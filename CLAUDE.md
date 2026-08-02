@@ -219,6 +219,16 @@ steps at once is how people get lost and blame themselves for it.
 **Flag scope creep in both directions.** Tell me when a change touches more than I asked for, and
 tell me when a feature I am asking for should wait until it can be tested.
 
+**Follow the established pattern unless there is a real reason not to — and police this yourself.**
+When a new thing is an instance of an existing kind (another tab, another list row, another pull,
+another export section, another status dot), it must match how its siblings already behave: the
+status dot acts on click, the pull re-renders its own view, the preview clears the previous item's
+bars, the export gets a section and a TOC entry and a scope toggle. Deviating is allowed only with a
+stated, valid reason. **It is your job to catch the missing schematic piece, not mine.** When you
+add one of a set, walk the others and check you did everything they do. If I am the one spotting
+that the new tab's dot does nothing while every other tab's dot downloads, we have both failed —
+but the miss is yours to prevent. Before calling a feature done, diff it against its siblings.
+
 ## Style
 
 - British-leaning English in user-facing copy; comments explain **why**, not what.

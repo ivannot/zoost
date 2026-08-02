@@ -60,9 +60,9 @@ const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
 // permission system, and a permission system that is not enforced anywhere is theatre.
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, health: false };
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'health'];
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
 let expScope = Object.assign({}, SCOPE_FULL);
 async function loadScope() {
   try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_FULL, st.exportScope); } catch (_) {}
@@ -1645,17 +1645,20 @@ tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}
 
 footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
 `;
-function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
+function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
+  conns = scope.connections ? (conns || []) : [];
   const esc = escHtml;
   const ws = bound || {};
   const now = new Date().toLocaleString();
 
   // function cross-references (uses / used by), navigable via anchors
   const fnAnchor = (api) => 'fn-' + sanitize(api || '');
+  const connAnchor = (name) => 'conn-' + sanitize(name || '');
+  const connApiSet = new Set((conns || []).map((c) => c.name));
   const _hByName = {}; Object.values(g.nodes || {}).forEach((n) => (_hByName[n.name] ||= []).push(n));
   const codeResolve = (ns, name) => {
     const nodes = g.nodes || {};
@@ -1702,6 +1705,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
         + (trig.length ? `<span><b>Triggered by (${trig.length}):</b> ${trig.map((w) => `<a href="#${wfAnchor(w.id)}">${esc(w.name)}</a>`).join(', ')}</span>` : '')
         + ((scheduledBy[f.api_name] || []).length ? `<span><b>Scheduled by (${scheduledBy[f.api_name].length}):</b> ${scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
+        + ((scope.connections && (f.connections || []).length) ? `<span><b>Connections (${f.connections.length}):</b> ${f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href="#${connAnchor(c.name)}">${esc(c.name)}</a>` : esc(c.name)).join(', ')}</span>` : '')
+        + ((f.modified_by || f.updatedTime) ? `<span><b>Modified:</b> ${f.modified_by ? 'by ' + esc(f.modified_by) : ''}${f.updatedTime ? ' · ' + esc(String(f.updatedTime).slice(0, 16)) : ''}</span>` : '')
         + `</div>` : '';
       fnHtml += `<section class="item" id="${fnAnchor(f.api_name)}" data-name="${esc(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
@@ -1877,6 +1882,15 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
       + `<td class="mono">${esc(m.api_name)}</td><td class="mono">${esc(m.module_name || '')}</td>`
       + `<td class="ct">${k}</td><td class="ct">${(m.fields || []).length}</td><td class="ct">${rb}</td></tr>`);
   }));
+  // Connections: catalogue + which functions use each
+  const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).map((c) => {
+    const usesLinks = c.uses.length ? c.uses.map(fnLink).join(', ') : '<span class="none">none</span>';
+    const status = c.missing ? '<span style="color:#b45309">not in catalogue</span>' : c.connected === false ? '<span style="color:#b45309">not connected</span>' : 'connected';
+    return `<tr id="${connAnchor(c.name)}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
+  });
+  const connHtml = conns.length
+    ? `<p class="hxd">The org's connections and the functions that use each — the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
+    : '<p class="empty">No connections in this export.</p>';
   const toc = `<nav class="toc"><h2>Contents</h2>`
     + `<h3 class="toch">Functions (${fns.length})</h3>`
     + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="7" class="none">none</td></tr>'}</tbody></table>`
@@ -1885,6 +1899,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
     + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
     + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
     + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue \u2014 related-list API names for Deluge</a></div>` : '')
+    + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue — connectors, status, and which functions use each</a></div>` : '')
     + (scope.health ? `<h3 class="toch">Health <span class="cnt">${healthTotal}</span></h3><div class="tochx"><a href="#health">Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}</a></div>` : '')
     + `</nav>`;
 
@@ -1895,7 +1910,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
     + `<header><h1>${esc(PRODUCT_NAME)} — Export</h1>`
     + `<div class="meta">${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${esc(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${esc(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${esc(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
@@ -1912,7 +1927,7 @@ async function loadExportData() {
   for (const e of entries) {
     const d = metaById.get(String(e.id)); let code = '';
     if (d) { try { code = await readFile(d.dg); } catch (_) {} }
-    fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null });
+    fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [] });
   }
   const mods = [];
   for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`_layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
@@ -1923,15 +1938,24 @@ async function loadExportData() {
   let wfIdx = []; try { wfIdx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
   for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
   let scheds = []; try { scheds = JSON.parse(await readFile('_schedules/_index.json')); } catch (_) {}
-  return { fns, mods, g, modRefs, wfs, scheds };
+  // connections catalogue + usage (which functions reference each), joined on connectionLinkName
+  let connCat = []; try { connCat = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  if (!Array.isArray(connCat)) connCat = [];
+  const connUse = {};
+  fns.forEach((f) => (f.connections || []).forEach((c) => { if (c && c.name) (connUse[c.name] ||= []).push(f.api_name); }));
+  const conns = connCat.map((c) => ({ ...c, uses: (connUse[c.name] || []).slice() }));
+  const catNames = new Set(connCat.map((c) => c.name));
+  Object.keys(connUse).forEach((name) => { if (!catNames.has(name)) conns.push({ name, label: name, connector: null, connected: null, missing: true, uses: connUse[name].slice() }); });
+  return { fns, mods, g, modRefs, wfs, scheds, conns };
 }
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
-  let { mods, g, wfs, scheds } = d;
+  let { mods, g, wfs, scheds, conns } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
+  conns = scope.connections ? (conns || []) : [];
   const nodes = scope.functions ? ((g && g.nodes) || {}) : {};
   const fnList = Object.values(nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -1956,6 +1980,8 @@ function buildExportMarkdown(d, scope) {
     if (n.calls && n.calls.length) md += `- calls: ${n.calls.join(', ')}\n`;
     if (n.called_by && n.called_by.length) md += `- called by: ${n.called_by.join(', ')}\n`;
     if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}`).join('; ')}\n`;
+    if (scope.connections && n.connections && n.connections.length) md += `- connections: ${n.connections.map((c) => c.name).join(', ')}\n`;
+    if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
     md += scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
   });
   // Relation-first catalogue: this is the section an LLM should hit when asked
@@ -2005,6 +2031,15 @@ function buildExportMarkdown(d, scope) {
       });
     });
   });
+  if (conns.length) {
+    md += '---\n\n## Connections\n\nThe org’s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
+    md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';
+    conns.slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).forEach((c) => {
+      const status = c.missing ? 'not in catalogue' : c.connected === false ? 'not connected' : 'connected';
+      md += `| \`${_mdCell(c.name)}\` | ${_mdCell(c.label || '')} | ${_mdCell(c.connector || '')} | ${status} | ${c.uses.length} | ${_mdCell(c.uses.join(', '))} |\n`;
+    });
+    md += '\n';
+  }
   md += `\n---\n\n## About this file\n\nGenerated by **${PRODUCT_NAME}**${PRODUCT_URL ? ` (${PRODUCT_URL})` : ''}, created by ${PRODUCT_AUTHOR}.\n\n${LEGAL_DISCLAIMER}\n`;
   return md;
 }
@@ -2028,8 +2063,8 @@ async function exportHtml() {
   try {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds } = await loadExportData();
-    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope);
+    const { fns, mods, g, modRefs, wfs, scheds, conns } = await loadExportData();
+    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await writeFile(name, html);
@@ -2093,6 +2128,7 @@ async function openSchedule(e) {
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   $('pvname').textContent = e.name;
+  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const fnLink = `<span class="wf-fn" data-fnid="${escHtml(e.function_id || '')}" data-fnname="${escHtml(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
@@ -2261,18 +2297,25 @@ function renderConnections() {
     el.setAttribute('aria-selected', c.path === currentPath);
     const dc = c.missing ? 'st-err' : c.connected === false ? 'st-stale' : 'st-ok';
     const dch = c.missing ? '⟳' : c.connected === false ? '◐' : '●';
-    const dt = c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected';
+    const dt = (c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected') + ' — click to refresh connections from Zoho';
     el.innerHTML = `<span class="st ${dc}" title="${dt}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
       + `<span class="rest rf" title="functions using it">${c.uses.length}×</span>`
       + (c.connector ? `<span class="rest rl" style="color:#a78bfa" title="connector">${escHtml(c.connector)}</span>` : '');
+    el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshConnections(); };   // the status dot acts, like every other tab's does (here: re-pull the catalogue)
     el.onclick = () => openConnection(c);
     tree.appendChild(el);
   });
+}
+async function refreshConnections() {
+  if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
+  setStatus('Refreshing connections…', 'busy');
+  await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
 }
 function openConnection(c) {
   currentPath = c.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
   $('pvname').textContent = c.label || c.name;
+  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
@@ -2326,6 +2369,7 @@ async function openWorkflow(e) {
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   $('pvname').textContent = e.name;
+  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = 'Go to \u2197'; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
