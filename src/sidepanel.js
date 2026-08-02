@@ -686,8 +686,14 @@ async function buildHealth() {
 }
 async function openHealth() {
   if (!dir) return;
-  $('healthview').classList.add('show');
+  closeAI();   // one panel at a time
+  $('healthview').classList.add('show'); $('health').classList.add('on'); document.body.classList.add('health-open');   // lit button + violet frame + covers the tabs, mirroring Ask AI
   $('healthbody').innerHTML = '<div class="hd">Analyzing\u2026</div>';
+  // Health reads the workspace files directly. Chrome lets the folder's File System Access
+  // permission lapse after inactivity; without re-requesting it first (like every other file
+  // operation does) the reads throw a generic "not allowed" DOMException. This click is a user
+  // gesture, so requesting here re-grants it \u2014 and if the user declines, we say so plainly.
+  if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted \u2014 click Refresh, then open Health again.</div>'; return; }
   try { healthData = await buildHealth(); } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
   renderHealthView();
 }
@@ -714,7 +720,8 @@ function renderHealthView() {
 function healthOpenFn(file, line) { closeHealth(); if (viewMode !== 'functions') { setMode('functions'); } openFile(file, true, line || null); }
 async function healthOpenWorkflow(id) { closeHealth(); setMode('workflows'); await rebuildWorkflows(); const e = workflowData.find((w) => String(w.id) === String(id)); if (e) openWorkflow(e); else setStatus('Workflow not found in this workspace.', 'warn'); }
 async function healthOpenSchedule(id) { closeHealth(); setMode('schedules'); await rebuildSchedules(); const e = scheduleData.find((x) => String(x.id) === String(id)); if (e) openSchedule(e); else setStatus('Schedule not found in this workspace.', 'warn'); }
-function closeHealth() { $('healthview').classList.remove('show'); }
+function toggleHealth() { if ($('healthview').classList.contains('show')) closeHealth(); else openHealth(); }
+function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }
 
 // ---------- AI assistant (BYOK, provider-agnostic; Phase A: context chat) ----------
 let aiMessages = [], aiModCache = null, aiSeedTruncated = false, aiSeedWarned = false;
@@ -915,6 +922,7 @@ function aiContextLabel() { const el = $('aictx'); if (!el) return; el.textConte
 function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!dir) return;
+  closeHealth();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open'); aiContextLabel(); aiEngineChrome(); aiRenderMessages();
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
@@ -2324,7 +2332,7 @@ $('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeTo
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
 loadScope();
-$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = openHealth; $('healthx').onclick = () => $('healthview').classList.remove('show'); $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'functions' ? openGraph() : openSchemaGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
+$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'functions' ? openGraph() : openSchemaGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;
 $('aiinput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); aiSend(); } });

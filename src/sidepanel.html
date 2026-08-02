@@ -68,6 +68,7 @@
   #mmoverlay .t{color:#f0b483;font-size:14px;font-weight:600}
   #mmoverlay .s{color:var(--muted);font-size:12px;line-height:1.5}
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
+  #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
   #belowbar{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
   #aiview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
   #aiview.show{display:flex}
@@ -207,6 +208,8 @@
   .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
   body.ai-open .wsgroup > button:not(#askai), body.ai-open .wsgroup .gsep, body.ai-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
   body.ai-open .wsgroup{border-color:#b06a1c}
+  body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep, body.health-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
+  body.health-open .wsgroup{border-color:#7c5cff}
   .genbar button:disabled{opacity:.5}
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
   .smode:hover{background:#1e2a3d;color:var(--ink)}
@@ -369,7 +372,6 @@
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span></div>
 
   <div id="main">
-    <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hx" id="healthx" title="Close">✕</span></div><div id="healthbody"></div></div>
     <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho tab and the local workspace point to different orgs. Browsing is disabled to avoid mixing environments — align them using the actions above.</div></div></div>
     <div id="tree"></div>
     <div id="resizer"></div>
@@ -386,6 +388,8 @@
       <div id="pvtable"></div>
     </div>
   </div>
+    <!-- Health lives at the #belowbar level (sibling of #aiview), so it covers the mode tabs too — like the AI panel. -->
+    <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hx" id="healthx" title="Close">✕</span></div><div id="healthbody"></div></div>
     <div id="aiview">
       <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">↺ Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
       <div id="aictx" class="aictx"></div>
