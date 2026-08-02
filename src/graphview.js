@@ -33,6 +33,10 @@ const NSCOL = (ns) => getComputedStyle(document.documentElement).getPropertyValu
       if (st && st.erParams && st.erParams.current) erP = Object.assign({}, ER_PRESET.modules, st.erParams.current);
     } catch (_) {}
     erInitControls();
+    // Depth buttons wired once: they work whether the focus comes from the open ("Open ER") or is
+    // set later by selecting a module in the Explorer of a whole-graph ("Schema") view.
+    $('erdMinus').onclick = () => setDepth(egoDepth - 1);
+    $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   $('statline').innerHTML = _schema
     ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> modules · <b>${DATA.counts.edges}</b> lookups · <b>${DATA.counts.dead_suspects}</b> unreferenced`
@@ -45,8 +49,6 @@ const NSCOL = (ns) => getComputedStyle(document.documentElement).getPropertyValu
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
     $('erdepth').style.display = 'inline-flex'; updateDepthUI();
     bfsEgo(); egoStat(); updateTopTools(); updateScopeUI();
-    $('erdMinus').onclick = () => setDepth(egoDepth - 1);
-    $('erdPlus').onclick = () => setDepth(egoDepth + 1);
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
 })();
@@ -231,7 +233,7 @@ function select(id, nopush) {
   focusNode = id;
   // Focus mode: the Explorer selection IS the context. Set it here so that switching to
   // Visual or ER afterwards already shows this module (it used to update only via ER).
-  if (schema && curFocus && id !== curFocus) setFocus(id);
+  if (schema && id !== curFocus) setFocus(id);   // selecting a module ALWAYS establishes/moves the focus, even from the whole-graph view
   else if (curView === 'visual') draw();
 }
 $('q').addEventListener('input', render);
@@ -490,6 +492,8 @@ function updateScopeUI() {
     b.style.display = curFocus ? '' : 'none';
     b.textContent = lbl; b.title = ttl; b.classList.toggle('on', scopeAll);
   });
+  // The reset appears only when a focus is active (whole-graph view already IS the reset target).
+  ['erReset', 'visReset'].forEach((id) => { const b = $(id); if (b) b.style.display = curFocus ? '' : 'none'; });
 }
 function setScope(all) {
   if (!curFocus) return;
@@ -523,7 +527,9 @@ function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
   // projections of the same context, so whoever changes the focus updates all of them.
   if (!id || !N[id] || id === curFocus) return;
-  curFocus = id; computeMaxDepth(); egoDepth = Math.min(egoDepth, maxEgoDepth);
+  const wasUnfocused = !curFocus;
+  curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
+  if (wasUnfocused) $('erdepth').style.display = 'inline-flex';   // first focus (e.g. from the whole-graph view): reveal the depth control
   updateDepthUI(); updateScopeUI(); updateTopTools();
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
@@ -532,6 +538,15 @@ function setFocus(id) {
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
+  if (curView === 'er') erShow();
+  else if (curView === 'visual') { fitView(); draw(); }
+}
+function clearFocus() {
+  // Back to the pristine whole-graph view — the state you get opening via "Schema".
+  curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
+  $('erdepth').style.display = 'none';
+  updateScopeUI(); updateTopTools(); erLaidOut = false;
+  $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> modules · <b>${DATA.counts.edges}</b> lookups · <b>${DATA.counts.dead_suspects}</b> unreferenced`;
   if (curView === 'er') erShow();
   else if (curView === 'visual') { fitView(); draw(); }
 }
@@ -921,6 +936,8 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 $('erScope').onclick = () => setScope(!scopeAll);
 $('visScope').onclick = () => setScope(!scopeAll);
+$('erReset').onclick = clearFocus;
+$('visReset').onclick = clearFocus;
 // ---- runtime layout controls ----
 const ER_CTL = [
   ['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
@@ -930,7 +947,7 @@ const ER_RELAYOUT = new Set(['margin', 'spread', 'ring']);
 let _erT = null;
 // Which layout branch is live decides which knobs mean anything:
 // concentric (focus + ego set) is driven by `ring`, the force branch by `spread`.
-function erConcentric() { return !!(DATA.focus && egoSet); }
+function erConcentric() { return !!(curFocus && egoSet); }   // concentric follows the CURRENT focus, not just the one it was opened with
 function erUpdateControlVis() {
   const rel = erEmph === 'relations', conc = erConcentric();
   const set = (id, on) => { const e = $(id); if (e) e.classList.toggle('off', !on); };
