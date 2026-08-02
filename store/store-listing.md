@@ -27,7 +27,7 @@ If you administer or develop on Zoho CRM you know the gaps: no external editor, 
 
 WHAT IT DOES
 
-- Local mirror, your Git. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders. Commit, diff, branch and roll back with your own tools. Functions deleted in Zoho are pruned locally, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, your Git. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders. Commit, diff, branch and roll back with your own tools. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
 - Search across every function at once. Full-text search over all your Deluge sources — the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
 

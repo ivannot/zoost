@@ -96,8 +96,8 @@
       Modules, Workflows or Schedules is the active tab — faster when you just changed one thing.</li>
     <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
       updates by itself. No action needed.</li>
-    <li>Functions deleted in Zoho are pruned locally, so the folder stays a faithful mirror rather than an
-      accumulating pile.</li>
+    <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b> (deletion is reconciled at pull time,
+      not intercepted live like a save), so the folder stays a faithful mirror rather than an accumulating pile.</li>
   </ul>
   <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull</b> in Modules mode. If the layout matrix or the
     relation catalogue looks empty, that workspace was pulled with an older build — pull again.</p>

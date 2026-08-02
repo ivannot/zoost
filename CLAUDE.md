@@ -163,6 +163,15 @@ description still said the extension "never sends your code anywhere", which the
 false. And **never describe a feature that is not tested** — the OpenAI-compatible endpoint claim
 was written before anyone had tried it, and had to be walked back everywhere.
 
+A third, just as binding. **Declare only what we have; have everything we declare — and check every
+surface, on adding *and* on removing.** When a feature lands or is cut, walk the whole table above —
+the marketing `site/index.html` included, not just `README.md` and `docs.html`. Adding the
+Connections tab but leaving `index.html` silent about it is the same class of failure as removing
+"Go to" and leaving a page that still advertises it: either way the site misrepresents the product.
+This is trust and transparency, not tidiness, and catching it is **your** job — the same vigilance
+the "follow the sibling pattern" rule demands. Before you call anything done, diff every user-facing
+surface against what the product actually does, in both directions.
+
 If a change touches what data leaves the machine, `site/privacy.html` and the Web Store data
 disclosures are not optional follow-ups. They are part of the change.
 
