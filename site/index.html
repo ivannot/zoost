@@ -38,6 +38,12 @@
   header nav{margin-left:auto;display:flex;gap:18px;font-size:13.5px}
   header nav a{color:var(--muted);text-decoration:none}
   header nav a:hover{color:var(--ink)}
+  header nav{align-items:center}
+  header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+  header .brand:hover{opacity:.85}
+  header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
+  header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
+  header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
 
   .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
   .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
@@ -90,14 +96,11 @@
 
 <header>
   <div class="wrap">
-    <img src="/icon-192.png" alt="">
-    <span class="nm">Zoost</span>
+    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
-      <a href="#what">What it does</a>
-      <a href="#features">Features</a>
-      <a href="#start">Get started</a>
       <a href="/docs.html">How to</a>
       <a href="/privacy.html">Privacy</a>
+      <a class="ncta" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install ↗</a>
     </nav>
   </div>
 </header>
