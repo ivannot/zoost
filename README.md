@@ -24,7 +24,8 @@ validates; this gives you everything Zoho's editor doesn't.
 ## What to expect from this project
 
 Zoost is **free**, licensed under [Apache-2.0](LICENSE), and built and maintained by one person
-in his spare time.
+in his spare time — with substantial help from Claude (which I've come to call Claudio) on
+design, code and wording. The judgement calls, and the responsibility for the result, are mine.
 
 - Issues and pull requests are welcome and are read.
 - There is **no guaranteed response time**, and no support commitment of any kind.

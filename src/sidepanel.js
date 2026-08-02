@@ -90,7 +90,7 @@ function closeScope(ok) {
 function showAbout() {
   $('aboutbody').innerHTML =
     `<div><b>${escHtml(PRODUCT_NAME)}</b> \u00b7 v${escHtml(chrome.runtime.getManifest().version)}</div>`
-    + `<div style="color:var(--muted)">Created by ${escHtml(PRODUCT_AUTHOR)}</div>`
+    + `<div style="color:var(--muted)">Created by ${escHtml(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
     + `<h4>Links</h4><div><a href="${escHtml(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/docs.html" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escHtml(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escHtml(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
     + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escHtml(SPONSOR_URL)}" target="_blank" rel="noopener">\u2665 GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escHtml(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
     + `<h4>Licence</h4><div><a href="${escHtml(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
