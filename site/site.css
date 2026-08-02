@@ -1,0 +1,56 @@
+/* site.css — shared base for every zoost.it page. Page-specific rules stay in each page's
+   inline <style>, which is loaded AFTER this file so it can override. Content-page typography
+   (docs, privacy) is scoped to `main`, so the landing page (no <main>) is left untouched. */
+
+:root{
+  --bg:#0d121c; --surface:#151d2b; --panel:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
+  --border:#26303f; --line:#1e2735; --sel:#3b82f6; --amber:#d97706; --teal:#83d8c6;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+.wrap{max-width:900px;margin:0 auto;padding:0 22px}
+
+/* ---- header (identical on every page) ---- */
+header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
+header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
+header img{width:26px;height:26px;border-radius:6px}
+header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
+header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+header .brand:hover{opacity:.85}
+header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
+header nav a{color:var(--muted);text-decoration:none}
+header nav a:hover{color:var(--ink)}
+header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
+header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
+header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
+
+/* ---- content pages (docs, privacy): scoped to main, so the landing page is untouched ---- */
+main{padding:44px 0 80px}
+main h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em}
+main h2{font-size:20px;margin:44px 0 8px;letter-spacing:-.01em;scroll-margin-top:70px}
+main h3{font-size:16px;margin:26px 0 6px;color:var(--ink)}
+main .sub{color:var(--muted);margin:0 0 10px;max-width:66ch}
+main .upd{font:12px var(--mono);color:#6b7c93;margin:0 0 30px}
+main p,main li{color:#c3cddc}
+main ul,main ol{padding-left:22px} main li{margin:7px 0}
+main code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+main .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 19px;margin:18px 0}
+main .box.warn{border-color:#6b4a1c;background:#1e1a12}
+main .box.warn b{color:#f0a44a}
+main .box h3{margin-top:0}
+main .box p:first-child{margin-top:0} main .box p:last-child{margin-bottom:0}
+main table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
+main th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+main td.k{white-space:nowrap;color:var(--ink)}
+
+/* ---- footer (identical on every page) ---- */
+footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);font-size:13px}
+footer a{color:var(--muted)} footer a:hover{color:var(--teal)}
+footer .flinks{margin:0 0 14px}
+footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
+.sep{color:var(--border);margin:0 7px}

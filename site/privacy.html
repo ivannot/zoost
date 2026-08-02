@@ -10,48 +10,10 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0d121c">
 <meta name="robots" content="index,follow">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root{
-    --bg:#0d121c; --surface:#151d2b; --ink:#e7edf6; --muted:#8ea0bb;
-    --border:#26303f; --line:#1e2735; --sel:#3b82f6; --amber:#d97706; --teal:#83d8c6;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);
-    -webkit-font-smoothing:antialiased}
-  a{color:var(--teal)}
-  .wrap{max-width:900px;margin:0 auto;padding:0 22px}
-  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
-  header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
-  header img{width:26px;height:26px;border-radius:6px}
-  header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
-  header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
-  header nav a{color:var(--muted);text-decoration:none}
-  header nav a:hover{color:var(--ink)}
-  header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-  header .brand:hover{opacity:.85}
-  header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
-  header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
-  header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
-  main{padding:48px 0 70px}
-  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
-  .upd{font:12.5px var(--mono);color:var(--muted);margin:0 0 34px}
-  h2{font-size:20px;margin:38px 0 10px;letter-spacing:-.01em}
-  h3{font-size:15px;margin:22px 0 6px;color:var(--ink)}
-  p,li{color:#c3cddc;font-size:15.5px}
-  ul{padding-left:20px} li{margin:7px 0}
-  code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);
-    border-radius:5px;padding:1px 5px}
-  .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 20px;margin:18px 0}
-  .box.warn{border-color:#6b4a1c;background:#1e1a12}
-  .box h3{margin-top:0}
-  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
-  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
-  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  /* privacy-specific — shared base & content typography are in site.css */
   td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
-  footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--muted);font-size:13px}
-  footer .legal{max-width:78ch;line-height:1.65}
 </style>
 </head>
 <body>
@@ -199,9 +161,24 @@
 
 <footer>
   <div class="wrap">
+    <div class="flinks">
+      <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a><span class="sep">·</span>
+      <a href="/docs.html">How to use</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
+      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
     <p class="legal">
-      Zoost is an independent, unofficial developer tool, licensed under the Apache License 2.0 and
-      provided AS IS, without warranties or conditions of any kind. It is not affiliated with, endorsed by,
+      Created by Ivan Notaristefano (with the support of Claudio). Copyright 2026. Licensed under the Apache License 2.0 and provided
+      <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
+      liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
+      support or maintenance.
+    </p>
+    <p class="legal">
+      Zoost is an independent, unofficial developer tool. It is <b>not</b> affiliated with, endorsed by,
       sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of
       Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
     </p>

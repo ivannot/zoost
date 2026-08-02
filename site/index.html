@@ -16,35 +16,9 @@
 <meta property="og:url" content="https://zoost.it/">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="author" content="Ivan Notaristefano">
+<link rel="stylesheet" href="/site.css">
 <style>
-  :root{
-    --bg:#0d121c; --surface:#151d2b; --panel:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
-    --border:#26303f; --line:#1e2735; --sel:#3b82f6; --amber:#d97706; --teal:#83d8c6;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);
-    -webkit-font-smoothing:antialiased}
-  a{color:var(--teal)}
-  .wrap{max-width:900px;margin:0 auto;padding:0 22px}
-
-  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.9);
-    backdrop-filter:blur(8px);z-index:5}
-  header .wrap{display:flex;align-items:center;gap:12px;padding-top:14px;padding-bottom:14px}
-  header img{width:26px;height:26px;border-radius:6px}
-  header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
-  header nav{margin-left:auto;display:flex;gap:18px;font-size:13.5px}
-  header nav a{color:var(--muted);text-decoration:none}
-  header nav a:hover{color:var(--ink)}
-  header nav{align-items:center}
-  header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-  header .brand:hover{opacity:.85}
-  header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
-  header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
-  header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
-
+  /* landing-page specific — shared base is in site.css */
   .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
   .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
   .hero h1 span{color:var(--muted)}
@@ -84,12 +58,6 @@
   .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
     max-width:70ch}
   .note.warn{border-color:var(--amber);color:#e2c98a}
-
-  footer{padding:34px 0 60px;color:var(--muted);font-size:13px}
-  footer .legal{max-width:78ch;line-height:1.65;margin:14px 0 0}
-  footer a{color:var(--muted)}
-  footer a:hover{color:var(--teal)}
-  .sep{color:var(--border);margin:0 7px}
 </style>
 </head>
 <body>
@@ -276,7 +244,7 @@
 
 <footer>
   <div class="wrap">
-    <div>
+    <div class="flinks">
       <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a><span class="sep">·</span>
       <a href="/docs.html">How to use</a><span class="sep">·</span>
       <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
