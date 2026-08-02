@@ -46,9 +46,13 @@
       id: fn.id, name: fn.name, display_name: fn.display_name, api_name: fn.api_name,
       nameSpace: fn.nameSpace, category: fn.category, source: fn.source,
       return_type: fn.return_type, params: fn.params || [],
-      description: fn.description || '', updatedTime: fn.updatedTime,
+      description: fn.description || '', updatedTime: fn.updatedTime, modified_by: fn.modified_by || null,
       associated_place: fn.associated_place ?? null, workflow: fn.workflow || '',
       rest_api: (fn.rest_api || []).map((r) => ({ type: r.type, active: r.active })),
+      // Connections the function uses. connectionLinkName is the join key — the exact name that
+      // appears in invokeurl [...connection:"..."], and the `name` in the org's connections catalogue.
+      connections: (fn.connections || []).map((c) => ({ name: c.connectionLinkName, label: c.connectionName || c.connectionLinkName, service: c.serviceName || null, scopes: c.scopes || [] })).filter((c) => c.name),
+      sv: 2,   // meta schema version — bump when new fields are captured, so old copies re-fetch (backfill)
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }

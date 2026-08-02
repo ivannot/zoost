@@ -148,7 +148,7 @@
   .f .rest.rf{margin-left:0;min-width:44px;text-align:right}
   .f .rest.rl{margin-left:8px;min-width:26px;text-align:right;color:#a78bfa}
   .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
-  .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)}
+  .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
   #missing{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
   .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0}
   /* nowrap keeps the row on one line; min-width:0 lets it scroll INSIDE its own box instead of
@@ -242,6 +242,13 @@
 
   #pvcallers .apwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);line-height:1.7}
   #pvcallers .orphan{color:#f59e0b}
+  #pvcallers .connwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
+  #pvcallers .conn{display:inline-block;background:#1a2333;border:1px solid #3f6ea8;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;color:#9fc4f5;cursor:pointer}
+  #pvcallers .conn:hover{background:rgba(47,111,237,.22);color:#cfe1fb}
+  #pvcallers .modline{margin-top:4px;color:#6b7688}
+  .connbanner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;background:rgba(47,111,237,.12);border-bottom:1px solid var(--border);font:11px var(--mono);color:#9fc4f5}
+  .connbanner .connclear{cursor:pointer;color:var(--muted)}
+  .connbanner .connclear:hover{color:var(--ink)}
   #pvcode a.c-link{text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
   #pvcode a.c-link:hover{background:rgba(96,165,250,.18);border-radius:3px}
   .wfcrit i{color:var(--muted);font-style:normal}

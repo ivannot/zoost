@@ -77,6 +77,13 @@ is disabled. Do not weaken this for convenience.
 reads what was written to disk. If a feature needs data that is not in the module JSON, the pull
 has to be extended and the user has to re-pull — say so in the UI rather than failing silently.
 
+**Function meta carries a schema version (`sv`), and old copies backfill themselves.** When the pull
+starts capturing a new field (e.g. `connections`, `modified_by` in 1.2.0), bump `sv` in
+`content-bridge.js` `toFile()` and in `META_SV` in `sidepanel.js`. Functions on disk below `META_SV`
+render as **stale** (amber ◐ dot) and are folded into the "Complete missing / Refresh outdated"
+flow, so existing workspaces top up the new fields with one click instead of a full re-download.
+This is how you evolve the captured data without orphaning already-pulled workspaces.
+
 **Related-list API names are a first-class concept.** The API name of a related list is neither
 module's `api_name`, and it is what `zoho.crm.getRelatedRecords()` requires. This is the single
 most valuable thing the tool surfaces; treat it accordingly.

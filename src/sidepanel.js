@@ -19,6 +19,7 @@ let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
+let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let currentPath = null, pvHist = [];
 let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
@@ -35,6 +36,7 @@ const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': 
 // double quote in the data closes it early and truncates — the trap that halved the getRelated snippet.
 const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
+const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); }
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
@@ -229,17 +231,34 @@ function guardOk() {
 
 // ---------- tree ----------
 const labelOf = (e) => (nameMode === 'display' ? (e.display_name || e.api_name) : (e.api_name || e.display_name));
+// Filter the functions tree to those that use a given connection (built from the pulled function
+// metadata). This is the "which/how many functions use connection X" answer, reusing the tree.
+async function filterByConnection(name) {
+  const g = await ensureGraph();
+  connFilterSet = new Set(Object.values(g.nodes).filter((n) => (n.connections || []).some((c) => c.name === name)).map((n) => n.file));
+  connectionFilter = name;
+  if (viewMode !== 'functions') setMode('functions'); else renderTree();
+}
+function clearConnectionFilter() { connectionFilter = null; connFilterSet = null; renderTree(); }
 function renderTree() {
   if (viewMode !== 'functions') return;
   const term = $('find').value.trim().toLowerCase();
   const byNs = {};
   treeData
     .filter((e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter))
+    .filter((e) => !connFilterSet || connFilterSet.has(e.path))
     .filter((e) => !term || (e.api_name || '').toLowerCase().includes(term) || (e.display_name || '').toLowerCase().includes(term))
     .forEach((e) => { (byNs[e.namespace] ||= []).push(e); });
   const tree = $('tree'); tree.innerHTML = '';
+  if (connectionFilter) {
+    const total = Object.values(byNs).reduce((n, l) => n + l.length, 0);
+    const b = document.createElement('div'); b.className = 'connbanner';
+    b.innerHTML = `<span><b>${total}</b> function(s) use <b>${escHtml(connectionFilter)}</b></span><span class="connclear" title="Clear filter">✕</span>`;
+    b.querySelector('.connclear').onclick = clearConnectionFilter;
+    tree.appendChild(b);
+  }
   const nsKeys = Object.keys(byNs).sort();
-  if (!nsKeys.length) { tree.innerHTML = '<div class="treemsg">No matches.</div>'; return; }
+  if (!nsKeys.length) { const m = document.createElement('div'); m.className = 'treemsg'; m.textContent = 'No matches.'; tree.appendChild(m); return; }
   nsKeys.forEach((ns) => {
     const list = byNs[ns].sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
     const isCol = collapsed.has(ns);
@@ -251,9 +270,9 @@ function renderTree() {
     list.forEach((e) => {
       const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
       el.setAttribute('aria-selected', e.path === currentPath);
-      const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
-      const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
+      const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
+      const stCh = e.error ? '\u27f3' : e.stale ? '\u25d0' : e.downloaded ? '\u25cf' : '\u25cb';
+      const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.stale ? 'Older data (no connections / author) \u2014 click to refresh' : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
       el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span>${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
@@ -271,7 +290,7 @@ async function rebuildTree() {
   for (const mp of metaPaths) {
     try {
       const meta = JSON.parse(await readFile(mp)); const dgPath = mp.replace(/\.meta\.json$/, '.dg');
-      downloadedById.set(String(meta.id), { path: dgPath, category: meta.category, source: meta.source, name: meta.name, rest: (meta.rest_api || []).some((r) => r.active), namespace: meta.nameSpace || dgPath.split('/')[0], display_name: meta.display_name });
+      downloadedById.set(String(meta.id), { path: dgPath, category: meta.category, source: meta.source, name: meta.name, rest: (meta.rest_api || []).some((r) => r.active), namespace: meta.nameSpace || dgPath.split('/')[0], display_name: meta.display_name, sv: meta.sv || 0 });
     } catch (_) {}
   }
   // the list index shows ALL functions (including not-yet-downloaded); fall back to on-disk meta for legacy workspaces
@@ -282,12 +301,12 @@ async function rebuildTree() {
       const id = String(e.id); const d = downloadedById.get(id);
       const path = d ? d.path : `${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
-      return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, error: false };
+      return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, stale: !!d && (d.sv || 0) < META_SV, error: false };
     });
   } else {
     treeData = [...downloadedById.entries()].map(([id, d]) => {
       index.set(id, { path: d.path, category: d.category, source: d.source, name: d.name, rest: d.rest });
-      return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, error: false };
+      return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, stale: (d.sv || 0) < META_SV, error: false };
     });
   }
   renderTree(); updateMissingButton();
@@ -301,10 +320,10 @@ async function loadGraph() {
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;
     const dg = await readFile(p); let meta = {}; try { meta = JSON.parse(await readFile(p.replace(/\.dg$/, '.meta.json'))); } catch {}
-    nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], dg, file: p });
+    nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, file: p });
   }
   const g = window.buildGraph(nodes);
-  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; } });
+  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; } });
   g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
   return g;
 }
@@ -361,8 +380,19 @@ async function showCallers(path) {
     } else if (!callers.length && !node.rest) {
       html += ' <span class="orphan">\u00b7 no known usage (orphan candidate)</span>';
     }
+    const conns = node.connections || [];
+    if (conns.length) {
+      html += '<div class="connwrap"><b>Connections (' + conns.length + '):</b> '
+        + conns.map((c) => `<span class="conn" data-conn="${escA(c.name)}" title="${escA((c.label || c.name) + (c.service ? ' \u00b7 ' + c.service : '') + ' \u2014 click to list every function that uses it')}">${escHtml(c.name)}</span>`).join(' ')
+        + '</div>';
+    }
+    const modBits = [];
+    if (node.modified_by) modBits.push('by ' + escHtml(node.modified_by));
+    if (node.updatedTime) modBits.push(escHtml(String(node.updatedTime).slice(0, 16)));
+    if (modBits.length) html += `<div class="modline">Last modified ${modBits.join(' \u00b7 ')}</div>`;
     box.innerHTML = html;
     box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file, true)));
+    box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
   } catch { box.className = ''; }
 }
 $('pvback').onclick = () => { const p = pvHist.pop(); updateBack(); if (p) openFile(p, false); };
@@ -1114,6 +1144,7 @@ $('wsdel').onclick = async () => {
 // ---------- view mode (Functions / Modules) ----------
 function setMode(mode) {
   viewMode = mode;
+  if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = 'Find by name\u2026'; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
   $('mFunctions').classList.toggle('active', mode === 'functions');
@@ -1505,14 +1536,14 @@ async function downloadOne(entry) {
     await writeFile(`${f.folder}/${f.stem}.dg`, f.dg);
     await writeFile(`${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     entry.path = `${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
-    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.error = false; entry.errorMsg = '';
+    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     graphCache = null; codeCache = null;
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissing() {
-  const pending = treeData.filter((e) => !e.downloaded);
+  const pending = treeData.filter((e) => !e.downloaded || e.stale);   // stale = older schema (before connections/author); re-fetch to backfill
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
   $('pull').disabled = true; $('missing').disabled = true;
   let ok = 0, fail = 0;
@@ -1542,8 +1573,11 @@ function updateMissingButton() {
   const b = $('missing'); if (!b) return;
   if (viewMode === 'modules' || viewMode === 'schedules') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;
-  const n = arr.filter((e) => !e.downloaded).length;
-  b.style.display = n > 0 ? '' : 'none'; b.textContent = `Complete missing (${n})`;
+  const miss = arr.filter((e) => !e.downloaded).length;
+  const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
+  const n = miss + stale;
+  b.style.display = n > 0 ? '' : 'none';
+  b.textContent = (stale && !miss) ? `Refresh ${stale} outdated` : `Complete missing (${n})`;
 }
 
 // ---------- export a self-contained, shareable HTML report ----------

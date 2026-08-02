@@ -170,6 +170,8 @@ environments.
 **Preview** (resizable)
 - Functions: highlighted code, line numbers, a **Called by** bar, clickable custom-function calls,
   and **Find in Zoho ↗** (filters the Zoho functions list to it; you open it from Zoho’s own ⋯ menu).
+  It also lists the **connections** the function uses (click one to filter the tree to every function
+  that uses it) and its last-modified author and date.
 - Modules: the fields table, **Records ↗** and **Layouts ↗** (for viewable modules).
 
 **Health (♥)** — tabbed audit over the local workspace, with a coverage note; items link to the
