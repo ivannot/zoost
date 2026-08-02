@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to use Zoost</title>
+<meta name="description" content="Short, practical guide to Zoost: working folder, workspaces, pulling, reading the graph and relations, exports, and how to set up an Anthropic or OpenAI API key.">
+<link rel="canonical" href="https://zoost.it/docs.html">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0d121c">
+<style>
+  :root{
+    --bg:#0d121c; --surface:#151d2b; --ink:#e7edf6; --muted:#8ea0bb;
+    --border:#26303f; --line:#1e2735; --sel:#3b82f6; --amber:#d97706; --teal:#83d8c6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:var(--teal)}
+  .wrap{max-width:820px;margin:0 auto;padding:0 22px}
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
+  header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
+  header img{width:26px;height:26px;border-radius:6px}
+  header .nm{font-weight:700}
+  header nav{margin-left:auto;display:flex;gap:16px;font-size:13.5px}
+  header nav a{color:var(--muted);text-decoration:none}
+  header nav a:hover{color:var(--ink)}
+  main{padding:44px 0 80px}
+  h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 10px;max-width:66ch}
+  .upd{font:12px var(--mono);color:#6b7c93;margin:0 0 30px}
+  h2{font-size:20px;margin:44px 0 8px;letter-spacing:-.01em;scroll-margin-top:70px}
+  h3{font-size:16px;margin:26px 0 6px}
+  p,li{color:#c3cddc}
+  ul,ol{padding-left:22px} li{margin:7px 0}
+  code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 19px;margin:18px 0}
+  .box.warn{border-color:#6b4a1c;background:#1e1a12}
+  .box.warn b{color:#f0a44a}
+  .box p:first-child{margin-top:0} .box p:last-child{margin-bottom:0}
+  .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
+  .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
+  .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+  td.k{white-space:nowrap;color:var(--ink)}
+  footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <img src="/icon-192.png" alt="">
+    <span class="nm">Zoost</span>
+    <nav><a href="/">Home</a><a href="/privacy.html">Privacy</a>
+      <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install</a></nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <h1>How to use Zoost</h1>
+  <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
+    around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
+  <p class="upd">Covers Zoost 1.0 · updated 2 August 2026</p>
+
+  <div class="toc">
+    <b>On this page</b>
+    <ol>
+      <li><a href="#model">The mental model</a></li>
+      <li><a href="#setup">First run</a></li>
+      <li><a href="#pull">Pulling and syncing</a></li>
+      <li><a href="#git">Putting it under Git</a></li>
+      <li><a href="#read">Reading your org</a></li>
+      <li><a href="#graph">The diagram</a></li>
+      <li><a href="#relations">Finding a relation name</a></li>
+      <li><a href="#health">Health audit</a></li>
+      <li><a href="#export">Exports</a></li>
+      <li><a href="#ai">AI assistant &amp; API keys</a></li>
+      <li><a href="#guard">Production vs sandbox</a></li>
+      <li><a href="#trouble">When something goes wrong</a></li>
+    </ol>
+  </div>
+
+  <h2 id="model">1. The mental model</h2>
+  <p>Three things, and everything else follows from them.</p>
+  <table>
+    <tbody>
+      <tr><td class="k">Working folder</td><td>One folder on your disk that you choose once. Everything Zoost writes lives inside it.</td></tr>
+      <tr><td class="k">Workspace</td><td>A subfolder, one per Zoho org, created for you. It holds that org's functions, schema and automations as plain files.</td></tr>
+      <tr><td class="k">Pull</td><td>The action that fills a workspace from Zoho. Zoost only reads from Zoho — it never writes back.</td></tr>
+    </tbody>
+  </table>
+  <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives
+    you the history, the map and the audit that the Zoho editor does not.</p>
+
+  <h2 id="setup">2. First run</h2>
+  <ol>
+    <li>Open a Zoho CRM tab and open the Zoost side panel (the extension icon).</li>
+    <li>Click <b class="ui">📁 Set working folder…</b> and choose a <b>dedicated, empty folder</b>.
+      Something like <code>~/Documents/Zoost</code>.</li>
+    <li>Click <b class="ui">+</b>. Zoost creates the subfolder for the org in your active tab, named
+      <code>instance[-sandbox]-orgid</code>, and selects it.</li>
+    <li>Click <b class="ui">Pull all</b>.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Do not put the working folder in OneDrive, Dropbox or iCloud Drive.</b> You will be creating Git
+      repositories inside it, and file-sync services corrupt <code>.git</code> directories by touching index
+      and lock files mid-operation. On-demand (placeholder) files also break the full-text search. Use a
+      local folder and push to a private Git remote if you want an off-machine copy.</p>
+  </div>
+  <p>Chrome does not keep file-system permissions across side-panel reopens: this is how the browser's
+    File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
+    in the panel, so normally you will not notice. If it needs you, the folder button turns amber and reads
+    <b class="ui">🔓 Grant access</b> — one click, and no file picker opens.</p>
+
+  <h2 id="pull">3. Pulling and syncing</h2>
+  <ul>
+    <li><b class="ui">Pull all</b> mirrors functions, module schema, layouts, related lists, workflows and schedules.</li>
+    <li><b class="ui">Pull Functions</b> (and its Modules / Workflows / Schedules variants) refreshes only
+      the current mode — faster when you just changed one thing.</li>
+    <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
+      updates by itself. No action needed.</li>
+    <li>Functions deleted in Zoho are pruned locally, so the folder stays a faithful mirror rather than an
+      accumulating pile.</li>
+  </ul>
+  <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull Modules</b>. If the layout matrix or the
+    relation catalogue looks empty, that workspace was pulled with an older build — pull again.</p>
+
+  <h2 id="git">4. Putting it under Git</h2>
+  <p>Nothing is automatic here, on purpose: it is your repository, with your conventions.</p>
+  <pre style="background:#0f1826;border:1px solid var(--line);border-radius:9px;padding:12px 14px;overflow:auto"><code>cd ~/Documents/Zoost/yourinstance-1234567890
+git init
+git add .
+git commit -m "baseline"</code></pre>
+  <p>From then on, pull and <code>git diff</code> tells you exactly what changed in the org since last time —
+    including schema changes, because module and layout metadata are stored as JSON.</p>
+
+  <h2 id="read">5. Reading your org</h2>
+  <p>The mode segments switch what the tree lists: <b class="ui">Functions</b>, <b class="ui">Modules</b>,
+    <b class="ui">Workflows</b>, <b class="ui">Schedules</b>. Select an item and the preview opens below.</p>
+  <ul>
+    <li>In a function's code, calls to other custom functions are <b>clickable</b> — jump to the definition,
+      then use <b class="ui">◂ back</b>.</li>
+    <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
+    <li><b class="ui">Find</b> has a scope switch attached to it: <b class="ui">in: names</b> matches file names,
+      <b class="ui">in: code</b> runs a <b>full-text search across every function source in the org</b> — the
+      closest thing to <code>grep</code> over your Deluge, and something Zoho does not provide. Use it before
+      renaming a field or retiring an endpoint.</li>
+    <li>On a module, the field table has one column per layout: a dot means the field is on that layout, an
+      amber dot means it is required there. Rows highlighted in cream are fields on <b>no</b> layout — API-only.</li>
+  </ul>
+
+  <h2 id="graph">6. The diagram</h2>
+  <p><b class="ui">Graph ↗</b> (in Functions mode) opens the call graph; <b class="ui">Schema ↗</b> (in Modules
+    mode) opens the module graph. From a module preview, <b class="ui">Open ER ↗</b> opens the entity-relationship
+    diagram focused on that module.</p>
+  <ul>
+    <li>Three tabs: <b>Explorer</b> (list + detail), <b>Visual</b> (node-link), <b>ER diagram</b> (tables and keys),
+      plus <b>Relations</b> — see the next section.</li>
+    <li>Selecting a module in Explorer sets the focus for all views. <b>Depth</b> controls how many hops out
+      from it are drawn; clicking a table re-centres the diagram there.</li>
+    <li><b class="ui">Scope</b> switches between the focused neighbourhood and the whole org. Whole-org plus
+      <b class="ui">Save PDF</b> produces a single page the size of the drawing — the wall-poster case. Set
+      <b class="ui">Fields: key</b> first or it will be unreadable.</li>
+    <li><b class="ui">Emphasis: relations</b> pushes the module boxes into the background and brings the
+      relation names forward.</li>
+    <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
+      card appears with the relation's API name and the Deluge call, ready to copy.</li>
+    <li><b class="ui">Layout ⚙</b> exposes spacing, spread and label size as live sliders. There is no correct
+      value — dense or airy depends on what you are looking at.</li>
+  </ul>
+
+  <h2 id="relations">7. Finding a relation name</h2>
+  <div class="box">
+    <p>The API name of a related list is <b>not</b> the api&nbsp;name of either module. It is a third string,
+      and it is what <code>zoho.crm.getRelatedRecords()</code> requires. This is the single most common way to
+      lose twenty minutes writing Deluge.</p>
+  </div>
+  <p>Two places give it to you:</p>
+  <ul>
+    <li><b>Module preview → Related lists</b>, in the side panel. Click an API name to copy it.</li>
+    <li><b>Relations tab</b> in the graph window: one row per relation, with the target module, the lookup
+      field or linking module behind it, and the full call. Filter chips hide the system related lists
+      (Notes, Attachments, Tasks…) so only your own relations remain.</li>
+  </ul>
+
+  <h2 id="health">8. Health audit</h2>
+  <p><b class="ui">Health</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
+    lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
+    not</b> analyse — client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
+  <p>Treat every entry as a <b>candidate to review</b>. Nothing is ever deleted for you, and an "orphan" may
+    simply be called from somewhere the API does not report.</p>
+
+  <h2 id="export">9. Exports</h2>
+  <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
+    layouts, relations, workflows, schedules, health. The <b>Share-safe</b> preset excludes source code.</p>
+  <ul>
+    <li><b class="ui">Export HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
+      handing to a colleague or a manager.</li>
+    <li><b class="ui">Export AI</b> — the same material as Markdown, shaped as context for an external LLM.</li>
+  </ul>
+  <div class="box warn">
+    <p><b>An export is a file that leaves your machine.</b> With source code included it contains your whole
+      business logic and any credentials someone hardcoded in a function. Decide deliberately, every time.</p>
+  </div>
+  <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
+
+  <h2 id="ai">10. AI assistant &amp; API keys</h2>
+  <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
+    <b>AI assistant</b>. Two providers are supported.</p>
+
+  <h3>Anthropic (Claude) — full agent</h3>
+  <ol>
+    <li>Go to <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
+      and create an API key. <b>A Claude.ai subscription is not an API key</b> — the developer API is billed
+      separately.</li>
+    <li>Paste the key and the exact model id from Anthropic's docs.</li>
+  </ol>
+  <p>With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers,
+    reads schemas and searches code by itself. Every tool it uses is shown in the chat.</p>
+
+  <h3>OpenAI (ChatGPT) — single-shot</h3>
+  <ol>
+    <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
+      → <b>Create new secret key</b>. Copy it immediately; it is shown once.</li>
+    <li><b>ChatGPT Plus is not API access.</b> Add prepaid credit under Billing on the platform, and set a
+      monthly spending limit while you are there.</li>
+    <li>Paste the key and the model id.</li>
+  </ol>
+  <p>OpenAI receives the org index plus the function you have open — not your whole codebase — and answers in
+    <b>one pass</b>. It cannot go and read another function by itself, so it will ask you for what it is
+    missing rather than invent it. That is intended, but it is a real difference in capability.</p>
+
+  <h3>Which one to choose</h3>
+  <table>
+    <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
+      <tr><td class="k">What it sees</td><td>Whatever it decides to open: any function, module, workflow, plus code search</td><td>The org index and the function currently open</td></tr>
+      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A “thinking…” indicator until the answer arrives</td></tr>
+      <tr><td class="k">Best for</td><td>“What breaks if I change this?”, tracing behaviour across the org</td><td>Focused questions about the function in front of you</td></tr>
+    </tbody>
+  </table>
+  <p>The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.</p>
+
+  <h3>Keeping the conversation — and the bill — under control</h3>
+  <p><b class="ui">↺ Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
+    thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
+    subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever —
+    it caps how many explore-then-answer rounds the agent may take before it must reply.</p>
+  <p><b>Max tool steps</b> caps how many explore-then-answer rounds the Anthropic agent may take. Higher means
+    better answers and more spend.</p>
+  <div class="box warn">
+    <p><b>The assistant is the one feature that sends data off your machine.</b> Deluge source, schemas and
+      workflow definitions go to the provider you configure, under their terms. If your organisation restricts
+      sending source code to third-party AI services, leave it off. Everything else in Zoost is local.</p>
+  </div>
+
+  <h2 id="guard">11. Production vs sandbox</h2>
+  <p>Every workspace is bound to one org, host and instance, recorded in its <code>.zoost.json</code>. If the
+    Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar
+    offering to switch tab or switch workspace. This is deliberate friction: it is what stops a sandbox pull
+    from overwriting a production mirror.</p>
+  <p>Renaming a folder, or renaming the portal in Zoho, does not break anything — identity lives in the org id
+    inside the file, not in the folder name.</p>
+
+  <h2 id="trouble">12. When something goes wrong</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Folder button is amber</td><td>The browser dropped the file-system permission. One click restores it; no file picker opens.</td></tr>
+      <tr><td class="k">Everything is disabled</td><td>Either no Zoho CRM tab is active, or the tab's org does not match the selected workspace. The bar at the top says which.</td></tr>
+      <tr><td class="k">No related lists / no layout matrix</td><td>That workspace was pulled before those existed. Run <b class="ui">Pull all</b> again and reopen the diagram.</td></tr>
+      <tr><td class="k">AI: <code>401</code></td><td>Wrong key, or whitespace pasted with it.</td></tr>
+      <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>The key is valid but the API balance is zero. API billing is separate from any chat subscription.</td></tr>
+      <tr><td class="k">AI: <code>404</code> on the model</td><td>Model id typo, or the model is not enabled for your account tier. Copy it from the provider's model list.</td></tr>
+      <tr><td class="k">Diagram is unreadable</td><td>Lower the depth, or open <b class="ui">Layout ⚙</b> and raise box spacing. For a crowded area, click the arc you care about to isolate it.</td></tr>
+      <tr><td class="k">Pull is slow</td><td>Normal on large orgs: one call per module for fields, layouts and related lists, deliberately paced to stay friendly to Zoho's API.</td></tr>
+    </tbody>
+  </table>
+  <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and
+    maintained in spare time — best effort, no guaranteed response time.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Zoost is an independent, unofficial developer tool, licensed under the Apache License 2.0 and provided
+      AS IS. Not affiliated with, endorsed by or sponsored by Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge"
+      are trademarks of Zoho Corporation, used nominatively to indicate compatibility.</p>
+  </div>
+</footer>
+
+</body>
+</html>

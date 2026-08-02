@@ -1,0 +1,44 @@
+Copyright 2026 Ivan Notaristefano
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+TRADEMARKS
+
+This product is an independent, unofficial developer tool. It is not
+affiliated with, endorsed by, sponsored by, or supported by Zoho
+Corporation Pvt. Ltd.
+
+"Zoho", "Zoho CRM" and "Deluge" are trademarks or registered trademarks
+of Zoho Corporation Pvt. Ltd. They are used in this project solely in a
+nominative, descriptive sense to indicate compatibility, as permitted
+under Section 6 of the Apache License, Version 2.0, which grants no
+trademark rights.
+
+All other trademarks are the property of their respective owners.
+
+---
+
+NO WARRANTY, NO SUPPORT
+
+This software is provided free of charge and AS IS. There is no
+warranty of any kind and no obligation on the author to provide
+support, maintenance, updates or fixes.
+
+The software reads data from the Zoho CRM instance the user is already
+signed in to, and writes it to a local folder chosen by the user. The
+author has no access to that data and no control over what the user
+subsequently does with it. Deciding what may be extracted and where it
+may be sent is the sole responsibility of the user and, where
+applicable, of the organisation whose data it is.

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy policy — Zoost</title>
+<meta name="description" content="Privacy policy for the Zoost Chrome extension. No data is collected by the developer.">
+<link rel="canonical" href="https://zoost.it/privacy.html">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0d121c">
+<meta name="robots" content="index,follow">
+<style>
+  :root{
+    --bg:#0d121c; --surface:#151d2b; --ink:#e7edf6; --muted:#8ea0bb;
+    --border:#26303f; --line:#1e2735; --sel:#3b82f6; --amber:#d97706; --teal:#83d8c6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--teal)}
+  .wrap{max-width:760px;margin:0 auto;padding:0 22px}
+  header{border-bottom:1px solid var(--line)}
+  header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
+  header img{width:26px;height:26px;border-radius:6px}
+  header .nm{font-weight:700}
+  header nav{margin-left:auto;font-size:13.5px}
+  header nav a{color:var(--muted);text-decoration:none}
+  header nav a:hover{color:var(--ink)}
+  main{padding:48px 0 70px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
+  .upd{font:12.5px var(--mono);color:var(--muted);margin:0 0 34px}
+  h2{font-size:18px;margin:38px 0 10px;letter-spacing:-.01em}
+  h3{font-size:15px;margin:22px 0 6px;color:var(--ink)}
+  p,li{color:#c3cddc;font-size:15.5px}
+  ul{padding-left:20px} li{margin:7px 0}
+  code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 20px;margin:18px 0}
+  .box.warn{border-color:#6b4a1c;background:#1e1a12}
+  .box h3{margin-top:0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
+  footer{border-top:1px solid var(--line);padding:26px 0 60px;color:var(--muted);font-size:13px}
+  footer .legal{max-width:78ch;line-height:1.65}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <img src="/icon-192.png" alt="">
+    <span class="nm">Zoost</span>
+    <nav><a href="/docs.html">How to</a> &nbsp; <a href="/">← Back to Zoost</a></nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <h1>Privacy policy</h1>
+  <p class="upd">Zoost — Chrome extension · Last updated: 2 August 2026</p>
+
+  <div class="box">
+    <h3>The short version</h3>
+    <p>Zoost collects nothing. It has no server, no account, no analytics and no tracking of any kind.
+      Your data moves between your browser, the Zoho CRM instance you are already signed in to, and a
+      folder on your own disk. The single exception is the optional AI assistant, which sends what you
+      ask it about to the AI provider <em>you</em> configure with <em>your own</em> API key. Nothing is
+      ever sent to the developer.</p>
+  </div>
+
+  <h2>1. Who is responsible</h2>
+  <p>Zoost is developed and published by <b>Ivan Notaristefano</b>, an individual developer, as an
+    independent, unofficial tool. Contact: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
+  <p>Zoost is not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation.
+    Data held inside your Zoho CRM remains governed by your own agreement with Zoho and by your
+    organisation's policies; this document covers only what the Zoost extension does with it.</p>
+
+  <h2>2. What the developer collects</h2>
+  <p><b>Nothing.</b> The extension contains no analytics, no telemetry, no error reporting, no
+    advertising identifiers, no cookies and no remotely hosted code. There is no backend service
+    operated by the developer, so there is no place for your data to arrive.</p>
+  <p>The developer therefore does not sell, share, transfer or otherwise process your personal data,
+    because it never receives any.</p>
+
+  <h2>3. What is stored, and where</h2>
+  <p>Everything Zoost stores lives on the computer you are using.</p>
+
+  <table>
+    <thead><tr><th>Where</th><th>What</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="p">Local folder<br>(File System Access)</td>
+        <td>Deluge function source, module and layout metadata, related lists, workflows, schedules,
+          exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host and
+          instance name.</td>
+        <td>This is the point of the tool: a local, versionable mirror you can put under Git.</td>
+      </tr>
+      <tr>
+        <td class="p">chrome.storage.local</td>
+        <td>Your preferences: AI engine choice, model, API key, export defaults, diagram layout settings.</td>
+        <td>Settings must survive a browser restart.</td>
+      </tr>
+      <tr>
+        <td class="p">IndexedDB</td>
+        <td>The browser handle for the working folder you selected, plus which workspace was last active.</td>
+        <td>So you do not have to re-pick the folder every time.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>None of this is transmitted anywhere. You can erase all of it at any time by removing the extension
+    and deleting the working folder. Removing the extension deletes the browser-side storage; the local
+    folder is yours and is left untouched.</p>
+
+  <h2>4. Where data travels</h2>
+
+  <h3>4.1 Your Zoho CRM</h3>
+  <p>Zoost calls the Zoho CRM API of the instance open in your tab, using the session you are already
+    signed in with. It sends no credentials of its own and creates none. It operates strictly within
+    your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.</p>
+  <p>Zoost reads metadata and function source. It does not read, download or export your CRM records
+    — no contacts, no deals, no customer data.</p>
+
+  <h3>4.2 The AI provider — only if you enable it</h3>
+  <div class="box warn">
+    <h3>Read this before enabling the assistant</h3>
+    <p>The AI assistant is off by default and requires you to enter your own API key. Once enabled, the
+      content it needs to answer you — which includes <b>Deluge source code</b>, module schemas, workflow
+      definitions and your questions — is sent directly from your browser to the provider you selected:
+      Anthropic or OpenAI. No other destination is possible: the extension is granted network access to
+      those two origins and to your Zoho CRM, and to nothing else.</p>
+    <p>That provider then processes the data under <b>its own</b> terms and privacy policy, not this one.
+      The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
+      If your organisation restricts sending source code or business logic to third-party AI services,
+      do not enable this feature.</p>
+  </div>
+  <p>Your API key is stored only in <code>chrome.storage.local</code> on your machine and is sent only to
+    the provider it belongs to.</p>
+
+  <h3>4.3 Exports</h3>
+  <p>Export files are written to your working folder and go nowhere on their own. Before each export,
+    Zoost asks which sections may be included; source code is opt-in and is flagged when selected. What
+    happens to a file after you create it is your responsibility and that of the organisation whose data
+    it describes.</p>
+
+  <h2>5. Permissions, and why each one exists</h2>
+  <ul>
+    <li><code>sidePanel</code> — the extension's interface is a Chrome side panel.</li>
+    <li><code>storage</code> — to keep your settings, as described above.</li>
+    <li><code>scripting</code> — to inject the bridge script that talks to the Zoho CRM API using your
+      session, and the hook that notices when you save a function so the local copy can follow.</li>
+    <li><code>tabs</code> — to detect which Zoho CRM instance and org the active tab belongs to, so that a
+      production workspace can never be synced against a sandbox by mistake.</li>
+    <li><b>Host access to Zoho CRM domains</b> (<code>crm.zoho.*</code>, <code>crmsandbox.zoho.*</code>,
+      <code>one.zoho.*</code>) — the only sites the extension runs on. It is inert everywhere else.</li>
+    <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> — the only two
+      AI destinations the extension can reach, used solely by the optional AI assistant and only after you
+      configure it.</li>
+  </ul>
+  <p>Zoost requests no access to your browsing history, bookmarks, downloads, saved passwords or any site
+    other than those listed above.</p>
+
+  <h2>6. Legal basis and your rights</h2>
+  <p>Because the developer receives no personal data, there is no processing to consent to, object to,
+    or request access to. Data protection rights in respect of the CRM data itself are exercised against
+    the controller of that data — your organisation — and, where relevant, against the AI provider you
+    chose, under their respective policies.</p>
+
+  <h2>7. Children</h2>
+  <p>Zoost is a developer and administration tool for business software. It is not directed at children
+    and is not intended for use by anyone under 16.</p>
+
+  <h2>8. This website</h2>
+  <p>zoost.it is a static site. It sets no cookies, embeds no trackers, loads no third-party fonts,
+    scripts or analytics, and does not profile visitors. Your hosting provider may keep standard server
+    access logs; those are outside the scope of this policy.</p>
+
+  <h2>9. Changes</h2>
+  <p>If a future version of Zoost changes what data is handled or where it travels, this policy will be
+    updated and the date at the top revised before that version is published. Material changes will be
+    noted in the extension's release notes.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="legal">
+      Zoost is an independent, unofficial developer tool, licensed under the Apache License 2.0 and
+      provided AS IS, without warranties or conditions of any kind. It is not affiliated with, endorsed by,
+      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of
+      Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

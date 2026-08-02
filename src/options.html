@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zoost — Settings</title>
+<style>
+  :root{
+    --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
+    --border:#26303f; --line:#1e2735; --sel:#3b82f6; --sel-soft:#16263f;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  .wrap{max-width:780px;margin:0 auto;padding:28px 22px 60px}
+  header{display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
+  header h1{font-size:19px;margin:0}
+  header .v{font:12px var(--mono);color:var(--muted)}
+  section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  section h2{font-size:14px;margin:0 0 4px}
+  section .sub{font-size:12px;color:var(--muted);margin:0 0 14px;max-width:62ch}
+  label{display:block;margin:10px 0}
+  label .lt{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=password],input[type=number],select{
+    width:100%;background:#0f1826;color:var(--ink);border:1px solid var(--border);
+    border-radius:8px;padding:9px 11px;font:13px var(--sans);outline:none}
+  input:focus,select:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  input[type=number]{width:110px}
+  button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
+    border-radius:8px;padding:8px 14px;cursor:pointer}
+  button:hover{border-color:var(--sel)}
+  button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+  button.primary:hover{background:#2f6fe0}
+  button.danger{color:#f4a9a9;border-color:#5c3436}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
+  .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .prov.on{border-color:#3f6ea8;background:rgba(47,111,237,.06)}
+  .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
+  .ck.ind{padding-left:22px}
+  .ck input{margin-top:3px;accent-color:var(--sel)}
+  .ck em{font-style:normal;color:#f0a44a}
+  .path{font:12.5px var(--mono);color:#83d8c6;background:#0f1826;border:1px solid var(--border);
+    border-radius:8px;padding:8px 11px;flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .path.none{color:var(--muted)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+  .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
+  .slid{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .slid .lt{flex:0 0 130px;margin:0}
+  .slid input[type=range]{flex:1;accent-color:#d97706}
+  .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#f0a44a}
+  .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
+  a{color:#83d8c6}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#16351f;border:1px solid #2f6f4a;color:#a7e8c0;padding:9px 16px;border-radius:9px;
+    font-size:13px;transition:opacity .18s,transform .18s;pointer-events:none}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.bad{background:#3a1f22;border-color:#7a3a40;color:#f4b8b8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Zoost</h1><span class="v" id="ver"></span><span class="v">settings</span></header>
+
+  <section>
+    <h2>Working folder</h2>
+    <p class="sub">One folder holds every workspace. Zoost creates a subfolder per Zoho org, named
+      <code>instance[-sandbox]-orgid</code>. The folder name is only a label — a workspace is identified
+      by the org id inside its <code>.zoost.json</code>, so renaming is safe.</p>
+    <div class="row">
+      <span class="path none" id="rootPath">Not set</span>
+      <button id="pickRoot" class="primary">Choose folder…</button>
+      <button id="clearRoot" class="danger">Forget</button>
+    </div>
+    <div class="warnbox">Granting access gives Zoost read/write over <b>everything inside that folder</b>, for as
+      long as the permission lasts. Use a dedicated folder, not your home or Documents.</div>
+    <p class="note">Chrome may ask the side panel to confirm this permission again the first time it
+      writes. That prompt is expected and appears once per session at most.</p>
+  </section>
+
+  <section>
+    <h2>AI assistant</h2>
+    <p class="sub">Bring your own key. Two providers are supported: <b>Anthropic</b> and <b>OpenAI</b>.
+      Requests go straight from your browser to the one you choose — never through any server of ours.
+      Keys are stored in <code>chrome.storage.local</code> on this machine.</p>
+    <label><span class="lt">Engine</span>
+      <select id="aiengine">
+        <option value="anthropic">Anthropic (Claude) — full agent, tool use</option>
+        <option value="openai">OpenAI (ChatGPT) — single-shot</option>
+      </select>
+    </label>
+    <div class="prov" id="provAnthropic">
+      <h3>Anthropic</h3>
+      <div class="grid2">
+        <label><span class="lt">Model</span><input type="text" id="ai_a_model" placeholder="e.g. claude-sonnet-4-5"></label>
+        <label><span class="lt">API key</span><input type="password" id="ai_a_key" placeholder="sk-ant-…"></label>
+      </div>
+    </div>
+    <div class="prov" id="provOpenai">
+      <h3>OpenAI (ChatGPT)</h3>
+      <div class="grid2">
+        <label><span class="lt">Model</span><input type="text" id="ai_o_model" placeholder="e.g. gpt-4o-mini"></label>
+        <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
+      </div>
+    </div>
+    <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="30"></label>
+    <div class="warnbox">The assistant sends the parts of your workspace it needs — including <b>Deluge source
+      code</b> — to the provider you configure. Check that this is acceptable for your organisation before use.</div>
+    <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
+  </section>
+
+  <section>
+    <h2>Export defaults</h2>
+    <p class="sub">What the export dialog starts with. You can still change it per export.</p>
+    <label class="ck"><input type="checkbox" id="sc_functions"><span><b>Functions</b> — inventory, namespaces, cross-references</span></label>
+    <label class="ck ind"><input type="checkbox" id="sc_code"><span><b>Deluge source code</b> — the full body of every function <em>the most sensitive part</em></span></label>
+    <label class="ck"><input type="checkbox" id="sc_modules"><span><b>Module schema</b> — fields, types, lookups, picklists</span></label>
+    <label class="ck ind"><input type="checkbox" id="sc_layouts"><span><b>Layout detail</b> — sections and per-layout fields</span></label>
+    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> — related-list API names and Deluge calls</span></label>
+    <label class="ck"><input type="checkbox" id="sc_workflows"><span><b>Workflows</b> — triggers, criteria, actions</span></label>
+    <label class="ck"><input type="checkbox" id="sc_schedules"><span><b>Schedules</b></span></label>
+    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> — orphans, unresolved calls, broken automations</span></label>
+    <div class="row" style="margin-top:12px">
+      <button id="scFull">Everything</button><button id="scSafe">Share-safe</button>
+      <button id="saveScope" class="primary">Save defaults</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Diagram layout</h2>
+    <p class="sub">The ER diagram reads these values when it opens. They are the <i>same</i> setting the
+      graph window's <b>Layout ⚙</b> panel edits, so adjusting a slider there updates what you see here —
+      there is no separate default to fall out of sync. <b>Reset to preset</b> in the graph returns to the
+      built-in values for the current emphasis mode, not to these.</p>
+    <div class="slid"><span class="lt">Box spacing</span><input type="range" id="pMargin" min="10" max="320" step="5"><span class="val" id="vMargin"></span></div>
+    <div class="slid"><span class="lt">Spread</span><input type="range" id="pSpread" min="10" max="160" step="2"><span class="val" id="vSpread"></span></div>
+    <div class="slid"><span class="lt">Ring radius</span><input type="range" id="pRing" min="200" max="1400" step="20"><span class="val" id="vRing"></span></div>
+    <div class="slid"><span class="lt">Label gap</span><input type="range" id="pGap" min="0" max="48" step="2"><span class="val" id="vGap"></span></div>
+    <div class="slid"><span class="lt">Label size</span><input type="range" id="pFs" min="8" max="22" step="1"><span class="val" id="vFs"></span></div>
+    <label class="ck"><input type="checkbox" id="pSub"><span>Show the lookup field under the relation name</span></label>
+    <div class="row" style="margin-top:12px"><button id="layReset">Restore built-in defaults</button><button id="saveLay" class="primary">Save</button></div>
+  </section>
+
+  <section>
+    <h2>About</h2>
+    <p class="sub">Created by <b>Ivan Notaristefano</b> · <a id="licenceLink" href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>
+    <div class="legal" id="legal"></div>
+    <p class="note">Zoost reads from the Zoho CRM instance you are already signed in to and writes to the
+      working folder above. It has no server of its own. Exports are files you create deliberately —
+      where they go afterwards is your responsibility.</p>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="idb.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

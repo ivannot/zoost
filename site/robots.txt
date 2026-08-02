@@ -1,0 +1,5 @@
+# https://zoost.it/robots.txt
+User-agent: *
+Allow: /
+
+Sitemap: https://zoost.it/sitemap.xml

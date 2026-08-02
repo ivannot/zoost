@@ -1,0 +1,107 @@
+{
+  "manifest_version": 3,
+  "name": "Zoost — workbench for Zoho CRM",
+  "version": "1.0.0",
+  "short_name": "Zoost",
+  "homepage_url": "https://zoost.it",
+  "description": "Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows.",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://crm.zoho.eu/*",
+    "https://crm.zoho.com/*",
+    "https://crm.zoho.in/*",
+    "https://crm.zoho.com.au/*",
+    "https://crm.zoho.jp/*",
+    "https://crm.zohocloud.ca/*",
+    "https://crmsandbox.zoho.eu/*",
+    "https://crmsandbox.zoho.com/*",
+    "https://crmsandbox.zoho.in/*",
+    "https://crmsandbox.zoho.com.au/*",
+    "https://crmsandbox.zoho.jp/*",
+    "https://crmsandbox.zohocloud.ca/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://one.zoho.eu/*",
+    "https://one.zoho.com/*",
+    "https://one.zoho.in/*",
+    "https://one.zoho.com.au/*",
+    "https://one.zoho.jp/*",
+    "https://one.zohocloud.ca/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Zoost",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://crm.zoho.eu/*",
+        "https://crm.zoho.com/*",
+        "https://crm.zoho.in/*",
+        "https://crm.zoho.com.au/*",
+        "https://crm.zoho.jp/*",
+        "https://crm.zohocloud.ca/*",
+        "https://crmsandbox.zoho.eu/*",
+        "https://crmsandbox.zoho.com/*",
+        "https://crmsandbox.zoho.in/*",
+        "https://crmsandbox.zoho.com.au/*",
+        "https://crmsandbox.zoho.jp/*",
+        "https://crmsandbox.zohocloud.ca/*"
+      ],
+      "js": [
+        "hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://crm.zoho.eu/*",
+        "https://crm.zoho.com/*",
+        "https://crm.zoho.in/*",
+        "https://crm.zoho.com.au/*",
+        "https://crm.zoho.jp/*",
+        "https://crm.zohocloud.ca/*",
+        "https://crmsandbox.zoho.eu/*",
+        "https://crmsandbox.zoho.com/*",
+        "https://crmsandbox.zoho.in/*",
+        "https://crmsandbox.zoho.com.au/*",
+        "https://crmsandbox.zoho.jp/*",
+        "https://crmsandbox.zohocloud.ca/*"
+      ],
+      "js": [
+        "content-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "ISOLATED",
+      "all_frames": true
+    }
+  ]
+}
