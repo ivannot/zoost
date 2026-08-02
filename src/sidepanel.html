@@ -22,8 +22,8 @@
   .wsroot.needgrant:hover{background:rgba(217,119,6,.20);border-color:#d97706;color:#fbbf24}
   .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}   /* min-width:0 lets the select shrink (and ellipsize) instead of shoving Remove off-screen */
   .wsbar button{flex:none}
-  .modebar{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
-  .seg{flex:1 1 auto;min-width:64px;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 4px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap}
+  .modebar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}
   #pvtable{display:none;flex:1;overflow:auto}
   .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
@@ -233,6 +233,7 @@
   .wfact{display:inline-block;background:#22304a;color:var(--muted);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px}
   .wf-fn{display:inline-block;background:rgba(59,111,224,.18);color:#82d2ff;border:1px solid var(--sel);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
   .wf-fn:hover{background:var(--sel);color:#fff}
+  .connfns{padding:6px 10px 2px}
   .wslbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;align-self:center;margin-right:2px}
   .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;margin-right:5px;vertical-align:middle}
   .rlbl.remote{background:#1e3a5f;color:#8ec5ff}
@@ -358,6 +359,7 @@
     <button id="mModules" class="seg">Modules</button>
     <button id="mWorkflows" class="seg">Workflows</button>
     <button id="mSchedules" class="seg">Schedules</button>
+    <button id="mConnections" class="seg">Connections</button>
   </div>
   <div class="bar">
     <!-- Pull and Refresh are always present → fixed on the left (Pull 1st, Refresh 2nd), so Refresh

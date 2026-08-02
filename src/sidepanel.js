@@ -562,19 +562,21 @@ function buildTypeChips() {
     ? [['all', 'All'], ...NS.map((n) => [n, n === 'validation_rule' ? 'validation' : n]), ['rest', 'REST']]
     : viewMode === 'modules'
     ? [['all', 'All'], ['standard', 'Standard'], ['custom', 'Custom']]
+    : viewMode === 'connections'
+    ? [['all', 'All'], ['used', 'Used'], ['unused', 'Unused'], ['disconnected', 'Disconnected']]
     : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
-  if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else scheduleFilter = 'all';
+  if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else if (viewMode === 'schedules') scheduleFilter = 'all'; else connCatFilter = 'all';
   // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
   // second row, eating vertical space the tree/preview below needs more than the filter does.
   const lbl = document.createElement('span'); lbl.className = 'fsellbl';
-  lbl.textContent = viewMode === 'functions' ? 'Type' : viewMode === 'modules' ? 'Kind' : 'Status';
+  lbl.textContent = viewMode === 'functions' ? 'Type' : viewMode === 'modules' ? 'Kind' : viewMode === 'connections' ? 'Filter' : 'Status';
   const sel = document.createElement('select'); sel.className = 'filtersel'; sel.setAttribute('aria-label', lbl.textContent + ' filter');
   defs.forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); });
   sel.value = 'all';
   sel.onchange = () => {
     const k = sel.value;
-    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else scheduleFilter = k;
-    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : renderSchedules());
+    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k; else connCatFilter = k;
+    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
 }
@@ -603,6 +605,7 @@ function runSearch() {
   if (viewMode === 'modules') { renderModules(); return; }
   if (viewMode === 'workflows') { renderWorkflows(); return; }
   if (viewMode === 'schedules') { renderSchedules(); return; }
+  if (viewMode === 'connections') { renderConnections(); return; }
   if (searchMode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
   else renderTree();
 }
@@ -1151,7 +1154,8 @@ function setMode(mode) {
   $('mModules').classList.toggle('active', mode === 'modules');
   $('mWorkflows').classList.toggle('active', mode === 'workflows');
   $('mSchedules').classList.toggle('active', mode === 'schedules');
-  const _typeLabel = ({ functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules' }[mode] || 'functions');
+  $('mConnections').classList.toggle('active', mode === 'connections');
+  const _typeLabel = ({ functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules', connections: 'connections' }[mode] || 'functions');
   $('pullone').textContent = 'Pull';   // local: pulls only the current type; the type is given by the active mode segment above
   $('pullone').title = `Pull only ${_typeLabel} into the local mirror — “Pull all” pulls every type`;
   buildTypeChips();
@@ -1167,7 +1171,8 @@ $('mFunctions').onclick = () => setMode('functions');
 $('mModules').onclick = () => setMode('modules');
 $('mWorkflows').onclick = () => setMode('workflows');
 $('mSchedules').onclick = () => setMode('schedules');
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : rebuildSchedules(); }
+$('mConnections').onclick = () => setMode('connections');
+async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished \u2014 success or error.
@@ -1178,12 +1183,13 @@ function setPullBusy(b) {
 }
 async function pullCurrent() {
   if (pullBusy) return;
-  const label = { functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules' }[viewMode] || 'functions';
+  const label = { functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules', connections: 'connections' }[viewMode] || 'functions';
   setPullBusy(true); setStatus('Pulling ' + label + '\u2026', 'busy');   // immediate feedback (underlying pull sets its own progress next)
   try {
     if (viewMode === 'modules') await pullModules();
     else if (viewMode === 'workflows') await pullWorkflows();
     else if (viewMode === 'schedules') await pullSchedules();
+    else if (viewMode === 'connections') await pullConnections();
     else await pullAll();
     if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
   } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
@@ -1192,7 +1198,7 @@ async function pullCurrent() {
 async function pullEverything() {
   if (pullBusy) return;
   setPullBusy(true);
-  try { await pullAll(); await pullModules(); await pullWorkflows(); await pullSchedules(); } catch (_) {}
+  try { await pullAll(); await pullModules(); await pullWorkflows(); await pullSchedules(); await pullConnections(); } catch (_) {}
   try { await rebuildActive(); } catch (_) {}
   setPullBusy(false);
 }
@@ -1571,7 +1577,7 @@ function updateRow(e) {
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
-  if (viewMode === 'modules' || viewMode === 'schedules') { b.style.display = 'none'; return; }
+  if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;
   const miss = arr.filter((e) => !e.downloaded).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
@@ -2196,6 +2202,94 @@ async function pullSchedules() {
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 — some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
   } catch (e) { setStatus('Schedules pull error: ' + e.message, 'bad'); }
+}
+// Org-wide connections catalogue → _connections/_index.json. Written once per "Pull all".
+async function pullConnections() {
+  try {
+    if (!(await ensurePerm(dir))) return;
+    const ctx = await getContext(); if (!ctx) { setStatus('No Zoho CRM tab open.', 'warn'); return; }
+    const cfg = await readCfg();
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch — refusing.', 'warn'); return; }
+    setStatus('Pulling connections…', 'busy');
+    const r = await toBridge({ cmd: 'pullConnections' });
+    if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    await writeFile('_connections/_index.json', JSON.stringify(r.connections || [], null, 2));
+    if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
+    else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
+  } catch (e) { setStatus('Connections pull error: ' + e.message, 'bad'); }
+}
+// ---------- connections view (org-wide catalogue + usage) ----------
+let connectionData = [], connCatFilter = 'all';
+async function loadConnectionsIndex() {
+  let idx = []; try { idx = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  return Array.isArray(idx) ? idx : [];
+}
+async function rebuildConnections() {
+  if (!dir) return;
+  try {
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
+    setStatus('Reading connections…', 'busy');
+    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const cat = await loadConnectionsIndex();
+    // usage: which functions reference each connection (join meta.connections[].name)
+    const g = await ensureGraph().catch(() => null);
+    const usedBy = {};
+    if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
+    connectionData = cat.map((c) => ({ ...c, path: '_connections/' + c.name, uses: (usedBy[c.name] || []).slice() }));
+    // connections a function references but that are NOT in the catalogue (renamed / removed)
+    const catNames = new Set(cat.map((c) => c.name));
+    Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: '_connections/' + name, uses: usedBy[name].slice() }); });
+    renderConnections();
+    setStatus(connectionData.length ? `${connectionData.length} connections.` : 'No connections pulled yet — click Pull all.', connectionData.length ? 'ok' : 'warn');
+  } catch (e) { setStatus('Connections error: ' + e.message, 'bad'); }
+  await refreshContext();
+}
+function renderConnections() {
+  if (viewMode !== 'connections') return;
+  const term = $('find').value.trim().toLowerCase();
+  const pass = (c) => {
+    if (connCatFilter === 'used' && !c.uses.length) return false;
+    if (connCatFilter === 'unused' && c.uses.length) return false;
+    if (connCatFilter === 'disconnected' && c.connected !== false) return false;
+    return !term || (c.name || '').toLowerCase().includes(term) || (c.label || '').toLowerCase().includes(term) || (c.connector || '').toLowerCase().includes(term);
+  };
+  const list = connectionData.filter(pass).sort((a, b) => (b.uses.length - a.uses.length) || (a.label || '').localeCompare(b.label || ''));
+  const tree = $('tree'); tree.innerHTML = '';
+  if (!list.length) { tree.innerHTML = '<div class="treemsg">' + (connectionData.length ? 'No matches.' : 'No connections yet — click Pull all.') + '</div>'; return; }
+  list.forEach((c) => {
+    const el = document.createElement('div'); el.className = 'f'; el.dataset.path = c.path;
+    el.setAttribute('aria-selected', c.path === currentPath);
+    const dc = c.missing ? 'st-err' : c.connected === false ? 'st-stale' : 'st-ok';
+    const dch = c.missing ? '⟳' : c.connected === false ? '◐' : '●';
+    const dt = c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected';
+    el.innerHTML = `<span class="st ${dc}" title="${dt}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
+      + `<span class="rest rf" title="functions using it">${c.uses.length}×</span>`
+      + (c.connector ? `<span class="rest rl" style="color:#a78bfa" title="connector">${escHtml(c.connector)}</span>` : '');
+    el.onclick = () => openConnection(c);
+    tree.appendChild(el);
+  });
+}
+function openConnection(c) {
+  currentPath = c.path; pvHist = []; updateBack();
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
+  $('pvname').textContent = c.label || c.name;
+  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
+  const uses = c.uses.slice().sort((a, b) => (nm(a) || '').localeCompare(nm(b) || ''));
+  let h = '<div class="wfd">'
+    + `<div class="wfrow"><span class="wk">Name</span> <b>${escHtml(c.name)}</b></div>`
+    + (c.connector ? `<div class="wfrow"><span class="wk">Connector</span> ${escHtml(c.connectorLabel || c.connector)}</div>` : '')
+    + (c.connected === false ? '<div class="wfrow"><span class="wk">Status</span> <span style="color:#f59e0b">not connected</span></div>' : c.connected === true ? '<div class="wfrow"><span class="wk">Status</span> connected</div>' : '')
+    + (c.createdBy ? `<div class="wfrow"><span class="wk">Created by</span> ${escHtml(c.createdBy)}</div>` : '')
+    + (c.missing ? '<div class="wfrow"><span class="wk">Note</span> <span style="color:#f59e0b">used by functions but not in the pulled catalogue (renamed or removed?)</span></div>' : '')
+    + `<div class="wfrow"><span class="wk">Used by</span> <b>${uses.length}</b> function(s)</div>`;
+  if (uses.length) h += '<div class="connfns">' + uses.map((n) => `<a class="wf-fn" data-file="${escA(n.file)}" title="${escA(n.namespace + '.' + n.name)}">ƒ ${escHtml(nm(n))}</a>`).join('') + '</div>';
+  if (c.scopes && c.scopes.length) h += `<details class="wfraw"><summary>Scopes (${c.scopes.length})</summary><pre>${escHtml(c.scopes.join('\n'))}</pre></details>`;
+  h += '</div>';
+  $('pvtable').innerHTML = h;
+  $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file, true); }));
+  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }
 async function pullWorkflows() {
   try {

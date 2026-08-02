@@ -158,7 +158,7 @@ offer zero-retention.
 - **Workspace select · + · 🗑** — `+` creates the workspace for the org in the active Zoho tab;
   the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
 - Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
-- Mode segments: **Functions · Modules · Workflows · Schedules**.
+- Mode segments: **Functions · Modules · Workflows · Schedules · Connections**.
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), and a **Type / Kind / Status** filter (one-line dropdown).
 
@@ -179,6 +179,11 @@ relevant function / workflow / schedule.
 
 **AI** (Ask AI) — a toggle that opens the assistant panel below the button bar; single persistent chat,
 streaming + Markdown, tool activity shown inline, ⚙ settings, ↺ Clear.
+
+**Connections** — the org's connections catalogue (pulled with **Pull all**), each with how many
+functions use it, the connector, and its status. Filter to **Unused** (used by no function) or
+**Disconnected**; open one to see every function that uses it. Answers "who uses this connection?"
+from structured data, not a text search.
 
 ---
 

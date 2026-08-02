@@ -118,6 +118,12 @@ These all failed **silently**, with no console error. They are the expensive kin
   have clobbered `lastPull`, because it carries fewer fields than the file holds.
 - **OpenAI model compatibility.** Newer models reject `max_tokens` and require
   `max_completion_tokens`. The call tries the first and retries on that specific 400.
+- **`/deluge/` endpoints want a different CSRF prefix than `/crm/`.** The `/crm/...` APIs take the
+  CSRF token as `crmcsrfparam=<token>`; the `/deluge/` (deluge runtime) APIs take the *same* token
+  value as `drepn=<token>`. Wrong prefix → **400, not 401**, so it reads as a bad request, not an
+  auth failure — misleading. `api(path, csrfPrefix)` in `content-bridge.js` carries the prefix; the
+  connections catalogue (`/deluge/api/ui/v1/{org}/services/ZohoCRM/connections`) uses `drepn`, and
+  needs the `zuid` (scraped from the page like the org id).
 
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are

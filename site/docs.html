@@ -37,7 +37,7 @@
   <h1>How to use Zoost</h1>
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
-  <p class="upd">Covers Zoost 1.2 · updated 3 August 2026</p>
+  <p class="upd">Covers Zoost 1.3 · updated 3 August 2026</p>
 
   <div class="toc">
     <b>On this page</b>
@@ -120,6 +120,9 @@ git commit -m "baseline"</code></pre>
     <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
     <li>It also lists the <b>connections</b> the function uses and who last changed it — click a connection
       to filter the tree to every function that uses it (no more "find in file" for a connection name).</li>
+    <li>The <b class="ui">Connections</b> tab lists the org's connection catalogue (pulled with
+      <b class="ui">Pull all</b>): each with how many functions use it, its connector and status. Filter to
+      <b>Unused</b> or <b>Disconnected</b>; open one to see every function that uses it.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
       open it from Zoho’s own <b class="ui">⋯</b> menu. Zoost takes you to it, but the last click is yours —
       it never drives the Zoho interface for you.</li>

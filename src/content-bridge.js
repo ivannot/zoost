@@ -26,16 +26,31 @@
     } catch (_) {}
     return null;
   }
-  const context = () => ({ ok: true, origin: BASE, org: orgId(), instance: instanceName() });
+  // The Zoho user id (zuid) is on every CRM page — a #dreZuId field (deluge runtime) and a `zuid`
+  // JS global. The connections catalogue endpoint needs it. Scraped like orgId (same fragility).
+  function zuid() {
+    try { const el = document.getElementById('dreZuId'); const v = el && String(el.value || el.textContent || '').trim(); if (v && /^\d{6,}$/.test(v)) return v; } catch (_) {}
+    try { const m = document.documentElement.innerHTML.match(/\bzuid\s*["'\s]*[:=]\s*["']?(\d{9,})/i); if (m) return m[1]; } catch (_) {}
+    return null;
+  }
+  const context = () => ({ ok: true, origin: BASE, org: orgId(), instance: instanceName(), zuid: zuid() });
 
-  function headers() {
-    const csrf = cookie('CT_CSRF_TOKEN') || cookie('crmcsr') || cookie('CSRF_TOKEN');
-    const h = { 'X-ZCSRF-TOKEN': 'crmcsrfparam=' + (csrf || ''), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' };
+  function csrfToken() {
+    // Same token value for both prefixes; prefer the cookie, fall back to the page's hidden #token.
+    const c = cookie('CT_CSRF_TOKEN') || cookie('crmcsr') || cookie('CSRF_TOKEN');
+    if (c) return c;
+    try { const el = document.getElementById('token'); if (el && el.value) return el.value; } catch (_) {}
+    return '';
+  }
+  // The /crm/... APIs want the CSRF as `crmcsrfparam=<token>`; the /deluge/ (DRE) APIs want the SAME
+  // token as `drepn=<token>`. Same value, different prefix — a mismatch is a 400.
+  function headers(csrfPrefix) {
+    const h = { 'X-ZCSRF-TOKEN': (csrfPrefix || 'crmcsrfparam') + '=' + csrfToken(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' };
     const org = orgId(); if (org) h['X-CRM-ORG'] = org;
     return h;
   }
-  async function api(path) {
-    const res = await fetch(BASE + path, { headers: headers(), credentials: 'include' });
+  async function api(path, csrfPrefix) {
+    const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
     if (!res.ok) throw new Error(res.status + ' on ' + path);
     return res.json();
   }
@@ -235,6 +250,24 @@
   // removed on principle: the panel offers Find (a deterministic filter, above) and the user opens
   // the function from Zoho's own menu, reading the label in their own language.
 
+  // Connections catalogue: the full list of the org's connections (including ones no function uses).
+  // connection.name is the join key with a function's meta.connections[].name (the connectionLinkName
+  // used in invokeurl [...connection:"..."]). Same host as everything else; needs the zuid.
+  async function pullConnections() {
+    const org = orgId(); const zu = zuid();
+    if (!org) throw new Error('org id not found on the page');
+    if (!zu) throw new Error('zuid not found on the page');
+    const j = await api(`/deluge/api/ui/v1/${org}/services/ZohoCRM/connections?zuid=${zu}&flowNeeded=true&extentionPlatform=false`, 'drepn');
+    const connections = (j.connections || []).map((c) => ({
+      name: c.name, label: c.displayName || c.name,
+      connector: (c.connector && c.connector.name) || null,
+      connectorLabel: (c.connector && c.connector.displayName) || null,
+      connected: c.isConnected !== false, createdBy: c.createdBy || null,
+      scopes: c.scopes || [], id: c.id || null,
+    })).filter((c) => c.name);
+    return { total: connections.length, connections };
+  }
+
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
@@ -255,6 +288,7 @@
     if (msg?.cmd === 'fetchModuleFields') { fetchModuleFields(msg.apiName).then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
     if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
     if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
+    if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }
   });
