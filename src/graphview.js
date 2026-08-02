@@ -323,7 +323,8 @@ document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
   updateTopTools();
   if (curView === 'rel') relRender();
   if (curView === 'visual') {
-    requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); });
+    if (!forceFeasible()) { showVisualTooBig(); }
+    else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
 });
@@ -334,6 +335,28 @@ let scale = 1, offX = 0, offY = 0, focusNode = null, subFocus = null, labelMode 
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
 let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-poster mode)
 let dragging = false, lastX = 0, lastY = 0;
+
+// Deterministic robustness guard. The force layout (settle) is O(n²) per iteration × ~420 and runs
+// on the main thread, so above this many nodes we do NOT attempt it — it would freeze the window.
+// We know n before we start, so we refuse up front and point to the views that stay fast (Explorer,
+// and — for schema — focus + depth). Conservative and NOT calibrated against a very large org; tune
+// this single number if you ever profile one.
+const FORCE_MAX_NODES = 600;
+function forceFeasible() { return nodesA.length <= FORCE_MAX_NODES; }
+function showVisualTooBig() {
+  let ov = document.getElementById('vistoobig');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'vistoobig';
+    ov.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;background:#fff;color:#475569;font:14px/1.7 system-ui,-apple-system,Segoe UI,sans-serif;z-index:6';
+    $('visual').appendChild(ov);
+  }
+  const focusHint = (DATA && DATA.kind === 'schema') ? ', or open the diagram <b>focused on one module</b> with a small depth' : '';
+  ov.innerHTML = `<div style="max-width:560px"><div style="font-size:16px;margin-bottom:8px"><b>${nodesA.length} nodes</b> — too many to lay out interactively.</div>`
+    + `The force-directed graph is not drawn above ${FORCE_MAX_NODES}: it would block this window while it computes.<br><br>`
+    + `Use the <b>Explorer</b> tab — search and filter, always fast${focusHint}.</div>`;
+  ov.style.display = 'flex';
+}
+function hideVisualTooBig() { const ov = document.getElementById('vistoobig'); if (ov) ov.style.display = 'none'; }
 
 function buildLegend() {
   const seen = {}; Object.values(N).forEach((n) => (seen[n.namespace] = 1));
@@ -346,6 +369,7 @@ function buildLegend() {
 }
 function initCanvas() {
   cv = $('cv'); ctx2d = cv.getContext('2d');
+  $('visual').style.position = $('visual').style.position || 'relative';   // anchor the too-big overlay to the canvas area, not the page
   nodesA = Object.keys(N);
   const idx = {}; nodesA.forEach((id, i) => (idx[id] = i));
   const es = new Set();
@@ -469,6 +493,12 @@ function updateScopeUI() {
 }
 function setScope(all) {
   if (!curFocus) return;
+  // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it — we
+  // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
+  if (all && !forceFeasible()) {
+    $('statline').innerHTML = `<b>${nodesA.length} modules</b> — too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(curFocus)}</b>; widen with depth instead.`;
+    return;
+  }
   scopeAll = !!all;
   bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
   if (curView === 'er') erShow();
@@ -660,7 +690,6 @@ function erBoxSize(n) {
 }
 function erLayout() {
   erSelEdge = null;   // positions change under it; a stale pick would point at the wrong arc
-  if (!laidOut) { settle(); laidOut = true; }
   erIds = erVisibleIds();
   if (erConcentric()) {
     // concentric ego layout: focus at centre, each BFS level on its own ring (compact + readable)
@@ -674,8 +703,13 @@ function erLayout() {
       ids.forEach((id, i) => { const ang = (i / n) * 2 * Math.PI - Math.PI / 2; const s = erBoxSize(N[id]); erPos[id] = { x: ringR * Math.cos(ang) - s.w / 2, y: ringR * Math.sin(ang) - s.h / 2, w: s.w, h: s.h }; });
     });
   } else {
+    // Free layout needs the force positions. Concentric focus mode above does NOT (it uses rings),
+    // so settle() is skipped there — that is the common case and it stays cheap at any org size.
+    // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their initial
+    // circular positions (from initCanvas) and the diagram still renders instead of freezing.
+    if (!laidOut && forceFeasible()) { settle(); laidOut = true; }
     const spread = erP.spread / 10;
-    erIds.forEach((id) => { const s = erBoxSize(N[id]); erPos[id] = { x: posX[id] * spread, y: posY[id] * spread, w: s.w, h: s.h }; });
+    erIds.forEach((id) => { const s = erBoxSize(N[id]); erPos[id] = { x: (posX[id] || 0) * spread, y: (posY[id] || 0) * spread, w: s.w, h: s.h }; });
   }
   const margin = erP.margin;   // labels live between the boxes, they need the room
   const passes = erIds.length > 150 ? 60 : 140;   // whole-org layouts are O(n\u00b2) per pass

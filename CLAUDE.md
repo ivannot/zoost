@@ -50,6 +50,17 @@ is inside a folder, and `chrome://extensions` wants the folder.
   fetched. Dead code in either direction is not acceptable.
 - **No legacy fallbacks left lying around.** When something is renamed or replaced, the old path
   goes. Migration code is written to delete itself.
+- **Do what you're certain of, or stop — never click-and-hope.** No retry loops against an
+  assumption, no matching Zoho's *localized* UI text, no synthetic clicks into a DOM contract we
+  do not own. Reach Zoho by constructed URL and read it through the API; if a certain path does not
+  exist, the feature stops with a precise message instead of guessing. This is why the function
+  "Go to" (which drove the Zoho editor via synthetic clicks on a localized "Edit function" label,
+  and looped ten times before failing with a wrong message) was removed in 1.1.0. "Find" navigates
+  to the functions list and filters it deterministically — the last, language-dependent click is
+  the user's. Legitimate exceptions the rule still allows: a *bounded* wait for a known element to
+  appear after a navigation, recovering by a known action (re-injecting the bridge), handling known
+  API variants (OpenAI `max_tokens` vs `max_completion_tokens`), and one retry on a genuinely
+  transient failure (network, 429, 5xx) — never on a deterministic 4xx.
 
 ## Architectural decisions worth not re-litigating
 

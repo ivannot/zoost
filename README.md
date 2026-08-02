@@ -48,7 +48,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **The whole org at once.** Functions, modules, workflows, schedules and their relationships,
   in one navigable place and one shareable document.
 - **Read-first, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
-  server-side; we give you versioning, comprehension, audit — and now an agent.
+  server-side; we give you versioning, comprehension, audit — and now an agent. Zoost never drives
+  Zoho's interface: it navigates by URL and reads through the API — it does not script clicks it
+  cannot be sure of.
 - **An AI that actually knows your org.** Not a generic chatbot: it opens your functions, traces
   your callers, reads your schemas, searches your code — grounded on the current version.
 
@@ -167,8 +169,8 @@ environments.
 
 **Preview** (resizable)
 - Functions: highlighted code, line numbers, a **Called by** bar, clickable custom-function calls,
-  and **Go to ↗** (opens the function in Zoho).
-- Modules: the fields table and **Go to ↗** (records tab, for viewable modules).
+  and **Find in Zoho ↗** (filters the Zoho functions list to it; you open it from Zoho’s own ⋯ menu).
+- Modules: the fields table, **Records ↗** and **Layouts ↗** (for viewable modules).
 
 **Health** — tabbed audit over the local workspace, with a coverage note; items link to the
 relevant function / workflow / schedule.

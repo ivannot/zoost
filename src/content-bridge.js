@@ -5,7 +5,6 @@
 (function () {
   if (window.__zoostBridge) { return; }
   window.__zoostBridge = true;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const PAGE = 50;
   const BASE = location.origin;
@@ -89,19 +88,19 @@
   }
   // Workflow rules — list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {
-    let page = 1, raw = [];
+    let page = 1, raw = [], capped = false;
     while (true) {
       const resp = await api(`/crm/v8/settings/automation/workflow_rules?page=${page}&per_page=200`);
       const rules = resp.workflow_rules || []; raw = raw.concat(rules);
       const info = resp.info || {}; if (!info.more_records || rules.length === 0) break; page++;
-      if (page > 20) break;
+      if (page > 20) { capped = true; break; }   // surfaced to the panel instead of stopping in silence
     }
     const entries = raw.map((r) => ({
       id: String(r.id), name: r.name, description: r.description || '',
       module: (r.module && r.module.api_name) || '', module_id: (r.module && r.module.id) || '',
       type: (r.execute_when && r.execute_when.type) || '', active: !!(r.status && r.status.active), source: r.source || '',
     }));
-    return { total: raw.length, entries };
+    return { total: raw.length, entries, capped };
   }
   async function fetchWorkflow(id) {
     const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}`);
@@ -118,18 +117,18 @@
     return { fields: fr.fields || [] };
   }
   async function listSchedules() {
-    let page = 1, raw = [];
+    let page = 1, raw = [], capped = false;
     while (true) {
       const resp = await api(`/crm/v9/settings/automation/schedules?page=${page}&per_page=200`);
       const s = resp.schedules || []; raw = raw.concat(s);
-      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > 20) break;
+      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > 20) { capped = true; break; }
     }
     const entries = raw.map((s) => ({
       id: String(s.id), name: s.name, status: s.status,
       function_id: (s.function && String(s.function.id)) || '', function_name: (s.function && s.function.name) || '',
       frequency: (s.frequency && s.frequency.type) || '', next: s.next_execution_time || null, last: s.last_execution_time || null,
     }));
-    return { total: raw.length, entries };
+    return { total: raw.length, entries, capped };
   }
   async function fetchOne(id, category, source) {
     const q = []; if (category) q.push('category=' + encodeURIComponent(category)); q.push('language=deluge'); if (source) q.push('source=' + encodeURIComponent(source));
@@ -204,10 +203,12 @@
     }
     return { total: mods.length, modules: out };
   }
-  // Functions-list search box (Lyte input.searchBar, maxlength=20).
+  // Functions-list search box (Lyte input.searchBar, maxlength=20). ONLY the stable, language-
+  // independent class selector. We do not fall back to matching the placeholder text: that is
+  // localized, and guessing from it is exactly the "try and hope" this tool refuses. If Zoho
+  // renames this class, Find stops and says so — it does not improvise.
   function findSearchInput() {
-    return document.querySelector('input.searchBar') ||
-      document.querySelector('input[placeholder*="funzioni" i]') || document.querySelector('input[placeholder*="function" i]');
+    return document.querySelector('input.searchBar');
   }
   function setSearch(input, term) {
     input.focus();
@@ -221,53 +222,14 @@
     const input = findSearchInput(); if (!input) return { ok: false, reason: 'search input not found' };
     const term = String(name).slice(0, 20); setSearch(input, term); return { ok: true, term };
   }
-  // Fire a full, framework-friendly click sequence on an element and a few ancestors (row handler may be on a parent).
-  function fireClick(el) {
-    const opts = { bubbles: true, cancelable: true, view: window };
-    ['pointerover', 'mouseover', 'pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((t) => {
-      try { el.dispatchEvent(t.startsWith('pointer') ? new PointerEvent(t, opts) : new MouseEvent(t, opts)); }
-      catch (_) { try { el.dispatchEvent(new MouseEvent(t.replace('pointer', 'mouse'), opts)); } catch (__) {} }
-    });
-  }
-  function clickChain(el) { let n = el; for (let i = 0; i < 4 && n; i++) { fireClick(n); n = n.parentElement; } }
-  // Find the row carrying the function ID in any attribute (the list binds it — confirmed via the /functions/{id} fetch).
-  function findRowById(id) {
-    if (!id) return null;
-    const els = document.querySelectorAll('[class*="lyte" i], tr, [data-zcqa], [data-id], [id]');
-    for (const el of els) { for (const at of el.attributes) { if (at.value && at.value.indexOf(id) >= 0) return el; } }
-    return null;
-  }
-  function findRowByName(targets) {
-    const els = document.querySelectorAll('lyte-text, lyte-td, td, a, span, div');
-    for (const el of els) { const t = (el.textContent || '').trim().toLowerCase().replace(/\s+/g, ' '); if (t && targets.some((x) => x === t)) return el; }
-    for (const el of els) { const t = (el.textContent || '').trim().toLowerCase().replace(/\s+/g, ' '); if (t && targets.some((x) => x.length > 6 && t.includes(x) && t.length < x.length + 40)) return el; }
-    return null;
-  }
-  // In the details popup, click "Modifica funzione" / "Edit function" to open the editor.
-  async function clickEditLink() {
-    for (let k = 0; k < 24; k++) {
-      await sleep(150);
-      const els = document.querySelectorAll('a, button, span, div, [role="button"], lyte-text, lyte-button');
-      for (const el of els) {
-        const t = (el.textContent || '').trim().toLowerCase();
-        if (t === 'modifica funzione' || t === 'edit function' || t === 'edit') { clickChain(el); return true; }
-      }
-    }
-    return false;
-  }
-  // Filter by the (truncated) name, open the exact function by ID (fallback: exact name), then click Edit to reach the editor.
-  async function openFunction(p) {
-    const input = findSearchInput(); if (!input) return { ok: false, reason: 'search input not found' };
-    const term = String(p.name || p.displayName || '').slice(0, 20); setSearch(input, term);
-    const norm = (x) => (x || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const targets = [p.displayName, p.name, p.apiName].map(norm).filter((t) => t && t.length > 3);
-    let row = null;
-    for (let k = 0; k < 16; k++) { await sleep(180); row = findRowById(p.id) || findRowByName(targets); if (row) break; }
-    if (!row) return { ok: true, term, opened: false, popup: false };
-    clickChain(row);
-    const edited = await clickEditLink();
-    return { ok: true, term, opened: edited, popup: !edited };
-  }
+  // The old "open the function in the Zoho editor" path lived here. It drove Zoho's DOM: it found
+  // the row by matching text/attributes, fired synthetic pointer/mouse click chains on several
+  // ancestors hoping a framework handler would catch, waited for a popup, then clicked a link
+  // matched by its localized label ("Modifica funzione" / "Edit function"). Even with a stable
+  // selector (data-zcqa="cf_editFunction") the final step is a synthetic click that triggers a Lyte
+  // binding we cannot invoke ourselves — "click and hope" through a private DOM contract. It was
+  // removed on principle: the panel offers Find (a deterministic filter, above) and the user opens
+  // the function from Zoho's own menu, reading the label in their own language.
 
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
@@ -291,7 +253,6 @@
     if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }
-    if (msg?.cmd === 'openFunction') { openFunction(msg).then((r) => sendResponse(r)).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
   });
 
   console.debug('[zoost] bridge active on', BASE, '· instance', instanceName(), '· org', orgId());

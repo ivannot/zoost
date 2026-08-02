@@ -250,7 +250,7 @@ function renderTree() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const stTitle = e.error ? 'Download failed \u2014 click to retry' : e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download';
+      const stTitle = e.error ? ('Download failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download';
       el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span>${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
@@ -325,7 +325,8 @@ async function openFile(path, push = false, line = null) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied — click Refresh to grant.', 'bad'); return; }
   if (push && currentPath && currentPath !== path) pvHist.push(currentPath);
   currentPath = path; updateBack(); if ($('status').className) setStatus('', '');
-  $('pvreveal').style.display = ''; $('pvreveal').textContent = 'Go to \u2197'; $('pvreveal').title = 'Open in the Zoho editor'; $('pvfind').style.display = ''; $('pvfind').textContent = 'Find \u2197'; $('pvfind').title = 'Filter in the Zoho list (for the \u22ef menu: Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
+  $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
+  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function \u2014 then open it from Zoho\u2019s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   $('pvname').textContent = path; $('pvcallers').className = ''; $('pvcallers').textContent = '';
   let code; try { code = await readFile(path); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
@@ -456,34 +457,21 @@ async function listReady(id) {
 }
 let _revealListener = null;
 async function listReadyWait(id, tries = 24) { for (let k = 0; k < tries && !(await listReady(id)); k++) await sleep(250); }
-async function doOpen(id, fn, nice) {
-  for (let k = 0; k < 10; k++) {
-    try {
-      await ensureBridge(id);
-      const r = await chrome.tabs.sendMessage(id, { cmd: 'openFunction', id: fn.id, name: fn.name, displayName: fn.displayName, apiName: fn.apiName });
-      if (r && r.ok) {
-        if (r.opened) setStatus(`Opened \u201c${nice}\u201d in the Zoho editor.`, 'ok');
-        else if (r.popup) setStatus(`Opened \u201c${nice}\u201d \u2014 click \u201cModifica funzione\u201d to edit.`, 'warn');
-        else setStatus(`Filtered \u201c${r.term}\u2026\u201d \u2014 select \u201c${nice}\u201d in the browser.`, 'warn');
-        return;
-      }
-    } catch (_) {}
-    await sleep(450);
-  }
-  setStatus('Could not reach the Functions list (not ready?).', 'warn');
-}
+// Find = fill the Zoho functions-list search box with this function's name. We wait (bounded, in
+// reveal) for the search box to exist \u2014 a known, language-independent element \u2014 then fill it ONCE.
+// If it is not there, we STOP and say exactly that, instead of retrying an action we are not sure of.
 async function doFilter(id, fn, nice) {
-  for (let k = 0; k < 10; k++) {
-    try {
-      await ensureBridge(id);
-      const r = await chrome.tabs.sendMessage(id, { cmd: 'fillSearch', name: fn.name || fn.apiName });
-      if (r && r.ok) { setStatus(`Filtered \u201c${r.term}\u2026\u201d \u2014 use the \u22ef menu in the Zoho list.`, 'ok'); return; }
-    } catch (_) {}
-    await sleep(450);
-  }
-  setStatus('Could not filter the list (not ready?).', 'warn');
+  await ensureBridge(id);
+  if (!(await listReady(id))) { setStatus('Couldn\u2019t find the Zoho functions search box \u2014 is the Functions list open?', 'warn'); return; }
+  try {
+    const r = await chrome.tabs.sendMessage(id, { cmd: 'fillSearch', name: fn.name || fn.apiName });
+    if (r && r.ok) { setStatus(`Filtered \u201c${r.term}\u2026\u201d \u2014 open \u201c${nice}\u201d from Zoho\u2019s \u22ef menu.`, 'ok'); return; }
+    setStatus('Couldn\u2019t fill the Zoho search box.', 'warn');
+  } catch (e) { setStatus('Couldn\u2019t reach the Zoho functions list: ' + e.message, 'warn'); }
 }
-async function reveal(fn, action = 'edit') {
+// Navigate to the Zoho Functions list (deterministic URL) and pre-filter it to `fn` (Find). The
+// only DOM touch left is filling the class-selected search box; there is no click-and-hope here.
+async function reveal(fn) {
   const nice = fn.displayName || fn.name || fn.apiName;
   let id = await zohoTabId();
   if (!id) { id = await openTargetZoho(false); if (!id) return; }
@@ -494,7 +482,7 @@ async function reveal(fn, action = 'edit') {
   if (!same) {
     setStatus('Opening Functions list\u2026', 'busy');
     if (url) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.reload(id);
-    await sleep(400); await waitTabComplete(id); await listReadyWait(id); await (action === 'filter' ? doFilter : doOpen)(id, fn, nice); return;
+    await sleep(400); await waitTabComplete(id); await listReadyWait(id); await doFilter(id, fn, nice); return;
   }
   // Same URL -> reload the list, but open the target only AFTER a real reload completes.
   // Handles Zoho's native "unsaved changes" dialog: if the user picks "Reload" (even seconds
@@ -506,7 +494,7 @@ async function reveal(fn, action = 'edit') {
     if (info.status === 'loading') sawLoading = true;
     if (info.status === 'complete' && sawLoading) {
       handled = true; chrome.tabs.onUpdated.removeListener(listener); _revealListener = null;
-      await listReadyWait(id); await (action === 'filter' ? doFilter : doOpen)(id, fn, nice);
+      await listReadyWait(id); await doFilter(id, fn, nice);
     }
   };
   _revealListener = listener;
@@ -528,8 +516,8 @@ async function revealFromPreview(action) {
   }
   const e = treeData.find((x) => x.path === currentPath); if (!e) return;
   const info = index.get(e.id);
-  try { await reveal({ id: e.id, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }, action); }
-  catch (err) { setStatus('Go to failed: ' + err.message, 'warn'); }
+  try { await reveal({ id: e.id, name: info?.name || e.api_name, displayName: e.display_name, apiName: e.api_name }); }
+  catch (err) { setStatus('Find failed: ' + err.message, 'warn'); }
 }
 $('pvreveal').onclick = () => revealFromPreview('edit');
 $('pvfind').onclick = () => revealFromPreview('filter');
@@ -722,7 +710,7 @@ async function healthOpenSchedule(id) { closeHealth(); setMode('schedules'); awa
 function closeHealth() { $('healthview').classList.remove('show'); }
 
 // ---------- AI assistant (BYOK, provider-agnostic; Phase A: context chat) ----------
-let aiMessages = [], aiModCache = null;
+let aiMessages = [], aiModCache = null, aiSeedTruncated = false, aiSeedWarned = false;
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 8 };
@@ -748,6 +736,7 @@ async function aiBuildSeed() {
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; s += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}\n`; });
   const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
   s += `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
+  aiSeedTruncated = s.length > 16000;   // don't hide the cut from the user (see aiSend)
   return aiTrunc(s, 16000);
 }
 async function aiSystemPromptB(withTools) {
@@ -884,8 +873,17 @@ async function aiSend() {
   aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); setStatus('AI thinking\u2026', 'busy');
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
-    if (cfg.active === 'anthropic') { const system = await aiSystemPromptB(true); await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 8); }
-    else { const system = await aiSystemPromptB(false); const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    const withTools = cfg.active === 'anthropic';
+    const system = await aiSystemPromptB(withTools);
+    // The org index sent to the model is capped. If it was cut, say so once — don't let the user
+    // assume the model saw everything. Claude can still look things up; OpenAI (single-shot) cannot.
+    if (aiSeedTruncated && !aiSeedWarned) {
+      aiSeedWarned = true;
+      aiMessages.push({ role: 'tool', content: 'ℹ️ Large org: the function/module index sent to the model is truncated. ' + (withTools ? 'Claude can still fetch specifics with its tools.' : 'OpenAI answers in one pass, so items beyond the cut are invisible to it — ask about specific functions or modules.') });
+      aiRenderMessages();
+    }
+    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 8); }
+    else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     setStatus('', '');
   } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); setStatus('AI error', 'warn'); }
   aiBusy = false; $('aisend').disabled = false;
@@ -1456,6 +1454,16 @@ async function openSchemaGraph() {
 }
 
 // ---------- resilient per-function download ----------
+// A 400/401/403/404 is deterministic: retrying repeats the same failure, so we do not. Only a
+// network blip or a 429/5xx is worth one retry. Matches the principle: retry what might change,
+// not what we already know will fail the same way.
+function isTransient(msg) {
+  const m = String(msg || '').match(/\b([45]\d\d)\b/);
+  if (!m) return true;                 // no HTTP status → network/unknown: a single retry is fair
+  const code = +m[1];
+  return code === 429 || code >= 500;
+}
+const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
   if (!dir) return false;
   if (!(await ensurePerm(dir))) { setStatus('Folder access denied — click Refresh.', 'bad'); return false; }
@@ -1467,11 +1475,11 @@ async function downloadOne(entry) {
     await writeFile(`${f.folder}/${f.stem}.dg`, f.dg);
     await writeFile(`${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     entry.path = `${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
-    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.error = false;
+    entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     graphCache = null; codeCache = null;
     return true;
-  } catch (e) { entry.error = true; entry.downloaded = false; return false; }
+  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissing() {
   const pending = treeData.filter((e) => !e.downloaded);
@@ -1482,7 +1490,7 @@ async function downloadMissing() {
     const e = pending[i];
     setStatus(`Downloading ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
     let done = await downloadOne(e);
-    if (!done) { await sleep(700); done = await downloadOne(e); }   // one backoff retry (handles transient 400s)
+    if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
     done ? ok++ : fail++;
     updateRow(e);
     await sleep(140);
@@ -1498,7 +1506,7 @@ function updateRow(e) {
   const ok = e.downloaded || e.scanned;
   st.className = 'st ' + (e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
   st.textContent = e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
-  st.title = e.error ? 'Failed \u2014 click to retry' : ok ? 'Done \u2014 click to refresh' : 'Not yet \u2014 click to fetch';
+  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : ok ? 'Done \u2014 click to refresh' : 'Not yet \u2014 click to fetch';
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
@@ -2075,7 +2083,8 @@ function renderWorkflows() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      el.innerHTML = `<span class="st ${stCls}" title="${e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download'}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      const wfTitle = e.error ? ('Download failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download';
+      el.innerHTML = `<span class="st ${stCls}" title="${wfTitle}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => openWorkflow(e);
       tree.appendChild(el);
@@ -2089,9 +2098,9 @@ async function downloadOneWf(entry) {
     const r = await toBridge({ cmd: 'fetchWorkflow', id: entry.id });
     if (!r?.ok || !r.rule) throw new Error(r?.error || 'not found');
     await writeFile(entry.path, JSON.stringify(r.rule, null, 2));
-    entry.downloaded = true; entry.error = false;
+    entry.downloaded = true; entry.error = false; entry.errorMsg = '';
     return true;
-  } catch (e) { entry.error = true; entry.downloaded = false; return false; }
+  } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissingWf() {
   const pending = workflowData.filter((e) => !e.downloaded);
@@ -2102,7 +2111,7 @@ async function downloadMissingWf() {
     const e = pending[i];
     setStatus(`Downloading workflow ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
     let done = await downloadOneWf(e);
-    if (!done) { await sleep(700); done = await downloadOneWf(e); }
+    if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneWf(e); }
     done ? ok++ : fail++;
     if (viewMode === 'workflows') updateRow(e);
     await sleep(120);
@@ -2121,7 +2130,7 @@ async function pullSchedules() {
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { setStatus('Schedules pull failed: ' + (r?.error || 'unknown'), 'bad'); return; }
     await writeFile('_schedules/_index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
-    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.`, 'ok');
+    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 — some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
   } catch (e) { setStatus('Schedules pull error: ' + e.message, 'bad'); }
 }
 async function pullWorkflows() {
@@ -2142,6 +2151,7 @@ async function pullWorkflows() {
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
+    if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 \u2014 some workflows may be missing', 'warn');
   } catch (e) { setStatus('Workflows pull error: ' + e.message, 'bad'); } finally { $('pull').disabled = false; pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
