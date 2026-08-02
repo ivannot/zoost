@@ -124,14 +124,14 @@
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>
     <li><b class="ui">Pull all</b> mirrors functions, module schema, layouts, related lists, workflows and schedules.</li>
-    <li><b class="ui">Pull Functions</b> (and its Modules / Workflows / Schedules variants) refreshes only
-      the current mode — faster when you just changed one thing.</li>
+    <li><b class="ui">Pull</b> (in the mode bar) refreshes only the current type — whichever of Functions,
+      Modules, Workflows or Schedules is the active tab — faster when you just changed one thing.</li>
     <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
       updates by itself. No action needed.</li>
     <li>Functions deleted in Zoho are pruned locally, so the folder stays a faithful mirror rather than an
       accumulating pile.</li>
   </ul>
-  <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull Modules</b>. If the layout matrix or the
+  <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull</b> in Modules mode. If the layout matrix or the
     relation catalogue looks empty, that workspace was pulled with an older build — pull again.</p>
 
   <h2 id="git">4. Putting it under Git</h2>
@@ -196,7 +196,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <h2 id="health">8. Health audit</h2>
-  <p><b class="ui">Health</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
+  <p><b class="ui">Health (♥)</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
     lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
     not</b> analyse — client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
   <p>Treat every entry as a <b>candidate to review</b>. Nothing is ever deleted for you, and an "orphan" may
@@ -206,9 +206,9 @@ git commit -m "baseline"</code></pre>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
     layouts, relations, workflows, schedules, health. The <b>Share-safe</b> preset excludes source code.</p>
   <ul>
-    <li><b class="ui">Export HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
+    <li><b class="ui">Export → HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
       handing to a colleague or a manager.</li>
-    <li><b class="ui">Export AI</b> — the same material as Markdown, shaped as context for an external LLM.</li>
+    <li><b class="ui">Export → Markdown</b> — the same material as Markdown, shaped as context for an external LLM.</li>
   </ul>
   <div class="box warn">
     <p><b>An export is a file that leaves your machine.</b> With source code included it contains your whole

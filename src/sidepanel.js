@@ -18,19 +18,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
-let treeData = [], nameMode = 'internal', typeFilter = 'all', graphCache = null;
+let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let currentPath = null, pvHist = [];
-let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'api';
+let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
 const collapsed = new Set();
 const expandedMods = new Set();
-let pullActive = false;
+let pullActive = false, pullBusy = false;
 
 const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; };
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+// escHtml is NOT attribute-safe (it leaves " alone). Use escA inside an attribute value, or a
+// double quote in the data closes it early and truncates — the trap that halved the getRelated snippet.
+const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); }
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
@@ -92,7 +95,7 @@ function showAbout() {
     `<div><b>${escHtml(PRODUCT_NAME)}</b> \u00b7 v${escHtml(chrome.runtime.getManifest().version)}</div>`
     + `<div style="color:var(--muted)">Created by ${escHtml(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
     + `<h4>Links</h4><div><a href="${escHtml(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/docs.html" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escHtml(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escHtml(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
-    + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escHtml(SPONSOR_URL)}" target="_blank" rel="noopener">\u2665 GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escHtml(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
+    + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escHtml(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escHtml(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
     + `<h4>Licence</h4><div><a href="${escHtml(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
@@ -213,7 +216,7 @@ async function refreshContext() {
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
   document.body.classList.toggle('zoho-blocked', !zohoReady());
-  $('pull').disabled = !zohoReady() || !dir;
+  $('pull').disabled = pullBusy || !zohoReady() || !dir;   // a pull in progress keeps it disabled even as the 5s refresh runs
   updateWsButtons();
 }
 function guardOk() {
@@ -250,7 +253,7 @@ function renderTree() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const stTitle = e.error ? ('Download failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download';
+      const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
       el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span>${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
@@ -348,7 +351,7 @@ async function showCallers(path) {
     const callers = node.called_by;
     const nm = (id) => nameMode === 'display' ? (g.nodes[id].display_name || g.nodes[id].name) : (g.nodes[id].api_name || g.nodes[id].name);
     let html = callers.length
-      ? `<b>Called by (${callers.length}):</b> ` + callers.map((id) => `<a data-file="${escHtml(g.nodes[id].file)}">${escHtml(nm(id))}</a>`).join(', ')
+      ? `<b>Called by (${callers.length}):</b> ` + callers.map((id) => `<a data-file="${escA(g.nodes[id].file)}" title="${escA(g.nodes[id].display_name || g.nodes[id].name || '')}">${escHtml(nm(id))}</a>`).join(', ')
       : '<b>Called by</b> \u2014 none';
     const ap = node.associated_place || [];
     if (ap.length) {
@@ -531,15 +534,19 @@ function buildTypeChips() {
     ? [['all', 'All'], ['standard', 'Standard'], ['custom', 'Custom']]
     : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
   if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else scheduleFilter = 'all';
-  defs.forEach(([k, l]) => {
-    const c = document.createElement('span'); c.className = 'chip'; c.textContent = l; c.setAttribute('aria-pressed', k === 'all');
-    c.onclick = () => {
-      if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else scheduleFilter = k;
-      [...wrap.children].forEach((x) => x.setAttribute('aria-pressed', x === c));
-      (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : renderSchedules());
-    };
-    wrap.appendChild(c);
-  });
+  // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
+  // second row, eating vertical space the tree/preview below needs more than the filter does.
+  const lbl = document.createElement('span'); lbl.className = 'fsellbl';
+  lbl.textContent = viewMode === 'functions' ? 'Type' : viewMode === 'modules' ? 'Kind' : 'Status';
+  const sel = document.createElement('select'); sel.className = 'filtersel'; sel.setAttribute('aria-label', lbl.textContent + ' filter');
+  defs.forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); });
+  sel.value = 'all';
+  sel.onchange = () => {
+    const k = sel.value;
+    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else scheduleFilter = k;
+    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : renderSchedules());
+  };
+  wrap.appendChild(lbl); wrap.appendChild(sel);
 }
 $('nameToggle').onclick = () => {
   if (viewMode === 'functions') {
@@ -609,7 +616,7 @@ async function contentSearch() {
 // ---------- pull / graph ----------
 async function pullAll() {
   try {
-    $('pull').disabled = true; pullActive = true;
+    pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
@@ -630,7 +637,7 @@ async function pullAll() {
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
-  } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); } finally { $('pull').disabled = false; pullActive = false; }
+  } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
 }
 async function openGraph() {
   if (!dir) return;
@@ -1105,7 +1112,9 @@ function setMode(mode) {
   $('mModules').classList.toggle('active', mode === 'modules');
   $('mWorkflows').classList.toggle('active', mode === 'workflows');
   $('mSchedules').classList.toggle('active', mode === 'schedules');
-  $('pullone').textContent = 'Pull ' + ({ functions: 'Functions', modules: 'Modules', workflows: 'Workflows', schedules: 'Schedules' }[mode] || 'Functions');
+  const _typeLabel = ({ functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules' }[mode] || 'functions');
+  $('pullone').textContent = 'Pull';   // local: pulls only the current type; the type is given by the active mode segment above
+  $('pullone').title = `Pull only ${_typeLabel} into the local mirror — “Pull all” pulls every type`;
   buildTypeChips();
   $('funcs').style.display = mode === 'functions' ? '' : 'none';
   $('graph').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
@@ -1120,9 +1129,18 @@ $('mModules').onclick = () => setMode('modules');
 $('mWorkflows').onclick = () => setMode('workflows');
 $('mSchedules').onclick = () => setMode('schedules');
 async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : rebuildSchedules(); }
+// While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
+// so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
+// when the current pull has finished \u2014 success or error.
+function setPullBusy(b) {
+  pullBusy = b;
+  $('pullone').disabled = b;
+  $('pull').disabled = b || !zohoReady() || !dir;
+}
 async function pullCurrent() {
+  if (pullBusy) return;
   const label = { functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules' }[viewMode] || 'functions';
-  $('pullone').disabled = true; setStatus('Pulling ' + label + '\u2026', 'busy');   // immediate feedback (underlying pull sets its own progress next)
+  setPullBusy(true); setStatus('Pulling ' + label + '\u2026', 'busy');   // immediate feedback (underlying pull sets its own progress next)
   try {
     if (viewMode === 'modules') await pullModules();
     else if (viewMode === 'workflows') await pullWorkflows();
@@ -1130,19 +1148,20 @@ async function pullCurrent() {
     else await pullAll();
     if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
   } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
-  finally { $('pullone').disabled = false; }
+  finally { setPullBusy(false); }
 }
 async function pullEverything() {
-  $('pull').disabled = true;
+  if (pullBusy) return;
+  setPullBusy(true);
   try { await pullAll(); await pullModules(); await pullWorkflows(); await pullSchedules(); } catch (_) {}
   try { await rebuildActive(); } catch (_) {}
-  $('pull').disabled = false;
+  setPullBusy(false);
 }
 
 // ---------- modules: pull ----------
 async function pullModules() {
   try {
-    $('pull').disabled = true; pullActive = true;
+    pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
@@ -1173,7 +1192,7 @@ async function pullModules() {
     for await (const p of walk(dir)) { if (p.startsWith('_layouts/') && p.endsWith('.json') && !p.endsWith('_index.json') && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
-  } catch (e) { setStatus('Modules pull error: ' + e.message, 'bad'); } finally { $('pull').disabled = false; pullActive = false; }
+  } catch (e) { setStatus('Modules pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
 }
 
 // ---------- modules: tree ----------
@@ -1226,10 +1245,13 @@ function renderModules() {
       const el = document.createElement('div'); el.className = 'f'; el.dataset.path = m.path; el.dataset.api = m.api_name;
       el.setAttribute('aria-selected', m.path === currentPath);
       const multi = (m.layoutCount || 0) > 1; const exp = expandedMods.has(m.path);
-      const chev = multi ? `<span class="laychev">${exp ? '\u25be' : '\u25b8'}</span>` : '<span class="laychev-sp"></span>';
-      el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="In workspace \u2014 click to resync fields from Zoho">${m.error ? '\u27f3' : '\u25cf'}</span>${chev}<span class="fname">${escHtml(nm(m))}</span>`
+      // The layouts chevron lives on the RIGHT (next to the layout count), not between dot and name,
+      // so module names line up with the other tabs' dot\u2192name spacing.
+      const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
+      const stTitle = m.error ? 'Failed \u2014 click to retry' : 'In workspace \u2014 click to resync fields from Zoho';
+      el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="${stTitle}">${m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
         + `<span class="rest rf" title="${m.fieldCount} field(s)">${m.fieldCount ? m.fieldCount + 'f' : ''}</span>`
-        + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>`;
+        + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>${chev}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); resyncModule(m); };
       const ch = el.querySelector('.laychev');
       if (ch) ch.onclick = (ev) => { ev.stopPropagation(); exp ? expandedMods.delete(m.path) : expandedMods.add(m.path); renderModules(); };
@@ -1506,7 +1528,7 @@ function updateRow(e) {
   const ok = e.downloaded || e.scanned;
   st.className = 'st ' + (e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
   st.textContent = e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
-  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : ok ? 'Done \u2014 click to refresh' : 'Not yet \u2014 click to fetch';
+  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : ok ? 'In workspace \u2014 click to refresh' : 'Not in workspace \u2014 click to download';
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
@@ -1826,7 +1848,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, scope) {
     + `<div class="meta">${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
-    + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${esc(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${esc(SPONSOR_URL)}">\u2665 Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${esc(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
+    + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${esc(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${esc(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${esc(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
 
@@ -2006,7 +2028,7 @@ function renderSchedules() {
     list.forEach((e) => {
       const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path;
       el.setAttribute('aria-selected', e.path === currentPath);
-      el.innerHTML = `<span class="st st-ok" title="Loaded \u2014 click to refresh schedules from Zoho">\u25cf</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.frequency || '')}</span>${e.status === 'active' ? '' : '<span class="wfoff">off</span>'}`;
+      el.innerHTML = `<span class="st st-ok" title="In workspace \u2014 click to refresh schedules from Zoho">\u25cf</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.frequency || '')}</span>${e.status === 'active' ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshSchedules(); };
       el.onclick = () => openSchedule(e);
       tree.appendChild(el);
@@ -2083,7 +2105,7 @@ function renderWorkflows() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const wfTitle = e.error ? ('Download failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'Downloaded \u2014 click to re-download' : 'Not downloaded \u2014 click to download';
+      const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
       el.innerHTML = `<span class="st ${stCls}" title="${wfTitle}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => openWorkflow(e);
@@ -2135,7 +2157,7 @@ async function pullSchedules() {
 }
 async function pullWorkflows() {
   try {
-    $('pull').disabled = true; pullActive = true;
+    pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
@@ -2152,7 +2174,7 @@ async function pullWorkflows() {
     await downloadMissingWf();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 \u2014 some workflows may be missing', 'warn');
-  } catch (e) { setStatus('Workflows pull error: ' + e.message, 'bad'); } finally { $('pull').disabled = false; pullActive = false; }
+  } catch (e) { setStatus('Workflows pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
   const ws = bound || {};

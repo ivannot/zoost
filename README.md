@@ -81,9 +81,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   what is and isn't analyzed.
 
 **Exports — human-friendly and AI-friendly**
-- **Export HTML**: the entire workspace — functions (highlighted, cross-linked), modules,
+- **Export → HTML**: the entire workspace — functions (highlighted, cross-linked), modules,
   workflows, schedules, and the health report — as one self-contained, navigable HTML file.
-- **Export AI (Markdown)**: the whole org as a single `.md` (index + full sources + schemas),
+- **Export → Markdown**: the whole org as a single `.md` (index + full sources + schemas),
   ready to drop into any external LLM. Work inside the extension *and* outside it.
 
 **AI assistant (bring your own key)**
@@ -118,7 +118,7 @@ and, **only if you enable the AI**, to the LLM provider you configure. Nothing g
 2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
 3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows and schedules.
 4. `git init` in the workspace folder to start versioning.
-5. Explore: open a function, follow its links, open **Graph ↗**, run **Health**, or **Export**.
+5. Explore: open a function, follow its links, open **Graph ↗**, run **Health** (♥), or **Export**.
 6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
 
 ---
@@ -155,12 +155,12 @@ offer zero-retention.
 **Top bars**
 - **Working folder** — set once; every workspace is a subfolder inside it, identified by the org id
   in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
-- **Workspace select · + · Remove** — `+` creates the workspace for the org in the active Zoho tab;
-  `Remove` deletes that subfolder (local mirror only, re-pullable).
-- Workspace-wide actions: **Pull all · Export HTML · Export AI · Health · Ask AI · Settings ↗ · About**.
+- **Workspace select · + · 🗑** — `+` creates the workspace for the org in the active Zoho tab;
+  the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
+- Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
 - Mode segments: **Functions · Modules · Workflows · Schedules**.
-- **Graph ↗ · Functions page ↗ · Refresh**, plus **Find** (name or in-file full-text),
-  name toggle (internal/display), and type chips.
+- **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
+  name toggle (internal/display), and a **Type / Kind / Status** filter (one-line dropdown).
 
 **Context bar** shows the active Zoho tab (`instance · org · prod|sandbox`) and whether it matches
 the workspace. Not on a Zoho tab → a **Go to Zoho** overlay. Different org than the workspace → a
@@ -172,10 +172,10 @@ environments.
   and **Find in Zoho ↗** (filters the Zoho functions list to it; you open it from Zoho’s own ⋯ menu).
 - Modules: the fields table, **Records ↗** and **Layouts ↗** (for viewable modules).
 
-**Health** — tabbed audit over the local workspace, with a coverage note; items link to the
+**Health (♥)** — tabbed audit over the local workspace, with a coverage note; items link to the
 relevant function / workflow / schedule.
 
-**Ask AI** — a toggle that opens the assistant panel below the button bar; single persistent chat,
+**AI** (Ask AI) — a toggle that opens the assistant panel below the button bar; single persistent chat,
 streaming + Markdown, tool activity shown inline, ⚙ settings, ↺ Clear.
 
 ---
