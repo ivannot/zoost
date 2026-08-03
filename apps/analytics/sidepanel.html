@@ -74,8 +74,27 @@
   #status.busy .spin{display:inline-block}
   @keyframes sp{to{transform:rotate(360deg)}}
 
-  .bar{display:flex;gap:6px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
-  .bar .sp{flex:1}
+  /* toolbar — same grouping, classes and uniform button height as the CRM panel */
+  .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0;border-bottom:1px solid var(--line)}
+  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:5px 7px 7px;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
+  .wsgroup button{height:28px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}
+  .wsgroup::-webkit-scrollbar{height:5px}
+  .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .wsgroup::-webkit-scrollbar-track{background:transparent}
+  .wsgroup legend{font-size:9px;color:var(--muted);padding:0 5px;text-transform:uppercase;letter-spacing:.6px}
+  .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls if it truly cannot fit */
+  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:4px 6px;display:inline-flex;gap:5px;align-items:center;flex:none}
+  .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
+  .expgroup button{flex:none;white-space:nowrap}
+  .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
+  .genbar button:disabled{opacity:.5}
+  body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep, body.health-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
+  body.health-open .wsgroup{border-color:#7c5cff}
+
+  #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
+  #pfoot .pfsp{flex:1}
+  #pfoot #about,#pfoot #help{cursor:pointer}
+  #pfoot a{color:var(--muted);text-decoration:none} #pfoot a:hover{color:#f472b6} #pfoot .sep{color:var(--border)}
 
   /* Census: one chip per view type, doubling as a filter. Counts are shown, never judged. */
   #census{display:flex;gap:5px;flex-wrap:wrap;padding:7px 8px;border-bottom:1px solid var(--line);background:#131a27}
@@ -129,9 +148,14 @@
   .dtab{flex:1 1 auto;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:4px 3px;border-radius:6px;cursor:pointer;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .dtab.active{background:#28405c;border-color:#3d5a7e;color:#fff}
   .dtab:disabled{opacity:.35;cursor:default}
-  .dbody{flex:1;overflow:auto;padding:8px 10px}
+  /* No padding on the scrolling box itself. With padding-top here the sticky header sits below it
+     and rows scroll up into the gap above — visible, and exactly what was reported. Padding lives
+     on .dpad for the tabs that are not a table; the columns table is full-bleed and its own cells
+     carry the spacing. */
+  .dbody{flex:1;overflow:auto;padding:0}
+  .dpad{padding:8px 10px}
   .ctbl{width:100%;border-collapse:collapse;font:11px var(--sans)}
-  .ctbl th{position:sticky;top:0;z-index:1;background:#141b29;color:var(--muted);text-align:left;padding:4px 7px;border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
+  .ctbl th{position:sticky;top:0;z-index:1;background:#141b29;box-shadow:0 1px 0 var(--border);color:var(--muted);text-align:left;padding:4px 7px;border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
   .ctbl td{padding:3px 7px;border-bottom:1px solid var(--line);color:#cbd5e1}
   .ctbl td.t{font:10px var(--mono);color:#7fe3d5;white-space:nowrap}
   pre.sql{margin:0;font:11px var(--mono);color:#cbd5e1;white-space:pre-wrap;word-break:break-word;line-height:1.5}
@@ -142,11 +166,21 @@
   .lin li .lv{color:var(--muted);font:10px var(--mono)}
   .lin .none{color:var(--muted);font-style:italic}
 
+  #healthview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
+  #healthview.show{display:flex}
+  #healthview .hh{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  #healthview .hh .hsp{flex:1}
+  #healthview .hx{cursor:pointer;color:var(--muted);font-size:14px}
+  #healthview .hx:hover{color:var(--ink)}
+  #healthbody{flex:1;overflow:auto;padding:10px 12px;font-size:12px;line-height:1.55;color:#cbd5e1}
+  #healthbody h4{margin:14px 0 5px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  #healthbody .hnum{font:12px var(--mono);color:var(--ink)}
+  #healthbody ul{margin:4px 0 0;padding-left:17px} #healthbody li{padding:1px 0}
+  #healthbody .gap{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:5px}
+
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
   .empty b{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
   .empty code{font:11px var(--mono);color:#7fe3d5}
-  .note{padding:8px 10px;border-top:1px solid var(--line);background:#101724;color:var(--muted);font-size:10.5px;line-height:1.55}
-  .note b{color:#cbd5e1}
 
   /* ---- dialogs and overlays — same structure and ids as the CRM panel ---- */
   .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
@@ -160,6 +194,10 @@
   .dlg .db{padding:12px 14px;overflow:auto;flex:1;min-height:0}
   .dlg .df{display:flex;gap:8px;align-items:center;padding:11px 14px;border-top:1px solid var(--border)}
   .dnote{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .preset{display:flex;gap:7px;margin:0 0 10px} .preset button{flex:1}
+  .ck{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:12px;color:#cbd5e1;cursor:pointer}
+  .ck input{margin-top:2px} .ck em{color:var(--warn);font-style:normal}
+  .ck b{color:var(--ink)}
   #aboutbody{font-size:12px;color:#cdd7e6;line-height:1.6}
   #aboutbody h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
   #aboutbody a{color:#83d8c6}
@@ -188,10 +226,20 @@
 <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button></div></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span></div>
 
-<div class="bar">
-  <button id="pull" class="zbtn" disabled>Pull all</button>
-  <span class="sp"></span>
-  <button id="about" title="About Zoost for Zoho Analytics" aria-label="About">ⓘ</button>
+<div class="genbar">
+  <fieldset class="wsgroup">
+    <legend>workspace</legend>
+    <button id="pull" class="zbtn" disabled title="Pull views, structure, relations, SQL and lineage">Pull all</button>
+    <button id="retry" class="zbtn" disabled title="Re-read only the items that failed in the last pull">Retry failed</button>
+    <span class="gsep"></span>
+    <span class="expgroup"><span class="explabel">export</span>
+      <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
+      <button id="exportmd" class="lbtn" disabled title="Markdown export — context for an external AI tool">Markdown</button>
+    </span>
+    <span class="gsep"></span>
+    <button id="health" class="pbtn" disabled title="Health — workspace audit, shown in this panel" aria-label="Health" style="font-size:15px;line-height:1">♥</button>
+    <button id="askai" class="abtn" disabled title="Ask AI about this workspace — arrives in the next version, it needs manifest permissions this build does not have">AI</button>
+  </fieldset>
 </div>
 
 <div id="census"></div>
@@ -223,8 +271,13 @@
     </div>
   </div>
 
+  <div id="healthview">
+    <div class="hh"><span>Health</span><span class="hsp"></span><span class="hx" id="healthx">✕</span></div>
+    <div id="healthbody"></div>
+  </div>
+
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="dt" id="dtitle"></span><button id="drefresh" class="zbtn" style="height:22px;padding:0 7px;font-size:11px" title="Re-read this one view from Zoho">&#8635;</button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
@@ -235,19 +288,33 @@
   </div>
 </div>
 
-<div class="note" id="note">
-  <b>Read-only.</b> Zoost never creates, edits or deletes a view. &middot;
-  <b>Lineage is Analytics&rsquo; own.</b> A view nothing depends on may still be used —
-  a shared link, a scheduled export, an embedded report, the API — so these are
-  <b>candidates</b>, never &ldquo;unused&rdquo;. &middot;
-  <b>Relations</b> are the joins Analytics itself draws in its ER diagram, written as Zoho writes
-  them. &middot;
-  <b>Design</b> is a real, sortable date for tables and query tables; for reports and dashboards
-  Analytics only gives text in your interface language, which is shown exactly as it sends it,
-  never parsed, and sorted last. <b>Data</b> is always a real timestamp.
+
+
+<div id="pfoot">
+  <a id="about" title="Credits, licence and legal notice">About</a> <span class="sep">·</span>
+  <a id="help" href="https://zoost.it/docs.html" title="How to use Zoost — opens zoost.it/docs" target="_blank" rel="noopener">Help ↗</a>
+  <span class="pfsp"></span>
+  <a href="https://github.com/sponsors/ivannot" target="_blank" rel="noopener" title="Support development on GitHub Sponsors (0% fees, needs a GitHub account)">Sponsor</a> <span class="sep">·</span>
+  <a href="https://ko-fi.com/ivannot" target="_blank" rel="noopener" title="Buy me a coffee on Ko-fi (no account needed)">☕ Ko-fi</a>
 </div>
 
 <div id="scrim" class="scrim"></div>
+<div id="expscope" class="dlg">
+  <div class="dh"><span>What goes into the export</span><span class="dx" id="expx">✕</span></div>
+  <div class="db">
+    <p class="dnote">An export is a file that leaves this machine. Pick what it may contain — the choice is remembered.</p>
+    <div class="preset"><button id="pspFull">Everything</button><button id="pspSafe">Share-safe</button></div>
+    <label class="ck"><input type="checkbox" id="sc_views"><span><b>Views</b> — the census: name, type, folder, owner, dates</span></label>
+    <label class="ck"><input type="checkbox" id="sc_structure"><span><b>Structure</b> — every table and query table with its columns and types</span></label>
+    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> — the joins from the ER model</span></label>
+    <label class="ck"><input type="checkbox" id="sc_sql"><span><b>Query table SQL</b> — the full source of every query table <em>the most sensitive part</em></span></label>
+    <label class="ck"><input type="checkbox" id="sc_lineage"><span><b>Lineage</b> — what reads from what, and what nothing depends on</span></label>
+    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> — the audit and its coverage gaps</span></label>
+    <div id="scwarn" class="dnote" style="color:var(--warn);margin:8px 0 0"></div>
+  </div>
+  <div class="df"><button id="expcancel">Cancel</button><span class="pfsp" style="flex:1"></span><button id="expgo" class="lbtn">Export</button></div>
+</div>
+
 <div id="aboutdlg" class="dlg full">
   <div class="dh"><span>About</span><span class="dx" id="aboutx">✕</span></div>
   <div class="db" id="aboutbody"></div>

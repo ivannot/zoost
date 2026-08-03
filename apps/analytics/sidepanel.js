@@ -99,6 +99,18 @@ async function pickRoot() {
     status('Could not open that folder: ' + (e.message || e), 'bad');
   }
 }
+// A stored handle whose permission lapsed needs *authorisation*, not re-selection. Asking for the
+// folder again is what made this panel more annoying than the CRM one: showDirectoryPicker() makes
+// the user navigate the filesystem, requestPermission() is a one-click prompt.
+async function grantRoot() {
+  if (!root) { await pickRoot(); return; }
+  try {
+    if (!(await ensurePerm(root))) { status('Access denied — Zoost cannot read the working folder.', 'bad'); return; }
+    rootGranted = true;
+    status(`Access granted to ${root.name}.`, 'ok');
+    await refreshWorkspaces();
+  } catch (e) { status('Grant failed: ' + (e.message || e), 'bad'); }
+}
 async function restoreRoot() {
   if (!root) root = await window.idbHandle.get('rootDir');
   if (!root) return;
@@ -296,6 +308,12 @@ function updateButtons() {
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('pull').disabled = busy || !dir || !guardOk();
+  $('retry').disabled = busy || !dir || !guardOk() || !pullFailed.length;
+  $('retry').textContent = pullFailed.length ? `Retry ${pullFailed.length} failed` : 'Retry failed';
+  const loaded = views.length > 0;
+  $('export').disabled = busy || !loaded;
+  $('exportmd').disabled = busy || !loaded;
+  $('health').disabled = busy || !loaded;
   $('pull').title = $('pull').disabled && dir && ctx && ctx.workspace && !guardOk()
     ? 'The active tab is a different workspace from the one selected here.' : '';
 }
@@ -344,6 +362,82 @@ async function pullAll() {
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);
   }
+}
+
+// A pull has two very different kinds of failure, and conflating them would be dishonest.
+//
+//   - **A stage fails.** The view list, the structure or the ER model is one call each: if it does
+//     not answer there is no partial answer to keep, so the pull stops and nothing is written. What
+//     was on disk before is left exactly as it was.
+//   - **An item fails.** SQL and lineage are one call per view. One unreadable view must not cost
+//     the other four hundred, so those are collected into `pullFailed`, the pull finishes, and the
+//     panel says how many were missed. The mirror is written *with the gap declared* rather than
+//     silently short.
+//
+// Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
+// items that failed, and `refreshOne()` re-reads a single view from its detail pane.
+async function refreshOne(id) {
+  const v = viewById().get(id);
+  if (!v) return;
+  setBusy(true, `Re-reading «${v.name}»…`);
+  try {
+    if (v.type === 'QueryTable') {
+      const r = await toBridge({ cmd: 'pullSql', ids: [id] });
+      if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
+    }
+    const d = await toBridge({ cmd: 'viewDependencies', id });
+    if (!deps) deps = {};
+    deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
+    pullFailed = pullFailed.filter((f) => f.id !== id);
+    await writeLineage(); await writeSql();
+    setBusy(false, `«${v.name}» re-read.`); $('status').className = 'ok';
+    render(); await openDetail(id);
+  } catch (e) {
+    setBusy(false, `Could not re-read «${v.name}»: ` + (e.message || e));
+    $('status').className = 'bad';
+  }
+}
+
+async function retryFailed() {
+  const ids = [...new Set(pullFailed.map((f) => f.id))];
+  if (!ids.length) return;
+  const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
+  chrome.runtime.onMessage.addListener(onProgress);
+  setBusy(true, `Retrying ${ids.length} item(s)…`);
+  try {
+    const qIds = ids.filter((i) => { const v = viewById().get(i); return v && v.type === 'QueryTable'; });
+    const still = [];
+    if (qIds.length) { const r = await toBridge({ cmd: 'pullSql', ids: qIds }); Object.assign(sqls, r.sql || {}); still.push(...(r.failed || [])); }
+    const r2 = await toBridge({ cmd: 'scanDependencies', ids });
+    if (!deps) deps = {};
+    Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []));
+    pullFailed = still;
+    mergeSchemaIntoViews();
+    await writeLineage(); await writeSql();
+    setBusy(false, pullFailed.length ? `${pullFailed.length} still unreadable.` : 'All previously failed items are now in.');
+    $('status').className = pullFailed.length ? 'warn' : 'ok';
+    render();
+  } catch (e) {
+    setBusy(false, 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
+  } finally { chrome.runtime.onMessage.removeListener(onProgress); }
+}
+
+// Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
+async function writeLineage() {
+  if (!dir) return;
+  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps, failed: pullFailed });
+}
+async function writeSql() {
+  if (!dir) return;
+  const index = await readJson('sql/_index.json', {});
+  for (const [id, q] of Object.entries(sqls)) {
+    if (typeof q.sql !== 'string') continue;              // not re-read this session; its file is current
+    const v = viewById().get(id);
+    const stem = q.stem || stemOf(v ? v.name : id, id);
+    await writeFile(`sql/${stem}.sql`, q.sql);
+    index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
+  }
+  await writeJson('sql/_index.json', index);
 }
 
 async function writeToDisk(info) {
@@ -554,6 +648,11 @@ async function openDetail(id) {
   if (!v) return;
   $('detail').classList.add('show');
   $('dtitle').textContent = v.name;
+  $('drefresh').disabled = busy || !guardOk();
+  $('drefresh').title = guardOk()
+    ? 'Re-read this one view from Zoho — its SQL and its lineage'
+    : 'The active tab is a different workspace, so nothing can be re-read';
+  $('drefresh').onclick = () => refreshOne(v.id);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
   $('tab_sql').disabled = !sqls[id];
@@ -573,9 +672,9 @@ async function renderDetail(v) {
   if (detailTab === 'cols') {
     const chain = structureChain(v, m);
     if (!chain) {
-      body.innerHTML = `<div class="empty" style="padding:10px 0"><b>No structure to show.</b>
+      body.innerHTML = `<div class="dpad"><div class="empty" style="padding:0"><b>No structure to show.</b>
         A ${esc(v.type)} has no columns of its own, and Analytics does not tell us which view it is
-        built on — so there is nothing here that would be true.</div>`;
+        built on — so there is nothing here that would be true.</div></div>`;
       return;
     }
     const src = chain[chain.length - 1];
@@ -583,9 +682,9 @@ async function renderDetail(v) {
     // When the structure is inherited, say whose it is and through what — a column list attributed
     // to the wrong object is worse than no column list.
     const via = chain.length > 1
-      ? `<div class="vsub" style="margin:0 0 8px">Structure of <b>${esc(src.name)}</b> (${esc(t.kind)}), inherited through ${chain.slice(0, -1).map((c) => esc(c.name)).join(' → ')} → <b>${esc(src.name)}</b></div>`
+      ? `<div class="vsub" style="margin:0">Structure of <b>${esc(src.name)}</b> (${esc(t.kind)}), inherited through ${chain.slice(0, -1).map((c) => esc(c.name)).join(' → ')} → <b>${esc(src.name)}</b></div>`
       : '';
-    body.innerHTML = via + `<table class="ctbl"><thead><tr><th>Column</th><th>Type</th></tr></thead><tbody>${
+    body.innerHTML = (via ? `<div class="dpad" style="padding-bottom:0">${via}</div>` : '') + `<table class="ctbl"><thead><tr><th>Column</th><th>Type</th></tr></thead><tbody>${
       t.columns.map((c) => `<tr><td>${esc(c.name)}</td><td class="t">${esc(c.type)}</td></tr>`).join('')
     }</tbody></table>`;
     return;
@@ -595,22 +694,22 @@ async function renderDetail(v) {
     // Zoho's own `relationstring` is shown as it writes it — "(A.col)=(B.col)". Re-rendering the
     // join in our own words would be an interpretation, and the point here is the fact, not our
     // phrasing of it. The direction is stated because a lookup is not symmetric.
-    body.innerHTML = rs.map((r) => {
+    body.innerHTML = '<div class="dpad">' + rs.map((r) => {
       const out = r.source === v.id;
       return `<div class="rel"><b>${esc(out ? '→ ' + r.targetName : '← ' + r.sourceName)}</b><br>${esc(r.relation)}</div>`;
-    }).join('');
+    }).join('') + '</div>';
     return;
   }
   if (detailTab === 'sql') {
     const sql = await sqlBodyOf(v.id);
-    body.innerHTML = sql
+    body.innerHTML = '<div class="dpad">' + (sql
       ? `<pre class="sql">${esc(sql)}</pre>`
-      : `<div class="empty" style="padding:10px 0"><b>The SQL file could not be read.</b> Pull again to fetch it.</div>`;
+      : `<div class="empty" style="padding:0"><b>The SQL file could not be read.</b> Use ↻ above to fetch just this one.</div>`) + '</div>';
     return;
   }
   // lineage
   const d = deps ? deps[v.id] : null;
-  if (!d) { body.innerHTML = '<div class="empty" style="padding:10px 0"><b>No lineage for this view.</b> It could not be read during the last pull.</div>'; return; }
+  if (!d) { body.innerHTML = '<div class="dpad"><div class="empty" style="padding:0"><b>No lineage for this view.</b> Use ↻ above to fetch just this one.</div></div>'; return; }
   const li = (arr) => arr.length
     ? `<ul>${arr.map((x) => `<li>${esc(nameOf(x.id, m))} <span class="lv">level ${x.level}</span></li>`).join('')}</ul>`
     : '<div class="none">none</div>';
@@ -621,12 +720,216 @@ async function renderDetail(v) {
   const cols = q && q.sources
     ? Object.entries(q.sources).map(([tid, s]) => `<li>${esc(s.name || nameOf(tid, m))} <span class="lv">${s.columns.length} columns involved</span></li>`).join('')
     : '';
-  body.innerHTML =
-    `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
+  body.innerHTML = '<div class="dpad">'
+    + `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
     + `<div class="lin"><h5>Read by</h5>${li(d.children)}</div>`
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
-    + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '');
+    + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
+    + '</div>';
 }
+
+// ---------- export ----------
+// Coarse scope on purpose: sections, never single views. Kept in IndexedDB beside the folder handle
+// rather than chrome.storage, so this build still needs no `storage` permission — the same choice,
+// one fewer thing to justify.
+const SCOPE_KEYS = ['views', 'structure', 'relations', 'sql', 'lineage', 'health'];
+const SCOPE_FULL = { views: true, structure: true, relations: true, sql: true, lineage: true, health: true };
+const SCOPE_SAFE = { views: true, structure: true, relations: true, sql: false, lineage: true, health: true };
+let expScope = Object.assign({}, SCOPE_FULL);
+async function loadScope() {
+  try { const v = await window.idbHandle.get('exportScopeAnalytics'); if (v) expScope = Object.assign({}, SCOPE_FULL, v); } catch (_) {}
+}
+function scopeToUI() {
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });
+  const q = $('sc_sql'); if (q) q.disabled = !expScope.structure;
+  $('scwarn').textContent = expScope.sql ? '\u26a0 includes the full SQL of every query table' : '';
+}
+function scopeFromUI() {
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) expScope[k] = !!e.checked; });
+  if (!expScope.structure) expScope.sql = false;
+  scopeToUI();
+}
+let _scopeResolve = null;
+function askScope() {
+  return new Promise((resolve) => {
+    _scopeResolve = resolve; scopeToUI();
+    $('scrim').classList.add('on'); $('expscope').classList.add('on');
+  });
+}
+function closeScope(ok) {
+  $('scrim').classList.remove('on'); $('expscope').classList.remove('on');
+  const r = _scopeResolve; _scopeResolve = null;
+  if (r) r(ok ? Object.assign({}, expScope) : null);
+}
+
+const stamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+
+// Both reports carry exactly what the panel shows, and nothing invented here: a figure that lives
+// only on screen would make the report a quietly lesser copy, and the reader could not know it.
+function exportSections(sc) {
+  const m = viewById();
+  const h = healthFindings();
+  const out = [];
+  if (sc.views) out.push({ id: 'views', title: 'Views', rows: views.map((v) => [v.name, v.type, v.folderName || '—', v.owner || '—', v.designModifiedAt ? shortDate(v.designModifiedAt) : (v.designModifiedText || '—'), shortDate(v.dataModifiedAt), v.system ? 'system' : '']),
+    head: ['View', 'Type', 'Folder', 'Owner', 'Design', 'Data', ''] });
+  if (sc.structure) out.push({ id: 'structure', title: 'Structure', tables: Object.entries(schema).map(([id, t]) => ({ id, ...t })) });
+  if (sc.relations) out.push({ id: 'relations', title: 'Relations', rows: relations.map((r) => [r.sourceName, r.targetName, r.relation]), head: ['From', 'To', 'Join'] });
+  if (sc.sql) out.push({ id: 'sql', title: 'Query table SQL' });
+  if (sc.lineage && deps) out.push({ id: 'lineage', title: 'Lineage', rows: views.filter((v) => deps[v.id]).map((v) => [v.name, String(deps[v.id].parents.length), String(deps[v.id].children.length), String(deps[v.id].dashboards.length)]), head: ['View', 'Reads from', 'Read by', 'On dashboards'] });
+  if (sc.health) out.push({ id: 'health', title: 'Health', h });
+  return out;
+}
+
+async function buildExportHtml(sc) {
+  const secs = exportSections(sc);
+  const esc2 = esc;
+  const toc = secs.map((x) => `<li><a href="#${x.id}">${esc2(x.title)}</a></li>`).join('');
+  const tbl = (head, rows) => `<table><thead><tr>${head.map((h2) => `<th>${esc2(h2)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc2(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  let body = '';
+  for (const x of secs) {
+    body += `<h2 id="${x.id}">${esc2(x.title)}</h2>`;
+    if (x.rows) body += tbl(x.head, x.rows);
+    else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type'], t.columns.map((c) => [c.name, c.type]))).join('');
+    else if (x.id === 'sql') {
+      for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
+        const q = sqls[v.id]; if (!q) continue;
+        const src = await sqlBodyOf(v.id);
+        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(src || '(could not be read)')}</pre>`;
+      }
+    } else if (x.h) {
+      const H = x.h;
+      body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
+        + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
+        + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Analytics' own dependency graph.</p>`
+        + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${esc2(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
+        + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${esc2(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
+        + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${esc2(v.name)}</li>`).join('')}</ul>`
+        + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} — ${esc2(f.error)}</li>`).join('')}</ul>` : '');
+    }
+  }
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost — ${esc2(bound.name || bound.workspace)}</title><style>
+body{font:14px/1.6 system-ui,sans-serif;color:#1b2431;background:#fff;margin:0;padding:28px;max-width:1100px}
+h1{margin:0 0 4px} h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid #e6ebf2} h3{margin:18px 0 6px;font-size:15px}
+small,i{color:#6b7a90;font-weight:400;font-style:normal}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12.5px;display:block;overflow-x:auto}
+th{background:#f3f6fa;text-align:left;padding:5px 8px;border-bottom:2px solid #dde4ee;white-space:nowrap}
+td{padding:4px 8px;border-bottom:1px solid #eef2f7;vertical-align:top}
+pre{background:#f7f9fc;border:1px solid #e3e9f2;border-radius:6px;padding:10px;overflow:auto;font-size:12px;white-space:pre-wrap}
+.meta{color:#6b7a90;font-size:12.5px} .gap{color:#6b7a90;font-size:12.5px;border-left:3px solid #e6ebf2;padding-left:10px}
+nav ul{columns:2;list-style:none;padding:0} nav a{color:#0e9488;text-decoration:none}
+footer{margin-top:36px;padding-top:12px;border-top:1px solid #e6ebf2;color:#6b7a90;font-size:12px}
+</style></head><body>
+<h1>${esc2(bound.name || bound.workspace)}</h1>
+<div class="meta">Zoho Analytics workspace ${esc2(bound.workspace)} · ${esc2(bound.origin || '')} · exported ${new Date().toISOString().slice(0, 10)} by ${esc2(PRODUCT_NAME)} v${esc2(chrome.runtime.getManifest().version)}</div>
+<nav><ul>${toc}</ul></nav>
+${body}
+<footer>Read-only mirror. Zoost never creates, edits or deletes anything in Zoho Analytics, and never reads record data.<br>${esc2(LEGAL_DISCLAIMER)}</footer>
+</body></html>`;
+}
+
+async function buildExportMarkdown(sc) {
+  const secs = exportSections(sc);
+  const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
+  let out = `# ${bound.name || bound.workspace}\n\nZoho Analytics workspace \`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
+  out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
+  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n\n';
+  for (const x of secs) {
+    out += `## ${x.title}\n\n`;
+    if (x.rows) out += row(x.head) + '\n' + row(x.head.map(() => '---')) + '\n' + x.rows.map(row).join('\n') + '\n\n';
+    else if (x.tables) for (const t of x.tables) out += `### ${t.name} (${t.kind}${t.system ? ', system' : ''})\n\n| Column | Type |\n| --- | --- |\n` + t.columns.map((c) => row([c.name, c.type])).join('\n') + '\n\n';
+    else if (x.id === 'sql') {
+      for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
+        const q = sqls[v.id]; if (!q) continue;
+        const src = await sqlBodyOf(v.id);
+        out += `### ${v.name}\n\n\u0060\u0060\u0060sql\n${src || '-- could not be read'}\n\u0060\u0060\u0060\n\n`;
+      }
+    } else if (x.h) {
+      const H = x.h;
+      out += `${H.counts.views} views · ${H.counts.tables} tables · ${H.counts.columns} columns · ${H.counts.relations} relations · ${H.counts.sql} SQL\n\n`;
+      out += '> Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.\n\n';
+      out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Analytics' own dependency graph.\n\n`;
+      if (H.orphans) out += H.orphans.map((v) => `- ${v.name} (${v.type})`).join('\n') + '\n\n';
+      out += `### Tables in no relation (${H.islands.length})\n\n` + H.islands.map((t) => `- ${t.name} (${t.kind})`).join('\n') + '\n\n';
+      out += `### Put there by Zoho, not by you (${H.system.length})\n\n` + H.system.map((v) => `- ${v.name}`).join('\n') + '\n\n';
+      if (H.unread.length) out += `### Could not be read (${H.unread.length})\n\n` + H.unread.map((f) => `- ${(viewById().get(f.id) || {}).name || f.id} — ${f.error}`).join('\n') + '\n\n';
+    }
+  }
+  return out;
+}
+
+async function doExport(kind) {
+  const sc = await askScope();
+  if (!sc) return;
+  await window.idbHandle.set('exportScopeAnalytics', sc);
+  setBusy(true, 'Building the export…');
+  try {
+    const md = kind === 'md';
+    const body = md ? await buildExportMarkdown(sc) : await buildExportHtml(sc);
+    const name = `zoost-analytics-${(bound.name || bound.workspace).replace(/[^\w.\-]/g, '_')}-${stamp()}.${md ? 'md' : 'html'}`;
+    await writeFile(name, body);
+    setBusy(false, `Written to the workspace folder: ${name}`); $('status').className = 'ok';
+  } catch (e) {
+    setBusy(false, 'Export failed: ' + (e.message || e)); $('status').className = 'bad';
+  }
+}
+
+// ---------- health ----------
+// Counts and lists, never a verdict. No thresholds, no "too old", no score: a query table nobody
+// reads may be a scheduled export's source, and a table with no relations may be deliberately
+// standalone. Every figure states what it does not cover, right next to itself.
+function healthFindings() {
+  const m = viewById();
+  const tables = Object.entries(schema);
+  const related = new Set();
+  for (const r of relations) { related.add(r.source); related.add(r.target); }
+  return {
+    counts: {
+      views: views.length, folders: folders.length,
+      tables: tables.length, columns: tables.reduce((n, [, t]) => n + t.columns.length, 0),
+      relations: relations.length, sql: Object.keys(sqls).length,
+    },
+    system: views.filter((v) => v.system),
+    orphans: deps ? views.filter(isOrphanCandidate) : null,
+    islands: tables.filter(([id]) => !related.has(id)).map(([id, t]) => ({ id, name: t.name, kind: t.kind })),
+    undescribed: views.filter((v) => !v.description),
+    unread: pullFailed.slice(),
+    noStructure: views.filter((v) => v.type !== 'Dashboard' && !structureChain(v, m)),
+  };
+}
+function renderHealth() {
+  const h = healthFindings();
+  const list = (arr, f) => arr.length ? `<ul>${arr.slice(0, 40).map(f).join('')}</ul>${arr.length > 40 ? `<div class="gap">…and ${arr.length - 40} more. The full list is in the exports.</div>` : ''}` : '';
+  const nm = (v) => `<li>${esc(v.name)} <span style="color:var(--muted)">${esc(v.type || v.kind || '')}</span></li>`;
+  $('healthbody').innerHTML =
+    `<h4>What was pulled</h4><div class="hnum">${h.counts.views} views · ${h.counts.folders} folders · ${h.counts.tables} tables · ${h.counts.columns} columns · ${h.counts.relations} relations · ${h.counts.sql} SQL</div>`
+    + `<div class="gap">Report definitions — which columns a chart puts on which axis, and how it aggregates them — are <b>not</b> covered. The endpoint that carries them also carries the computed series, which is your data, so Zoost does not call it.</div>`
+
+    + `<h4>Nothing depends on them <span class="hnum">${h.orphans ? h.orphans.length : '—'}</span></h4>`
+    + (h.orphans ? list(h.orphans, nm) : '<div class="gap">Lineage was not pulled.</div>')
+    + `<div class="gap">Candidates, not a verdict. Analytics only knows what its own views read from each other; a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.</div>`
+
+    + `<h4>Tables in no relation <span class="hnum">${h.islands.length}</span></h4>`
+    + list(h.islands, nm)
+    + `<div class="gap">They take part in no join in the ER model. That can be deliberate — a lookup list, a staging table — so this is a list to read, not a problem to fix.</div>`
+
+    + `<h4>Put there by Zoho, not by you <span class="hnum">${h.system.length}</span></h4>`
+    + list(h.system, nm)
+    + `<div class="gap">Flagged <code>isSystemTable</code> by Analytics itself — typically synced from a connected source. The view list does not flag any of them, so this comes from the ER model alone.</div>`
+
+    + `<h4>No description <span class="hnum">${h.undescribed.length}</span> of ${h.counts.views}</h4>`
+    + `<div class="gap">A count, not a judgement. Plenty of views need no description.</div>`
+
+    + (h.noStructure.length ? `<h4>No structure reachable <span class="hnum">${h.noStructure.length}</span></h4>` + list(h.noStructure, nm)
+       + '<div class="gap">Neither their own columns nor a parent chain leading to any. Dashboards are excluded, since having none is correct for them.</div>' : '')
+
+    + (h.unread.length ? `<h4 style="color:var(--warn)">Could not be read <span class="hnum">${h.unread.length}</span></h4>`
+       + list(h.unread, (f) => `<li>${esc((viewById().get(f.id) || {}).name || f.id)} — <span style="color:var(--muted)">${esc(f.error)}</span></li>`)
+       + '<div class="gap">Use <b>Retry failed</b>, or ↻ on a single view. Until then this mirror is short by exactly these.</div>' : '')
+
+    + `<h4>Design and data dates</h4><div class="gap">Design is a real timestamp for tables and query tables, and Zoho\u2019s own text for everything else — shown exactly as it sends it, in your interface language, never parsed, and sorted last. Data is always a real timestamp.</div>`;
+}
+function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); }
+function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); }
 
 // ---------- about ----------
 // The same dialog the CRM panel shows, with the same sections in the same order. A user who has both
@@ -648,7 +951,7 @@ function showAbout() {
 function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
 
 // ---------- wiring ----------
-$('wsroot').onclick = pickRoot;
+$('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
 $('wsadd').onclick = addWorkspace;
 $('wsdel').onclick = delWorkspace;
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
@@ -658,10 +961,21 @@ $('find').oninput = render;
 $('findclear').onclick = () => { $('find').value = ''; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
+$('export').onclick = () => doExport('html');
+$('exportmd').onclick = () => doExport('md');
+$('retry').onclick = retryFailed;
+$('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : openHealth());
+$('healthx').onclick = closeHealth;
+$('expx').onclick = () => closeScope(false);
+$('expcancel').onclick = () => closeScope(false);
+$('expgo').onclick = () => { scopeFromUI(); closeScope(true); };
+$('pspFull').onclick = () => { expScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
+$('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
+SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('about').onclick = showAbout;
 $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;
-$('scrim').onclick = closeAbout;
+$('scrim').onclick = () => { closeAbout(); closeScope(false); };
 $('dclose').onclick = () => { $('detail').classList.remove('show'); selectedId = null; render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
   b.onclick = async () => {
@@ -686,4 +1000,4 @@ chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 window.addEventListener('focus', () => refreshContext());
 
-(async () => { await restoreRoot(); await refreshContext(); })();
+(async () => { await loadScope(); await restoreRoot(); await refreshContext(); })();

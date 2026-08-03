@@ -187,6 +187,15 @@ table↔table joins (`ZDBCreateERD.ma`, written as Zoho writes them), query→so
 Zoho's own `relationstring` is displayed verbatim rather than re-rendered in our words: the fact is
 the product, our phrasing of it would be an interpretation.
 
+**An Analytics pull fails in two different ways, and conflating them would be dishonest.** A
+*stage* (view list, structure, ER model) is one call: if it does not answer there is no partial
+result worth keeping, so the pull stops and **nothing is written** — what was on disk stays as it
+was. An *item* (SQL, lineage) is one call per view: one unreadable view must not cost the other four
+hundred, so failures are collected into `pullFailed`, the pull completes, and the panel states how
+many were missed. Both are recoverable without re-downloading the workspace — **Retry failed**
+re-reads exactly the failures, **↻** in the detail pane re-reads one view — and `writeLineage()` /
+`writeSql()` are split out precisely so a single-item refresh rewrites only what it touched.
+
 **A pulled Analytics workspace on disk** is `views.json` (census + folders), `schema.json` (columns
 per table **and the relations**), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/_index.json`
 carrying the id-to-file map and the column-level lineage. The `.sql` files are the point: they are
@@ -215,6 +224,11 @@ These all failed **silently**, with no console error. They are the expensive kin
   loses at equal specificity. Muting rules must come after the rules they override.
 - **Sticky headers need a z-index.** Without one, later siblings paint over them and rows appear
   to slide above the header.
+- **A sticky header also needs its scroll container to have no padding above it.** `position:sticky;
+  top:0` sticks to the container's *padding* box, so with `padding-top` on the scroller the header
+  parks below the gap and rows scroll up into the strip above it — visible, and reported. Put the
+  padding on the non-table content instead (`.dpad`), leave the scrolling box at `padding:0`, and
+  let the table's own cells carry the spacing.
 - **Overlays sized to the wrong container.** `inset:0` covers the positioned ancestor, not the
   panel. Check what actually needs covering before choosing `absolute` or `fixed`.
 - **Functions that rewrite state as a side effect.** `cacheBinding` writing `.zoost.json` would
