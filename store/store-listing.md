@@ -13,7 +13,7 @@ Zoost — workbench for Zoho CRM
 ## 2. Short description (manifest `description`, max 132)
 
 ```
-Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows.
+Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows, connections.
 ```
 
 ---

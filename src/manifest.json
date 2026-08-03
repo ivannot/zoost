@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Zoost — workbench for Zoho CRM",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "short_name": "Zoost",
   "homepage_url": "https://zoost.it",
-  "description": "Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows.",
+  "description": "Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows, connections.",
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true

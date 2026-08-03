@@ -165,6 +165,7 @@ When behaviour, UI or features change, check every one of these and update what 
 
 | File | Update when |
 |---|---|
+| `src/manifest.json` | the `description` (max 132 chars) — it is what Chrome shows on the extensions page **and** the Store's short description, so it is the most-read sentence the project has. Keep it identical to §2 of `store/store-listing.md` |
 | `README.md` | features, interface, quick start, known limitations |
 | `site/docs.html` | anything a user does differently. The "Covers Zoost X · updated Y" line fills itself from the manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
 | `site/index.html` | a feature worth advertising appears or changes |
