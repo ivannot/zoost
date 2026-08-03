@@ -170,6 +170,43 @@
   .lin li .lv{color:var(--muted);font:10px var(--mono)}
   .lin .none{color:var(--muted);font-style:italic}
 
+  #aiview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
+  #aiview.show{display:flex}
+  #aiview .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #aiview .aihead .aisp{flex:1}
+  #aiview .aiicon{cursor:pointer;color:var(--muted);font-size:14px}
+  #aiview .aiicon:hover{color:var(--ink)}
+  #aiengbadge{font:10px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px;white-space:nowrap}
+  #aiengbadge.agent{color:#83d8c6;border-color:#2f6f62}
+  #aiengbadge.single{color:#f0a44a;border-color:#6b4a1c}
+  .aictx{padding:5px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--surface)}
+  .aimsgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+  .aimsg{display:flex;flex-direction:column;gap:2px;max-width:85%}
+  .aimsg.user{align-self:flex-end;align-items:flex-end}
+  .aimsg.assistant{align-self:flex-start;align-items:flex-start}
+  .aimsg .airole{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:0 4px}
+  .aimsg .aitext{padding:8px 11px;font-size:12.5px;line-height:1.5;word-break:break-word;border-radius:13px}
+  .aimsg.user .aitext{background:var(--sel-soft);border:1px solid #1d5c54;border-bottom-right-radius:3px}
+  .aimsg.assistant .aitext{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:3px}
+  .aitool{align-self:flex-start;font:10.5px var(--mono);color:var(--muted);background:#0f1622;border:1px solid var(--line);border-radius:6px;padding:2px 8px;max-width:90%}
+  .aimsg.assistant .aitext pre.aicode{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow:auto;font:11px var(--mono);white-space:pre;margin:6px 0}
+  .aimsg.assistant .aitext code{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0 4px;font:11px var(--mono)}
+  .aiwait{align-self:flex-start;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 11px;background:var(--surface);border:1px solid var(--line);border-radius:13px 13px 13px 3px}
+  .aiwait i{width:6px;height:6px;border-radius:50%;background:var(--muted);display:inline-block;animation:aib 1.1s infinite ease-in-out}
+  .aiwait i:nth-child(2){animation-delay:.15s} .aiwait i:nth-child(3){animation-delay:.3s}
+  @keyframes aib{0%,80%,100%{opacity:.25}40%{opacity:1}}
+  .ainote{margin:0 12px 8px;padding:7px 10px;border-left:2px solid #6b4a1c;background:#1e1a12;color:#e2c98a;font-size:11px;line-height:1.5;border-radius:0 6px 6px 0;display:none}
+  .ainote.show{display:block;position:relative;padding-right:26px}
+  .ainote .ainotex{position:absolute;top:5px;right:8px;cursor:pointer;color:#b08b52;font-size:12px;line-height:1}
+  .ainote .ainotex:hover{color:#f0a44a}
+  .aiinrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
+  .aiinrow textarea{flex:1;resize:vertical;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans);min-height:38px}
+  .aiinrow textarea:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  body.ai-open .wsgroup > button:not(#askai), body.ai-open .wsgroup .gsep, body.ai-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
+  body.ai-open .wsgroup{border-color:#b06a1c}
+  #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
+  #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
+
   #healthview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
   #healthview.show{display:flex}
   #healthview .hh{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600}
@@ -243,7 +280,7 @@
     </span>
     <span class="gsep"></span>
     <button id="health" class="pbtn" disabled title="Health — workspace audit, shown in this panel" aria-label="Health" style="font-size:15px;line-height:1">♥</button>
-    <button id="askai" class="abtn" disabled title="Ask AI about this workspace — arrives in the next version, it needs manifest permissions this build does not have">AI</button>
+    <button id="askai" class="abtn" disabled title="Ask AI about this workspace">AI</button>
   </fieldset>
 </div>
 
@@ -274,6 +311,14 @@
       Set a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
       <code>/workspace/&lt;id&gt;</code> — press <b>+ Workspace</b>, then <b>Pull all</b>.
     </div>
+  </div>
+
+  <div id="aiview">
+    <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">↺ Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
+    <div id="aictx" class="aictx"></div>
+    <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
+    <div id="aimsgs" class="aimsgs"></div>
+    <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about a view, a column, what depends on what… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend" class="abtn">Send</button></div>
   </div>
 
   <div id="healthview">
@@ -333,6 +378,7 @@
 </div>
 
 <script src="idb.js"></script>
+<script src="analytics-sql.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

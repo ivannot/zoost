@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zoost — Zoho Analytics · Settings</title>
+<style>
+  /* The CRM options page, with --sel teal instead of blue. Same shell, same section grammar, same
+     wording where the meaning is the same — see CLAUDE.md on why the two must stay twins. */
+  :root{
+    --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
+    --border:#26303f; --line:#1e2735; --sel:#14b8a6; --sel-soft:#0f3b38;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  .wrap{max-width:780px;margin:0 auto;padding:28px 22px 60px}
+  header{display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
+  header h1{font-size:19px;margin:0}
+  header .v{font:12px var(--mono);color:var(--muted)}
+  section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  section h2{font-size:14px;margin:0 0 4px}
+  section .sub{font-size:12px;color:var(--muted);margin:0 0 14px;max-width:62ch}
+  label{display:block;margin:10px 0}
+  label .lt{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=password],input[type=number],select{
+    width:100%;background:#0f1826;color:var(--ink);border:1px solid var(--border);
+    border-radius:8px;padding:9px 11px;font:13px var(--sans);outline:none}
+  input:focus,select:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  input[type=number]{width:110px}
+  button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
+    border-radius:8px;padding:8px 14px;cursor:pointer}
+  button:hover{border-color:var(--sel)}
+  button.primary{background:var(--sel);border-color:var(--sel);color:#04211e;font-weight:600}
+  button.primary:hover{background:#19d1bc}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
+  .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .prov.on{border-color:#2f6f62;background:rgba(47,111,98,.07)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+  .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
+  .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
+  a{color:#83d8c6}
+  code{font:12px var(--mono);color:#7fe3d5}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#16351f;border:1px solid #2f6f4a;color:#a7e8c0;padding:9px 16px;border-radius:9px;
+    font-size:13px;transition:opacity .18s,transform .18s;pointer-events:none}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.bad{background:#3a1f22;border-color:#7a3a40;color:#f4b8b8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1 id="ttl">Zoost — Zoho Analytics</h1><span class="v" id="ver"></span></header>
+
+  <section>
+    <h2>AI assistant</h2>
+    <p class="sub">Bring your own key. Two providers are supported: <b>Anthropic</b> and <b>OpenAI</b>.
+      Requests go straight from your browser to the one you choose — never through any server of ours.
+      Keys are stored in <code>chrome.storage.local</code> on this machine.</p>
+    <label><span class="lt">Engine</span>
+      <select id="aiengine">
+        <option value="anthropic">Anthropic (Claude) — full agent, tool use</option>
+        <option value="openai">OpenAI (ChatGPT) — single-shot</option>
+      </select>
+    </label>
+    <div class="prov" id="provAnthropic">
+      <h3>Anthropic</h3>
+      <div class="grid2">
+        <label><span class="lt">Model</span><input type="text" id="ai_a_model" placeholder="e.g. claude-sonnet-4-5"></label>
+        <label><span class="lt">API key</span><input type="password" id="ai_a_key" placeholder="sk-ant-…"></label>
+      </div>
+    </div>
+    <div class="prov" id="provOpenai">
+      <h3>OpenAI (ChatGPT)</h3>
+      <div class="grid2">
+        <label><span class="lt">Model</span><input type="text" id="ai_o_model" placeholder="e.g. gpt-4o-mini"></label>
+        <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
+      </div>
+    </div>
+    <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="30"></label>
+    <div class="warnbox">The assistant sends the parts of your workspace it needs — including the
+      <b>SQL of your query tables</b>, table and column names — to the provider you configure. It never
+      sends the rows in your tables, because Zoost never reads them. Check that this is acceptable for
+      your organisation before use.</div>
+    <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
+  </section>
+
+  <section>
+    <h2>What the assistant knows about Zoho Analytics SQL</h2>
+    <p class="sub">Query tables are not standard SQL, and an assistant that assumes they are writes
+      queries that will not run. These constraints are given to the model with every request, and are
+      taken from Zoho's own documentation rather than from experience — anything not stated there is
+      left out.</p>
+    <div id="sqlrules" class="legal"></div>
+    <div class="note">Source:
+      <a href="https://www.zoho.com/analytics/help/query-tables.html" target="_blank" rel="noopener">Query Tables — Zoho Analytics Help</a> ·
+      <a href="https://help.zoho.com/portal/en/kb/analytics/knowledge-base/data-modeling-preparation/query-tables-for-data-preparation-1/articles/what-are-the-sql-dialects-supported-by-zoho-analytics" target="_blank" rel="noopener">Supported SQL dialects</a>.
+      Zoost does not run, validate or deploy SQL — whatever the assistant writes is a draft for you to
+      paste into Analytics, which is the only thing that can tell you it compiles.</div>
+  </section>
+
+  <section>
+    <h2>About</h2>
+    <div class="legal" id="legal"></div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="analytics-sql.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Zoost — workbench for Zoho Analytics",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
   "description": "Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "permissions": [
     "sidePanel",
+    "storage",
     "scripting",
     "tabs"
   ],
@@ -16,7 +21,9 @@
     "https://analytics.zoho.in/*",
     "https://analytics.zoho.com.au/*",
     "https://analytics.zoho.jp/*",
-    "https://analytics.zohocloud.ca/*"
+    "https://analytics.zohocloud.ca/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"

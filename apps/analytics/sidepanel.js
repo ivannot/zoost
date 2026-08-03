@@ -316,6 +316,7 @@ function updateButtons() {
   $('export').disabled = busy || !loaded;
   $('exportmd').disabled = busy || !loaded;
   $('health').disabled = busy || !loaded;
+  $('askai').disabled = busy || !loaded;
   $('pull').title = $('pull').disabled && dir && ctx && ctx.workspace && !guardOk()
     ? 'The active tab is a different workspace from the one selected here.' : '';
 }
@@ -783,6 +784,314 @@ async function refreshLocal() {
   setBusy(false);
 }
 
+// ---------- AI ----------
+// Ported from the CRM panel: same config shape, same storage key, same streaming agent loop, same
+// single-shot OpenAI path with the max_tokens/max_completion_tokens retry. What differs is what the
+// tools read — views, columns, relations, SQL and lineage instead of functions and modules — and the
+// SQL guardrail, which is the one thing here not derived from the user's own workspace.
+let aiMessages = [];
+let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false;
+
+async function aiGetCfg() {
+  let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
+  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 8 };
+}
+function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
+function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }
+
+const aiFindView = (q) => {
+  if (!q) return null;
+  const low = String(q).toLowerCase();
+  return views.find((v) => v.id === String(q)) || views.find((v) => (v.name || '').toLowerCase() === low)
+    || views.find((v) => (v.name || '').toLowerCase().includes(low)) || null;
+};
+function aiStructureText(v) {
+  const m = viewById();
+  const chain = structureChain(v, m);
+  if (!chain) return `${v.name} (${v.type}) has no columns and no reachable source.`;
+  const src = chain[chain.length - 1], t = schema[src.id];
+  const { out, inc } = foreignKeys(src.id);
+  let s2 = `${src.name} (${t.kind}${t.system ? ', system table — synced by Zoho, not built by the user' : ''})`;
+  if (chain.length > 1) s2 += `\n(structure inherited by ${v.name} through ${chain.slice(0, -1).map((c) => c.name).join(' → ')})`;
+  s2 += '\n| Column | Type | References |\n';
+  t.columns.forEach((c) => {
+    const refs = [].concat((out.get(c.name) || []).map((f) => `→ ${f.name}.${f.column}`), (inc.get(c.name) || []).map((f) => `← ${f.name}.${f.column}`)).join(', ');
+    s2 += `| ${c.name} | ${c.type} | ${refs} |\n`;
+  });
+  return s2;
+}
+
+async function aiBuildSeed() {
+  const byType = new Map();
+  for (const v of views) byType.set(v.type, (byType.get(v.type) || 0) + 1);
+  let s2 = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`;
+  s2 += `${views.length} views — ` + [...byType.entries()].map(([t, n]) => `${t} ${n}`).join(', ') + `\n`;
+  s2 += `${Object.keys(schema).length} data objects, ${Object.values(schema).reduce((n, t) => n + t.columns.length, 0)} columns, ${relations.length} relations\n`;
+  s2 += `\n## Tables and query tables\n`;
+  s2 += Object.entries(schema).sort((a, b) => a[1].name.localeCompare(b[1].name))
+    .map(([id, t]) => `- ${t.name} [${t.kind}]${t.system ? ' [system]' : ''} ${t.columns.length} cols`).join('\n') + '\n';
+  const pres = views.filter((v) => !schema[v.id]);
+  if (pres.length) {
+    s2 += `\n## Reports, pivots, dashboards (${pres.length})\n`;
+    const m = viewById();
+    s2 += pres.map((v) => `- ${v.name} [${v.type}]${v.parent && m.get(v.parent) ? ' on ' + m.get(v.parent).name : ''}`).join('\n') + '\n';
+  }
+  aiSeedTruncated = s2.length > 16000;   // don't hide the cut from the user (see aiSend)
+  return aiTrunc(s2, 16000);
+}
+
+async function aiSystemPrompt(withTools) {
+  const seed = await aiBuildSeed();
+  let focus = '';
+  const cur = selectedId ? viewById().get(selectedId) : null;
+  if (cur) {
+    focus = `\n# CURRENT FOCUS\nThe user is looking at ${cur.name} (${cur.type}).\n${aiStructureText(cur)}\n`;
+    const q = sqls[cur.id];
+    if (q) { const body = await sqlBodyOf(cur.id); if (body) focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(body, 4000)}\n\u0060\u0060\u0060\n`; }
+  }
+  const toolsLine = withTools
+    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing.'
+    : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
+  return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
+    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n\n`
+    + `${window.ZOHO_ANALYTICS_SQL.text()}\n`
+    + `${focus}\n# WORKSPACE INDEX\n${seed}`;
+}
+
+const AI_TOOLS = [
+  { name: 'list_views', description: 'List views in the workspace. Optionally filter by a substring of the name, by type (Table, QueryTable, Pivot, AnalysisView, SummaryView, Report, Dashboard), and/or by a minimum column count.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, type: { type: 'string' }, min_columns: { type: 'number' } } } },
+  { name: 'get_view', description: 'Everything known about one view by name or id: type, folder, owner, what it is built on, dates, and its lineage.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'get_structure', description: 'Columns and Zoho data types of a table or query table, with each column\u2019s foreign keys in both directions. For a report or pivot, returns the structure it inherits and says so.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'get_sql', description: 'The SQL source of a query table, with the source tables and the columns it involves.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'search_sql', description: 'Full-text search across every query table\u2019s SQL. Returns the view names that match.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'search_columns', description: 'Find which tables have a column whose name matches. Use this to answer "where is this data" before writing a query.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'get_relations', description: 'Relations (joins) a table takes part in, in both directions, as Zoho writes them. Omit the name for the whole workspace.', input_schema: { type: 'object', properties: { name: { type: 'string' } } } },
+  { name: 'who_uses', description: 'What reads from a view, transitively, plus the dashboards it appears on.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'orphans', description: 'Views that nothing in the workspace depends on. Candidates, not a verdict.', input_schema: { type: 'object', properties: {} } },
+];
+
+async function aiExecTool(name, input) {
+  input = input || {};
+  const m = viewById();
+  if (name === 'list_views') {
+    const f = (input.filter || '').toLowerCase(), ty = (input.type || '').toLowerCase(), minc = Number(input.min_columns) || 0;
+    const rows = views.filter((v) => (!f || (v.name || '').toLowerCase().includes(f)) && (!ty || (v.type || '').toLowerCase() === ty)
+      && (!minc || (schema[v.id] ? schema[v.id].columns.length : 0) >= minc));
+    if (!rows.length) return `0 views match. ${views.length} in the workspace.`;
+    return `${rows.length} of ${views.length} views:\n` + rows.map((v) => `${v.name} [${v.type}]${schema[v.id] ? ' ' + schema[v.id].columns.length + ' cols' : ''}${v.folderName ? ' · ' + v.folderName : ''}`).join('\n');
+  }
+  const v = name === 'orphans' || name === 'get_relations' ? null : aiFindView(input.name);
+  if (!v && name !== 'orphans' && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
+  if (name === 'get_view') {
+    const d = deps && deps[v.id];
+    return `${v.name}\ntype: ${v.type}\nfolder: ${v.folderName || '(none)'}\nowner: ${v.owner || ''}\n`
+      + `built_on: ${v.parent && m.get(v.parent) ? m.get(v.parent).name : '(nothing — it is a data object)'}\n`
+      + `design_changed: ${v.designModifiedAt ? shortDate(v.designModifiedAt) : v.designModifiedText + ' (Zoho\u2019s own text, not machine-readable)'}\n`
+      + `data_changed: ${shortDate(v.dataModifiedAt)}\n`
+      + `system_table: ${!!v.system}\ndescription: ${v.description || '(none)'}\n`
+      + (d ? `reads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}` : 'lineage: not pulled');
+  }
+  if (name === 'get_structure') return aiStructureText(v);
+  if (name === 'get_sql') {
+    const q = sqls[v.id];
+    if (!q) return `${v.name} is a ${v.type}, not a query table — it has no SQL.`;
+    const body = await sqlBodyOf(v.id);
+    const src = Object.entries(q.sources || {}).map(([, sdef]) => `${sdef.name} (${sdef.columns.length} columns involved)`).join(', ');
+    return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${body || '(the SQL file could not be read)'}`;
+  }
+  if (name === 'search_sql') {
+    const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
+    const hits = [];
+    for (const vv of views.filter((x) => x.type === 'QueryTable')) {
+      const body = await sqlBodyOf(vv.id);
+      if (body && body.toLowerCase().includes(q)) hits.push(vv.name);
+    }
+    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + hits.join('\n') : '(no matches)';
+  }
+  if (name === 'search_columns') {
+    const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
+    const hits = [];
+    for (const [id, t] of Object.entries(schema)) {
+      const cols = t.columns.filter((c) => c.name.toLowerCase().includes(q));
+      if (cols.length) hits.push(`${t.name} [${t.kind}]: ` + cols.map((c) => `${c.name} (${c.type})`).join(', '));
+    }
+    return hits.length ? `${hits.length} table(s) have a matching column:\n` + hits.join('\n') : '(no matches)';
+  }
+  if (name === 'get_relations') {
+    const list = v ? relationsOf(v.id) : relations;
+    if (!list.length) return v ? `${v.name} takes part in no relation.` : 'No relations in this workspace.';
+    return `${list.length} relation(s):\n` + list.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`).join('\n');
+  }
+  if (name === 'who_uses') {
+    const d = deps && deps[v.id];
+    if (!d) return `No lineage for ${v.name} — it was not pulled.`;
+    return `${v.name} is read by ${d.children.length} view(s) and appears on ${d.dashboards.length} dashboard(s).\n`
+      + (d.children.map((x) => `- ${nameOf(x.id, m)} (level ${x.level})`).join('\n') || '(nothing reads from it)')
+      + `\nNote: Analytics only knows what its own views read from each other. A shared link, a scheduled export, an embedded report or an API consumer is invisible to it.`;
+  }
+  if (name === 'orphans') {
+    if (!deps) return 'Lineage was not pulled, so this cannot be answered.';
+    const o = views.filter(isOrphanCandidate);
+    return `${o.length} candidate(s) that nothing in this workspace depends on — candidates, not a verdict:\n`
+      + o.map((x) => `- ${x.name} [${x.type}]`).join('\n');
+  }
+  return 'Unknown tool: ' + name;
+}
+
+// Transport and rendering, ported verbatim in behaviour from the CRM panel: streaming Anthropic
+// agent loop, single-shot OpenAI with the max_tokens → max_completion_tokens retry on that specific
+// 400 (newer models reject the older field). Only the two engines the manifest grants host access to
+// are supported, because those are the two that are tested.
+function aiMarkdown(src) {
+  const codes = [];
+  let t = esc(src == null ? '' : src);
+  t = t.replace(/\u0060\u0060\u0060(\w*)\n?([\s\S]*?)\u0060\u0060\u0060/g, (mm, lang, code) => { codes.push('<pre class="aicode">' + code.replace(/\n+$/, '') + '</pre>'); return '\uE000' + (codes.length - 1) + '\uE001'; });
+  t = t.replace(/\u0060([^\u0060\n]+)\u0060/g, (mm, c) => { codes.push('<code>' + c + '</code>'); return '\uE000' + (codes.length - 1) + '\uE001'; });
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  t = t.replace(/^#{1,6}\s+(.*)$/gm, '<strong>$1</strong>');
+  t = t.replace(/^\s*[-*]\s+(.*)$/gm, '• $1');
+  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  t = t.replace(/\n/g, '<br>');
+  t = t.replace(/\uE000(\d+)\uE001/g, (mm, i) => codes[+i]);
+  return t;
+}
+function aiToolArg(input) { try { const t = JSON.stringify(input || {}); return t.length > 60 ? t.slice(0, 57) + '…' : t; } catch (_) { return ''; } }
+function aiToolEvent(name, input) { aiMessages.push({ role: 'tool', content: `🔧 ${name}(${aiToolArg(input)})` }); aiRenderMessages(); }
+
+async function aiStreamAnthropic(a, msgs, system, tools, onText) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': a.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: a.model, max_tokens: 4096, system, tools, messages: msgs, stream: true }) });
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${aiTrunc(await res.text(), 300)}`);
+  const reader = res.body.getReader(); const dec = new TextDecoder();
+  let buf = ''; const blocks = []; let stop_reason = null;
+  const handle = (evt, data) => {
+    if (evt === 'content_block_start') { blocks[data.index] = data.content_block.type === 'tool_use' ? { type: 'tool_use', id: data.content_block.id, name: data.content_block.name, _json: '' } : { type: 'text', text: '' }; }
+    else if (evt === 'content_block_delta') { const b = blocks[data.index]; if (!b) return; if (data.delta.type === 'text_delta') { b.text += data.delta.text; onText && onText(data.delta.text); } else if (data.delta.type === 'input_json_delta') { b._json += data.delta.partial_json || ''; } }
+    else if (evt === 'content_block_stop') { const b = blocks[data.index]; if (b && b.type === 'tool_use') { try { b.input = JSON.parse(b._json || '{}'); } catch (_) { b.input = {}; } delete b._json; } }
+    else if (evt === 'message_delta') { if (data.delta && data.delta.stop_reason) stop_reason = data.delta.stop_reason; }
+  };
+  for (;;) {
+    const { value, done } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+      let evt = null, dataStr = '';
+      chunk.split('\n').forEach((ln) => { if (ln.startsWith('event:')) evt = ln.slice(6).trim(); else if (ln.startsWith('data:')) dataStr += ln.slice(5).trim(); });
+      if (evt && dataStr) { try { handle(evt, JSON.parse(dataStr)); } catch (_) {} }
+    }
+  }
+  const content = blocks.filter(Boolean).map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
+  return { content, stop_reason };
+}
+
+async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
+  const msgs = apiMessages.slice();
+  for (let iter = 0; iter < maxIter; iter++) {
+    let bubble = null, el = null;
+    const onText = (t) => {
+      if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
+      bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
+    };
+    const { content, stop_reason } = await aiStreamAnthropic(a, msgs, system, tools, onText);
+    const toolUses = content.filter((b) => b.type === 'tool_use');
+    if (stop_reason !== 'tool_use' || !toolUses.length) {
+      if (!bubble) { const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n'); aiMessages.push({ role: 'assistant', content: txt || '(empty response)' }); aiRenderMessages(); }
+      return;
+    }
+    msgs.push({ role: 'assistant', content });
+    const results = [];
+    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = 'Error: ' + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
+    msgs.push({ role: 'user', content: results });
+  }
+  aiMessages.push({ role: 'assistant', content: `(Reached the tool-step limit of ${maxIter}. Raise it in Settings or ask something more specific.)` }); aiRenderMessages();
+}
+
+async function aiCall(cfg, messages, system) {
+  const o = cfg.openai;
+  const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
+  const post = async (limitField) => fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${o.apiKey}` },
+    body: JSON.stringify({ model: o.model, messages: msgs, [limitField]: 4096 }),
+  });
+  // Older chat models want `max_tokens`; newer OpenAI models reject it and require
+  // `max_completion_tokens`. Try the classic field, then retry once on that specific complaint.
+  let res = await post('max_tokens');
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 400 && /max_completion_tokens/.test(body)) res = await post('max_completion_tokens');
+    else throw new Error(`API ${res.status}: ${aiTrunc(body, 300)}`);
+  }
+  if (!res.ok) throw new Error(`API ${res.status}: ${aiTrunc(await res.text(), 300)}`);
+  const d = await res.json();
+  const c = d.choices && d.choices[0];
+  const txt = (c && c.message && c.message.content) || '';
+  if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything — this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
+  return txt;
+}
+
+function aiRenderMessages() {
+  const box = $('aimsgs');
+  if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this workspace — I can read structures, follow foreign keys, open the SQL of a query table, search columns, and say what depends on what.</div></div>'; return; }
+  box.innerHTML = aiMessages.map((m) => m.role === 'tool' ? `<div class="aitool">${esc(m.content)}</div>` : `<div class="aimsg ${m.role}"><div class="airole">${m.role === 'user' ? 'You' : 'AI'}</div><div class="aitext">${m.role === 'assistant' ? aiMarkdown(m.content) : esc(m.content).replace(/\n/g, '<br>')}</div></div>`).join('')
+    + (aiBusy ? '<div class="aiwait"><i></i><i></i><i></i> thinking…</div>' : '');
+  box.scrollTop = box.scrollHeight;
+}
+
+async function aiSend() {
+  const cfg = await aiGetCfg();
+  aiEngineChrome();
+  if (!aiActiveReady(cfg)) { chrome.runtime.openOptionsPage(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
+  const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
+  inp.value = ''; aiMessages.push({ role: 'user', content: text });
+  aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); status('AI thinking…', 'busy');
+  try {
+    const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
+    const withTools = cfg.active === 'anthropic';
+    const system = await aiSystemPrompt(withTools);
+    // The workspace index sent to the model is capped. If it was cut, say so once — do not let the
+    // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
+    if (aiSeedTruncated && !aiSeedWarned) {
+      aiSeedWarned = true;
+      aiMessages.push({ role: 'tool', content: 'ℹ️ Large workspace: the index sent to the model is truncated. ' + (withTools ? 'Claude can still fetch specifics with its tools.' : 'OpenAI answers in one pass, so items beyond the cut are invisible to it — ask about specific views.') });
+      aiRenderMessages();
+    }
+    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 8);
+    else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    status('', '');
+  } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); status('AI error', 'warn'); }
+  aiBusy = false; $('aisend').disabled = false;
+  aiRenderMessages();
+}
+
+async function aiEngineChrome() {
+  const b = $('aiengbadge'), note = $('ainote');
+  if (!b || !note) return;
+  const cfg = await aiGetCfg();
+  if (cfg.active === 'anthropic') { b.textContent = 'Claude · agent'; b.className = 'agent'; note.className = 'ainote'; }
+  else {
+    b.textContent = 'OpenAI · single-shot'; b.className = 'single';
+    $('ainotetxt').innerHTML = 'OpenAI answers in <b>one pass</b>: it sees the workspace index plus the view you have open, '
+      + 'and cannot go and read other structures by itself — so it will ask you for what it is missing. '
+      + 'Switch to Claude in Settings for an agent that explores the whole workspace on its own.';
+    note.className = 'ainote show';
+  }
+}
+function aiContextLabel() {
+  const el = $('aictx'); if (!el) return;
+  const v = selectedId ? viewById().get(selectedId) : null;
+  el.textContent = v ? `Focus: ${v.name} · conversation persists across views` : 'No view focused · open one to give structure-level context';
+}
+function toggleAI() {
+  if ($('aiview').classList.contains('show')) { closeAI(); return; }
+  if (!views.length) return;
+  closeHealth();   // one panel at a time
+  $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open');
+  aiContextLabel(); aiEngineChrome(); aiRenderMessages();
+}
+function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation?')) return; aiMessages = []; aiSeedWarned = false; aiRenderMessages(); }
+
 // ---------- export ----------
 // Coarse scope on purpose: sections, never single views. Kept in IndexedDB beside the folder handle
 // rather than chrome.storage, so this build still needs no `storage` permission — the same choice,
@@ -895,7 +1204,11 @@ async function buildExportMarkdown(sc) {
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
   let out = `# ${bound.name || bound.workspace}\n\nZoho Analytics workspace \`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
   out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
-  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n\n';
+  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n- Zoho Analytics SQL — what query tables allow\n\n';
+  // The dialect reference travels with the export on purpose: this file exists to be handed to an
+  // agent that has never seen Analytics, and a workspace description without the tool's constraints
+  // would get it writing SQL that cannot run.
+  out += window.ZOHO_ANALYTICS_SQL.markdown() + '\n';
   for (const x of secs) {
     out += `## ${x.title}\n\n`;
     if (x.rows) out += row(x.head) + '\n' + row(x.head.map(() => '---')) + '\n' + x.rows.map(row).join('\n') + '\n\n';
@@ -1015,8 +1328,9 @@ function showAbout() {
     + `<h4>Support</h4><div><a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a> · <a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">☕ Ko-fi</a></div>`
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
-    + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
-    + `The extension has no server of its own and sends nothing anywhere. What is written to your workspace folder — and what happens to it afterwards — is up to you.</div>`;
+    + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs — view and column names, relations, and the SQL of your query tables — are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine.</div>`;
   $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
 }
 function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
@@ -1036,7 +1350,16 @@ $('export').onclick = () => doExport('html');
 $('exportmd').onclick = () => doExport('md');
 $('retry').onclick = retryFailed;
 $('refresh').onclick = refreshLocal;
-$('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : openHealth());
+$('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : (closeAI(), openHealth()));
+$('askai').onclick = toggleAI;
+$('aix').onclick = closeAI;
+$('aiclear').onclick = aiClear;
+$('aigear').onclick = () => chrome.runtime.openOptionsPage();
+$('ainotex').onclick = () => $('ainote').classList.remove('show');
+$('aisend').onclick = aiSend;
+$('aiinput').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); aiSend(); } });
+chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.aicfg) aiEngineChrome(); });
+window.addEventListener('focus', () => aiEngineChrome());
 $('healthx').onclick = closeHealth;
 $('expx').onclick = () => closeScope(false);
 $('expcancel').onclick = () => closeScope(false);

@@ -235,6 +235,15 @@ own question, one view at a time, and Analytics only knows what its views read f
 shared link, a scheduled export, an embedded report or an API consumer is invisible to it. Same
 discipline as the connection usage counts in CRM: the coverage gap is stated next to the number.
 
+**The Analytics SQL dialect is a sourced reference, not knowledge.** `apps/analytics/analytics-sql.js`
+is the one thing in that extension not derived from the user's own workspace, and every line in it
+comes from Zoho's published documentation, cited in the file. It is a separate file because three
+places need the same text — the AI system prompt, the options page (so the user can read what the
+model is being told), and the **Markdown export**, which exists to be handed to an agent that has
+never seen Analytics and would otherwise write SQL that cannot run. If a rule cannot be sourced it
+is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
+that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
+
 **AI configuration lives in the options page**, not the side panel. The panel is ~400px wide and
 those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
 `window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.
