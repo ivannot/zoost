@@ -152,13 +152,14 @@ report-to-source graph costs no extra call. Dashboards have no `PARENT_ID` and n
 correct, not a gap. `structureChain()` walks the chain so a report can show its structure instead of
 shrugging, and always states whose structure it is showing.
 
-**What Analytics will not tell us: lookups between base tables.** No captured endpoint exposes them.
-The relations Zoost can prove are query→source (from `editsql`'s `PAROBJID` / `PAROBJIDINVCOLS`,
-which is column-level) and view→view (`PARENT_ID` plus `dependencyview`). Every surface that shows
-relations must say the foreign keys are not among them, rather than implying a complete ER.
+**Relations come from the ER endpoint, and nothing else exposes them.** Three kinds, all provable:
+table↔table joins (`ZDBCreateERD.ma`, written as Zoho writes them), query→source at column level
+(`editsql`'s `PAROBJID` / `PAROBJIDINVCOLS`), and view→view (`PARENT_ID` plus `dependencyview`).
+Zoho's own `relationstring` is displayed verbatim rather than re-rendered in our words: the fact is
+the product, our phrasing of it would be an interpretation.
 
 **A pulled Analytics workspace on disk** is `views.json` (census + folders), `schema.json` (columns
-per table), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/_index.json`
+per table **and the relations**), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/_index.json`
 carrying the id-to-file map and the column-level lineage. The `.sql` files are the point: they are
 the only thing in Analytics that is genuinely source someone wrote, and one file each is what makes
 `git diff` able to answer "what changed in this workspace last month" — which Analytics cannot.
@@ -219,9 +220,23 @@ These all failed **silently**, with no console error. They are the expensive kin
 - **Analytics answers `200` with `{"status":"failure"}`.** The HTTP code alone is not the success
   signal, unlike CRM. `api()` in the Analytics bridge treats anything that is not an explicit
   success as an error.
-- **Analytics endpoints take no CSRF token at all** — session cookies plus
-  `X-Requested-With: XMLHttpRequest` is the whole contract. Verified absent in a capture; do not add
-  one "to be safe".
+- **Analytics CSRF depends on the endpoint family, and there is no single answer.** The
+  `/reportsapi/` and `/clientapi/` endpoints take **no token at all** — session cookies plus
+  `X-Requested-With: XMLHttpRequest` is the whole contract, verified absent in a capture. The legacy
+  `.ma` endpoints (`ZDBCreateERD.ma`) **do**, as `ZDB_CSRF_TOKEN=<value>`. Unlike CRM, where the
+  token is always needed and only the prefix changes, here the answer differs per family. `api()`
+  sends none, `post()` sends it. Adding one to the first family, or omitting it from the second, is
+  equally wrong.
+- **`ZDBCreateERD.ma` is a strict superset of `GETALLTABLECOLDETAILS`, and it carries the relations.**
+  One POST (`DBID`, `ISERDGNEWFLOW=true`) returns the workspace's whole ER model. Measured against a
+  capture: same 135 objects, same columns and types (only ordered differently), **plus** 119
+  relations with the join written out as `(A.col)=(B.col)`, **plus** `lastModTime` in epoch
+  milliseconds that matched `LAST_DESIGN_MODIFY` on 135/135 — the machine-readable design date the
+  view list only gives as localized text — **plus** `isSystemTable`, which flagged 37 objects while
+  `VIEWLIST` flagged none, **plus** a stable `colid` per column. It answers with **no `status`
+  field**, so the shape is the only success signal and `api()`'s check would wave anything through.
+  Its `links` reference nodes and columns **by array index**; those indices mean nothing outside the
+  response and are resolved to view ids and column names before travelling any further.
 
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are

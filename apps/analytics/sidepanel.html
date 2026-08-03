@@ -76,6 +76,9 @@
   .vsub{color:var(--muted);font-size:10px;margin-top:1px}
   .vtype{display:inline-block;font:9.5px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 4px;white-space:nowrap}
   .orphan{color:var(--warn);font-size:10px;white-space:nowrap}
+  .sysflag{color:#8b7bd8}   /* Zoho put it there; you did not build it */
+  .rel{font:11px var(--mono);color:#cbd5e1;padding:3px 0;border-bottom:1px solid var(--line);word-break:break-word}
+  .rel b{color:var(--ink)}
 
   /* detail pane — the structure of the selected table or view */
   #detail{display:none;flex-direction:column;border-top:2px solid var(--border);background:#0f1622;max-height:58%;min-height:120px}
@@ -139,6 +142,7 @@
     <option value="name">Name</option>
     <option value="type">Type</option>
     <option value="folderName">Folder</option>
+    <option value="designModifiedAt">Design changed</option>
     <option value="dataModifiedAt">Data changed</option>
     <option value="owner">Owner</option>
   </select>
@@ -160,6 +164,7 @@
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
+      <button class="dtab" id="tab_rel" data-tab="rel">Relations</button>
       <button class="dtab" id="tab_lin" data-tab="lin">Lineage</button>
     </div>
     <div class="dbody" id="dbody"></div>
@@ -171,10 +176,11 @@
   <b>Lineage is Analytics&rsquo; own.</b> A view nothing depends on may still be used —
   a shared link, a scheduled export, an embedded report, the API — so these are
   <b>candidates</b>, never &ldquo;unused&rdquo;. &middot;
-  <b>Lookups between base tables are not covered:</b> no endpoint we can read exposes them, so the
-  relations shown are query&nbsp;&rarr;&nbsp;source and view&nbsp;&rarr;&nbsp;view only. &middot;
-  <b>Design</b> is Zoho&rsquo;s own text in your interface language and is not sortable;
-  <b>Data</b> is a real timestamp and is.
+  <b>Relations</b> are the joins Analytics itself draws in its ER diagram, written as Zoho writes
+  them. &middot;
+  <b>Design</b> is a real, sortable date for tables and query tables; for reports and dashboards
+  Analytics only gives text in your interface language, which is shown exactly as it sends it,
+  never parsed, and sorted last. <b>Data</b> is always a real timestamp.
 </div>
 
 <script src="idb.js"></script>

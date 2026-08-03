@@ -6,11 +6,13 @@
  *
  * Three differences from the CRM bridge worth knowing:
  *
- *  - **No CSRF token.** The CRM APIs reject a request without `X-ZCSRF-TOKEN`, and the /crm/ and
- *    /deluge/ families want the same token under different prefixes. The Analytics endpoints used
- *    here take none at all: session cookies plus `X-Requested-With: XMLHttpRequest` is the whole
- *    contract. Do not add a token "to be safe" — it was verified absent, and inventing one is the
- *    kind of guess that produces a 400 nobody can explain.
+ *  - **CSRF depends on which family of endpoint you are calling.** The `/reportsapi/` and
+ *    `/clientapi/` endpoints take **no token at all** — session cookies plus
+ *    `X-Requested-With: XMLHttpRequest` is the whole contract, verified absent in a capture. The
+ *    legacy `.ma` endpoints (the ER diagram is one) **do**, as `ZDB_CSRF_TOKEN=<value>`. So there is
+ *    no single answer here, unlike CRM where the token is always required and only the prefix
+ *    changes. `api()` sends none; `post()` sends the token. Do not add one "to be safe" to the
+ *    first family, and do not omit it from the second.
  *
  *  - **HTTP 200 is not success.** Analytics answers `{"status":"failure"}` with a 200, so the code
  *    alone tells you nothing. `api()` treats anything that is not an explicit success as an error.
@@ -58,6 +60,39 @@
     if (!w) throw new Error('no workspace in the current URL');
     return w;
   };
+
+  // The legacy `.ma` endpoints DO want a CSRF token, unlike every /reportsapi/ and /clientapi/ call
+  // above. It goes in as `ZDB_CSRF_TOKEN=<value>` — the same shape as the CRM bridge's prefixed
+  // token, a different name. Two deterministic places are checked, in order; if neither has it the
+  // caller stops with a message naming what was looked for, rather than sending a request that
+  // would come back as an unexplained failure.
+  const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
+  function zdbCsrf() {
+    const c = cookie('ZDB_CSRF_TOKEN');
+    if (c) return c;
+    try {
+      const m = document.documentElement.innerHTML.match(/ZDB_CSRF_TOKEN["'\s]*[:=]["'\s]*([A-Za-z0-9_\-]{32,})/);
+      if (m) return m[1];
+    } catch (_) {}
+    return '';
+  }
+  async function post(path, params) {
+    const token = zdbCsrf();
+    if (!token) throw new Error('CSRF token not found on the page (looked for a ZDB_CSRF_TOKEN cookie, then the same name in the page source)');
+    const res = await fetch(BASE + path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-ZCSRF-TOKEN': 'ZDB_CSRF_TOKEN=' + token,
+        Accept: '*/*',
+      },
+      credentials: 'include',
+      body: new URLSearchParams(params).toString(),
+    });
+    if (!res.ok) throw new Error(res.status + ' on ' + path.split('?')[0]);
+    return res.json();
+  }
   const progress = (stage, done, total) =>
     chrome.runtime.sendMessage({ type: 'pullProgress', stage, done, total }).catch(() => {});
 
@@ -133,13 +168,63 @@
       columns: (entry.colValues || []).map((c) => ({ name: text(c[0]), type: text(c[1]) })),
     };
   }
-  async function tableSchema() {
+  // The ER endpoint is what Analytics itself calls to draw the workspace diagram, and it is a strict
+  // superset of GETALLTABLECOLDETAILS: the same 135 objects with the same columns and types
+  // (verified against a capture — identical sets, only ordered differently), plus four things that
+  // endpoint does not have:
+  //
+  //   - **the relations** — 119 of them in the workspace this was measured on, each with the join
+  //     written out as "(A.col)=(B.col)". This is the foreign-key graph, and nothing else we can
+  //     read exposes it.
+  //   - **`lastModTime`**, epoch milliseconds, which matched LAST_DESIGN_MODIFY on 135/135. It is
+  //     the machine-readable design date the view list only gives as localized text, so the Design
+  //     column can finally sort for these objects.
+  //   - **`isSystemTable`** — 37 of 135 here, while VIEWLIST flagged none. Telling what Zoho put
+  //     there apart from what you built is close to the point of the product.
+  //   - **`colid`**, a stable id per column, which survives a rename.
+  //
+  // It answers with no `status` field at all, so the shape is the only success signal; `api()`'s
+  // check would have waved anything through.
+  const KIND_ERD = { 0: 'Table', 6: 'QueryTable' };
+  async function workspaceErd() {
     const id = ws();
-    const j = await api(`/reportsapi/db/${id}/GETALLTABLECOLDETAILS`);
-    const values = (j && j.data && j.data.values) || {};
-    const tables = {};
-    for (const [viewId, entry] of Object.entries(values)) tables[String(viewId)] = expandCols(entry);
-    return { workspace: id, tables, count: Object.keys(tables).length };
+    const j = await post('/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD&SUBREQUEST=XMLHTTP&_ZVER_=101',
+      { DBID: id, ISERDGNEWFLOW: 'true' });
+    if (!j || !Array.isArray(j.nodes) || !Array.isArray(j.links)) {
+      throw new Error('the ER endpoint did not answer with nodes and links');
+    }
+    const tables = {}; const byIndex = new Map();
+    for (const n of j.nodes) {
+      const viewId = String(n.viewId);
+      byIndex.set(n.id, { viewId, node: n });
+      tables[viewId] = {
+        name: text(n.name),
+        kind: KIND_ERD[String(n.viewType)] || String(n.viewType ?? ''),
+        description: text(n.viewDesc),
+        system: !!n.isSystemTable,
+        dataPrep: !!n.isDataPrepTable,
+        designModifiedAt: Number(n.lastModTime) || null,
+        columns: (n.columns || []).map((c) => ({ name: text(c.name), type: text(c.dt), colid: text(c.colid), description: text(c.coldesc) })),
+      };
+    }
+    // Links reference nodes and columns by array index. Those indices mean nothing outside this
+    // response, so they are resolved here and never travel further.
+    const colName = (idx, i) => {
+      const e = byIndex.get(idx);
+      const c = e && e.node.columns && e.node.columns[i];
+      return c ? text(c.name) : '';
+    };
+    const relations = j.links.map((l) => {
+      const s = byIndex.get(l.source), t = byIndex.get(l.target);
+      return {
+        source: s ? s.viewId : null, target: t ? t.viewId : null,
+        sourceName: s ? text(s.node.name) : '', targetName: t ? text(t.node.name) : '',
+        sourceColumns: (l.sourceColumns || []).map((i) => colName(l.source, i)),
+        targetColumns: (l.targetColumns || []).map((i) => colName(l.target, i)),
+        relation: text(l.relationstring),   // Zoho's own rendering of the join, e.g. "(A.col)=(B.col)"
+      };
+    }).filter((r) => r.source && r.target);
+    return { workspace: id, tables, relations, count: Object.keys(tables).length };
   }
 
   // ---- the SQL of a QueryTable --------------------------------------------------------------
@@ -203,7 +288,7 @@
     if (msg?.cmd === 'context') { sendResponse(context()); return; }
     if (msg?.cmd === 'workspaceInfo') return reply(workspaceInfo());
     if (msg?.cmd === 'listViews') return reply(listViews());
-    if (msg?.cmd === 'tableSchema') return reply(tableSchema());
+    if (msg?.cmd === 'workspaceErd') return reply(workspaceErd());
     if (msg?.cmd === 'pullSql') return reply(pullSql(msg.ids || []));
     if (msg?.cmd === 'viewDependencies') return reply(viewDependencies(msg.id));
     if (msg?.cmd === 'scanDependencies') return reply(scanDependencies(msg.ids || []));

@@ -35,7 +35,7 @@ let bound = null;           // { workspace, name, origin } of the active workspa
 let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
 
-let views = [], folders = [], schema = {}, sqls = {}, deps = null, pullFailed = [];
+let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
 const ORPHANS = '__orphans__';
 let typeFilter = null, sortKey = 'name', sortDir = 1, selectedId = null, detailTab = 'cols';
 
@@ -112,9 +112,9 @@ async function refreshWorkspaces() {
   if (root && !rootGranted) {
     $('pickroot').textContent = `${root.name} — click to grant access`;
     sel.innerHTML = '<option value="">access not granted</option>';
-    return setEnabled(false);
+    dir = null; bound = null; return updateButtons();
   }
-  if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; return setEnabled(false); }
+  if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; return updateButtons(); }
 
   const list = await listWorkspaces();
   // Folders sitting directly in the working folder are the older flat layout. This is not a
@@ -131,7 +131,7 @@ async function refreshWorkspaces() {
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} — no workspaces yet</option>`;
     if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move Analytics ones into «${root.name}/${APP_DIR}/» and click ↻.`, 'warn');
-    return setEnabled(false);
+    dir = null; bound = null; return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}">${esc(w.name || w.folder)} · ${esc(w.id)}</option>`).join('');
   const active = await window.idbHandle.get('activeWsAnalytics');
@@ -232,9 +232,9 @@ async function pullAll() {
     const vl = await toBridge({ cmd: 'listViews' });
     views = vl.views || []; folders = vl.folders || [];
 
-    setBusy(true, 'Reading table and column structure…');
-    const sc = await toBridge({ cmd: 'tableSchema' });
-    schema = sc.tables || {};
+    setBusy(true, 'Reading structure and relations…');
+    const sc = await toBridge({ cmd: 'workspaceErd' });
+    schema = sc.tables || {}; relations = sc.relations || [];
 
     const qIds = views.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
@@ -247,11 +247,12 @@ async function pullAll() {
     deps = dp.deps || {};
     pullFailed = [].concat(sq.failed || [], dp.failed || []);
 
+    mergeSchemaIntoViews();
     await writeToDisk(info);
 
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
-    setBusy(false, `${views.length} views · ${Object.keys(schema).length} tables · ${cols} columns · ${qIds.length} SQL · ${orphans} nothing depends on`
+    setBusy(false, `${views.length} views · ${Object.keys(schema).length} tables · ${cols} columns · ${relations.length} relations · ${qIds.length} SQL · ${orphans} nothing depends on`
       + (pullFailed.length ? ` · ${pullFailed.length} could not be read` : ''));
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
@@ -265,7 +266,7 @@ async function pullAll() {
 
 async function writeToDisk(info) {
   await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views });
-  await writeJson('schema.json', { workspace: info.workspace, tables: schema });
+  await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations });
   await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed });
   // One .sql per query table, so the workspace is diffable in git — that is the whole point of the
   // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
@@ -280,7 +281,7 @@ async function writeToDisk(info) {
   await writeJson(CFG, {
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
-    counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, sql: Object.keys(sqls).length },
+    counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, relations: relations.length, sql: Object.keys(sqls).length },
   });
   bound = { workspace: info.workspace, name: info.name, origin: info.origin };
 }
@@ -290,11 +291,12 @@ async function loadFromDisk() {
   const s = await readJson('schema.json', null);
   const l = await readJson('lineage.json', null);
   views = (v && v.views) || []; folders = (v && v.folders) || [];
-  schema = (s && s.tables) || {};
+  schema = (s && s.tables) || {}; relations = (s && s.relations) || [];
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
   sqls = {};
   const index = await readJson('sql/_index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
+  mergeSchemaIntoViews();
   selectedId = null; $('detail').classList.remove('show');
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
@@ -321,6 +323,21 @@ function isOrphanCandidate(v) {
   if (v.type === 'Dashboard') return false;    // a dashboard is consumed by people, not by views
   return d.children.length === 0 && d.dashboards.length === 0;
 }
+// The ER endpoint carries `lastModTime`, epoch milliseconds, which matched LAST_DESIGN_MODIFY on
+// every one of the 135 objects it describes. It is copied onto the views so the Design column can
+// sort — but only Tables and QueryTables have it. Presentation views still only have Zoho's
+// localized text, which is shown verbatim and never parsed, so they sort last and the note says so.
+function mergeSchemaIntoViews() {
+  for (const v of views) {
+    const t = schema[v.id];
+    v.designModifiedAt = t ? t.designModifiedAt : null;
+    v.system = t ? !!t.system : false;
+  }
+}
+
+// Every relation this view takes part in, either end. Relations are stored once, not per side.
+const relationsOf = (id) => relations.filter((r) => r.source === id || r.target === id);
+
 const viewById = () => { const m = new Map(); for (const v of views) m.set(v.id, v); return m; };
 const nameOf = (id, m) => (m.get(id) ? m.get(id).name : id);
 
@@ -383,9 +400,9 @@ function visibleViews() {
     });
   }
   return out.slice().sort((a, b) => {
-    if (sortKey === 'dataModifiedAt') {
+    if (sortKey === 'dataModifiedAt' || sortKey === 'designModifiedAt') {
       // Views with no timestamp sort last in both directions — an absent value is not "oldest".
-      const x = a.dataModifiedAt, y = b.dataModifiedAt;
+      const x = a[sortKey], y = b[sortKey];
       if (!x && !y) return 0;
       if (!x) return 1;
       if (!y) return -1;
@@ -436,10 +453,12 @@ function render() {
       <th class="num" title="As Zoho words it, in your interface language — not sortable, see the note below">Design</th>
       <th class="num">Data</th>${deps ? '<th class="num">Used by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
-      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}</div></td>
+      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Analytics flags this as a system table — it came from a connected source, you did not build it">system</span>' : ''}</div></td>
       <td><span class="vtype">${esc(v.type)}</span></td>
       <td class="num">${colCount(v)}</td>
-      <td class="num verbatim" title="${escA(v.designModifiedBy ? 'by ' + v.designModifiedBy : '')}">${esc(v.designModifiedText || '—')}</td>
+      ${v.designModifiedAt
+        ? `<td class="num" title="${escA(v.designModifiedBy ? 'by ' + v.designModifiedBy : '')}">${esc(shortDate(v.designModifiedAt))}</td>`
+        : `<td class="num verbatim" title="${escA('Zoho gives no machine-readable value for this one — shown as it sends it' + (v.designModifiedBy ? ', by ' + v.designModifiedBy : ''))}">${esc(v.designModifiedText || '—')}</td>`}
       <td class="num">${esc(shortDate(v.dataModifiedAt))}</td>
       ${deps ? `<td class="num">${usedBy(v)}</td>` : ''}
     </tr>`).join('')}</tbody></table>`;
@@ -456,8 +475,10 @@ async function openDetail(id) {
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
   $('tab_sql').disabled = !sqls[id];
+  $('tab_rel').disabled = !relationsOf(id).length;
   $('tab_lin').disabled = !deps;
   if (detailTab === 'sql' && !sqls[id]) detailTab = 'cols';
+  if (detailTab === 'rel' && !relationsOf(id).length) detailTab = 'cols';
   if (detailTab === 'lin' && !deps) detailTab = 'cols';
   document.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('active', b.dataset.tab === detailTab));
   await renderDetail(v);
@@ -485,6 +506,17 @@ async function renderDetail(v) {
     body.innerHTML = via + `<table class="ctbl"><thead><tr><th>Column</th><th>Type</th></tr></thead><tbody>${
       t.columns.map((c) => `<tr><td>${esc(c.name)}</td><td class="t">${esc(c.type)}</td></tr>`).join('')
     }</tbody></table>`;
+    return;
+  }
+  if (detailTab === 'rel') {
+    const rs = relationsOf(v.id);
+    // Zoho's own `relationstring` is shown as it writes it — "(A.col)=(B.col)". Re-rendering the
+    // join in our own words would be an interpretation, and the point here is the fact, not our
+    // phrasing of it. The direction is stated because a lookup is not symmetric.
+    body.innerHTML = rs.map((r) => {
+      const out = r.source === v.id;
+      return `<div class="rel"><b>${esc(out ? '→ ' + r.targetName : '← ' + r.sourceName)}</b><br>${esc(r.relation)}</div>`;
+    }).join('');
     return;
   }
   if (detailTab === 'sql') {
