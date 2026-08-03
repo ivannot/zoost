@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Zoost — Zoho CRM</title>
+<meta name="author" content="Ivan Notaristefano">
+<meta name="generator" content="Zoost">
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#fff; --ink:#182130; --muted:#647085; --border:#d7deea; --line:#e7ecf4;
+    --sel:#2f6fed; --sel-soft:#e7effd; --up:#b0531f; --up-soft:#fbecdf; --down:#1f7a5c; --down-soft:#e0f2ea;
+    --rest:#6b4fbb; --warn:#c2410c;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
+    /* namespace colors (shared with canvas) */
+    --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b; --n-schedule:#8b5cf6; --n-validation_rule:#ef4444;
+    --n-standard:#3b82f6; --n-custom:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:15px;margin:0}
+  header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .tabs{margin-left:auto;display:flex;gap:4px}
+  .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
+  .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .wrap{flex:1;min-height:0;position:relative}
+  .view{position:absolute;inset:0;display:none} .view.on{display:flex}
+  /* explorer */
+  aside{width:340px;flex:none;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+  .search{padding:12px}
+  .search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
+  .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
+  .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .list{overflow:auto;flex:1;border-top:1px solid var(--line)}
+  .item{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:8px}
+  .item:hover{background:var(--sel-soft)} .item[aria-selected=true]{background:var(--sel-soft);box-shadow:inset 3px 0 0 var(--sel)}
+  .item .nm{font:12.5px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ns{font:10px var(--mono);color:var(--muted)} .deg{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  main{flex:1;overflow:auto;padding:22px 26px;min-width:0}
+  .empty{color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
+  .crumbs{font:12px var(--mono);color:var(--muted);margin-bottom:14px;min-height:16px}
+  .crumbs a{color:var(--sel);cursor:pointer} .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .title h2{margin:0;font:20px var(--mono)}
+  .badge{font:10.5px var(--sans);padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#eef2f8;color:#3a4760}
+  .b-rest{background:#efeaFB;color:var(--rest);border-color:#ddd2f5}
+  .sub{color:var(--muted);font-size:13px;margin:6px 0 2px}
+  .desc{font-size:13px;color:#3a4760;margin:8px 0 0;max-width:70ch}
+  .sig{font:12px var(--mono);color:#3a4760;background:#f6f8fb;border:1px solid var(--line);padding:8px 10px;border-radius:8px;margin:14px 0;white-space:pre-wrap}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  .col h3{font-size:12px;letter-spacing:.3px;text-transform:uppercase;margin:0 0 8px}
+  .col.up h3{color:var(--up)} .col.down h3{color:var(--down)} .col .hint{font-size:11px;color:var(--muted);font-weight:400;text-transform:none}
+  .refs{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .ref{padding:8px 11px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
+  .ref:last-child{border-bottom:0} .up .ref:hover{background:var(--up-soft)} .down .ref:hover{background:var(--down-soft)}
+  .ref .nm{font:12px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .none{padding:10px 11px;color:var(--muted);font-size:12.5px}
+  .warn{margin-top:16px;border:1px solid #f4c9a3;background:#fdf3ea;border-radius:10px;padding:10px 12px}
+  .warn h4{margin:0 0 4px;font-size:12px;color:var(--warn)} .warn code{font:12px var(--mono)}
+  .assoc{margin-top:12px;font:11.5px var(--mono);color:var(--muted)} .assoc b{color:#3a4760}
+  .file{margin-top:14px;font:11.5px var(--mono);color:var(--muted)}
+  /* visual */
+  #visual{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 40%,#ffffff, #eef1f6)}
+  #cv{width:100%;height:100%;display:block;cursor:grab} #cv:active{cursor:grabbing}
+  .legend{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:11px var(--sans);color:var(--muted)}
+  .legend b{color:var(--ink)} .legend .li{display:flex;align-items:center;gap:6px;margin-top:3px}
+  .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
+  #tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font:11px var(--mono);padding:3px 7px;border-radius:6px;display:none;transform:translate(-50%,-140%)}
+  #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
+  .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  .srcbody{display:flex;max-height:340px;overflow:auto;background:#0f1622}
+  .srcbody .gut{margin:0;padding:10px;color:#4a5877;text-align:right;user-select:none;border-right:1px solid #1e2735;font:11.5px/1.55 var(--mono);white-space:pre;background:#0c1220}
+  .srcbody .src{margin:0;padding:10px;flex:1;color:#cbd5e1;font:11.5px/1.55 var(--mono);white-space:pre;tab-size:2}
+  .c-com{color:#7c8aa3;font-style:italic} .c-str{color:#4bb37f} .c-num{color:#c07a3a}
+  .c-kw{color:#5a82e0;font-weight:600} .c-type{color:#9a6fd0} .c-fn{color:#3a9fd6}
+  .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
+  .ftbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+  .ftbl td{padding:4px 8px;border-bottom:1px solid var(--line);color:#33415a;white-space:nowrap}
+  .ftbl td.mono{color:#2563eb} .ftbl tr:hover{background:#eef3fb}
+  .ftbl th.lcol,.ftbl td.lcol{text-align:center;padding:4px 5px;border-left:1px solid var(--line)}
+  .ftbl th.lcol{max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;font-size:10px;letter-spacing:0}
+  .ftbl th.lcol.hid{color:#b9c2cf;font-style:italic}
+  .ftbl td.lcol .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8}
+  .ftbl td.lcol .d.req{background:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.18)}
+  .ftbl tr.nolay td{background:#fffaf0}
+  .ftbl .nolaytag{color:#d97706;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;margin-left:5px}
+  .laylegend{padding:6px 10px;font:10.5px var(--sans);color:var(--muted);background:#f6f8fb;border-top:1px solid var(--line)}
+  .laylegend .d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;vertical-align:middle}
+  .laylegend .d.req{background:#d97706}
+  .laychips{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#f6f8fb;border-bottom:1px solid var(--line)}
+  .laychip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .laychip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  #v-er{overflow:hidden;background:#eef1f6}
+  /* relations view */
+  #v-rel{flex-direction:column;background:#fff;overflow:hidden}
+  #relbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+  #relq{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font:12.5px var(--sans);outline:none}
+  #relq:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  #relcount{font:11.5px var(--sans);color:var(--muted);white-space:nowrap}
+  #relwrap{flex:1;overflow:auto;min-height:0}
+  .rtbl{width:100%;border-collapse:collapse;font:12px var(--sans)}
+  .rtbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
+  .rtbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  .rtbl tr:hover{background:#f7faff}
+  .rtbl .rname{font:13px var(--mono);font-weight:700;color:#b45309;cursor:pointer;white-space:nowrap}
+  .rtbl .rname:hover{text-decoration:underline}
+  .rtbl .mod{font:11.5px var(--mono);color:#64748b;cursor:pointer}
+  .rtbl .mod:hover{color:var(--sel);text-decoration:underline}
+  .rtbl .rlab{color:#475569}
+  .rtbl .rtype{font:10.5px var(--sans);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+  .rtbl .snip{font:11px var(--mono);color:#334155;background:#f6f8fb;border:1px solid var(--line);border-radius:6px;padding:4px 7px;cursor:pointer;display:inline-block;white-space:nowrap}
+  .rtbl .snip:hover{border-color:var(--sel);background:#eef3fb}
+  .rtbl tr.sys td{background:#fcfcfd;color:#94a3b8}
+  .rtbl tr.sys .rname{color:#94a3b8;font-weight:600}
+  #relhint{padding:9px 14px;font:11px var(--sans);color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
+  #ertools,#vistools{position:absolute;top:10px;left:10px;z-index:6;display:flex;gap:6px;flex-wrap:wrap}
+  #ertools button,#vistools button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--muted)}
+  #ertools button:hover,#vistools button:hover{border-color:var(--sel);color:var(--ink)}
+  #vistools button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  #ertools button.on{background:#92400e;border-color:#92400e;color:#fff}
+  #ertools button:disabled{opacity:.4;cursor:default}
+  #erlay{position:absolute;top:48px;left:10px;z-index:7;display:none;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:10px 12px;width:262px}
+  #erlay.on{display:block}
+  #erlay .lrow{display:flex;align-items:center;gap:8px;margin:6px 0}
+  #erlay label{font:11.5px var(--sans);color:var(--muted);flex:0 0 88px}
+  #erlay input[type=range]{flex:1;min-width:0;accent-color:#d97706}
+  #erlay input[type=checkbox]{accent-color:#d97706}
+  #erlay .lval{font:11px var(--mono);color:#92400e;flex:0 0 34px;text-align:right}
+  #erlay .lhead{font:10.5px var(--sans);color:#94a3b8;margin:0 0 6px;line-height:1.4}
+  #erlay .lrow.off{display:none}
+  #erlay .lfoot{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+  #erlay .lfoot button{width:100%;font:11.5px var(--sans)}
+  @media print{ #erlay{display:none !important} }
+  #erdepth button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:15px}   /* centre the −/+ glyph in its box */
+  #erdepth button:disabled{opacity:.35;cursor:default}
+  #ervp{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+  #ersvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+  .erbox{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 2px 10px rgba(20,30,50,.10);font:11px var(--mono);overflow:hidden;cursor:pointer}
+  .erbox.sel{outline:2px solid var(--sel);outline-offset:1px}
+  .erbox.focus{border-color:#fbbf24 !important;box-shadow:0 0 0 3px rgba(251,191,36,.4),0 6px 20px rgba(0,0,0,.15) !important}
+  .erbox .erhdr{padding:6px 9px;font-weight:700;color:#fff;font-family:var(--sans);font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .erbox .erhdr small{opacity:.85;font-weight:500;font-size:10px}
+  .erbox.standard .erhdr{background:#3b82f6} .erbox.custom .erhdr{background:#a78bfa}
+  /* relation-first mode: the module is context, not content */
+  .erbox.dim{background:#fbfcfd;border-color:#d7dee7;box-shadow:none}
+  .erbox.dim .erhdr{background:#eef2f7 !important;color:#5b6b80;font-weight:600;font-size:11px;padding:5px 8px}
+  .erbox.dim .erhdr small{color:#93a2b5;opacity:1}
+  .erbox.dim.focus{border-color:#f0b95c !important;box-shadow:0 0 0 2px rgba(217,119,6,.30) !important}
+  /* in relation mode the labels are the subject: they go above the boxes */
+  #v-er.relemph #ersvg{z-index:3}
+  #v-er.relemph .erbox{z-index:1}
+  /* edge selection: bring one relation and its two ends to the front, push the rest back */
+  .erbox.faded{opacity:.16}
+  .erbox.epick{border-color:#d97706 !important;box-shadow:0 0 0 3px rgba(217,119,6,.32),0 6px 18px rgba(0,0,0,.12) !important}
+  #ersvg .erhit{pointer-events:stroke;cursor:pointer}
+  #ersvg .erlabel{pointer-events:auto;cursor:pointer}
+  #ersvg .erlink{pointer-events:none}
+  #erpick{position:absolute;left:10px;bottom:36px;z-index:8;display:none;background:#fff;border:1px solid #e8b563;border-radius:10px;box-shadow:0 8px 26px rgba(20,30,50,.16);padding:11px 13px;max-width:460px;font:12px var(--sans)}
+  #erpick.on{display:block}
+  #erpick .pk1{font:700 14px var(--mono);color:#92400e;margin-bottom:3px;word-break:break-all}
+  #erpick .pk2{color:var(--muted);margin-bottom:7px}
+  #erpick .pk2 b{color:#33415a;font-family:var(--mono);font-weight:600}
+  #erpick .pksnip{font:11.5px var(--mono);background:#fffbeb;border:1px solid #f0d9a8;border-radius:7px;padding:6px 8px;cursor:pointer;word-break:break-all;color:#7c4a10}
+  #erpick .pksnip:hover{border-color:#d97706;background:#fef3c7}
+  #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1}
+  #erpick .pkalt{margin-top:6px;font:11px var(--mono);color:#94a3b8}
+  @media print{ #erpick{display:none !important} }
+  .erbox .errow{display:flex;gap:8px;padding:2px 9px;border-top:1px solid #eef1f6}
+  .erbox .errow .fn{color:#33415a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .erbox .errow .ft{color:#94a3b8;white-space:nowrap}
+  .erbox .errow.lk{background:#f6f2fe} .erbox .errow.lk .fn{color:#7c3aed;font-weight:600}
+  .erbox .errow .pk{color:#d97706;font-weight:700;margin-left:2px}
+  .erbox .ermore{padding:3px 9px;color:#94a3b8;border-top:1px solid #eef1f6;font-style:italic}
+  @media print{ #v-er.on{position:static;overflow:visible} #ervp{transform:none !important} #ertools,.hint2{display:none !important} }
+  @media print{
+    header .tabs, #vistools, #v-explorer, .legend, .hint2, #tip{display:none !important}
+    header{border:0} body{height:auto;overflow:visible}
+    .wrap{position:static} .view{position:static}
+    #v-visual{display:flex !important} #visual{background:#fff}
+  }
+  #credit{position:fixed;bottom:6px;left:10px;font:10px system-ui,-apple-system,sans-serif;color:#9aa4b2;z-index:3;pointer-events:none}
+  #credit a{color:#9aa4b2;text-decoration:none}
+  @media print{ #credit{color:#556;position:fixed;bottom:6px;left:10px} }
+</style>
+</head>
+<body>
+  <header>
+    <h1 id="gtitle">Zoost</h1>
+    <span class="stat" id="statline"><b id="s-nodes">0</b> tables · <b id="s-edges">0</b> relations · <b id="s-dead">0</b> in no relation · <b id="s-unres">0</b> unresolved</span>
+    <span class="stat" id="s-ws"></span>
+    <div class="tabs" style="margin-left:auto"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+  </header>
+  <div class="wrap">
+    <div class="view on" id="v-explorer">
+      <aside>
+        <div class="search"><input id="q" placeholder="Search table…  (/ to focus)" autocomplete="off"></div>
+        <div class="chips" id="chips"></div>
+        <div class="list" id="list"></div>
+      </aside>
+      <main id="main"><div class="empty">Select a table.<br>Left = what points at it (impact if you change it). Right = what it points at.</div></main>
+    </div>
+    <div class="view" id="v-visual">
+      <div id="visual">
+        <div id="vistools">
+          <button id="visScope" title="Switch between the focused neighbourhood and the whole org" style="display:none">Scope: focus</button>
+        <button id="visReset" title="Clear the focus and show the whole graph again" style="display:none">↺ Whole graph</button>
+          <button id="fitBtn" title="Fit graph to view">Fit</button>
+          <button id="focusBtn" title="Show only the selected node's neighbourhood">Focus</button>
+          <button id="labelBtn" title="Cycle labels: hubs / all / off">Labels: hubs</button>
+          <button id="nameToggle" title="Node labels: internal api_name or display label">Name: display</button>
+          <button id="pdfBtn" title="Save the graph as PDF">Save PDF</button>
+        </div>
+        <canvas id="cv"></canvas>
+        <div class="legend" id="legend"><b>Namespaces</b></div>
+        <div class="hint2">scroll to zoom · drag to pan · click a node to inspect</div>
+        <div id="tip"></div>
+      </div>
+    </div>
+    <div class="view" id="v-rel">
+      <div id="relbar">
+        <input id="relq" placeholder="Search table, column, join…" autocomplete="off">
+        <span class="chips" id="relchips" style="padding:0"></span>
+        <span id="relcount"></span>
+      </div>
+      <div id="relwrap"></div>
+      <div id="relhint">Click a join to copy it · click a table to open it in the Explorer</div>
+    </div>
+    <div class="view" id="v-er">
+      <div id="ertools">
+        <button id="erLayBtn" title="Layout controls: spacing, spread, label size">Layout ⚙</button>
+        <button id="erEmph" title="Relation-first rendering: modules shrink to labels, relation API names take the foreground">Emphasis: modules</button>
+        <button id="erScope" title="Switch between the focused neighbourhood and the whole org" style="display:none">Scope: focus</button>
+        <button id="erReset" title="Clear the focus and show the whole graph again" style="display:none">↺ Whole graph</button>
+        <span id="erdepth" style="display:none;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 8px;font:12px var(--sans)">Depth <button id="erdMinus" style="border:none;background:#eef1f6;border-radius:5px;width:20px;height:20px;cursor:pointer;font-weight:700">−</button><b id="erdVal" style="min-width:12px;text-align:center">2</b><span id="erdMax" style="color:#94a3b8;font-size:11px">/ 6</span><button id="erdPlus" style="border:none;background:#eef1f6;border-radius:5px;width:20px;height:20px;cursor:pointer;font-weight:700">+</button></span>
+        <button id="erAll">Fields: key</button>
+        <button id="erFit2">Fit</button>
+        <button id="erPdf">Save PDF</button>
+      </div>
+      <div id="erlay">
+        <div class="lhead" id="erlayHead"></div>
+        <div class="lrow" id="rowMargin"><label for="pMargin">Box spacing</label><input type="range" id="pMargin" min="10" max="320" step="5"><span class="lval" id="vMargin"></span></div>
+        <div class="lrow" id="rowSpread"><label for="pSpread">Spread</label><input type="range" id="pSpread" min="10" max="160" step="2"><span class="lval" id="vSpread"></span></div>
+        <div class="lrow" id="rowRing"><label for="pRing">Ring radius</label><input type="range" id="pRing" min="200" max="1400" step="20"><span class="lval" id="vRing"></span></div>
+        <div class="lrow" id="rowGap"><label for="pGap">Label gap</label><input type="range" id="pGap" min="0" max="48" step="2"><span class="lval" id="vGap"></span></div>
+        <div class="lrow" id="rowFs"><label for="pFs">Label size</label><input type="range" id="pFs" min="8" max="22" step="1"><span class="lval" id="vFs"></span></div>
+        <div class="lrow" id="rowSub"><label for="pSub">Show lookup field</label><input type="checkbox" id="pSub"><span class="lval"></span></div>
+        <div class="lrow lfoot"><button id="erlayReset">Reset to preset</button></div>
+      </div>
+      <div id="erpick"><span class="pkx" id="erpickx">✕</span><div id="erpickbody"></div></div>
+      <div id="ervp"><svg id="ersvg"><defs><marker id="erarrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/></marker><marker id="erarrowsel" markerWidth="11" markerHeight="11" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#d97706"/></marker></defs></svg><div id="erboxes"></div></div>
+      <div class="hint2">scroll to zoom · drag to pan · click a table to inspect</div>
+    </div>
+  </div>
+  <script src="graphview.js"></script>
+  <div id="credit"></div>
+</body>
+</html>

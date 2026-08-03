@@ -279,6 +279,7 @@
       <button id="exportmd" class="lbtn" disabled title="Markdown export — context for an external AI tool">Markdown</button>
     </span>
     <span class="gsep"></span>
+    <button id="graph" class="lbtn" disabled title="ER diagram — tables, columns and the relations between them, in its own window">Schema ↗</button>
     <button id="health" class="pbtn" disabled title="Health — workspace audit, shown in this panel" aria-label="Health" style="font-size:15px;line-height:1">♥</button>
     <button id="askai" class="abtn" disabled title="Ask AI about this workspace">AI</button>
   </fieldset>
@@ -327,7 +328,7 @@
   </div>
 
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view">Pull</button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="Open the ER diagram focused on this table">ER ↗</button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view">Pull</button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>

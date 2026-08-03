@@ -178,6 +178,16 @@ This is how you evolve the captured data without orphaning already-pulled worksp
 module's `api_name`, and it is what `zoho.crm.getRelatedRecords()` requires. This is the single
 most valuable thing the tool surfaces; treat it accordingly.
 
+**The graph window is one engine, fed by two products.** `graphview.js` consumes a generic shape —
+`{kind:'schema', nodes:{id:{fields[], calls[], called_by[], …}}, edges:[[a,b]], focus, depth}` — and
+everything expensive lives there: the ER layout with both branches, the depth control, the layout
+sliders, the force graph, the PDF export. So a new product does **not** get a second diagram: it
+expresses its own world in that shape and the window works. Analytics maps table→node,
+column→field, foreign key→`lookup`, relation→edge, and only the genuinely product-specific parts
+were rewritten in its copy — the edge card (a join, not a related-list snippet), the relations table,
+the filter chips and the wording. If you find yourself changing the layout maths on one side, it
+almost certainly belongs on both.
+
 **The ER diagram has two layout branches**, and they are mutually exclusive:
 concentric (focus + ego set) driven by `ring`, and force-directed driven by `spread`.
 A control that does nothing in the active branch must be hidden, not shown and ignored.

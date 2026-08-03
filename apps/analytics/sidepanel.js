@@ -315,6 +315,7 @@ function updateButtons() {
   const loaded = views.length > 0;
   $('export').disabled = busy || !loaded;
   $('exportmd').disabled = busy || !loaded;
+  $('graph').disabled = busy || !Object.keys(schema).length;
   $('health').disabled = busy || !loaded;
   $('askai').disabled = busy || !loaded;
   $('pull').title = $('pull').disabled && dir && ctx && ctx.workspace && !guardOk()
@@ -687,6 +688,15 @@ async function openDetail(id) {
     ? 'Pull only this view into the local mirror — its SQL and its lineage'
     : 'The active tab is a different workspace, so nothing can be pulled';
   $('dpull').onclick = () => pullOne(v.id);
+  // Focused ER, exactly as the CRM opens a module's relations: the window takes it from here and
+  // the depth stays adjustable there.
+  const chain = structureChain(v, viewById());
+  const srcId = chain ? chain[chain.length - 1].id : null;
+  $('dgraph').disabled = !srcId || !relationsOf(srcId).length;
+  $('dgraph').title = srcId && relationsOf(srcId).length
+    ? 'Open the ER diagram focused on this table'
+    : 'This table takes part in no relation, so there is nothing to diagram';
+  $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
   $('tab_sql').disabled = !sqls[id];
@@ -782,6 +792,73 @@ async function refreshLocal() {
   setBusy(true, 'Reloading from disk…');
   await loadFromDisk();
   setBusy(false);
+}
+
+// ---------- schema graph ----------
+// The graph window is the CRM one, unchanged in its engine: same ER layout with the concentric and
+// force branches, the same depth control and the same layout sliders. It consumes a generic
+// node/edge shape, so the job here is to express the Analytics workspace in that shape rather than
+// to write a second diagram — which is also why the two windows behave identically for anyone who
+// uses both.
+//
+//   node   = a table or query table          (the only things with columns)
+//   field  = a column, `lookup` set when it is a foreign key
+//   edge   = a relation from the ER model
+//   joins  = the same relations with Zoho's own join string, for the edge card and the table
+//   reads  = the views that read from this table, from the lineage
+function buildSchemaGraph() {
+  const m = viewById();
+  const nodes = {};
+  for (const [id, t] of Object.entries(schema)) {
+    const { out, inc } = foreignKeys(id);
+    const joins = [];
+    for (const [col, list] of out) for (const f of list) joins.push({ direction: 'out', other: f.id, otherName: f.name, column: col, otherColumn: f.column, relation: (relations.find((r) => r.source === id && r.target === f.id && r.sourceColumns.includes(col)) || {}).relation || '' });
+    for (const [col, list] of inc) for (const f of list) joins.push({ direction: 'in', other: f.id, otherName: f.name, column: col, otherColumn: f.column, relation: (relations.find((r) => r.target === id && r.source === f.id && r.targetColumns.includes(col)) || {}).relation || '' });
+    // Which views read from this table, so the diagram can answer "what breaks if I change it".
+    const d = deps && deps[id];
+    const reads = d ? d.children.map((x) => nameOf(x.id, m)) : [];
+    nodes[id] = {
+      id, name: t.name, api_name: t.name, display_name: t.name,
+      namespace: t.kind === 'QueryTable' ? 'query' : 'table',
+      system: !!t.system, category: t.kind, description: t.description || '',
+      calls: [], called_by: [], rest: false, dead_suspect: false, unresolved: [], ambiguous: [],
+      associated_place: null, file: null, source_code: '', params: [], return_type: null,
+      fields: t.columns.map((c) => {
+        const fk = (out.get(c.name) || [])[0];
+        return { api_name: c.name, label: c.name, data_type: c.type, mandatory: false, lookup: fk ? fk.id : null };
+      }),
+      joins, reads,
+      layouts: [], related_lists: [], layoutDetail: false, touched_by: [],
+    };
+  }
+  const edgeSet = new Set();
+  for (const r of relations) {
+    if (!nodes[r.source] || !nodes[r.target] || r.source === r.target) continue;
+    nodes[r.source].calls.push(r.target); nodes[r.target].called_by.push(r.source);
+    edgeSet.add(r.source + '\u0000' + r.target);
+  }
+  Object.values(nodes).forEach((n) => {
+    n.calls = [...new Set(n.calls)]; n.called_by = [...new Set(n.called_by)];
+    n.dead_suspect = n.calls.length === 0 && n.called_by.length === 0;   // in no relation at all
+  });
+  const edges = [...edgeSet].map((e) => { const [a2, b2] = e.split('\u0000'); return [a2, b2]; });
+  return {
+    kind: 'schema', nodes, edges, focus: null, depth: null,
+    counts: { nodes: Object.keys(nodes).length, edges: edges.length, dead_suspects: Object.values(nodes).filter((n) => n.dead_suspect).length, unresolved: 0 },
+    workspace: { instance: bound ? (bound.name || bound.workspace) : null, org: bound ? bound.workspace : null },
+  };
+}
+
+async function openSchemaGraph(focusId, depth) {
+  try {
+    if (!Object.keys(schema).length) throw new Error('nothing pulled yet — run Pull all first');
+    const g = buildSchemaGraph();
+    if (!g.counts.nodes) throw new Error('no tables in this workspace');
+    if (focusId && g.nodes[focusId]) { g.focus = focusId; g.depth = Math.max(1, depth || 2); }
+    await chrome.storage.local.set({ graphData: g });
+    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    status(`Schema: ${g.counts.nodes} tables, ${g.counts.edges} relations.`, 'ok');
+  } catch (e) { status('Schema graph error: ' + (e.message || e), 'bad'); }
 }
 
 // ---------- AI ----------
@@ -1346,6 +1423,7 @@ $('find').oninput = render;
 $('findclear').onclick = () => { $('find').value = ''; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
+$('graph').onclick = () => openSchemaGraph();
 $('export').onclick = () => doExport('html');
 $('exportmd').onclick = () => doExport('md');
 $('retry').onclick = retryFailed;
