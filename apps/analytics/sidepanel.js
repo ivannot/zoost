@@ -914,7 +914,7 @@ let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false, aiSeedOmitted
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20 };
+  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
 }
 function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
 function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }
@@ -952,9 +952,11 @@ function aiStructureText(v) {
 // never dropped. Reports and dashboards are findable by name through list_views, so they go first if
 // something must. Whatever is left out is *named as left out*, in the prompt itself, with what to
 // call instead — an index that is silently short is worse than one that is honestly partial.
-const AI_SEED_CAP = 72000;
+const AI_SEED_CAP_DEFAULT = 72000;
+let aiSeedSize = 0;                     // what the last index actually came to, shown in the chat
 
-async function aiBuildSeed() {
+async function aiBuildSeed(cap) {
+  cap = Math.max(4000, Number(cap) || AI_SEED_CAP_DEFAULT);
   const m = viewById();
   const byType = new Map();
   for (const v of views) byType.set(v.type, (byType.get(v.type) || 0) + 1);
@@ -990,27 +992,28 @@ async function aiBuildSeed() {
   // Assemble in priority order, and record what did not fit rather than letting it vanish.
   const omitted = [];
   let out = header + tables;
-  if (out.length + reports.length <= AI_SEED_CAP) out += reports;
+  if (out.length + reports.length <= cap) out += reports;
   else if (reports) omitted.push(`the ${pres.length} reports and pivots`);
-  if (out.length + dashboards.length <= AI_SEED_CAP) out += dashboards;
+  if (out.length + dashboards.length <= cap) out += dashboards;
   else if (dashboards) omitted.push(`the ${dashList.length} dashboards`);
 
   aiSeedOmitted = omitted;
-  if (out.length > AI_SEED_CAP) {          // even the tables alone overflow: an enormous workspace
+  if (out.length > cap) {          // even the tables alone overflow: an enormous workspace
     aiSeedOmitted = [`part of the table list — this workspace is larger than the index can hold`];
-    out = aiTrunc(out, AI_SEED_CAP);
+    out = aiTrunc(out, cap);
   }
-  aiSeedTruncated = omitted.length > 0 || out.length >= AI_SEED_CAP;
+  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
   if (omitted.length) {
     out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and you can find them by name`
       + ` with list_views (it takes a name substring and a type) — do not assume a view is absent`
       + ` because it is not in this index.\n`;
   }
+  aiSeedSize = out.length;
   return out;
 }
 
-async function aiSystemPrompt(withTools) {
-  const seed = await aiBuildSeed();
+async function aiSystemPrompt(withTools, cap) {
+  const seed = await aiBuildSeed(cap);
   let focus = '';
   const cur = selectedId ? viewById().get(selectedId) : null;
   if (cur) {
@@ -1253,7 +1256,7 @@ async function aiSend() {
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
-    const system = await aiSystemPrompt(withTools);
+    const system = await aiSystemPrompt(withTools, cfg.seedCap);
     // The workspace index sent to the model is capped. If it was cut, say so once — do not let the
     // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
@@ -1284,17 +1287,29 @@ async function aiEngineChrome() {
     note.className = 'ainote show';
   }
 }
-function aiContextLabel() {
+// The index is sent with *every* message, so its size is what each question costs before you have
+// asked anything. Showing it is the only way the setting that caps it can be a real choice rather
+// than a number in a form: build it once, measure, and say so.
+async function aiContextLabel() {
   const el = $('aictx'); if (!el) return;
   const v = selectedId ? viewById().get(selectedId) : null;
-  el.textContent = v ? `Focus: ${v.name} · conversation persists across views` : 'No view focused · open one to give structure-level context';
+  const focus = v ? `Focus: ${v.name}` : 'No view focused — open one to give structure-level context';
+  let cost = '';
+  try {
+    const cfg = await aiGetCfg();
+    await aiBuildSeed(cfg.seedCap);
+    const tok = Math.round(aiSeedSize / 4);
+    cost = ` · index ${(aiSeedSize / 1000).toFixed(0)}k characters, ~${tok.toLocaleString()} tokens per message`
+      + (aiSeedOmitted.length ? ` · ${aiSeedOmitted.join(' and ')} left out` : '');
+  } catch (_) {}
+  el.textContent = focus + cost;
 }
 function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!views.length) return;
   closeHealth();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open');
-  aiContextLabel(); aiEngineChrome(); aiRenderMessages();
+  aiContextLabel(); aiEngineChrome(); aiRenderMessages();   // the label fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
 function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation?')) return; aiMessages = []; aiSeedWarned = false; aiRenderMessages(); }

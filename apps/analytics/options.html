@@ -86,6 +86,17 @@
         <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
       </div>
     </div>
+    <label><span class="lt">Workspace index sent with each message</span><input type="number" id="ai_seedcap" min="4000" max="400000" step="1000"></label>
+    <p class="note" style="margin-top:0">Characters. The assistant is given an index of the workspace with
+      <em>every</em> message, so this is what a question costs before you have asked anything — roughly one
+      token per four characters. The panel shows the real figure for the workspace you have open, under the
+      chat title.</p>
+    <p class="note" style="margin-top:6px">When a workspace does not fit, the order is decided rather than
+      arbitrary: <b>tables and query tables are never dropped</b> — they are the vocabulary needed to write a
+      query or follow a foreign key — and reports and dashboards go first, because the assistant can still
+      find those by name with its tools. Whatever is left out is named as left out, so the assistant never
+      assumes a view is absent because it was not shown one.</p>
+
     <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
     <p class="note" style="margin-top:0">How many times the assistant may reach for a tool before it has to answer.
       20 is the default. Raise it for questions that span the whole workspace; lower it to cap what a single

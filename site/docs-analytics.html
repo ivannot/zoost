@@ -244,6 +244,16 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </table>
   <p>These two are the only providers supported, because they are the two that are tested and the only two
     the extension may reach.</p>
+  <p>Two settings decide what a question costs. <b class="ui">Workspace index</b> is how much of the
+    workspace is described to the assistant with <em>every</em> message — bigger means it knows more names,
+    and it is billed each time. The panel prints the real figure for the workspace you have open, under the
+    chat title, so the number is not a guess. <b class="ui">Max tool steps</b> caps how many times it may
+    reach for a tool before answering; 20 is the default and most answers use two or three.</p>
+  <p>When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary:
+    tables and query tables are never dropped, because they are the vocabulary needed to write a query or
+    follow a foreign key, and reports go first because the assistant can still find those by name. Whatever
+    is left out is named as left out — so it never concludes a view does not exist because it was not
+    shown one.</p>
   <p>The assistant is told what Zoho documents about query-table SQL — SELECT only, double-quoted
     identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of
     query-over-query. You can read exactly what it is told in <b class="ui">⚙ Settings</b>. What it writes

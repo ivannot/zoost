@@ -37,6 +37,7 @@ async function loadAi() {
   $('ai_o_model').value = (c.openai && c.openai.model) || '';
   $('ai_o_key').value = (c.openai && c.openai.apiKey) || '';
   $('ai_maxiter').value = c.maxIter || 20;
+  $('ai_seedcap').value = c.seedCap || 72000;
   markEngine();
 }
 // A selector that changes a *mode* saves on change, not behind a Save button — the same rule as the
@@ -52,6 +53,7 @@ async function saveAi(silent) {
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
     openai: { model: $('ai_o_model').value.trim(), apiKey: $('ai_o_key').value.trim() },
     maxIter: Math.max(1, Math.min(40, Number($('ai_maxiter').value) || 20)),
+    seedCap: Math.max(4000, Math.min(400000, Number($('ai_seedcap').value) || 72000)),
   };
   try { await chrome.storage.local.set({ aicfg: cfg }); if (!silent) toast('AI settings saved.'); }
   catch (e) { toast('Could not save: ' + e.message, true); }

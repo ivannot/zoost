@@ -324,6 +324,12 @@ what to call instead. Measured: 1144 views and 444 data objects come to ~62k cha
 tokens) and fit whole; at 2429 views the tables still fit in full and the reports are declared
 absent.
 
+The cap is a **setting**, because the trade it makes is the user's to price: a bigger index means
+the assistant knows more names, and it is billed on every message. A number in a form is not a
+choice, though — so the panel measures the index for the workspace actually open and prints it under
+the chat title, in characters and approximate tokens. The knob and the consequence are in the same
+sentence.
+
 **Tool answers are capped too, and say how to narrow.** A tool that returns nine hundred lines has
 not answered. `aiCap()` cuts the list, states the true total, and tells the model which argument
 would narrow it.
