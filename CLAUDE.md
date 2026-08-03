@@ -329,9 +329,16 @@ in step. It reads the **tags** rather than GitHub Releases, because the routine 
 a tag while attaching a Release is a manual step that may not happen. Tags are semver-sorted here
 rather than trusting the API's unspecified order.
 
-**Functions live inside `site/`, not at the repo root.** The Pages project's root directory is
-`site/` (that is why `site/index.html` is served at `/`), and Pages looks for `functions/` relative
-to that root. A function placed at the repository root deploys silently and 404s — the pages are
-served normally, so nothing looks wrong until you request the endpoint. Verify a new endpoint by
-requesting it, e.g. `curl -s -o /dev/null -w '%{http_code}' https://zoost.it/api/versions`; do not
-assume it is live because the deploy succeeded.
+**zoost.it is a Cloudflare *Worker* with static assets, not a Pages project.** The dashboard shows
+"Connect your **Worker** to a Git repository", deploy command `npx wrangler deploy`, root directory
+`site`, and there is no `wrangler.*` in the repo — the Worker is configured in the dashboard. This
+matters because **`functions/` is a Pages-only convention**: on a Worker that directory is never
+looked at, so a file placed there is either published as a static asset (if it is inside `site/`) or
+ignored entirely. Server-side code here needs a Worker script plus a wrangler config, which would
+take over a deployment that currently works without one — test that on a branch first, since
+non-production builds are enabled.
+
+And the lesson that cost two wrong guesses: **a successful deploy says nothing about an endpoint
+being live.** Request it and read the status code —
+`curl -s -o /dev/null -w '%{http_code}' https://zoost.it/api/versions` — and when something 404s,
+find out *what the platform actually is* before moving files around.
