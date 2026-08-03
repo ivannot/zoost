@@ -30,8 +30,11 @@
     .then(function (d) {
       if (!d) return;
       var bits = [];
+      // Three different things on purpose: what you can install, what has been released, and what is
+      // being built. "In development" is spelled out so the last one cannot be read as available.
       bits.push('<span class="vitem"><b>Web Store</b> ' + (d.store ? esc(d.store) : '<i>unknown</i>') + '</span>');
       bits.push('<span class="vitem"><b>Latest tag</b> ' + (d.tag ? esc(d.tag) : '<i>unknown</i>') + '</span>');
+      if (d.repo) bits.push('<span class="vitem"><b>In development</b> ' + esc(d.repo) + '</span>');
       if (d.siteUpdated) {
         var f = fmtDate(d.siteUpdated);
         if (f) bits.push('<span class="vitem"><b>Site updated</b> ' + esc(f) + '</span>');
