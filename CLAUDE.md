@@ -274,6 +274,19 @@ steps at once is how people get lost and blame themselves for it.
 **Flag scope creep in both directions.** Tell me when a change touches more than I asked for, and
 tell me when a feature I am asking for should wait until it can be tested.
 
+**There is no regression testing. You are the safety net.** I test the thing that just changed, and
+nothing else — deliberately: the time saved by working with you would go straight back into
+re-testing, which defeats the point. So a regression will not be caught by me. It will ship.
+
+This is not a reason to be timid, it is a reason to be precise. Before touching anything **shared** —
+a CSS class, a helper, a piece of module state, a constant — find every other user of it and decide
+consciously whether they survive the change; prefer adding a new thing over altering a shared one;
+and after the change, verify the other users mechanically rather than by eye. This is how the
+functions list got its own `.rr/.rn/.rfl/.rc` badge classes instead of widening `.rf/.rl`, which
+Modules and Connections rows also use: reusing them would have silently changed those two tabs, and
+nobody would have looked. Say plainly which parts of a change you actually exercised and which you
+only reasoned about — an honest "not verified" is worth more than a confident guess.
+
 **Follow the established pattern unless there is a real reason not to — and police this yourself.**
 When a new thing is an instance of an existing kind (another tab, another list row, another pull,
 another export section, another status dot), it must match how its siblings already behave: the
