@@ -127,7 +127,8 @@ and, **only if you enable the AI**, to the LLM provider you configure. Nothing g
 ## Quick start
 
 1. **Settings → Choose folder…** — pick one dedicated **working folder**. Every workspace will be a
-   subfolder inside it, created automatically and named `instance[-sandbox]-orgid`.
+   subfolder inside it at `crm/instance[-sandbox]-orgid`, created automatically. Each Zoost
+   product keeps its own subfolder, so one working folder can serve them all.
 2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
 3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules and connections.
 4. `git init` in the workspace folder to start versioning.

@@ -1173,10 +1173,23 @@ async function syncOne(id) {
 }
 
 // ---------- workspaces ----------
-// One "working folder" is picked once; every workspace is a subfolder inside it, created on
-// demand. The folder NAME is only a label: identity is the org id inside each `.zoost.json`,
-// so renaming a Zoho portal (or the folder) never orphans a workspace.
+// One "working folder" is picked once. Inside it, each Zoost product keeps its own subfolder, and
+// each workspace lives one level below that:
+//
+//   <working folder>/crm/<instance>[-sandbox]-<orgid>/
+//   <working folder>/analytics/<project>/
+//
+// One folder can therefore serve every Zoost product without the two ever colliding, and the root
+// says what it holds at a glance. The folder NAME is only a label: identity is the org id inside
+// each `.zoost.json`, so renaming a Zoho portal (or the folder) never orphans a workspace.
+const APP_DIR = 'crm';                       // this app's subfolder
+const APP_DIRS = ['crm', 'analytics'];       // known product folders — not "foreign" content
 let root = null, rootGranted = false;
+// Resolved on demand rather than cached: the handle must stay valid across permission lapses.
+async function appRoot(create) {
+  if (!root) return null;
+  try { return await root.getDirectoryHandle(APP_DIR, { create: !!create }); } catch (_) { return null; }
+}
 const wsFolderName = (ctx) => `${sanitize(ctx.instance || 'workspace')}${envOf(ctx.origin) === 'sandbox' ? '-sandbox' : ''}-${sanitize(ctx.org || 'org')}`;
 async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); return JSON.parse(await (await fh.getFile()).text()); }
 
@@ -1202,7 +1215,8 @@ async function pickRoot() {
     for await (const e of h.values()) {
       if (++seen > 80) break;
       if (e.kind !== 'directory') { foreign++; continue; }
-      try { await e.getFileHandle(CFG); } catch (_) { foreign++; }
+      if (APP_DIRS.includes(e.name)) continue;              // a product folder — this is our own layout
+      try { await e.getFileHandle(CFG); } catch (_) { foreign++; }   // a workspace from the older flat layout
     }
     if (foreign > 6 && !confirm(`\u00ab${h.name}\u00bb already contains ${foreign} items that are not Zoost workspaces.\n\n`
       + `Zoost will hold read/write access to everything inside it, permanently. A dedicated folder is strongly recommended.\n\nUse this folder anyway?`)) return;
@@ -1219,7 +1233,9 @@ async function addWorkspaceForTab() {
   if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first \u2014 the workspace is created for the org you are signed in to.', 'warn'); return; }
   try {
     const name = wsFolderName(ctx);
-    const h = await root.getDirectoryHandle(name, { create: true });
+    const base = await appRoot(true);
+    if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
+    const h = await base.getDirectoryHandle(name, { create: true });
     const fh = await h.getFileHandle(CFG, { create: true });
     const w = await fh.createWritable();
     await w.write(JSON.stringify({ org: ctx.org, base: ctx.origin, instance: ctx.instance }, null, 2));
@@ -1282,17 +1298,32 @@ async function loadWorkspaces() {
     setStatus('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
     await refreshContext(); return;
   }
-  for await (const e of root.values()) {
-    if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
-    let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
-    if (!cfg || !cfg.org) continue;
-    wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+  const base = await appRoot(false);
+  if (base) {
+    for await (const e of base.values()) {
+      if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
+      let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
+      if (!cfg || !cfg.org) continue;
+      wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+    }
   }
   wsList.sort((a, b) => a.name.localeCompare(b.name));
   if (!wsList.length) {
-    sel.innerHTML = `<option value="">${root.name} \u2014 no workspaces yet</option>`;
+    // Workspaces sitting directly in the working folder are the older flat layout. Say so precisely
+    // instead of reporting an empty list: the folders are there, Zoost is simply not looking at that
+    // level any more now that each product has its own.
+    let stray = 0;
+    try {
+      for await (const e of root.values()) {
+        if (e.kind !== 'directory' || APP_DIRS.includes(e.name) || e.name.startsWith('.')) continue;
+        try { await e.getFileHandle(CFG); stray++; } catch (_) {}
+      }
+    } catch (_) {}
+    sel.innerHTML = `<option value="">${root.name}/${APP_DIR} \u2014 no workspaces yet</option>`;
     dir = null; setEnabled(false); updateWsButtons();
-    setStatus('Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
+    setStatus(stray
+      ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own \u2014 move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
+      : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
     await refreshContext(); return;
   }
   const active = await window.idbHandle.get('activeWs');
@@ -1318,7 +1349,9 @@ $('wsdel').onclick = async () => {
   if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only \u2014 nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
   try {
     if (!(await ensurePerm(root))) return;
-    await root.removeEntry(w.name, { recursive: true });
+      const base = await appRoot(false);
+      if (!base) { setStatus('Could not open the workspace folder.', 'warn'); return; }
+      await base.removeEntry(w.name, { recursive: true });   // delete inside crm/, never at the root
     await window.idbHandle.set('activeWs', null);
     currentPath = null; $('preview').classList.remove('show');
     setStatus(`Removed ${w.name}.`, 'ok');

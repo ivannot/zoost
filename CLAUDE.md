@@ -94,10 +94,22 @@ is inside a folder, and `chrome://extensions` wants the folder.
 
 ## Architectural decisions worth not re-litigating
 
-**Workspace identity is the org id inside `.zoost.json`, never the folder name.** One working
-folder holds a subfolder per org, named `instance[-sandbox]-orgid`. That name is a label:
-renaming the folder, or renaming the Zoho portal, must not orphan a workspace. The workspace list
-is built by enumerating the root and reading each config.
+**Workspace identity is the org id inside `.zoost.json`, never the folder name.** The working folder
+holds **a subfolder per product**, and one workspace folder inside that:
+
+```
+<working folder>/crm/<instance>[-sandbox]-<orgid>/
+<working folder>/analytics/<project>/
+```
+
+so a single folder serves every Zoost product without the two ever meeting. Each app enumerates
+**its own** subfolder (`APP_DIR`), never the root. The folder names are labels: renaming the folder,
+or renaming the Zoho portal, must not orphan a workspace — the list is built by reading each config.
+
+Workspaces found sitting directly in the working folder are the older flat layout. The panel does
+not adopt them; it says precisely how many there are and where to move them. Detecting them is not a
+compatibility fallback — nothing keeps working the old way — it is an empty state that tells the
+truth instead of reporting "no workspaces" while the folders are plainly there.
 
 **The environment guard is the most important safety property.** Each workspace is bound to one
 org, host and instance. If the active Zoho tab belongs to a different org, every Zoho-bound action

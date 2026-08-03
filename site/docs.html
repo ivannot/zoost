@@ -77,7 +77,8 @@
     <li>Click <b class="ui">📁 Set working folder…</b> and choose a <b>dedicated, empty folder</b>.
       Something like <code>~/Documents/Zoost</code>.</li>
     <li>Click <b class="ui">+</b>. Zoost creates the subfolder for the org in your active tab, named
-      <code>instance[-sandbox]-orgid</code>, and selects it.</li>
+      <code>crm/instance[-sandbox]-orgid</code>, and selects it. Each Zoost product keeps its own
+      subfolder inside the working folder, so one folder can serve them all.</li>
     <li>Click <b class="ui">Pull all</b>.</li>
   </ol>
   <div class="box warn">
@@ -107,7 +108,7 @@
 
   <h2 id="git">4. Putting it under Git</h2>
   <p>Nothing is automatic here, on purpose: it is your repository, with your conventions.</p>
-  <pre style="background:#0f1826;border:1px solid var(--line);border-radius:9px;padding:12px 14px;overflow:auto"><code>cd ~/Documents/Zoost/yourinstance-1234567890
+  <pre style="background:#0f1826;border:1px solid var(--line);border-radius:9px;padding:12px 14px;overflow:auto"><code>cd ~/Documents/Zoost/crm/yourinstance-1234567890
 git init
 git add .
 git commit -m "baseline"</code></pre>
