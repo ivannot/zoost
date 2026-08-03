@@ -70,6 +70,19 @@ async function storeVersion() {
   return null;
 }
 
+// The version the code is at right now, straight from the manifest on the default branch. This is
+// deliberately not the same thing as the tag: it is what is built, not what has been released, and
+// the badge labels it "in development" so nobody reads it as something they can install.
+async function repoVersion() {
+  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/src/manifest.json`, {
+    headers: { 'user-agent': UA }, signal: timeout(6000),
+  });
+  if (!r.ok) return null;
+  const j = await r.json();
+  const v = String((j && j.version) || '').trim();
+  return IS_VERSION.test(v) ? v : null;   // same shape guard as the rest
+}
+
 // When the site content itself last changed. GitHub knows this without any credential, and it is
 // truer than a deploy timestamp: it is when the pages actually changed.
 async function siteUpdated() {
@@ -92,12 +105,12 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [store, tag, updated] = await Promise.all([
-    settled(storeVersion()), settled(latestTag()), settled(siteUpdated()),
+  const [store, tag, repo, updated] = await Promise.all([
+    settled(storeVersion()), settled(latestTag()), settled(repoVersion()), settled(siteUpdated()),
   ]);
 
   const res = new Response(JSON.stringify({
-    store, tag, siteUpdated: updated, checked: new Date().toISOString(),
+    store, tag, repo, siteUpdated: updated, checked: new Date().toISOString(),
   }), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
