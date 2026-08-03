@@ -186,6 +186,20 @@ This is how you evolve the captured data without orphaning already-pulled worksp
 module's `api_name`, and it is what `zoho.crm.getRelatedRecords()` requires. This is the single
 most valuable thing the tool surfaces; treat it accordingly.
 
+**In CRM a node's id is its name; in Analytics it is a number.** The graph window prints
+`DATA.focus` and node ids in the status line and in edge tooltips, which reads fine when the id is
+`Contacts` and is useless when it is `177856000000004012`. Anything user-facing must go through
+`label(N[id])` with the id only as a last-resort fallback. The same asymmetry is why `nameOf()` must
+never return a bare `.name`: an id that does not resolve produced the literal string `undefined` and
+it travelled all the way into the diagram as if it were a table.
+
+**Validate ids where they enter, not where they are printed.** `dependencyview` returns
+`{objId, level}` in every captured response, but `String(x.objId)` on an element without one yields
+`"undefined"` — a string that passes every later check and only fails visibly at the far end, as a
+node called "undefined". The bridge now accepts an object with `objId`/`id` or a bare id, requires it
+to look like a Zoho id, drops what does not, and **counts what it dropped** so a silent gap becomes a
+stated one.
+
 **The graph window is one engine, fed by two products.** `graphview.js` consumes a generic shape —
 `{kind:'schema', nodes:{id:{fields[], calls[], called_by[], …}}, edges:[[a,b]], focus, depth}` — and
 everything expensive lives there: the ER layout with both branches, the depth control, the layout

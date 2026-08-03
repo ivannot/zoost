@@ -9,7 +9,9 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
 // the value — that is what cut a snippet in half right after the opening bracket.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const label = (n) => (nameMode === 'internal'
+// Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph
+// is filtered. Returning '' lets them fall back to the id rather than printing "undefined".
+const label = (n) => (!n ? '' : nameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
 const NSCOL = (ns) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + ns).trim() || '#94a3b8';
@@ -39,7 +41,7 @@ const NSCOL = (ns) => getComputedStyle(document.documentElement).getPropertyValu
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   $('statline').innerHTML = _schema
-    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> tables · <b>${DATA.counts.edges}</b> relations · <b>${DATA.counts.dead_suspects}</b> in no relation`
+    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(label(N[DATA.focus]) || DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> tables · <b>${DATA.counts.edges}</b> relations · <b>${DATA.counts.dead_suspects}</b> in no relation`
     : `<b>${DATA.counts.nodes}</b> functions · <b>${DATA.counts.edges}</b> calls · <b>${DATA.counts.dead_suspects}</b> no-caller · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
@@ -497,7 +499,7 @@ function setScope(all) {
   // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it — we
   // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
   if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} modules</b> — too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(curFocus)}</b>; widen with depth instead.`;
+    $('statline').innerHTML = `<b>${nodesA.length} tables</b> — too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; widen with depth instead.`;
     return;
   }
   scopeAll = !!all;
@@ -513,7 +515,7 @@ function egoStat() {
   }
   const nn = egoSet ? egoSet.size : DATA.counts.nodes;
   const ne = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> tables \u00b7 <b>${ne}</b> relations \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(label(N[curFocus]) || curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> tables \u00b7 <b>${ne}</b> relations \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -799,7 +801,7 @@ function erRender() {
     hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '14');
     hit.addEventListener('click', (ev) => { if (erDragged) return; ev.stopPropagation(); erPick(a, b); });
     const ht = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    ht.textContent = `${b} \u2192 ${a}`; hit.appendChild(ht);
+    ht.textContent = `${label(N[b]) || b} \u2192 ${label(N[a]) || a}`; hit.appendChild(ht);
     svg.appendChild(hit);
 
     // The join, from A's side: which of A's columns points at which of B's. Both ends are labelled

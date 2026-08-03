@@ -16,6 +16,12 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
   + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
   + 'Deciding what may be extracted from Analytics, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
 
+// The ER preset the graph window starts from. Kept identical to ER_PRESET.modules in graphview.js:
+// the two are the same setting seen from two places, not a default and a copy of it.
+const LAY_DEFAULT = { margin: 36, spread: 42, ring: 420, gap: 8, fs: 10, sub: true };
+const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pRing', 'vRing', 'ring'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
+let lay = Object.assign({}, LAY_DEFAULT);
+
 let toastT = null;
 function toast(msg, bad) {
   const t = $('toast'); t.textContent = msg; t.className = 'on' + (bad ? ' bad' : '');
@@ -51,6 +57,24 @@ async function saveAi(silent) {
   catch (e) { toast('Could not save: ' + e.message, true); }
 }
 
+function layToUI() {
+  LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
+  $('pSub').checked = !!lay.sub;
+}
+LAY_CTL.forEach(([sl, lb, k]) => {
+  $(sl).addEventListener('input', () => { lay[k] = parseInt($(sl).value, 10); $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
+});
+$('pSub').onchange = () => { lay.sub = $('pSub').checked; };
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI(); };
+$('saveLay').onclick = async () => {
+  try { await chrome.storage.local.set({ erParams: { current: lay } }); toast('Diagram defaults saved.'); }
+  catch (e) { toast('Could not save: ' + e.message, true); }
+};
+async function loadLay() {
+  try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
+  layToUI();
+}
+
 $('aiengine').onchange = () => { markEngine(); saveAi(true); };
 $('saveAi').onclick = () => saveAi(false);
 
@@ -63,4 +87,5 @@ $('saveAi').onclick = () => saveAi(false);
     + '</ul>';
   $('legal').innerHTML = `<b>${esc(m.name)}</b> v${esc(m.version)} · created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)<br><br>${esc(LEGAL_DISCLAIMER)}`;
   loadAi();
+  loadLay();
 })();

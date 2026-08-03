@@ -551,7 +551,9 @@ function foreignKeys(viewId) {
 const relationsOf = (id) => relations.filter((r) => r.source === id || r.target === id);
 
 const viewById = () => { const m = new Map(); for (const v of views) m.set(v.id, v); return m; };
-const nameOf = (id, m) => (m.get(id) ? m.get(id).name : id);
+// A view we cannot resolve is shown by its id — which is at least true. Returning the raw
+// `.name` was how `undefined` reached the diagram as if it were a table's name.
+const nameOf = (id, m) => (m.get(id) && m.get(id).name) || String(id == null ? '?' : id);
 
 // Walk PARENT_ID up to the first view that actually has columns. Only Tables and QueryTables carry
 // structure; a Pivot or a Report is a presentation of one of them, sometimes several steps removed.

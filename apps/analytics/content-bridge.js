@@ -263,12 +263,26 @@
   async function viewDependencies(id) {
     const j = await api(`/clientapi/dependencyview/workspace/${ws()}/view/${id}`);
     const d = (j && j.data) || {};
-    const ids = (a) => (a || []).map((x) => ({ id: String(x.objId), level: Number(x.level) || 0 }));
+    // Validate at the boundary. `{objId, level}` is the shape every captured response used, but an
+    // element that does not carry one must be dropped, not turned into the string "undefined" — which
+    // is exactly what String(x.objId) did, and it travelled all the way to the diagram as a node name.
+    // A bare id is accepted too, because dashboardViewIds already arrives that way.
+    const one = (x) => {
+      if (x == null) return null;
+      const raw = (typeof x === 'object') ? (x.objId != null ? x.objId : x.id) : x;
+      const v2 = raw == null ? '' : String(raw).trim();
+      return /^\d{4,}$/.test(v2) ? v2 : null;      // Zoho ids are long integers; anything else is not one
+    };
+    const ids = (a) => (a || []).map((x) => ({ id: one(x), level: Number(x && x.level) || 0 })).filter((e) => e.id);
+    const dropped = (a) => (a || []).filter((x) => !one(x)).length;
     return {
       id: String(id),
       parents: ids(d.parentTableIds),
       children: ids(d.childTableIds),
-      dashboards: (d.dashboardViewIds || []).map((x) => String(x && x.objId != null ? x.objId : x)),
+      dashboards: (d.dashboardViewIds || []).map(one).filter(Boolean),
+      // Not hidden: if Analytics sent something we could not read, the count says so rather than the
+      // diagram quietly showing one fewer dependency than exists.
+      dropped: dropped(d.parentTableIds) + dropped(d.childTableIds) + dropped(d.dashboardViewIds),
     };
   }
   // Failures are collected rather than aborting: one unreadable view must not cost the other three

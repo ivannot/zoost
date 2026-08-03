@@ -41,6 +41,12 @@
   .prov.on{border-color:#2f6f62;background:rgba(47,111,98,.07)}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
   .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
+  .slid{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .slid .lt{flex:0 0 130px;margin:0}
+  .slid input[type=range]{flex:1;accent-color:var(--sel)}
+  .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#7fe3d5}
+  .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
+  .ck input{margin-top:3px;accent-color:var(--sel)}
   .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
   a{color:#83d8c6}
   code{font:12px var(--mono);color:#7fe3d5}
@@ -100,6 +106,21 @@
       <a href="https://help.zoho.com/portal/en/kb/analytics/knowledge-base/data-modeling-preparation/query-tables-for-data-preparation-1/articles/what-are-the-sql-dialects-supported-by-zoho-analytics" target="_blank" rel="noopener">Supported SQL dialects</a>.
       Zoost does not run, validate or deploy SQL — whatever the assistant writes is a draft for you to
       paste into Analytics, which is the only thing that can tell you it compiles.</div>
+  </section>
+
+  <section>
+    <h2>Diagram layout</h2>
+    <p class="sub">The ER diagram reads these values when it opens. They are the <i>same</i> setting the
+      graph window's <b>Layout ⚙</b> panel edits, so adjusting a slider there updates what you see here —
+      there is no separate default to fall out of sync. <b>Reset to preset</b> in the graph returns to the
+      built-in values for the current emphasis mode, not to these.</p>
+    <div class="slid"><span class="lt">Box spacing</span><input type="range" id="pMargin" min="10" max="320" step="5"><span class="val" id="vMargin"></span></div>
+    <div class="slid"><span class="lt">Spread</span><input type="range" id="pSpread" min="10" max="160" step="2"><span class="val" id="vSpread"></span></div>
+    <div class="slid"><span class="lt">Ring radius</span><input type="range" id="pRing" min="200" max="1400" step="20"><span class="val" id="vRing"></span></div>
+    <div class="slid"><span class="lt">Label gap</span><input type="range" id="pGap" min="0" max="48" step="2"><span class="val" id="vGap"></span></div>
+    <div class="slid"><span class="lt">Label size</span><input type="range" id="pFs" min="8" max="22" step="1"><span class="val" id="vFs"></span></div>
+    <label class="ck"><input type="checkbox" id="pSub"><span>Show the source column under the join label</span></label>
+    <div class="row" style="margin-top:12px"><button id="layReset">Restore built-in defaults</button><button id="saveLay" class="primary">Save</button></div>
   </section>
 
   <section>
