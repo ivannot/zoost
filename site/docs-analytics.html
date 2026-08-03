@@ -75,14 +75,14 @@
   <p>Three things, and the rest follows.</p>
   <table>
     <tbody>
-      <tr><td class="p"><b>Working folder</b></td>
+      <tr><td class="k">Working folder</td>
         <td>One folder on your disk for every Zoost product. Each keeps its own subfolder inside it, so
           the CRM mirror and the Analytics mirror never meet.</td></tr>
-      <tr><td class="p"><b>Workspace</b></td>
+      <tr><td class="k">Workspace</td>
         <td>One folder per Analytics workspace, inside <code>analytics/</code>. Its identity is the
           workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name — rename either
           and nothing is orphaned.</td></tr>
-      <tr><td class="p"><b>The active tab decides</b></td>
+      <tr><td class="k">The active tab decides</td>
         <td>The panel takes the workspace from the URL of the tab you are on. There is nothing to pick and
           nothing to pick wrong. Move to another workspace and every Zoho-bound action is disabled until
           the tab and the folder agree again.</td></tr>
@@ -130,12 +130,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>What you get on disk:</p>
   <table>
     <tbody>
-      <tr><td class="p"><code>views.json</code></td><td>the census: every view with type, folder, owner, dates, tags</td></tr>
-      <tr><td class="p"><code>schema.json</code></td><td>columns and data types per table, plus the relations</td></tr>
-      <tr><td class="p"><code>lineage.json</code></td><td>what reads from what, both directions</td></tr>
-      <tr><td class="p"><code>sql/*.sql</code></td><td>one file per query table — the diffable part</td></tr>
-      <tr><td class="p"><code>sql/_index.json</code></td><td>id-to-file map, and which source columns each query involves</td></tr>
-      <tr><td class="p"><code>export/</code></td><td>the reports you generate</td></tr>
+      <tr><td class="k"><code>views.json</code></td><td>the census: every view with type, folder, owner, dates, tags</td></tr>
+      <tr><td class="k"><code>schema.json</code></td><td>columns and data types per table, plus the relations</td></tr>
+      <tr><td class="k"><code>lineage.json</code></td><td>what reads from what, both directions</td></tr>
+      <tr><td class="k"><code>sql/*.sql</code></td><td>one file per query table — the diffable part</td></tr>
+      <tr><td class="k"><code>sql/_index.json</code></td><td>id-to-file map, and which source columns each query involves</td></tr>
+      <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
     </tbody>
   </table>
   <p>The <code>.sql</code> files are the point. They are the only thing in Analytics that is genuinely
@@ -231,19 +231,29 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h2 id="ai">12. AI assistant &amp; API keys</h2>
   <p>Optional, and off until you configure it. <b class="ui">⚙ Settings</b> → pick a provider, paste a
     model name and your own API key.</p>
+  <h3>Anthropic (Claude) — full agent</h3>
+  <p>Runs with read-only tools over your local mirror: it reads a structure, follows a foreign key, opens a
+    query's SQL, searches columns and says what depends on what, choosing for itself which to use. Every
+    tool call is shown in the chat, so you can see what it looked at before answering.</p>
+  <h3>OpenAI (ChatGPT) — single-shot</h3>
+  <p>Answers in one pass from the workspace index and the view you have open. It cannot go and read
+    anything itself, so it will tell you what it is missing rather than fetch it.</p>
   <table>
+    <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
     <tbody>
-      <tr><td class="p"><b>Anthropic</b> (Claude)</td>
-        <td>Runs as an agent with read-only tools over your local mirror: it reads a structure, follows a
-          foreign key, opens a query's SQL, searches columns, says what depends on what. Every tool call is
-          shown in the chat.</td></tr>
-      <tr><td class="p"><b>OpenAI</b> (ChatGPT)</td>
-        <td>Answers in one pass from the workspace index and the view you have open. It cannot go and read
-          anything itself, so it will ask you for what it is missing.</td></tr>
+      <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
+      <tr><td class="k">What it sees</td><td>Whatever it decides to open: any view's structure, foreign keys, SQL and lineage, plus column and SQL search</td><td>The workspace index and the view currently open</td></tr>
+      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A “thinking…” indicator until the answer arrives</td></tr>
+      <tr><td class="k">Best for</td><td>“What reads from this table?”, “is there already a query joining these two?”</td><td>Focused questions about the view in front of you</td></tr>
     </tbody>
   </table>
-  <p>These two are the only providers supported, because they are the two that are tested and the only two
-    the extension may reach.</p>
+
+  <h3>Which one to choose</h3>
+  <p>Claude for anything that needs looking around — "what reads from this table", "is there already a
+    query joining these two" — because those take several lookups. OpenAI is fine for questions about
+    something you already have open. These two are the only providers supported, because they are the two
+    that are tested and the only two the extension may reach.</p>
+  <h3>Keeping the conversation — and the bill — under control</h3>
   <p>Two settings decide what a question costs. <b class="ui">Workspace index</b> is how much of the
     workspace is described to the assistant with <em>every</em> message — bigger means it knows more names,
     and it is billed each time. The panel prints the real figure for the workspace you have open, under the
@@ -265,31 +275,32 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="trouble">13. When something goes wrong</h2>
   <table>
+    <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
-      <tr><td class="p">Everything is disabled</td>
+      <tr><td class="k">Everything is disabled</td>
         <td>The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
-      <tr><td class="p">“Not on a Zoho Analytics tab”</td>
+      <tr><td class="k">“Not on a Zoho Analytics tab”</td>
         <td>The panel acts on the active tab. Switch to the Analytics tab, or use the button on the
           overlay.</td></tr>
-      <tr><td class="p">“No workspace open”</td>
+      <tr><td class="k">“No workspace open”</td>
         <td>You are on Analytics but not inside a workspace. Open one — the URL must contain
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
-      <tr><td class="p">The folder button is amber</td>
+      <tr><td class="k">The folder button is amber</td>
         <td>The browser dropped the permission, which it does between sessions. Click anywhere in the panel
           to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
-      <tr><td class="p">“CSRF token not found”</td>
+      <tr><td class="k">“CSRF token not found”</td>
         <td>The session is not signed in on that tab. Reload the Analytics page and try again.</td></tr>
-      <tr><td class="p">N items could not be read</td>
+      <tr><td class="k">N items could not be read</td>
         <td>Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
           and Health lists them.</td></tr>
-      <tr><td class="p">A report shows no columns</td>
+      <tr><td class="k">A report shows no columns</td>
         <td>Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
           view through what the report is built on, it says so rather than showing an empty table.</td></tr>
     </tbody>
   </table>
-  <p class="note">Something wrong or missing here? <a href="mailto:ivan@zoost.it">ivan@zoost.it</a> or an
-    issue on <a href="https://github.com/ivannot/zoost">GitHub</a>.</p>
+  <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and
+    maintained in spare time — best effort, no guaranteed response time.</p>
 
 </div>
 </main>

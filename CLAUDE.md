@@ -63,6 +63,21 @@ contains the mistakes already made: this one grew a line after each of ten repor
 was still incomplete every time, because the next drift was always in a dimension nobody had thought
 to list. Run this instead — it compares the two panels rather than remembering to:
 
+A class used but never defined renders as nothing, and nothing is hard to see. This finds them:
+
+```bash
+# every class the page uses, minus every class anything styles
+python3 - <<'EOF'
+import re, glob
+css = ''.join(open(f, encoding='utf-8').read() for f in glob.glob('site/*.css') + glob.glob('site/*.html'))
+for f in sorted(glob.glob('site/*.html')):
+    s = open(f, encoding='utf-8').read()
+    used = {c for m in re.findall(r'class="([^"]*)"', s) for c in m.split()}
+    missing = sorted(c for c in used if f'.{c}' not in css)
+    if missing: print(f, missing)
+EOF
+```
+
 ```bash
 python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles, CSS declarations
 python3 tools/twincheck.py --all    # everything, product-specific parts included
@@ -476,7 +491,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | `README.md` | features, interface, quick start, known limitations |
 | `site/index.html` | the **suite** home: what the products share, and the card for each. A new product means a new card and a new page |
 | `site/crm.html`, `site/analytics.html` | the **product** pages. One per app, same structure and voice: why it exists, what's inside, what it does *not* do, get started. A feature landing in an app lands on its page in the same change |
-| `site/docs.html`, `site/docs-analytics.html` | anything a user does differently. **One guide per app**, switched between at the top of both. The "Covers Zoost X · updated Y" line fills itself from that app's manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
+| `site/docs.html`, `site/docs-analytics.html` | anything a user does differently. The two guides must also *look* alike: a class copied from a page that defines it renders as nothing on one that does not — `td.p` and `.note` came from `privacy.html` and left the Analytics guide's term cells unstyled. Check with the one-liner below |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
 | `store/<app>/store-listing.md` | description, single purpose, or any permission justification. **Each app has its own**, and both are published |
 | `CLAUDE.md` | a new convention, decision or trap that the next session must know |
