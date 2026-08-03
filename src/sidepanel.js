@@ -20,7 +20,8 @@ let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
-let treeSort = 'name';   // 'name' keeps the namespace grouping; any other key sorts flat, highest first
+let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
+let treeSortDir = 'asc';      // 'asc' | 'desc' — defaults per sort: A→Z for names, biggest-first for numbers
 let currentPath = null, pvHist = [];
 let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
@@ -248,12 +249,16 @@ function fnRowEl(e) {
   const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
   const stCh = e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
   const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' — click to retry') : e.stale ? 'Older data (no connections / author) — click to refresh' : e.downloaded ? 'In workspace — click to re-download from Zoho' : 'Not in workspace — click to download';
+  // Every trailing slot is always emitted, empty when it has nothing to say. A slot that disappears
+  // lets the next one slide into its place, and then the numbers stop lining up down the list —
+  // which is the whole point of having them there.
   const st = e.stats;
-  const sizeBadge = st ? `<span class="rest rf" title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB">${st.lines}L</span>`
-    + (st.apiCalls ? `<span class="rest rl" style="color:#e0a86b" title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}">${st.apiCalls}↗</span>` : '') : '';
-  // In a sorted-flat list the namespace grouping is gone, so each row carries its own namespace.
-  const nsTag = treeSort !== 'name' ? `<span class="rest" style="color:#6b7688">${escHtml(e.namespace || '')}</span>` : '';
-  el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}${nsTag}${sizeBadge}`;
+  const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
+  const nsSlot = treeSort !== 'name'   // flat sorting drops the namespace headers, so the row carries it
+    ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
+  const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
+  const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
+  el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
   el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
   return el;
@@ -285,10 +290,18 @@ function renderTree() {
   if (!shown.length) { const m = document.createElement('div'); m.className = 'treemsg'; m.textContent = 'No matches.'; tree.appendChild(m); return; }
   const sorter = TREE_SORTS[treeSort];
   if (sorter) {
-    const list = shown.slice().sort((a, b) => sorter.get(b) - sorter.get(a) || labelOf(a).localeCompare(labelOf(b)));
+    const dir = treeSortDir === 'asc' ? 1 : -1;
+    const list = shown.slice().sort((a, b) => {
+      const va = sorter.get(a), vb = sorter.get(b);
+      // Rows with no data yet stay at the bottom whichever way we sort: ascending would otherwise
+      // open the list with the functions we know nothing about.
+      if ((va < 0) !== (vb < 0)) return va < 0 ? 1 : -1;
+      if (va !== vb) return dir * (va - vb);
+      return labelOf(a).localeCompare(labelOf(b));
+    });
     const noData = list.filter((e) => sorter.get(e) < 0).length;
     const hdr = document.createElement('div'); hdr.className = 'srhdr';
-    hdr.textContent = `${list.length} function(s) by ${sorter.label}, highest first`
+    hdr.textContent = `${list.length} function(s) by ${sorter.label}, ${treeSortDir === 'asc' ? 'lowest' : 'highest'} first`
       + (noData ? ` · ${noData} without data (not downloaded yet)` : '');
     tree.appendChild(hdr);
     list.forEach((e) => tree.appendChild(fnRowEl(e)));
@@ -296,7 +309,7 @@ function renderTree() {
   }
   const byNs = {}; shown.forEach((e) => { (byNs[e.namespace] ||= []).push(e); });
   Object.keys(byNs).sort().forEach((ns) => {
-    const list = byNs[ns].sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
+    const list = byNs[ns].sort((a, b) => (treeSortDir === 'asc' ? 1 : -1) * labelOf(a).localeCompare(labelOf(b)));
     const isCol = collapsed.has(ns);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
     g.innerHTML = `<span class="chev">▾</span><span>${ns}</span><span class="cnt">${list.length}</span>`;
@@ -479,11 +492,10 @@ async function showCallers(path) {
       if (st.crm) parts.push(`${st.crm} zoho.crm`);
       if (st.zoho) parts.push(`${st.zoho} other Zoho`);
       if (st.sendmail) parts.push(`${st.sendmail} sendmail`);
-      // The caveat is written out, not hidden in a tooltip: a number whose meaning you cannot see
-      // is a number you can misread.
+      // The caveat about what these counts mean lives in the Health audit's "Size & calls" tab and in
+      // the docs: worth stating once where there is room, not on every preview in a 400px panel.
       html += `<div class="statline"><b>Size:</b> ${st.lines} lines (${st.codeLines} code) \u00b7 ${(st.chars / 1024).toFixed(1)} KB`
-        + ` &nbsp;\u00b7&nbsp; <b>Outbound calls:</b> ${st.apiCalls ? escHtml(parts.join(', ')) : 'none'}`
-        + `<span class="statnote">counted outside comments and strings \u00b7 length is verbosity, not complexity</span></div>`;
+        + ` &nbsp;\u00b7&nbsp; <b>Outbound calls:</b> ${st.apiCalls ? escHtml(parts.join(', ')) : 'none'}</div>`;
     }
     const modBits = [];
     if (node.modified_by) modBits.push('by ' + escHtml(node.modified_by));
@@ -685,8 +697,21 @@ function buildTypeChips() {
     [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', 'Last modified']]
       .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
     ss.value = treeSort;
-    ss.onchange = () => { treeSort = ss.value; renderTree(); };
-    wrap.appendChild(sl); wrap.appendChild(ss);
+    const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
+    const paintDir = () => {
+      const asc = treeSortDir === 'asc';
+      dirBtn.textContent = asc ? '↑' : '↓';
+      dirBtn.title = treeSort === 'name'
+        ? (asc ? 'A to Z — click for Z to A' : 'Z to A — click for A to Z')
+        : (asc ? 'Lowest first — click for highest first' : 'Highest first — click for lowest first');
+      dirBtn.setAttribute('aria-label', dirBtn.title);
+    };
+    // Changing what you sort by resets the direction to the one that is almost always wanted:
+    // names read A→Z, numbers read biggest-first.
+    ss.onchange = () => { treeSort = ss.value; treeSortDir = treeSort === 'name' ? 'asc' : 'desc'; paintDir(); renderTree(); };
+    dirBtn.onclick = () => { treeSortDir = treeSortDir === 'asc' ? 'desc' : 'asc'; paintDir(); renderTree(); };
+    paintDir();
+    wrap.appendChild(sl); wrap.appendChild(ss); wrap.appendChild(dirBtn);
   }
 }
 $('nameToggle').onclick = () => {

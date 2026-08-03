@@ -43,6 +43,8 @@
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   .fsellbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
   .filtersel{background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font:12px var(--sans);cursor:pointer}
+  .sortdir{background:#0f1826;border:1px solid var(--border);border-radius:7px;padding:0;width:26px;height:26px;line-height:1;font-size:13px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sortdir:hover{border-color:var(--sel)}
   .ntog button{padding:4px 9px;font-size:11px}
   #ctx{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
   #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
@@ -147,6 +149,13 @@
   .f .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .f .rest.rf{margin-left:0;min-width:44px;text-align:right}
   .f .rest.rl{margin-left:8px;min-width:26px;text-align:right;color:#a78bfa}
+  /* Functions rows: fixed-width trailing columns of their own (rf/rl above belong to Modules), so
+     the numbers line up down the list even when a row has nothing to put in one of them. The first
+     .rest still carries margin-left:auto and pushes the whole group to the right edge. */
+  .f .rest.rr{min-width:26px;text-align:right}
+  .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
+  .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
+  .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
   .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
   .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
   #missing{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
@@ -248,7 +257,6 @@
   #pvcallers .conn:hover{background:rgba(47,111,237,.22);color:#cfe1fb}
   #pvcallers .modline{margin-top:4px;color:#6b7688}
   #pvcallers .statline{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);color:#8ea0bb}
-  #pvcallers .statnote{display:block;margin-top:2px;color:#5b6b82;font-size:10px}
   .connbanner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;background:rgba(47,111,237,.12);border-bottom:1px solid var(--border);font:11px var(--mono);color:#9fc4f5}
   .connbanner .connclear{cursor:pointer;color:var(--muted)}
   .connbanner .connclear:hover{color:var(--ink)}

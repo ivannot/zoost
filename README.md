@@ -176,7 +176,7 @@ offer zero-retention.
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
   dropdown — name (grouped by namespace) or lines / API calls / size / last modified, which sorts
-  flat, highest first.
+  flat — plus a **↑/↓** button for the direction.
 
 **Context bar** shows the active Zoho tab (`instance · org · prod|sandbox`) and whether it matches
 the workspace. Not on a Zoho tab → a **Go to Zoho** overlay. Different org than the workspace → a
