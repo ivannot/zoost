@@ -200,6 +200,15 @@ report-to-source graph costs no extra call. Dashboards have no `PARENT_ID` and n
 correct, not a gap. `structureChain()` walks the chain so a report can show its structure instead of
 shrugging, and always states whose structure it is showing.
 
+**Foreign keys are per column, and they are provable.** `ZDBCreateERD.ma`'s links carry
+`sourceColumns` / `targetColumns` as **indices into that node's own `columns` array** — meaningless
+outside the response, so the bridge resolves them to names before they travel. Rebuilding
+`(A.col)=(B.col)` from the resolved pair reproduces Zoho's own `relationstring` on **119/119** links,
+which is why the columns view can state a column's foreign key as fact rather than as a guess. The
+panel shows both directions and they are different facts: **→** this column points at another table,
+**←** another table's column points at this one. They are real navigation, like the CRM's function
+cross-references — a name you cannot click is half an answer.
+
 **Relations come from the ER endpoint, and nothing else exposes them.** Three kinds, all provable:
 table↔table joins (`ZDBCreateERD.ma`, written as Zoho writes them), query→source at column level
 (`editsql`'s `PAROBJID` / `PAROBJIDINVCOLS`), and view→view (`PARENT_ID` plus `dependencyview`).

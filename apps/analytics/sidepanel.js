@@ -513,6 +513,33 @@ function mergeSchemaIntoViews() {
   }
 }
 
+// Foreign keys, per column, derived from the ER model's links. Not inferred: the bridge resolves
+// each link's column indices to names, and rebuilding "(A.col)=(B.col)" from the pair reproduces
+// Zoho's own `relationstring` exactly, on every link in the workspace this was measured on.
+//
+//   out — this column points at another table  (the classic foreign key)
+//   in  — another table's column points at this one
+//
+// Returned keyed by column name so the columns table can annotate a row without searching.
+function foreignKeys(viewId) {
+  const out = new Map(), inc = new Map();
+  for (const r of relations) {
+    if (r.source === viewId) {
+      r.sourceColumns.forEach((c, i) => {
+        if (!out.has(c)) out.set(c, []);
+        out.get(c).push({ id: r.target, name: r.targetName, column: r.targetColumns[i] || r.targetColumns[0] || '' });
+      });
+    }
+    if (r.target === viewId) {
+      r.targetColumns.forEach((c, i) => {
+        if (!inc.has(c)) inc.set(c, []);
+        inc.get(c).push({ id: r.source, name: r.sourceName, column: r.sourceColumns[i] || r.sourceColumns[0] || '' });
+      });
+    }
+  }
+  return { out, inc };
+}
+
 // Every relation this view takes part in, either end. Relations are stored once, not per side.
 const relationsOf = (id) => relations.filter((r) => r.source === id || r.target === id);
 
@@ -690,9 +717,21 @@ async function renderDetail(v) {
     const via = chain.length > 1
       ? `<div class="vsub" style="margin:0">Structure of <b>${esc(src.name)}</b> (${esc(t.kind)}), inherited through ${chain.slice(0, -1).map((c) => esc(c.name)).join(' → ')} → <b>${esc(src.name)}</b></div>`
       : '';
-    body.innerHTML = (via ? `<div class="dpad" style="padding-bottom:0">${via}</div>` : '') + `<table class="ctbl"><thead><tr><th>Column</th><th>Type</th></tr></thead><tbody>${
-      t.columns.map((c) => `<tr><td>${esc(c.name)}</td><td class="t">${esc(c.type)}</td></tr>`).join('')
-    }</tbody></table>`;
+    const { out, inc } = foreignKeys(src.id);
+    const anyFk = out.size || inc.size;
+    const ref = (c) => {
+      const bits = [];
+      for (const f of out.get(c.name) || []) bits.push(`<a class="fk" data-go="${escA(f.id)}" title="${escA('Foreign key → ' + f.name + '.' + f.column)}">→ ${esc(f.name)}<span class="fkc">.${esc(f.column)}</span></a>`);
+      for (const f of inc.get(c.name) || []) bits.push(`<a class="fk in" data-go="${escA(f.id)}" title="${escA(f.name + '.' + f.column + ' points here')}">← ${esc(f.name)}<span class="fkc">.${esc(f.column)}</span></a>`);
+      return bits.join('<br>');
+    };
+    body.innerHTML = (via ? `<div class="dpad" style="padding-bottom:0">${via}</div>` : '')
+      + `<table class="ctbl"><thead><tr><th>Column</th><th>Type</th>${anyFk ? '<th>References</th>' : ''}</tr></thead><tbody>${
+        t.columns.map((c) => `<tr><td>${esc(c.name)}</td><td class="t">${esc(c.type)}</td>${anyFk ? `<td>${ref(c)}</td>` : ''}</tr>`).join('')
+      }</tbody></table>`;
+    // The links are real navigation, as the CRM's function cross-references are: they open the other
+    // table's structure rather than merely naming it.
+    body.querySelectorAll('a.fk[data-go]').forEach((a2) => { a2.onclick = () => openDetail(a2.dataset.go); });
     return;
   }
   if (detailTab === 'rel') {
@@ -780,6 +819,16 @@ function closeScope(ok) {
 
 // Both reports carry exactly what the panel shows, and nothing invented here: a figure that lives
 // only on screen would make the report a quietly lesser copy, and the reader could not know it.
+// Same facts as the panel's References column, as text. A report that omitted them would be a
+// quietly lesser copy of what the reader saw on screen, and they could not know it.
+function fkText(viewId, colName) {
+  const { out, inc } = foreignKeys(viewId);
+  return [].concat(
+    (out.get(colName) || []).map((f) => `→ ${f.name}.${f.column}`),
+    (inc.get(colName) || []).map((f) => `← ${f.name}.${f.column}`),
+  ).join(', ');
+}
+
 function exportSections(sc) {
   const m = viewById();
   const h = healthFindings();
@@ -803,7 +852,7 @@ async function buildExportHtml(sc) {
   for (const x of secs) {
     body += `<h2 id="${x.id}">${esc2(x.title)}</h2>`;
     if (x.rows) body += tbl(x.head, x.rows);
-    else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type'], t.columns.map((c) => [c.name, c.type]))).join('');
+    else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         const q = sqls[v.id]; if (!q) continue;
@@ -850,7 +899,7 @@ async function buildExportMarkdown(sc) {
   for (const x of secs) {
     out += `## ${x.title}\n\n`;
     if (x.rows) out += row(x.head) + '\n' + row(x.head.map(() => '---')) + '\n' + x.rows.map(row).join('\n') + '\n\n';
-    else if (x.tables) for (const t of x.tables) out += `### ${t.name} (${t.kind}${t.system ? ', system' : ''})\n\n| Column | Type |\n| --- | --- |\n` + t.columns.map((c) => row([c.name, c.type])).join('\n') + '\n\n';
+    else if (x.tables) for (const t of x.tables) out += `### ${t.name} (${t.kind}${t.system ? ', system' : ''})\n\n| Column | Type | References |\n| --- | --- | --- |\n` + t.columns.map((c) => row([c.name, c.type, fkText(t.id, c.name)])).join('\n') + '\n\n';
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         const q = sqls[v.id]; if (!q) continue;

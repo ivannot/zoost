@@ -158,6 +158,10 @@
   .ctbl th{position:sticky;top:0;z-index:1;background:#141b29;box-shadow:0 1px 0 var(--border);color:var(--muted);text-align:left;padding:4px 7px;border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
   .ctbl td{padding:3px 7px;border-bottom:1px solid var(--line);color:#cbd5e1}
   .ctbl td.t{font:10px var(--mono);color:#7fe3d5;white-space:nowrap}
+  a.fk{color:#9fc4f5;cursor:pointer;font-size:10.5px;white-space:nowrap;text-decoration:none}
+  a.fk:hover{color:#cfe1fb;text-decoration:underline}
+  a.fk.in{color:#b9a9f0}      /* incoming: someone else points here — a different fact, a different colour */
+  a.fk .fkc{color:var(--muted)}
   pre.sql{margin:0;font:11px var(--mono);color:#cbd5e1;white-space:pre-wrap;word-break:break-word;line-height:1.5}
   .lin{margin:0 0 10px}
   .lin h5{margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600}
