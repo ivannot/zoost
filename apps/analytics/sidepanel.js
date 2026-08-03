@@ -79,6 +79,7 @@ const readJson = async (rel, fallback) => { try { return JSON.parse(await readFi
 const writeJson = (rel, o) => writeFile(rel, JSON.stringify(o, null, 2));
 // Filenames are derived from Zoho's names, so anything a filesystem dislikes has to go. The id is
 // appended because two views in different folders may legitimately share a name.
+const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 const stemOf = (name, id) => (String(name || 'unnamed').replace(/[^\w.\- ]/g, '_').trim().slice(0, 80) || 'unnamed') + '-' + id;
 
 async function appRoot(create) {
@@ -762,8 +763,6 @@ function closeScope(ok) {
   if (r) r(ok ? Object.assign({}, expScope) : null);
 }
 
-const stamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
-
 // Both reports carry exactly what the panel shows, and nothing invented here: a figure that lives
 // only on screen would make the report a quietly lesser copy, and the reader could not know it.
 function exportSections(sc) {
@@ -857,19 +856,27 @@ async function buildExportMarkdown(sc) {
   return out;
 }
 
+// Folder, filename shape, timestamp format, permission check and status wording are all the CRM
+// panel's, deliberately: an export is the artefact a user collects from both apps, and finding it
+// somewhere else in one of them is precisely the discontinuity the two are supposed to avoid.
+// There is no "analytics" in the filename because the workspace already sits under analytics/, and
+// the CRM does not put "crm" in its own.
 async function doExport(kind) {
+  if (!dir) return;
   const sc = await askScope();
   if (!sc) return;
   await window.idbHandle.set('exportScopeAnalytics', sc);
-  setBusy(true, 'Building the export…');
+  setBusy(true, kind === 'md' ? 'Building AI (Markdown) export…' : 'Building HTML export…');
   try {
+    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     const md = kind === 'md';
     const body = md ? await buildExportMarkdown(sc) : await buildExportHtml(sc);
-    const name = `zoost-analytics-${(bound.name || bound.workspace).replace(/[^\w.\-]/g, '_')}-${stamp()}.${md ? 'md' : 'html'}`;
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    const name = `export/zoost-${sanitize((bound && (bound.name || bound.workspace)) || 'workspace')}-${stamp}.${md ? 'md' : 'html'}`;
     await writeFile(name, body);
-    setBusy(false, `Written to the workspace folder: ${name}`); $('status').className = 'ok';
+    setBusy(false, `Exported → ${name} (in your workspace folder).`); $('status').className = 'ok';
   } catch (e) {
-    setBusy(false, 'Export failed: ' + (e.message || e)); $('status').className = 'bad';
+    setBusy(false, 'Export error: ' + (e.message || e)); $('status').className = 'bad';
   }
 }
 

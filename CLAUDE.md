@@ -72,6 +72,20 @@ exist only in CRM; views, query tables and the ER model only in Analytics), or i
 that has drifted? Only the first kind is allowed to differ. The colour `--sel` is the one deliberate
 exception: blue in CRM, teal in Analytics, because that is what says which product you are in.
 
+**That grep only covers markup. The twin rule covers behaviour and artefacts too**, and that is
+where it was broken next: exports were written to `export/` in CRM and to the workspace root in
+Analytics, under a different filename shape and a different timestamp format. Nothing in the markup
+could have caught it. So also compare, by reading both sides:
+
+- **where a file is written and what it is called** — `export/zoost-<name>-<stamp>.<ext>`, with
+  `stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')` and `sanitize()` on the name
+- **what the status line says afterwards**, word for word
+- **which guards run before an action** — e.g. `ensurePerm(dir)` before writing an export
+- **which folders a workspace walk skips** (`_index/`, `_modules/`, `export/`)
+
+An export is the artefact a user collects from both apps. Finding it in a different place in one of
+them is exactly the discontinuity these two are supposed to avoid.
+
 `LICENSE`, `NOTICE` and `README.md` live at the root so GitHub picks them up; `build.sh` copies
 the first two into the package at build time.
 
