@@ -6,13 +6,16 @@
  *
  * Three differences from the CRM bridge worth knowing:
  *
- *  - **CSRF depends on which family of endpoint you are calling.** The `/reportsapi/` and
- *    `/clientapi/` endpoints take **no token at all** — session cookies plus
- *    `X-Requested-With: XMLHttpRequest` is the whole contract, verified absent in a capture. The
- *    legacy `.ma` endpoints (the ER diagram is one) **do**, as `ZDB_CSRF_TOKEN=<value>`. So there is
- *    no single answer here, unlike CRM where the token is always required and only the prefix
- *    changes. `api()` sends none; `post()` sends the token. Do not add one "to be safe" to the
- *    first family, and do not omit it from the second.
+ *  - **CSRF follows the HTTP method, not the path.** Measured across a 104-request capture with no
+ *    exceptions: **every POST carries `X-ZCSRF-TOKEN: ZDB_CSRF_TOKEN=<value>`, and no GET does** —
+ *    including `POST /reportsapi/DashAnalysisViewsJSON`, which is why "the /reportsapi/ family needs
+ *    no token" was the wrong generalisation from a capture that happened to contain only its GETs.
+ *    So `api()` (GET) sends none and `post()` sends it, and that split is the rule itself rather
+ *    than a list of paths to keep updated.
+ *
+ *    Note the token's own name is **not** the cookie's name — the CRM bridge in this same repository
+ *    proves it: header prefix `crmcsrfparam=`, cookie `CT_CSRF_TOKEN`. Assuming otherwise here is
+ *    what made the first ER pull fail.
  *
  *  - **HTTP 200 is not success.** Analytics answers `{"status":"failure"}` with a 200, so the code
  *    alone tells you nothing. `api()` treats anything that is not an explicit success as an error.
@@ -61,11 +64,10 @@
     return w;
   };
 
-  // The legacy `.ma` endpoints DO want a CSRF token, unlike every /reportsapi/ and /clientapi/ call
-  // above. It goes in as `ZDB_CSRF_TOKEN=<value>` — the same shape as the CRM bridge's prefixed
-  // token, a different name. Two deterministic places are checked, in order; if neither has it the
-  // caller stops with a message naming what was looked for, rather than sending a request that
-  // would come back as an unexplained failure.
+  // Every POST wants a CSRF token; no GET does. It goes in as `ZDB_CSRF_TOKEN=<value>` — the same
+  // shape as the CRM bridge's prefixed token, a different name. Deterministic places are checked in
+  // order; if none has it the caller stops with a message naming exactly what was looked for, rather
+  // than sending a request that would come back as an unexplained failure.
   const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
   function zdbCsrf() {
     const c = cookie('ZDB_CSRF_TOKEN');

@@ -249,13 +249,24 @@ These all failed **silently**, with no console error. They are the expensive kin
 - **Analytics answers `200` with `{"status":"failure"}`.** The HTTP code alone is not the success
   signal, unlike CRM. `api()` in the Analytics bridge treats anything that is not an explicit
   success as an error.
-- **Analytics CSRF depends on the endpoint family, and there is no single answer.** The
-  `/reportsapi/` and `/clientapi/` endpoints take **no token at all** — session cookies plus
-  `X-Requested-With: XMLHttpRequest` is the whole contract, verified absent in a capture. The legacy
-  `.ma` endpoints (`ZDBCreateERD.ma`) **do**, as `ZDB_CSRF_TOKEN=<value>`. Unlike CRM, where the
-  token is always needed and only the prefix changes, here the answer differs per family. `api()`
-  sends none, `post()` sends it. Adding one to the first family, or omitting it from the second, is
-  equally wrong.
+- **Analytics CSRF follows the HTTP method, not the path.** Measured across a 104-request capture
+  with **no exceptions**: every POST carries `X-ZCSRF-TOKEN: ZDB_CSRF_TOKEN=<value>`, and no GET
+  does. `api()` (GET) sends none, `post()` sends it, and that split *is* the rule — not a list of
+  paths to keep in step. "The `/reportsapi/` family needs no token" was the wrong generalisation,
+  drawn from a capture that happened to contain only that family's GETs; `POST
+  /reportsapi/DashAnalysisViewsJSON` carries one.
+- **A CSRF header's prefix is not the cookie's name.** The CRM bridge in this same repository proves
+  it — prefix `crmcsrfparam=`, cookie `CT_CSRF_TOKEN` — and assuming `ZDB_CSRF_TOKEN=` meant a
+  cookie of that name is what made the first Analytics ER pull fail. Find the source, never infer it
+  from the prefix.
+- **Two Analytics endpoints are deliberately never called, and that is a safety decision, not an
+  oversight.** `ZDBTableDataAction.ma` returns `dataTextNew`, the actual cell values of a table —
+  customer records, which Zoost states it never touches. `ZAChartView.ve` would give the report
+  definition we otherwise lack (graph type, groupings, axes, thresholds), but it comes welded to
+  `chartJSON`, the computed series — still customer data, with no known way to ask for the
+  configuration alone. So report definitions for the presentation views stay **uncovered**, and
+  every surface says so rather than implying the mirror is complete. Do not "just try" a parameter
+  to suppress the data: guessing at that boundary is exactly where a read-only claim gets broken.
 - **`ZDBCreateERD.ma` is a strict superset of `GETALLTABLECOLDETAILS`, and it carries the relations.**
   One POST (`DBID`, `ISERDGNEWFLOW=true`) returns the workspace's whole ER model. Measured against a
   capture: same 135 objects, same columns and types (only ordered differently), **plus** 119
