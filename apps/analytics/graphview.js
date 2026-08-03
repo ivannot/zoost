@@ -147,7 +147,7 @@ function layoutZoneHtml(n) {
     <td class="mono">${esc(f.api_name)}</td>
     <td>${esc(f.data_type || '')}${f.length ? ` (${f.length})` : ''}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
-    <td class="mono">${f.lookup ? '\u2192 ' + esc(f.lookup) : ''}</td>${cells}
+    <td class="mono">${f.lookup ? '\u2192 ' + esc(label(N[f.lookup]) || f.lookup) : ''}</td>${cells}
   </tr>`;
   }).join('');
 
@@ -768,7 +768,7 @@ function erRender() {
     div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px`;
     const rows = s.rows.slice(0, s.shown).map((fld) => {
       const lk = fld.lookup ? ' lk' : ''; const req = fld.mandatory ? '<span class="pk">*</span>' : '';
-      const t = fld.lookup ? ('\u2192 ' + esc(fld.lookup)) : esc(fld.data_type || '');
+      const t = fld.lookup ? ('\u2192 ' + esc(label(N[fld.lookup]) || fld.lookup)) : esc(fld.data_type || '');
       return `<div class="errow${lk}"><span class="fn">${esc(fld.api_name)}${req}</span><span class="ft">${t}</span></div>`;
     }).join('');
     const more = s.more ? `<div class="ermore">+${s.rows.length - s.shown} more\u2026</div>` : '';

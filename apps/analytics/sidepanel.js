@@ -215,7 +215,7 @@ async function delWorkspace() {
     await window.idbHandle.set('activeWsAnalytics', null);
     dir = null; bound = null;
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
-    $('detail').classList.remove('show'); selectedId = null;
+    $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null;
     status(`Removed ${w.folder}.`, 'ok');
     await refreshWorkspaces();
     render();
@@ -281,7 +281,7 @@ async function refreshContext() {
   $('mmbar').classList.toggle('show', mm);
   $('mmoverlay').classList.toggle('show', mm);
   if (mm) {
-    $('detail').classList.remove('show');
+    $('detail').classList.remove('show'); $('resizer').classList.remove('show');
     $('mmtext').textContent = `The tab is workspace ${ctx.workspace}; this folder mirrors «${bound.name || bound.workspace}» (${bound.workspace}). Everything is disabled until they match.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in — switching to it if it exists locally, creating it if not.
@@ -487,7 +487,7 @@ async function loadFromDisk() {
   const index = await readJson('sql/_index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
-  selectedId = null; $('detail').classList.remove('show');
+  selectedId = null; $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
 }
@@ -619,6 +619,16 @@ function visibleViews() {
     });
   }
   return out.slice().sort((a, b) => {
+    if (sortKey === 'readBy') {
+      // Absent lineage sorts last in both directions, like an absent timestamp: "not pulled" is not
+      // the same as "nothing reads it", and putting them at zero would say it was.
+      const cnt = (v) => { const d = deps && deps[v.id]; return d ? d.children.length + d.dashboards.length : null; };
+      const x = cnt(a), y = cnt(b);
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x - y) * sortDir;
+    }
     if (sortKey === 'dataModifiedAt' || sortKey === 'designModifiedAt') {
       // Views with no timestamp sort last in both directions — an absent value is not "oldest".
       const x = a[sortKey], y = b[sortKey];
@@ -697,7 +707,7 @@ async function openDetail(id) {
   selectedId = id;
   const v = viewById().get(id);
   if (!v) return;
-  $('detail').classList.add('show');
+  $('detail').classList.add('show'); $('resizer').classList.add('show');
   $('dtitle').textContent = v.name;
   // A Zoho read, so it is worded and coloured like every other Zoho read: "Pull", .zbtn. The ↻ glyph
   // means "reload from disk / re-grant folder access" in the CRM panel and must keep meaning only
@@ -1471,7 +1481,7 @@ $('about').onclick = showAbout;
 $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;
 $('scrim').onclick = () => { closeAbout(); closeScope(false); };
-$('dclose').onclick = () => { $('detail').classList.remove('show'); selectedId = null; render(); };
+$('dclose').onclick = () => { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
   b.onclick = async () => {
     if (b.disabled) return;
@@ -1491,8 +1501,26 @@ document.addEventListener('click', async (e) => {
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }, true);
 
+// resizable split — the CRM's, down to the stored height
+let dragY = false;
+$('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
+window.addEventListener('mousemove', (e) => {
+  if (!dragY) return;
+  const r = $('main').getBoundingClientRect();
+  const h = Math.max(120, Math.min(r.height - 80, r.bottom - e.clientY));
+  $('detail').style.height = h + 'px';
+});
+window.addEventListener('mouseup', () => {
+  if (!dragY) return;
+  dragY = false; document.body.style.userSelect = '';
+  try { chrome.storage.local.set({ detailH: $('detail').style.height }); } catch (_) {}
+});
+
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
 window.addEventListener('focus', () => refreshContext());
 
-(async () => { await loadScope(); await restoreRoot(); await refreshContext(); })();
+(async () => {
+  try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
+  await loadScope(); await restoreRoot(); await refreshContext();
+})();

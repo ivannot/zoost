@@ -32,8 +32,9 @@
   .ftbl td.mono{color:#82d2ff} .ftbl tr:hover{background:#16263f}
   .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
-  button:hover{background:#2b3a58} button:disabled{opacity:.5;cursor:default}
+  button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
   button.primary{background:var(--sel);border-color:var(--sel);color:#fff}
+  button.primary:hover:not(:disabled){background:#2f6fe0}
   .controls{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:#131a27;flex-wrap:wrap}
   .findgrp{display:flex;align-items:stretch;flex:1;min-width:190px;background:#0f1826;border:1px solid var(--border);border-radius:7px;overflow:hidden}
   .findgrp:focus-within{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
@@ -50,8 +51,8 @@
   #ctx{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
   #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
   #ctx.match .dot{background:var(--ok)} #ctx.mismatch .dot{background:var(--bad)} #ctx.unbound .dot{background:var(--muted)} #ctx.offzoho .dot{background:var(--warn)}
-  #ctx .who{font:11.5px var(--mono)} #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
-  #ctx .bound{margin-left:auto;color:var(--muted);font:11px var(--mono)} #ctx.mismatch .bound{color:var(--bad)}
+  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
+  #ctx .bound{margin-left:auto;color:var(--muted);font:11px var(--mono);white-space:nowrap} #ctx.mismatch .bound{color:var(--bad)}
   #status{font-size:11px;color:var(--muted);padding:4px 10px;min-height:18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
   #mmbar{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:9px 11px;background:#2a1c14;border-bottom:1px solid #6b3a1f}
   #mmbar.show{display:flex}

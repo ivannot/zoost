@@ -68,12 +68,21 @@ python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles
 python3 tools/twincheck.py --all    # everything, product-specific parts included
 ```
 
-It reports elements present on one side only, shared elements whose class or inline style differs,
-shared CSS rules whose declarations differ, **and rules that exist on one side only** — that fourth
-check was missing from the first version and the omission let a reported bug through unseen: the AI
-Send button is styled by `.aiinrow #aisend` in CRM and by nothing at all in Analytics, so comparing
-only the selectors present in both files could never see it. A rule missing entirely is the most
-common way two stylesheets drift, not the least. It decides nothing — a difference may be deliberate.
+**The lists inside it are of what is deliberately different, never of what to check.** That
+direction is the whole point: forgetting to declare something makes it *reported*, not silent. Two
+earlier versions had it the other way round and both went quiet on real bugs — one because the rule
+styling a button existed on a single side, the other because nobody had added the resizer to a list
+of things worth comparing. An allow-list is a checklist wearing a script's clothes.
+
+Where a criterion can be derived, it is: the set of shared classes comes from reading both files'
+markup, not from a list, so a class used on both sides but styled on one is always reported. A rule
+is anchored on the first class or id of its first token — `.dtab.active` is about `.dtab`, not about
+`.active`.
+
+**Prove it against a bug you already know about before trusting it.** Removing `.aiinrow #aisend`
+from Analytics must make the tool print three findings; putting it back must return it to zero. A
+checker that has never caught anything is a claim, not a check — and claiming otherwise is how this
+took three attempts instead of one. It decides nothing — a difference may be deliberate.
 **It must print zero unexplained differences before a UI change is done.** Anything genuinely
 deliberate goes in its `EXPECTED` map *with the reason on the same line*; a checker that keeps
 reporting known-good noise is a checker nobody reads.
