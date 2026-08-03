@@ -283,7 +283,7 @@ function renderTree() {
 async function rebuildTree() {
   if (!dir) return;
   if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
-  setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; aiConnCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   // scan disk: which functions are already downloaded (have a .meta.json), keyed by id
   const downloadedById = new Map(); const metaPaths = [];
   for await (const p of walk(dir)) { if (p.startsWith('_index/')) continue; if (p.endsWith('.meta.json')) metaPaths.push(p); }
@@ -757,7 +757,7 @@ function toggleHealth() { if ($('healthview').classList.contains('show')) closeH
 function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }
 
 // ---------- AI assistant (BYOK, provider-agnostic; Phase A: context chat) ----------
-let aiMessages = [], aiModCache = null, aiSeedTruncated = false, aiSeedWarned = false;
+let aiMessages = [], aiModCache = null, aiConnCache = null, aiSeedTruncated = false, aiSeedWarned = false;
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 8 };
@@ -771,6 +771,20 @@ async function aiLoadModules() {
   for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
   aiModCache = map; return map;
 }
+// Connections catalogue for the AI, joined with the functions that use each (same join key as the
+// Connections tab: meta.connections[].name, the string in invokeurl [...connection:"..."]).
+async function aiLoadConnections() {
+  if (aiConnCache) return aiConnCache;
+  let cat = []; try { cat = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  if (!Array.isArray(cat)) cat = [];
+  const g = await ensureGraph().catch(() => null);
+  const used = {};
+  if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (used[c.name] ||= []).push(n.namespace + '.' + n.name); }));
+  const list = cat.map((c) => ({ ...c, uses: (used[c.name] || []).slice() }));
+  const known = new Set(cat.map((c) => c.name));
+  Object.keys(used).forEach((nm) => { if (!known.has(nm)) list.push({ name: nm, label: nm, connector: null, connected: null, missing: true, uses: used[nm].slice() }); });
+  aiConnCache = list; return list;
+}
 function aiModuleText(m) {
   let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist |\n`;
   (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${(f.picklist && f.picklist.length) ? f.picklist.slice(0, 15).join(', ') : ''} |\n`; });
@@ -783,6 +797,8 @@ async function aiBuildSeed() {
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; s += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}\n`; });
   const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
   s += `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
+  const conns = await aiLoadConnections();
+  if (conns.length) s += `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} · used by ${c.uses.length} function(s)${c.connected === false ? ' · NOT CONNECTED' : ''}${c.missing ? ' · not in catalogue' : ''}`).join('\n') + '\n';
   aiSeedTruncated = s.length > 16000;   // don't hide the cut from the user (see aiSend)
   return aiTrunc(s, 16000);
 }
@@ -791,7 +807,7 @@ async function aiSystemPromptB(withTools) {
   let focus = '';
   if (currentPath && currentPath.endsWith('.dg')) { const g = await ensureGraph(); const n = Object.values(g.nodes).find((x) => x.file === currentPath); if (n) focus = `\n# CURRENT FOCUS\nThe user is currently viewing ${n.namespace}.${n.name}:\n\`\`\`deluge\n${aiTrunc(n.source_code || '', 5000)}\n\`\`\`\n`; }
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
+    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
   return `You are an expert assistant for Zoho CRM Deluge scripting and CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${focus}\n# ORG INDEX\n${seed}`;
 }
@@ -802,17 +818,28 @@ const AI_TOOLS = [
   { name: 'get_callees', description: 'List functions called by the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'search_code', description: 'Full-text search across all function sources; returns "namespace.name:line" matches.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'get_module', description: 'Field schema of a module by api_name.', input_schema: { type: 'object', properties: { api_name: { type: 'string' } }, required: ['api_name'] } },
+  { name: 'get_connection', description: 'A connection by name (the string used in invokeurl [...connection:"..."]): its connector, status, scopes, and every function that uses it.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_workflow', description: 'A workflow by id or name, with trigger and function actions.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
 ];
 async function aiExecTool(name, input) {
   const g = await ensureGraph(); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
   if (name === 'list_functions') { const flt = (input.filter || '').toLowerCase(); const list = Object.values(nodes).map((n) => n.namespace + '.' + n.name).filter((id) => !flt || id.toLowerCase().includes(flt)).sort(); return list.length ? list.join('\n') : '(no functions)'; }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\n\n${n.source_code || ''}`; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nlast_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : 'Function not found: ' + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? hits.slice(0, 60).join('\n') : '(no matches)'; }
   if (name === 'get_module') { const mods = await aiLoadModules(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_connection') {
+    const list = await aiLoadConnections();
+    const q = String(input.name || '').toLowerCase();
+    const c = list.find((x) => (x.name || '').toLowerCase() === q) || list.find((x) => (x.label || '').toLowerCase() === q);
+    if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled — run Pull all)');
+    return `connection: ${c.name}\nlabel: ${c.label || ''}\nconnector: ${c.connector || '(unknown)'}\n`
+      + `status: ${c.missing ? 'referenced by functions but NOT in the catalogue' : c.connected === false ? 'configured but NOT connected' : 'connected'}\n`
+      + `created_by: ${c.createdBy || ''}\nscopes: ${(c.scopes || []).join(', ') || '(none)'}\n`
+      + `used_by (${c.uses.length}): ${c.uses.join(', ') || '(none — unused by the functions in this workspace; Flow, widgets and client scripts are not visible to Zoost)'}`;
+  }
   if (name === 'get_workflow') { let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {} const q = String(input.query || '').toLowerCase(); const w = idx.find((x) => String(x.id) === input.query || (x.name || '').toLowerCase() === q || (x.name || '').toLowerCase().includes(q)); if (!w) return 'Workflow not found: ' + input.query; let det = null; try { det = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} const fns = []; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => fns.push(a.name)); }); return `Workflow: ${w.name}\nmodule: ${w.module || ''}\nfunctions: ${[...new Set(fns)].join(', ') || '(none)'}`; }
   return 'Unknown tool: ' + name;
 }
@@ -2250,6 +2277,7 @@ async function pullConnections() {
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
     await writeFile('_connections/_index.json', JSON.stringify(r.connections || [], null, 2));
+    aiConnCache = null;   // the AI's catalogue must not serve what we just replaced
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
   } catch (e) { setStatus('Connections pull error: ' + e.message, 'bad'); }

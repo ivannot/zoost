@@ -53,7 +53,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   Zoho's interface: it navigates by URL and reads through the API — it does not script clicks it
   cannot be sure of.
 - **An AI that actually knows your org.** Not a generic chatbot: it opens your functions, traces
-  your callers, reads your schemas, searches your code — grounded on the current version.
+  your callers, reads your schemas, looks up your connections, searches your code — grounded on the
+  current version.
 
 ---
 
@@ -95,8 +96,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - A persistent chat, grounded on your real org. **Provider-agnostic BYOK**: Anthropic (Claude)
   or **OpenAI** (ChatGPT). Two providers, both tested — nothing claimed that has not been tried.
 - With Anthropic it runs as an **agent with read-only tools** — `get_function`, `who_calls`,
-  `get_callees`, `search_code`, `get_module`, `get_workflow`, `list_functions` — so it explores
-  the whole org itself instead of guessing. Every tool it opens is shown in the chat (🔧).
+  `get_callees`, `search_code`, `get_module`, `get_workflow`, `get_connection`, `list_functions` —
+  so it explores the whole org itself instead of guessing. Every tool it opens is shown in the chat (🔧).
 - **Streaming** responses, **Markdown** rendering, and a configurable **tool-step limit** so you
   control how much it reasons — and spends.
 
@@ -143,7 +144,8 @@ Both keys are stored **only in your browser** (`chrome.storage.local`) and each 
 **directly to the provider you choose** — never to the developer.
 
 **How it works.** The system prompt carries a compact **index of the whole org** (every function
-signature, modules, automations) plus the function you're currently viewing. From there the agent
+signature, modules, automations, and the connections with their usage counts) plus the function
+you're currently viewing. From there the agent
 uses read-only tools to fetch exact code and schemas on demand — so it sees the entire org, one
 piece at a time, only when needed. Answers reflect the **current** version of the code; there's a
 single persistent conversation you clear yourself (switching functions never wipes it).
@@ -215,7 +217,7 @@ Both land in your workspace folder, so they're versioned with your Git.
 
 ## Privacy & data
 
-- **Function/module/workflow/schedule files** and **exports** are written to the local folder you
+- **Function/module/workflow/schedule/connection files** and **exports** are written to the local folder you
   choose (File System Access API). Graph data and the workspace list/binding live in the browser
   (IndexedDB / `chrome.storage.local`). None of this is uploaded anywhere.
 - The extension talks to **your own Zoho CRM** using your existing session.
@@ -264,8 +266,8 @@ like to support development:
 ## Known limitations
 
 - The **AI** is powerful but not infallible: answers reflect what's in the workspace (pull to keep
-  it fresh) and the tools' coverage (functions/modules/workflows/schedules — not client scripts or
-  rules Zoho doesn't expose). Treat its output as an excellent first analysis to verify.
+  it fresh) and the tools' coverage (functions/modules/workflows/schedules/connections — not client
+  scripts or rules Zoho doesn't expose). Treat its output as an excellent first analysis to verify.
 - **Deploy from repo → Zoho** (write-back) is intentionally not implemented; pull + save-sync only.
 - OpenAI currently runs **single-shot** (no tool-use yet); Anthropic is the full agent.
 - Only Anthropic and OpenAI are supported. Other OpenAI-compatible endpoints (OpenRouter, Azure,

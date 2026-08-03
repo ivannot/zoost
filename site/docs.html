@@ -37,7 +37,7 @@
   <h1>How to use Zoost</h1>
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
-  <p class="upd">Covers Zoost 1.3 · updated 3 August 2026</p>
+  <p class="upd">Covers Zoost 1.4 · updated 3 August 2026</p>
 
   <div class="toc">
     <b>On this page</b>
@@ -229,7 +229,8 @@ git commit -m "baseline"</code></pre>
     <li>Paste the key and the exact model id from Anthropic's docs.</li>
   </ol>
   <p>With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers,
-    reads schemas and searches code by itself. Every tool it uses is shown in the chat.</p>
+    reads schemas, looks up a connection and who uses it, and searches code by itself. Every tool it uses is
+    shown in the chat.</p>
 
   <h3>OpenAI (ChatGPT) — single-shot</h3>
   <ol>
@@ -248,7 +249,7 @@ git commit -m "baseline"</code></pre>
     <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
     <tbody>
       <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
-      <tr><td class="k">What it sees</td><td>Whatever it decides to open: any function, module, workflow, plus code search</td><td>The org index and the function currently open</td></tr>
+      <tr><td class="k">What it sees</td><td>Whatever it decides to open: any function, module, workflow or connection, plus code search</td><td>The org index and the function currently open</td></tr>
       <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A “thinking…” indicator until the answer arrives</td></tr>
       <tr><td class="k">Best for</td><td>“What breaks if I change this?”, tracing behaviour across the org</td><td>Focused questions about the function in front of you</td></tr>
     </tbody>
