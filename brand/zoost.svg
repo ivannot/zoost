@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Zoost.
+       One mark for the family, one colour per product. The geometry is measured from the icon Zoost
+       shipped with: a 52x48 Z at 14px bar weight, centred in a 116px squircle with a 30px radius.
+       Nothing about the shape changes between products — at 16px in a browser toolbar the hue is the
+       only thing that still carries, so the hue is what tells them apart, and everything else stays
+       identical on purpose. -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7b8aa6"/><stop offset="1" stop-color="#3d4a63"/>
+  </linearGradient></defs>
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#g)"/>
+  <g fill="#fff">
+    <rect x="38" y="40" width="52" height="14" rx="3"/>
+    <polygon points="90,54 54,74 38,74 74,54"/>
+    <rect x="38" y="74" width="52" height="14" rx="3"/>
+  </g>
+</svg>
