@@ -37,7 +37,7 @@
   <h1>How to use Zoost</h1>
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
-  <p class="upd">Covers Zoost 1.4 · updated 3 August 2026</p>
+  <p class="upd">Covers Zoost 1.5 · updated 3 August 2026</p>
 
   <div class="toc">
     <b>On this page</b>
@@ -123,6 +123,12 @@ git commit -m "baseline"</code></pre>
     <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
     <li>It also lists the <b>connections</b> the function uses and who last changed it — click a connection
       to filter the tree to every function that uses it (no more "find in file" for a connection name).</li>
+    <li>Each function carries its <b>size</b> (lines, code lines, KB) and its <b>outbound calls</b> —
+      <code>invokeurl</code>, <code>zoho.crm.*</code> and the other Zoho service tasks — as a badge in the
+      list and in the preview. Calls are counted outside comments and string literals, so a task named in a
+      comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
+      not complexity, and every outbound call is work Zoho meters — how to weigh that is your call, not ours.
+      Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
     <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide — see
       <a href="#connections">section 8</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
@@ -201,6 +207,10 @@ git commit -m "baseline"</code></pre>
     not</b> analyse — client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
   <p>Treat every entry as a <b>candidate to review</b>. Nothing is ever deleted for you, and an "orphan" may
     simply be called from somewhere the API does not report.</p>
+  <p>A third tab, <b class="ui">Size &amp; calls</b>, ranks the longest functions and the ones making the most
+    outbound calls. There is no threshold and no verdict attached: a long function is worth a look, not
+    necessarily a problem, and a short one can still be the dangerous one. The counts are there so you can
+    see where length and API cost concentrate — the reading is yours.</p>
 
   <h2 id="export">10. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
@@ -210,6 +220,11 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Export → HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
       handing to a colleague or a manager.</li>
     <li><b class="ui">Export → Markdown</b> — the same material as Markdown, shaped as context for an external LLM.</li>
+  </ul>
+  <p>Both carry everything the panel shows, including each function's size and outbound-call counts (a
+    <b>Size and outbound calls</b> table in the Markdown, columns in the HTML index): a report should never be
+    a lesser copy of what you saw on screen.</p>
+  <ul>
   </ul>
   <div class="box warn">
     <p><b>An export is a file that leaves your machine.</b> With source code included it contains your whole

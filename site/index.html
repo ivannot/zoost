@@ -151,6 +151,9 @@
           <li><span class="k">Connections per function</span>: every function lists the connections it uses — click one
             to filter the tree to every other function that uses it. Structured, not a text search.</li>
           <li><span class="k">Authorship</span>: who last changed a function, and when, next to its code.</li>
+          <li><span class="k">Size &amp; outbound calls</span>: length in lines and KB, and how many
+            <code>invokeurl</code>, <code>zoho.crm.*</code> and other Zoho service calls a function makes —
+            counted outside comments and strings. Counts, not a score; you decide how to read them.</li>
         </ul>
       </div>
 
@@ -200,6 +203,8 @@
         <h3>Health audit</h3>
         <ul>
           <li>Orphan candidates, unresolved calls, ambiguous calls.</li>
+          <li><span class="k">Size &amp; calls</span>: the longest functions and the ones making the most
+            outbound calls — plain counts, no threshold and no verdict.</li>
           <li>Broken automations and lookups pointing at modules that are not there.</li>
           <li>Every check states what it does <em>and does not</em> analyse. Candidates to review — never
             automatic deletions.</li>

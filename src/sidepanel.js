@@ -273,7 +273,10 @@ function renderTree() {
       const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.stale ? '\u25d0' : e.downloaded ? '\u25cf' : '\u25cb';
       const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.stale ? 'Older data (no connections / author) \u2014 click to refresh' : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
-      el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span>${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}`;
+      const st = e.stats;
+      const sizeBadge = st ? `<span class="rest rf" title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB">${st.lines}L</span>`
+        + (st.apiCalls ? `<span class="rest rl" style="color:#e0a86b" title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}">${st.apiCalls}↗</span>` : '') : '';
+      el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}${sizeBadge}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
       tree.appendChild(el);
@@ -309,10 +312,70 @@ async function rebuildTree() {
       return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, stale: (d.sv || 0) < META_SV, error: false };
     });
   }
-  renderTree(); updateMissingButton();
+  renderTree(); updateMissingButton(); attachFnStats();
   const dl = treeData.filter((e) => e.downloaded).length;
   setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok'); await refreshContext();
 }
+
+// The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first
+// render instead of blocking it — the graph gets built anyway the moment a function is opened.
+async function attachFnStats() {
+  try {
+    const g = await ensureGraph();
+    const byFile = {}; Object.values(g.nodes).forEach((n) => { if (n.file) byFile[n.file] = n.stats; });
+    let any = false;
+    treeData.forEach((e) => { const s = byFile[e.path]; if (s) { e.stats = s; any = true; } });
+    if (any && viewMode === 'functions') renderTree();
+  } catch (_) {}   // stats are an enrichment: if the graph cannot be built, the tree still works
+}
+
+// ---------- function statistics ----------
+// Derived from the source we already hold in memory, never written to disk: a stored copy could
+// disagree with the .dg next to it, and would cost a schema bump plus a re-pull of every function
+// for a number that is free to recompute.
+//
+// These are counts, not a score. Length measures verbosity, not complexity, and the call counts say
+// how much a function talks to the outside — how to read that is the reader's call, not ours.
+// Zoho's own list of Deluge integration namespaces: zoho.com/deluge/help/integration-tasks.html
+const ZOHO_SERVICES = 'crm|creator|books|invoice|inventory|billing|subscriptions|desk|projects|people|recruit|mail|calendar|sheet|writer|cliq|connect|sign|analytics|bookings|salesiq|workdrive|map|notebook';
+const RE_ZOHO_ANY = new RegExp('\\bzoho\\.(?:' + ZOHO_SERVICES + ')\\.\\w+', 'gi');
+const RE_ZOHO_CRM = /\bzoho\.crm\.\w+/gi;
+const RE_INVOKEURL = /\binvokeurl\b/gi;
+const RE_SENDMAIL = /\bsendmail\b/gi;
+// Comments and string literals are removed, so a task named in a comment or inside a message is not
+// counted as a call. This is a single left-to-right scan on purpose: chained regexes get it wrong,
+// because a URL literal ("https://x") contains "//" and a comment-first pass would cut the line and
+// leave an unterminated quote that swallows the lines after it. Newlines are preserved so the line
+// count stays meaningful.
+function stripNonCode(src) {
+  const s = String(src || '');
+  let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i], d = s[i + 1];
+    if (c === '/' && d === '*') { const e = s.indexOf('*/', i + 2); const seg = s.slice(i, e < 0 ? s.length : e + 2); out += seg.replace(/[^\n]/g, ' '); i = e < 0 ? s.length : e + 2; continue; }
+    if (c === '/' && d === '/') { const e = s.indexOf('\n', i); i = e < 0 ? s.length : e; out += ' '; continue; }
+    if (c === '"' || c === "'") { const q = c; i++; while (i < s.length && s[i] !== q) { if (s[i] === '\\') i++; i++; } i++; out += q + q; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+const _count = (s, re) => { const m = s.match(re); return m ? m.length : 0; };
+function fnStats(src) {
+  const code = String(src || '');
+  const bare = stripNonCode(code);
+  const crm = _count(bare, RE_ZOHO_CRM);
+  const zohoAny = _count(bare, RE_ZOHO_ANY);
+  const invokeurl = _count(bare, RE_INVOKEURL);
+  return {
+    lines: code ? code.split('\n').length : 0,
+    codeLines: bare.split('\n').filter((l) => l.trim() !== '').length,
+    chars: code.length,
+    invokeurl, sendmail: _count(bare, RE_SENDMAIL),
+    crm, zoho: zohoAny - crm,          // other Zoho services
+    apiCalls: invokeurl + zohoAny,     // outbound calls; each one is work Zoho meters
+  };
+}
+const statsLabel = (s) => `${s.lines} lines · ${(s.chars / 1024).toFixed(1)} KB · ${s.apiCalls} API call${s.apiCalls === 1 ? '' : 's'}`;
 
 // ---------- graph cache ----------
 async function loadGraph() {
@@ -323,7 +386,7 @@ async function loadGraph() {
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, file: p });
   }
   const g = window.buildGraph(nodes);
-  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; } });
+  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; g.nodes[id].stats = fnStats(nd.dg); } });
   g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
   return g;
 }
@@ -385,6 +448,17 @@ async function showCallers(path) {
       html += '<div class="connwrap"><b>Connections (' + conns.length + '):</b> '
         + conns.map((c) => `<span class="conn" data-conn="${escA(c.name)}" title="${escA((c.label || c.name) + (c.service ? ' \u00b7 ' + c.service : '') + ' \u2014 click to list every function that uses it')}">${escHtml(c.name)}</span>`).join(' ')
         + '</div>';
+    }
+    const st = node.stats;
+    if (st) {
+      const parts = [];
+      if (st.invokeurl) parts.push(`${st.invokeurl} invokeurl`);
+      if (st.crm) parts.push(`${st.crm} zoho.crm`);
+      if (st.zoho) parts.push(`${st.zoho} other Zoho`);
+      if (st.sendmail) parts.push(`${st.sendmail} sendmail`);
+      html += `<div class="statline"><b>Size:</b> ${st.lines} lines (${st.codeLines} code) \u00b7 ${(st.chars / 1024).toFixed(1)} KB`
+        + ` &nbsp;\u00b7&nbsp; <b>Outbound calls:</b> ${st.apiCalls ? escHtml(parts.join(', ')) : 'none'}`
+        + `<span class="statnote" title="Counts, not a score. Comments and string literals are excluded. Length measures verbosity, not complexity \u2014 how to read these is up to you.">\u24d8</span></div>`;
     }
     const modBits = [];
     if (node.modified_by) modBits.push('by ' + escHtml(node.modified_by));
@@ -707,8 +781,17 @@ async function buildHealth() {
   for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
-  const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> \u2014 never an automatic deletion. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> \u2014 never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  // Size and outbound-call counts, shown as plain rankings with no threshold and no verdict: a long
+  // function is worth a look, not automatically wrong, and the reader decides what the numbers mean.
+  const withStats = nodes.filter((n) => n.stats && n.stats.lines);
+  const biggest = withStats.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15)
+    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.lines} lines · ${n.stats.codeLines} code · ${(n.stats.chars / 1024).toFixed(1)} KB</span>` }));
+  const chattiest = withStats.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15)
+    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls — ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
   const groups = [
+    { id: 'biggest', tab: 'size', title: 'Largest functions', desc: 'By line count, longest first. Length is verbosity, not complexity — a long function is worth a look, not necessarily a problem.', bad: false, items: biggest },
+    { id: 'chattiest', tab: 'size', title: 'Most outbound calls', desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
     { id: 'orphan', tab: 'functions', title: 'Orphan candidates', desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: 'Unresolved calls', desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
     { id: 'ambiguous', tab: 'functions', title: 'Ambiguous calls', desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
@@ -737,6 +820,7 @@ function renderHealthView() {
   let html = `<div class="htabs">`
     + `<button class="htab ${healthTab === 'functions' ? 'on' : ''}" data-tab="functions">Functions <span class="htn">${tabCount('functions')}</span></button>`
     + `<button class="htab ${healthTab === 'wiring' ? 'on' : ''}" data-tab="wiring">Wiring <span class="htn">${tabCount('wiring')}</span></button>`
+    + `<button class="htab ${healthTab === 'size' ? 'on' : ''}" data-tab="size">Size &amp; calls</button>`
     + `</div>`;
   html += `<div class="hcov">${healthData.coverage}</div>`;
   groups.filter((g) => g.tab === healthTab).forEach((g) => {
@@ -793,8 +877,8 @@ function aiModuleText(m) {
 async function aiBuildSeed() {
   const g = await ensureGraph();
   const nodes = Object.values(g.nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
-  let s = `## Function index (${nodes.length})\n`;
-  nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; s += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}\n`; });
+  let s = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
+  nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; s += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
   const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
   s += `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
   const conns = await aiLoadConnections();
@@ -825,7 +909,7 @@ async function aiExecTool(name, input) {
   const g = await ensureGraph(); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
   if (name === 'list_functions') { const flt = (input.filter || '').toLowerCase(); const list = Object.values(nodes).map((n) => n.namespace + '.' + n.name).filter((id) => !flt || id.toLowerCase().includes(flt)).sort(); return list.length ? list.join('\n') : '(no functions)'; }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nlast_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : 'Function not found: ' + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? hits.slice(0, 60).join('\n') : '(no matches)'; }
@@ -1733,6 +1817,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
         + ((scheduledBy[f.api_name] || []).length ? `<span><b>Scheduled by (${scheduledBy[f.api_name].length}):</b> ${scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
         + ((scope.connections && (f.connections || []).length) ? `<span><b>Connections (${f.connections.length}):</b> ${f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href="#${connAnchor(c.name)}">${esc(c.name)}</a>` : esc(c.name)).join(', ')}</span>` : '')
+        + (f.stats ? `<span><b>Size:</b> ${f.stats.lines} lines (${f.stats.codeLines} code) · ${(f.stats.chars / 1024).toFixed(1)} KB · <b>outbound calls:</b> ${f.stats.apiCalls || 'none'}${f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} zoho.crm, ${f.stats.zoho} other${f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''})` : ''}</span>` : '')
         + ((f.modified_by || f.updatedTime) ? `<span><b>Modified:</b> ${f.modified_by ? 'by ' + esc(f.modified_by) : ''}${f.updatedTime ? ' · ' + esc(String(f.updatedTime).slice(0, 16)) : ''}</span>` : '')
         + `</div>` : '';
       fnHtml += `<section class="item" id="${fnAnchor(f.api_name)}" data-name="${esc(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
@@ -1874,6 +1959,10 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   const hOrph = hNodes.filter((n) => n.dead_suspect).sort((a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || ''));
   const hUnres = hNodes.filter((n) => n.unresolved && n.unresolved.length);
   const hAmbig = hNodes.filter((n) => n.ambiguous && n.ambiguous.length);
+  // Informational rankings, deliberately kept out of the issue total below: they are not defects.
+  const hStat = hNodes.filter((n) => n.stats && n.stats.lines);
+  const hBig = hStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15);
+  const hChatty = hStat.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15);
   const hBroken = [];
   wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(hById[String(a.id)] || hByAny[(a.name || '').toLowerCase()])) hBroken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
   scheds.forEach((sc) => { if (!(hById[String(sc.function_id)] || hByAny[(sc.function_name || '').toLowerCase()])) hBroken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
@@ -1888,6 +1977,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + hSec('Ambiguous calls', hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
     + hSec('Broken automations', hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
     + hSec('Missing module references', hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
+    + hSec('Largest functions', hBig.length, 'By line count, longest first. Length is verbosity, not complexity \u2014 a long function is worth a look, not necessarily a problem.', hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
+    + hSec('Most outbound calls', hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls \u2014 ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
     ;
   const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
 
@@ -1899,7 +1990,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
       fnRows.push(`<tr><td><a href="#${fnAnchor(f.api_name)}">${esc(f.display_name || f.api_name)}</a></td>`
         + `<td class="mono">${esc(f.api_name)}</td><td class="mono">${esc(ns)}</td>`
         + `<td class="ct">${f.rest ? '\u25cf' : ''}</td><td class="ct">${f.downloaded ? '' : '\u2014'}</td>`
-        + `<td class="ct">${n ? n.calls.length : 0}</td><td class="ct">${n ? n.called_by.length : 0}</td></tr>`);
+        + `<td class="ct">${n ? n.calls.length : 0}</td><td class="ct">${n ? n.called_by.length : 0}</td>`
+        + `<td class="ct">${f.stats ? f.stats.lines : ''}</td><td class="ct">${f.stats ? f.stats.apiCalls : ''}</td></tr>`);
     });
   });
   const modRows = [];
@@ -1920,7 +2012,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     : '<p class="empty">No connections in this export.</p>';
   const toc = `<nav class="toc"><h2>Contents</h2>`
     + `<h3 class="toch">Functions (${fns.length})</h3>`
-    + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="7" class="none">none</td></tr>'}</tbody></table>`
+    + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th><th title="source lines">Lines</th><th title="invokeurl + Zoho service tasks">Calls</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="9" class="none">none</td></tr>'}</tbody></table>`
     + `<h3 class="toch">Modules (${mods.length})</h3>`
     + `<table class="toctbl"><thead><tr><th>Module</th><th>API name</th><th>Generated</th><th>Kind</th><th>Fields</th><th>Ref by</th></tr></thead><tbody>${modRows.join('') || '<tr><td colspan="6" class="none">none</td></tr>'}</tbody></table>`
     + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
@@ -1954,7 +2046,7 @@ async function loadExportData() {
   for (const e of entries) {
     const d = metaById.get(String(e.id)); let code = '';
     if (d) { try { code = await readFile(d.dg); } catch (_) {} }
-    fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [] });
+    fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
   const mods = [];
   for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`_layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
@@ -1995,7 +2087,7 @@ function buildExportMarkdown(d, scope) {
   md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\u2019s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.description ? ' \u2014 ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' \u2014 ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` \u2014 ${(m.fields || []).length} fields\n`; });
   if (wfs.length) { md += '\n### Workflows\n'; wfs.forEach((w) => { const fl = wfFns(w); md += `- ${w.name}${w.module ? ' (' + w.module + ')' : ''}${fl.length ? ' \u2192 ' + fl.join(', ') : ''}\n`; }); }
@@ -2007,6 +2099,7 @@ function buildExportMarkdown(d, scope) {
     if (n.calls && n.calls.length) md += `- calls: ${n.calls.join(', ')}\n`;
     if (n.called_by && n.called_by.length) md += `- called by: ${n.called_by.join(', ')}\n`;
     if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}`).join('; ')}\n`;
+    if (n.stats) md += `- size: ${n.stats.lines} lines (${n.stats.codeLines} code) · ${(n.stats.chars / 1024).toFixed(1)} KB\n- outbound calls: ${n.stats.apiCalls || 'none'}${n.stats.apiCalls ? ` (${n.stats.invokeurl} invokeurl, ${n.stats.crm} zoho.crm, ${n.stats.zoho} other Zoho${n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''})` : ''}\n`;
     if (scope.connections && n.connections && n.connections.length) md += `- connections: ${n.connections.map((c) => c.name).join(', ')}\n`;
     if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
     md += scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
@@ -2058,6 +2151,16 @@ function buildExportMarkdown(d, scope) {
       });
     });
   });
+  const mdStat = fnList.filter((n) => n.stats && n.stats.lines);
+  if (mdStat.length) {
+    md += '---\n\n## Size and outbound calls\n\nPlain counts, no threshold and no verdict: length is verbosity, not complexity, and each outbound call is work Zoho meters. Calls are counted outside comments and string literals. Interpretation is the reader’s.\n\n';
+    md += '| Function | Lines | Code lines | KB | invokeurl | zoho.crm | Other Zoho | sendmail | Total calls |\n|---|---|---|---|---|---|---|---|---|\n';
+    mdStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).forEach((n) => {
+      const s = n.stats;
+      md += `| \`${_mdCell(n.namespace + '.' + n.name)}\` | ${s.lines} | ${s.codeLines} | ${(s.chars / 1024).toFixed(1)} | ${s.invokeurl} | ${s.crm} | ${s.zoho} | ${s.sendmail} | ${s.apiCalls} |\n`;
+    });
+    md += '\n';
+  }
   if (conns.length) {
     md += '---\n\n## Connections\n\nThe org’s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
     md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';

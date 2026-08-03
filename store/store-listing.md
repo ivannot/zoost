@@ -47,6 +47,8 @@ WHAT IT DOES
 
 - Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes — and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
 
+- Size and outbound calls. Every function shows its length and how many outbound calls it makes — invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals — so you can see at a glance where length and API cost concentrate. These are plain counts with no threshold and no verdict: length is verbosity, not complexity, and the interpretation is yours. Computed from the local mirror, with no extra calls to Zoho.
+
 - Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review — never automatic deletions.
 
 - Exports you can hand over. The whole workspace as one self-contained cross-linked HTML file, or as Markdown shaped as context for an external LLM. A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.

@@ -80,11 +80,16 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it —
   per function (the connections it calls) and org-wide (usage count, unused, disconnected).
   Plus who last changed each function, and when.
+- **Size and outbound calls**: every function shows its length (lines, code lines, KB) and how many
+  outbound calls it makes — `invokeurl`, `zoho.crm.*` and the other Zoho service tasks, counted
+  outside comments and string literals. Counts, not a score: length is verbosity, not complexity,
+  and you decide what the numbers mean. Computed from the sources on disk — no extra Zoho calls,
+  nothing stored, so it can never disagree with the file.
 
 **Health / audit** (candidates to review — never automatic deletions)
-- Two tabs — **Functions** (orphans, unresolved calls, ambiguous calls) and **Wiring** (broken
-  automations, missing module references) — each with an explicit coverage note stating exactly
-  what is and isn't analyzed.
+- Three tabs — **Functions** (orphans, unresolved calls, ambiguous calls), **Wiring** (broken
+  automations, missing module references) and **Size & calls** (longest functions, most outbound
+  calls) — each with an explicit coverage note stating exactly what is and isn't analyzed.
 
 **Exports — human-friendly and AI-friendly**
 - **Export → HTML**: the entire workspace — functions (highlighted, cross-linked), modules,
@@ -274,6 +279,10 @@ like to support development:
   local models) are deliberately **not** offered: the manifest grants host access to those two
   origins only, and an untested claim is worse than a missing feature.
 - The function↔module reference in exports is heuristic string-matching.
+- **Size and call counts are counts, not complexity.** Lines measure verbosity; the call count is
+  static (it does not know how often a branch runs, or that a call sits inside a loop), and it only
+  sees `invokeurl` and the documented `zoho.<service>.*` tasks. Read them as "worth a look", never
+  as a score.
 - **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow,
   Circuits, widgets or client scripts, which Zoost does not read — so "unused" means "unused by your
   functions", a candidate to review, not a verdict.

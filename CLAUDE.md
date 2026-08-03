@@ -118,6 +118,10 @@ These all failed **silently**, with no console error. They are the expensive kin
   have clobbered `lastPull`, because it carries fewer fields than the file holds.
 - **OpenAI model compatibility.** Newer models reject `max_tokens` and require
   `max_completion_tokens`. The call tries the first and retries on that specific 400.
+- **Stripping comments and strings from Deluge cannot be done with chained regexes.** Removing line
+  comments before string literals cuts `url: "https://x"` at the `//`, which leaves an unterminated
+  quote that swallows the following lines — the counts then silently under-report. `stripNonCode()`
+  is a single left-to-right scan for exactly this reason. A unit check caught it; the eye did not.
 - **`/deluge/` endpoints want a different CSRF prefix than `/crm/`.** The `/crm/...` APIs take the
   CSRF token as `crmcsrfparam=<token>`; the `/deluge/` (deluge runtime) APIs take the *same* token
   value as `drepn=<token>`. Wrong prefix → **400, not 401**, so it reads as a bad request, not an
@@ -189,6 +193,23 @@ is stored and where it travels) and `store/store-listing.md`. Only then is the c
 
 If a change touches what data leaves the machine, `site/privacy.html` and the Web Store data
 disclosures are not optional follow-ups. They are part of the change.
+
+### Anything shown in the UI must also be in the reports
+
+**Every piece of information the panel shows about an item belongs in the HTML and Markdown exports
+too.** The exports exist so someone without the extension sees what you see; a number that lives
+only on screen makes the report a lesser, quietly incomplete copy — and the person reading it cannot
+know what they are missing. When you add a column, a badge, a chip or a line of detail, add it in the
+same change to `buildExportHtml` **and** `buildExportMarkdown`, and to the AI context if it helps the
+model answer about it. The reverse also holds: nothing in a report should be invented there.
+
+### Numbers are exposed, never interpreted
+
+When surfacing a measurement (size, counts, usage), give the reader the number and what it counts —
+not a verdict. No thresholds, no red "too big", no "worst offenders", no quality score. Length is
+verbosity, not complexity; a long function may be a clean mapping table and a short one may be a
+minefield. State plainly what a metric does **not** capture, the way the health audit states its
+coverage gaps, and let the user decide how to read it. We inform; we do not grade their work.
 
 ### What to produce, by size of change
 

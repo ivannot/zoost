@@ -101,7 +101,9 @@ function srcBlock(n) {
   const lines = code.split('\n').length;
   const gut = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
   const hl = window.highlightDeluge ? window.highlightDeluge(code) : esc(code);
-  return `<div class="srcwrap"><div class="srchead">Source · ${lines} lines · ${esc(n.namespace)}.${esc(n.name)}</div><div class="srcbody"><pre class="gut">${gut}</pre><pre class="src">${hl}</pre></div></div>`;
+  const st = n.stats;   // computed by the panel from the same source; counts only, no verdict
+  const callBits = st && st.apiCalls ? ` · ${st.apiCalls} outbound call${st.apiCalls === 1 ? '' : 's'} (${st.invokeurl} invokeurl, ${st.crm} zoho.crm, ${st.zoho} other${st.sendmail ? `, ${st.sendmail} sendmail` : ''})` : st ? ' · no outbound calls' : '';
+  return `<div class="srcwrap"><div class="srchead">Source · ${lines} lines${st ? ` (${st.codeLines} code)` : ''}${callBits} · ${esc(n.namespace)}.${esc(n.name)}</div><div class="srcbody"><pre class="gut">${gut}</pre><pre class="src">${hl}</pre></div></div>`;
 }
 let layFilter = null;   // null = all fields, otherwise the index of a layout in n.layouts
 const layShort = (t) => { t = String(t || ''); return t.length > 12 ? t.slice(0, 11) + '\u2026' : t; };
