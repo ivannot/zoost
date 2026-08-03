@@ -18,7 +18,7 @@ It is **read-only towards Zoho**. It never writes back, and never touches CRM re
 ```
 src/      the extension. Exactly what ships. Nothing else lives here.
 site/     zoost.it — deployed automatically by Cloudflare on push to main
-functions/ Cloudflare Pages Functions for zoost.it (server-side, edge). `functions/api/x.js` → /api/x
+site/functions/  Cloudflare Pages Functions (server-side, edge). `site/functions/api/x.js` → /api/x
 store/    Chrome Web Store listing copy and permission justifications
 dist/     build output, git-ignored
 ```
@@ -310,10 +310,15 @@ the same submission.
 Pushing to `main` also deploys `site/` to zoost.it via Cloudflare. Documentation goes live with
 the commit, so it must be correct at commit time, not at release time.
 
-The site is static plus one edge function: `functions/api/versions.js` reports the Web Store
+The site is static plus one edge function: `site/functions/api/versions.js` reports the Web Store
 version, the newest git tag and when `site/` last changed, so the footer shows whether the three are
 in step. It reads the **tags** rather than GitHub Releases, because the routine above always creates
 a tag while attaching a Release is a manual step that may not happen. Tags are semver-sorted here
-rather than trusting the API's unspecified order. If Cloudflare ever stops serving `/api/versions`,
-check the Pages project's **Root directory**: Functions must live in `/functions` at the root the
-project is built from.
+rather than trusting the API's unspecified order.
+
+**Functions live inside `site/`, not at the repo root.** The Pages project's root directory is
+`site/` (that is why `site/index.html` is served at `/`), and Pages looks for `functions/` relative
+to that root. A function placed at the repository root deploys silently and 404s — the pages are
+served normally, so nothing looks wrong until you request the endpoint. Verify a new endpoint by
+requesting it, e.g. `curl -s -o /dev/null -w '%{http_code}' https://zoost.it/api/versions`; do not
+assume it is live because the deploy succeeded.
