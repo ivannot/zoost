@@ -29,7 +29,7 @@ the Web Store, a different data model — sharing only the name, the site and th
 ```
 apps/crm/        the Zoho CRM extension. Exactly what ships. Nothing else lives here.
 apps/analytics/  the Zoho Analytics extension (in progress)
-site/            zoost.it — published by `npx wrangler deploy`, NOT by pushing (see the deploy note)
+site/            zoost.it — deployed by Cloudflare on push to main (root directory: site)
 site/_worker.js  the Worker script (see the Cloudflare notes further down)
 store/crm/       Chrome Web Store listing copy and permission justifications, per app
 dist/            build output, git-ignored
@@ -593,23 +593,19 @@ Then, by hand: attach that zip to a GitHub Release for the tag, and — if anyth
 changed — update the Web Store package, description, privacy policy URL and data disclosures in
 the same submission.
 
-**Pushing to `main` does NOT deploy the site.** The Worker's deployment history shows `Wrangler` as
-the source of every release: `zoost-it` is not connected to the repository, so a push publishes
-nothing and `git push` followed by `curl` will keep showing the old pages with no error anywhere.
-This file claimed the opposite for a long time and the claim cost real time — it is exactly the
-"never let a claim outlive its truth" failure, in the file that exists to prevent it.
+Pushing to `main` deploys `site/` to zoost.it: the Worker is connected to `ivannot/zoost` with root
+directory `site`, production branch `main`, and `npx wrangler deploy` as the deploy command.
 
-Deploying is therefore a deliberate step, from `site/`:
+**Do not read "Source: Wrangler" in the deployment history as "deployed by hand".** Cloudflare's own
+build runs that same command on its machine, so every deployment says Wrangler whether it came from a
+push or from a laptop. Reading it as proof that Git was not connected cost a wrong diagnosis and a
+wrong correction to this file.
 
-```bash
-npx wrangler deploy        # needs Node >= 22; the machine currently has v19, so this fails first
-```
+The deployment list only shows **successful** deploys. When a push does not appear there, the build
+either did not run or failed, and only the **Builds** page says which — the deployment history cannot.
 
-The better fix is to make the old sentence true: connect the Worker to Git in the Cloudflare
-dashboard (Workers & Pages → `zoost-it` → Settings → Build), repository `ivannot/zoost`, production
-branch `main`, **root directory `site`**. Until someone does that, treat a site change as unpublished
-until `curl` says otherwise. Documentation still has to be correct at commit time — it just does not
-become visible at commit time.
+And the lesson that keeps being re-learnt: a push is not a publication until `curl` says so.
+Documentation has to be correct at commit time, but it becomes visible only when a build succeeds.
 
 The site is static plus one edge function: `site/functions/api/versions.js` reports the Web Store
 version, the newest git tag and when `site/` last changed, so the footer shows whether the three are
