@@ -22,7 +22,12 @@
  */
 
 const REPO = 'ivannot/zoost';
-const EXT_ID = 'flffecjpbmjfonhoojaiemgjanbjkmpj';
+// One listing per product. Both are published, so the badge reports both — a badge that named one
+// of two would be the "declare only what we have" rule broken in the direction of saying less.
+const EXT_ID = {
+  crm: 'flffecjpbmjfonhoojaiemgjanbjkmpj',
+  analytics: 'gmelnigbgklfjgceldicakkomhgplgge',
+};
 const TTL = 3600;                       // seconds
 const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
@@ -57,8 +62,8 @@ async function latestTag() {
 
 // Published version on the Chrome Web Store. No API exists, so this reads the listing page and only
 // accepts a value shaped like a version.
-async function storeVersion() {
-  const r = await fetch(`https://chromewebstore.google.com/detail/${EXT_ID}`, {
+async function storeVersion(app) {
+  const r = await fetch(`https://chromewebstore.google.com/detail/${EXT_ID[app]}`, {
     headers: {
       'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'accept-language': 'en-US,en;q=0.9',
@@ -109,7 +114,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=5';
+const CACHE_KEY = '/api/versions?v=6';   // bumped: the payload now carries both products
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -118,13 +123,19 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [store, tag, repo, updated, docsUpd] = await Promise.all([
-    settled(storeVersion()), settled(latestTag()), settled(repoVersion('crm')),
-    settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
+  const [crmStore, crmRepo, anStore, anRepo, tag, updated, docsUpd] = await Promise.all([
+    settled(storeVersion('crm')), settled(repoVersion('crm')),
+    settled(storeVersion('analytics')), settled(repoVersion('analytics')),
+    settled(latestTag()), settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
   ]);
 
   const res = new Response(JSON.stringify({
-    store, tag, repo, siteUpdated: updated, docsUpdated: docsUpd, checked: new Date().toISOString(),
+    // `store` and `repo` are kept alongside the per-product fields so an older cached page still
+    // renders something true rather than nothing while the new one propagates.
+    store: crmStore, repo: crmRepo,
+    crm: { store: crmStore, repo: crmRepo },
+    analytics: { store: anStore, repo: anRepo },
+    tag, siteUpdated: updated, docsUpdated: docsUpd, checked: new Date().toISOString(),
   }), {
     headers: {
       'content-type': 'application/json; charset=utf-8',

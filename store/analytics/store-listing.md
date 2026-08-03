@@ -5,9 +5,12 @@ Last verified against `apps/analytics/manifest.json` at version **1.0.0** · 3 A
 `short_name` and the toolbar tooltip are browser-UI fields and do not appear on the Store listing,
 so changing them does not touch anything below.
 
-**Not submitted yet.** This copy is ready; the extension is still in development. Before it goes up,
-re-read §2 against the manifest `description` (they must be identical, max 132 characters) and
-confirm every claim below is still true of the code — the same sweep the CRM listing gets.
+**Submitted 3 August 2026.** Extension id `gmelnigbgklfjgceldicakkomhgplgge`, listing at
+<https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge>.
+
+Before every resubmission: re-read §2 against the manifest `description` (they must be identical,
+max 132 characters) and confirm every claim below is still true of the code — the same sweep the CRM
+listing gets.
 
 ---
 

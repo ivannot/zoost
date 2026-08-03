@@ -28,7 +28,7 @@ the Web Store, a different data model — sharing only the name, the site and th
 
 ```
 apps/crm/        the Zoho CRM extension. Exactly what ships. Nothing else lives here.
-apps/analytics/  the Zoho Analytics extension (in progress)
+apps/analytics/  the Zoho Analytics extension
 site/            zoost.it — deployed by Cloudflare on push to main (root directory: site)
 site/_worker.js  the Worker script (see the Cloudflare notes further down)
 store/crm/       Chrome Web Store listing copy and permission justifications, per app
@@ -435,7 +435,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | `site/crm.html`, `site/analytics.html` | the **product** pages. One per app, same structure and voice: why it exists, what's inside, what it does *not* do, get started. A feature landing in an app lands on its page in the same change |
 | `site/docs.html` | anything a user does differently. The "Covers Zoost X · updated Y" line fills itself from the manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
-| `store/<app>/store-listing.md` | description, single purpose, or any permission justification. **Each app has its own**; `store/analytics/` exists and is ready, unsubmitted |
+| `store/<app>/store-listing.md` | description, single purpose, or any permission justification. **Each app has its own**, and both are published |
 | `CLAUDE.md` | a new convention, decision or trap that the next session must know |
 
 Two rules that are not optional. **Never let a claim outlive its truth**: today the store

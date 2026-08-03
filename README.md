@@ -128,8 +128,8 @@ and they carry their own version numbers.
 
 | Folder | What it is | State |
 |---|---|---|
-| `apps/crm` | **Zoost — workbench for Zoho CRM.** Everything this README describes. | Released, on the Chrome Web Store |
-| `apps/analytics` | **Zoost — workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them — plus what nothing depends on. | **Early work in progress. Not released, not on the Web Store, not documented on the site.** Load it unpacked if you want to try it, and expect it to change or break. |
+| `apps/crm` | **Zoost — workbench for Zoho CRM.** Everything this README describes. | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) |
+| `apps/analytics` | **Zoost — workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them — plus what nothing depends on. | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) |
 
 Nothing is shared between the two yet, on purpose: they read different platforms with different
 shapes, and factoring code out before both sides actually need it costs more than the duplication.

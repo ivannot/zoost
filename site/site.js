@@ -46,12 +46,18 @@
       var bits = [];
       // Three different things on purpose: what you can install, what has been released, and what is
       // being built. "In development" is spelled out so the last one cannot be read as available.
-      // Say which product these numbers are about. With two extensions in the repository an
-      // unqualified "Web Store 0.13.8" reads as if it covered both, and only one is published.
-      bits.push('<span class="vitem" style="opacity:.75">Zoho CRM</span>');
-      bits.push('<span class="vitem"><b>Web Store</b> ' + (d.store ? esc(d.store) : '<i>unknown</i>') + '</span>');
+      // One line per product, each naming itself. Two published extensions and a single unqualified
+      // "Web Store 0.13.8" would read as covering both. Falls back to the old flat fields so a page
+      // served from cache before the endpoint changed still shows something true.
+      var prods = [['Zoho CRM', d.crm || { store: d.store, repo: d.repo }], ['Zoho Analytics', d.analytics]];
+      prods.forEach(function (pr) {
+        var name = pr[0], v = pr[1];
+        if (!v || (!v.store && !v.repo)) return;
+        bits.push('<span class="vitem" style="opacity:.75">' + esc(name) + '</span>');
+        bits.push('<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>');
+        if (v.repo) bits.push('<span class="vitem"><b>In development</b> ' + esc(v.repo) + '</span>');
+      });
       bits.push('<span class="vitem"><b>Latest tag</b> ' + (d.tag ? esc(d.tag) : '<i>unknown</i>') + '</span>');
-      if (d.repo) bits.push('<span class="vitem"><b>In development</b> ' + esc(d.repo) + '</span>');
       if (d.siteUpdated) {
         var f = fmtDate(d.siteUpdated);
         if (f) bits.push('<span class="vitem"><b>Site updated</b> ' + esc(f) + '</span>');

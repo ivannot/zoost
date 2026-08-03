@@ -28,9 +28,8 @@ const CFG = '.zoost.json';
 const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
 
 // Identity and legal text, worded as in the CRM panel — the two are one product to the reader.
-// There is deliberately no Web Store link: this extension is not published, and a link to a listing
-// that does not exist would be a claim outliving its truth before it was even made.
 const PRODUCT_URL = 'https://zoost.it';
+const STORE_URL = 'https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge';
 const CONTACT_EMAIL = 'ivan@zoost.it';
 const REPO_URL = 'https://github.com/ivannot/zoost';
 const SPONSOR_URL = 'https://github.com/sponsors/ivannot';
@@ -1444,8 +1443,7 @@ function showAbout() {
   $('aboutbody').innerHTML =
     `<div><b>${esc(PRODUCT_NAME)}</b> · v${esc(m.version)}</div>`
     + `<div style="color:var(--muted)">Created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
-    + `<div class="dnote" style="margin-top:8px">Early work in progress — not published on the Chrome Web Store, and not yet documented on the site.</div>`
-    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> · <a href="${escA(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> · <a href="mailto:${escA(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a></div>`
+    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> · <a href="${escA(PRODUCT_URL)}/analytics.html" target="_blank" rel="noopener">What it does</a> · <a href="${escA(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="${escA(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> · <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> · <a href="mailto:${escA(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a></div>`
     + `<h4>Support</h4><div><a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a> · <a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">☕ Ko-fi</a></div>`
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
