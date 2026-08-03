@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <!-- Zoost for Zoho Analytics.
-       One mark, one flat colour per product. The geometry is measured from the icon Zoost shipped
-       with: a 52x48 Z at 14px bar weight, centred in a 116px squircle with a 30px radius.
-       Nothing about the shape changes between products — at 16px in a toolbar the hue is the only
-       thing that still carries, so the hue does the whole job.
-       Flat, not graded: at that size a gradient becomes a smudge, and flat means the colour named
+       One mark, one flat colour per product. The Z keeps the proportions of the icon Zoost shipped
+       with — a 52x48 letter at 14px bar weight — scaled x1.55 so it fills 69% of the tile instead of
+       45%. Everything scales together, so the bar weight stays right; past this the diagonal starts
+       to touch the corner radius and the counters close up at 16px.
+       Flat, not graded: at toolbar size a gradient becomes a smudge, and flat means the colour named
        here is exactly the colour you see.
-       The three are 112° apart in hue and every one clears 5:1 against white, which is what makes
-       them tellable apart at a glance rather than on inspection. They are deliberately *not* Zoho's
-       own product colours: Zoost disclaims affiliation on every surface, and borrowing their palette
-       would say the opposite. -->
+       The two products are 112 degrees apart in hue and both clear 5:1 against white — that is what
+       makes them tellable apart at a glance rather than on inspection. They are deliberately *not*
+       Zoho's own product colours: Zoost disclaims affiliation everywhere, and borrowing a vendor's
+       palette says the opposite. -->
   <rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/>
   <g fill="#fff">
-    <rect x="38" y="40" width="52" height="14" rx="3"/>
-    <polygon points="90,54 54,74 38,74 74,54"/>
-    <rect x="38" y="74" width="52" height="14" rx="3"/>
+    <rect x="23.7" y="26.8" width="80.6" height="21.7" rx="4.7"/>
+    <polygon points="104.3,48.5 48.5,79.5 23.7,79.5 79.5,48.5"/>
+    <rect x="23.7" y="79.5" width="80.6" height="21.7" rx="4.7"/>
   </g>
 </svg>

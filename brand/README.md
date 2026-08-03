@@ -8,6 +8,14 @@ Three files, one geometry. The shape never changes between products; only the hu
 | `zoost-crm.svg` | Zoost for Zoho CRM — `#2563eb` |
 | `zoost-analytics.svg` | Zoost for Zoho Analytics — `#be2a6b` |
 
+The mark fills **69%** of the tile (a 52×48 Z scaled ×1.55, so the bar weight scales with it). Past
+that the diagonal starts to touch the corner radius and the counters close up at 16px.
+
+Each icon colour has a UI sibling, one step lighter and more saturated, used as that app's `--sel`:
+`#2563eb → #3b82f6` for CRM, `#be2a6b → #dc2d7a` for Analytics — the same relationship in both, so
+the panel and its icon read as one thing. The site's product pages and guides carry the same accents;
+the home, the privacy page and anything about the suite stay on the family slate.
+
 **The geometry is measured, not redrawn.** A 52×48 Z at 14px bar weight, centred in a 116px squircle
 with a 30px corner radius, in a 128 box — taken off the icon Zoost shipped with, so the family mark
 *is* the mark, not a lookalike.

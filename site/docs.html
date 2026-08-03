@@ -11,6 +11,9 @@
 <meta name="theme-color" content="#0d121c">
 <link rel="stylesheet" href="/site.css">
 <style>
+  /* This guide is about one product, so it wears that product's accent. The suite pages stay slate.
+     Same mechanism as the panels: one token, everything else derives from it. */
+  :root{--sel:#2563eb;--sel-soft:#16263f}
   /* docs-specific — shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}

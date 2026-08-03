@@ -9,7 +9,7 @@
      wording where the meaning is the same — see CLAUDE.md on why the two must stay twins. */
   :root{
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
-    --border:#26303f; --line:#1e2735; --sel:#14b8a6; --sel-soft:#0f3b38;
+    --border:#26303f; --line:#1e2735; --sel:#dc2d7a; --sel-soft:#3a1226;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
   }
@@ -32,24 +32,24 @@
   button{font:13px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);
     border-radius:8px;padding:8px 14px;cursor:pointer}
   button:hover{border-color:var(--sel)}
-  button.primary{background:var(--sel);border-color:var(--sel);color:#04211e;font-weight:600}
-  button.primary:hover{background:#19d1bc}
+  button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+  button.primary:hover{background:#c4256b}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
   .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
   .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .prov.on{border-color:#2f6f62;background:rgba(47,111,98,.07)}
+  .prov.on{border-color:#9c4670;background:rgba(220,45,122,.07)}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
   .warnbox{border-left:2px solid var(--warn);padding-left:10px;color:#e2c98a;font-size:12px;margin-top:10px}
   .slid{display:flex;align-items:center;gap:10px;margin:8px 0}
   .slid .lt{flex:0 0 130px;margin:0}
   .slid input[type=range]{flex:1;accent-color:var(--sel)}
-  .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#7fe3d5}
+  .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#f0a8c8}
   .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
   .ck input{margin-top:3px;accent-color:var(--sel)}
   .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
-  a{color:#83d8c6}
-  code{font:12px var(--mono);color:#7fe3d5}
+  a{color:#f0a8c8}
+  code{font:12px var(--mono);color:#f0a8c8}
   #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#16351f;border:1px solid #2f6f4a;color:#a7e8c0;padding:9px 16px;border-radius:9px;
     font-size:13px;transition:opacity .18s,transform .18s;pointer-events:none}

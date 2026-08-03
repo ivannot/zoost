@@ -97,8 +97,17 @@ reporting known-good noise is a checker nobody reads.
 
 Walk each difference and decide: is it genuinely product-specific (functions, modules and Deluge
 exist only in CRM; views, query tables and the ER model only in Analytics), or is it shared chrome
-that has drifted? Only the first kind is allowed to differ. The colour `--sel` is the one deliberate
-exception: blue in CRM, teal in Analytics, because that is what says which product you are in.
+that has drifted? Only the first kind is allowed to differ.
+
+**The accent is the one deliberate exception, and everything derived from it follows.** `--sel` is
+`#2563eb` in CRM and `#dc2d7a` in Analytics — each panel's own icon colour, so the app you are in
+says so without a label. `--sel-soft`, `.zbtn`, `.znav` and the user's chat bubble derive from it and
+are expected to differ; they are declared in `twincheck.py` with that reason. Nothing else may.
+
+**Five roles, five hues — check the accent has not eaten one.** The button grammar needs the accent
+to be distinct from `.lbtn` teal, `.pbtn` violet and `.abtn` amber. Analytics ran with a teal accent
+for a while and `.lbtn` collided with it: two roles, one colour, and one fewer distinguishable
+meaning than the CRM had. A new product's accent has to clear those three before anything else.
 
 **That grep only covers markup. The twin rule covers behaviour and artefacts too**, and that is
 where it was broken next: exports were written to `export/` in CRM and to the workspace root in
