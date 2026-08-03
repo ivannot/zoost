@@ -22,6 +22,8 @@
   <div class="wrap">
     <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
+      <a href="/crm.html">Zoho CRM</a>
+      <a href="/analytics.html">Zoho Analytics</a>
       <a href="/docs.html">How to</a>
       <a href="/privacy.html" aria-current="page">Privacy</a>
       <a class="ncta" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install ↗</a>
@@ -33,23 +35,39 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost — Chrome extension · Last updated: 3 August 2026</p>
+  <p class="upd">Zoost — Chrome extensions · Last updated: 3 August 2026</p>
 
   <div class="box">
     <h3>The short version</h3>
     <p>Zoost collects nothing. It has no server, no account, no analytics and no tracking of any kind.
-      Your data moves between your browser, the Zoho CRM instance you are already signed in to, and a
+      Your data moves between your browser, the Zoho product you are already signed in to, and a
       folder on your own disk. The single exception is the optional AI assistant, which sends what you
       ask it about to the AI provider <em>you</em> configure with <em>your own</em> API key. Nothing is
       ever sent to the developer.</p>
   </div>
 
+  <h2>0. Which extensions this covers</h2>
+  <p>This policy covers every extension in the Zoost family. There are two:</p>
+  <ul>
+    <li><b>Zoost — workbench for Zoho CRM</b>, published on the Chrome Web Store.</li>
+    <li><b>Zoost — workbench for Zoho Analytics</b>, still in development and not yet published.</li>
+  </ul>
+  <p>They are separate extensions with separate permissions, but they behave identically in every
+    respect this document describes: no server, no account, no telemetry, a local mirror in a folder
+    you choose, and one optional AI assistant that only ever talks to a provider you configure
+    yourself.</p>
+  <p><b>One difference is worth stating plainly.</b> The CRM extension can send your Deluge source
+    code to an AI provider if you enable the assistant. The Analytics extension can send view names,
+    column names, relations and the SQL of your query tables — and <b>never the rows inside your
+    tables</b>, because it does not read them: the endpoints that return cell values are deliberately
+    not called.</p>
+
   <h2>1. Who is responsible</h2>
   <p>Zoost is developed and published by <b>Ivan Notaristefano</b>, an individual developer, as an
     independent, unofficial tool. Contact: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
   <p>Zoost is not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation.
-    Data held inside your Zoho CRM remains governed by your own agreement with Zoho and by your
-    organisation's policies; this document covers only what the Zoost extension does with it.</p>
+    Data held inside your Zoho products remains governed by your own agreement with Zoho and by your
+    organisation's policies; this document covers only what the Zoost extensions do with it.</p>
 
   <h2>2. What the developer collects</h2>
   <p><b>Nothing.</b> The extension contains no analytics, no telemetry, no error reporting, no
@@ -92,7 +110,7 @@
 
   <h2>4. Where data travels</h2>
 
-  <h3>4.1 Your Zoho CRM</h3>
+  <h3>4.1 Your Zoho product</h3>
   <p>Zoost calls the Zoho CRM API of the instance open in your tab, using the session you are already
     signed in with. It sends no credentials of its own and creates none. It operates strictly within
     your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.</p>
@@ -123,6 +141,12 @@
     it describes.</p>
 
   <h2>5. Permissions, and why each one exists</h2>
+  <p>Both extensions request the same four API permissions — <code>sidePanel</code>,
+    <code>storage</code>, <code>scripting</code> and <code>tabs</code> — for the same reasons. They
+    differ only in which hosts they may reach: the CRM one lists the Zoho CRM and sandbox data
+    centres, the Analytics one lists the Zoho Analytics data centres. Both list
+    <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
+    assistant and only if you configure it.</p>
   <ul>
     <li><code>sidePanel</code> — the extension's interface is a Chrome side panel.</li>
     <li><code>storage</code> — to keep your settings, as described above.</li>
@@ -191,8 +215,8 @@
     </p>
     <p class="legal">
       Zoost is an independent, unofficial developer tool. It is <b>not</b> affiliated with, endorsed by,
-      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of
-      Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
+      trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
     </p>
   </div>
 </footer>

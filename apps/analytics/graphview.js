@@ -482,7 +482,7 @@ function updateDepthUI() {
   const dp = $('erdepth'); if (dp) dp.style.opacity = scopeAll ? '.45' : '';
 }
 function updateScopeUI() {
-  const lbl = scopeAll ? 'Scope: all modules' : `Scope: ${curFocus || 'focus'}`;
+  const lbl = scopeAll ? 'Scope: all tables' : `Scope: ${(curFocus && label(N[curFocus])) || 'focus'}`;
   const ttl = scopeAll
     ? 'Showing every module. Click to go back to the focused neighbourhood.'
     : 'Showing the focus neighbourhood. Click to show every module (full diagram for A0 printing).';

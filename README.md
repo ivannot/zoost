@@ -12,6 +12,8 @@ It does **not** replace Zoho's editor. You keep writing and saving where Zoho co
 validates; this gives you everything Zoho's editor doesn't.
 
 **Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) ·
+**Zoho CRM:** [zoost.it/crm](https://zoost.it/crm.html) ·
+**Zoho Analytics:** [zoost.it/analytics](https://zoost.it/analytics.html) ·
 **Guide:** [zoost.it/docs](https://zoost.it/docs.html) ·
 **Privacy:** [zoost.it/privacy](https://zoost.it/privacy.html) ·
 **Source:** [github.com/ivannot/zoost](https://github.com/ivannot/zoost)

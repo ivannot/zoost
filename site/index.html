@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost — workbench for Zoho CRM</title>
-<meta name="description" content="Mirror your Zoho CRM Deluge functions, module schema, relations, layouts, workflows, schedules and connections into local files you can put under Git — then explore them with reference graphs, ER diagrams, a relation catalogue, a connections catalogue, health audits and exports.">
-<link rel="canonical" href="https://zoost.it/">
+<title>Zoost — workbenches for the Zoho products you have built on</title>
+<meta name="description" content="Zoost mirrors what you have built inside a Zoho product into plain local files, then layers navigation, diagrams, search, audit and export on top. One workbench per product: Zoho CRM and Zoho Analytics. Read-only, local, no account.">
+<link rel="canonical" href="https://zoost.it/crm.html">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#0d121c">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Zoost — workbench for Zoho CRM">
-<meta property="og:description" content="Your Zoho CRM org as a local, versionable, navigable codebase.">
+<meta property="og:title" content="Zoost — workbenches for the Zoho products you have built on">
+<meta property="og:description" content="You built it, it is yours, and the platform gives you no way to see it whole. Zoost does.">
 <meta property="og:url" content="https://zoost.it/">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="author" content="Ivan Notaristefano">
@@ -58,6 +58,18 @@
   .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
     max-width:70ch}
   .note.warn{border-color:var(--amber);color:#e2c98a}
+  .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+  .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
+  .prod .ph{display:flex;align-items:center;gap:12px}
+  .prod .ph img{width:38px;height:38px;border-radius:9px}
+  .prod .ph h3{margin:0}
+  .prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
+    padding:2px 9px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+  .prod .st.live{color:#83d8c6;border-color:#2f6f62}
+  .prod .st.wip{color:#f0a44a;border-color:#6b4a1c}
+  .prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+  .prod .plinks a{color:var(--sel);text-decoration:none;font-weight:600}
+  .prod .plinks a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -66,6 +78,8 @@
   <div class="wrap">
     <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
+      <a href="/crm.html">Zoho CRM</a>
+      <a href="/analytics.html">Zoho Analytics</a>
       <a href="/docs.html">How to</a>
       <a href="/privacy.html">Privacy</a>
       <a class="ncta" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install ↗</a>
@@ -75,169 +89,116 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>And a map of how it fits together.</span></h1>
-    <p class="lead">Zoost is a Chrome extension that mirrors your Deluge functions, module schema, relations,
-      layouts, workflows, schedules and connections into plain files on your disk — then layers on reference graphs,
-      ER diagrams, full-text search across every function, a relation catalogue, a connections catalogue, a health audit,
-      shareable exports and an optional AI assistant that reads your actual org. Everything runs in your browser.</p>
+    <h1>You built it. It is yours.<br><span>And the platform gives you no way to see it whole.</span></h1>
+    <p class="lead">Zoost is a small family of Chrome extensions, one per Zoho product. Each mirrors what
+      <em>you</em> have built inside that product — code, schema, relations, dependencies — into plain files on your
+      own disk, then layers navigation, diagrams, search, audit and export on top of that mirror.
+      None of them writes anything back. Everything runs in your browser.</p>
     <div class="cta">
-      <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Get it on the Chrome Web Store</a>
-      <a class="btn" href="#start">How it works</a>
+      <a class="btn p" href="#products">See the two</a>
+      <a class="btn" href="#shared">What they have in common</a>
       <span class="meta">Free · Apache-2.0 · no account</span>
     </div>
   </div>
 </div>
 
-<section id="what">
+<section id="products">
   <div class="wrap">
-    <h2>Why it exists</h2>
-    <div class="why">
-      <div>
-        <h3>Your history, your Git</h3>
-        <p>Functions land as plain <code>.dg</code> files with <code>.meta.json</code> sidecars, in namespaced
-          folders. Diff, branch, review and roll back with the tools you already use — no proprietary cloud sync.</p>
+    <h2>The workbenches</h2>
+    <div class="prod">
+
+      <div class="card">
+        <div class="ph">
+          <img src="/icon-192.png" alt="">
+          <h3>Zoho CRM</h3>
+          <span class="st live">on the Web Store</span>
+        </div>
+        <p>Deluge functions as versionable files, full-text search across every one of them, a reference graph of
+          what calls what, module schema with layouts, the related-list API names you keep having to look up,
+          workflows, schedules and the connections catalogue.</p>
+        <div class="plinks">
+          <a href="/crm.html">What it does →</a>
+          <a href="/docs.html">How to use it →</a>
+          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install ↗</a>
+        </div>
       </div>
-      <div>
-        <h3>The whole org at once</h3>
-        <p>Functions, modules, relations, workflows, schedules and connections in one navigable place, and in
-          one document you can hand to someone who does not have the extension.</p>
+
+      <div class="card">
+        <div class="ph">
+          <img src="/analytics-192.png" alt="">
+          <h3>Zoho Analytics</h3>
+          <span class="st wip">in development</span>
+        </div>
+        <p>Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table,
+          the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of
+          what nothing depends on any more.</p>
+        <div class="plinks">
+          <a href="/analytics.html">What it does →</a>
+          <a href="https://github.com/ivannot/zoost/tree/main/apps/analytics">Source ↗</a>
+        </div>
       </div>
-      <div>
-        <h3>Read-first, on purpose</h3>
-        <p>Zoost does not replace Zoho's editor. You keep writing where Zoho compiles and validates.
-          It gives you the versioning, comprehension and audit that the editor does not.</p>
-      </div>
-      <div>
-        <h3>Grep your whole org</h3>
-        <p>Full-text search across <b>every</b> Deluge function at once — the thing Zoho has never had. Find every
-          place a field, a module, an endpoint or a hardcoded id is referenced, before you change it.</p>
-      </div>
-      <div>
-        <h3>The relation names you keep losing</h3>
-        <p>The API name of a related list is neither module's api&nbsp;name — and it is what
-          <code>getRelatedRecords()</code> demands. Zoost catalogues every relation with the call ready to copy.</p>
-      </div>
+
     </div>
-    <p class="note">Built and maintained by one person, with substantial help from Claude — “Claudio”, to me —
-      on design, code and wording. The judgement calls, and the responsibility, are mine.</p>
+    <p class="note" style="margin-top:22px">The Analytics workbench is <b>not on the Web Store yet</b> and is not
+      finished. It is here because it is being built in the open, and you can load it unpacked from source today —
+      but expect it to change, and do not depend on it for anything that matters.</p>
   </div>
 </section>
 
-<section id="features">
+<section id="shared">
   <div class="wrap">
-    <h2>What's inside</h2>
-    <div class="grid">
-
-      <div class="card">
-        <h3>Local mirror, Git-friendly</h3>
-        <ul>
-          <li>Pull every Deluge function to <code>.dg</code> source plus metadata sidecars.</li>
-          <li><span class="k">Auto-sync on save</span>: save in Zoho, the local file follows.</li>
-          <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b>, so the folder stays a faithful mirror.</li>
-          <li>One working folder, a subfolder per product, one per org inside it — production and sandbox never mix.</li>
-        </ul>
+    <h2>What every Zoost has in common</h2>
+    <div class="why">
+      <div>
+        <h3>Read-only, on purpose</h3>
+        <p>No Zoost writes to Zoho. Not a function, not a view, not a setting. Zoho compiles and validates
+          server-side, and owning a write path would mean owning deployment, conflicts and rollback — a different
+          product. You keep working where you already work.</p>
       </div>
-
-      <div class="card">
-        <h3>Understand the implementation</h3>
-        <ul>
-          <li><span class="k">Reference graph</span>: who calls a function (impact) and what it calls (dependencies),
-            as a searchable explorer and a node-link diagram.</li>
-          <li><span class="k">Full-text search</span>: one query across every function's source. Switch the search
-            scope from names to code and find every reference to a field, module or hardcoded id in the org.</li>
-          <li><span class="k">Hypertext code</span>: calls to custom functions are clickable — jump to the definition and back.</li>
-          <li><span class="k">Reverse usage</span>: where each function is wired across the org — blueprint, button,
-            schedule — read from Zoho's own signal, with no expensive scans.</li>
-          <li><span class="k">Connections per function</span>: every function lists the connections it uses — click one
-            to filter the tree to every other function that uses it. Structured, not a text search.</li>
-          <li><span class="k">Authorship</span>: who last changed a function, and when, next to its code.</li>
-          <li><span class="k">Size &amp; outbound calls</span>: length in lines and KB, and how many
-            <code>invokeurl</code>, <code>zoho.crm.*</code> and other Zoho service calls a function makes —
-            counted outside comments and strings. Counts, not a score; you decide how to read them.
-            <b>Sort the list</b> by any of them to see where length and API cost concentrate.</li>
-        </ul>
+      <div>
+        <h3>Plain files, your Git</h3>
+        <p>The mirror is ordinary files in a folder you pick: source, JSON, SQL. Commit it and <code>git diff</code>
+          answers "what changed last month" — a question neither product can answer about itself.</p>
       </div>
-
-      <div class="card">
-        <h3>Schema, layouts and relations</h3>
-        <ul>
-          <li>Every field with type, lookup target and picklist values.</li>
-          <li><span class="k">Layout matrix</span>: one column per layout, a dot where a field belongs, amber where it
-            is required there — and fields in <em>no</em> layout flagged as API-only.</li>
-          <li><span class="k">Relation catalogue</span>: one row per related list, with target module, the lookup or
-            linking module behind it, and the <code>getRelatedRecords()</code> call to copy.</li>
-        </ul>
+      <div>
+        <h3>The whole thing at once</h3>
+        <p>Both platforms show you one object at a time. Both Zoosts show you the shape: what depends on what,
+          what nothing depends on, where a name is referenced, and one document you can hand to someone who does
+          not have the extension.</p>
       </div>
-
-      <div class="card">
-        <h3>ER diagram that stays readable</h3>
-        <ul>
-          <li>Modules as tables, foreign keys as arrows. Pan, zoom, fit, save as PDF.</li>
-          <li>Focus any module and walk the graph by clicking; adjustable depth.</li>
-          <li><span class="k">Relation-first mode</span>: modules recede, relation names take the foreground.</li>
-          <li>Click an arc to isolate one relation and push everything else back.</li>
-          <li>Spacing, spread and label size are live sliders — and an all-modules scope for wall-size prints.</li>
-        </ul>
+      <div>
+        <h3>Numbers, never verdicts</h3>
+        <p>Counts and lists, with no thresholds and no score. A long function may be a clean mapping table; a view
+          nothing reads may feed a scheduled export. Every figure says what it does <em>not</em> cover, right next
+          to itself, and the judgement stays yours.</p>
       </div>
-
-      <div class="card">
-        <h3>Automation map</h3>
-        <ul>
-          <li>Workflows with triggers, criteria, instant and time-based actions, and the functions they invoke.</li>
-          <li>Schedules with frequency, status and target function.</li>
-          <li>On-demand workflow execution stats.</li>
-        </ul>
+      <div>
+        <h3>Nothing leaves the machine</h3>
+        <p>No server, no account, no telemetry. The extensions use the Zoho session you are already signed into and
+          write to a folder you choose. The one exception is the optional AI assistant — and only if you configure
+          it, with your own key, sending only to the provider you picked.</p>
       </div>
-
-      <div class="card">
-        <h3>Connections catalogue</h3>
-        <ul>
-          <li>Every connection in the org, pulled from Zoho: its connector, who created it, and its OAuth scopes.</li>
-          <li><span class="k">Usage count</span>: how many functions use each one — open it to see exactly which.</li>
-          <li>Filter to <span class="k">Unused</span> (no function references it) or <span class="k">Disconnected</span>
-            (configured but not connected) — the two states worth acting on.</li>
-          <li>Connections a function calls but that no longer exist in the catalogue are flagged too.</li>
-        </ul>
+      <div>
+        <h3>One interface, learned once</h3>
+        <p>They are twins. The workspace bar, the environment guard, the dialogs, the button colours, the exports
+          and the diagram controls are the same thing in both, down to the wording. Use one and you already know
+          the other.</p>
       </div>
-
-      <div class="card">
-        <h3>Health audit</h3>
-        <ul>
-          <li>Orphan candidates, unresolved calls, ambiguous calls.</li>
-          <li><span class="k">Size &amp; calls</span>: the longest functions and the ones making the most
-            outbound calls — plain counts, no threshold and no verdict.</li>
-          <li>Broken automations and lookups pointing at modules that are not there.</li>
-          <li>Every check states what it does <em>and does not</em> analyse. Candidates to review — never
-            automatic deletions.</li>
-        </ul>
+      <div>
+        <h3>Certain, or stopped</h3>
+        <p>No guessing at a platform's private interface. Where a path is not certain, the feature stops with a
+          precise message instead of retrying against an assumption. What a Zoost cannot know, it says it cannot
+          know.</p>
       </div>
-
-      <div class="card">
-        <h3>Exports you can hand over</h3>
-        <ul>
-          <li><span class="k">HTML</span>: the whole workspace as one self-contained, cross-linked, searchable file.</li>
-          <li><span class="k">Markdown</span>: the same material shaped as context for an external LLM.</li>
-          <li>A scope dialog decides what may leave your machine, section by section. Source code is opt-in
-            and flagged every time.</li>
-        </ul>
+      <div>
+        <h3>Open, and yours to fork</h3>
+        <p>Apache-2.0, no build step, no dependencies, no framework. The source is readable by anyone about to give
+          it access to their data — which is the point, since that is exactly what you are being asked to do.</p>
       </div>
-
-      <div class="card">
-        <h3>AI assistant — bring your own key</h3>
-        <ul>
-          <li>Two providers, both tested: <span class="k">Anthropic</span> (Claude) and <span class="k">OpenAI</span> (ChatGPT).</li>
-          <li>They are not equivalent, and the chat says which is active: Claude explores the org on its own,
-            OpenAI answers in one pass from the index and the open function.</li>
-          <li>With Anthropic it runs as an agent with read-only tools, so it opens your functions, traces
-            callers, looks up connections and searches your code instead of guessing. Every tool call is shown.</li>
-          <li>Streaming answers, Markdown rendering, a tool-step limit you control.</li>
-          <li>Entirely optional. Keys stay in your browser; requests go straight to your provider.</li>
-          <li><span class="k">Clear</span> resets the thread — which also trims what is re-sent each time, so it
-            is the main lever on cost.</li>
-        </ul>
-      </div>
-
     </div>
+    <p class="note" style="margin-top:26px">Built and maintained by one person, with substantial help from Claude —
+      “Claudio”, to me — on design, code and wording. The judgement calls, and the responsibility for the result,
+      are mine.</p>
   </div>
 </section>
 
@@ -245,20 +206,17 @@
   <div class="wrap">
     <h2>Get started</h2>
     <ol class="steps">
-      <li>Install from the <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a> and open the side panel.</li>
-      <li>In <b>Settings</b>, pick a <b>working folder</b> — a dedicated, empty folder. Every workspace will live inside it.</li>
-      <li>Open a Zoho CRM tab and click <b>+</b>. Zoost creates the workspace for that org.</li>
-      <li>Click <b>Pull all</b> to mirror functions, modules, layouts, relations, workflows, schedules and connections.</li>
-      <li><code>git init</code> in the folder, and you have history from here on.</li>
-      <li>Explore: follow a call, open the graph, run the health audit, or export the lot.</li>
+      <li>Pick the product you want to look at: <b><a href="/crm.html">Zoho CRM</a></b> or
+        <b><a href="/analytics.html">Zoho Analytics</a></b>.</li>
+      <li><b>Install the extension</b> — from the Web Store for CRM, or unpacked from source for Analytics.</li>
+      <li><b>Choose one working folder.</b> Each Zoost keeps its own subfolder inside it, so a single folder serves
+        them all and the two never meet.</li>
+      <li><b>Open the Zoho tab</b> you want to mirror, create the workspace and pull. Then <code>git init</code>,
+        and you have a history from today onwards.</li>
     </ol>
-    <p class="note">Full walkthrough, including API key setup and troubleshooting:
-      <a href="/docs.html"><b>How to use Zoost</b></a>.</p>
-    <p class="note">You need to be signed in to Zoho CRM in the same browser. Zoost uses your existing session
-      and your existing permissions — it can see exactly what you can see, and nothing more.</p>
-    <p class="note warn">The AI assistant is the one part that sends data outside your machine: the workspace
-      content it needs, including Deluge source, goes to the provider you configure. Check that this is
-      acceptable in your organisation before enabling it. Everything else stays local.</p>
+    <p class="note warn" style="margin-top:8px">Zoost never writes to Zoho, so the worst it can do to your data is
+      nothing. What it writes is the folder you chose — and what happens to an export after you have made it is
+      up to you.</p>
   </div>
 </section>
 
