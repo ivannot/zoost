@@ -689,6 +689,18 @@ What that request means, in order. Do all of it without being asked:
 7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
    date, and commit it.
 
+**Every GitHub Action is pinned to a commit hash, never to `@v2`.** A tag is a ref its owner can
+repoint at any time, so a supply chain that ends in "and then whatever that tag says today" is not
+one. The trailing comment records which release each hash was, so an upgrade stays a deliberate edit.
+Resolve one with `curl -s https://api.github.com/repos/<owner>/<repo>/git/ref/tags/<tag>` — and note
+that an annotated tag answers with `"type":"tag"`, which must then be dereferenced to its commit;
+pinning the tag object's own sha would not be a commit at all.
+
+**An HTML comment inside a Markdown table ends the table.** `<!-- rows appended here -->` sat between
+the header and the first row of `RELEASES.md`, so GitHub rendered an empty table followed by loose
+pipe-delimited text — locally invisible, wrong on the only surface that matters. Instructions to a
+future editor go *before* the header, with a blank line after them.
+
 Tags are per product (`crm-v1.8.1`), and `RELEASES.md` is part of the release, not a follow-up.
 If anything user-facing changed, regenerate `store/<app>/store-listing.md` and say which dashboard
 fields move alongside the package — they are reviewed together.

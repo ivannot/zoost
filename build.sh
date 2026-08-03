@@ -73,5 +73,8 @@ fi
 rm -rf .build
 echo "built $OUT"
 echo "  timestamps: $SOURCE"
+# Which archiver produced this. Determinism is verified on Info-ZIP 3.0 (macOS) and on ubuntu-latest
+# in CI, not asserted for every zip implementation in existence, so the log has to say which one ran.
+echo "  archiver:   $(zip -v 2>/dev/null | sed -n '2p' | cut -d, -f1)"
 echo "  sha256:     $(shasum -a 256 "$OUT" | cut -d' ' -f1)"
 unzip -l "$OUT" | tail -3

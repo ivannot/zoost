@@ -32,13 +32,18 @@ PY
 [[ -n "$CLAIMED" ]] || { echo "RELEASES.md has no row for $APP $VERSION."; exit 1; }
 [[ "$CLAIMED" == *"not reproducible"* ]] && { echo "RELEASES.md says this one predates the reproducible build and publishes no hash. Nothing to check."; exit 1; }
 
-HERE=$(git rev-parse --abbrev-ref HEAD)
-trap 'git checkout -q "$HERE" 2>/dev/null || true' EXIT
-git checkout -q "$TAG"
-./build.sh "$APP" >/dev/null
+# Build in a throwaway worktree rather than checking the tag out here. Verification must not touch
+# the repository it is run in: `git checkout` moves your HEAD, refuses outright if you have local
+# changes, and restoring "the branch you were on" is not even well defined when you started detached.
+# A worktree is a separate directory sharing the object store — nothing about your checkout changes.
+WT=$(mktemp -d)
+trap 'git worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"' EXIT
+git worktree add -q --detach "$WT" "$TAG"
+( cd "$WT" && ./build.sh "$APP" >/dev/null )
+ZIP="$WT/$ZIP"
 BUILT=$(shasum -a 256 "$ZIP" 2>/dev/null | cut -d' ' -f1 || sha256sum "$ZIP" | cut -d' ' -f1)
 
-echo "  tag       $TAG  ($(git rev-parse --short HEAD))"
+echo "  tag       $TAG  ($(git rev-parse --short "$TAG^{commit}"))"
 echo "  claimed   $CLAIMED"
 echo "  rebuilt   $BUILT"
 if [[ "$CLAIMED" == "$BUILT" ]]; then

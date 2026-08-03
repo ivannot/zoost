@@ -14,6 +14,12 @@
 # The discipline that keeps the chain intact is therefore: **upload the asset from the Release, never
 # a local build.** RELEASES.md says so, and the hash in the Release body is what makes a swap
 # detectable.
+# Every action below is pinned to a commit hash, not to a moving tag. `@v2` is a ref its owner can
+# repoint at any time — a supply chain that ends in "and then whatever that tag says today" is not
+# one. The trailing comment records which release each hash was, so upgrading stays a deliberate,
+# reviewable edit. Resolve a new one with:
+#   curl -s https://api.github.com/repos/<owner>/<repo>/git/ref/tags/<tag>
+#
 name: release
 
 on:
@@ -31,7 +37,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
 
       - name: Read the app and version out of the tag
         id: tag
@@ -75,12 +81,12 @@ jobs:
           unzip -l "${{ steps.tag.outputs.zip }}"
 
       - name: Sign a provenance statement for the archive
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018   # v1.4.4
         with:
           subject-path: ${{ steps.tag.outputs.zip }}
 
       - name: Publish the Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.4.0
         with:
           files: ${{ steps.tag.outputs.zip }}
           name: Zoost for ${{ steps.tag.outputs.app }} ${{ steps.tag.outputs.version }}

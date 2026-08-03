@@ -3,11 +3,11 @@
 Every version submitted to the Chrome Web Store, with the commit it was built from and the SHA-256
 of the package that was uploaded.
 
-The point is that **you do not have to take our word for it.** The build is reproducible: the same
-commit produces the same bytes on any machine, because every file is stamped with the commit's own
-date, the file list is sorted before it reaches `zip`, and machine-specific attributes are dropped.
-So the hash below is not a fact about our laptop — it is a fact about the source, and you can check
-it:
+The point is that **you do not have to take our word for how the release asset was built.** The build
+is reproducible: the same commit produces the same bytes, because every file is stamped with the
+commit's own date, the file list is sorted before it reaches `zip`, and machine-specific attributes
+are dropped. So the hash below is not a fact about our laptop — it is a fact about the source, and
+you can check it:
 
 ```bash
 git clone https://github.com/ivannot/zoost && cd zoost
@@ -16,12 +16,18 @@ git checkout <tag>
 shasum -a 256 dist/zoost-<app>-<version>-store.zip
 ```
 
-If that number matches the row below, the package on the Web Store was built from exactly the source
-in this repository at that tag, and nothing else went into it.
+If that number matches the row below, the archive published on the Release was built from exactly
+the source in this repository at that tag, and nothing else went into it.
+
+Note the precise claim, because the looser one would be false: this establishes how the *release
+asset* was produced. Uploading it to the Store is a manual step, so nothing here cryptographically
+proves the file Google received is that one. What closes that circle is at the far end — unpack the
+installed extension and diff it against the tag. See *What this cannot prove*.
+
+<!-- release rows are appended below the header, newest last -->
 
 | App | Version | Tag | Commit | SHA-256 of the uploaded `.zip` | Submitted |
 |---|---|---|---|---|---|
-<!-- release rows are appended here, newest last -->
 | analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible — see below* | 2026-08-03 |
 
 ## What this table cannot tell you, and why
@@ -54,8 +60,9 @@ Pushing a tag `crm-v*` or `analytics-v*` makes GitHub check out that exact commi
 the build is deterministic by doing it **twice** and comparing, attach the archive to a Release, and
 sign a [provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations)
 binding that file to this repository, that commit and that workflow. The workflow is
-[`.github/workflows/release.yml`](.github/workflows/release.yml) — read it; it is thirty lines and
-does nothing clever. The build log is public.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) — read it; it is short, does
+nothing clever, and every action it uses is pinned to a commit hash rather than a moving tag. The
+build log is public.
 
 **The archive attached to the Release is the file submitted to the Chrome Web Store.** Nothing is
 rebuilt in between, and nothing is uploaded from a personal machine. That is the rule the whole
@@ -70,7 +77,7 @@ gh attestation verify zoost-<app>-<version>-store.zip --repo ivannot/zoost
 # 2. the same source produces the same bytes on your machine
 tools/verify.sh <app> <version>
 
-# 3. read what is actually inside — 19 files, no bundler, no minifier, no dependencies
+# 3. read what is actually inside — a couple of dozen files, no bundler, no minifier, no deps
 unzip -l zoost-<app>-<version>-store.zip
 ```
 
@@ -83,10 +90,20 @@ There is no build step that could put something in the package that is not in th
 **What Google serves is not byte-identical to what was uploaded.** The Store repackages and re-signs
 every extension, so the `.crx` a browser installs cannot be compared to the `.zip` here. What the
 chain above establishes is the *input* to that process. To check the far end, unpack the installed
-extension from your Chrome profile and diff its files against the tag — they are plain text.
+extension from your Chrome profile and diff its files against the tag — they are plain text, and
+this is also what settles the one manual step in the chain, since the upload to Google is done by
+hand and no signature covers it.
 
 **An attestation says who built a file, not that the file is good.** It removes "trust the author's
 laptop" from the chain. It does not remove "read the code", and nothing can.
+
+**Reproducibility is claimed for an environment, not for every machine on earth.** `build.sh` drives
+whatever `zip` is on the system, and a different implementation could in principle deflate the same
+bytes differently. It is verified on two: Info-ZIP 3.0 on macOS, and whatever `ubuntu-latest` carries
+in CI, where every release is built twice and the run fails if the hashes differ. Each build prints
+the archiver it used, so the log says which. Making the guarantee universal would mean pinning the
+toolchain in a container; that is not done today, and claiming it were would be the kind of
+overstatement this file exists to avoid.
 
 ## Making a release
 

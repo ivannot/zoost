@@ -251,7 +251,7 @@
     <div class="why">
       <div>
         <h3>Read what ships</h3>
-        <p>Nineteen files of plain JavaScript and HTML. No bundler, no minifier, no dependencies —
+        <p>Around twenty files of plain JavaScript and HTML. No bundler, no minifier, no dependencies —
           what you download is what runs, and there is no build step that could put something in the
           package that is not in the repository. You can read all of it in an afternoon.</p>
       </div>
@@ -270,9 +270,11 @@
       </div>
       <div>
         <h3>What none of it proves</h3>
-        <p>Google repackages and re-signs every extension, so what it serves is not byte-identical to
-          what was uploaded — the chain covers the input to that step. And an attestation says who
-          built a file, never that the file is good. That part is still reading the code.</p>
+        <p>Uploading to the Store is a manual step, so no signature covers it: what is proven is how
+          the release archive was built. Google also repackages and re-signs every extension, so what
+          it serves is not byte-identical to what was uploaded. Both are settled at the far end, by
+          diffing the installed extension against the tag. And an attestation says who built a file,
+          never that the file is good — that part is still reading the code.</p>
       </div>
     </div>
     <p class="note" style="margin-top:24px">The record of every submitted version — commit, tag and
