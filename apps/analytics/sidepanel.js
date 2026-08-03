@@ -914,7 +914,7 @@ let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false;
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 8 };
+  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20 };
 }
 function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
 function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }
@@ -941,23 +941,54 @@ function aiStructureText(v) {
   return s2;
 }
 
+// The whole workspace, as compactly as it can be stated. Every name is here on purpose: "does a
+// view already exist that does X" cannot be answered from a summary, and the tools can only fetch
+// detail for something the model already knows exists.
+//
+// The cap is 48000 characters — roughly 12k tokens, and about 1.8x the workspace this was measured
+// on (377 views, 135 tables ≈ 27k). It was 16000, which cut 40% of a workspace that size and left
+// the model guessing at names it had never been shown. If the cap is ever hit the panel says so in
+// the chat rather than letting the answer look complete.
+const AI_SEED_CAP = 48000;
+
 async function aiBuildSeed() {
+  const m = viewById();
   const byType = new Map();
   for (const v of views) byType.set(v.type, (byType.get(v.type) || 0) + 1);
-  let s2 = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`;
-  s2 += `${views.length} views — ` + [...byType.entries()].map(([t, n]) => `${t} ${n}`).join(', ') + `\n`;
-  s2 += `${Object.keys(schema).length} data objects, ${Object.values(schema).reduce((n, t) => n + t.columns.length, 0)} columns, ${relations.length} relations\n`;
-  s2 += `\n## Tables and query tables\n`;
+  const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
+
+  let s2 = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`
+    + `${views.length} views — ` + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
+    + `${Object.keys(schema).length} data objects, ${cols} columns, ${relations.length} relations`
+    + (deps ? `, ${views.filter(isOrphanCandidate).length} nothing depends on` : ', lineage not pulled') + '\n';
+
+  // Data objects: name, kind, column count, and whether Zoho put it there. One line each.
+  s2 += `\n## Tables and query tables (${Object.keys(schema).length})\n`;
   s2 += Object.entries(schema).sort((a, b) => a[1].name.localeCompare(b[1].name))
-    .map(([id, t]) => `- ${t.name} [${t.kind}]${t.system ? ' [system]' : ''} ${t.columns.length} cols`).join('\n') + '\n';
-  const pres = views.filter((v) => !schema[v.id]);
+    .map(([, t]) => `${t.name} [${t.kind === 'QueryTable' ? 'Q' : 'T'}${t.system ? ',sys' : ''}] ${t.columns.length}c`).join('\n') + '\n';
+
+  // Presentation views, grouped by what they are built on: the shape of the workspace shows through
+  // that way, and it costs fewer characters than repeating the parent on every line.
+  const pres = views.filter((v) => !schema[v.id] && v.type !== 'Dashboard');
   if (pres.length) {
-    s2 += `\n## Reports, pivots, dashboards (${pres.length})\n`;
-    const m = viewById();
-    s2 += pres.map((v) => `- ${v.name} [${v.type}]${v.parent && m.get(v.parent) ? ' on ' + m.get(v.parent).name : ''}`).join('\n') + '\n';
+    const byParent = new Map();
+    for (const v of pres) {
+      const p = v.parent && m.get(v.parent) ? m.get(v.parent).name : '(unknown source)';
+      if (!byParent.has(p)) byParent.set(p, []);
+      byParent.get(p).push(`${v.name} [${v.type[0]}${v.type === 'SummaryView' ? 'u' : ''}]`);
+    }
+    s2 += `\n## Reports and pivots (${pres.length}), grouped by what they are built on\n`;
+    s2 += [...byParent.entries()].sort((a, b) => b[1].length - a[1].length)
+      .map(([p, list]) => `${p} → ${list.join(', ')}`).join('\n') + '\n';
   }
-  aiSeedTruncated = s2.length > 16000;   // don't hide the cut from the user (see aiSend)
-  return aiTrunc(s2, 16000);
+  const dash = views.filter((v) => v.type === 'Dashboard');
+  if (dash.length) s2 += `\n## Dashboards (${dash.length})\n` + dash.map((v) => v.name).join(', ') + '\n';
+
+  s2 += '\nKey: [T] table, [Q] query table, sys = put there by Zoho not by the user, Nc = columns.\n'
+    + 'Report types: [A] AnalysisView, [P] Pivot, [R] Report, [Su] SummaryView.\n';
+
+  aiSeedTruncated = s2.length > AI_SEED_CAP;
+  return aiTrunc(s2, AI_SEED_CAP);
 }
 
 async function aiSystemPrompt(withTools) {
@@ -970,7 +1001,7 @@ async function aiSystemPrompt(withTools) {
     if (q) { const body = await sqlBodyOf(cur.id); if (body) focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(body, 4000)}\n\u0060\u0060\u0060\n`; }
   }
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing.'
+    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view — structure, foreign keys, SQL and lineage — so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
     : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
   return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
     + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n\n`
@@ -980,7 +1011,7 @@ async function aiSystemPrompt(withTools) {
 
 const AI_TOOLS = [
   { name: 'list_views', description: 'List views in the workspace. Optionally filter by a substring of the name, by type (Table, QueryTable, Pivot, AnalysisView, SummaryView, Report, Dashboard), and/or by a minimum column count.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, type: { type: 'string' }, min_columns: { type: 'number' } } } },
-  { name: 'get_view', description: 'Everything known about one view by name or id: type, folder, owner, what it is built on, dates, and its lineage.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'get_view', description: 'THE DOSSIER for one view, in a single call: type, folder, owner, dates, what it is built on, its full column list with data types and foreign keys, its SQL if it is a query table, its relations, and what reads from it. Prefer this over calling get_structure, get_sql and who_uses separately.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_structure', description: 'Columns and Zoho data types of a table or query table, with each column\u2019s foreign keys in both directions. For a report or pivot, returns the structure it inherits and says so.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_sql', description: 'The SQL source of a query table, with the source tables and the columns it involves.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'search_sql', description: 'Full-text search across every query table\u2019s SQL. Returns the view names that match.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
@@ -1003,13 +1034,30 @@ async function aiExecTool(name, input) {
   const v = name === 'orphans' || name === 'get_relations' ? null : aiFindView(input.name);
   if (!v && name !== 'orphans' && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
   if (name === 'get_view') {
+    // Everything about one view in one step. It used to answer the metadata alone, so any real
+    // question cost three or four calls — which is how a limit of eight ran out on a single
+    // question. The tools are the expensive part of an agent loop; making each one answer more is
+    // worth more than adding steps.
     const d = deps && deps[v.id];
-    return `${v.name}\ntype: ${v.type}\nfolder: ${v.folderName || '(none)'}\nowner: ${v.owner || ''}\n`
+    let out = `${v.name}\ntype: ${v.type}\nfolder: ${v.folderName || '(none)'}\nowner: ${v.owner || ''}\n`
       + `built_on: ${v.parent && m.get(v.parent) ? m.get(v.parent).name : '(nothing — it is a data object)'}\n`
       + `design_changed: ${v.designModifiedAt ? shortDate(v.designModifiedAt) : v.designModifiedText + ' (Zoho\u2019s own text, not machine-readable)'}\n`
       + `data_changed: ${shortDate(v.dataModifiedAt)}\n`
-      + `system_table: ${!!v.system}\ndescription: ${v.description || '(none)'}\n`
-      + (d ? `reads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}` : 'lineage: not pulled');
+      + `system_table: ${!!v.system}\ndescription: ${v.description || '(none)'}\n`;
+    out += '\n' + aiStructureText(v) + '\n';
+    const rs = relationsOf(v.id);
+    if (rs.length) out += `\nrelations (${rs.length}):\n` + rs.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`).join('\n') + '\n';
+    const q = sqls[v.id];
+    if (q) {
+      const body = await sqlBodyOf(v.id);
+      const src = Object.entries(q.sources || {}).map(([, sd]) => `${sd.name} (${sd.columns.length} columns involved)`).join(', ');
+      out += `\nsource tables: ${src || '(none recorded)'}\nSQL:\n${body || '(could not be read)'}\n`;
+    }
+    out += d
+      ? `\nreads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}\n`
+        + 'Note: Analytics only knows what its own views read from each other — a shared link, a scheduled export or an API consumer is invisible to it.'
+      : '\nlineage: not pulled';
+    return out;
   }
   if (name === 'get_structure') return aiStructureText(v);
   if (name === 'get_sql') {
@@ -1020,11 +1068,15 @@ async function aiExecTool(name, input) {
     return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${body || '(the SQL file could not be read)'}`;
   }
   if (name === 'search_sql') {
+    // With the matching line beside each name the model can usually answer without opening the
+    // query at all — a bare list of names made every hit cost another call.
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
     const hits = [];
     for (const vv of views.filter((x) => x.type === 'QueryTable')) {
       const body = await sqlBodyOf(vv.id);
-      if (body && body.toLowerCase().includes(q)) hits.push(vv.name);
+      if (!body || !body.toLowerCase().includes(q)) continue;
+      const line = body.split('\n').find((l) => l.toLowerCase().includes(q)) || '';
+      hits.push(`${vv.name}\n    ${line.trim().slice(0, 160)}`);
     }
     return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + hits.join('\n') : '(no matches)';
   }
@@ -1176,7 +1228,7 @@ async function aiSend() {
       aiMessages.push({ role: 'tool', content: 'ℹ️ Large workspace: the index sent to the model is truncated. ' + (withTools ? 'Claude can still fetch specifics with its tools.' : 'OpenAI answers in one pass, so items beyond the cut are invisible to it — ask about specific views.') });
       aiRenderMessages();
     }
-    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 8);
+    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     status('', '');
   } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); status('AI error', 'warn'); }

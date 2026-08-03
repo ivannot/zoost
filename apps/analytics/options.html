@@ -86,7 +86,10 @@
         <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
       </div>
     </div>
-    <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="30"></label>
+    <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
+    <p class="note" style="margin-top:0">How many times the assistant may reach for a tool before it has to answer.
+      20 is the default. Raise it for questions that span the whole workspace; lower it to cap what a single
+      question can cost. It is a ceiling, not a target — most answers use two or three.</p>
     <div class="warnbox">The assistant sends the parts of your workspace it needs — including the
       <b>SQL of your query tables</b>, table and column names — to the provider you configure. It never
       sends the rows in your tables, because Zoost never reads them. Check that this is acceptable for
