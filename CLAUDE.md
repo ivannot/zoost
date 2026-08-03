@@ -166,7 +166,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | File | Update when |
 |---|---|
 | `README.md` | features, interface, quick start, known limitations |
-| `site/docs.html` | anything a user does differently — **and the "Covers Zoost X.Y" line at the top, always** |
+| `site/docs.html` | anything a user does differently. The "Covers Zoost X · updated Y" line fills itself from the manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
 | `site/index.html` | a feature worth advertising appears or changes |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
 | `store/store-listing.md` | description, single purpose, or any permission justification |
