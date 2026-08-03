@@ -310,6 +310,7 @@ function updateButtons() {
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('pull').disabled = busy || !dir || !guardOk();
   $('retry').disabled = busy || !dir || !guardOk() || !pullFailed.length;
+  $('refresh').disabled = busy || (!dir && !(root && !rootGranted));
   $('retry').textContent = pullFailed.length ? `Retry ${pullFailed.length} failed` : 'Retry failed';
   const loaded = views.length > 0;
   $('export').disabled = busy || !loaded;
@@ -376,8 +377,8 @@ async function pullAll() {
 //     silently short.
 //
 // Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
-// items that failed, and `refreshOne()` re-reads a single view from its detail pane.
-async function refreshOne(id) {
+// items that failed, and `pullOne()` re-reads a single view from its detail pane.
+async function pullOne(id) {
   const v = viewById().get(id);
   if (!v) return;
   setBusy(true, `Re-reading «${v.name}»…`);
@@ -649,11 +650,15 @@ async function openDetail(id) {
   if (!v) return;
   $('detail').classList.add('show');
   $('dtitle').textContent = v.name;
-  $('drefresh').disabled = busy || !guardOk();
-  $('drefresh').title = guardOk()
-    ? 'Re-read this one view from Zoho — its SQL and its lineage'
-    : 'The active tab is a different workspace, so nothing can be re-read';
-  $('drefresh').onclick = () => refreshOne(v.id);
+  // A Zoho read, so it is worded and coloured like every other Zoho read: "Pull", .zbtn. The ↻ glyph
+  // means "reload from disk / re-grant folder access" in the CRM panel and must keep meaning only
+  // that here — a symbol that fetches from Zoho in one app and reads the disk in the other is worse
+  // than no symbol.
+  $('dpull').disabled = busy || !guardOk();
+  $('dpull').title = guardOk()
+    ? 'Pull only this view into the local mirror — its SQL and its lineage'
+    : 'The active tab is a different workspace, so nothing can be pulled';
+  $('dpull').onclick = () => pullOne(v.id);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
   $('tab_sql').disabled = !sqls[id];
@@ -705,12 +710,12 @@ async function renderDetail(v) {
     const sql = await sqlBodyOf(v.id);
     body.innerHTML = '<div class="dpad">' + (sql
       ? `<pre class="sql">${esc(sql)}</pre>`
-      : `<div class="empty" style="padding:0"><b>The SQL file could not be read.</b> Use ↻ above to fetch just this one.</div>`) + '</div>';
+      : `<div class="empty" style="padding:0"><b>The SQL file could not be read.</b> Use Pull above to fetch just this one.</div>`) + '</div>';
     return;
   }
   // lineage
   const d = deps ? deps[v.id] : null;
-  if (!d) { body.innerHTML = '<div class="dpad"><div class="empty" style="padding:0"><b>No lineage for this view.</b> Use ↻ above to fetch just this one.</div></div>'; return; }
+  if (!d) { body.innerHTML = '<div class="dpad"><div class="empty" style="padding:0"><b>No lineage for this view.</b> Use Pull above to fetch just this one.</div></div>'; return; }
   const li = (arr) => arr.length
     ? `<ul>${arr.map((x) => `<li>${esc(nameOf(x.id, m))} <span class="lv">level ${x.level}</span></li>`).join('')}</ul>`
     : '<div class="none">none</div>';
@@ -727,6 +732,16 @@ async function renderDetail(v) {
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
     + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
     + '</div>';
+}
+
+// Local only. Re-reads the mirror from disk, or takes the chance to re-grant a lapsed folder
+// permission — it never talks to Zoho. Same meaning, same glyph and same title as the CRM panel's.
+async function refreshLocal() {
+  if (root && !rootGranted) { await grantRoot(); return; }
+  if (!dir) return;
+  setBusy(true, 'Reloading from disk…');
+  await loadFromDisk();
+  setBusy(false);
 }
 
 // ---------- export ----------
@@ -971,6 +986,7 @@ $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sort
 $('export').onclick = () => doExport('html');
 $('exportmd').onclick = () => doExport('md');
 $('retry').onclick = retryFailed;
+$('refresh').onclick = refreshLocal;
 $('health').onclick = () => ($('healthview').classList.contains('show') ? closeHealth() : openHealth());
 $('healthx').onclick = closeHealth;
 $('expx').onclick = () => closeScope(false);

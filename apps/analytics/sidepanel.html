@@ -231,6 +231,7 @@
     <legend>workspace</legend>
     <button id="pull" class="zbtn" disabled title="Pull views, structure, relations, SQL and lineage">Pull all</button>
     <button id="retry" class="zbtn" disabled title="Re-read only the items that failed in the last pull">Retry failed</button>
+    <button id="refresh" disabled title="Refresh — reload from disk / re-grant folder access" aria-label="Refresh" style="font-size:15px;line-height:1">↻</button>
     <span class="gsep"></span>
     <span class="expgroup"><span class="explabel">export</span>
       <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
@@ -277,7 +278,7 @@
   </div>
 
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><button id="drefresh" class="zbtn" style="height:22px;padding:0 7px;font-size:11px" title="Re-read this one view from Zoho">&#8635;</button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view">Pull</button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>

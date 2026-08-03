@@ -77,6 +77,11 @@ where it was broken next: exports were written to `export/` in CRM and to the wo
 Analytics, under a different filename shape and a different timestamp format. Nothing in the markup
 could have caught it. So also compare, by reading both sides:
 
+- **what a symbol means.** The glyphs are a vocabulary shared across the apps, and one that means
+  two different things is worse than none: **`↻` is local** — "reload from disk / re-grant folder
+  access" — and **anything that reads from Zoho says "Pull"** and wears `.zbtn`, whether it is
+  "Pull all", the per-type "Pull", or the per-item one. The Analytics detail pane shipped a `↻` that
+  called Zoho; it was the right colour and the wrong glyph, which is the confusing combination.
 - **where a file is written and what it is called** — `export/zoost-<name>-<stamp>.<ext>`, with
   `stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')` and `sanitize()` on the name
 - **what the status line says afterwards**, word for word
