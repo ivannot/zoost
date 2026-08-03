@@ -703,6 +703,19 @@ function render() {
 }
 
 // ---------- detail ----------
+// Every time the pane shows something else, it shows it from the top. Without this the scrollbar
+// stays where the previous item left it and the reader is looking at row 40 of a table they have
+// never seen. Run twice — once now, once after layout — because content rendered on the next frame
+// would otherwise restore the old offset. Straight from the CRM panel, which has always done it.
+function resetDetailScroll() {
+  const doIt = () => {
+    const e = $('dbody'); if (e) { e.scrollTop = 0; e.scrollLeft = 0; }
+    const d = $('detail');
+    if (d) d.querySelectorAll('pre,table,[style*="overflow"]').forEach((x) => { x.scrollTop = 0; x.scrollLeft = 0; });
+  };
+  doIt(); requestAnimationFrame(doIt);
+}
+
 async function openDetail(id) {
   selectedId = id;
   const v = viewById().get(id);
@@ -737,6 +750,7 @@ async function openDetail(id) {
   if (detailTab === 'lin' && !deps) detailTab = 'cols';
   document.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('active', b.dataset.tab === detailTab));
   await renderDetail(v);
+  resetDetailScroll();
   render();
 }
 
@@ -1450,7 +1464,7 @@ $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').v
 $('pull').onclick = pullAll;
 $('gozoho').onclick = openZohoHome;
 $('find').oninput = render;
-$('findclear').onclick = () => { $('find').value = ''; render(); };
+$('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };
 $('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
@@ -1488,7 +1502,7 @@ document.querySelectorAll('.dtab').forEach((b) => {
     detailTab = b.dataset.tab;
     document.querySelectorAll('.dtab').forEach((x) => x.classList.toggle('active', x === b));
     const v = viewById().get(selectedId);
-    if (v) await renderDetail(v);
+    if (v) { await renderDetail(v); resetDetailScroll(); }   // a different tab is different content too
   };
 });
 // A stored folder handle loses its permission between sessions and can only be re-granted from a

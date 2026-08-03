@@ -19,6 +19,16 @@ Checks:
   3. shared CSS rules whose declarations differ
   4. CSS rules that exist on one side only
 
+Checks 5 and 6 cover behaviour, which the first four are blind to: markup and CSS can match while a
+control does nothing on one side. Check 5 compares which shared controls have a handler and of what
+event type. Check 6 compares which platform and DOM techniques each panel uses **at all** — if one
+resets a scroll position and the other never does anywhere, that is worth a look.
+
+Both are approximations. What a handler *does* is not statically comparable, so check 6 is a smell
+detector at file granularity, not a proof: it would have caught the detail pane keeping its scroll
+position, and would not have caught the search box failing to take focus back, because that file
+used `focus` elsewhere. Know which of the two a finding is before trusting it.
+
 It decides nothing. A difference may be deliberate — say so below, with the reason on the line.
 
     python3 tools/twincheck.py            # everything not declared product-specific
@@ -30,6 +40,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
+SCRIPTS = {'crm': ROOT / 'apps/crm/sidepanel.js', 'analytics': ROOT / 'apps/analytics/sidepanel.js'}
 
 # Same structural element, different name. The divergence is real and worth removing one day; until
 # then it is declared here so the tool compares them as the one thing they are.
@@ -106,6 +117,53 @@ EXPECTED_SOLO = {
 # listing them all would be the checklist problem again — so the set of shared classes is derived
 # from the two files instead of declared. That way a class used on both sides but styled on only one
 # is always reported, which is the case that let the Send button through.
+def handlers(js):
+    """Which shared controls have behaviour attached, and of what kind.
+
+    The dimension the first three checks were blind to: markup and CSS can match perfectly while a
+    control does nothing on one side. It found the detail pane keeping its scroll position when the
+    CRM's resets it, and a search box that did not take focus back after being cleared.
+    """
+    out = {}
+    for m in re.finditer(r"\$\('([\w-]+)'\)\.(on\w+)\s*=", js):
+        out.setdefault(canon(m.group(1)), set()).add(m.group(2))
+    for m in re.finditer(r"\$\('([\w-]+)'\)\.addEventListener\('(\w+)'", js):
+        out.setdefault(canon(m.group(1)), set()).add('on' + m.group(2))
+    return out
+
+
+def idioms(js):
+    """Platform and DOM techniques each panel uses at all.
+
+    Handler *types* can match while what the handler does does not, and that is not statically
+    comparable in general. This is the useful approximation: if one panel resets a scroll position
+    and the other never does anywhere, that is worth a look. Derived by pattern, not from a list.
+    """
+    out = set()
+    for m in re.finditer(r'\bchrome\.(\w+)\.(\w+)\(', js):
+        out.add(f'chrome.{m.group(1)}.{m.group(2)}()')
+    for m in re.finditer(r'\b(window|document)\.addEventListener\(\s*[\'"](\w+)', js):
+        out.add(f'{m.group(1)}.on{m.group(2)}')
+    for m in re.finditer(r'\.(scrollTop|scrollLeft|scrollIntoView|focus|blur|select)\b', js):
+        out.add(f'.{m.group(1)}')
+    for kw in ('requestAnimationFrame', 'confirm(', 'AbortSignal', 'structuredClone'):
+        if kw in js:
+            out.add(kw.rstrip('('))
+    return out
+
+
+# Idioms one product uses and the other has no occasion for, with the reason.
+EXPECTED_IDIOM = {
+    'chrome.tabs.get()': 'the CRM waits for a tab to finish loading; Analytics never navigates and waits',
+    'chrome.tabs.reload()': 'the CRM re-injects by reloading the Zoho tab in one recovery path',
+}
+
+# Behaviours that exist in one product only, with the reason.
+EXPECTED_BEHAVIOUR = {
+    'pull': set(), 'find': set(),
+}
+
+
 def markup_classes(html):
     out = set()
     for m in re.finditer(r'\bclass="([^"]*)"', html):
@@ -246,6 +304,29 @@ def main():
             solo.append(f'  {sel:44s} only in {a}')
     print('\n'.join(solo) if solo else '  none')
     findings += len(solo)
+
+    js = {k: p.read_text(encoding='utf-8') for k, p in SCRIPTS.items()}
+    hnd = {k: handlers(v) for k, v in js.items()}
+    print('\n== shared controls whose attached behaviour differs ==')
+    bdiffs = []
+    for eid in sorted(set(ids['crm']) & set(ids['analytics'])):
+        a2, b2 = hnd['crm'].get(eid, set()), hnd['analytics'].get(eid, set())
+        if a2 != b2 and (a2 or b2):
+            miss = ', '.join(sorted(a2 - b2)) or '—'
+            extra = ', '.join(sorted(b2 - a2)) or '—'
+            bdiffs.append(f'  {eid:16s} crm-only: {miss:24s} analytics-only: {extra}')
+    print('\n'.join(bdiffs) if bdiffs else '  none')
+    findings += len(bdiffs)
+
+    idm = {k: idioms(v) for k, v in js.items()}
+    print('\n== platform / DOM idioms used on one side only ==')
+    idiff = []
+    for a2, b2 in (('crm', 'analytics'), ('analytics', 'crm')):
+        for k in sorted(idm[a2] - idm[b2]):
+            if every or k not in EXPECTED_IDIOM:
+                idiff.append(f'  {k:40s} only in {a2}')
+    print('\n'.join(idiff) if idiff else '  none')
+    findings += len(idiff)
 
     print('\n== declared deliberate ==')
     for k, v in sorted(EQUIV.items()):

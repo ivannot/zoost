@@ -79,6 +79,14 @@ markup, not from a list, so a class used on both sides but styled on one is alwa
 is anchored on the first class or id of its first token — `.dtab.active` is about `.dtab`, not about
 `.active`.
 
+It also compares **behaviour**, because markup and CSS can match perfectly while a control does
+nothing on one side — the dimension that let the detail pane keep its scroll position when the CRM's
+resets. Two checks, both approximations and honest about it: which shared controls have a handler and
+of what event type, and which platform and DOM techniques each panel uses *at all*. What a handler
+*does* is not statically comparable, so the second is a smell detector at file granularity: it would
+have caught the missing scroll reset, and would not have caught the search box failing to take focus
+back, because that file used `focus` elsewhere.
+
 **Prove it against a bug you already know about before trusting it.** Removing `.aiinrow #aisend`
 from Analytics must make the tool print three findings; putting it back must return it to zero. A
 checker that has never caught anything is a claim, not a check — and claiming otherwise is how this
