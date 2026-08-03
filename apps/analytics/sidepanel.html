@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Zoost — Zoho Analytics</title>
 <style>
-  /* Same tokens as the CRM panel so the two feel like one product; --sel is teal instead of blue,
-     which is what tells them apart at a glance — exactly as with the icons. */
+  /* The two Zoost extensions are twins. Anything they have in common — the workspace bar, the
+     environment guard, the dialogs, the button semantics, the empty states — is the *same* thing
+     here as in apps/crm, down to the element ids, so that someone who uses both never has to learn
+     it twice and so that a fix on one side can be carried to the other mechanically.
+     Only --sel differs: teal instead of blue, which is what says which product you are in. */
   :root{
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#14b8a6; --sel-soft:#0f3b38;
@@ -17,24 +20,53 @@
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;font-size:13px;overflow-x:hidden}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
-  button:hover{background:#2b3a58} button:disabled{opacity:.5;cursor:default}
-  button.primary{background:var(--sel);border-color:var(--sel);color:#04211e;font-weight:600}
-  button.primary:hover:not(:disabled){background:#19d1bc}
+  button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
 
-  /* workspace bar — mirrors the CRM panel's, including the dashed "not chosen yet" affordance */
+  /* button semantics — identical meaning to the CRM panel:
+     .zbtn  solid accent  — reads from / talks to Zoho (pull)
+     .znav  light blue    — opens a page in Zoho
+     .lbtn  teal outline  — produces a local artefact (file or window)
+     .pbtn  violet outline— in-panel view, no output, no Zoho call
+     .abtn  amber outline — AI                                                */
+  .zbtn{background:var(--sel);border-color:var(--sel);color:#04211e;font-weight:600}
+  .zbtn:hover:not(:disabled){background:#19d1bc;border-color:#19d1bc}
+  .znav{background:rgba(47,111,237,.14);border:1px solid #3f6ea8;color:#9fc4f5}
+  .znav:hover:not(:disabled){background:rgba(47,111,237,.26);color:#cfe1fb}
+  .lbtn{background:transparent;border:1px solid #2f6f62;color:#83d8c6}
+  .lbtn:hover:not(:disabled){background:rgba(47,111,98,.16)}
+  .pbtn{background:transparent;border:1px solid #5a4a9c;color:#b9a9f0}
+  .pbtn:hover:not(:disabled){background:rgba(124,92,255,.16)}
+  .abtn{background:transparent;border:1px solid #b06a1c;color:#f0a44a}
+  .abtn:hover:not(:disabled){background:rgba(217,119,6,.16)}
+
+  /* ---- workspace bar — same two rows, same ids, same affordances as the CRM panel ---- */
   .wsbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
-  .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;background:transparent;border:1px dashed var(--border);color:var(--muted)}
+  .wsbar2{padding-top:0}
+  .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:1px dashed var(--border);color:var(--muted)}
   .wsroot:hover{border-color:var(--sel);color:var(--ink);border-style:solid}
   .wsroot.needgrant{border-style:solid;border-color:#b06a1c;color:#f0a44a;background:rgba(217,119,6,.10);font-weight:600}
+  .wsroot.needgrant:hover{background:rgba(217,119,6,.20);border-color:#d97706;color:#fbbf24}
   .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}
   .wsbar button{flex:none}
 
-  #ctx{display:flex;gap:9px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
+  #ctx{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
   #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-  #ctx.bound .dot{background:var(--ok)} #ctx.nows .dot{background:var(--warn)}
-  #ctx.off .dot{background:var(--muted)} #ctx.mismatch .dot{background:var(--bad)}
-  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  #ctx.match .dot{background:var(--ok)} #ctx.mismatch .dot{background:var(--bad)}
+  #ctx.unbound .dot{background:var(--muted)} #ctx.offzoho .dot{background:var(--warn)}
+  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
+  #ctx .bound{margin-left:auto;color:var(--muted);font:11px var(--mono);white-space:nowrap}
+  #ctx.mismatch .bound{color:var(--bad)}
+  .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.4px;border-radius:3px;padding:0 4px;margin-right:5px}
+  .rlbl.remote{background:rgba(47,111,237,.18);color:#9fc4f5}
+  .rlbl.local{background:rgba(47,111,98,.18);color:#83d8c6}
+
+  #mmbar{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:9px 11px;background:#2a1c14;border-bottom:1px solid #6b3a1f}
+  #mmbar.show{display:flex}
+  #mmbar #mmtext{font:11.5px var(--mono);color:#f0b483;line-height:1.5}
+  #mmbar .mmbtns{display:flex;gap:8px;flex-wrap:wrap}
+  #mmbar .mmbtns button{white-space:nowrap;flex:1 1 auto}
+  #mmbar #mmgo{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
 
   #status{font-size:11px;color:var(--muted);padding:5px 10px;min-height:20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
   #status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)} #status.busy{color:var(--ink)}
@@ -63,7 +95,13 @@
   .sortdir{background:#0f1826;border:1px solid var(--border);border-radius:7px;padding:0;width:26px;height:26px;font-size:13px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
   .sortdir:hover{border-color:var(--sel)}
 
-  #main{flex:1;display:flex;flex-direction:column;min-height:0}
+  #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+  #mmoverlay{display:none;position:absolute;inset:0;z-index:6;background:var(--bg);align-items:center;justify-content:center;padding:24px;text-align:center}
+  #mmoverlay.show{display:flex}
+  #mmoverlay .mmob{max-width:280px;display:flex;flex-direction:column;gap:8px}
+  #mmoverlay .t{color:#f0b483;font-size:14px;font-weight:600}
+  #mmoverlay .s{color:var(--muted);font-size:12px;line-height:1.5}
+
   #list{flex:1;overflow:auto;min-height:0}
   .vtbl{width:100%;border-collapse:collapse;font:11.5px var(--sans)}
   .vtbl th{position:sticky;top:0;z-index:2;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:9.5px;letter-spacing:.3px}
@@ -109,26 +147,51 @@
   .empty code{font:11px var(--mono);color:#7fe3d5}
   .note{padding:8px 10px;border-top:1px solid var(--line);background:#101724;color:var(--muted);font-size:10.5px;line-height:1.55}
   .note b{color:#cbd5e1}
+
+  /* ---- dialogs and overlays — same structure and ids as the CRM panel ---- */
+  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
+  .scrim.on{display:block}
+  .dlg{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dlg.on{display:flex}
+  .dlg.full{left:0;top:0;transform:none;width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0}
+  .dlg.full .db{padding:16px 18px}
+  .dlg .dh{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);font-weight:600;color:#e7edf6}
+  .dlg .dx{cursor:pointer;color:var(--muted)}
+  .dlg .db{padding:12px 14px;overflow:auto;flex:1;min-height:0}
+  .dlg .df{display:flex;gap:8px;align-items:center;padding:11px 14px;border-top:1px solid var(--border)}
+  .dnote{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  #aboutbody{font-size:12px;color:#cdd7e6;line-height:1.6}
+  #aboutbody h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  #aboutbody a{color:#83d8c6}
+  #aboutbody .legal{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:6px}
+
+  #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:70;text-align:center;padding:20px}
+  #offoverlay.show{display:flex}
+  #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600}
+  #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
 </style>
 </head>
 <body>
 
 <div class="wsbar">
-  <button class="wsroot" id="pickroot" title="Pick one working folder. Every Zoost product keeps its own subfolder inside it.">Choose folder…</button>
-  <button id="addws" disabled title="Create a workspace folder for the workspace in the active tab">+</button>
+  <button id="wsroot" class="wsroot" title="Pick the folder that will contain all Zoost workspaces">📁 Set working folder…</button>
 </div>
-<div class="wsbar">
-  <select id="wssel" title="Workspaces found on disk"></select>
-  <button id="wsrefresh" title="Re-read the working folder">&#8635;</button>
+<div class="wsbar wsbar2">
+  <select id="ws" title="Workspaces found inside the working folder"></select>
+  <button id="wsadd" title="Create a workspace for the Analytics workspace in the active tab">+ Workspace</button>
+  <button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" style="font-size:15px;line-height:1">🗑</button>
 </div>
 
-<div id="ctx" class="off"><i class="dot"></i><span class="who" id="ctxwho">Looking for a Zoho Analytics tab…</span></div>
+<div id="ctx" class="unbound">
+  <span class="dot"></span><span class="who" id="who">No Zoho Analytics tab detected</span><span class="bound" id="bound"></span>
+</div>
+<div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button></div></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span></div>
 
 <div class="bar">
-  <button id="pull" class="primary" disabled>Pull all</button>
+  <button id="pull" class="zbtn" disabled>Pull all</button>
   <span class="sp"></span>
-  <button id="about" title="About">i</button>
+  <button id="about" title="About Zoost for Zoho Analytics" aria-label="About">ⓘ</button>
 </div>
 
 <div id="census"></div>
@@ -150,12 +213,13 @@
 </div>
 
 <div id="main">
+  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
+
   <div id="list">
     <div class="empty">
       <b>Nothing pulled yet.</b>
-      Pick a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
-      <code>/workspace/&lt;id&gt;</code> — press <b>+</b> to create the workspace folder, then
-      <b>Pull all</b>.
+      Set a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
+      <code>/workspace/&lt;id&gt;</code> — press <b>+ Workspace</b>, then <b>Pull all</b>.
     </div>
   </div>
 
@@ -181,6 +245,19 @@
   <b>Design</b> is a real, sortable date for tables and query tables; for reports and dashboards
   Analytics only gives text in your interface language, which is shown exactly as it sends it,
   never parsed, and sorted last. <b>Data</b> is always a real timestamp.
+</div>
+
+<div id="scrim" class="scrim"></div>
+<div id="aboutdlg" class="dlg full">
+  <div class="dh"><span>About</span><span class="dx" id="aboutx">✕</span></div>
+  <div class="db" id="aboutbody"></div>
+  <div class="df"><button id="aboutok" class="zbtn">Close</button></div>
+</div>
+
+<div id="offoverlay">
+  <div class="t">Not on a Zoho Analytics tab</div>
+  <div class="s">This workspace talks to Zoho only from a Zoho Analytics tab.</div>
+  <button class="znav" id="gozoho">Go to Zoho Analytics ↗</button>
 </div>
 
 <script src="idb.js"></script>

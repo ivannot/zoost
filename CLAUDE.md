@@ -43,6 +43,35 @@ preview, a health view, exports) but they read different platforms with differen
 something out only once both sides actually use it and it has stopped changing — sharing too early
 between two products that are still finding their form costs more than the duplication.
 
+**But separate code must not mean separate products. The apps are twins, and it has to show.**
+Technically independent, one product to whoever uses both. Anything they have in common — the
+working-folder and workspace bar, the environment guard and its mismatch overlay, the dialogs, the
+button semantics, the empty states, the wording, the colours, the philosophy — is **the same thing**
+on both sides, down to the element ids. Two consequences, both binding:
+
+- **Never invent what already exists.** Before building anything on one side, look at whether the
+  other side already solved it, and port it. The Analytics panel shipped 0.2.0 with a working-folder
+  picker invented from scratch: no Remove, no mismatch bar, no blocking overlay, no About dialog, an
+  ad-hoc `.primary` class where the CRM has a five-class button grammar, and different ids for
+  identical concepts. All of that was rework that need not have happened.
+- **A change to something shared is a change on both sides.** Fixing the workspace bar in one app and
+  not the other silently breaks the continuity for the person using both. If a shared change can only
+  land on one side for now, say so explicitly rather than letting the two drift apart in silence.
+
+Check it mechanically, not by memory — the same discipline as the documentation sweep:
+
+```bash
+# every id one panel has and the other does not is either a deliberate difference or a gap
+grep -o 'id="[^"]*"' apps/crm/sidepanel.html | sort -u > /tmp/a
+grep -o 'id="[^"]*"' apps/analytics/sidepanel.html | sort -u > /tmp/b
+comm -3 /tmp/a /tmp/b
+```
+
+Walk each difference and decide: is it genuinely product-specific (functions, modules and Deluge
+exist only in CRM; views, query tables and the ER model only in Analytics), or is it shared chrome
+that has drifted? Only the first kind is allowed to differ. The colour `--sel` is the one deliberate
+exception: blue in CRM, teal in Analytics, because that is what says which product you are in.
+
 `LICENSE`, `NOTICE` and `README.md` live at the root so GitHub picks them up; `build.sh` copies
 the first two into the package at build time.
 

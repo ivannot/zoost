@@ -27,6 +27,23 @@ const APP_DIRS = ['crm', 'analytics'];        // known product folders — not "
 const CFG = '.zoost.json';
 const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
 
+// Identity and legal text, worded as in the CRM panel — the two are one product to the reader.
+// There is deliberately no Web Store link: this extension is not published, and a link to a listing
+// that does not exist would be a claim outliving its truth before it was even made.
+const PRODUCT_URL = 'https://zoost.it';
+const CONTACT_EMAIL = 'ivan@zoost.it';
+const REPO_URL = 'https://github.com/ivannot/zoost';
+const SPONSOR_URL = 'https://github.com/sponsors/ivannot';
+const KOFI_URL = 'https://ko-fi.com/ivannot';
+const PRODUCT_AUTHOR = 'Ivan Notaristefano';
+const PRODUCT_LICENSE = 'Apache License 2.0';
+const LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
+const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation. '
+  + '"Zoho" and "Zoho Analytics" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility. '
+  + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
+  + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
+  + 'Deciding what may be extracted from Analytics, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
+
 // ---------- state ----------
 let root = null;            // the working folder handle
 let rootGranted = false;
@@ -35,6 +52,7 @@ let bound = null;           // { workspace, name, origin } of the active workspa
 let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
 
+let wsList = [];            // workspaces found on disk, cached like the CRM panel's
 let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
 const ORPHANS = '__orphans__';
 let typeFilter = null, sortKey = 'name', sortDir = 1, selectedId = null, detailTab = 'cols';
@@ -106,17 +124,18 @@ async function listWorkspaces() {
 }
 
 async function refreshWorkspaces() {
-  const sel = $('wssel');
-  $('pickroot').textContent = root ? `${root.name}/${APP_DIR}` : 'Choose folder…';
-  $('pickroot').classList.toggle('needgrant', !!root && !rootGranted);
+  const sel = $('ws');
+  $('wsroot').textContent = root ? `${root.name}/${APP_DIR}` : 'Choose folder…';
+  $('wsroot').classList.toggle('needgrant', !!root && !rootGranted);
   if (root && !rootGranted) {
-    $('pickroot').textContent = `${root.name} — click to grant access`;
+    $('wsroot').textContent = `${root.name} — click to grant access`;
     sel.innerHTML = '<option value="">access not granted</option>';
     dir = null; bound = null; return updateButtons();
   }
   if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; return updateButtons(); }
 
   const list = await listWorkspaces();
+  wsList = list;
   // Folders sitting directly in the working folder are the older flat layout. This is not a
   // compatibility fallback — nothing keeps working the old way — it is an empty state that says
   // what it sees instead of reporting "no workspaces" while the folders are plainly there.
@@ -130,7 +149,7 @@ async function refreshWorkspaces() {
 
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} — no workspaces yet</option>`;
-    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move Analytics ones into «${root.name}/${APP_DIR}/» and click ↻.`, 'warn');
+    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move the Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
     dir = null; bound = null; return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}">${esc(w.name || w.folder)} · ${esc(w.id)}</option>`).join('');
@@ -169,6 +188,27 @@ async function addWorkspace() {
   }
 }
 
+// Deleting the local mirror only. The confirmation says so explicitly, because "Remove workspace"
+// next to a tool that talks to Zoho is exactly the phrase someone reads as "delete it in Zoho".
+async function delWorkspace() {
+  const w = wsList.find((x) => x.id === $('ws').value);
+  if (!w || !root) return;
+  if (!confirm(`Delete the folder «${w.folder}» and everything in it?\n\nThis removes the local mirror only — nothing in Zoho Analytics is touched. You can pull it again at any time.`)) return;
+  try {
+    if (!(await ensurePerm(root))) return;
+    const base = await appRoot(false);
+    if (!base) { status('Could not open the workspace folder.', 'warn'); return; }
+    await base.removeEntry(w.folder, { recursive: true });   // delete inside analytics/, never at the root
+    await window.idbHandle.set('activeWsAnalytics', null);
+    dir = null; bound = null;
+    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
+    $('detail').classList.remove('show'); selectedId = null;
+    status(`Removed ${w.folder}.`, 'ok');
+    await refreshWorkspaces();
+    render();
+  } catch (e) { status('Remove failed: ' + (e.message || e), 'warn'); }
+}
+
 // ---------- tab / bridge ----------
 async function analyticsTabId() {
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -196,23 +236,65 @@ async function toBridge(msg) {
 const guardOk = () => !!(bound && ctx && ctx.workspace && String(ctx.workspace) === String(bound.workspace));
 
 async function refreshContext() {
-  const el = $('ctx'), who = $('ctxwho');
+  const el = $('ctx'), who = $('who'), bnd = $('bound');
   const id = await analyticsTabId();
-  if (id == null) { ctx = null; }
-  else {
-    await ensureBridge(id);
-    try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); ctx = r && r.ok ? r : null; } catch { ctx = null; }
+  const localLbl = bound
+    ? `<span class="rlbl local">Workspace</span>«${esc(bound.name || bound.workspace)}» ${esc(bound.workspace)}`
+    : '<span class="rlbl local">Workspace</span><span>not bound yet</span>';
+
+  if (id == null) {                                  // the ACTIVE tab is not Analytics
+    ctx = null;
+    $('offoverlay').classList.add('show');
+    $('mmbar').classList.remove('show'); $('mmoverlay').classList.remove('show');
+    el.className = 'offzoho'; who.innerHTML = 'Not on a Zoho Analytics tab'; bnd.innerHTML = localLbl;
+    return updateButtons();
   }
-  const local = bound ? `<span>· local «${esc(bound.name || bound.workspace)}»</span>` : '';
-  if (!ctx) { el.className = 'off'; who.innerHTML = `Not on a Zoho Analytics tab ${local}`; }
-  else if (!ctx.workspace) { el.className = 'nows'; who.innerHTML = `Analytics · no workspace open ${local}`; }
-  else if (!bound) { el.className = 'nows'; who.innerHTML = `<b>workspace ${esc(ctx.workspace)}</b> <span>· press + to create it locally</span>`; }
-  else if (guardOk()) { el.className = 'bound'; who.innerHTML = `<b>${esc(bound.name || bound.workspace)}</b> <span>· ${esc(ctx.workspace)} ✓</span>`; }
-  else { el.className = 'mismatch'; who.innerHTML = `<b>tab is workspace ${esc(ctx.workspace)}</b> <span>≠ local «${esc(bound.name || bound.workspace)}» ✗</span>`; }
+  $('offoverlay').classList.remove('show');
+  await ensureBridge(id);
+  try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); ctx = r && r.ok ? r : null; } catch { ctx = null; }
+
+  if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Analytics tab (not ready — reload it)'; bnd.innerHTML = localLbl; }
+  else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
+  else {
+    who.innerHTML = `<span class="rlbl remote">Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
+    if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
+    else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
+    else { el.className = 'mismatch'; bnd.innerHTML = localLbl + ' ✗'; }
+  }
+
+  // The mismatch bar offers the one action that resolves it, and the overlay makes it impossible to
+  // browse one workspace's mirror while looking at another. Same guarantee as the CRM panel's.
+  const mm = !!(bound && ctx && ctx.workspace && !guardOk());
+  $('mmbar').classList.toggle('show', mm);
+  $('mmoverlay').classList.toggle('show', mm);
+  if (mm) {
+    $('detail').classList.remove('show');
+    $('mmtext').textContent = `The tab is workspace ${ctx.workspace}; this folder mirrors «${bound.name || bound.workspace}» (${bound.workspace}). Everything is disabled until they match.`;
+    $('mmsw').textContent = `Switch tab → «${bound.name || bound.workspace}» ↗`;
+    $('mmsw').className = 'znav';
+    $('mmsw').onclick = () => switchTab();
+  }
   updateButtons();
 }
+
+// Both are a plain navigation to a URL we construct ourselves — no clicking through Zoho's UI, and
+// nothing that depends on what the page happens to look like.
+const homeUrl = () => (bound && bound.origin ? `${bound.origin}/workspace/${bound.workspace}` : 'https://analytics.zoho.eu/');
+async function switchTab() {
+  const id = await analyticsTabId();
+  const url = homeUrl();
+  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
+}
+async function openZohoHome() {
+  const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = homeUrl();
+  if (a && HOST_RE.test(a.url || '')) await chrome.tabs.update(a.id, { url, active: true });
+  else await chrome.tabs.create({ url, active: true });
+}
+
 function updateButtons() {
-  $('addws').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
+  $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
+  $('wsdel').disabled = busy || !dir || !wsList.length;
   $('pull').disabled = busy || !dir || !guardOk();
   $('pull').title = $('pull').disabled && dir && ctx && ctx.workspace && !guardOk()
     ? 'The active tab is a different workspace from the one selected here.' : '';
@@ -547,26 +629,39 @@ async function renderDetail(v) {
 }
 
 // ---------- about ----------
+// The same dialog the CRM panel shows, with the same sections in the same order. A user who has both
+// should recognise it immediately; that is the whole point of keeping them twins.
 function showAbout() {
   const m = chrome.runtime.getManifest();
-  status(`${PRODUCT_NAME} ${m.version} — read-only, independent, not affiliated with Zoho.`, 'ok');
+  $('aboutbody').innerHTML =
+    `<div><b>${esc(PRODUCT_NAME)}</b> · v${esc(m.version)}</div>`
+    + `<div style="color:var(--muted)">Created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
+    + `<div class="dnote" style="margin-top:8px">Early work in progress — not published on the Chrome Web Store, and not yet documented on the site.</div>`
+    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> · <a href="${escA(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> · <a href="mailto:${escA(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a></div>`
+    + `<h4>Support</h4><div><a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a> · <a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">☕ Ko-fi</a></div>`
+    + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
+    + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
+    + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
+    + `The extension has no server of its own and sends nothing anywhere. What is written to your workspace folder — and what happens to it afterwards — is up to you.</div>`;
+  $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
 }
+function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
 
 // ---------- wiring ----------
-$('pickroot').onclick = pickRoot;
-$('addws').onclick = addWorkspace;
-$('wsrefresh').onclick = () => refreshWorkspaces();
-$('wssel').onchange = async () => {
-  const list = await listWorkspaces();
-  const w = list.find((x) => x.id === $('wssel').value);
-  if (w) await selectWorkspace(w);
-};
+$('wsroot').onclick = pickRoot;
+$('wsadd').onclick = addWorkspace;
+$('wsdel').onclick = delWorkspace;
+$('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
 $('pull').onclick = pullAll;
+$('gozoho').onclick = openZohoHome;
 $('find').oninput = render;
 $('findclear').onclick = () => { $('find').value = ''; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
 $('about').onclick = showAbout;
+$('aboutx').onclick = closeAbout;
+$('aboutok').onclick = closeAbout;
+$('scrim').onclick = closeAbout;
 $('dclose').onclick = () => { $('detail').classList.remove('show'); selectedId = null; render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
   b.onclick = async () => {
@@ -577,6 +672,15 @@ document.querySelectorAll('.dtab').forEach((b) => {
     if (v) await renderDetail(v);
   };
 });
+// A stored folder handle loses its permission between sessions and can only be re-granted from a
+// user gesture. Any click in the panel counts, so the first thing the user does restores access —
+// except clicks on the controls that would themselves ask, or on a dialog.
+document.addEventListener('click', async (e) => {
+  if (!root || rootGranted) return;
+  const t = e.target;
+  if (t.closest && (t.closest('#wsroot') || t.closest('.dlg') || t.closest('#offoverlay'))) return;
+  try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
+}, true);
 
 chrome.tabs.onActivated.addListener(() => refreshContext());
 chrome.tabs.onUpdated.addListener((_id, info) => { if (info.status === 'complete' || info.url) refreshContext(); });
