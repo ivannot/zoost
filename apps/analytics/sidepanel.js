@@ -283,9 +283,14 @@ async function refreshContext() {
   if (mm) {
     $('detail').classList.remove('show');
     $('mmtext').textContent = `The tab is workspace ${ctx.workspace}; this folder mirrors «${bound.name || bound.workspace}» (${bound.workspace}). Everything is disabled until they match.`;
-    $('mmsw').textContent = `Switch tab → «${bound.name || bound.workspace}» ↗`;
-    $('mmsw').className = 'znav';
-    $('mmsw').onclick = () => switchTab();
+    // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
+    // the workspace the tab is already in — switching to it if it exists locally, creating it if not.
+    $('mmgo').textContent = `Switch tab → «${bound.name || bound.workspace}» ↗`;
+    $('mmgo').onclick = () => switchTab();
+    const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
+    const sw = $('mmsw'); sw.className = 'znav';
+    if (match) { sw.textContent = `Switch workspace → «${match.name || match.folder}»`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
+    else { sw.textContent = `Create workspace for «${ctx.workspace}»`; sw.onclick = () => addWorkspace(); }
   }
   updateButtons();
 }
@@ -583,22 +588,22 @@ function shortDate(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-function renderCensus() {
-  const box = $('census');
-  if (!views.length) { box.innerHTML = ''; return; }
+// One line, not two rows of chips: the CRM made this call already and wrote down why — seven
+// filters wrapped, and the list below needs the vertical space more than the filter does. The counts
+// move into the option labels so nothing is lost by dropping the chips.
+function renderTypeFilter() {
+  const sel = $('typesel');
+  if (!views.length) { sel.innerHTML = '<option value="">—</option>'; sel.disabled = true; return; }
+  sel.disabled = false;
   const counts = new Map();
   for (const v of views) counts.set(v.type, (counts.get(v.type) || 0) + 1);
-  const chips = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) =>
-    `<span class="chip${typeFilter === t ? ' on' : ''}" data-type="${escA(t)}">${esc(t)} <b>${n}</b></span>`);
-  chips.unshift(`<span class="chip${typeFilter === null ? ' on' : ''}" data-type="">All <b>${views.length}</b></span>`);
-  if (deps) {
-    const n = views.filter(isOrphanCandidate).length;
-    chips.push(`<span class="chip${typeFilter === ORPHANS ? ' on' : ''}" data-type="${ORPHANS}" title="Nothing in this workspace depends on them — candidates, not a verdict">Nothing depends on <b>${n}</b></span>`);
-  }
-  box.innerHTML = chips.join('');
-  box.querySelectorAll('.chip').forEach((c) => {
-    c.onclick = () => { const t = c.dataset.type; typeFilter = t === '' ? null : t; render(); };
+  const opts = [`<option value="">All (${views.length})</option>`];
+  [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([t, n]) => {
+    opts.push(`<option value="${escA(t)}">${esc(t)} (${n})</option>`);
   });
+  if (deps) opts.push(`<option value="${ORPHANS}">Nothing depends on (${views.filter(isOrphanCandidate).length})</option>`);
+  sel.innerHTML = opts.join('');
+  sel.value = typeFilter || '';
 }
 
 function visibleViews() {
@@ -628,7 +633,7 @@ function visibleViews() {
 }
 
 function render() {
-  renderCensus();
+  renderTypeFilter();
   const list = $('list');
   if (!views.length) {
     list.innerHTML = `<div class="empty"><b>Nothing pulled yet.</b>
@@ -1436,6 +1441,7 @@ $('pull').onclick = pullAll;
 $('gozoho').onclick = openZohoHome;
 $('find').oninput = render;
 $('findclear').onclick = () => { $('find').value = ''; render(); };
+$('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
 $('sortdir').onclick = () => { sortDir = -sortDir; $('sortdir').innerHTML = sortDir === 1 ? '&#8593;' : '&#8595;'; render(); };
 $('graph').onclick = () => openSchemaGraph();

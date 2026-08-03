@@ -58,14 +58,21 @@ on both sides, down to the element ids. Two consequences, both binding:
   not the other silently breaks the continuity for the person using both. If a shared change can only
   land on one side for now, say so explicitly rather than letting the two drift apart in silence.
 
-Check it mechanically, not by memory — the same discipline as the documentation sweep:
+Check it with the tool, not by memory, and **not by a checklist either**. A checklist only ever
+contains the mistakes already made: this one grew a line after each of ten reported divergences and
+was still incomplete every time, because the next drift was always in a dimension nobody had thought
+to list. Run this instead — it compares the two panels rather than remembering to:
 
 ```bash
-# every id one panel has and the other does not is either a deliberate difference or a gap
-grep -o 'id="[^"]*"' apps/crm/sidepanel.html | sort -u > /tmp/a
-grep -o 'id="[^"]*"' apps/analytics/sidepanel.html | sort -u > /tmp/b
-comm -3 /tmp/a /tmp/b
+python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles, CSS declarations
+python3 tools/twincheck.py --all    # everything, product-specific parts included
 ```
+
+It reports elements present on one side only, shared elements whose class or inline style differs,
+and shared CSS rules whose declarations differ. It decides nothing — a difference may be deliberate.
+**It must print zero unexplained differences before a UI change is done.** Anything genuinely
+deliberate goes in its `EXPECTED` map *with the reason on the same line*; a checker that keeps
+reporting known-good noise is a checker nobody reads.
 
 Walk each difference and decide: is it genuinely product-specific (functions, modules and Deluge
 exist only in CRM; views, query tables and the ER model only in Analytics), or is it shared chrome
