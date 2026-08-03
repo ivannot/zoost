@@ -35,6 +35,19 @@ Analytics' brand blues and reds. Zoost disclaims affiliation on every surface it
 palette would say the opposite, and colour is the fastest way to imply a relationship that does not
 exist.
 
+## Where each one goes
+
+| Surface | Mark |
+|---|---|
+| `site/favicon.ico`, `icon-192`, `icon-512`, `apple-touch-icon` | family — the site is the suite |
+| the header brand on every page | family |
+| `site/crm-192.png`, `site/analytics-192.png` | the product cards on the home |
+| `apps/<app>/icons/*.png` | that app's own colour |
+
+The header is the suite, not whichever product's page you happen to be on. That is why it stays
+family slate everywhere, and why the product colour appears only on the cards, the accents and the
+extensions themselves.
+
 **Rendering the PNGs** (16 / 32 / 48 / 128, what the manifests want):
 
 ```bash
