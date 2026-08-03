@@ -118,10 +118,27 @@ and, **only if you enable the AI**, to the LLM provider you configure. Nothing g
 
 ---
 
+## What is in this repository
+
+Zoost is one root brand with **one extension per Zoho product**. They are separate extensions
+deliberately — different host permissions, a different purpose to declare, a different data model —
+and they carry their own version numbers.
+
+| Folder | What it is | State |
+|---|---|---|
+| `apps/crm` | **Zoost — workbench for Zoho CRM.** Everything this README describes. | Released, on the Chrome Web Store |
+| `apps/analytics` | **Zoost — workbench for Zoho Analytics.** Lists every view in a workspace, when each was last changed in design and in data, and what depends on what. | **Early work in progress. Not released, not on the Web Store, not documented on the site.** Load it unpacked if you want to try it, and expect it to change or break. |
+
+Nothing is shared between the two yet, on purpose: they read different platforms with different
+shapes, and factoring code out before both sides actually need it costs more than the duplication.
+
+---
+
 ## Install (developer / unpacked)
 
 1. Open `chrome://extensions`, enable **Developer mode**.
-2. **Load unpacked** → select this folder.
+2. **Load unpacked** → select **`apps/crm`**, not the repository root. Each extension lives in its
+   own folder under `apps/` and is loaded separately.
 3. Open Zoho CRM in a tab, then open the extension's **side panel**.
 
 ## Quick start

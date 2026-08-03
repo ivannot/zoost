@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Zoost — workbench for Zoho Analytics",
+  "version": "0.1.0",
+  "short_name": "Zoost Analytics",
+  "homepage_url": "https://zoost.it",
+  "description": "Independent workbench for Zoho Analytics: census every view in a workspace, see when each was last changed, find what nothing depends on.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://analytics.zoho.eu/*",
+    "https://analytics.zoho.com/*",
+    "https://analytics.zoho.in/*",
+    "https://analytics.zoho.com.au/*",
+    "https://analytics.zoho.jp/*",
+    "https://analytics.zohocloud.ca/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Zoost for Analytics",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://analytics.zoho.eu/*",
+        "https://analytics.zoho.com/*",
+        "https://analytics.zoho.in/*",
+        "https://analytics.zoho.com.au/*",
+        "https://analytics.zoho.jp/*",
+        "https://analytics.zohocloud.ca/*"
+      ],
+      "js": [
+        "content-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Zoost for Zoho Analytics.
+       Same mark as the CRM icon — a Z, which rotated reads as an N. The lower bar runs on to become
+       an axis and three slim columns rise from it, so the whole thing reads as a chart that is still
+       a Z.
+       The Z is kept at full size deliberately. The columns are the part that gives way, because the
+       icon is seen at 16px in the toolbar far more often than at 128, and at that size the letter is
+       all that survives — there, teal against the CRM's blue is what actually tells them apart. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#56d6c0"/>
+      <stop offset="1" stop-color="#109b8c"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#g)"/>
+  <g fill="#fff">
+    <!-- columns first: the Z always sits on top -->
+    <rect x="82" y="60" width="7" height="20" rx="2" opacity=".5"/>
+    <rect x="92" y="50" width="7" height="30" rx="2" opacity=".65"/>
+    <rect x="102" y="40" width="7" height="40" rx="2" opacity=".8"/>
+    <!-- the Z, at the same weight as the CRM mark -->
+    <rect x="26" y="36" width="56" height="15" rx="3"/>
+    <polygon points="82,51 42,80 26,80 66,51"/>
+    <!-- the lower bar runs on to the right, becoming the axis the columns stand on -->
+    <rect x="26" y="80" width="83" height="15" rx="3"/>
+  </g>
+</svg>

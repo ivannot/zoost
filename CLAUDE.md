@@ -137,6 +137,17 @@ A control that does nothing in the active branch must be hidden, not shown and i
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 
+**Analytics takes the workspace from the URL, not from a list.** `/workspace/{id}` carries it, so
+there is nothing to scrape and nothing to be fragile about — and the workspace-list endpoint is not
+needed at all. This is the same shape as the CRM panel taking the org from the tab it is looking at:
+the user says which workspace by being in it. Outside a workspace URL the panel says so and every
+action is disabled, rather than picking one.
+
+**"Nothing depends on it" is a candidate, never a verdict.** The dependency scan asks Analytics its
+own question, one view at a time, and Analytics only knows what its views read from each other. A
+shared link, a scheduled export, an embedded report or an API consumer is invisible to it. Same
+discipline as the connection usage counts in CRM: the coverage gap is stated next to the number.
+
 **AI configuration lives in the options page**, not the side panel. The panel is ~400px wide and
 those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
 `window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.
@@ -170,6 +181,27 @@ These all failed **silently**, with no console error. They are the expensive kin
   auth failure — misleading. `api(path, csrfPrefix)` in `content-bridge.js` carries the prefix; the
   connections catalogue (`/deluge/api/ui/v1/{org}/services/ZohoCRM/connections`) uses `drepn`, and
   needs the `zuid` (scraped from the page like the org id).
+- **An HTML numeric entity written into a JavaScript string becomes that byte.** `&#0;` used as a
+  sentinel inside a JS string literal put a real NUL byte in the source. Nothing failed: the file
+  parsed, the editor showed nothing, and `grep` quietly reported "Binary file matches" and returned
+  no lines — so a search for the sentinel found it nowhere. The mirror image of the trap above it
+  (JS escapes inside HTML text). Sentinels are plain ASCII: `'__orphans__'`, not an entity.
+- **`toISOString()` on a date parsed as local time shifts the day.** `new Date(' 03 Jul 2025')` is
+  local midnight; `.toISOString()` converts to UTC, so anywhere east of Greenwich every date reads
+  one day early. Format from `getFullYear()/getMonth()/getDate()`, never through UTC.
+- **Analytics dates arrive already localized; only one field is machine-readable.** In `VIEWLIST`,
+  `ACT_VIEW_MODTIME` is epoch milliseconds — the only value that can be sorted or formatted.
+  `LAST_DATA_MODIFY` comes back as `"1 ora minuto fa"` and `LAST_DESIGN_MODIFY` as `" 03 Jul 2025"`,
+  both rendered in the user's interface language. Those are displayed verbatim and never parsed:
+  reading a localized date is the same mistake as matching a localized button label, and it fails on
+  the first user whose UI is not English. Consequence in the UI: Design is shown, and stated as
+  unsortable with the reason; Data is a real timestamp and sorts.
+- **Analytics answers `200` with `{"status":"failure"}`.** The HTTP code alone is not the success
+  signal, unlike CRM. `api()` in the Analytics bridge treats anything that is not an explicit
+  success as an error.
+- **Analytics endpoints take no CSRF token at all** — session cookies plus
+  `X-Requested-With: XMLHttpRequest` is the whole contract. Verified absent in a capture; do not add
+  one "to be safe".
 
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are
