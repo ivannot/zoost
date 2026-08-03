@@ -53,4 +53,10 @@ footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);f
 footer a{color:var(--muted)} footer a:hover{color:var(--teal)}
 footer .flinks{margin:0 0 14px}
 footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
+/* Version alignment badge — hidden until site.js has something true to put in it. */
+#vers{display:none}
+#vers.on{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 12px;font:11.5px var(--mono);color:var(--muted)}
+#vers .vitem{white-space:nowrap}
+#vers .vitem b{color:var(--ink);font-weight:600}
+#vers .vitem i{font-style:normal;opacity:.7}
 .sep{color:var(--border);margin:0 7px}

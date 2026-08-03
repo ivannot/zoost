@@ -150,9 +150,16 @@
     and is not intended for use by anyone under 16.</p>
 
   <h2>8. This website</h2>
-  <p>zoost.it is a static site. It sets no cookies, embeds no trackers, loads no third-party fonts,
-    scripts or analytics, and does not profile visitors. Your hosting provider may keep standard server
-    access logs; those are outside the scope of this policy.</p>
+  <p>zoost.it sets no cookies, embeds no trackers, loads no third-party fonts, scripts or analytics, and
+    does not profile visitors. The pages are static files; the only script is one small file served from
+    this same domain, which fills in the copyright year and the version badge in the footer.</p>
+  <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's edge
+    and asks two public sources — the extension's Chrome Web Store listing page, and the GitHub API for the
+    repository's newest tag and the date the site content last changed — so the footer can show whether the
+    published, tagged and documented versions are in step. Those requests are made <b>by the server, not by
+    your browser</b>: nothing about you is sent to Google or GitHub, no identifier of yours is involved, and
+    the answer is cached for everyone alike. If a source is unreachable the badge simply reads "unknown".</p>
+  <p>Your hosting provider may keep standard server access logs; those are outside the scope of this policy.</p>
 
   <h2>9. Changes</h2>
   <p>If a future version of Zoost changes what data is handled or where it travels, this policy will be
@@ -164,6 +171,7 @@
 
 <footer>
   <div class="wrap">
+    <div id="vers"></div>
     <div class="flinks">
       <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a><span class="sep">·</span>
       <a href="/docs.html">How to use</a><span class="sep">·</span>
@@ -175,7 +183,7 @@
       <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
     </div>
     <p class="legal">
-      Created by Ivan Notaristefano (with the support of Claudio). Copyright 2026. Licensed under the Apache License 2.0 and provided
+      Created by Ivan Notaristefano (with the support of Claudio). Copyright <span class="cyear">2026</span>. Licensed under the Apache License 2.0 and provided
       <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
       liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
       support or maintenance.
@@ -188,5 +196,6 @@
   </div>
 </footer>
 
+<script src="/site.js" defer></script>
 </body>
 </html>

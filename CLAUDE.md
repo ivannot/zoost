@@ -18,6 +18,7 @@ It is **read-only towards Zoho**. It never writes back, and never touches CRM re
 ```
 src/      the extension. Exactly what ships. Nothing else lives here.
 site/     zoost.it — deployed automatically by Cloudflare on push to main
+functions/ Cloudflare Pages Functions for zoost.it (server-side, edge). `functions/api/x.js` → /api/x
 store/    Chrome Web Store listing copy and permission justifications
 dist/     build output, git-ignored
 ```
@@ -61,6 +62,15 @@ is inside a folder, and `chrome://extensions` wants the folder.
   appear after a navigation, recovering by a known action (re-injecting the bridge), handling known
   API variants (OpenAI `max_tokens` vs `max_completion_tokens`), and one retry on a genuinely
   transient failure (network, 429, 5xx) — never on a deterministic 4xx.
+
+  **This rule binds the extension absolutely; the website is judged differently.** The extension is
+  where work happens: someone acts on what it says, so an uncertain answer there can cost real time
+  or real data. `zoost.it` is informational — if a scraped number goes missing the page says
+  "unknown" and nobody is harmed. So the site may depend on a source we do not control (the version
+  badge reads the Chrome Web Store listing's markup, since Google publishes no API), provided the
+  dependency **fails visibly and cannot lie**: validate the shape of what came back, discard anything
+  that does not match, show "unknown" rather than a stale or guessed value, and cache so a blip is
+  invisible. Never carry this licence back into `src/`.
 
 ## Architectural decisions worth not re-litigating
 
@@ -299,3 +309,11 @@ the same submission.
 
 Pushing to `main` also deploys `site/` to zoost.it via Cloudflare. Documentation goes live with
 the commit, so it must be correct at commit time, not at release time.
+
+The site is static plus one edge function: `functions/api/versions.js` reports the Web Store
+version, the newest git tag and when `site/` last changed, so the footer shows whether the three are
+in step. It reads the **tags** rather than GitHub Releases, because the routine above always creates
+a tag while attaching a Release is a manual step that may not happen. Tags are semver-sorted here
+rather than trusting the API's unspecified order. If Cloudflare ever stops serving `/api/versions`,
+check the Pages project's **Root directory**: Functions must live in `/functions` at the root the
+project is built from.
