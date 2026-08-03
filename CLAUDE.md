@@ -388,6 +388,18 @@ These all failed **silently**, with no console error. They are the expensive kin
   reading a localized date is the same mistake as matching a localized button label, and it fails on
   the first user whose UI is not English. Consequence in the UI: Design is shown, and stated as
   unsortable with the reason; Data is a real timestamp and sorts.
+- **An empty string is falsy, so "empty" and "missing" become one message.** Five surfaces wrote
+  `body || '(could not be read)'` for a query table's SQL. A query Analytics returned empty read as
+  one that had never been fetched — and the assistant, told the SQL was unreadable, reconstructed
+  what the query probably did from column names and presented it as its logic. Keep the two apart:
+  `null` is unreadable, `''` is empty, and one helper decides the wording so the surfaces cannot
+  drift. The same shape of bug is anywhere `x || 'fallback'` guards a string that may legitimately be
+  empty.
+- **A response missing the field you came for is a failure, not a default.** `querySql` coerced an
+  absent `SQLQUERY` to `''`: the pull reported success, wrote an empty file, and the gap was
+  invisible until an assistant tripped over it. It throws now, so the item lands in `pullFailed`,
+  is counted, and **Retry failed** can pick it up. Same rule as the dependency ids — validate where
+  the value enters.
 - **Analytics answers `200` with `{"status":"failure"}`.** The HTTP code alone is not the success
   signal, unlike CRM. `api()` in the Analytics bridge treats anything that is not an explicit
   success as an error.

@@ -236,12 +236,17 @@
   async function querySql(id) {
     const j = await api(`/clientapi/sqltable/workspaces/${ws()}/views/${id}/editsql`);
     const d = (j && j.data) || {};
+    // A response without SQLQUERY is a shape this does not understand, not a query with no text.
+    // Coercing it to '' made the pull report success, write an empty file, and leave the panel saying
+    // "could not be read" about something that had never been read at all. Fail here instead: the
+    // item lands in pullFailed, gets counted, and Retry can pick it up.
+    if (typeof d.SQLQUERY !== 'string') throw new Error('the response carried no SQLQUERY');
     const inv = (d.PAROBJIDINVCOLS && d.PAROBJIDINVCOLS.values) || {};
     const sources = {};
     for (const [tid, entry] of Object.entries(inv)) sources[String(tid)] = expandCols(entry);
     return {
       id: String(id),
-      sql: typeof d.SQLQUERY === 'string' ? d.SQLQUERY : '',
+      sql: d.SQLQUERY,
       parents: (Array.isArray(d.PAROBJID) ? d.PAROBJID : []).map(String),
       sources,        // { sourceTableId: { name, kind, columns[] } } — column-level lineage
     };

@@ -472,7 +472,7 @@ async function writeToDisk(info) {
   for (const [id, q] of Object.entries(sqls)) {
     const v = views.find((x) => x.id === id);
     const stem = stemOf(v ? v.name : id, id);
-    await writeFile(`sql/${stem}.sql`, q.sql || '');
+    await writeFile(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
   await writeJson('sql/_index.json', index);
@@ -499,6 +499,16 @@ async function loadFromDisk() {
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
 }
+
+// "Empty" and "unreadable" are different facts and were the same message: every surface wrote
+// `body || 'could not be read'`, and an empty string is falsy. So a query Analytics returned empty —
+// or one whose file was written empty by the bug above — was reported as never having been read,
+// which sent the assistant off reconstructing SQL it could simply have been told was absent.
+//   null  → the file is not there or could not be opened
+//   ''    → Analytics answered with an empty query
+const SQL_UNREADABLE = '(the .sql file could not be read — use Pull on this view to fetch it again)';
+const SQL_EMPTY = '(Analytics returned this query table with no SQL text at all)';
+const sqlText = (body) => (body == null ? SQL_UNREADABLE : (body.trim() ? body : SQL_EMPTY));
 
 // SQL bodies are not held in memory after a reload — they are read from their file on demand, which
 // is also what keeps a large workspace from sitting in the panel's heap.
@@ -810,9 +820,9 @@ async function renderDetail(v) {
   }
   if (detailTab === 'sql') {
     const sql = await sqlBodyOf(v.id);
-    body.innerHTML = '<div class="dpad">' + (sql
+    body.innerHTML = '<div class="dpad">' + (sql && sql.trim()
       ? `<pre class="sql">${esc(sql)}</pre>`
-      : `<div class="empty" style="padding:0"><b>The SQL file could not be read.</b> Use Pull above to fetch just this one.</div>`) + '</div>';
+      : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL file could not be read.' : 'No SQL text.'}</b> ${esc(sqlText(sql))}</div>`) + '</div>';
     return;
   }
   // lineage
@@ -1034,7 +1044,7 @@ async function aiSystemPrompt(withTools, cap) {
     ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view — structure, foreign keys, SQL and lineage — so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
     : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
   return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
-    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n\n`
+    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic \u2014 a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
     + `${window.ZOHO_ANALYTICS_SQL.text()}\n`
     + `${focus}\n# WORKSPACE INDEX\n${seed}`;
 }
@@ -1092,7 +1102,7 @@ async function aiExecTool(name, input) {
     if (q) {
       const body = await sqlBodyOf(v.id);
       const src = Object.entries(q.sources || {}).map(([, sd]) => `${sd.name} (${sd.columns.length} columns involved)`).join(', ');
-      out += `\nsource tables: ${src || '(none recorded)'}\nSQL:\n${body || '(could not be read)'}\n`;
+      out += `\nsource tables: ${src || '(none recorded)'}\nSQL:\n${sqlText(body)}\n`;
     }
     out += d
       ? `\nreads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}\n`
@@ -1106,7 +1116,7 @@ async function aiExecTool(name, input) {
     if (!q) return `${v.name} is a ${v.type}, not a query table — it has no SQL.`;
     const body = await sqlBodyOf(v.id);
     const src = Object.entries(q.sources || {}).map(([, sdef]) => `${sdef.name} (${sdef.columns.length} columns involved)`).join(', ');
-    return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${body || '(the SQL file could not be read)'}`;
+    return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${sqlText(body)}`;
   }
   if (name === 'search_sql') {
     // With the matching line beside each name the model can usually answer without opening the
@@ -1397,7 +1407,7 @@ async function buildExportHtml(sc) {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         const q = sqls[v.id]; if (!q) continue;
         const src = await sqlBodyOf(v.id);
-        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(src || '(could not be read)')}</pre>`;
+        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(sqlText(src))}</pre>`;
       }
     } else if (x.h) {
       const H = x.h;
@@ -1448,7 +1458,7 @@ async function buildExportMarkdown(sc) {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
         const q = sqls[v.id]; if (!q) continue;
         const src = await sqlBodyOf(v.id);
-        out += `### ${v.name}\n\n\u0060\u0060\u0060sql\n${src || '-- could not be read'}\n\u0060\u0060\u0060\n\n`;
+        out += `### ${v.name}\n\n\u0060\u0060\u0060sql\n${src && src.trim() ? src : '-- ' + sqlText(src)}\n\u0060\u0060\u0060\n\n`;
       }
     } else if (x.h) {
       const H = x.h;
