@@ -37,7 +37,7 @@
   <h1>How to use Zoost</h1>
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
-  <p class="upd">Covers Zoost 1.5 · updated 3 August 2026</p>
+  <p class="upd">Covers Zoost 1.6 · updated 3 August 2026</p>
 
   <div class="toc">
     <b>On this page</b>
@@ -129,6 +129,10 @@ git commit -m "baseline"</code></pre>
       comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
       not complexity, and every outbound call is work Zoho meters — how to weigh that is your call, not ours.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
+    <li><b class="ui">Sort</b> reorders the list by <b>lines</b>, <b>API calls</b>, <b>size</b> or
+      <b>last modified</b>, longest/highest first. A numeric sort drops the namespace grouping and shows one
+      flat list — the namespace moves onto each row — because "which are the biggest" is a different question
+      from "what is in this namespace". <b class="ui">Name (grouped)</b> returns to the default.</li>
     <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide — see
       <a href="#connections">section 8</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
@@ -246,6 +250,9 @@ git commit -m "baseline"</code></pre>
   <p>With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers,
     reads schemas, looks up a connection and who uses it, and searches code by itself. Every tool it uses is
     shown in the chat.</p>
+  <p>It also knows each function's size and outbound-call counts, and can filter by them — so
+    "how many functions are longer than 150 lines?" or "which ones make more than five API calls?" are answered
+    from the numbers, not estimated.</p>
 
   <h3>OpenAI (ChatGPT) — single-shot</h3>
   <ol>

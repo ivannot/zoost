@@ -84,7 +84,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   outbound calls it makes — `invokeurl`, `zoho.crm.*` and the other Zoho service tasks, counted
   outside comments and string literals. Counts, not a score: length is verbosity, not complexity,
   and you decide what the numbers mean. Computed from the sources on disk — no extra Zoho calls,
-  nothing stored, so it can never disagree with the file.
+  nothing stored, so it can never disagree with the file. Sort the list by any of them to see where
+  they concentrate; the AI can filter by them too (`list_functions` takes `min_lines` / `min_calls`),
+  so "how many functions are over 150 lines" is answered from the numbers, not estimated.
 
 **Health / audit** (candidates to review — never automatic deletions)
 - Three tabs — **Functions** (orphans, unresolved calls, ambiguous calls), **Wiring** (broken
@@ -172,7 +174,9 @@ offer zero-retention.
 - Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
 - Mode segments: **Functions · Modules · Workflows · Schedules · Connections**.
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
-  name toggle (internal/display), and a **Type / Kind / Status** filter (one-line dropdown).
+  name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
+  dropdown — name (grouped by namespace) or lines / API calls / size / last modified, which sorts
+  flat, highest first.
 
 **Context bar** shows the active Zoho tab (`instance · org · prod|sandbox`) and whether it matches
 the workspace. Not on a Zoho tab → a **Go to Zoho** overlay. Different org than the workspace → a

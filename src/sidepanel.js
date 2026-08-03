@@ -20,6 +20,7 @@ let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
+let treeSort = 'name';   // 'name' keeps the namespace grouping; any other key sorts flat, highest first
 let currentPath = null, pvHist = [];
 let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
@@ -240,26 +241,61 @@ async function filterByConnection(name) {
   if (viewMode !== 'functions') setMode('functions'); else renderTree();
 }
 function clearConnectionFilter() { connectionFilter = null; connFilterSet = null; renderTree(); }
+// One row builder, shared by the grouped and the sorted-flat rendering, so the two cannot drift.
+function fnRowEl(e) {
+  const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
+  el.setAttribute('aria-selected', e.path === currentPath);
+  const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
+  const stCh = e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
+  const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' — click to retry') : e.stale ? 'Older data (no connections / author) — click to refresh' : e.downloaded ? 'In workspace — click to re-download from Zoho' : 'Not in workspace — click to download';
+  const st = e.stats;
+  const sizeBadge = st ? `<span class="rest rf" title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB">${st.lines}L</span>`
+    + (st.apiCalls ? `<span class="rest rl" style="color:#e0a86b" title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}">${st.apiCalls}↗</span>` : '') : '';
+  // In a sorted-flat list the namespace grouping is gone, so each row carries its own namespace.
+  const nsTag = treeSort !== 'name' ? `<span class="rest" style="color:#6b7688">${escHtml(e.namespace || '')}</span>` : '';
+  el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}${nsTag}${sizeBadge}`;
+  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
+  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
+  return el;
+}
+// Sorting by a number answers a different question from browsing by namespace, so a numeric sort
+// drops the grouping and goes flat, highest first. Descending only: these are "which are the big
+// ones" questions, and an ascending list of the smallest functions answers nothing anyone asks.
+const TREE_SORTS = {
+  name: null,
+  lines: { label: 'lines', get: (e) => (e.stats ? e.stats.lines : -1) },
+  calls: { label: 'outbound calls', get: (e) => (e.stats ? e.stats.apiCalls : -1) },
+  size: { label: 'size in bytes', get: (e) => (e.stats ? e.stats.chars : -1) },
+  modified: { label: 'last modified', get: (e) => (e.updatedTime ? (Date.parse(String(e.updatedTime).replace(' ', 'T')) || 0) : -1) },
+};
 function renderTree() {
   if (viewMode !== 'functions') return;
   const term = $('find').value.trim().toLowerCase();
-  const byNs = {};
-  treeData
+  const shown = treeData
     .filter((e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter))
     .filter((e) => !connFilterSet || connFilterSet.has(e.path))
-    .filter((e) => !term || (e.api_name || '').toLowerCase().includes(term) || (e.display_name || '').toLowerCase().includes(term))
-    .forEach((e) => { (byNs[e.namespace] ||= []).push(e); });
+    .filter((e) => !term || (e.api_name || '').toLowerCase().includes(term) || (e.display_name || '').toLowerCase().includes(term));
   const tree = $('tree'); tree.innerHTML = '';
   if (connectionFilter) {
-    const total = Object.values(byNs).reduce((n, l) => n + l.length, 0);
     const b = document.createElement('div'); b.className = 'connbanner';
-    b.innerHTML = `<span><b>${total}</b> function(s) use <b>${escHtml(connectionFilter)}</b></span><span class="connclear" title="Clear filter">✕</span>`;
+    b.innerHTML = `<span><b>${shown.length}</b> function(s) use <b>${escHtml(connectionFilter)}</b></span><span class="connclear" title="Clear filter">✕</span>`;
     b.querySelector('.connclear').onclick = clearConnectionFilter;
     tree.appendChild(b);
   }
-  const nsKeys = Object.keys(byNs).sort();
-  if (!nsKeys.length) { const m = document.createElement('div'); m.className = 'treemsg'; m.textContent = 'No matches.'; tree.appendChild(m); return; }
-  nsKeys.forEach((ns) => {
+  if (!shown.length) { const m = document.createElement('div'); m.className = 'treemsg'; m.textContent = 'No matches.'; tree.appendChild(m); return; }
+  const sorter = TREE_SORTS[treeSort];
+  if (sorter) {
+    const list = shown.slice().sort((a, b) => sorter.get(b) - sorter.get(a) || labelOf(a).localeCompare(labelOf(b)));
+    const noData = list.filter((e) => sorter.get(e) < 0).length;
+    const hdr = document.createElement('div'); hdr.className = 'srhdr';
+    hdr.textContent = `${list.length} function(s) by ${sorter.label}, highest first`
+      + (noData ? ` · ${noData} without data (not downloaded yet)` : '');
+    tree.appendChild(hdr);
+    list.forEach((e) => tree.appendChild(fnRowEl(e)));
+    return;
+  }
+  const byNs = {}; shown.forEach((e) => { (byNs[e.namespace] ||= []).push(e); });
+  Object.keys(byNs).sort().forEach((ns) => {
     const list = byNs[ns].sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
     const isCol = collapsed.has(ns);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
@@ -267,20 +303,7 @@ function renderTree() {
     g.onclick = () => { isCol ? collapsed.delete(ns) : collapsed.add(ns); renderTree(); };
     tree.appendChild(g);
     if (isCol) return;
-    list.forEach((e) => {
-      const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path; el.dataset.id = e.id || '';
-      el.setAttribute('aria-selected', e.path === currentPath);
-      const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
-      const stCh = e.error ? '\u27f3' : e.stale ? '\u25d0' : e.downloaded ? '\u25cf' : '\u25cb';
-      const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.stale ? 'Older data (no connections / author) \u2014 click to refresh' : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
-      const st = e.stats;
-      const sizeBadge = st ? `<span class="rest rf" title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB">${st.lines}L</span>`
-        + (st.apiCalls ? `<span class="rest rl" style="color:#e0a86b" title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}">${st.apiCalls}↗</span>` : '') : '';
-      el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${e.rest ? '<span class="rest">REST</span>' : ''}${sizeBadge}`;
-      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
-      el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
-      tree.appendChild(el);
-    });
+    list.forEach((e) => tree.appendChild(fnRowEl(e)));
   });
 }
 async function rebuildTree() {
@@ -293,7 +316,7 @@ async function rebuildTree() {
   for (const mp of metaPaths) {
     try {
       const meta = JSON.parse(await readFile(mp)); const dgPath = mp.replace(/\.meta\.json$/, '.dg');
-      downloadedById.set(String(meta.id), { path: dgPath, category: meta.category, source: meta.source, name: meta.name, rest: (meta.rest_api || []).some((r) => r.active), namespace: meta.nameSpace || dgPath.split('/')[0], display_name: meta.display_name, sv: meta.sv || 0 });
+      downloadedById.set(String(meta.id), { path: dgPath, category: meta.category, source: meta.source, name: meta.name, rest: (meta.rest_api || []).some((r) => r.active), namespace: meta.nameSpace || dgPath.split('/')[0], display_name: meta.display_name, sv: meta.sv || 0, updatedTime: meta.updatedTime || null });
     } catch (_) {}
   }
   // the list index shows ALL functions (including not-yet-downloaded); fall back to on-disk meta for legacy workspaces
@@ -304,12 +327,12 @@ async function rebuildTree() {
       const id = String(e.id); const d = downloadedById.get(id);
       const path = d ? d.path : `${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
-      return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, stale: !!d && (d.sv || 0) < META_SV, error: false };
+      return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, stale: !!d && (d.sv || 0) < META_SV, error: false, updatedTime: (d && d.updatedTime) || null };
     });
   } else {
     treeData = [...downloadedById.entries()].map(([id, d]) => {
       index.set(id, { path: d.path, category: d.category, source: d.source, name: d.name, rest: d.rest });
-      return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, stale: (d.sv || 0) < META_SV, error: false };
+      return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, stale: (d.sv || 0) < META_SV, error: false, updatedTime: d.updatedTime || null };
     });
   }
   renderTree(); updateMissingButton(); attachFnStats();
@@ -456,9 +479,11 @@ async function showCallers(path) {
       if (st.crm) parts.push(`${st.crm} zoho.crm`);
       if (st.zoho) parts.push(`${st.zoho} other Zoho`);
       if (st.sendmail) parts.push(`${st.sendmail} sendmail`);
+      // The caveat is written out, not hidden in a tooltip: a number whose meaning you cannot see
+      // is a number you can misread.
       html += `<div class="statline"><b>Size:</b> ${st.lines} lines (${st.codeLines} code) \u00b7 ${(st.chars / 1024).toFixed(1)} KB`
         + ` &nbsp;\u00b7&nbsp; <b>Outbound calls:</b> ${st.apiCalls ? escHtml(parts.join(', ')) : 'none'}`
-        + `<span class="statnote" title="Counts, not a score. Comments and string literals are excluded. Length measures verbosity, not complexity \u2014 how to read these is up to you.">\u24d8</span></div>`;
+        + `<span class="statnote">counted outside comments and strings \u00b7 length is verbosity, not complexity</span></div>`;
     }
     const modBits = [];
     if (node.modified_by) modBits.push('by ' + escHtml(node.modified_by));
@@ -653,6 +678,16 @@ function buildTypeChips() {
     (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
+  // Functions only: the numeric columns are what you sort by, and only functions have them.
+  if (viewMode === 'functions') {
+    const sl = document.createElement('span'); sl.className = 'fsellbl'; sl.textContent = 'Sort';
+    const ss = document.createElement('select'); ss.className = 'filtersel'; ss.setAttribute('aria-label', 'Sort functions');
+    [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', 'Last modified']]
+      .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
+    ss.value = treeSort;
+    ss.onchange = () => { treeSort = ss.value; renderTree(); };
+    wrap.appendChild(sl); wrap.appendChild(ss);
+  }
 }
 $('nameToggle').onclick = () => {
   if (viewMode === 'functions') {
@@ -896,7 +931,7 @@ async function aiSystemPromptB(withTools) {
   return `You are an expert assistant for Zoho CRM Deluge scripting and CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${focus}\n# ORG INDEX\n${seed}`;
 }
 const AI_TOOLS = [
-  { name: 'list_functions', description: 'List workspace functions, optionally filtered by a substring of "namespace.name".', input_schema: { type: 'object', properties: { filter: { type: 'string' } } } },
+  { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) — use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
   { name: 'get_function', description: 'Full Deluge source and metadata of a function identified by "namespace.name" (or just its name).', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'who_calls', description: 'List functions that call the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_callees', description: 'List functions called by the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
@@ -908,7 +943,18 @@ const AI_TOOLS = [
 async function aiExecTool(name, input) {
   const g = await ensureGraph(); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
-  if (name === 'list_functions') { const flt = (input.filter || '').toLowerCase(); const list = Object.values(nodes).map((n) => n.namespace + '.' + n.name).filter((id) => !flt || id.toLowerCase().includes(flt)).sort(); return list.length ? list.join('\n') : '(no functions)'; }
+  if (name === 'list_functions') {
+    const flt = (input.filter || '').toLowerCase();
+    const minL = Number(input.min_lines) || 0, minC = Number(input.min_calls) || 0;
+    const rows = Object.values(nodes)
+      .map((n) => ({ id: n.namespace + '.' + n.name, s: n.stats || { lines: 0, apiCalls: 0 } }))
+      .filter((r) => (!flt || r.id.toLowerCase().includes(flt)) && r.s.lines >= minL && r.s.apiCalls >= minC)
+      .sort((a, b) => b.s.lines - a.s.lines || a.id.localeCompare(b.id));
+    const crit = [flt ? `name contains "${input.filter}"` : '', minL ? `>= ${minL} lines` : '', minC ? `>= ${minC} outbound calls` : ''].filter(Boolean).join(', ') || 'all';
+    if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.`;
+    return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
+      + rows.map((r) => `${r.id} — ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
+  }
   if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : 'Function not found: ' + input.name; }
