@@ -120,6 +120,20 @@ and, **only if you enable the AI**, to the LLM provider you configure. Nothing g
 
 ---
 
+## Which commit is on the Web Store
+
+[`RELEASES.md`](RELEASES.md) lists every version submitted to the Store with the commit it was built
+from and the SHA-256 of the package that was uploaded. The build is reproducible, so you can check
+that yourself rather than take our word for it:
+
+```bash
+git checkout <tag> && ./build.sh <app>
+shasum -a 256 dist/zoost-<app>-<version>-store.zip
+```
+
+It also says what the table cannot tell you — the CRM version currently published predates this
+repository and has no commit to point at.
+
 ## What is in this repository
 
 Zoost is one root brand with **one extension per Zoho product**. They are separate extensions

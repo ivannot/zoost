@@ -554,10 +554,28 @@ No zip, no reinstall. Just tell me what to look at and what should have changed.
 **A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
 minor for features. Propose the commit message; do not batch unrelated work into one commit.
 
-**A release → tag plus package.** Tag `vX.Y.Z`, push with `--follow-tags`, run `./build.sh`, and
-tell me to attach `dist/zoost-<app>-X.Y.Z-store.zip` to a GitHub Release for that tag.
+**A release → `tools/release.sh <app>`.** It refuses a dirty tree, builds the package **twice** and
+compares the hashes, tags the commit `<app>-v<version>`, and appends the row to `RELEASES.md`.
+Pushing and uploading stay manual, because both leave the machine.
+
+Tags are per product — `crm-v1.8.1`, not `vX.Y.Z`: with two extensions a bare version says nothing
+about which one. The single legacy `v1.0.0` predates that and is left alone; moving a published ref
+is worse than an untidy one.
+
+**The build is reproducible, and that is load-bearing.** Publishing a SHA-256 is worth nothing if two
+builds of the same commit differ — a reviewer who rebuilds gets another number and can prove nothing
+either way. Ours did differ, because `zip` stores each file's mtime and walks the directory in
+filesystem order. `build.sh` now stamps every file with the commit's own date, sorts the file list
+before handing it to `zip`, and passes `-X`. Verify with three consecutive builds: same hash, or the
+guarantee is gone.
+
 **The zip is never committed** — it is a build artefact, reproducible from the tagged commit, and
 `dist/` is git-ignored. It lives as a Release attachment, nowhere else.
+
+**Record what cannot be verified, rather than omitting it.** `RELEASES.md` states that CRM 0.13.8 —
+the version on the Store — predates this repository and has no commit to point at, and that
+Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A
+verifiable record that quietly papered over its first entries would be worth less than none.
 
 **A release with user-visible change → store copy as well.** Regenerate whatever in
 `store/store-listing.md` no longer matches: description, single purpose, permission
