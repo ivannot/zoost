@@ -124,15 +124,24 @@ async function listWorkspaces() {
   const base = await appRoot(false);
   if (!base) return [];
   const out = [];
-  for await (const e of base.values()) {
-    if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
-    try {
-      const fh = await e.getFileHandle(CFG);
-      const cfg = JSON.parse(await (await fh.getFile()).text());
-      if (cfg && cfg.workspace) out.push({ id: String(cfg.workspace), name: cfg.name || '', folder: e.name, handle: e, cfg });
-    } catch (_) { /* a folder without a config is not a workspace; silently skipped */ }
+  // The enumeration itself can fail — a handle whose permission lapsed, a folder moved or removed
+  // since the browser stored it. Unguarded, that threw out of here and left the panel with no
+  // workspace list and no explanation. A folder we cannot read is a state to report, not a crash.
+  try {
+    for await (const e of base.values()) {
+      if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
+      try {
+        const fh = await e.getFileHandle(CFG);
+        const cfg = JSON.parse(await (await fh.getFile()).text());
+        if (cfg && cfg.workspace) out.push({ id: String(cfg.workspace), name: cfg.name || '', folder: e.name, handle: e, cfg });
+      } catch (_) { /* a folder without a config is not a workspace; silently skipped */ }
+    }
+  } catch (e) {
+    rootGranted = false;                       // most often this is a lapsed permission
+    status(`Could not read «${root ? root.name : '?'}/${APP_DIR}»: ${e.message || e}. Click the folder button to grant access again.`, 'warn');
+    return out;                                // whatever was read before the failure is still true
   }
-  return out.sort((a, b) => (a.name || a.folder).localeCompare(b.name || b.folder));
+  return out.sort((a, b) => String(a.name || a.folder || '').localeCompare(String(b.name || b.folder || '')));
 }
 
 async function refreshWorkspaces() {
@@ -153,7 +162,7 @@ async function refreshWorkspaces() {
   // what it sees instead of reporting "no workspaces" while the folders are plainly there.
   let stray = 0;
   try {
-    for await (const e of root.values()) {
+    for await (const e of root.values()) {   // same exposure as above; the catch below covers it
       if (e.kind !== 'directory' || APP_DIRS.includes(e.name) || e.name.startsWith('.')) continue;
       try { await e.getFileHandle(CFG); stray++; } catch (_) {}
     }

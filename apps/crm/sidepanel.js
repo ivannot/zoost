@@ -1352,15 +1352,23 @@ async function loadWorkspaces() {
     await refreshContext(); return;
   }
   const base = await appRoot(false);
+  // The enumeration itself can fail — a handle whose permission lapsed, a folder moved or removed
+  // since the browser stored it. Unguarded, that threw out of here and left the panel with no
+  // workspace list and no explanation. A folder we cannot read is a state to report, not a crash.
   if (base) {
-    for await (const e of base.values()) {
-      if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
-      let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
-      if (!cfg || !cfg.org) continue;
-      wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+    try {
+      for await (const e of base.values()) {
+        if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
+        let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
+        if (!cfg || !cfg.org) continue;
+        wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+      }
+    } catch (e) {
+      rootGranted = false;
+      setStatus(`Could not read \u00ab${root ? root.name : '?'}/${APP_DIR}\u00bb: ${e.message || e}. Click the folder button to grant access again.`, 'warn');
     }
   }
-  wsList.sort((a, b) => a.name.localeCompare(b.name));
+  wsList.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   if (!wsList.length) {
     // Workspaces sitting directly in the working folder are the older flat layout. Say so precisely
     // instead of reporting an empty list: the folders are there, Zoost is simply not looking at that
