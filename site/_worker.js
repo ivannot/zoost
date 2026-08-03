@@ -13,8 +13,7 @@
  *    others still answer; the page then shows "unknown" for that one only.
  *  - Nothing is ever guessed. A value that does not look like a version is discarded rather than
  *    displayed, so a change in Google's markup can only cost us the number — never invent one.
- *  - Answers are cached at the edge for an hour, which keeps us far inside GitHub's unauthenticated
- *    rate limit and means a brief upstream failure is invisible.
+ *  - Answers are cached at the edge for an hour, so a brief upstream failure is invisible.
  *
  * The store number is scraped from the listing page because Google publishes no API for it. That is
  * a DOM contract we do not own and it will break one day — acceptable *here*, on an informational
@@ -30,18 +29,23 @@ const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not
 
 const timeout = (ms) => AbortSignal.timeout(ms);
 
-// Newest git tag. Tags are sorted here rather than trusting the API's order, which is not specified.
+// Newest git tag, read from GitHub's Atom feed rather than its JSON API.
+//
+// api.github.com allows 60 unauthenticated requests an hour *per IP*, and this Worker goes out
+// through Cloudflare's shared egress addresses — where that budget is spent by traffic that has
+// nothing to do with us. The result was three of the four fields coming back null most of the time.
+// The Atom feeds on github.com carry the same facts without that limit and without a credential.
+// They are XML, so the parsing is deliberately shallow and every value still passes a shape guard.
 async function latestTag() {
-  const r = await fetch(`https://api.github.com/repos/${REPO}/tags?per_page=100`, {
-    headers: { 'user-agent': UA, accept: 'application/vnd.github+json' },
+  const r = await fetch(`https://github.com/${REPO}/tags.atom`, {
+    headers: { 'user-agent': UA, accept: 'application/atom+xml' },
     signal: timeout(6000),
   });
   if (!r.ok) return null;
-  const tags = await r.json();
-  if (!Array.isArray(tags)) return null;
-  const semver = tags
-    .map((t) => String(t.name || ''))
-    .filter((n) => /^v?\d+\.\d+\.\d+$/.test(n))
+  const xml = await r.text();
+  const semver = [...xml.matchAll(/<title>([^<]{1,40})<\/title>/g)]
+    .map((m) => m[1].trim())
+    .filter((n) => /^v?\d+\.\d+\.\d+$/.test(n))   // also drops the feed's own title
     .sort((a, b) => {
       const pa = a.replace(/^v/, '').split('.').map(Number);
       const pb = b.replace(/^v/, '').split('.').map(Number);
@@ -87,14 +91,15 @@ async function repoVersion(app) {
 // deploy timestamp: it is when the content actually changed. Asked per path on purpose — a guide
 // that claims to have been updated because the homepage changed is claiming something false.
 async function lastChanged(path) {
-  const r = await fetch(`https://api.github.com/repos/${REPO}/commits?path=${encodeURIComponent(path)}&per_page=1`, {
-    headers: { 'user-agent': UA, accept: 'application/vnd.github+json' },
+  const r = await fetch(`https://github.com/${REPO}/commits/main/${path}.atom`, {
+    headers: { 'user-agent': UA, accept: 'application/atom+xml' },
     signal: timeout(6000),
   });
   if (!r.ok) return null;
-  const commits = await r.json();
-  const d = Array.isArray(commits) && commits[0]?.commit?.committer?.date;
-  return d || null;
+  const xml = await r.text();
+  const m = xml.match(/<entry>[\s\S]*?<updated>([^<]+)<\/updated>/);   // first entry = newest commit
+  const d = m && m[1].trim();
+  return d && !isNaN(Date.parse(d)) ? d : null;   // shape guard: must be a real timestamp
 }
 
 const settled = (p) => p.then((v) => v).catch(() => null);
@@ -104,7 +109,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=4';
+const CACHE_KEY = '/api/versions?v=5';
 
 async function versions(request, ctx) {
   const cache = caches.default;

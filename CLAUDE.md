@@ -376,6 +376,12 @@ Two traps that this layout hides:
   committing a config without them would have silently changed the runtime. If the platform's
   defaults ever move, compare against what it generates before assuming ours is complete.
 
+- **Do not call `api.github.com` from the Worker.** It allows 60 unauthenticated requests an hour
+  *per IP*, and the Worker leaves through Cloudflare's shared egress addresses, where that budget is
+  already spent by strangers' traffic. Three of the badge's four fields came back null because of it,
+  intermittently and with no error. The Atom feeds on `github.com` carry the same facts with no such
+  limit and no credential: `tags.atom` for the newest tag, `commits/main/<path>.atom` for when a path
+  last changed. They are XML, so parse shallowly and keep the shape guards.
 - **The edge cache will hide your deploy.** `/api/versions` is cached for an hour and the Worker
   checks the cache before doing anything, so new code can run and still return the old body — no
   error, no 404, just a value that will not change. The key ignores the query string on purpose (so
