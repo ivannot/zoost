@@ -8,9 +8,15 @@ after the fact, each followed by one more line in a checklist that was still inc
 
 So this compares them instead of remembering to. It reports three kinds of difference:
 
-  1. shared element ids whose CSS differs
-  2. shared element ids present in one panel and absent from the other
-  3. shared CSS class rules whose declarations differ
+  1. shared element ids present in one panel and absent from the other
+  2. shared elements whose class or inline style differs
+  3. shared CSS rules whose declarations differ
+  4. CSS rules that exist on one side only
+
+The fourth check is the one this tool shipped without, and the omission cost a reported bug: the AI
+Send button is styled by `.aiinrow #aisend` in the CRM and by nothing at all here, so comparing only
+the selectors present in *both* files could never see it. A rule missing entirely is the most common
+way two stylesheets drift, not the least.
 
 It cannot decide anything: a difference may be deliberate (--sel is teal here and blue there,
 Analytics has views where CRM has functions). It only guarantees you are looking at all of them.
@@ -133,10 +139,39 @@ def main():
     print('\n'.join(cdiffs) if cdiffs else '  none')
     findings += len(cdiffs)
 
+    # One-sided rules that are genuinely product-specific, with the reason. Same discipline as
+    # EXPECTED: if you add a line here you owe an explanation on it.
+    EXPECTED_SOLO = {
+        '.bar': 'the CRM has a per-mode button row; Analytics has no modes',
+        '.ck b': 'the Analytics export dialog bolds the section name inside each label',
+        '.empty': 'Analytics renders its empty states as .empty blocks; the CRM uses its own markup',
+        '.empty b': 'ditto',
+        '.empty code': 'ditto',
+        '#healthbody h4': 'the two health views report different things and are structured differently',
+        '#healthbody ul': 'ditto',
+        '#healthbody li': 'ditto',
+        '#healthbody .hnum': 'ditto',
+        '#healthbody .gap': 'ditto — the coverage-gap note is an Analytics idiom',
+    }
+
+    print('\n== CSS rules on one side only ==')
+    solo = []
+    for a2, b2 in (('crm', 'analytics'), ('analytics', 'crm')):
+        for sel in sorted(set(css[a2]) - set(css[b2])):
+            first = sel.split()[0].lstrip('.#').split(':')[0]
+            deep = [t.lstrip('.#').split(':')[0] for t in sel.split()]
+            touches = any(t in SHARED_CLASSES or t in SHARED_IDS for t in deep + [first])
+            if (every or touches) and sel not in EXPECTED_SOLO:
+                solo.append(f'  {sel:44s} only in {a2}')
+    print('\n'.join(solo) if solo else '  none')
+    findings += len(solo)
+
     if EXPECTED:
         print('\n== differences recorded as deliberate ==')
         for (sel, prop), why in sorted(EXPECTED.items()):
             print(f'  {sel} {{{prop}}} — {why}')
+        for sel, why in sorted(EXPECTED_SOLO.items()):
+            print(f'  {sel} (one side only) — {why}')
 
     print(f'\n{findings} unexplained difference(s) to walk. Each is deliberate or a drift — decide, do not skip.')
     return 0

@@ -69,7 +69,11 @@ python3 tools/twincheck.py --all    # everything, product-specific parts include
 ```
 
 It reports elements present on one side only, shared elements whose class or inline style differs,
-and shared CSS rules whose declarations differ. It decides nothing — a difference may be deliberate.
+shared CSS rules whose declarations differ, **and rules that exist on one side only** — that fourth
+check was missing from the first version and the omission let a reported bug through unseen: the AI
+Send button is styled by `.aiinrow #aisend` in CRM and by nothing at all in Analytics, so comparing
+only the selectors present in both files could never see it. A rule missing entirely is the most
+common way two stylesheets drift, not the least. It decides nothing — a difference may be deliberate.
 **It must print zero unexplained differences before a UI change is done.** Anything genuinely
 deliberate goes in its `EXPECTED` map *with the reason on the same line*; a checker that keeps
 reporting known-good noise is a checker nobody reads.

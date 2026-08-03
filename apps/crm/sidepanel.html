@@ -40,6 +40,7 @@
   .findwrap{position:relative;flex:1;min-width:90px;display:flex}
   .findwrap input{width:100%;padding:6px 26px 6px 10px;background:transparent;border:0;color:var(--ink);font:12px var(--sans);outline:none}
   .findwrap .fx{position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer}
+  .findwrap .fx:hover{color:var(--ink)}
   .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   .fsellbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
   .filtersel{background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font:12px var(--sans);cursor:pointer}
@@ -105,6 +106,7 @@
   .ainote .ainotex:hover{color:#f0a44a}
   .aiinrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
   .aiinrow textarea{flex:1;resize:vertical;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans);min-height:38px}
+  .aiinrow textarea:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
   .aiinrow #aisend{background:#d97706;border-color:#d97706;color:#fff;font-weight:600;align-self:stretch;padding:0 14px}
   .aiinrow #aisend:hover:not(:disabled){background:#ea8c11;border-color:#ea8c11}
   .aiinrow #aisend:disabled{opacity:.5}
