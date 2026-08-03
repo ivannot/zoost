@@ -601,6 +601,12 @@ build runs that same command on its machine, so every deployment says Wrangler w
 push or from a laptop. Reading it as proof that Git was not connected cost a wrong diagnosis and a
 wrong correction to this file.
 
+**Build watch paths must be `site/*`, not `*`.** With `*` every commit to the repository starts a
+build, including the twenty a day that only touch `apps/`. That burns the plan's build allowance on
+nothing and, when it runs out, builds simply stop being queued — no error on the push, no banner, and
+the last successful deploy left serving. It is what happened on 3 August: about twenty-five builds
+for four site changes.
+
 The deployment list only shows **successful** deploys. When a push does not appear there, the build
 either did not run or failed, and only the **Builds** page says which — the deployment history cannot.
 
