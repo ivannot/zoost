@@ -313,6 +313,21 @@ never seen Analytics and would otherwise write SQL that cannot run. If a rule ca
 is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
 that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
 
+**The AI index is layered, and what does not fit is named.** A workspace of a thousand views does
+not fit in a system prompt sent with every message, so the question is never "how big a cap" but
+"what gets dropped". Dropping the tail is the wrong answer: it cuts an arbitrary half and the model
+cannot tell it is missing, which is how it ends up asserting a view does not exist. `aiBuildSeed()`
+assembles in priority order — **data objects are never dropped**, because they are the vocabulary
+needed to write a query or follow a foreign key; reports and dashboards go first because
+`list_views` can find them by name — and whatever is left out is stated in the prompt itself with
+what to call instead. Measured: 1144 views and 444 data objects come to ~62k characters (~15k
+tokens) and fit whole; at 2429 views the tables still fit in full and the reports are declared
+absent.
+
+**Tool answers are capped too, and say how to narrow.** A tool that returns nine hundred lines has
+not answered. `aiCap()` cuts the list, states the true total, and tells the model which argument
+would narrow it.
+
 **AI configuration lives in the options page**, not the side panel. The panel is ~400px wide and
 those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
 `window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.

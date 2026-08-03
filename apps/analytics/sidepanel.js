@@ -910,7 +910,7 @@ async function openSchemaGraph(focusId, depth) {
 // tools read — views, columns, relations, SQL and lineage instead of functions and modules — and the
 // SQL guardrail, which is the one thing here not derived from the user's own workspace.
 let aiMessages = [];
-let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false;
+let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false, aiSeedOmitted = [];
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
@@ -941,15 +941,18 @@ function aiStructureText(v) {
   return s2;
 }
 
-// The whole workspace, as compactly as it can be stated. Every name is here on purpose: "does a
-// view already exist that does X" cannot be answered from a summary, and the tools can only fetch
-// detail for something the model already knows exists.
+// The workspace, stated as compactly as it can be, in layers of decreasing importance.
 //
-// The cap is 48000 characters — roughly 12k tokens, and about 1.8x the workspace this was measured
-// on (377 views, 135 tables ≈ 27k). It was 16000, which cut 40% of a workspace that size and left
-// the model guessing at names it had never been shown. If the cap is ever hit the panel says so in
-// the chat rather than letting the answer look complete.
-const AI_SEED_CAP = 48000;
+// A workspace of a thousand views does not fit in a system prompt sent with every message, so the
+// question is not "how big a cap" but "what gets dropped when it does not fit". Dropping the tail is
+// the wrong answer: it cuts an arbitrary half and the model cannot tell it is missing.
+//
+// The order below is the answer. Data objects are the vocabulary — you cannot write a query, follow
+// a foreign key or judge whether something already exists without knowing the tables, so they are
+// never dropped. Reports and dashboards are findable by name through list_views, so they go first if
+// something must. Whatever is left out is *named as left out*, in the prompt itself, with what to
+// call instead — an index that is silently short is worse than one that is honestly partial.
+const AI_SEED_CAP = 72000;
 
 async function aiBuildSeed() {
   const m = viewById();
@@ -957,38 +960,53 @@ async function aiBuildSeed() {
   for (const v of views) byType.set(v.type, (byType.get(v.type) || 0) + 1);
   const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
 
-  let s2 = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`
+  const header = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`
     + `${views.length} views — ` + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
     + `${Object.keys(schema).length} data objects, ${cols} columns, ${relations.length} relations`
-    + (deps ? `, ${views.filter(isOrphanCandidate).length} nothing depends on` : ', lineage not pulled') + '\n';
+    + (deps ? `, ${views.filter(isOrphanCandidate).length} nothing depends on` : ', lineage not pulled') + '\n'
+    + '\nKey: [T] table, [Q] query table, sys = put there by Zoho not by the user, Nc = columns.\n'
+    + 'Report types: [A] AnalysisView, [P] Pivot, [R] Report, [S] SummaryView.\n';
 
-  // Data objects: name, kind, column count, and whether Zoho put it there. One line each.
-  s2 += `\n## Tables and query tables (${Object.keys(schema).length})\n`;
-  s2 += Object.entries(schema).sort((a, b) => a[1].name.localeCompare(b[1].name))
-    .map(([, t]) => `${t.name} [${t.kind === 'QueryTable' ? 'Q' : 'T'}${t.system ? ',sys' : ''}] ${t.columns.length}c`).join('\n') + '\n';
+  const tables = `\n## Tables and query tables (${Object.keys(schema).length})\n`
+    + Object.entries(schema).sort((a, b) => a[1].name.localeCompare(b[1].name))
+      .map(([, t]) => `${t.name} [${t.kind === 'QueryTable' ? 'Q' : 'T'}${t.system ? ',sys' : ''}] ${t.columns.length}c`).join('\n') + '\n';
 
-  // Presentation views, grouped by what they are built on: the shape of the workspace shows through
-  // that way, and it costs fewer characters than repeating the parent on every line.
   const pres = views.filter((v) => !schema[v.id] && v.type !== 'Dashboard');
+  let reports = '';
   if (pres.length) {
     const byParent = new Map();
     for (const v of pres) {
       const p = v.parent && m.get(v.parent) ? m.get(v.parent).name : '(unknown source)';
       if (!byParent.has(p)) byParent.set(p, []);
-      byParent.get(p).push(`${v.name} [${v.type[0]}${v.type === 'SummaryView' ? 'u' : ''}]`);
+      byParent.get(p).push(`${v.name} [${v.type[0]}]`);
     }
-    s2 += `\n## Reports and pivots (${pres.length}), grouped by what they are built on\n`;
-    s2 += [...byParent.entries()].sort((a, b) => b[1].length - a[1].length)
-      .map(([p, list]) => `${p} → ${list.join(', ')}`).join('\n') + '\n';
+    reports = `\n## Reports and pivots (${pres.length}), grouped by what they are built on\n`
+      + [...byParent.entries()].sort((a, b) => b[1].length - a[1].length)
+        .map(([p, list]) => `${p} → ${list.join(', ')}`).join('\n') + '\n';
   }
-  const dash = views.filter((v) => v.type === 'Dashboard');
-  if (dash.length) s2 += `\n## Dashboards (${dash.length})\n` + dash.map((v) => v.name).join(', ') + '\n';
+  const dashList = views.filter((v) => v.type === 'Dashboard');
+  const dashboards = dashList.length ? `\n## Dashboards (${dashList.length})\n` + dashList.map((v) => v.name).join(', ') + '\n' : '';
 
-  s2 += '\nKey: [T] table, [Q] query table, sys = put there by Zoho not by the user, Nc = columns.\n'
-    + 'Report types: [A] AnalysisView, [P] Pivot, [R] Report, [Su] SummaryView.\n';
+  // Assemble in priority order, and record what did not fit rather than letting it vanish.
+  const omitted = [];
+  let out = header + tables;
+  if (out.length + reports.length <= AI_SEED_CAP) out += reports;
+  else if (reports) omitted.push(`the ${pres.length} reports and pivots`);
+  if (out.length + dashboards.length <= AI_SEED_CAP) out += dashboards;
+  else if (dashboards) omitted.push(`the ${dashList.length} dashboards`);
 
-  aiSeedTruncated = s2.length > AI_SEED_CAP;
-  return aiTrunc(s2, AI_SEED_CAP);
+  aiSeedOmitted = omitted;
+  if (out.length > AI_SEED_CAP) {          // even the tables alone overflow: an enormous workspace
+    aiSeedOmitted = [`part of the table list — this workspace is larger than the index can hold`];
+    out = aiTrunc(out, AI_SEED_CAP);
+  }
+  aiSeedTruncated = omitted.length > 0 || out.length >= AI_SEED_CAP;
+  if (omitted.length) {
+    out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and you can find them by name`
+      + ` with list_views (it takes a name substring and a type) — do not assume a view is absent`
+      + ` because it is not in this index.\n`;
+  }
+  return out;
 }
 
 async function aiSystemPrompt(withTools) {
@@ -1021,6 +1039,15 @@ const AI_TOOLS = [
   { name: 'orphans', description: 'Views that nothing in the workspace depends on. Candidates, not a verdict.', input_schema: { type: 'object', properties: {} } },
 ];
 
+// A tool that answers with nine hundred lines has not answered. Cap the list, say how many there
+// were, and say how to narrow — the model can then ask a better question instead of drowning in the
+// first one.
+function aiCap(lines, total, how, limit = 120) {
+  if (lines.length <= limit) return lines.join('\n');
+  return lines.slice(0, limit).join('\n')
+    + `\n… and ${total - limit} more (${total} in all). ${how}`;
+}
+
 async function aiExecTool(name, input) {
   input = input || {};
   const m = viewById();
@@ -1029,7 +1056,9 @@ async function aiExecTool(name, input) {
     const rows = views.filter((v) => (!f || (v.name || '').toLowerCase().includes(f)) && (!ty || (v.type || '').toLowerCase() === ty)
       && (!minc || (schema[v.id] ? schema[v.id].columns.length : 0) >= minc));
     if (!rows.length) return `0 views match. ${views.length} in the workspace.`;
-    return `${rows.length} of ${views.length} views:\n` + rows.map((v) => `${v.name} [${v.type}]${schema[v.id] ? ' ' + schema[v.id].columns.length + ' cols' : ''}${v.folderName ? ' · ' + v.folderName : ''}`).join('\n');
+    const lines = rows.map((v) => `${v.name} [${v.type}]${schema[v.id] ? ' ' + schema[v.id].columns.length + ' cols' : ''}${v.folderName ? ' · ' + v.folderName : ''}`);
+    return `${rows.length} of ${views.length} views:\n`
+      + aiCap(lines, rows.length, 'Narrow with `filter` (a name substring), `type`, or `min_columns`.');
   }
   const v = name === 'orphans' || name === 'get_relations' ? null : aiFindView(input.name);
   if (!v && name !== 'orphans' && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
@@ -1078,7 +1107,7 @@ async function aiExecTool(name, input) {
       const line = body.split('\n').find((l) => l.toLowerCase().includes(q)) || '';
       hits.push(`${vv.name}\n    ${line.trim().slice(0, 160)}`);
     }
-    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + hits.join('\n') : '(no matches)';
+    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + aiCap(hits, hits.length, 'Use a longer substring to narrow.', 60) : '(no matches)';
   }
   if (name === 'search_columns') {
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
@@ -1087,12 +1116,12 @@ async function aiExecTool(name, input) {
       const cols = t.columns.filter((c) => c.name.toLowerCase().includes(q));
       if (cols.length) hits.push(`${t.name} [${t.kind}]: ` + cols.map((c) => `${c.name} (${c.type})`).join(', '));
     }
-    return hits.length ? `${hits.length} table(s) have a matching column:\n` + hits.join('\n') : '(no matches)';
+    return hits.length ? `${hits.length} table(s) have a matching column:\n` + aiCap(hits, hits.length, 'Use a longer substring to narrow.') : '(no matches)';
   }
   if (name === 'get_relations') {
     const list = v ? relationsOf(v.id) : relations;
     if (!list.length) return v ? `${v.name} takes part in no relation.` : 'No relations in this workspace.';
-    return `${list.length} relation(s):\n` + list.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`).join('\n');
+    return `${list.length} relation(s):\n` + aiCap(list.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`), list.length, 'Pass a table name to see only its relations.');
   }
   if (name === 'who_uses') {
     const d = deps && deps[v.id];
@@ -1104,8 +1133,12 @@ async function aiExecTool(name, input) {
   if (name === 'orphans') {
     if (!deps) return 'Lineage was not pulled, so this cannot be answered.';
     const o = views.filter(isOrphanCandidate);
-    return `${o.length} candidate(s) that nothing in this workspace depends on — candidates, not a verdict:\n`
-      + o.map((x) => `- ${x.name} [${x.type}]`).join('\n');
+    const byType = new Map();
+    for (const x of o) byType.set(x.type, (byType.get(x.type) || 0) + 1);
+    return `${o.length} candidate(s) that nothing in this workspace depends on — candidates, not a verdict.\n`
+      + 'By type: ' + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
+      + aiCap(o.map((x) => `- ${x.name} [${x.type}]`), o.length, 'Use list_views with a type to see the rest.')
+      + '\nAnalytics only knows what its own views read from each other: a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.';
   }
   return 'Unknown tool: ' + name;
 }
@@ -1225,7 +1258,9 @@ async function aiSend() {
     // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
       aiSeedWarned = true;
-      aiMessages.push({ role: 'tool', content: 'ℹ️ Large workspace: the index sent to the model is truncated. ' + (withTools ? 'Claude can still fetch specifics with its tools.' : 'OpenAI answers in one pass, so items beyond the cut are invisible to it — ask about specific views.') });
+      const what = aiSeedOmitted.length ? aiSeedOmitted.join(' and ') : 'part of the index';
+      aiMessages.push({ role: 'tool', content: `ℹ️ Large workspace: ${what} could not fit in the index sent with each message. `
+        + (withTools ? 'Claude can still find them by name with its tools — the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
       aiRenderMessages();
     }
     if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
