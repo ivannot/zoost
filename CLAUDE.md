@@ -663,18 +663,38 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 
 ## Release routine
 
-The mechanics, once "Definition of done" says a release is warranted:
+**"Give me the zip to publish" is a request for the whole chain, never for a file.** This is standing
+instruction, not a per-release choice: a package built here and handed over is exactly the weak link
+the chain was built to remove, so producing one on request would undo the work silently. If the
+answer is ever a local `./build.sh` artefact, something has gone wrong — say so instead of handing it
+over.
 
-```bash
-# 1. version bumped in apps/<app>/manifest.json, docs updated, all committed
-git tag -a vX.Y.Z -m "Zoost X.Y.Z"
-git push --follow-tags
-./build.sh <app>                 # -> dist/zoost-<app>-X.Y.Z-store.zip
-```
+What that request means, in order. Do all of it without being asked:
 
-Then, by hand: attach that zip to a GitHub Release for the tag, and — if anything user-facing
-changed — update the Web Store package, description, privacy policy URL and data disclosures in
-the same submission.
+1. **Check the release is actually warranted and complete.** Run "Definition of done" over the change
+   — docs, site, store copy, `manifest.json` description — before anything is tagged. A tag is a
+   public ref; fixing a premature one costs more than waiting.
+2. **Bump `version` in `apps/<app>/manifest.json`** — patch for fixes, minor for features — and
+   commit everything. The tree must be clean or `release.sh` refuses, by design.
+3. **`tools/release.sh <app>`** — verifies the tree, builds twice locally and compares (fast
+   feedback: a non-reproducible build must fail *before* the tag exists), then creates
+   `<app>-v<version>`.
+4. **`git push --follow-tags`** — this, and nothing else, starts the public build. GitHub checks out
+   the tag, builds it twice, prints `unzip -l` into the public log, signs a provenance attestation
+   and publishes the Release.
+5. **Watch the workflow and read its log.** It is the only place a build failure appears. Report what
+   it said — including the hash — rather than assuming it passed.
+6. **Hand over the link to the Release asset, plus the hash, plus what to paste** into the Store
+   dashboard. Never a path into `dist/`.
+7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
+   date, and commit it.
+
+Tags are per product (`crm-v1.8.1`), and `RELEASES.md` is part of the release, not a follow-up.
+If anything user-facing changed, regenerate `store/<app>/store-listing.md` and say which dashboard
+fields move alongside the package — they are reviewed together.
+
+**Publishing itself is not on this list, and is not yours to initiate.** Releases go to the Store in
+batches, when there is something solid; cut a tag when asked, not when a version looks ready.
 
 Pushing to `main` deploys `site/` to zoost.it: the Worker is connected to `ivannot/zoost` with root
 directory `site`, production branch `main`, and `npx wrangler deploy` as the deploy command.
