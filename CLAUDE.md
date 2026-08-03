@@ -329,14 +329,28 @@ in step. It reads the **tags** rather than GitHub Releases, because the routine 
 a tag while attaching a Release is a manual step that may not happen. Tags are semver-sorted here
 rather than trusting the API's unspecified order.
 
-**zoost.it is a Cloudflare *Worker* with static assets, not a Pages project.** The dashboard shows
-"Connect your **Worker** to a Git repository", deploy command `npx wrangler deploy`, root directory
-`site`, and there is no `wrangler.*` in the repo — the Worker is configured in the dashboard. This
-matters because **`functions/` is a Pages-only convention**: on a Worker that directory is never
-looked at, so a file placed there is either published as a static asset (if it is inside `site/`) or
-ignored entirely. Server-side code here needs a Worker script plus a wrangler config, which would
-take over a deployment that currently works without one — test that on a branch first, since
-non-production builds are enabled.
+**zoost.it is a Cloudflare *Worker* with static assets, not a Pages project.** Worker name
+`zoost-it`, deploy `npx wrangler deploy`, root directory `site` — so `site/wrangler.jsonc` is the
+config and every path in it is relative to `site/`. **`functions/` is a Pages-only convention** and
+is never looked at here: a file placed there is published as a static asset (if inside `site/`) or
+ignored entirely. Server-side code goes in `site/_worker.js`, which answers `/api/versions` and
+hands everything else to `env.ASSETS`. Assets are served first and the script runs only when no file
+matches, so adding to it cannot change how an existing page is served.
+
+Two traps that this layout hides:
+
+- **`site/.assetsignore` is what stops `_worker.js` and `wrangler.jsonc` being served as files.**
+  The assets directory is `site/` itself, so anything in it is public by default — the generated
+  config used to be readable at `/wrangler.jsonc`. Anything added beside the pages that is not meant
+  to be downloaded must go in that ignore list.
+- **Cloudflare generates a `wrangler.jsonc` when none is committed, and ours must stay a superset of
+  it.** The generated one carries `compatibility_flags: ["nodejs_compat"]` and `observability`;
+  committing a config without them would have silently changed the runtime. If the platform's
+  defaults ever move, compare against what it generates before assuming ours is complete.
+
+Preview deploys are enabled for non-production branches, and the URL is
+`<branch>-zoost-it.ivannot.workers.dev`. Anything touching the deployment goes there first and gets
+verified with `curl` — endpoint status **and** the pages — before it reaches `main`.
 
 And the lesson that cost two wrong guesses: **a successful deploy says nothing about an endpoint
 being live.** Request it and read the status code —
