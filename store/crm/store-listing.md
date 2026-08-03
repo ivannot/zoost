@@ -1,6 +1,9 @@
 # Zoost — Chrome Web Store submission copy
 
-Version 1.0.0 · prepared 2 August 2026
+Last verified against `apps/crm/manifest.json` at version **1.7.1** · 3 August 2026
+
+`short_name` and the toolbar tooltip are browser-UI fields and do not appear on the Store listing,
+so changing them does not touch anything below.
 
 ---
 

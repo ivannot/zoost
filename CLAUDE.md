@@ -209,13 +209,23 @@ the places to look first when something "does nothing".
 
 ## Naming and positioning
 
-The product is **Zoost — workbench for Zoho CRM**. Not "IDE": you do not edit code in it, and the
-audience is wider than developers. "Zoho", "Zoho CRM" and "Deluge" appear only in a descriptive
-position, never as the leading element of the name, and never in the icon. Every user-facing
-surface carries the independent/unofficial disclaimer.
+The products are **Zoost — workbench for Zoho CRM** and **Zoost — workbench for Zoho Analytics**.
+Not "IDE": you do not edit code in them, and the audience is wider than developers. "Zoho",
+"Zoho CRM", "Zoho Analytics" and "Deluge" appear only in a descriptive position, never as the
+leading element of the name, and never in the icon. Every user-facing surface carries the
+independent/unofficial disclaimer.
 
 The name comes from `chrome.runtime.getManifest().name` everywhere. Renaming means editing one
 field in `manifest.json`.
+
+**Two extensions means every identity surface has to say *which one*.** `name` is not enough on its
+own: Chrome shows `short_name` where space is tight (the extensions menu) and
+`action.default_title` as the toolbar tooltip, and a bare "Zoost" on both is how you end up unable
+to tell them apart. Each app therefore carries a **qualified `short_name`** (`Zoost CRM`,
+`Zoost Analytics`), a `default_title` **identical to its `name`**, and its own `<title>` on every
+page it ships. The icons share one mark, measured off the CRM one so the geometry matches exactly —
+a 52×48 Z at 14px bar weight in a 128 tile — and differ by **hue**, because at 16px in the toolbar
+the hue is the only thing left that carries. Adding a third product means doing all four again.
 
 ## Definition of done
 

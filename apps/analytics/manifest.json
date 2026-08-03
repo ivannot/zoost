@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Zoost — workbench for Zoho Analytics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
-  "description": "Independent workbench for Zoho Analytics: census every view in a workspace, see when each was last changed, find what nothing depends on.",
+  "description": "Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.",
   "permissions": [
     "sidePanel",
     "storage",
@@ -26,7 +26,7 @@
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Open Zoost for Analytics",
+    "default_title": "Zoost — workbench for Zoho Analytics",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png",
