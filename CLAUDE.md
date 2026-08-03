@@ -29,7 +29,7 @@ the Web Store, a different data model — sharing only the name, the site and th
 ```
 apps/crm/        the Zoho CRM extension. Exactly what ships. Nothing else lives here.
 apps/analytics/  the Zoho Analytics extension (in progress)
-site/            zoost.it — deployed automatically by Cloudflare on push to main
+site/            zoost.it — published by `npx wrangler deploy`, NOT by pushing (see the deploy note)
 site/_worker.js  the Worker script (see the Cloudflare notes further down)
 store/crm/       Chrome Web Store listing copy and permission justifications, per app
 dist/            build output, git-ignored
@@ -593,8 +593,23 @@ Then, by hand: attach that zip to a GitHub Release for the tag, and — if anyth
 changed — update the Web Store package, description, privacy policy URL and data disclosures in
 the same submission.
 
-Pushing to `main` also deploys `site/` to zoost.it via Cloudflare. Documentation goes live with
-the commit, so it must be correct at commit time, not at release time.
+**Pushing to `main` does NOT deploy the site.** The Worker's deployment history shows `Wrangler` as
+the source of every release: `zoost-it` is not connected to the repository, so a push publishes
+nothing and `git push` followed by `curl` will keep showing the old pages with no error anywhere.
+This file claimed the opposite for a long time and the claim cost real time — it is exactly the
+"never let a claim outlive its truth" failure, in the file that exists to prevent it.
+
+Deploying is therefore a deliberate step, from `site/`:
+
+```bash
+npx wrangler deploy        # needs Node >= 22; the machine currently has v19, so this fails first
+```
+
+The better fix is to make the old sentence true: connect the Worker to Git in the Cloudflare
+dashboard (Workers & Pages → `zoost-it` → Settings → Build), repository `ivannot/zoost`, production
+branch `main`, **root directory `site`**. Until someone does that, treat a site change as unpublished
+until `curl` says otherwise. Documentation still has to be correct at commit time — it just does not
+become visible at commit time.
 
 The site is static plus one edge function: `site/functions/api/versions.js` reports the Web Store
 version, the newest git tag and when `site/` last changed, so the footer shows whether the three are
