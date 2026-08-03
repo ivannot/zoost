@@ -554,9 +554,16 @@ No zip, no reinstall. Just tell me what to look at and what should have changed.
 **A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
 minor for features. Propose the commit message; do not batch unrelated work into one commit.
 
-**A release → `tools/release.sh <app>`.** It refuses a dirty tree, builds the package **twice** and
-compares the hashes, tags the commit `<app>-v<version>`, and appends the row to `RELEASES.md`.
-Pushing and uploading stay manual, because both leave the machine.
+**A release → tag, and the tag is the trigger.** `tools/release.sh <app>` refuses a dirty tree,
+proves the build reproducible locally, and creates the tag. `git push --follow-tags` then makes
+**GitHub** check out that commit, build it twice, attach the archive to a Release and sign a
+provenance attestation for it.
+
+**The file uploaded to the Store is the Release asset, never a local build.** That is the rule the
+whole chain rests on: a package built on the author's machine and uploaded from it asks a reviewer to
+take his word for it, and reproducibility only helps if someone independent actually rebuilds —
+which nobody does spontaneously. Moving the build to a machine with a public log removes the author
+from the chain; the attestation makes it checkable with one command.
 
 Tags are per product — `crm-v1.8.1`, not `vX.Y.Z`: with two extensions a bare version says nothing
 about which one. The single legacy `v1.0.0` predates that and is left alone; moving a published ref

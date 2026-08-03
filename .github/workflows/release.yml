@@ -1,0 +1,117 @@
+# Build the package that gets submitted to the Chrome Web Store, on a machine nobody owns.
+#
+# The point is to remove the author from the chain. Until now the build happened on a laptop and the
+# file was uploaded from there, so a reviewer had to take it on trust that the upload came from the
+# tagged commit. Reproducibility helps only if someone independent actually rebuilds — and nobody
+# does that spontaneously.
+#
+# So: pushing a tag `crm-v*` or `analytics-v*` makes GitHub check out that exact commit, build it,
+# prove the build is deterministic by doing it twice, publish the archive as a Release asset, and
+# sign a provenance statement binding the artifact to this workflow file, this repository and that
+# commit. The log is public. The attestation is verifiable with one command and no trust in us.
+#
+# What the author still does by hand — and cannot be automated away — is upload the file to Google.
+# The discipline that keeps the chain intact is therefore: **upload the asset from the Release, never
+# a local build.** RELEASES.md says so, and the hash in the Release body is what makes a swap
+# detectable.
+name: release
+
+on:
+  push:
+    tags:
+      - 'crm-v*'
+      - 'analytics-v*'
+
+permissions:
+  contents: write        # create the Release and attach the archive
+  id-token: write        # mint the OIDC token the attestation is signed with
+  attestations: write    # record the provenance statement
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the app and version out of the tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          APP="${TAG%%-v*}"
+          VERSION="${TAG#*-v}"
+          echo "app=$APP"         >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=dist/zoost-$APP-$VERSION-store.zip" >> "$GITHUB_OUTPUT"
+
+      - name: The tag must agree with the manifest
+        run: |
+          # A tag that says one version while the manifest says another would make the whole record
+          # meaningless, so it is a hard stop rather than a warning.
+          MANIFEST=$(python3 -c "import json;print(json.load(open('apps/${{ steps.tag.outputs.app }}/manifest.json'))['version'])")
+          if [ "$MANIFEST" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "Tag says ${{ steps.tag.outputs.version }}, apps/${{ steps.tag.outputs.app }}/manifest.json says $MANIFEST."
+            exit 1
+          fi
+
+      - name: Build twice and prove the two are identical
+        id: build
+        run: |
+          ./build.sh "${{ steps.tag.outputs.app }}"
+          A=$(sha256sum "${{ steps.tag.outputs.zip }}" | cut -d' ' -f1)
+          ./build.sh "${{ steps.tag.outputs.app }}"
+          B=$(sha256sum "${{ steps.tag.outputs.zip }}" | cut -d' ' -f1)
+          echo "first  $A"
+          echo "second $B"
+          if [ "$A" != "$B" ]; then
+            echo "The build is not reproducible. A published hash would be a number nobody can check."
+            exit 1
+          fi
+          echo "sha256=$A" >> "$GITHUB_OUTPUT"
+
+      - name: What is actually in the package
+        run: |
+          # Printed into the public log on purpose: the archive is plain readable source, no bundler
+          # and no minifier, and this is where anyone can see that for themselves.
+          unzip -l "${{ steps.tag.outputs.zip }}"
+
+      - name: Sign a provenance statement for the archive
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ${{ steps.tag.outputs.zip }}
+
+      - name: Publish the Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.tag.outputs.zip }}
+          name: Zoost for ${{ steps.tag.outputs.app }} ${{ steps.tag.outputs.version }}
+          body: |
+            Built by GitHub Actions from `${{ github.sha }}`, not on anyone's laptop.
+
+            ```
+            package  zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip
+            sha256   ${{ steps.build.outputs.sha256 }}
+            commit   ${{ github.sha }}
+            ```
+
+            **The asset attached here is the file submitted to the Chrome Web Store.** Nothing is
+            rebuilt in between.
+
+            Verify it yourself, without trusting us:
+
+            ```bash
+            # 1. the archive really came from this repository, this workflow, this commit
+            gh attestation verify zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip \
+               --repo ${{ github.repository }}
+
+            # 2. and the same source produces the same bytes on your machine
+            git clone https://github.com/${{ github.repository }} && cd zoost
+            git checkout ${{ github.ref_name }}
+            ./build.sh ${{ steps.tag.outputs.app }}
+            sha256sum dist/zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip
+            ```
+
+            The row for `RELEASES.md`:
+
+            ```
+            | ${{ steps.tag.outputs.app }} | ${{ steps.tag.outputs.version }} | `${{ github.ref_name }}` | `${{ github.sha }}` | `${{ steps.build.outputs.sha256 }}` | (date submitted) |
+            ```

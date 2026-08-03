@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # tools/release.sh <app>
 #
-# Records a Web Store submission so that it can be verified by someone who does not know us.
+# Cuts a release tag. It deliberately does **not** produce the file you upload.
 #
-# It refuses to run on a dirty tree, builds the package reproducibly, tags the commit
-# <app>-v<version>, appends the row to RELEASES.md, and prints what to do by hand. It does not push
-# and does not upload: the last two steps are yours, and both are outward-facing.
+# That used to be its job, and that was the weak link: a package built on this laptop and uploaded
+# from it asks a reviewer to take the author's word that the two match the tagged commit.
+# Now the tag is the trigger — GitHub checks out that commit, builds it, proves the build is
+# deterministic by doing it twice, attaches the archive to a Release and signs a provenance
+# statement for it. The log is public.
 #
-# The point of the whole thing is the hash. A published SHA-256 only means something if a reviewer
-# can rebuild the same bytes from the tag — which is why build.sh is deterministic and why this
-# script verifies that before writing anything down. If two builds of the same tree disagree, the
-# hash proves nothing and the script stops rather than record a number nobody can check.
+# So the rule is: **upload the asset from the GitHub Release, never a local build.** A local build of
+# the same commit should be byte-identical, and this script checks that before letting you tag — but
+# identical-in-principle is not the same as the artifact anyone can trace, and only one of the two
+# has GitHub's signature on it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -25,54 +27,49 @@ fi
 
 VERSION=$(python3 -c "import json;print(json.load(open('apps/$APP/manifest.json'))['version'])")
 TAG="$APP-v$VERSION"
-COMMIT=$(git rev-parse HEAD)
 SHORT=$(git rev-parse --short HEAD)
 ZIP="dist/zoost-$APP-$VERSION-store.zip"
 
-git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && { echo "Tag $TAG already exists — bump the version in apps/$APP/manifest.json first."; exit 1; }
+git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && {
+  echo "Tag $TAG already exists — bump the version in apps/$APP/manifest.json first."; exit 1; }
 
+# Fail here rather than in CI: a non-reproducible build makes every published hash meaningless, and
+# finding that out after the tag is pushed means an orphaned tag to clean up.
 ./build.sh "$APP" >/dev/null
-H1=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
+A=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
 ./build.sh "$APP" >/dev/null
-H2=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
-if [[ "$H1" != "$H2" ]]; then
+B=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
+if [[ "$A" != "$B" ]]; then
   echo "The build is not reproducible on this machine — two runs of the same commit differ:"
-  echo "  $H1"
-  echo "  $H2"
-  echo "Publishing a hash now would be a number nobody can verify. Fix build.sh first."
+  echo "  $A"
+  echo "  $B"
+  echo "Fix build.sh before tagging: a hash nobody can reproduce is worse than none."
   exit 1
 fi
 
-git tag -a "$TAG" -m "Zoost for $APP $VERSION — submitted to the Chrome Web Store
+git tag -a "$TAG" -m "Zoost for $APP $VERSION
 
-package  zoost-$APP-$VERSION-store.zip
-sha256   $H1
-commit   $COMMIT
+commit  $(git rev-parse HEAD)
 
-Reproduce with:  git checkout $TAG && ./build.sh $APP"
+Built and attested by GitHub Actions on this tag. The archive to submit is the asset
+on the Release, not a local build. Verify with:
 
-TODAY=$(date '+%Y-%m-%d')
-python3 - "$APP" "$VERSION" "$TAG" "$SHORT" "$H1" "$TODAY" <<'PY'
-import sys, re, pathlib
-app, version, tag, short, sha, today = sys.argv[1:7]
-p = pathlib.Path('RELEASES.md')
-row = f'| {app} | {version} | `{tag}` | `{short}` | `{sha}` | {today} |\n'
-s = p.read_text(encoding='utf-8')
-marker = '<!-- release rows are appended here, newest last -->\n'
-assert marker in s, 'RELEASES.md lost its marker'
-p.write_text(s.replace(marker, marker + row, 1), encoding='utf-8')
-print(f'  RELEASES.md  + {app} {version}')
-PY
+  gh attestation verify zoost-$APP-$VERSION-store.zip --repo ivannot/zoost
+  tools/verify.sh $APP $VERSION"
 
 cat <<EOF
 
-  tag        $TAG        (local — not pushed)
+  tag        $TAG   (local — not pushed)
   commit     $SHORT
-  package    $ZIP
-  sha256     $H1
+  local hash $A
+             ↑ this should match what CI publishes. If it does not, stop and find out why
+               before uploading anything.
 
-  Left to do, by hand:
-    git add RELEASES.md && git commit -m "Record $TAG" && git push --follow-tags
-    upload $ZIP to the Chrome Web Store
-    attach the same file to a GitHub Release for $TAG
+  Next:
+    1.  git push --follow-tags
+    2.  wait for the 'release' workflow, then open the GitHub Release it created
+    3.  DOWNLOAD the .zip asset from that Release and upload THAT to the Chrome Web Store
+    4.  paste the RELEASES.md row from the Release body, commit, push
+
+  Step 3 is the whole point. A local build is not the artifact anyone can trace.
 EOF

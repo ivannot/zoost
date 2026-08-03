@@ -46,12 +46,57 @@ is what was submitted.
 unambiguous. It is left alone rather than deleted — moving published refs is worse than an untidy
 one. Every tag from here on is `<app>-v<version>`.
 
+## How the package is produced, and why that matters
+
+Nothing here is built on a laptop any more.
+
+Pushing a tag `crm-v*` or `analytics-v*` makes GitHub check out that exact commit, build it, prove
+the build is deterministic by doing it **twice** and comparing, attach the archive to a Release, and
+sign a [provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations)
+binding that file to this repository, that commit and that workflow. The workflow is
+[`.github/workflows/release.yml`](.github/workflows/release.yml) — read it; it is thirty lines and
+does nothing clever. The build log is public.
+
+**The archive attached to the Release is the file submitted to the Chrome Web Store.** Nothing is
+rebuilt in between, and nothing is uploaded from a personal machine. That is the rule the whole
+chain rests on.
+
+Three things you can check, in increasing order of paranoia:
+
+```bash
+# 1. GitHub itself says it built this archive, from this repo, at this commit
+gh attestation verify zoost-<app>-<version>-store.zip --repo ivannot/zoost
+
+# 2. the same source produces the same bytes on your machine
+tools/verify.sh <app> <version>
+
+# 3. read what is actually inside — 19 files, no bundler, no minifier, no dependencies
+unzip -l zoost-<app>-<version>-store.zip
+```
+
+The third is the one that matters most and takes the least trust. Zoost ships as plain readable
+JavaScript and HTML: what you download is what runs, and you can read all of it in an afternoon.
+There is no build step that could put something in the package that is not in the repository.
+
+## What this cannot prove
+
+**What Google serves is not byte-identical to what was uploaded.** The Store repackages and re-signs
+every extension, so the `.crx` a browser installs cannot be compared to the `.zip` here. What the
+chain above establishes is the *input* to that process. To check the far end, unpack the installed
+extension from your Chrome profile and diff its files against the tag — they are plain text.
+
+**An attestation says who built a file, not that the file is good.** It removes "trust the author's
+laptop" from the chain. It does not remove "read the code", and nothing can.
+
 ## Making a release
 
 ```bash
-tools/release.sh <crm|analytics>
+tools/release.sh <crm|analytics>   # checks the tree is clean and the build reproducible, then tags
+git push --follow-tags             # this is what starts the public build
 ```
 
-It refuses a dirty tree, builds twice and compares the two hashes before writing anything down — a
-number nobody can reproduce is worse than no number — then tags the commit and appends the row here.
-Pushing and uploading stay manual, because both leave this machine.
+Then, when the workflow finishes: download the `.zip` **from the Release it created**, upload that
+file to the Chrome Web Store, and paste the `RELEASES.md` row from the Release body.
+
+`release.sh` no longer produces the file you upload, on purpose. It used to, and that was the weak
+link: a package built here and uploaded from here asks a reviewer to take the author's word for it.
