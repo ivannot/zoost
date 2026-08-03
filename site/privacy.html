@@ -154,9 +154,10 @@
     does not profile visitors. The pages are static files; the only script is one small file served from
     this same domain, which fills in the copyright year and the version badge in the footer.</p>
   <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's edge
-    and asks two public sources — the extension's Chrome Web Store listing page, and the GitHub API for the
-    repository's newest tag and the date the site content last changed — so the footer can show whether the
-    published, tagged and documented versions are in step. Those requests are made <b>by the server, not by
+    and asks two public sources — the extension's Chrome Web Store listing page, and GitHub for the
+    repository's newest tag, the version in its manifest, and the date the site content last changed — so
+    the footer can show what is published, what was released, what is in development, and when these pages
+    last changed. Those requests are made <b>by the server, not by
     your browser</b>: nothing about you is sent to Google or GitHub, no identifier of yours is involved, and
     the answer is cached for everyone alike. If a source is unreachable the badge simply reads "unknown".</p>
   <p>Your hosting provider may keep standard server access logs; those are outside the scope of this policy.</p>
