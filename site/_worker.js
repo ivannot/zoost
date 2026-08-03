@@ -98,9 +98,16 @@ async function siteUpdated() {
 
 const settled = (p) => p.then((v) => v).catch(() => null);
 
+// The cache key carries a version marker, and it must be bumped whenever the payload's shape
+// changes. The key deliberately ignores the query string — otherwise anyone could fill the cache
+// with junk keys — which also means a stale entry cannot be busted from outside. Without this
+// marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
+// and returns it unchanged. That is exactly what happened when `repo` was added.
+const CACHE_KEY = '/api/versions?v=2';
+
 async function versions(request, ctx) {
   const cache = caches.default;
-  const key = new Request(new URL('/api/versions', request.url).toString(), { method: 'GET' });
+  const key = new Request(new URL(CACHE_KEY, request.url).toString(), { method: 'GET' });
 
   const hit = await cache.match(key);
   if (hit) return hit;
