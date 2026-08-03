@@ -70,12 +70,14 @@ async function loadAi() {
     active: c.active || 'anthropic',
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
     openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}),
-    maxIter: c.maxIter || 8,
+    maxIter: c.maxIter || 20,
+    seedCap: c.seedCap || 72000,
   };
   $('aiengine').value = cfg.active;
   $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
   $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
   $('ai_maxiter').value = cfg.maxIter;
+  $('ai_seedcap').value = cfg.seedCap;
   markEngine();
 }
 function markEngine() {
@@ -97,7 +99,8 @@ $('saveAi').onclick = async () => {
     active: $('aiengine').value,
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
     openai: { model: $('ai_o_model').value.trim(), apiKey: $('ai_o_key').value.trim() },
-    maxIter: Math.max(1, Math.min(30, parseInt($('ai_maxiter').value, 10) || 8)),
+    maxIter: Math.max(1, Math.min(40, parseInt($('ai_maxiter').value, 10) || 20)),
+    seedCap: Math.max(4000, Math.min(400000, parseInt($('ai_seedcap').value, 10) || 72000)),
   };
   const p = cfg[cfg.active] || {};
   await chrome.storage.local.set({ aicfg: cfg }); await stamp();

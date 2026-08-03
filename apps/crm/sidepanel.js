@@ -904,7 +904,7 @@ function closeHealth() { $('healthview').classList.remove('show'); $('health').c
 let aiMessages = [], aiModCache = null, aiConnCache = null, aiSeedTruncated = false, aiSeedWarned = false;
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 8 };
+  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
 }
 function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
 async function aiSaveCfg(cfg) { try { await chrome.storage.local.set({ aicfg: cfg }); } catch (_) {} }
@@ -934,20 +934,55 @@ function aiModuleText(m) {
   (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${(f.picklist && f.picklist.length) ? f.picklist.slice(0, 15).join(', ') : ''} |\n`; });
   return s;
 }
-async function aiBuildSeed() {
+// The org, stated as compactly as it can be, in layers of decreasing importance.
+//
+// The index goes with *every* message, so its size is what a question costs before it has been
+// asked. A large org does not fit, and the question is then not "how big a cap" but "what gets
+// dropped". Cutting the tail is the wrong answer: it removes an arbitrary half and the model cannot
+// tell it is missing, which is how an assistant ends up asserting a function does not exist.
+//
+// Functions are the vocabulary here — nothing can be answered without knowing what exists — so they
+// are never dropped. Modules and connections are short and go last. Whatever is left out is named as
+// left out, with the tool that finds it, so a partial index is honest rather than silently short.
+const AI_SEED_CAP_DEFAULT = 72000;
+let aiSeedSize = 0, aiSeedOmitted = [];
+
+async function aiBuildSeed(cap) {
+  cap = Math.max(4000, Number(cap) || AI_SEED_CAP_DEFAULT);
   const g = await ensureGraph();
   const nodes = Object.values(g.nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
-  let s = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
-  nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; s += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
+  let funcs = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
+  nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
+
   const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
-  s += `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
+  const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
+
   const conns = await aiLoadConnections();
-  if (conns.length) s += `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} · used by ${c.uses.length} function(s)${c.connected === false ? ' · NOT CONNECTED' : ''}${c.missing ? ' · not in catalogue' : ''}`).join('\n') + '\n';
-  aiSeedTruncated = s.length > 16000;   // don't hide the cut from the user (see aiSend)
-  return aiTrunc(s, 16000);
+  const connections = conns.length
+    ? `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} \u00b7 used by ${c.uses.length} function(s)${c.connected === false ? ' \u00b7 NOT CONNECTED' : ''}${c.missing ? ' \u00b7 not in catalogue' : ''}`).join('\n') + '\n'
+    : '';
+
+  const omitted = [];
+  let out = funcs;
+  if (out.length + modules.length <= cap) out += modules; else omitted.push(`the ${mk.length} module names`);
+  if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(`the ${conns.length} connections`);
+  aiSeedOmitted = omitted;
+  if (out.length > cap) {                 // even the function list alone overflows
+    aiSeedOmitted = ['part of the function index — this org is larger than the index can hold'];
+    out = aiTrunc(out, cap);
+  }
+  aiSeedTruncated = omitted.length > 0 || out.length >= cap;
+  if (omitted.length) {
+    out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and can be fetched by name`
+      + ` (list_functions, get_module, get_connection) \u2014 do not assume something is absent because`
+      + ` it is not in this index.\n`;
+  }
+  aiSeedSize = out.length;
+  return out;
 }
-async function aiSystemPromptB(withTools) {
-  const seed = await aiBuildSeed();
+
+async function aiSystemPromptB(withTools, cap) {
+  const seed = await aiBuildSeed(cap);
   let focus = '';
   if (currentPath && currentPath.endsWith('.dg')) { const g = await ensureGraph(); const n = Object.values(g.nodes).find((x) => x.file === currentPath); if (n) focus = `\n# CURRENT FOCUS\nThe user is currently viewing ${n.namespace}.${n.name}:\n\`\`\`deluge\n${aiTrunc(n.source_code || '', 5000)}\n\`\`\`\n`; }
   const toolsLine = withTools
@@ -1103,15 +1138,17 @@ async function aiSend() {
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
-    const system = await aiSystemPromptB(withTools);
+    const system = await aiSystemPromptB(withTools, cfg.seedCap);
     // The org index sent to the model is capped. If it was cut, say so once — don't let the user
     // assume the model saw everything. Claude can still look things up; OpenAI (single-shot) cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
       aiSeedWarned = true;
-      aiMessages.push({ role: 'tool', content: 'ℹ️ Large org: the function/module index sent to the model is truncated. ' + (withTools ? 'Claude can still fetch specifics with its tools.' : 'OpenAI answers in one pass, so items beyond the cut are invisible to it — ask about specific functions or modules.') });
+      const what = aiSeedOmitted.length ? aiSeedOmitted.join(' and ') : 'part of the index';
+      aiMessages.push({ role: 'tool', content: `ℹ️ Large org: ${what} could not fit in the index sent with each message. `
+        + (withTools ? 'Claude can still find them by name with its tools — the function list is always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific functions by name.') });
       aiRenderMessages();
     }
-    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 8); }
+    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20); }
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     setStatus('', '');
   } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); setStatus('AI error', 'warn'); }
@@ -1133,7 +1170,23 @@ async function aiEngineChrome() {
     note.className = 'ainote show';
   }
 }
-function aiContextLabel() { const el = $('aictx'); if (!el) return; el.textContent = (currentPath && currentPath.endsWith('.dg')) ? ('Focus: ' + currentPath.split('/').pop() + ' \u00b7 conversation persists across functions') : 'No function focused \u00b7 open one to give code-level context'; }
+// The index is sent with *every* message, so its size is what each question costs before it has been
+// asked. Showing it is the only way the setting that caps it can be a real choice rather than a
+// number in a form: build it once, measure, and say so.
+async function aiContextLabel() {
+  const el = $('aictx'); if (!el) return;
+  const focus = (currentPath && currentPath.endsWith('.dg'))
+    ? 'Focus: ' + currentPath.split('/').pop()
+    : 'No function focused \u2014 open one to give code-level context';
+  let cost = '';
+  try {
+    const cfg = await aiGetCfg();
+    await aiBuildSeed(cfg.seedCap);
+    cost = ` \u00b7 index ${(aiSeedSize / 1000).toFixed(0)}k characters, ~${Math.round(aiSeedSize / 4).toLocaleString()} tokens per message`
+      + (aiSeedOmitted.length ? ` \u00b7 ${aiSeedOmitted.join(' and ')} left out` : '');
+  } catch (_) {}
+  el.textContent = focus + cost;
+}
 function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!dir) return;

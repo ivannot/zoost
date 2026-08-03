@@ -313,11 +313,12 @@ never seen Analytics and would otherwise write SQL that cannot run. If a rule ca
 is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
 that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
 
-**The AI index is layered, and what does not fit is named.** A workspace of a thousand views does
+**The AI index is layered, and what does not fit is named — in both apps.** A workspace of a thousand views does
 not fit in a system prompt sent with every message, so the question is never "how big a cap" but
 "what gets dropped". Dropping the tail is the wrong answer: it cuts an arbitrary half and the model
-cannot tell it is missing, which is how it ends up asserting a view does not exist. `aiBuildSeed()`
-assembles in priority order — **data objects are never dropped**, because they are the vocabulary
+cannot tell it is missing, which is how it ends up asserting a view does not exist. `aiBuildSeed(cap)`
+assembles in priority order — **the vocabulary is never dropped**: data objects in Analytics,
+the function list in CRM, because they are the vocabulary
 needed to write a query or follow a foreign key; reports and dashboards go first because
 `list_views` can find them by name — and whatever is left out is stated in the prompt itself with
 what to call instead. Measured: 1144 views and 444 data objects come to ~62k characters (~15k

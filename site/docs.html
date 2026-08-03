@@ -255,6 +255,15 @@ git commit -m "baseline"</code></pre>
   <h2 id="ai">11. AI assistant &amp; API keys</h2>
   <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
     <b>AI assistant</b>. Two providers are supported.</p>
+  <p>Two settings decide what a question costs. <b class="ui">Org index</b> is how much of the org is
+    described to the assistant with <em>every</em> message — bigger means it knows more names, and it is
+    billed each time. The panel prints the real figure for the workspace you have open, under the chat
+    title, so the number is not a guess. <b class="ui">Max tool steps</b> caps how many times it may reach
+    for a tool before answering; 20 is the default and most answers use two or three.</p>
+  <p>When an org is too large to describe in full, what gets dropped is decided rather than arbitrary: the
+    function list is never dropped, because it is the vocabulary everything else refers to, and module and
+    connection names go first because the assistant can still fetch those by name. Whatever is left out is
+    named as left out — so it never concludes something does not exist because it was not shown it.</p>
 
   <h3>Anthropic (Claude) — full agent</h3>
   <ol>
