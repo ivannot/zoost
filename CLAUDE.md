@@ -299,6 +299,13 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 
 ## Style
 
+- **Never let the test environment show through.** No real org, portal, instance, module, field,
+  function or connection names from the CRM this is developed against — not in code, not in comments,
+  not in examples, not in commit messages, not in the site. Use neutral placeholders:
+  `yourinstance`, `1234567890`, `Contacts`. This is not tidiness: Zoost is stated to be built
+  independently of its author's day job, and a real portal name in a comment quietly contradicts
+  that. Anything pasted in during a session — HAR files, exported JSON, function sources — is
+  reference material for the conversation and must never reach the repository.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
 - Say what a thing does not do, next to what it does. The health audit states its coverage gaps;
   the AI panel states that OpenAI cannot explore on its own; the export dialog flags source code.
