@@ -6,7 +6,7 @@
 <title>Zoost — Zoho Analytics</title>
 <style>
   /* Same tokens as the CRM panel so the two feel like one product; --sel is teal instead of blue,
-     which is the only thing that tells them apart at a glance — exactly as with the icons. */
+     which is what tells them apart at a glance — exactly as with the icons. */
   :root{
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#14b8a6; --sel-soft:#0f3b38;
@@ -19,12 +19,21 @@
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
   button:hover{background:#2b3a58} button:disabled{opacity:.5;cursor:default}
   button.primary{background:var(--sel);border-color:var(--sel);color:#04211e;font-weight:600}
-  button.primary:hover{background:#19d1bc}
+  button.primary:hover:not(:disabled){background:#19d1bc}
+
+  /* workspace bar — mirrors the CRM panel's, including the dashed "not chosen yet" affordance */
+  .wsbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;background:transparent;border:1px dashed var(--border);color:var(--muted)}
+  .wsroot:hover{border-color:var(--sel);color:var(--ink);border-style:solid}
+  .wsroot.needgrant{border-style:solid;border-color:#b06a1c;color:#f0a44a;background:rgba(217,119,6,.10);font-weight:600}
+  .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}
+  .wsbar button{flex:none}
 
   #ctx{display:flex;gap:9px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:#131a27;font-size:11.5px}
   #ctx .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-  #ctx.bound .dot{background:var(--ok)} #ctx.nows .dot{background:var(--warn)} #ctx.off .dot{background:var(--muted)}
-  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #ctx.bound .dot{background:var(--ok)} #ctx.nows .dot{background:var(--warn)}
+  #ctx.off .dot{background:var(--muted)} #ctx.mismatch .dot{background:var(--bad)}
+  #ctx .who{font:11.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
   #ctx .who b{color:var(--ink)} #ctx .who span{color:var(--muted)}
 
   #status{font-size:11px;color:var(--muted);padding:5px 10px;min-height:20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
@@ -54,6 +63,7 @@
   .sortdir{background:#0f1826;border:1px solid var(--border);border-radius:7px;padding:0;width:26px;height:26px;font-size:13px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
   .sortdir:hover{border-color:var(--sel)}
 
+  #main{flex:1;display:flex;flex-direction:column;min-height:0}
   #list{flex:1;overflow:auto;min-height:0}
   .vtbl{width:100%;border-collapse:collapse;font:11.5px var(--sans)}
   .vtbl th{position:sticky;top:0;z-index:2;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:9.5px;letter-spacing:.3px}
@@ -61,11 +71,35 @@
   .vtbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top}
   .vtbl td.num{text-align:right;font:11px var(--mono);color:var(--muted)}
   .vtbl td.verbatim{font-style:italic}   /* Zoho's own wording, passed through — not a value we computed */
-  .vtbl tr:hover{background:#15242e}
+  .vtbl tr{cursor:pointer} .vtbl tr:hover{background:#15242e} .vtbl tr.sel{background:var(--sel-soft)}
   .vname{color:var(--ink);font-weight:500;word-break:break-word}
   .vsub{color:var(--muted);font-size:10px;margin-top:1px}
   .vtype{display:inline-block;font:9.5px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 4px;white-space:nowrap}
   .orphan{color:var(--warn);font-size:10px;white-space:nowrap}
+
+  /* detail pane — the structure of the selected table or view */
+  #detail{display:none;flex-direction:column;border-top:2px solid var(--border);background:#0f1622;max-height:58%;min-height:120px}
+  #detail.show{display:flex}
+  .dhead{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .dhead .dt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .dhead .dx{cursor:pointer;color:var(--muted);font-size:15px;padding:0 4px}
+  .dhead .dx:hover{color:var(--ink)}
+  .dtabs{display:flex;gap:3px;padding:5px 7px;border-bottom:1px solid var(--line);background:#131a27}
+  .dtab{flex:1 1 auto;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:4px 3px;border-radius:6px;cursor:pointer;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dtab.active{background:#28405c;border-color:#3d5a7e;color:#fff}
+  .dtab:disabled{opacity:.35;cursor:default}
+  .dbody{flex:1;overflow:auto;padding:8px 10px}
+  .ctbl{width:100%;border-collapse:collapse;font:11px var(--sans)}
+  .ctbl th{position:sticky;top:0;z-index:1;background:#141b29;color:var(--muted);text-align:left;padding:4px 7px;border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
+  .ctbl td{padding:3px 7px;border-bottom:1px solid var(--line);color:#cbd5e1}
+  .ctbl td.t{font:10px var(--mono);color:#7fe3d5;white-space:nowrap}
+  pre.sql{margin:0;font:11px var(--mono);color:#cbd5e1;white-space:pre-wrap;word-break:break-word;line-height:1.5}
+  .lin{margin:0 0 10px}
+  .lin h5{margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600}
+  .lin ul{margin:0;padding-left:16px}
+  .lin li{padding:1px 0;color:#cbd5e1}
+  .lin li .lv{color:var(--muted);font:10px var(--mono)}
+  .lin .none{color:var(--muted);font-style:italic}
 
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
   .empty b{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
@@ -76,21 +110,29 @@
 </head>
 <body>
 
+<div class="wsbar">
+  <button class="wsroot" id="pickroot" title="Pick one working folder. Every Zoost product keeps its own subfolder inside it.">Choose folder…</button>
+  <button id="addws" disabled title="Create a workspace folder for the workspace in the active tab">+</button>
+</div>
+<div class="wsbar">
+  <select id="wssel" title="Workspaces found on disk"></select>
+  <button id="wsrefresh" title="Re-read the working folder">&#8635;</button>
+</div>
+
 <div id="ctx" class="off"><i class="dot"></i><span class="who" id="ctxwho">Looking for a Zoho Analytics tab…</span></div>
 <div id="status"><i class="spin"></i><span id="statustext">Ready.</span></div>
 
 <div class="bar">
-  <button id="refresh" class="primary">List views</button>
-  <button id="scan" disabled title="Ask Analytics what depends on what, one view at a time">Scan dependencies</button>
+  <button id="pull" class="primary" disabled>Pull all</button>
   <span class="sp"></span>
-  <button id="about" title="About Zoost for Analytics">i</button>
+  <button id="about" title="About">i</button>
 </div>
 
 <div id="census"></div>
 
 <div class="controls">
   <div class="findwrap">
-    <input id="find" type="search" placeholder="Filter by name or folder…" autocomplete="off" />
+    <input id="find" type="search" placeholder="Filter by name, folder or column…" autocomplete="off" />
     <span class="fx" id="findclear" title="Clear">&times;</span>
   </div>
   <select id="sort" title="Sort by">
@@ -103,25 +145,39 @@
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
 </div>
 
-<div id="list">
-  <div class="empty">
-    <b>Nothing listed yet.</b>
-    Open a Zoho Analytics workspace in the active tab — its URL looks like
-    <code>/workspace/&lt;id&gt;</code> — then press <b>List views</b>.
-    The workspace comes from the tab you are on, so there is nothing to configure.
+<div id="main">
+  <div id="list">
+    <div class="empty">
+      <b>Nothing pulled yet.</b>
+      Pick a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
+      <code>/workspace/&lt;id&gt;</code> — press <b>+</b> to create the workspace folder, then
+      <b>Pull all</b>.
+    </div>
+  </div>
+
+  <div id="detail">
+    <div class="dhead"><span class="dt" id="dtitle"></span><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dtabs">
+      <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
+      <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
+      <button class="dtab" id="tab_lin" data-tab="lin">Lineage</button>
+    </div>
+    <div class="dbody" id="dbody"></div>
   </div>
 </div>
 
 <div class="note" id="note">
   <b>Read-only.</b> Zoost never creates, edits or deletes a view. &middot;
-  <b>Dependencies are Analytics&rsquo; own.</b> A view nothing depends on may still be used —
-  through a shared link, an export, an embedded report or the API — so the scan marks
+  <b>Lineage is Analytics&rsquo; own.</b> A view nothing depends on may still be used —
+  a shared link, a scheduled export, an embedded report, the API — so these are
   <b>candidates</b>, never &ldquo;unused&rdquo;. &middot;
-  <b>Design</b> is shown <i>exactly as Zoho sends it</i>, in your interface language: Analytics gives
-  no machine-readable value for it, and Zoost will not guess at a date it cannot read — so that
-  column is not sortable. <b>Data</b> is a real timestamp and is.
+  <b>Lookups between base tables are not covered:</b> no endpoint we can read exposes them, so the
+  relations shown are query&nbsp;&rarr;&nbsp;source and view&nbsp;&rarr;&nbsp;view only. &middot;
+  <b>Design</b> is Zoho&rsquo;s own text in your interface language and is not sortable;
+  <b>Data</b> is a real timestamp and is.
 </div>
 
+<script src="idb.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

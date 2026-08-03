@@ -143,6 +143,26 @@ needed at all. This is the same shape as the CRM panel taking the org from the t
 the user says which workspace by being in it. Outside a workspace URL the panel says so and every
 action is disabled, rather than picking one.
 
+**The Analytics data model, as measured — not as assumed.** Seven view types. Only **Table** and
+**QueryTable** carry columns of their own; `GETALLTABLECOLDETAILS` describes exactly those in one
+call, and its keys **are** `VIEW_ID`s (verified: 135/135 match, and its name and kind agree with the
+view list's). Everything else is presentation, and `VIEWLIST`'s **`PARENT_ID`** says what it is built
+on — every presentation view resolves to a data-bearing view in exactly **one hop**, so the whole
+report-to-source graph costs no extra call. Dashboards have no `PARENT_ID` and no columns; that is
+correct, not a gap. `structureChain()` walks the chain so a report can show its structure instead of
+shrugging, and always states whose structure it is showing.
+
+**What Analytics will not tell us: lookups between base tables.** No captured endpoint exposes them.
+The relations Zoost can prove are query→source (from `editsql`'s `PAROBJID` / `PAROBJIDINVCOLS`,
+which is column-level) and view→view (`PARENT_ID` plus `dependencyview`). Every surface that shows
+relations must say the foreign keys are not among them, rather than implying a complete ER.
+
+**A pulled Analytics workspace on disk** is `views.json` (census + folders), `schema.json` (columns
+per table), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/_index.json`
+carrying the id-to-file map and the column-level lineage. The `.sql` files are the point: they are
+the only thing in Analytics that is genuinely source someone wrote, and one file each is what makes
+`git diff` able to answer "what changed in this workspace last month" — which Analytics cannot.
+
 **"Nothing depends on it" is a candidate, never a verdict.** The dependency scan asks Analytics its
 own question, one view at a time, and Analytics only knows what its views read from each other. A
 shared link, a scheduled export, an embedded report or an API consumer is invisible to it. Same
