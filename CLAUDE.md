@@ -433,7 +433,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | `README.md` | features, interface, quick start, known limitations |
 | `site/index.html` | the **suite** home: what the products share, and the card for each. A new product means a new card and a new page |
 | `site/crm.html`, `site/analytics.html` | the **product** pages. One per app, same structure and voice: why it exists, what's inside, what it does *not* do, get started. A feature landing in an app lands on its page in the same change |
-| `site/docs.html` | anything a user does differently. The "Covers Zoost X · updated Y" line fills itself from the manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
+| `site/docs.html`, `site/docs-analytics.html` | anything a user does differently. **One guide per app**, switched between at the top of both. The "Covers Zoost X · updated Y" line fills itself from that app's manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
 | `store/<app>/store-listing.md` | description, single purpose, or any permission justification. **Each app has its own**, and both are published |
 | `CLAUDE.md` | a new convention, decision or trap that the next session must know |

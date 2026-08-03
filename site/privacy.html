@@ -82,13 +82,24 @@
     <thead><tr><th>Where</th><th>What</th><th>Why</th></tr></thead>
     <tbody>
       <tr>
-        <td class="p">Local folder<br>(File System Access)</td>
+        <td class="p">Local folder<br>(File System Access)<br><span class="k">Zoho CRM</span></td>
         <td>Deluge function source and its metadata (including which connections each function uses and who
           last changed it), module and layout metadata, related lists, workflows, schedules, the org's
           connections catalogue (names, connectors and OAuth scopes — <b>never</b> connection secrets or
           tokens), exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host
           and instance name.</td>
         <td>This is the point of the tool: a local, versionable mirror you can put under Git.</td>
+      </tr>
+      <tr>
+        <td class="p">Local folder<br>(File System Access)<br><span class="k">Zoho Analytics</span></td>
+        <td>The workspace's structure: the list of views with their type, folder, owner and dates; the
+          columns and data types of every table and query table; the relations between them; the dependency
+          graph; and the SQL of each query table as its own <code>.sql</code> file. Plus exports and a
+          <code>.zoost.json</code> holding the workspace id, name and host.
+          <b>Never the rows inside your tables</b> — the extension does not read them, and the endpoints
+          that return cell values are deliberately not called.</td>
+        <td>Same purpose: a local, versionable mirror. The <code>.sql</code> files are the part that makes
+          <code>git diff</code> able to answer what changed.</td>
       </tr>
       <tr>
         <td class="p">chrome.storage.local</td>
@@ -110,7 +121,8 @@
   <h2>4. Where data travels</h2>
 
   <h3>4.1 Your Zoho product</h3>
-  <p>Zoost calls the Zoho CRM API of the instance open in your tab, using the session you are already
+  <p>Zoost calls the API of the Zoho product open in your tab — the Zoho CRM API for one extension,
+    the Zoho Analytics API for the other — using the session you are already
     signed in with. It sends no credentials of its own and creates none. It operates strictly within
     your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.</p>
   <p>Zoost reads metadata and function source. It does not read, download or export your CRM records
@@ -120,14 +132,18 @@
   <div class="box warn">
     <h3>Read this before enabling the assistant</h3>
     <p>The AI assistant is off by default and requires you to enter your own API key. Once enabled, the
-      content it needs to answer you — which includes <b>Deluge source code</b>, module schemas, workflow
+      content it needs to answer you. For the CRM extension that includes <b>Deluge source code</b>, module schemas, workflow
       definitions, connection names and their connectors (never their secrets or tokens, which Zoost never
       reads) and your questions — is sent directly from your browser to the provider you selected:
       Anthropic or OpenAI. No other destination is possible: the extension is granted network access to
-      those two origins and to your Zoho CRM, and to nothing else.</p>
+      those two origins and to your Zoho product, and to nothing else.</p>
+    <p>For the <b>Analytics</b> extension the same applies to a different set: view names, column names and
+      data types, the relations between tables, the dependency graph, and the <b>SQL of your query
+      tables</b>. It can never send the rows inside a table, because it never reads them — so the assistant
+      knows your workspace's structure and never its values.</p>
     <p>That provider then processes the data under <b>its own</b> terms and privacy policy, not this one.
       The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
-      If your organisation restricts sending source code or business logic to third-party AI services,
+      If your organisation restricts sending source code, SQL or business logic to third-party AI services,
       do not enable this feature.</p>
   </div>
   <p>Your API key is stored only in <code>chrome.storage.local</code> on your machine and is sent only to
@@ -135,7 +151,8 @@
 
   <h3>4.3 Exports</h3>
   <p>Export files are written to your working folder and go nowhere on their own. Before each export,
-    Zoost asks which sections may be included; source code is opt-in and is flagged when selected. What
+    Zoost asks which sections may be included; the sensitive part is opt-in and flagged when selected —
+    Deluge source code in the CRM extension, the SQL of your query tables in the Analytics one. What
     happens to a file after you create it is your responsibility and that of the organisation whose data
     it describes.</p>
 
@@ -149,12 +166,16 @@
   <ul>
     <li><code>sidePanel</code> — the extension's interface is a Chrome side panel.</li>
     <li><code>storage</code> — to keep your settings, as described above.</li>
-    <li><code>scripting</code> — to inject the bridge script that talks to the Zoho CRM API using your
+    <li><code>scripting</code> — to inject the bridge script that talks to the Zoho API using your
       session, and the hook that notices when you save a function so the local copy can follow.</li>
-    <li><code>tabs</code> — to detect which Zoho CRM instance and org the active tab belongs to, so that a
+    <li><code>tabs</code> — to detect which Zoho CRM org, or which Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to Zoho CRM domains</b> (<code>crm.zoho.*</code>, <code>crmsandbox.zoho.*</code>,
-      <code>one.zoho.*</code>) — the only sites the extension runs on. It is inert everywhere else.</li>
+    <li><b>Host access to the Zoho domains each extension reads.</b> The CRM one lists
+      <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>; the Analytics one lists
+      <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre
+      because an account may live on any of them, and neither lists a domain it does not read. Both also
+      list <code>api.anthropic.com</code> and <code>api.openai.com</code>, contacted only by the optional
+      assistant and only if you configure it.</li>
     <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> — the only two
       AI destinations the extension can reach, used solely by the optional AI assistant and only after you
       configure it.</li>

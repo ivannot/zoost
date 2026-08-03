@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to use Zoost for Zoho Analytics</title>
+<meta name="description" content="How to use Zoost for Zoho Analytics: working folder, workspaces, pulling, reading a table’s structure and foreign keys, the ER diagram, query-table SQL, what nothing depends on, exports, and the AI assistant.">
+<link rel="canonical" href="https://zoost.it/docs-analytics.html">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0d121c">
+<link rel="stylesheet" href="/site.css">
+<style>
+  /* docs-specific — shared base & content typography are in site.css */
+  b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
+  .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
+  .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
+  .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
+  .gsw{display:inline-flex;gap:0;margin:18px 0 0;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+  .gsw a{padding:7px 16px;font:600 13.5px var(--sans);color:var(--muted);text-decoration:none;background:var(--surface)}
+  .gsw a:hover{color:var(--ink)}
+  .gsw a.on{background:var(--sel);color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <nav>
+      <a href="/crm.html">Zoho CRM</a>
+      <a href="/analytics.html">Zoho Analytics</a>
+      <a href="/docs.html" aria-current="page">How to</a>
+      <a href="/privacy.html">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <h1>How to use Zoost</h1>
+  <div class="gsw">
+    <a href="/docs.html">Zoho CRM</a><a href="/docs-analytics.html" class="on">Zoho Analytics</a>
+  </div>
+  <h2 style="border:0;margin:22px 0 0;padding:0;font-size:20px">Zoho Analytics</h2>
+  <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
+    around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
+  <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost <span class="dv">1.0.0</span> · updated <span class="dd">3 August 2026</span></p>
+
+  <div class="toc">
+    <b>On this page</b>
+    <ol>
+      <li><a href="#model">The mental model</a></li>
+      <li><a href="#setup">First run</a></li>
+      <li><a href="#pull">Pulling</a></li>
+      <li><a href="#git">Putting it under Git</a></li>
+      <li><a href="#read">Reading the workspace</a></li>
+      <li><a href="#structure">Structure and foreign keys</a></li>
+      <li><a href="#graph">The ER diagram</a></li>
+      <li><a href="#sql">Query-table SQL</a></li>
+      <li><a href="#depends">What nothing depends on</a></li>
+      <li><a href="#health">Health</a></li>
+      <li><a href="#export">Exports</a></li>
+      <li><a href="#ai">AI assistant &amp; API keys</a></li>
+      <li><a href="#trouble">When something goes wrong</a></li>
+    </ol>
+  </div>
+
+  <h2 id="model">1. The mental model</h2>
+  <p>Three things, and the rest follows.</p>
+  <table>
+    <tbody>
+      <tr><td class="p"><b>Working folder</b></td>
+        <td>One folder on your disk for every Zoost product. Each keeps its own subfolder inside it, so
+          the CRM mirror and the Analytics mirror never meet.</td></tr>
+      <tr><td class="p"><b>Workspace</b></td>
+        <td>One folder per Analytics workspace, inside <code>analytics/</code>. Its identity is the
+          workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name — rename either
+          and nothing is orphaned.</td></tr>
+      <tr><td class="p"><b>The active tab decides</b></td>
+        <td>The panel takes the workspace from the URL of the tab you are on. There is nothing to pick and
+          nothing to pick wrong. Move to another workspace and every Zoho-bound action is disabled until
+          the tab and the folder agree again.</td></tr>
+    </tbody>
+  </table>
+  <p class="box">Zoost is <b>read-only</b> towards Analytics. It never creates, edits or deletes a view,
+    and it never reads the rows inside your tables — the endpoints that return cell values exist and are
+    deliberately not called. The worst it can do to your workspace is nothing.</p>
+
+  <h2 id="setup">2. First run</h2>
+  <ol>
+    <li>Install from the Chrome Web Store and open a Zoho Analytics tab.</li>
+    <li>Click the Zoost icon to open the side panel.</li>
+    <li><b class="ui">📁 Set working folder…</b> — pick one folder. The browser asks for permission; it is
+      the only way an extension may write files, and it applies to that folder alone.</li>
+    <li>Open the workspace you want to mirror. Its URL looks like
+      <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
+    <li><b class="ui">+ Workspace</b> — creates the folder for it and reads its name from Analytics.</li>
+  </ol>
+  <p>The bar under the toolbar is the guard. Green means the tab and the folder are the same workspace.
+    Amber with a bar of actions means they are not, and everything Zoho-bound stays disabled until you
+    pick one of the two ways out it offers.</p>
+
+  <h2 id="pull">3. Pulling</h2>
+  <p><b class="ui">Pull all</b> reads the whole workspace in one pass: the list of views, the columns and
+    types of every table and query table, the relations between them, the SQL of each query table, and the
+    dependency graph. A few hundred views take under a minute.</p>
+  <p>Two kinds of failure, told apart on purpose:</p>
+  <ul>
+    <li>A <b>stage</b> — the view list, the structure, the ER model — is one call. If it does not answer
+      there is no partial result worth keeping, so the pull stops and <b>nothing is written</b>. What was
+      on disk stays as it was.</li>
+    <li>An <b>item</b> — one view's SQL or lineage — is one call each. One unreadable view must not cost
+      the other four hundred, so failures are collected, the pull finishes, and the status line says how
+      many were missed. <b class="ui">Retry N failed</b> appears and re-reads exactly those.</li>
+  </ul>
+  <p>To re-read a single view, open it and use <b class="ui">Pull</b> in the detail pane. The <b class="ui">↻</b>
+    button next to it is <em>local</em>: it reloads the mirror from disk, or re-grants folder access. It
+    never talks to Zoho — same meaning as in the CRM panel.</p>
+
+  <h2 id="git">4. Putting it under Git</h2>
+  <p>In the workspace folder:</p>
+  <pre><code>cd &lt;working folder&gt;/analytics/&lt;workspace&gt;
+git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code></pre>
+  <p>What you get on disk:</p>
+  <table>
+    <tbody>
+      <tr><td class="p"><code>views.json</code></td><td>the census: every view with type, folder, owner, dates, tags</td></tr>
+      <tr><td class="p"><code>schema.json</code></td><td>columns and data types per table, plus the relations</td></tr>
+      <tr><td class="p"><code>lineage.json</code></td><td>what reads from what, both directions</td></tr>
+      <tr><td class="p"><code>sql/*.sql</code></td><td>one file per query table — the diffable part</td></tr>
+      <tr><td class="p"><code>sql/_index.json</code></td><td>id-to-file map, and which source columns each query involves</td></tr>
+      <tr><td class="p"><code>export/</code></td><td>the reports you generate</td></tr>
+    </tbody>
+  </table>
+  <p>The <code>.sql</code> files are the point. They are the only thing in Analytics that is genuinely
+    source somebody wrote, and one file each is what lets <code>git diff</code> answer <em>what changed in
+    this workspace last month</em> — a question Analytics cannot answer at all.</p>
+
+  <h2 id="read">5. Reading the workspace</h2>
+  <p>The list is every view. Above it, two picklists: <b class="ui">Type</b> filters by kind and carries the
+    count of each, <b class="ui">Sort</b> orders by name, type, folder, when the data changed, how many views
+    read from it, or owner.</p>
+  <p>The search box looks at names, folders <em>and column names</em>. Type a column name to find which
+    tables carry it — useful before going looking for where some data lives.</p>
+  <p>Two date columns, and they are different facts:</p>
+  <ul>
+    <li><b>Data</b> — when the data last refreshed. Always a real timestamp, always sortable.</li>
+    <li><b>Design</b> — when the design last changed. A real date for tables and query tables. For reports
+      and dashboards Analytics only gives text in your interface language, so it is shown <em>exactly as it
+      sends it</em>, in italics, never parsed, and sorted last. Reading a localized date is the same mistake
+      as reading a localized button label.</li>
+  </ul>
+  <p>Rows marked <span class="k">system</span> were put there by Zoho — synced from a connected source
+    rather than built by you. Analytics' own ER model knows which; the view list does not.</p>
+
+  <h2 id="structure">6. Structure and foreign keys</h2>
+  <p>Click any row to open the detail pane. Drag the bar above it to resize; the height is remembered.</p>
+  <p><b class="ui">Columns</b> shows every column with its Zoho data type. Tables and query tables carry
+    their own; a report or a pivot carries none, so Zoost follows what it is built on and shows
+    <em>that</em> structure — saying whose it is, rather than passing it off as the report's.</p>
+  <p>The <b>References</b> column is the foreign keys, in both directions, because a lookup is not
+    symmetric:</p>
+  <ul>
+    <li><b>→</b> this column points at another table</li>
+    <li><b>←</b> another table's column points at this one</li>
+  </ul>
+  <p>Each is a link: click it and you are looking at the other table. They come from the ER model Analytics
+    itself draws, with the join written exactly as Zoho writes it.</p>
+
+  <h2 id="graph">7. The ER diagram</h2>
+  <p><b class="ui">Schema ↗</b> opens the whole workspace in its own window. <b class="ui">ER ↗</b> in a
+    table's detail pane opens the same window focused on that table, at depth 2.</p>
+  <ul>
+    <li>Tables as boxes, relations as arrows, the join written on the arc.</li>
+    <li>Click a box to re-centre on it; <b class="ui">±</b> widens or narrows the depth around the focus.</li>
+    <li>Click an arc to isolate one relation and push everything else back — the cheapest way to read a
+      crowded diagram.</li>
+    <li><b class="ui">Layout ⚙</b> exposes spacing, spread, ring radius, label gap and label size as live
+      sliders. There is no single right value across graphs, so the trade-off is yours to make. The
+      starting values live in <b class="ui">⚙ Settings</b>, and the two are the same setting seen from two
+      places.</li>
+    <li><b class="ui">Save PDF</b> prints it at wall size.</li>
+  </ul>
+  <p>The window also has a <b>Relations</b> tab: one row per join, searchable by table, column or join,
+    and every join copyable.</p>
+
+  <h2 id="sql">8. Query-table SQL</h2>
+  <p>The <b class="ui">SQL</b> tab shows the source of a query table. The <b>Lineage</b> tab lists the
+    source tables it reads and how many of their columns it actually involves — which is what makes
+    <em>if I drop this column, what breaks</em> answerable.</p>
+  <p>On disk every query is its own file, so <code>grep</code> and <code>git log -p</code> work on them
+    like any other source.</p>
+  <p class="box warn">Zoost never runs, validates or deploys SQL. It reads it and writes it to disk;
+    Analytics remains the only thing that can tell you a query compiles.</p>
+
+  <h2 id="depends">9. What nothing depends on</h2>
+  <p>The pull asks Analytics its own dependency question for every view. The <b>Read by</b> column is how
+    many views read from it plus the dashboards it appears on — click the number to open the breakdown.
+    Pick <b>Nothing depends on</b> in the Type filter to see only the candidates.</p>
+  <p class="box warn"><b>Candidates, never a verdict.</b> Analytics only knows what its own views read from
+    each other. A shared link somebody bookmarked, a scheduled export, an embedded report or an API
+    consumer is invisible to that graph. Treat the list as a place to start asking, not a delete queue.</p>
+
+  <h2 id="health">10. Health</h2>
+  <p><b class="ui">♥</b> opens the audit in the panel: views nothing depends on, tables in no relation at
+    all, tables Zoho put there rather than you, views with no description, and anything that could not be
+    read in the last pull.</p>
+  <p>Counts and lists — no thresholds, no red flags, no score. A table in no relation may be a deliberate
+    lookup list; a view nothing reads may feed a scheduled export. Every figure states what it does
+    <em>not</em> cover, next to itself.</p>
+
+  <h2 id="export">11. Exports</h2>
+  <p><b class="ui">HTML</b> produces one self-contained file with everything the panel shows.
+    <b class="ui">Markdown</b> produces the same shaped as context for an AI tool that has never seen your
+    workspace.</p>
+  <p>A dialog decides section by section what may go in — views, structure, relations, SQL, lineage,
+    health — with <b>Everything</b> and <b>Share-safe</b> presets. The <b>SQL</b> option sits indented under
+    Structure because it depends on it, and it is flagged every time: it is the part somebody wrote.</p>
+  <p>Both land in <code>export/</code> inside the workspace folder, named
+    <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code> — the same place and the same shape as the CRM
+    workbench's exports.</p>
+  <p>The Markdown carries one thing the HTML does not: <b>the constraints of Analytics' SQL dialect</b>, so
+    an assistant reading that file does not write queries that cannot run.</p>
+
+  <h2 id="ai">12. AI assistant &amp; API keys</h2>
+  <p>Optional, and off until you configure it. <b class="ui">⚙ Settings</b> → pick a provider, paste a
+    model name and your own API key.</p>
+  <table>
+    <tbody>
+      <tr><td class="p"><b>Anthropic</b> (Claude)</td>
+        <td>Runs as an agent with read-only tools over your local mirror: it reads a structure, follows a
+          foreign key, opens a query's SQL, searches columns, says what depends on what. Every tool call is
+          shown in the chat.</td></tr>
+      <tr><td class="p"><b>OpenAI</b> (ChatGPT)</td>
+        <td>Answers in one pass from the workspace index and the view you have open. It cannot go and read
+          anything itself, so it will ask you for what it is missing.</td></tr>
+    </tbody>
+  </table>
+  <p>These two are the only providers supported, because they are the two that are tested and the only two
+    the extension may reach.</p>
+  <p>The assistant is told what Zoho documents about query-table SQL — SELECT only, double-quoted
+    identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of
+    query-over-query. You can read exactly what it is told in <b class="ui">⚙ Settings</b>. What it writes
+    is a draft for you to paste, never something Zoost has checked.</p>
+  <p class="box warn">Using the assistant sends the parts of your workspace it needs — view and column
+    names, relations, and the SQL of your query tables — from your browser straight to the provider you
+    chose. It never sends the rows inside your tables, because Zoost does not read them. Nothing goes to
+    the developer. Check this is acceptable for your organisation before enabling it.</p>
+
+  <h2 id="trouble">13. When something goes wrong</h2>
+  <table>
+    <tbody>
+      <tr><td class="p">Everything is disabled</td>
+        <td>The tab and the folder are different workspaces. The amber bar offers both ways out: take the
+          tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
+      <tr><td class="p">“Not on a Zoho Analytics tab”</td>
+        <td>The panel acts on the active tab. Switch to the Analytics tab, or use the button on the
+          overlay.</td></tr>
+      <tr><td class="p">“No workspace open”</td>
+        <td>You are on Analytics but not inside a workspace. Open one — the URL must contain
+          <code>/workspace/&lt;id&gt;</code>.</td></tr>
+      <tr><td class="p">The folder button is amber</td>
+        <td>The browser dropped the permission, which it does between sessions. Click anywhere in the panel
+          to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
+      <tr><td class="p">“CSRF token not found”</td>
+        <td>The session is not signed in on that tab. Reload the Analytics page and try again.</td></tr>
+      <tr><td class="p">N items could not be read</td>
+        <td>Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
+          and Health lists them.</td></tr>
+      <tr><td class="p">A report shows no columns</td>
+        <td>Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
+          view through what the report is built on, it says so rather than showing an empty table.</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Something wrong or missing here? <a href="mailto:ivan@zoost.it">ivan@zoost.it</a> or an
+    issue on <a href="https://github.com/ivannot/zoost">GitHub</a>.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/crm.html">Zoho CRM</a><span class="sep">·</span>
+      <a href="/analytics.html">Zoho Analytics</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
+      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Created by Ivan Notaristefano (with the support of Claudio). Copyright <span class="cyear">2026</span>. Licensed under the Apache License 2.0 and provided
+      <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
+      liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
+      support or maintenance.
+    </p>
+    <p class="legal">
+      Zoost is an independent, unofficial developer tool. It is <b>not</b> affiliated with, endorsed by,
+      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
+      trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+</body>
+</html>

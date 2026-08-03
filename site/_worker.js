@@ -114,7 +114,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=6';   // bumped: the payload now carries both products
+const CACHE_KEY = '/api/versions?v=7';   // bumped: both products, and a date per guide
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -123,10 +123,11 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [crmStore, crmRepo, anStore, anRepo, tag, updated, docsUpd] = await Promise.all([
+  const [crmStore, crmRepo, anStore, anRepo, tag, updated, docsUpd, docsAnUpd] = await Promise.all([
     settled(storeVersion('crm')), settled(repoVersion('crm')),
     settled(storeVersion('analytics')), settled(repoVersion('analytics')),
     settled(latestTag()), settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
+    settled(lastChanged('site/docs-analytics.html')),
   ]);
 
   const res = new Response(JSON.stringify({
@@ -135,7 +136,8 @@ async function versions(request, ctx) {
     store: crmStore, repo: crmRepo,
     crm: { store: crmStore, repo: crmRepo },
     analytics: { store: anStore, repo: anRepo },
-    tag, siteUpdated: updated, docsUpdated: docsUpd, checked: new Date().toISOString(),
+    tag, siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
+    checked: new Date().toISOString(),
   }), {
     headers: {
       'content-type': 'application/json; charset=utf-8',

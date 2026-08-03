@@ -30,11 +30,19 @@
   // that documentation ships with the code that changed it, so the version the docs describe is the
   // version in the manifest. The date is the last change to docs.html specifically — using the whole
   // site would claim the guide was updated when only the homepage moved.
+  // "Covers Zoost X · updated Y" on a guide. Which product's version, and which file's date, come
+  // from the .upd element itself — a guide that borrowed the other product's number would be stating
+  // something false about the thing it documents.
   function fillDocsStamp(d) {
-    var v = document.querySelector('.upd .dv');
-    var t = document.querySelector('.upd .dd');
-    if (v && d.repo) v.textContent = d.repo;
-    if (t && d.docsUpdated) { var f = fmtDate(d.docsUpdated, true); if (f) t.textContent = f; }
+    var el = document.querySelector('.upd');
+    if (!el) return;
+    var app = el.getAttribute('data-app') || 'crm';
+    var v = el.querySelector('.dv');
+    var t = el.querySelector('.dd');
+    var ver = (d[app] && d[app].repo) || (app === 'crm' ? d.repo : null);
+    if (v && ver) v.textContent = ver;
+    var when = el.getAttribute('data-updated-key') === 'analytics' ? d.docsAnalyticsUpdated : d.docsUpdated;
+    if (t && when) { var f = fmtDate(when, true); if (f) t.textContent = f; }
   }
 
   fetch('/api/versions', { headers: { accept: 'application/json' } })
@@ -53,10 +61,12 @@
       prods.forEach(function (pr) {
         var name = pr[0], v = pr[1];
         if (!v || (!v.store && !v.repo)) return;
-        bits.push('<span class="vitem" style="opacity:.75">' + esc(name) + '</span>');
+        if (bits.length) bits.push('<span class="vbreak"></span>');
+        bits.push('<span class="vitem vprod">' + esc(name) + '</span>');
         bits.push('<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>');
         if (v.repo) bits.push('<span class="vitem"><b>In development</b> ' + esc(v.repo) + '</span>');
       });
+      if (bits.length) bits.push('<span class="vbreak"></span>');
       bits.push('<span class="vitem"><b>Latest tag</b> ' + (d.tag ? esc(d.tag) : '<i>unknown</i>') + '</span>');
       if (d.siteUpdated) {
         var f = fmtDate(d.siteUpdated);
