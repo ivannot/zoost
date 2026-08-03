@@ -83,10 +83,11 @@ async function repoVersion() {
   return IS_VERSION.test(v) ? v : null;   // same shape guard as the rest
 }
 
-// When the site content itself last changed. GitHub knows this without any credential, and it is
-// truer than a deploy timestamp: it is when the pages actually changed.
-async function siteUpdated() {
-  const r = await fetch(`https://api.github.com/repos/${REPO}/commits?path=site&per_page=1`, {
+// When a given path last changed. GitHub knows this without any credential, and it is truer than a
+// deploy timestamp: it is when the content actually changed. Asked per path on purpose — a guide
+// that claims to have been updated because the homepage changed is claiming something false.
+async function lastChanged(path) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}/commits?path=${encodeURIComponent(path)}&per_page=1`, {
     headers: { 'user-agent': UA, accept: 'application/vnd.github+json' },
     signal: timeout(6000),
   });
@@ -103,7 +104,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=2';
+const CACHE_KEY = '/api/versions?v=3';
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -112,12 +113,13 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [store, tag, repo, updated] = await Promise.all([
-    settled(storeVersion()), settled(latestTag()), settled(repoVersion()), settled(siteUpdated()),
+  const [store, tag, repo, updated, docsUpd] = await Promise.all([
+    settled(storeVersion()), settled(latestTag()), settled(repoVersion()),
+    settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
   ]);
 
   const res = new Response(JSON.stringify({
-    store, tag, repo, siteUpdated: updated, checked: new Date().toISOString(),
+    store, tag, repo, siteUpdated: updated, docsUpdated: docsUpd, checked: new Date().toISOString(),
   }), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
