@@ -258,7 +258,11 @@ These all failed **silently**, with no console error. They are the expensive kin
 - **A CSRF header's prefix is not the cookie's name.** The CRM bridge in this same repository proves
   it — prefix `crmcsrfparam=`, cookie `CT_CSRF_TOKEN` — and assuming `ZDB_CSRF_TOKEN=` meant a
   cookie of that name is what made the first Analytics ER pull fail. Find the source, never infer it
-  from the prefix.
+  from the prefix. On `analytics.zoho.*` the value is the **`CSRF_TOKEN`** cookie, with
+  `CT_CSRF_TOKEN` holding the identical value — established by hooking `setRequestHeader`/`fetch` in
+  the page and comparing what the app itself sends against the cookie jar, printing only the *name*
+  that matched. That technique is the general answer when a token's origin is not in a capture: make
+  the application tell you, do not try candidates against a live endpoint.
 - **Two Analytics endpoints are deliberately never called, and that is a safety decision, not an
   oversight.** `ZDBTableDataAction.ma` returns `dataTextNew`, the actual cell values of a table —
   customer records, which Zoost states it never touches. `ZAChartView.ve` would give the report

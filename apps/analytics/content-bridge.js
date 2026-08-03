@@ -70,17 +70,17 @@
   // than sending a request that would come back as an unexplained failure.
   const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
   function zdbCsrf() {
-    const c = cookie('ZDB_CSRF_TOKEN');
-    if (c) return c;
-    try {
-      const m = document.documentElement.innerHTML.match(/ZDB_CSRF_TOKEN["'\s]*[:=]["'\s]*([A-Za-z0-9_\-]{32,})/);
-      if (m) return m[1];
-    } catch (_) {}
-    return '';
+    // Verified by intercepting what the Analytics app itself sends: the value is the 128-character
+    // `CSRF_TOKEN` cookie, and `CT_CSRF_TOKEN` on this host holds the identical value. Reading
+    // either is therefore correct — the pair is tolerance for one being absent on another data
+    // centre, not a guess between two candidates, and there is no request to retry if the first is
+    // missing. The token was also confirmed **not** to be anywhere in the page source, so the
+    // scrape that used to sit here was dead code and is gone.
+    return cookie('CSRF_TOKEN') || cookie('CT_CSRF_TOKEN') || '';
   }
   async function post(path, params) {
     const token = zdbCsrf();
-    if (!token) throw new Error('CSRF token not found on the page (looked for a ZDB_CSRF_TOKEN cookie, then the same name in the page source)');
+    if (!token) throw new Error('CSRF token not found (no CSRF_TOKEN or CT_CSRF_TOKEN cookie on this page — are you signed in?)');
     const res = await fetch(BASE + path, {
       method: 'POST',
       headers: {
