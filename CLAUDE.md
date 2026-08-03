@@ -77,6 +77,14 @@ where it was broken next: exports were written to `export/` in CRM and to the wo
 Analytics, under a different filename shape and a different timestamp format. Nothing in the markup
 could have caught it. So also compare, by reading both sides:
 
+- **what an overlay covers.** In the CRM panel `#aiview` and `#healthview` live inside `#belowbar`
+  at `inset:0`, so opening one hides the mode segments and the per-type button row beneath it — the
+  view owns everything below the main toolbar. An overlay that starts lower leaves a strip of stale
+  controls visible and looks like a different product.
+- **a control that has nothing to do is absent, not disabled.** The CRM's "Complete missing" button
+  is `display:none` until there is something missing, and its label carries the count. A greyed
+  button still says "there is something here you cannot have", which is misleading when there is no
+  something. Disabled is for *temporarily* unavailable — wrong workspace, pull running.
 - **what a symbol means.** The glyphs are a vocabulary shared across the apps, and one that means
   two different things is worse than none: **`↻` is local** — "reload from disk / re-grant folder
   access" — and **anything that reads from Zoho says "Pull"** and wears `.zbtn`, whether it is

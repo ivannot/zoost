@@ -93,7 +93,7 @@
 
   #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
   #pfoot .pfsp{flex:1}
-  #pfoot #about,#pfoot #help{cursor:pointer}
+  #pfoot #opts,#pfoot #about,#pfoot #help{cursor:pointer}
   #pfoot a{color:var(--muted);text-decoration:none} #pfoot a:hover{color:#f472b6} #pfoot .sep{color:var(--border)}
 
   /* Census: one chip per view type, doubling as a filter. Counts are shown, never judged. */
@@ -271,7 +271,7 @@
   <fieldset class="wsgroup">
     <legend>workspace</legend>
     <button id="pull" class="zbtn" disabled title="Pull views, structure, relations, SQL and lineage">Pull all</button>
-    <button id="retry" class="zbtn" disabled title="Re-read only the items that failed in the last pull">Retry failed</button>
+    <button id="retry" style="display:none" title="Re-read only the items that failed in the last pull"></button>
     <button id="refresh" disabled title="Refresh — reload from disk / re-grant folder access" aria-label="Refresh" style="font-size:15px;line-height:1">↻</button>
     <span class="gsep"></span>
     <span class="expgroup"><span class="explabel">export</span>
@@ -285,6 +285,7 @@
   </fieldset>
 </div>
 
+<div id="main">
 <div id="census"></div>
 
 <div class="controls">
@@ -303,7 +304,6 @@
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
 </div>
 
-<div id="main">
   <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
 
   <div id="list">
@@ -319,7 +319,7 @@
     <div id="aictx" class="aictx"></div>
     <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
     <div id="aimsgs" class="aimsgs"></div>
-    <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about a view, a column, what depends on what… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend" class="abtn">Send</button></div>
+    <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about a view, a column, what depends on what… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend">Send</button></div>
   </div>
 
   <div id="healthview">
@@ -342,6 +342,7 @@
 
 
 <div id="pfoot">
+  <a id="opts" title="AI engine and assistant settings">⚙ Settings</a> <span class="sep">·</span>
   <a id="about" title="Credits, licence and legal notice">About</a> <span class="sep">·</span>
   <a id="help" href="https://zoost.it/docs.html" title="How to use Zoost — opens zoost.it/docs" target="_blank" rel="noopener">Help ↗</a>
   <span class="pfsp"></span>

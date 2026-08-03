@@ -309,9 +309,14 @@ function updateButtons() {
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('pull').disabled = busy || !dir || !guardOk();
-  $('retry').disabled = busy || !dir || !guardOk() || !pullFailed.length;
+  // Absent, not disabled, when there is nothing to retry — the CRM's equivalent does the same.
+  // A greyed button still says "there is something here you cannot have", which is misleading
+  // when there is no something. The label carries the count, so the button is self-explaining.
+  const rb = $('retry');
+  rb.style.display = pullFailed.length ? '' : 'none';
+  rb.textContent = `Retry ${pullFailed.length} failed`;
+  rb.disabled = busy || !dir || !guardOk();
   $('refresh').disabled = busy || (!dir && !(root && !rootGranted));
-  $('retry').textContent = pullFailed.length ? `Retry ${pullFailed.length} failed` : 'Retry failed';
   const loaded = views.length > 0;
   $('export').disabled = busy || !loaded;
   $('exportmd').disabled = busy || !loaded;
@@ -637,12 +642,17 @@ function render() {
       The search also looks inside column names. Clear it to see them all again.</div>`;
     return;
   }
+  // The number is the answer's headline; clicking it opens the breakdown. Naming the same fact
+  // "Used by" in the list and "Read by" in the detail is how a reader ends up unsure they are
+  // looking at the same thing — so it is one name now, and one click away from its detail.
   const usedBy = (v) => {
     if (!deps) return '';
     const d = deps[v.id];
     if (!d) return '<span class="orphan" title="This view could not be read during the pull">?</span>';
     const n = d.children.length + d.dashboards.length;
-    return n ? String(n) : '<span class="orphan">none</span>';
+    return n
+      ? `<a class="fk" data-lin="${escA(v.id)}" title="Show what reads from it">${n}</a>`
+      : '<span class="orphan">none</span>';
   };
   // Own columns plain; inherited ones marked, because attributing a parent's structure to a report
   // without saying so would be a quiet lie about whose columns those are.
@@ -658,7 +668,7 @@ function render() {
     <thead><tr>
       <th>View</th><th>Type</th><th class="num" title="Columns, for tables and query tables">Cols</th>
       <th class="num" title="As Zoho words it, in your interface language — not sortable, see the note below">Design</th>
-      <th class="num">Data</th>${deps ? '<th class="num">Used by</th>' : ''}
+      <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on \u2014 the Lineage tab breaks the same figure down">Read by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
       <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Analytics flags this as a system table — it came from a connected source, you did not build it">system</span>' : ''}</div></td>
       <td><span class="vtype">${esc(v.type)}</span></td>
@@ -670,6 +680,9 @@ function render() {
       ${deps ? `<td class="num">${usedBy(v)}</td>` : ''}
     </tr>`).join('')}</tbody></table>`;
   list.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => openDetail(tr.dataset.id); });
+  list.querySelectorAll('a.fk[data-lin]').forEach((a2) => {
+    a2.onclick = (ev) => { ev.stopPropagation(); detailTab = 'lin'; openDetail(a2.dataset.lin); };
+  });
 }
 
 // ---------- detail ----------
@@ -778,7 +791,7 @@ async function renderDetail(v) {
     : '';
   body.innerHTML = '<div class="dpad">'
     + `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
-    + `<div class="lin"><h5>Read by</h5>${li(d.children)}</div>`
+    + `<div class="lin"><h5>Read by <span class="lv">\u2014 the same count the list shows</span></h5>${li(d.children)}</div>`
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
     + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
     + '</div>';
@@ -1445,6 +1458,7 @@ $('expgo').onclick = () => { scopeFromUI(); closeScope(true); };
 $('pspFull').onclick = () => { expScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
 $('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
+$('opts').onclick = () => chrome.runtime.openOptionsPage();
 $('about').onclick = showAbout;
 $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;
