@@ -348,6 +348,13 @@ Two traps that this layout hides:
   committing a config without them would have silently changed the runtime. If the platform's
   defaults ever move, compare against what it generates before assuming ours is complete.
 
+- **The edge cache will hide your deploy.** `/api/versions` is cached for an hour and the Worker
+  checks the cache before doing anything, so new code can run and still return the old body — no
+  error, no 404, just a value that will not change. The key ignores the query string on purpose (so
+  the cache cannot be flooded with junk keys), which means it cannot be busted from outside either.
+  `CACHE_KEY` therefore carries a version marker: **bump it whenever the payload's shape changes**,
+  or the change is invisible until the old entry happens to expire.
+
 Preview deploys are enabled for non-production branches, and the URL is
 `<branch>-zoost-it.ivannot.workers.dev`. Anything touching the deployment goes there first and gets
 verified with `curl` — endpoint status **and** the pages — before it reaches `main`.
