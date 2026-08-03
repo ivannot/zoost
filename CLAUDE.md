@@ -7,21 +7,41 @@ Read this before changing anything.
 
 ## What Zoost is
 
-A Chrome MV3 extension that mirrors a Zoho CRM org — Deluge functions, module schema, layouts,
-related lists, workflows, schedules — into plain local files, and layers navigation, diagrams,
-search, audit and export on top of that mirror.
+Zoost mirrors what you have built inside a Zoho product into plain local files, then layers
+navigation, diagrams, search, audit and export on top of that mirror. The premise is the same for
+every product it covers: **you built it, it is yours, and the platform gives you no way to see it
+whole.**
 
-It is **read-only towards Zoho**. It never writes back, and never touches CRM records.
+- **Zoost for Zoho CRM** (`apps/crm`) — Deluge functions, module schema, layouts, related lists,
+  workflows, schedules, connections.
+- **Zoost for Zoho Analytics** (`apps/analytics`) — workspaces, tables, query tables, reports and
+  dashboards, their lineage, and what nothing depends on any more.
+
+Every one of them is **read-only towards the platform**. They never write back, and never touch
+customer records.
 
 ## Repository layout
 
+Zoost is becoming a family: one root brand, one repository, **one extension per Zoho product**.
+They are separate extensions on purpose — different host permissions, a different single purpose for
+the Web Store, a different data model — sharing only the name, the site and the philosophy.
+
 ```
-src/      the extension. Exactly what ships. Nothing else lives here.
-site/     zoost.it — deployed automatically by Cloudflare on push to main
-site/functions/  Cloudflare Pages Functions (server-side, edge). `site/functions/api/x.js` → /api/x
-store/    Chrome Web Store listing copy and permission justifications
-dist/     build output, git-ignored
+apps/crm/        the Zoho CRM extension. Exactly what ships. Nothing else lives here.
+apps/analytics/  the Zoho Analytics extension (in progress)
+site/            zoost.it — deployed automatically by Cloudflare on push to main
+site/_worker.js  the Worker script (see the Cloudflare notes further down)
+store/crm/       Chrome Web Store listing copy and permission justifications, per app
+dist/            build output, git-ignored
 ```
+
+Each app carries its **own `manifest.json` and its own version number** — they do not move in step.
+`./build.sh crm` and `./build.sh analytics` package them separately.
+
+**No code is shared between apps yet, and that is deliberate.** The two will look similar (a tree, a
+preview, a health view, exports) but they read different platforms with different shapes. Factor
+something out only once both sides actually use it and it has stopped changing — sharing too early
+between two products that are still finding their form costs more than the duplication.
 
 `LICENSE`, `NOTICE` and `README.md` live at the root so GitHub picks them up; `build.sh` copies
 the first two into the package at build time.
@@ -29,8 +49,8 @@ the first two into the package at build time.
 ## Build
 
 ```bash
-./build.sh              # dist/zoost-<v>-store.zip     manifest at archive ROOT — for the Web Store
-./build.sh --unpacked   # dist/zoost-<v>-unpacked.zip  folder-wrapped — for Load unpacked
+./build.sh crm          # dist/zoost-crm-<v>-store.zip     manifest at archive ROOT — for the Web Store
+./build.sh crm --unpacked  # dist/zoost-crm-<v>-unpacked.zip  folder-wrapped — for Load unpacked
 ```
 
 Getting these the wrong way round wastes half an hour: the Web Store rejects a zip whose manifest
@@ -70,7 +90,7 @@ is inside a folder, and `chrome://extensions` wants the folder.
   badge reads the Chrome Web Store listing's markup, since Google publishes no API), provided the
   dependency **fails visibly and cannot lie**: validate the shape of what came back, discard anything
   that does not match, show "unknown" rather than a stale or guessed value, and cache so a blip is
-  invisible. Never carry this licence back into `src/`.
+  invisible. Never carry this licence back into an app under `apps/`.
 
 ## Architectural decisions worth not re-litigating
 
@@ -165,12 +185,12 @@ When behaviour, UI or features change, check every one of these and update what 
 
 | File | Update when |
 |---|---|
-| `src/manifest.json` | the `description` (max 132 chars) — it is what Chrome shows on the extensions page **and** the Store's short description, so it is the most-read sentence the project has. Keep it identical to §2 of `store/store-listing.md` |
+| `apps/<app>/manifest.json` | the `description` (max 132 chars) — it is what Chrome shows on the extensions page **and** the Store's short description, so it is the most-read sentence the project has. Keep it identical to §2 of `store/<app>/store-listing.md` |
 | `README.md` | features, interface, quick start, known limitations |
 | `site/docs.html` | anything a user does differently. The "Covers Zoost X · updated Y" line fills itself from the manifest and from the last commit touching that file — do not hand-edit it; the values in the HTML are only the no-JavaScript fallback |
 | `site/index.html` | a feature worth advertising appears or changes |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
-| `store/store-listing.md` | description, single purpose, or any permission justification |
+| `store/<app>/store-listing.md` | description, single purpose, or any permission justification |
 | `CLAUDE.md` | a new convention, decision or trap that the next session must know |
 
 Two rules that are not optional. **Never let a claim outlive its truth**: today the store
@@ -225,14 +245,14 @@ coverage gaps, and let the user decide how to read it. We inform; we do not grad
 ### What to produce, by size of change
 
 **Any code change → nothing to package.** Local testing runs straight off the repository:
-`chrome://extensions` → *Load unpacked* → `~/Developer/zoost/src`, then hit reload after edits.
+`chrome://extensions` → *Load unpacked* → `~/Developer/zoost/apps/<app>`, then hit reload after edits.
 No zip, no reinstall. Just tell me what to look at and what should have changed.
 
-**A change worth keeping → a commit.** Bump `version` in `src/manifest.json`: patch for fixes,
+**A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
 minor for features. Propose the commit message; do not batch unrelated work into one commit.
 
 **A release → tag plus package.** Tag `vX.Y.Z`, push with `--follow-tags`, run `./build.sh`, and
-tell me to attach `dist/zoost-X.Y.Z-store.zip` to a GitHub Release for that tag.
+tell me to attach `dist/zoost-<app>-X.Y.Z-store.zip` to a GitHub Release for that tag.
 **The zip is never committed** — it is a build artefact, reproducible from the tagged commit, and
 `dist/` is git-ignored. It lives as a Release attachment, nowhere else.
 
@@ -318,10 +338,10 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 The mechanics, once "Definition of done" says a release is warranted:
 
 ```bash
-# 1. version bumped in src/manifest.json, docs updated, all committed
+# 1. version bumped in apps/<app>/manifest.json, docs updated, all committed
 git tag -a vX.Y.Z -m "Zoost X.Y.Z"
 git push --follow-tags
-./build.sh                       # -> dist/zoost-X.Y.Z-store.zip
+./build.sh <app>                 # -> dist/zoost-<app>-X.Y.Z-store.zip
 ```
 
 Then, by hand: attach that zip to a GitHub Release for the tag, and — if anything user-facing

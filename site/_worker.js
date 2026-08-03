@@ -73,8 +73,8 @@ async function storeVersion() {
 // The version the code is at right now, straight from the manifest on the default branch. This is
 // deliberately not the same thing as the tag: it is what is built, not what has been released, and
 // the badge labels it "in development" so nobody reads it as something they can install.
-async function repoVersion() {
-  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/src/manifest.json`, {
+async function repoVersion(app) {
+  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/apps/${app}/manifest.json`, {
     headers: { 'user-agent': UA }, signal: timeout(6000),
   });
   if (!r.ok) return null;
@@ -104,7 +104,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=3';
+const CACHE_KEY = '/api/versions?v=4';
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -114,7 +114,7 @@ async function versions(request, ctx) {
   if (hit) return hit;
 
   const [store, tag, repo, updated, docsUpd] = await Promise.all([
-    settled(storeVersion()), settled(latestTag()), settled(repoVersion()),
+    settled(storeVersion()), settled(latestTag()), settled(repoVersion('crm')),
     settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
   ]);
 
