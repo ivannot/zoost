@@ -23,7 +23,7 @@ Independent developer & admin workbench for Zoho CRM: version Deluge locally, ex
 ```
 Zoost turns your Zoho CRM org into a local, version-controllable, searchable codebase — and then draws you a map of it.
 
-If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?". Zoost fills them, without sending your code anywhere.
+If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?", and no way to tell which functions still use a given connection. Zoost fills them, without sending your code anywhere.
 
 WHAT IT DOES
 
@@ -44,6 +44,8 @@ WHAT IT DOES
 - ER diagram that stays readable. Modules as tables, foreign keys as arrows. Focus a module, adjust depth, walk the graph by clicking. A relation-first mode pushes modules into the background and brings relation names forward. Click an arc to isolate one relation and fade everything else. Live sliders for spacing and label size, an all-modules scope, and Save PDF for wall-size prints.
 
 - Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function.
+
+- Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes — and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
 
 - Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review — never automatic deletions.
 
@@ -91,7 +93,7 @@ Zoost is an independent, unofficial developer tool. It is not affiliated with, e
 ```
 Zoost has one purpose: to give a Zoho CRM administrator or developer a local, read-only mirror of their own org's Deluge code and configuration, and the tools to navigate and document it.
 
-Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows and schedules, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an entity-relationship diagram, a catalogue of related-list API names, a health audit and offline exports.
+Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an entity-relationship diagram, a catalogue of related-list API names, a cross-reference of which functions use which connection, a health audit and offline exports.
 
 Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost never writes back to Zoho, never touches CRM records, and does nothing on any other website.
 ```
@@ -127,7 +129,7 @@ No browsing data, no CRM data and no personal information are placed in storage.
 ```
 scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhere else.
 
-1. A bridge script that calls the Zoho CRM API from the page's own origin, using the session the user is already signed in with. Running in the page context is what allows the extension to read the user's own functions, module metadata, layouts, related lists, workflows and schedules without asking for separate credentials, and strictly within that user's existing Zoho permissions.
+1. A bridge script that calls the Zoho CRM API from the page's own origin, using the session the user is already signed in with. Running in the page context is what allows the extension to read the user's own functions, module metadata, layouts, related lists, workflows, schedules and the names of the org's connections without asking for separate credentials, and strictly within that user's existing Zoho permissions.
 
 2. A hook that detects when the user saves a Deluge function in the native Zoho editor, so the corresponding local file can be updated automatically and the local mirror stays faithful.
 

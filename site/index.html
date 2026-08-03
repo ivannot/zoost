@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost — workbench for Zoho CRM</title>
-<meta name="description" content="Mirror your Zoho CRM Deluge functions, module schema, relations, workflows and schedules into local files you can put under Git — then explore them with reference graphs, ER diagrams, a relation catalogue, health audits and exports.">
+<meta name="description" content="Mirror your Zoho CRM Deluge functions, module schema, relations, layouts, workflows, schedules and connections into local files you can put under Git — then explore them with reference graphs, ER diagrams, a relation catalogue, a connections catalogue, health audits and exports.">
 <link rel="canonical" href="https://zoost.it/">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -77,9 +77,9 @@
   <div class="wrap">
     <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>And a map of how it fits together.</span></h1>
     <p class="lead">Zoost is a Chrome extension that mirrors your Deluge functions, module schema, relations,
-      layouts, workflows and schedules into plain files on your disk — then layers on reference graphs,
-      ER diagrams, full-text search across every function, a relation catalogue, a health audit, shareable exports and an optional AI assistant
-      that reads your actual org. Everything runs in your browser.</p>
+      layouts, workflows, schedules and connections into plain files on your disk — then layers on reference graphs,
+      ER diagrams, full-text search across every function, a relation catalogue, a connections catalogue, a health audit,
+      shareable exports and an optional AI assistant that reads your actual org. Everything runs in your browser.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Get it on the Chrome Web Store</a>
       <a class="btn" href="#start">How it works</a>
@@ -99,8 +99,8 @@
       </div>
       <div>
         <h3>The whole org at once</h3>
-        <p>Functions, modules, relations, workflows and schedules in one navigable place, and in one document
-          you can hand to someone who does not have the extension.</p>
+        <p>Functions, modules, relations, workflows, schedules and connections in one navigable place, and in
+          one document you can hand to someone who does not have the extension.</p>
       </div>
       <div>
         <h3>Read-first, on purpose</h3>
@@ -148,8 +148,9 @@
           <li><span class="k">Hypertext code</span>: calls to custom functions are clickable — jump to the definition and back.</li>
           <li><span class="k">Reverse usage</span>: where each function is wired across the org — blueprint, button,
             schedule — read from Zoho's own signal, with no expensive scans.</li>
-          <li><span class="k">Connections</span>: the org's connection catalogue — how many functions use each, with the
-            unused and disconnected ones flagged, all cross-referenced.</li>
+          <li><span class="k">Connections per function</span>: every function lists the connections it uses — click one
+            to filter the tree to every other function that uses it. Structured, not a text search.</li>
+          <li><span class="k">Authorship</span>: who last changed a function, and when, next to its code.</li>
         </ul>
       </div>
 
@@ -181,6 +182,17 @@
           <li>Workflows with triggers, criteria, instant and time-based actions, and the functions they invoke.</li>
           <li>Schedules with frequency, status and target function.</li>
           <li>On-demand workflow execution stats.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Connections catalogue</h3>
+        <ul>
+          <li>Every connection in the org, pulled from Zoho: its connector, who created it, and its OAuth scopes.</li>
+          <li><span class="k">Usage count</span>: how many functions use each one — open it to see exactly which.</li>
+          <li>Filter to <span class="k">Unused</span> (no function references it) or <span class="k">Disconnected</span>
+            (configured but not connected) — the two states worth acting on.</li>
+          <li>Connections a function calls but that no longer exist in the catalogue are flagged too.</li>
         </ul>
       </div>
 
@@ -230,7 +242,7 @@
       <li>Install from the <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a> and open the side panel.</li>
       <li>In <b>Settings</b>, pick a <b>working folder</b> — a dedicated, empty folder. Every workspace will live inside it.</li>
       <li>Open a Zoho CRM tab and click <b>+</b>. Zoost creates the workspace for that org.</li>
-      <li>Click <b>Pull all</b> to mirror functions, modules, workflows and schedules.</li>
+      <li>Click <b>Pull all</b> to mirror functions, modules, layouts, relations, workflows, schedules and connections.</li>
       <li><code>git init</code> in the folder, and you have history from here on.</li>
       <li>Explore: follow a call, open the graph, run the health audit, or export the lot.</li>
     </ol>

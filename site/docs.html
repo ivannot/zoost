@@ -49,6 +49,7 @@
       <li><a href="#read">Reading your org</a></li>
       <li><a href="#graph">The diagram</a></li>
       <li><a href="#relations">Finding a relation name</a></li>
+      <li><a href="#connections">Connections</a></li>
       <li><a href="#health">Health audit</a></li>
       <li><a href="#export">Exports</a></li>
       <li><a href="#ai">AI assistant &amp; API keys</a></li>
@@ -62,7 +63,7 @@
   <table>
     <tbody>
       <tr><td class="k">Working folder</td><td>One folder on your disk that you choose once. Everything Zoost writes lives inside it.</td></tr>
-      <tr><td class="k">Workspace</td><td>A subfolder, one per Zoho org, created for you. It holds that org's functions, schema and automations as plain files.</td></tr>
+      <tr><td class="k">Workspace</td><td>A subfolder, one per Zoho org, created for you. It holds that org's functions, schema, automations and connections as plain files.</td></tr>
       <tr><td class="k">Pull</td><td>The action that fills a workspace from Zoho. Zoost only reads from Zoho — it never writes back.</td></tr>
     </tbody>
   </table>
@@ -91,9 +92,10 @@
 
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>
-    <li><b class="ui">Pull all</b> mirrors functions, module schema, layouts, related lists, workflows and schedules.</li>
+    <li><b class="ui">Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
+      and the connections catalogue.</li>
     <li><b class="ui">Pull</b> (in the mode bar) refreshes only the current type — whichever of Functions,
-      Modules, Workflows or Schedules is the active tab — faster when you just changed one thing.</li>
+      Modules, Workflows, Schedules or Connections is the active tab — faster when you just changed one thing.</li>
     <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
       updates by itself. No action needed.</li>
     <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b> (deletion is reconciled at pull time,
@@ -113,16 +115,16 @@ git commit -m "baseline"</code></pre>
 
   <h2 id="read">5. Reading your org</h2>
   <p>The mode segments switch what the tree lists: <b class="ui">Functions</b>, <b class="ui">Modules</b>,
-    <b class="ui">Workflows</b>, <b class="ui">Schedules</b>. Select an item and the preview opens below.</p>
+    <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>. Select an item and
+    the preview opens below.</p>
   <ul>
     <li>In a function's code, calls to other custom functions are <b>clickable</b> — jump to the definition,
       then use <b class="ui">◂ back</b>.</li>
     <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
     <li>It also lists the <b>connections</b> the function uses and who last changed it — click a connection
       to filter the tree to every function that uses it (no more "find in file" for a connection name).</li>
-    <li>The <b class="ui">Connections</b> tab lists the org's connection catalogue (pulled with
-      <b class="ui">Pull all</b>): each with how many functions use it, its connector and status. Filter to
-      <b>Unused</b> or <b>Disconnected</b>; open one to see every function that uses it.</li>
+    <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide — see
+      <a href="#connections">section 8</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
       open it from Zoho’s own <b class="ui">⋯</b> menu. Zoost takes you to it, but the last click is yours —
       it never drives the Zoho interface for you.</li>
@@ -139,8 +141,8 @@ git commit -m "baseline"</code></pre>
     mode) opens the module graph. From a module preview, <b class="ui">Open ER ↗</b> opens the entity-relationship
     diagram focused on that module.</p>
   <ul>
-    <li>Three tabs: <b>Explorer</b> (list + detail), <b>Visual</b> (node-link), <b>ER diagram</b> (tables and keys),
-      plus <b>Relations</b> — see the next section.</li>
+    <li>Four tabs: <b>Explorer</b> (list + detail), <b>Visual</b> (node-link), <b>ER diagram</b> (tables and keys),
+      and <b>Relations</b> — see the next section.</li>
     <li>Selecting a module in Explorer sets the focus for all views — whether you opened the whole schema
       or one module's ER. <b>Depth</b> controls how many hops out from it are drawn; clicking a table
       re-centres the diagram there. <b class="ui">↺ Whole graph</b> clears the focus and shows every module again.</li>
@@ -154,6 +156,10 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread and label size as live sliders. There is no correct
       value — dense or airy depends on what you are looking at.</li>
   </ul>
+  <p><b>What it will not do:</b> above a few hundred nodes the free-form <b>Visual</b> layout is not attempted at
+    all — computing it would freeze the window — so it says so instead of hanging, and the same applies to the
+    whole-org <b class="ui">Scope</b>. The <b>Explorer</b> and the focused <b>ER diagram</b> stay fast at any org
+    size; use a module focus and a small depth.</p>
 
   <h2 id="relations">7. Finding a relation name</h2>
   <div class="box">
@@ -169,16 +175,37 @@ git commit -m "baseline"</code></pre>
       (Notes, Attachments, Tasks…) so only your own relations remain.</li>
   </ul>
 
-  <h2 id="health">8. Health audit</h2>
+  <h2 id="connections">8. Connections</h2>
+  <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists
+    them in setup, but never tells you which functions actually use one — so nobody dares delete any.</p>
+  <p>The <b class="ui">Connections</b> tab is the org's catalogue, pulled with <b class="ui">Pull all</b>. One row
+    per connection, with its connector, its status, and <b>how many functions use it</b>. Open one to see exactly
+    which functions, and click through to any of them.</p>
+  <ul>
+    <li><b>Unused</b> — in the catalogue, referenced by no function. The candidates for cleanup.</li>
+    <li><b>Disconnected</b> — configured but not currently connected. Anything relying on it is already broken.</li>
+    <li><b>Not in catalogue</b> — a function calls a connection name the catalogue does not have: renamed, removed,
+      or created in another scope.</li>
+  </ul>
+  <p>The join key is the connection name exactly as written in the Deluge call, so the count is structural — not a
+    text search that also matches comments and strings.</p>
+  <div class="box">
+    <p>Usage counts only cover <b>Deluge functions in this workspace</b>. A connection can also be used by
+      Zoho Flow, Circuits, widgets or client scripts, which Zoost does not read — so treat <b>Unused</b> as
+      "unused by your functions", a candidate to review, not a verdict.</p>
+  </div>
+
+  <h2 id="health">9. Health audit</h2>
   <p><b class="ui">Health (♥)</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
     lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
     not</b> analyse — client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
   <p>Treat every entry as a <b>candidate to review</b>. Nothing is ever deleted for you, and an "orphan" may
     simply be called from somewhere the API does not report.</p>
 
-  <h2 id="export">9. Exports</h2>
+  <h2 id="export">10. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
-    layouts, relations, workflows, schedules, health. The <b>Share-safe</b> preset excludes source code.</p>
+    layouts, relations, workflows, schedules, connections, health. The <b>Share-safe</b> preset excludes source
+    code.</p>
   <ul>
     <li><b class="ui">Export → HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
       handing to a colleague or a manager.</li>
@@ -190,7 +217,7 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
 
-  <h2 id="ai">10. AI assistant &amp; API keys</h2>
+  <h2 id="ai">11. AI assistant &amp; API keys</h2>
   <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
     <b>AI assistant</b>. Two providers are supported.</p>
 
@@ -241,7 +268,7 @@ git commit -m "baseline"</code></pre>
       sending source code to third-party AI services, leave it off. Everything else in Zoost is local.</p>
   </div>
 
-  <h2 id="guard">11. Production vs sandbox</h2>
+  <h2 id="guard">12. Production vs sandbox</h2>
   <p>Every workspace is bound to one org, host and instance, recorded in its <code>.zoost.json</code>. If the
     Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar
     offering to switch tab or switch workspace. This is deliberate friction: it is what stops a sandbox pull
@@ -249,13 +276,16 @@ git commit -m "baseline"</code></pre>
   <p>Renaming a folder, or renaming the portal in Zoho, does not break anything — identity lives in the org id
     inside the file, not in the folder name.</p>
 
-  <h2 id="trouble">12. When something goes wrong</h2>
+  <h2 id="trouble">13. When something goes wrong</h2>
   <table>
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
       <tr><td class="k">Folder button is amber</td><td>The browser dropped the file-system permission. One click restores it; no file picker opens.</td></tr>
       <tr><td class="k">Everything is disabled</td><td>Either no Zoho CRM tab is active, or the tab's org does not match the selected workspace. The bar at the top says which.</td></tr>
       <tr><td class="k">No related lists / no layout matrix</td><td>That workspace was pulled before those existed. Run <b class="ui">Pull all</b> again and reopen the diagram.</td></tr>
+      <tr><td class="k">Connections tab is empty</td><td>The catalogue arrives with <b class="ui">Pull all</b> (or <b class="ui">Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
+      <tr><td class="k">Functions show an amber <b>◐</b> dot</td><td>They were pulled before connections and authorship were captured. Click <b class="ui">Refresh outdated</b> in the button bar above the list to top them up — no full re-download.</td></tr>
+      <tr><td class="k">Visual graph says there are too many nodes</td><td>Above a few hundred nodes the free layout is not attempted, because it would freeze the window. Use <b>Explorer</b>, or focus one module and lower the depth.</td></tr>
       <tr><td class="k">AI: <code>401</code></td><td>Wrong key, or whitespace pasted with it.</td></tr>
       <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>The key is valid but the API balance is zero. API billing is separate from any chat subscription.</td></tr>
       <tr><td class="k">AI: <code>404</code> on the model</td><td>Model id typo, or the model is not enabled for your account tier. Copy it from the provider's model list.</td></tr>

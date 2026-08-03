@@ -3,8 +3,9 @@
 **Turn your Zoho CRM org into a local, versionable, navigable codebase — and talk to it.**
 
 A Chrome extension (Manifest V3) that mirrors your Zoho CRM **Deluge functions, module schema,
-workflows and schedules** into plain local files you can put under your own Git — then layers on
-a dependency graph, an ER diagram, an honest health audit, a whole-org HTML export, and an
+workflows, schedules and connections** into plain local files you can put under your own Git — then
+layers on a dependency graph, an ER diagram, a connections cross-reference, an honest health audit,
+a whole-org HTML export, and an
 **AI assistant that can read and reason over your entire codebase** (bring your own key).
 
 It does **not** replace Zoho's editor. You keep writing and saving where Zoho compiles and
@@ -45,7 +46,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 
 - **Your history, your Git.** Functions are plain `.dg` files on your disk — not a proprietary
   cloud sync. Diff, branch, review, roll back with the tools you already use.
-- **The whole org at once.** Functions, modules, workflows, schedules and their relationships,
+- **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
   in one navigable place and one shareable document.
 - **Read-first, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
   server-side; we give you versioning, comprehension, audit — and now an agent. Zoost never drives
@@ -75,6 +76,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   time-based actions, and the functions they invoke — plus on-demand workflow execution stats.
 - **Reverse usage**: each function shows where it's wired across the org (blueprint, button,
   schedule, …) via Zoho's own `associated_place` signal — no expensive scans.
+- **Connections**: the org's connection catalogue cross-referenced with the functions that use it —
+  per function (the connections it calls) and org-wide (usage count, unused, disconnected).
+  Plus who last changed each function, and when.
 
 **Health / audit** (candidates to review — never automatic deletions)
 - Two tabs — **Functions** (orphans, unresolved calls, ambiguous calls) and **Wiring** (broken
@@ -117,7 +121,7 @@ and, **only if you enable the AI**, to the LLM provider you configure. Nothing g
 1. **Settings → Choose folder…** — pick one dedicated **working folder**. Every workspace will be a
    subfolder inside it, created automatically and named `instance[-sandbox]-orgid`.
 2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
-3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows and schedules.
+3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules and connections.
 4. `git init` in the workspace folder to start versioning.
 5. Explore: open a function, follow its links, open **Graph ↗**, run **Health** (♥), or **Export**.
 6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
@@ -191,7 +195,7 @@ from structured data, not a text search.
 ## Exports
 
 - **HTML** (`export/*.html`): one navigable file — functions (cross-linked), modules, workflows,
-  schedules, health. Great for reviews, handovers, documentation.
+  schedules, connections, health. Great for reviews, handovers, documentation.
 - **Markdown** (`export/*.md`): AI-friendly whole-org context for external LLMs — index + full
   function sources + module schemas.
 
@@ -238,7 +242,8 @@ Both land in your workspace folder, so they're versioned with your Git.
 ## How it works (internals)
 
 - Reverse-engineered CRM settings endpoints (no official function-CRUD API exists): functions,
-  modules, fields, workflows, schedules, and each function's `associated_place`.
+  modules, fields, workflows, schedules, the connections catalogue (a `/deluge/` endpoint, which
+  takes the CSRF token with a different prefix), and each function's `associated_place`.
 - Auth = your session cookies + `X-ZCSRF-TOKEN` (from the page's CSRF cookie), scoped per host.
 - `hook.js` (MAIN world) detects save PUTs; `content-bridge.js` (ISOLATED world) performs the
   authenticated fetches; the side panel owns the filesystem, the graph, the health engine, the
@@ -267,6 +272,11 @@ like to support development:
   local models) are deliberately **not** offered: the manifest grants host access to those two
   origins only, and an untested claim is worse than a missing feature.
 - The function↔module reference in exports is heuristic string-matching.
+- **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow,
+  Circuits, widgets or client scripts, which Zoost does not read — so "unused" means "unused by your
+  functions", a candidate to review, not a verdict.
+- The **force-directed Visual graph is not attempted above a few hundred nodes** (it would block the
+  window); the Explorer and a focused ER diagram stay fast at any size.
 
 ---
 

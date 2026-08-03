@@ -163,14 +163,29 @@ description still said the extension "never sends your code anywhere", which the
 false. And **never describe a feature that is not tested** — the OpenAI-compatible endpoint claim
 was written before anyone had tried it, and had to be walked back everywhere.
 
-A third, just as binding. **Declare only what we have; have everything we declare — and check every
-surface, on adding *and* on removing.** When a feature lands or is cut, walk the whole table above —
-the marketing `site/index.html` included, not just `README.md` and `docs.html`. Adding the
-Connections tab but leaving `index.html` silent about it is the same class of failure as removing
-"Go to" and leaving a page that still advertises it: either way the site misrepresents the product.
-This is trust and transparency, not tidiness, and catching it is **your** job — the same vigilance
-the "follow the sibling pattern" rule demands. Before you call anything done, diff every user-facing
-surface against what the product actually does, in both directions.
+A third, just as binding. **Declare only what we have; have everything we declare — on every surface,
+on adding *and* on removing.** This is not tidiness, it is the product's claim to being correct and
+transparent. Catching it is **your** job, never the user's.
+
+Mentioning a feature once is not enough, and it is the trap that has actually been hit here twice.
+Every surface enumerates the product's parts in several places — a meta description, a hero
+paragraph, a "whole org at once" list, a feature card, a quick-start step, a mode-segment list, a
+pull description, an export-scope list, a stored-data table. **A new part must appear in every list
+its siblings appear in**; a removed one must disappear from all of them. Connections shipped in
+1.3.0 mentioned in two places while Functions/Modules/Workflows/Schedules were enumerated in nine —
+that is the product lying by omission about its own shape.
+
+So do it mechanically, not by memory. When a capability lands or is cut:
+
+```bash
+# every place a sibling is enumerated is a place the new part probably belongs
+grep -rn "schedules\|Schedules" README.md site/ store/     # pick any established sibling
+```
+
+Walk each hit and decide — include, or consciously not. Then the reverse pass: read each surface top
+to bottom and check that every claim on it is still true of the code (verify in the source, do not
+assume). Do this across `README.md`, `site/index.html`, `site/docs.html`, `site/privacy.html` (what
+is stored and where it travels) and `store/store-listing.md`. Only then is the change done.
 
 If a change touches what data leaves the machine, `site/privacy.html` and the Web Store data
 disclosures are not optional follow-ups. They are part of the change.
