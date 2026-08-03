@@ -1,0 +1,15 @@
+{
+  // zoost.it — a Worker that serves this directory as static assets, plus one endpoint.
+  //
+  // The Worker is deployed by Cloudflare's git integration with "Root directory: site", so this
+  // config sits here and every path below is relative to site/. Assets are served first; the
+  // script in `main` is only invoked when no file matches, which is why adding it does not change
+  // how any page is served. `.assetsignore` keeps this file and the script from being published.
+  "name": "zoost-it",
+  "compatibility_date": "2026-08-03",
+  "main": "_worker.js",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS"
+  }
+}

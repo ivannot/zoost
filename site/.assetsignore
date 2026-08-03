@@ -1,0 +1,5 @@
+# Files in this directory that must NOT be published as static assets.
+# The Worker script was previously served verbatim at its own URL because nothing excluded it.
+_worker.js
+wrangler.jsonc
+.assetsignore

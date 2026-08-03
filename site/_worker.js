@@ -1,5 +1,9 @@
 /*
- * /api/versions — Cloudflare Pages Function.
+ * zoost.it Worker. Everything is a static asset except /api/versions, which this script answers.
+ *
+ * Assets are served first by the platform; this script only runs when no file matches, so the site
+ * behaves exactly as before and this endpoint is the single addition. `functions/` was the wrong
+ * shape entirely — that is a Cloudflare Pages convention and this project is a Worker.
  *
  * Reports the version Zoost is at in each place it lives, so the site can show whether they are in
  * step: the Chrome Web Store, the newest git tag, and when the site content last changed.
@@ -81,8 +85,7 @@ async function siteUpdated() {
 
 const settled = (p) => p.then((v) => v).catch(() => null);
 
-export async function onRequest(context) {
-  const { request, waitUntil } = context;
+async function versions(request, ctx) {
   const cache = caches.default;
   const key = new Request(new URL('/api/versions', request.url).toString(), { method: 'GET' });
 
@@ -101,6 +104,13 @@ export async function onRequest(context) {
       'cache-control': `public, max-age=${TTL}`,
     },
   });
-  waitUntil(cache.put(key, res.clone()));
+  ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
+
+export default {
+  async fetch(request, env, ctx) {
+    if (new URL(request.url).pathname === '/api/versions') return versions(request, ctx);
+    return env.ASSETS.fetch(request);   // everything else is a file, served as before
+  },
+};
