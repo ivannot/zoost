@@ -28,7 +28,7 @@
 
   // "Covers Zoost X · updated Y" on the guide. Kept in step with the repo automatically: the rule is
   // that documentation ships with the code that changed it, so the version the docs describe is the
-  // version in the manifest. The date is the last change to docs.html specifically — using the whole
+  // version in the manifest. The date is the last change to that guide specifically — using the whole
   // site would claim the guide was updated when only the homepage moved.
   // "Covers Zoost X · updated Y" on a guide. Which product's version, and which file's date, come
   // from the .upd element itself — a guide that borrowed the other product's number would be stating

@@ -80,7 +80,7 @@ async function openSettings() {
 // guide, which is the kind of thing that only ever gets found by a user — so both are named here,
 // once, and every surface derives from them instead of writing a path inline.
 const PAGE_URL = PRODUCT_URL + '/crm.html';
-const DOCS_URL = PRODUCT_URL + '/docs.html';
+const DOCS_URL = PRODUCT_URL + '/docs-crm.html';
 const STORE_URL = 'https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj';
 const CONTACT_EMAIL = 'ivan@zoost.it';
 const REPO_URL = 'https://github.com/ivannot/zoost';

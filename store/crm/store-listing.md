@@ -84,7 +84,7 @@ REQUIREMENTS
 DOCUMENTATION AND PRIVACY
 
 Source code: https://github.com/ivannot/zoost
-Guide: https://zoost.it/docs.html
+Guide: https://zoost.it/docs-crm.html
 Privacy policy: https://zoost.it/privacy.html
 Home: https://zoost.it
 

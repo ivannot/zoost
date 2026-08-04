@@ -127,7 +127,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=8';   // bumped: the tag is per product now
+const CACHE_KEY = '/api/versions?v=9';   // bumped: the CRM guide moved to docs-crm.html
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -141,7 +141,7 @@ async function versions(request, ctx) {
       settled(storeVersion('crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
       settled(storeVersion('analytics')), settled(repoVersion('analytics')),
       settled(latestTag('analytics')),
-      settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
+      settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
 
@@ -164,9 +164,25 @@ async function versions(request, ctx) {
   return res;
 }
 
+// `/docs` used to be the Zoho CRM guide, which made the generic URL the property of one product
+// while the other had to carry its name in the path. The guides are `/docs-crm` and
+// `/docs-analytics` now, and `/how-to` is the neutral way in.
+//
+// The old path must never 404, and not merely for tidiness: **Zoost for Zoho CRM 1.9.0 has
+// `zoost.it/docs.html` compiled into it** and is in review as this ships. A published extension
+// cannot be asked to change, so the site keeps its side of that contract permanently. 301 rather
+// than 302 so search engines move rather than keep asking.
+const MOVED = {
+  '/docs': '/docs-crm.html',
+  '/docs.html': '/docs-crm.html',
+};
+
 export default {
   async fetch(request, env, ctx) {
-    if (new URL(request.url).pathname === '/api/versions') return versions(request, ctx);
+    const url = new URL(request.url);
+    if (url.pathname === '/api/versions') return versions(request, ctx);
+    const to = MOVED[url.pathname];
+    if (to) return Response.redirect(new URL(to, url).toString(), 301);
     return env.ASSETS.fetch(request);   // everything else is a file, served as before
   },
 };

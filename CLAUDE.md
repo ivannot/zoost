@@ -573,6 +573,14 @@ Not "IDE": you do not edit code in them, and the audience is wider than develope
 leading element of the name, and never in the icon. Every user-facing surface carries the
 independent/unofficial disclaimer.
 
+**The generic URL may not belong to one product.** `/docs` was the Zoho CRM guide while Analytics
+carried its name in the path — the same asymmetry as the navigation, one layer down. The guides are
+`/docs-crm.html` and `/docs-analytics.html`, and `/how-to.html` is the neutral way in that the
+horizontal pages link to. `/docs` and `/docs.html` **301 permanently** to the CRM guide and must
+never stop doing so: Zoost for Zoho CRM 1.9.0 has that URL compiled into it, and a published
+extension cannot be asked to change. The redirect lives in `_worker.js`, since assets are served
+first and a file at that path would win.
+
 **Name the platform in full, every time: "Zoho CRM", "Zoho Analytics", never the bare word.** On a
 page whose subject is *our* Zoho Analytics workbench, "it never writes to Analytics" does not say
 which Analytics — and a reader who guesses will as often guess it means us. It is also the safer
@@ -617,7 +625,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | `README.md` | features, interface, quick start, known limitations |
 | `site/index.html` | the **suite** home: what the products share, and the card for each. A new product means a new card and a new page |
 | `site/crm.html`, `site/analytics.html` | the **product** pages. One per app, same structure and voice: why it exists, what's inside, what it does *not* do, get started. A feature landing in an app lands on its page in the same change |
-| `site/docs.html`, `site/docs-analytics.html` | anything a user does differently. The two guides must also *look* alike: a class copied from a page that defines it renders as nothing on one that does not — `td.p` and `.note` came from `privacy.html` and left the Analytics guide's term cells unstyled. Check with the one-liner below |
+| `site/docs-crm.html`, `site/docs-analytics.html`, `site/how-to.html` | anything a user does differently. The two guides must also *look* alike: a class copied from a page that defines it renders as nothing on one that does not — `td.p` and `.note` came from `privacy.html` and left the Analytics guide's term cells unstyled. Check with the one-liner below |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |
 | `store/<app>/store-listing.md` | description, single purpose, or any permission justification. **Each app has its own**, and both are published |
 | `CLAUDE.md` | a new convention, decision or trap that the next session must know |
@@ -648,7 +656,7 @@ grep -rn "schedules\|Schedules" README.md site/ store/     # pick any establishe
 
 Walk each hit and decide — include, or consciously not. Then the reverse pass: read each surface top
 to bottom and check that every claim on it is still true of the code (verify in the source, do not
-assume). Do this across `README.md`, `site/index.html`, `site/docs.html`, `site/privacy.html` (what
+assume). Do this across `README.md`, `site/index.html`, `site/docs-crm.html`, `site/privacy.html` (what
 is stored and where it travels) and `store/store-listing.md`. Only then is the change done.
 
 If a change touches what data leaves the machine, `site/privacy.html` and the Web Store data
