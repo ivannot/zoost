@@ -737,6 +737,34 @@ coverage gaps, and let the user decide how to read it. We inform; we do not grad
 
 ### What to produce, by size of change
 
+### Tests
+
+```bash
+bash tests/run.sh          # unit tests, the three checkers, and both builds
+```
+
+**No framework, no dependencies, no build step** — node's own runner and Python's `unittest`, both
+already present on any machine that can build this project. A suite needing `npm install` would be
+the first dependency in a repository whose pitch is that it has none.
+
+**Every case is a bug that actually happened.** A test written from imagination tests the
+imagination; these were lifted from the throwaway checks run while fixing real defects — the Deluge
+comment/string scanner, which CSRF cookie belongs to which family, staleness derived per area,
+reading an annotated tag out of an Atom feed, the store scrape's shape guard. **The checkers are
+tested too**, and that is not ceremony: two of the three shipped broken on the day they were written,
+and a broken checker reports success over the thing it exists to catch, which is worse than none.
+
+**The panels are not restructured to be importable.** `tests/slice.mjs` lifts a named function out
+of a browser script and runs it alone; refactoring 3000 lines of DOM-bound code *in order to* add
+tests would spend the risk before earning the cover. The limit is stated rather than hidden: this
+proves the logic, not the wiring — a correct helper called from the wrong place still passes. If
+`sliceFn` cannot find a function it **throws**, so a rename cannot silently drop the cover.
+
+**Prove a test can fail before trusting it.** Same rule as the checkers. Break the thing on purpose
+— point the deluge token at the wrong cookie, set the staleness margin to zero, restore the tag
+filter that dropped annotated tags — and confirm red, then restore. A suite that has never failed is
+a claim.
+
 **Any code change → nothing to package.** Local testing runs straight off the repository:
 `chrome://extensions` → *Load unpacked* → `~/Developer/zoost/apps/<app>`, then hit reload after edits.
 No zip, no reinstall. Just tell me what to look at and what should have changed.

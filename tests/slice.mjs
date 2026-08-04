@@ -1,0 +1,76 @@
+/*
+ * slice.mjs — lift a named function out of a shipped file and evaluate it in isolation.
+ *
+ * The panels are browser scripts, not modules: `sidepanel.js` is 3000 lines that assume `document`,
+ * `chrome` and a DOM, and nothing in them is exported. Restructuring them so they could be imported
+ * is exactly the refactor this project has no safety net for — CLAUDE.md says so in as many words —
+ * and doing it *in order to add tests* would be spending the risk before earning the cover.
+ *
+ * So the tests take the function's source text and run it alone. What this buys and what it does not:
+ *
+ *   It tests the function as written. If the logic is wrong, the test fails. That is the whole
+ *   value, and every case in these files is one that actually went wrong at some point today.
+ *
+ *   It does not test the function as *called*. A correct helper wired to the wrong caller passes
+ *   here. Nothing static catches that; reading the code does.
+ *
+ * The one thing it must never do is stop covering something in silence. If the function is renamed,
+ * moved or deleted, `sliceFn` throws rather than returning nothing — a test that quietly tests
+ * nothing is worse than no test, because it reports success.
+ */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import vm from 'node:vm';
+
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const read = (rel) => readFileSync(join(ROOT, rel), 'utf8');
+
+/** Extract `function NAME(...) { ... }` from a source file.
+ *
+ * The end is the first `}` at column zero. Brace counting was the obvious approach and it was
+ * wrong: a regex literal such as /['"]/ contains a quote, the scanner read it as the start of a
+ * string, and the slice ran to the end of the file — 2490 lines instead of 20, and the test failed
+ * on a DOM helper it should never have seen. Every file here puts a top-level function's closing
+ * brace in column zero, so that is a fact about the code rather than a guess about JavaScript.
+ */
+export function sliceFn(rel, name) {
+  const src = read(rel);
+  const start = src.search(new RegExp(`(^|\\n)\\s*(export\\s+)?(async\\s+)?function\\s+${name}\\s*\\(`));
+  if (start < 0) throw new Error(`${rel}: function ${name}() not found — renamed, moved or deleted. Fix the test or restore the cover.`);
+  // The closing brace sits at the same indentation as the declaration. Column zero alone was not
+  // enough: content-bridge.js wraps everything in an IIFE, so its functions are indented by two and
+  // csrfToken() sliced 317 lines. Indentation is a fact about this codebase, consistently applied.
+  const kw = src.indexOf('function', start);
+  const pad = src.slice(src.lastIndexOf('\n', kw) + 1, kw).match(/^[ \t]*/)[0];
+  const end = src.indexOf('\n' + pad + '}', src.indexOf('{', start));
+  if (end < 0) throw new Error(`${rel}: no closing brace at the declaration's indentation after ${name}()`);
+  // Strip `export`: the slice is evaluated as a plain script, not as a module.
+  return src.slice(start, end + pad.length + 2).replace(/^(\s*)export\s+/, '$1');
+}
+
+/** Lift a top-level `const NAME = …;` — one line, so the test uses the real value, not a copy.
+ *
+ * A test that restates a constant is testing its own copy of it. IS_VERSION *is* the shape guard;
+ * duplicating it here would let the guard change and the test keep passing on the old one.
+ */
+export function sliceConst(rel, name) {
+  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?const\\s+${name}\\s*=.*?;`, 's'));
+  if (!m) throw new Error(`${rel}: const ${name} not found — renamed or removed.`);
+  return m[0].replace(/^\s*export\s+/m, '');
+}
+
+/** Evaluate one or more sliced functions together, with whatever globals they need stubbed. */
+export function load(pieces, globals = {}) {
+  // Not `{ ...globals }`: spreading invokes any getter immediately, freezing the value at load time
+  // when the test has not set it yet. The object is handed over as it is, so a getter stays live and
+  // a test can change what a function sees between cases.
+  const ctx = vm.createContext(globals);
+  const names = [];
+  for (const p of pieces) {
+    const m = p.match(/function\s+(\w+)\s*\(/) || p.match(/const\s+(\w+)\s*=/);
+    if (m) names.push(m[1]);
+  }
+  vm.runInContext(pieces.join('\n\n') + `\n;({ ${names.join(', ')} })`, ctx);
+  return vm.runInContext(`({ ${names.join(', ')} })`, ctx);
+}

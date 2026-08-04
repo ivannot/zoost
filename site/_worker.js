@@ -60,6 +60,12 @@ async function latestTag(app) {
   // one lightweight legacy tag, and every real release would have gone missing in a way that looks
   // like "nothing has been released yet". Hence the optional `: …` tail, and a title window wide
   // enough to hold a message rather than truncating it into a non-match.
+  return pickLatestTag(xml, app);
+}
+
+// The parsing, separated from the fetching so it can be tested against real feed text. This is
+// where the bug was: not in reaching GitHub, but in reading what it sent back.
+export function pickLatestTag(xml, app) {
   const re = new RegExp(`^(${app}-v(\\d+\\.\\d+\\.\\d+))(?::|$)`);
   const tags = [...xml.matchAll(/<title>([^<]{1,200})<\/title>/g)]
     .map((m) => re.exec(m[1].trim()))
@@ -84,7 +90,12 @@ async function storeVersion(app) {
     signal: timeout(8000),
   });
   if (!r.ok) return null;
-  const html = await r.text();
+  return pickStoreVersion(await r.text());
+}
+
+// Separated for the same reason: the shape guard is the promise that a change in Google's markup
+// can only cost us the number, never invent one, and a promise is worth what its test is worth.
+export function pickStoreVersion(html) {
   for (const m of html.matchAll(/class="nBZElf">([^<]{1,24})</g)) {
     const v = m[1].trim();
     if (IS_VERSION.test(v)) return v;   // shape guard — see the header note
