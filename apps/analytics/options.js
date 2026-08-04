@@ -55,6 +55,7 @@ async function saveAi(silent) {
     maxIter: Math.max(1, Math.min(40, Number($('ai_maxiter').value) || 20)),
     seedCap: Math.max(4000, Math.min(400000, Number($('ai_seedcap').value) || 72000)),
   };
+  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
   try { await chrome.storage.local.set({ aicfg: cfg }); if (!silent) toast('AI settings saved.'); }
   catch (e) { toast('Could not save: ' + e.message, true); }
 }
@@ -69,6 +70,7 @@ LAY_CTL.forEach(([sl, lb, k]) => {
 $('pSub').onchange = () => { lay.sub = $('pSub').checked; };
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI(); };
 $('saveLay').onclick = async () => {
+  markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false);
   try { await chrome.storage.local.set({ erParams: { current: lay } }); toast('Diagram defaults saved.'); }
   catch (e) { toast('Could not save: ' + e.message, true); }
 };
@@ -79,6 +81,61 @@ async function loadLay() {
 
 $('aiengine').onchange = () => { markEngine(); saveAi(true); };
 $('saveAi').onclick = () => saveAi(false);
+
+// ---------- guarding against the stale save ----------
+//
+// One settings window stops you having two copies of this form. It does not stop this copy going out
+// of date while it sits open, so each section watches its own key: changed elsewhere and untouched
+// here, the form catches up silently; changed elsewhere while you were editing, nothing is
+// overwritten in either direction and you choose. Never resolve it by guessing which side is newer.
+//
+// The same mechanism, the same wording and the same markup as the CRM workbench — this is shared
+// chrome, and the two panels must not disagree about what a settings conflict looks like.
+const SECTIONS = {
+  aicfg: { label: 'AI assistant', reload: loadAi },
+  erParams: { label: 'Diagram layout', reload: loadLay },
+};
+const dirty = new Set();
+const ownWrite = new Map();
+function markOwn(key) { ownWrite.set(key, Date.now()); }
+function wasOwn(key) {
+  const t = ownWrite.get(key);
+  if (t && Date.now() - t < 3000) { ownWrite.delete(key); return true; }
+  return false;
+}
+function markDirty(key) { dirty.add(key); }
+function conflictBox(key, on) {
+  const id = 'cf_' + key;
+  let el = document.getElementById(id);
+  const sec = document.querySelector(`[data-section="${key}"]`);
+  if (!sec) return;
+  if (!on) { if (el) el.remove(); return; }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = id; el.className = 'conflict';
+  el.innerHTML = `<b>${SECTIONS[key].label} changed somewhere else</b> while you were editing here. `
+    + 'Saving now would overwrite it with what this page loaded.'
+    + '<span class="cfb"><button data-take="' + key + '">Take theirs</button>'
+    + '<button data-keep="' + key + '">Keep mine</button></span>';
+  sec.insertBefore(el, sec.firstChild);
+  el.querySelector('[data-take]').onclick = async () => { dirty.delete(key); await SECTIONS[key].reload(); conflictBox(key, false); };
+  el.querySelector('[data-keep]').onclick = () => conflictBox(key, false);
+}
+document.querySelectorAll('[data-section]').forEach((sec) => {
+  const k = sec.dataset.section;
+  sec.addEventListener('input', () => markDirty(k));
+  sec.addEventListener('change', () => markDirty(k));
+});
+try {
+  chrome.storage.onChanged.addListener(async (ch, area) => {
+    if (area !== 'local') return;
+    for (const key of Object.keys(SECTIONS)) {
+      if (!ch[key] || wasOwn(key)) continue;
+      if (dirty.has(key)) conflictBox(key, true);
+      else { try { await SECTIONS[key].reload(); } catch (_) {} }
+    }
+  });
+} catch (_) {}
 
 (function init() {
   const m = chrome.runtime.getManifest();

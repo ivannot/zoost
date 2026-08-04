@@ -29,6 +29,39 @@ const PULL_SV = 1;                            // pull schema version; bump when 
 
 // Identity and legal text, worded as in the CRM panel — the two are one product to the reader.
 const PRODUCT_URL = 'https://zoost.it';
+
+// Settings live in one window, and only ever one.
+//
+// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window —
+// while the side panel is per window. Two browser windows, two settings tabs; over a working day,
+// ten. That is not a tidiness problem: every one of them is a form holding a snapshot of the
+// settings from the moment it opened, and saving an old one silently overwrites a newer one with
+// stale values. It is the same trap as having the same Deluge function open in two tabs and being
+// invited to "save your work" by the older of them.
+//
+// So: find any existing settings tab across all windows, focus it, and open a dedicated popup
+// window only if there is none. Existing duplicates are focused, never closed — one of them may
+// hold edits, and discarding those to enforce uniqueness would be committing the very mistake this
+// prevents. They disappear as they are closed.
+//
+// Uniqueness by construction is still not enough on its own, which is why options.js also refuses to
+// save over a value that changed underneath it. A window can be closed and reopened, the extension
+// reloaded, and the panel itself writes some of these keys.
+async function openSettings() {
+  const url = chrome.runtime.getURL('options.html');
+  try {
+    const open = await chrome.tabs.query({ url });
+    if (open && open.length) {
+      await chrome.windows.update(open[0].windowId, { focused: true });
+      await chrome.tabs.update(open[0].id, { active: true });
+      return;
+    }
+    await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
+  } catch (_) {
+    chrome.runtime.openOptionsPage();   // whatever went wrong, the settings must still be reachable
+  }
+}
+
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
 // guide, which is the kind of thing that only ever gets found by a user — so both are named here,
 // once, and every surface derives from them instead of writing a path inline.
@@ -1284,7 +1317,7 @@ function aiRenderMessages() {
 async function aiSend() {
   const cfg = await aiGetCfg();
   aiEngineChrome();
-  if (!aiActiveReady(cfg)) { chrome.runtime.openOptionsPage(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
+  if (!aiActiveReady(cfg)) { openSettings(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
   aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); status('AI thinking…', 'busy');
@@ -1612,7 +1645,7 @@ $('health').onclick = () => ($('healthview').classList.contains('show') ? closeH
 $('askai').onclick = toggleAI;
 $('aix').onclick = closeAI;
 $('aiclear').onclick = aiClear;
-$('aigear').onclick = () => chrome.runtime.openOptionsPage();
+$('aigear').onclick = () => openSettings();
 $('ainotex').onclick = () => $('ainote').classList.remove('show');
 $('aisend').onclick = aiSend;
 $('aiinput').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); aiSend(); } });
@@ -1625,7 +1658,7 @@ $('expgo').onclick = () => { scopeFromUI(); closeScope(true); };
 $('pspFull').onclick = () => { expScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
 $('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
-$('opts').onclick = () => chrome.runtime.openOptionsPage();
+$('opts').onclick = () => openSettings();
 $('about').onclick = showAbout;
 $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;

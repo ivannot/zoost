@@ -43,6 +43,39 @@ async function removeFile(path) { const parts = path.split('/'); const name = pa
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
+
+// Settings live in one window, and only ever one.
+//
+// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window —
+// while the side panel is per window. Two browser windows, two settings tabs; over a working day,
+// ten. That is not a tidiness problem: every one of them is a form holding a snapshot of the
+// settings from the moment it opened, and saving an old one silently overwrites a newer one with
+// stale values. It is the same trap as having the same Deluge function open in two tabs and being
+// invited to "save your work" by the older of them.
+//
+// So: find any existing settings tab across all windows, focus it, and open a dedicated popup
+// window only if there is none. Existing duplicates are focused, never closed — one of them may
+// hold edits, and discarding those to enforce uniqueness would be committing the very mistake this
+// prevents. They disappear as they are closed.
+//
+// Uniqueness by construction is still not enough on its own, which is why options.js also refuses to
+// save over a value that changed underneath it. A window can be closed and reopened, the extension
+// reloaded, and the panel itself writes some of these keys.
+async function openSettings() {
+  const url = chrome.runtime.getURL('options.html');
+  try {
+    const open = await chrome.tabs.query({ url });
+    if (open && open.length) {
+      await chrome.windows.update(open[0].windowId, { focused: true });
+      await chrome.tabs.update(open[0].id, { active: true });
+      return;
+    }
+    await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
+  } catch (_) {
+    chrome.runtime.openOptionsPage();   // whatever went wrong, the settings must still be reachable
+  }
+}
+
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
 // guide, which is the kind of thing that only ever gets found by a user — so both are named here,
 // once, and every surface derives from them instead of writing a path inline.
@@ -1404,9 +1437,9 @@ function toggleAI() {
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
 function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching functions no longer resets it.')) return; aiMessages = []; aiRenderMessages(); }
 // AI configuration lives in the options page now: the side panel is 400px wide and these are
-// set-once fields. openOptionsPage() opens the tab; the panel picks the change up via
+// set-once fields. openSettings() focuses the one settings window; the panel picks the change up via
 // chrome.storage.onChanged.
-function aiOpenSettings() { chrome.runtime.openOptionsPage(); }
+function aiOpenSettings() { openSettings(); }
 
 
 // ---------- save-sync ----------
@@ -3039,7 +3072,7 @@ function openFunctionFromWorkflow(id, name) {
 }
 
 // ---------- boot + tab reactivity ----------
-$('opts').onclick = () => chrome.runtime.openOptionsPage();
+$('opts').onclick = () => openSettings();
 $('help').href = DOCS_URL;
 // The options page is a separate document: pick up its changes without a manual refresh.
 try {

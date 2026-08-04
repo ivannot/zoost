@@ -366,6 +366,25 @@ Only the HTTP form is classified. Analytics also answers `200` with `{"status":"
 whether a permission refusal ever arrives that way has **not** been measured — so that path stays an
 ordinary failure rather than being labelled a refusal on a guess.
 
+**Settings open in one window, and the form still refuses to save over a value that moved.** Two
+things, and the second is the one that matters. `openOptionsPage()` opens a *tab* and de-duplicates
+only within the current browser window — while the side panel is per window, so two browser windows
+give two settings tabs and a working day gives ten. `openSettings()` in each panel queries every
+window for an existing `options.html` tab, focuses it, and opens a dedicated popup only if there is
+none. Existing duplicates are **focused, never closed**: one of them may hold edits, and discarding
+those to enforce uniqueness would commit the exact mistake this prevents.
+
+But uniqueness by construction does not stop *this* copy going stale. It can sit open for hours while
+the panel writes the same keys — `exportScope` is rewritten on every export with a different scope,
+`aicfg` when the engine changes — and Save then writes back what was true at page load. That is the
+lost update, and it is the same shape as having one Deluge function open in two tabs and being
+invited to "save your work" by the older of them. So each section in `options.js` watches its own
+key: changed elsewhere and untouched here, the form catches up silently; changed elsewhere while
+being edited, **nothing is overwritten in either direction** and the section says so with both ways
+out. The page's own writes are marked so it does not warn about itself, and that mark expires so a
+real later change is still seen. **Never resolve this by guessing which side is newer** — the user is
+the only one who knows which they meant.
+
 **Excluding an area never deletes its files, and a "remove local files" *flag* was considered and
 refused.** A standing instruction to delete on every future pull is a foot-gun — re-enable the tab,
 forget the flag, and the next pull has already thrown the files away — and deleting solves nothing

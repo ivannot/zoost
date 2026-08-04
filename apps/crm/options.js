@@ -91,7 +91,7 @@ $('aiengine').onchange = async () => {
   markEngine();
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   c.active = $('aiengine').value;
-  await chrome.storage.local.set({ aicfg: c }); await stamp();
+  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: c }); await stamp();
   toast(`Engine set to ${c.active === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)'}.`);
 };
 $('saveAi').onclick = async () => {
@@ -103,7 +103,7 @@ $('saveAi').onclick = async () => {
     seedCap: Math.max(4000, Math.min(400000, parseInt($('ai_seedcap').value, 10) || 72000)),
   };
   const p = cfg[cfg.active] || {};
-  await chrome.storage.local.set({ aicfg: cfg }); await stamp();
+  markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: cfg }); await stamp();
   toast(p.apiKey && p.model ? 'AI settings saved.' : 'Saved — but the selected engine still needs a model and an API key.', !(p.apiKey && p.model));
 };
 
@@ -128,7 +128,7 @@ async function loadScope() {
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scFull').onclick = () => { scope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
 $('scSafe').onclick = () => { scope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
-$('saveScope').onclick = async () => { scopeFromUI(); await chrome.storage.local.set({ exportScope: scope }); await stamp(); toast('Export defaults saved.'); };
+$('saveScope').onclick = async () => { scopeFromUI(); markOwn('exportScope'); dirty.delete('exportScope'); conflictBox('exportScope', false); await chrome.storage.local.set({ exportScope: scope }); await stamp(); toast('Export defaults saved.'); };
 
 // ---------- diagram layout ----------
 let lay = Object.assign({}, LAY_DEFAULT);
@@ -141,7 +141,7 @@ LAY_CTL.forEach(([sl, lb, k]) => {
 });
 $('pSub').onchange = () => { lay.sub = $('pSub').checked; };
 $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI(); };
-$('saveLay').onclick = async () => { await chrome.storage.local.set({ erParams: { current: lay } }); await stamp(); toast('Diagram defaults saved.'); };
+$('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false); await chrome.storage.local.set({ erParams: { current: lay } }); await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
   try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
   layToUI();
@@ -255,11 +255,79 @@ async function loadTabs() {
   renderTabs();
 }
 $('saveTabs').onclick = async () => {
+  markOwn('tabPrefs'); dirty.delete('tabPrefs'); conflictBox('tabPrefs', false);
   await chrome.storage.local.set({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } });
   await stamp();
   toast('Tabs saved.');
 };
 $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); };
+
+
+// ---------- guarding against the stale save ----------
+//
+// One window stops you *having* two copies of this form. It does not stop this copy being out of
+// date: it can sit open for hours while the side panel writes some of the same keys — exportScope
+// is rewritten every time you export with a different scope, aicfg when the engine changes — and
+// then Save writes back what was true when the page loaded. That is the lost update, and it is the
+// bug being described: the older copy wins because it saved last.
+//
+// So each section watches its own key. If it changes elsewhere and you have not touched that
+// section, the form re-reads it — silently, because there is nothing to decide. If you *have*
+// touched it, nothing is overwritten in either direction: the section says so and offers both ways
+// out. Never resolve this by guessing which side is newer; the user is the only one who knows which
+// they meant.
+const SECTIONS = {
+  exportScope: { label: 'Export defaults', reload: loadScope },
+  tabPrefs: { label: 'Tabs', reload: loadTabs },
+  erParams: { label: 'Diagram layout', reload: loadLay },
+  aicfg: { label: 'AI assistant', reload: loadAi },
+};
+const dirty = new Set();
+// Writes made from this page also fire onChanged. Marked so the page does not warn about itself.
+const ownWrite = new Map();
+function markOwn(key) { ownWrite.set(key, Date.now()); }
+function wasOwn(key) {
+  const t = ownWrite.get(key);
+  if (t && Date.now() - t < 3000) { ownWrite.delete(key); return true; }
+  return false;
+}
+function markDirty(key) { dirty.add(key); }
+function conflictBox(key, on) {
+  const id = 'cf_' + key;
+  let el = document.getElementById(id);
+  const sec = document.querySelector(`[data-section="${key}"]`);
+  if (!sec) return;
+  if (!on) { if (el) el.remove(); return; }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = id; el.className = 'conflict';
+  el.innerHTML = `<b>${SECTIONS[key].label} changed somewhere else</b> while you were editing here. `
+    + 'Saving now would overwrite it with what this page loaded.'
+    + '<span class="cfb"><button data-take="' + key + '">Take theirs</button>'
+    + '<button data-keep="' + key + '">Keep mine</button></span>';
+  sec.insertBefore(el, sec.firstChild);
+  el.querySelector('[data-take]').onclick = async () => { dirty.delete(key); await SECTIONS[key].reload(); conflictBox(key, false); };
+  el.querySelector('[data-keep]').onclick = () => conflictBox(key, false);
+}
+// Any edit inside a section marks it. Attached to the section rather than to each control, so a
+// field added later is covered without anyone remembering — the reorder arrows are clicks and not
+// input events, hence the third listener.
+document.querySelectorAll('[data-section]').forEach((sec) => {
+  const k = sec.dataset.section;
+  sec.addEventListener('input', () => markDirty(k));
+  sec.addEventListener('change', () => markDirty(k));
+  sec.addEventListener('click', (e) => { if (e.target.closest('.mv')) markDirty(k); });
+});
+try {
+  chrome.storage.onChanged.addListener(async (ch, area) => {
+    if (area !== 'local') return;
+    for (const key of Object.keys(SECTIONS)) {
+      if (!ch[key] || wasOwn(key)) continue;
+      if (dirty.has(key)) conflictBox(key, true);          // your edits stand; you decide
+      else { try { await SECTIONS[key].reload(); } catch (_) {} }   // nothing to lose: just catch up
+    }
+  });
+} catch (_) {}
 
 // ---------- init ----------
 (async function init() {
