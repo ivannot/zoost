@@ -128,6 +128,8 @@ What is kept:
 - Which AI engine the user selected, the model id, and the API key they entered (the assistant is optional and off by default). The key is used only to call the provider the user chose.
 - Export defaults: which sections a generated export file may contain.
 - Diagram preferences: spacing, spread and label size for the ER diagram.
+- Which side panel tabs the user shows, in what order, and which of them a pull should ask Zoho for.
+- A display-only copy of which data types the user's Zoho role was granted or refused in the workspace currently open, so the options page can explain why a tab is unavailable. The authoritative record is a file in the user's own folder; this copy is only read into a sentence.
 - A small timestamp used so the side panel notices when settings are changed in the options page.
 
 No browsing data, no CRM data and no personal information are placed in storage. The mirrored Deluge sources and metadata are not stored here: they are written as ordinary files into the local folder the user selected, through the File System Access API.
