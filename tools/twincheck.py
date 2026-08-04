@@ -39,6 +39,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# This compares the two side panels, and only those: it is a structural diff of one page against
+# its twin, and graphview/options have different shapes rather than shared chrome.
+#
+# That is a real limit and it cost something. Two files out of the twelve each app ships were the
+# only ones any check ever read, so an Analytics window titled after the CRM survived from the day
+# the graph engine was ported. `tools/namecheck.py` covers *every* shipped file for the one property
+# that must hold across all of them — that a file names its own product and no other — and it globs
+# rather than holding a list, so a file added tomorrow is covered without anyone remembering.
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
 SCRIPTS = {'crm': ROOT / 'apps/crm/sidepanel.js', 'analytics': ROOT / 'apps/analytics/sidepanel.js'}
 

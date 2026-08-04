@@ -86,7 +86,25 @@ notice and hard to name. It was reported by the user, which is the failure. **A 
 
 ```bash
 python3 tools/sitecheck.py           # header and footer must have one shape across all pages
+python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
 ```
+
+**Run all three before calling a change done.** They divide the problem three ways and each was
+written after something got past the others. The third exists because of a pattern worth naming:
+five naming defects reached the user, and all five were invisible for the same two reasons.
+`twincheck` reads **two files out of the twelve each app ships**, with the pair written by hand —
+a checklist wearing a script's clothes, inside the tool built to prevent exactly that. And every
+check compared *structure* — ids, classes, declarations, handlers — while a product name is a
+**string**, which nothing read.
+
+So `namecheck.py` globs (a file added tomorrow is covered without anyone remembering) and reads
+strings: every shipped page's `<title>` must name its own product; no file may name or link to the
+other one; the manifest's identity fields are the authority rather than a copy kept in the tool; and
+it reads `release.yml`, because "Zoost for crm 1.9.0" was published by the one file that is neither
+panel nor page. Proven against all four defects: each is reported when reintroduced.
+
+**When a check misses something, extend the check — never the care.** "Be more careful" had already
+been tried five times.
 
 ```bash
 python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles, CSS declarations
