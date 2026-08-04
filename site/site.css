@@ -32,13 +32,20 @@ header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
    not var(--sel): that token is the *current* page's accent, so a "Zoho CRM" button would turn
    magenta on the Analytics pages — which is the one thing the colours exist to prevent. */
-header nav a.nprod{color:#fff;border-radius:7px;padding:5px 11px;font-weight:600;line-height:1.2}
+header nav a.nprod{color:#fff;border-radius:7px;padding:5px 11px;font-weight:600;line-height:1.2;white-space:nowrap}
 header nav a.ncrm{background:#2563eb}
 header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
 header nav a.nana{background:#dc2d7a}
 header nav a.nana:hover{background:#e8508f;color:#fff}
 header nav a.nprod[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px currentColor}
-@media (max-width:560px){ header nav a.nprod{padding:4px 8px} }
+/* The product names are long, and on a phone they wrapped *inside* their own buttons — four lines
+   of "Zoost / for / Zoho / CRM". The buttons never break now; the bar breaks instead, onto its own
+   full-width row under the brand. */
+@media (max-width:760px){
+  header .wrap{flex-wrap:wrap;row-gap:9px;padding:12px 18px}
+  header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:8px 10px;font-size:12.5px}
+  header nav a.nprod{padding:4px 9px}
+}
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
 

@@ -60,9 +60,14 @@
       // install today, what has been released and can be checked out and verified, and what is
       // being built right now. "In development" is spelled out so it cannot be read as available.
       var bits = [];
+      // Our products, named as ours. "Zoho CRM · Web Store 1.0.0" does not read as "the Zoost for
+      // Zoho CRM you can install is 1.0.0" — it reads as a statement about Zoho's product, and it
+      // is false: 1.0.0 is our version. A label that attributes a property has to name the thing
+      // the property belongs to. (A label that merely *selects* a platform — the nav buttons, the
+      // guide switcher — may say "Zoho CRM", because there you are choosing a platform.)
       var prods = [
-        ['Zoho CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
-        ['Zoho Analytics', d.analytics],
+        ['Zoost for Zoho CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
+        ['Zoost for Zoho Analytics', d.analytics],
       ];
       prods.forEach(function (pr) {
         var name = pr[0], v = pr[1];

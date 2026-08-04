@@ -83,6 +83,22 @@ def bare_platform(html: str):
             for m in re.finditer(r'\b(Analytics|CRM)\b', s)]
 
 
+def ours_named_as_theirs(html: str):
+    """A label whose whole text is "Zoho CRM" is Zoho's product, not ours.
+
+    The footer badge said "Zoho CRM · Web Store 1.0.0", which does not read as "the Zoost you can
+    install is at 1.0.0" — it reads as a statement about Zoho's product, and it is false. The same
+    word was standing in for our extension in the nav, the footer links, the cards and the guide
+    switcher. Nominative use means naming *their* product when we mean theirs; it does not license
+    using their name as shorthand for ours.
+
+    Only checks labels that stand alone — a link, a heading, a bold run whose entire content is the
+    platform name. Inside a sentence "Zoho CRM" is almost always the platform and correct.
+    """
+    return [m.group(2) + f' as a bare <{m.group(1)}>'
+            for m in re.finditer(r'<(a|h1|h2|h3|b|strong)\b[^>]*>\s*(Zoho CRM|Zoho Analytics)\s*</\1>', html)]
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -107,6 +123,8 @@ def main() -> int:
     for p in pages:
         for ctx in bare_platform(p.read_text(encoding='utf-8')):
             findings.append(f'{p.name}: bare platform name — …{ctx}…')
+        for lbl in ours_named_as_theirs(p.read_text(encoding='utf-8')):
+            findings.append(f'{p.name}: our product labelled with Zoho\'s name — {lbl}')
 
     print(f'sitecheck: {len(pages)} pages — ' + ', '.join(p.name for p in pages))
     for f in findings:

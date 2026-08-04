@@ -606,6 +606,15 @@ trademark posture: nominative use is strongest when the mark is quoted exactly a
 descriptive position, while an unqualified "Analytics" reads as a word we have adopted. The cost is
 repetition, and this project has always priced precision above elegance.
 
+**Never let Zoho's product name stand in for ours.** "Zoho CRM · Web Store 1.0.0" in the footer
+badge does not read as "the Zoost you can install is 1.0.0" — it reads as a claim about Zoho's
+product, and it is false, because 1.0.0 is ours. The same word was standing in for our extensions in
+the navigation, the footer links, the home cards and the guide switcher. Nominative use means naming
+*their* product when we mean theirs; it does not license borrowing their name for ours. Wherever a
+label stands for one of our extensions it reads **"Zoost for Zoho CRM"** / **"Zoost for Zoho
+Analytics"** — `sitecheck.py` reports any link, heading or bold run whose entire text is a bare
+platform name.
+
 **"Zoost" alone is already the full name of the family** — nothing is being shortened, so it needs no
 qualifier. Where the two products must be told apart, write **"Zoost for Zoho CRM"** and **"Zoost for
 Zoho Analytics"**. Never "Zoost Analytics" in prose (that is only the Chrome `short_name`), and never
