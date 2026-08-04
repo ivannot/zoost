@@ -29,6 +29,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | App | Version | Tag | Commit | SHA-256 of the uploaded `.zip` | Submitted |
 |---|---|---|---|---|---|
 | analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible — see below* | 2026-08-03 |
+| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` | 2026-08-04 |
 
 ## What this table cannot tell you, and why
 
