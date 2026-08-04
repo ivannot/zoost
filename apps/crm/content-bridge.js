@@ -90,10 +90,35 @@
       return m ? m[1] : null;
     } catch (_) { return null; }
   }
-  async function api(path, csrfPrefix) {
+  // Right after a fresh login the deluge runtime rejects the very first `/deluge/` call with
+  // 400 INVALID_CSRF_TOKEN, and any `/crm/` call in between makes the next attempt succeed —
+  // reproduced deliberately: log out, log in, pull connections (fails), pull schedules, pull
+  // connections (works). It is also why "Pull all" never showed this: functions run first.
+  //
+  // Which of the two explanations is true — `drecn` not yet set/refreshed, or the deluge session not
+  // yet initialised server-side — is **not** established. It does not need to be: the remedy is the
+  // same under both, and it is the one that was measured rather than reasoned about. So on exactly
+  // that error, make one ordinary CRM call and try again, once.
+  //
+  // This is the "recovering by a known action" exception, not a retry loop: one attempt, only on a
+  // specific error string, only for the deluge family, and the primer's own result is ignored —
+  // we are after the side effect, and a user whose role refuses that endpoint is no worse off than
+  // before. If the second attempt fails the original error is what the user sees.
+  async function warmDeluge() {
+    try {
+      await fetch(BASE + '/crm/v9/settings/automation/schedules?page=1&per_page=1',
+        { headers: headers(), credentials: 'include' });
+    } catch (_) {}
+  }
+  async function api(path, csrfPrefix, retried) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
-    if (!res.ok) throw apiError(res.status, path, await errorDetail(res));
-    return res.json();
+    if (res.ok) return res.json();
+    const detail = await errorDetail(res);
+    if (!retried && csrfPrefix === 'drepn' && res.status === 400 && detail === 'INVALID_CSRF_TOKEN') {
+      await warmDeluge();
+      return api(path, csrfPrefix, true);
+    }
+    throw apiError(res.status, path, detail);
   }
   function toFile(fn, fallback) {
     const ns = fn.nameSpace || fallback?.namespace || fn.category || 'misc';

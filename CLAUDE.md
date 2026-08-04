@@ -445,6 +445,16 @@ These all failed **silently**, with no console error. They are the expensive kin
   **find the source by making the page tell you** (hook `setRequestHeader`, compare what Zoho's own
   UI sends against the cookie jar, print only the matching *name*), never infer it from the prefix
   and never assume two tokens that match today are the same token.
+- **The first `/deluge/` call after a fresh login is refused, and any `/crm/` call fixes it.**
+  Reproduced deliberately: log out, log in, pull connections → **400 INVALID_CSRF_TOKEN**; pull
+  schedules; pull connections → works. It never showed up in "Pull all" because functions run first.
+  Whether `drecn` is not yet set/refreshed, or the deluge session is not yet initialised server-side,
+  is **not established** — and does not need to be, because the remedy is the same either way. `api()`
+  makes one ordinary CRM call and retries **once**, only on that exact status-and-message pair and
+  only for the `drepn` family; the primer's result is ignored, since it is the side effect we want.
+  This is the "recovering by a known action" exception, not a retry loop — and note it is allowed
+  precisely because the recovery was *measured* rather than guessed at.
+
 - **A failing response explains itself in its body, and throwing that away costs the answer.**
   `400 on /deluge/api/…` names the symptom; `— INVALID_CSRF_TOKEN` names the cause. Both bridges read
   a short prefix of the body and quote `errorMessage`/`message`/`error` if it is there. Nothing
