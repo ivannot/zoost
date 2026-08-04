@@ -65,6 +65,8 @@
   .tabrow .why{display:block;font-size:11px;color:var(--muted);margin-top:2px}
   .tabrow.denied{opacity:.75;border-style:dashed}
   .tabrow.denied .tn b{color:var(--muted)}
+  .tabrow .pl{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);flex:none;cursor:pointer}
+  .tabrow .pl input{margin:0}
   .tabrow .mv{padding:2px 8px;font-size:12px;line-height:1.3;flex:none}
   .tabrow .mv:disabled{opacity:.3}
 </style>
@@ -139,7 +141,11 @@
     <p class="sub">Which types the side panel offers, and in what order. A tab you turn off is
       <i>absent</i>, not greyed out — the panel is 400px wide and a control that does nothing is just
       noise. Nothing is deleted by hiding a tab: <b>Pull all</b> still mirrors that type, and it still
-      appears in exports and in what the AI can see.</p>
+      appears in exports and in what the AI can see — unless you also clear its <b>pull</b> box, which is
+      the separate question of whether Zoost should ask Zoho for that type at all. Turning a tab off
+      clears it for you, because most tabs are turned off for an area the account cannot read and
+      pulling it then only produces an error. Turn it back on if you mirror a type for Git without
+      browsing it.</p>
     <div id="tablist" class="tabs"></div>
     <p class="sub" id="tabnote" style="display:none"></p>
     <div class="row" style="margin-top:12px">

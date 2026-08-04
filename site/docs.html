@@ -31,8 +31,8 @@
   <div class="wrap">
     <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
-      <a href="/crm.html">Zoho CRM</a>
-      <a href="/analytics.html">Zoho Analytics</a>
+      <a class="nprod ncrm" href="/crm.html">Zoho CRM</a>
+      <a class="nprod nana" href="/analytics.html">Zoho Analytics</a>
       <a href="/docs.html" aria-current="page">How to</a>
       <a href="/privacy.html">Privacy</a>
     </nav>
@@ -138,8 +138,11 @@ git commit -m "baseline"</code></pre>
     and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, where <b class="ui">Pull all</b>
     will check again. Roles are per org: a workspace that refuses an area says nothing about the next one.</p>
   <p>The same page is where you choose <b>which tabs to show at all, and in what order</b> — the panel is
-    narrow, and a type you never look at is only in the way. Hiding one changes the panel and nothing else:
-    <b class="ui">Pull all</b> still mirrors it, and it still appears in exports and to the assistant.</p>
+    narrow, and a type you never look at is only in the way. Each row has a second switch, <b>pull</b>, for
+    the separate question of whether Zoost should ask Zoho for that type at all. Turning a tab off clears
+    it, because most tabs are turned off for an area the account cannot read and pulling it then only
+    produces an error — turn it back on if you mirror a type for Git without browsing it. A pull that
+    skipped something says so.</p>
   <ul>
     <li>In a function's code, calls to other custom functions are <b>clickable</b> — jump to the definition,
       then use <b class="ui">◂ back</b>.</li>

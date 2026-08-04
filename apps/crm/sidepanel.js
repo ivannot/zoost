@@ -43,6 +43,11 @@ async function removeFile(path) { const parts = path.split('/'); const name = pa
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
+// Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
+// guide, which is the kind of thing that only ever gets found by a user — so both are named here,
+// once, and every surface derives from them instead of writing a path inline.
+const PAGE_URL = PRODUCT_URL + '/crm.html';
+const DOCS_URL = PRODUCT_URL + '/docs.html';
 const STORE_URL = 'https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj';
 const CONTACT_EMAIL = 'ivan@zoost.it';
 const REPO_URL = 'https://github.com/ivannot/zoost';
@@ -78,7 +83,13 @@ async function loadTabPrefs() {
     const st = await chrome.storage.local.get('tabPrefs');
     const p = st && st.tabPrefs;
     if (p && Array.isArray(p.order) && Array.isArray(p.hidden)) {
-      tabPrefs = { order: p.order.filter((id) => TAB[id]), hidden: p.hidden.filter((id) => TAB[id]) };
+      tabPrefs = {
+        order: p.order.filter((id) => TAB[id]),
+        hidden: p.hidden.filter((id) => TAB[id]),
+        // Absent in preferences saved before this existed: those said nothing about pulling, so the
+        // honest reading is "pull everything", not "skip whatever happens to be hidden today".
+        nopull: (Array.isArray(p.nopull) ? p.nopull : []).filter((id) => TAB[id]),
+      };
     }
   } catch (_) {}
 }
@@ -175,7 +186,7 @@ function showAbout() {
   $('aboutbody').innerHTML =
     `<div><b>${escHtml(PRODUCT_NAME)}</b> \u00b7 v${escHtml(chrome.runtime.getManifest().version)}</div>`
     + `<div style="color:var(--muted)">Created by ${escHtml(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
-    + `<h4>Links</h4><div><a href="${escHtml(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/docs.html" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escHtml(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escHtml(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
+    + `<h4>Links</h4><div><a href="${escHtml(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escHtml(PAGE_URL)}" target="_blank" rel="noopener">What it does</a> \u00b7 <a href="${escHtml(DOCS_URL)}" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escHtml(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escHtml(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
     + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escHtml(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escHtml(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
     + `<h4>Licence</h4><div><a href="${escHtml(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
@@ -235,7 +246,7 @@ const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
 
 // What the user chose: which tabs to show and in what order. A preference, stored per install and
 // not per workspace — unlike the access verdicts, which are a property of one org's roles.
-let tabPrefs = { order: TABS.map((t) => t.id), hidden: [] };
+let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [] };
 // What Zoho answered, for the workspace currently open: area -> { state, status, at }.
 // 'ok' | 'forbidden' | 'failed'. Empty until a pull has actually asked.
 let tabAccess = {};
@@ -243,6 +254,13 @@ let tabAccess = {};
 const accessOf = (id) => (tabAccess[id] && tabAccess[id].state) || null;
 const isForbidden = (id) => accessOf(id) === 'forbidden';
 const isHiddenByUser = (id) => tabPrefs.hidden.includes(id);
+// Hiding a tab and skipping its pull are separate on purpose, but they are not equally likely: most
+// people who turn a tab off do it because they cannot read that area anyway, and leaving it in the
+// pull chain then buys nothing but an error per pull. So the flag exists and it defaults to
+// following the tab — hide one and its pull goes with it unless you say otherwise, because the
+// alternative is a setting that is right for the ninth user out of ten and silently wrong for the
+// other nine.
+const isPulled = (id) => !tabPrefs.nopull.includes(id);
 // The order is the preference's, with anything the preference has never heard of appended — so a
 // tab added in a later version appears instead of vanishing for everyone who has saved a setting.
 function tabOrder() {
@@ -1623,13 +1641,19 @@ async function pullEverything() {
   if (pullBusy) return;
   setPullBusy(true);
   const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, connections: pullConnections };
+  const skipped = [];
   for (const t of TABS) {
     if (isForbidden(t.id)) continue;
+    if (!isPulled(t.id)) { skipped.push(t.id); continue; }
     try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
   }
   try { await rebuildActive(); } catch (_) {}
   renderTabs();                                   // a refusal discovered just now changes the set
-  const note = forbiddenNote();
+  // Both notes, because they are different facts and neither may be swallowed: one is what Zoho
+  // refused, the other is what you told it not to ask for. A pull that quietly covered less than the
+  // whole org without saying so is a mirror you cannot trust.
+  const note = forbiddenNote()
+    + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '');
   if (note) setStatus($('stxt').textContent + note, 'warn');
   setPullBusy(false);
 }
@@ -2936,7 +2960,7 @@ function openFunctionFromWorkflow(id, name) {
 
 // ---------- boot + tab reactivity ----------
 $('opts').onclick = () => chrome.runtime.openOptionsPage();
-$('help').href = PRODUCT_URL + '/docs.html';
+$('help').href = DOCS_URL;
 // The options page is a separate document: pick up its changes without a manual refresh.
 try {
   chrome.storage.onChanged.addListener(async (ch, area) => {

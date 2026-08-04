@@ -207,7 +207,9 @@ offer zero-retention.
   the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
 - Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
 - Mode segments: **Functions · Modules · Workflows · Schedules · Connections** — which of these
-  appear, and in what order, is yours to set in **Settings → Tabs**. A tab your Zoho role has no
+  appear, and in what order, is yours to set in **Settings → Tabs**, where each also carries a
+  **pull** switch — whether `Pull all` asks Zoho for that type at all. Turning a tab off clears it,
+  since a tab is usually turned off for an area the account cannot read. A tab your Zoho role has no
   access to removes itself (see below).
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**

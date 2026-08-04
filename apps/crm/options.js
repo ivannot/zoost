@@ -164,6 +164,7 @@ const TAB_DEFS = [
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];
+let tabNoPullCur = [];
 let tabAccessCur = { ws: null, access: {} };
 
 const dayOf = (iso) => {
@@ -189,15 +190,33 @@ function renderTabs() {
     const why = denied
       ? `Not granted to your Zoho role${a.status ? ` — Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
       : def.note;
-    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${id}">
+    // Two independent switches, because they answer different questions: "do I want to look at this"
+    // and "should Zoost even ask Zoho for it". A refused area has neither offered — it is skipped
+    // whatever these say, and a control that cannot do what it says is worse than no control.
+    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${id}" title="Show this tab in the side panel">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
+      <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${id}">pull</label>
       <button class="mv" data-up="${id}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
       <button class="mv" data-down="${id}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll('input[data-id]').forEach((c) => (c.onchange = () => {
     const id = c.dataset.id;
-    tabHiddenCur = c.checked ? tabHiddenCur.filter((x) => x !== id) : tabHiddenCur.concat([id]);
+    if (c.checked) {
+      tabHiddenCur = tabHiddenCur.filter((x) => x !== id);
+    } else {
+      tabHiddenCur = tabHiddenCur.concat([id]);
+      // Turning a tab off also stops pulling it, and shows that it has: nine times in ten a tab is
+      // turned off because that area is not readable anyway, and leaving it in the chain buys one
+      // error per pull and nothing else. Shown rather than done invisibly, and you can turn the pull
+      // back on for the tenth case — someone who mirrors a type for Git and never browses it.
+      if (!tabNoPullCur.includes(id)) tabNoPullCur = tabNoPullCur.concat([id]);
+    }
+    renderTabs();
+  }));
+  box.querySelectorAll('input[data-pull]').forEach((c) => (c.onchange = () => {
+    const id = c.dataset.pull;
+    tabNoPullCur = c.checked ? tabNoPullCur.filter((x) => x !== id) : tabNoPullCur.concat([id]);
   }));
   box.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => move(b.dataset.up, -1)));
   box.querySelectorAll('[data-down]').forEach((b) => (b.onclick = () => move(b.dataset.down, 1)));
@@ -229,17 +248,18 @@ async function loadTabs() {
       const known = p.order.filter((id) => TAB_IDS.includes(id));
       tabOrderCur = known.concat(TAB_IDS.filter((id) => !known.includes(id)));   // a tab added later must appear, not vanish
       tabHiddenCur = p.hidden.filter((id) => TAB_IDS.includes(id));
+      tabNoPullCur = (Array.isArray(p.nopull) ? p.nopull : []).filter((id) => TAB_IDS.includes(id));
     }
     if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
   } catch (_) {}
   renderTabs();
 }
 $('saveTabs').onclick = async () => {
-  await chrome.storage.local.set({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur } });
+  await chrome.storage.local.set({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur, nopull: tabNoPullCur } });
   await stamp();
   toast('Tabs saved.');
 };
-$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; renderTabs(); };
+$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; tabNoPullCur = []; renderTabs(); };
 
 // ---------- init ----------
 (async function init() {

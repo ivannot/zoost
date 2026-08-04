@@ -55,18 +55,26 @@
   // ordinary failure rather than being labelled a refusal on a guess. Understating is recoverable;
   // telling someone their role is the problem when it is not sends them to an administrator for
   // nothing.
-  function apiError(status, path) {
-    const e = new Error(status + ' on ' + path.split('?')[0]);
+  function apiError(status, path, detail) {
+    const e = new Error(status + ' on ' + path.split('?')[0] + (detail ? ' — ' + detail : ''));
     e.status = status;
     e.forbidden = status === 401 || status === 403;
     return e;
+  }
+  // Same as the CRM bridge: quote what the platform said rather than only its status code.
+  async function errorDetail(res) {
+    try {
+      const t = (await res.text()).slice(0, 400);
+      const m = t.match(/"(?:errorMessage|message|summary|error)"\s*:\s*"([^"]{1,120})"/);
+      return m ? m[1] : null;
+    } catch (_) { return null; }
   }
   async function api(path) {
     const res = await fetch(BASE + path, {
       headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
       credentials: 'include',
     });
-    if (!res.ok) throw apiError(res.status, path);
+    if (!res.ok) throw apiError(res.status, path, await errorDetail(res));
     const j = await res.json();
     if (j && j.status && String(j.status).toLowerCase() !== 'success') {
       throw new Error('Analytics returned status "' + j.status + '"' + (j.summary ? ': ' + j.summary : ''));
@@ -107,7 +115,7 @@
       credentials: 'include',
       body: new URLSearchParams(params).toString(),
     });
-    if (!res.ok) throw apiError(res.status, path);
+    if (!res.ok) throw apiError(res.status, path, await errorDetail(res));
     return res.json();
   }
   const progress = (stage, done, total) =>

@@ -57,15 +57,26 @@
   // Not verified: whether Zoho ever signals a permission refusal as 200 with an error body. If it
   // does, that case will read as a normal failure here rather than being mislabelled — which is the
   // right way round for a guess we have not tested.
-  function apiError(status, path) {
-    const e = new Error(status + ' on ' + path);
+  function apiError(status, path, detail) {
+    const e = new Error(status + ' on ' + path + (detail ? ' — ' + detail : ''));
     e.status = status;
     e.forbidden = status === 401 || status === 403;
     return e;
   }
+  // Zoho explains itself in the body and we were throwing it away. A connections pull failing with
+  // `{"errorMessage":"INVALID_CSRF_TOKEN"}` reached the user as the bare string "400 on
+  // /deluge/api/…", which names the symptom and hides the one word that says what to do. Read at
+  // most a short body, and only to quote it — nothing here branches on its contents.
+  async function errorDetail(res) {
+    try {
+      const t = (await res.text()).slice(0, 400);
+      const m = t.match(/"(?:errorMessage|message|error)"\s*:\s*"([^"]{1,120})"/);
+      return m ? m[1] : null;
+    } catch (_) { return null; }
+  }
   async function api(path, csrfPrefix) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
-    if (!res.ok) throw apiError(res.status, path);
+    if (!res.ok) throw apiError(res.status, path, await errorDetail(res));
     return res.json();
   }
   function toFile(fn, fallback) {

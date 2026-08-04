@@ -29,6 +29,11 @@ const PULL_SV = 1;                            // pull schema version; bump when 
 
 // Identity and legal text, worded as in the CRM panel — the two are one product to the reader.
 const PRODUCT_URL = 'https://zoost.it';
+// Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
+// guide, which is the kind of thing that only ever gets found by a user — so both are named here,
+// once, and every surface derives from them instead of writing a path inline.
+const PAGE_URL = PRODUCT_URL + '/analytics.html';
+const DOCS_URL = PRODUCT_URL + '/docs-analytics.html';
 const STORE_URL = 'https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge';
 const CONTACT_EMAIL = 'ivan@zoost.it';
 const REPO_URL = 'https://github.com/ivannot/zoost';
@@ -1575,7 +1580,7 @@ function showAbout() {
   $('aboutbody').innerHTML =
     `<div><b>${esc(PRODUCT_NAME)}</b> · v${esc(m.version)}</div>`
     + `<div style="color:var(--muted)">Created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
-    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> · <a href="${escA(PRODUCT_URL)}/analytics.html" target="_blank" rel="noopener">What it does</a> · <a href="${escA(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="${escA(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> · <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> · <a href="mailto:${escA(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a></div>`
+    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> · <a href="${escA(PAGE_URL)}" target="_blank" rel="noopener">What it does</a> · <a href="${escA(DOCS_URL)}" target="_blank" rel="noopener">How to use</a> · <a href="${escA(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="${escA(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> · <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> · <a href="mailto:${escA(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a></div>`
     + `<h4>Support</h4><div><a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a> · <a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">☕ Ko-fi</a></div>`
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
@@ -1668,3 +1673,4 @@ window.addEventListener('focus', () => refreshContext());
   try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
   await loadScope(); await restoreRoot(); await refreshContext();
 })();
+$('help').href = DOCS_URL;   // set here, not in the markup — same as the CRM panel
