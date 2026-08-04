@@ -61,6 +61,7 @@ PRODUCT_ONLY = {
         'stxt': 'ditto',
         'nameToggle': 'internal vs display name, a CRM-only distinction',
         'typechips': 'the old chip row, replaced by a picklist',
+        'modebar': 'the segment row for the five CRM types; Analytics has one list and a type filter',
     },
     'analytics': {
         'typesel': 'the type picklist; the CRM builds its own dynamically',

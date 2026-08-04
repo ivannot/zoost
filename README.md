@@ -206,7 +206,9 @@ offer zero-retention.
 - **Workspace select · + · 🗑** — `+` creates the workspace for the org in the active Zoho tab;
   the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
 - Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
-- Mode segments: **Functions · Modules · Workflows · Schedules · Connections**.
+- Mode segments: **Functions · Modules · Workflows · Schedules · Connections** — which of these
+  appear, and in what order, is yours to set in **Settings → Tabs**. A tab your Zoho role has no
+  access to removes itself (see below).
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
   dropdown — name (grouped by namespace) or lines / API calls / size / last modified, which sorts
@@ -324,6 +326,13 @@ like to support development:
 - **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow,
   Circuits, widgets or client scripts, which Zoost does not read — so "unused" means "unused by your
   functions", a candidate to review, not a verdict.
+- **What your Zoho role allows can only be discovered by asking.** There is no reliable way to know
+  in advance whether a user may read Deluge functions or the connections catalogue, so Zoost finds
+  out by pulling: an area Zoho refuses (401/403) is recorded per workspace with the date, its tab is
+  hidden, and the reason is stated in **Settings → Tabs**. Roles are per org, so another workspace
+  may grant what this one refuses. Pull again to re-check — a verdict is a record of what was asked,
+  not a permanent fact. Only an outright HTTP refusal counts: an area that fails for another reason
+  is reported as a failure and stays visible.
 - The **force-directed Visual graph is not attempted above a few hundred nodes** (it would block the
   window); the Explorer and a focused ER diagram stay fast at any size.
 

@@ -49,9 +49,23 @@
     const org = orgId(); if (org) h['X-CRM-ORG'] = org;
     return h;
   }
+  // A refused request is a different fact from a failed one, and the panel has to be able to tell
+  // them apart: "your Zoho role does not cover this" is something the user can act on, while
+  // "500 on /crm/v2/…" is not. Zoho answers 401 when the session is not entitled and 403 when the
+  // profile is not — both mean *asked and refused*, neither means Zoost is broken.
+  //
+  // Not verified: whether Zoho ever signals a permission refusal as 200 with an error body. If it
+  // does, that case will read as a normal failure here rather than being mislabelled — which is the
+  // right way round for a guess we have not tested.
+  function apiError(status, path) {
+    const e = new Error(status + ' on ' + path);
+    e.status = status;
+    e.forbidden = status === 401 || status === 403;
+    return e;
+  }
   async function api(path, csrfPrefix) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
-    if (!res.ok) throw new Error(res.status + ' on ' + path);
+    if (!res.ok) throw apiError(res.status, path);
     return res.json();
   }
   function toFile(fn, fallback) {
@@ -278,17 +292,23 @@
     // null-origin iframes (location.origin === 'null'), where fetch(BASE + path) becomes a relative,
     // malformed URL (…/null/crm/v2/…) → 400. Those frames must stay silent so the real CRM frame answers.
     if (!/^https:\/\/crm(sandbox)?\.zoho/.test(location.origin)) return false;
+  // An Error does not survive chrome.runtime messaging — it arrives as a plain object, and
+  // `String(e)` throws away everything except the text. That is the boundary trap CLAUDE.md is about:
+  // `forbidden` would be lost exactly here, and the panel would go back to guessing from a string.
+  // So every handler replies through this, and the two facts travel as their own fields.
+  const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) });
+
     if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) — skips wrapper service frames
-    if (msg?.cmd === 'pullAll') { pullAll().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'listFunctions') { listFunctions().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'listWorkflows') { listWorkflows().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'fetchWorkflow') { fetchWorkflow(msg.id).then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'workflowUsage') { workflowUsage(msg.id, msg.from, msg.till).then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'listSchedules') { listSchedules().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'fetchModuleFields') { fetchModuleFields(msg.apiName).then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
-    if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e) })); return true; }
+    if (msg?.cmd === 'pullAll') { pullAll().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'listFunctions') { listFunctions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'listWorkflows') { listWorkflows().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'fetchWorkflow') { fetchWorkflow(msg.id).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'workflowUsage') { workflowUsage(msg.id, msg.from, msg.till).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'listSchedules') { listSchedules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'fetchModuleFields') { fetchModuleFields(msg.apiName).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }
   });

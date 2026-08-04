@@ -58,6 +58,15 @@
     font-size:13px;transition:opacity .18s,transform .18s;pointer-events:none}
   #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
   #toast.bad{background:#3a1f22;border-color:#7a3a40;color:#f4b8b8}
+  .tabs{display:flex;flex-direction:column;gap:6px}
+  .tabrow{display:flex;align-items:center;gap:9px;padding:7px 10px;background:#0f1826;border:1px solid var(--border);border-radius:8px}
+  .tabrow .tn{flex:1;min-width:0}
+  .tabrow .tn b{color:var(--ink)}
+  .tabrow .why{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .tabrow.denied{opacity:.75;border-style:dashed}
+  .tabrow.denied .tn b{color:var(--muted)}
+  .tabrow .mv{padding:2px 8px;font-size:12px;line-height:1.3;flex:none}
+  .tabrow .mv:disabled{opacity:.3}
 </style>
 </head>
 <body>
@@ -123,6 +132,20 @@
     <div class="warnbox">The assistant sends the parts of your workspace it needs — including <b>Deluge source
       code</b> — to the provider you configure. Check that this is acceptable for your organisation before use.</div>
     <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
+  </section>
+
+  <section>
+    <h2>Tabs</h2>
+    <p class="sub">Which types the side panel offers, and in what order. A tab you turn off is
+      <i>absent</i>, not greyed out — the panel is 400px wide and a control that does nothing is just
+      noise. Nothing is deleted by hiding a tab: <b>Pull all</b> still mirrors that type, and it still
+      appears in exports and in what the AI can see.</p>
+    <div id="tablist" class="tabs"></div>
+    <p class="sub" id="tabnote" style="display:none"></p>
+    <div class="row" style="margin-top:12px">
+      <button id="tabReset">Show all</button>
+      <button id="saveTabs" class="primary">Save tabs</button>
+    </div>
   </section>
 
   <section>

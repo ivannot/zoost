@@ -328,6 +328,44 @@ never seen Analytics and would otherwise write SQL that cannot run. If a rule ca
 is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
 that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
 
+**The CRM's tabs come from one registry, and what a role cannot reach is measured, not assumed.**
+`TABS` in `sidepanel.js` is the single list; the segment row is built from it, so adding a type does
+not mean remembering it in the markup, in five `.active` toggles, in five click handlers and in two
+label maps — which is what it used to mean, and why the set could never be reordered. Two independent
+reasons remove a tab, and they must not be conflated:
+
+- **the user hid it** (`tabPrefs` in `chrome.storage.local`, with the order) — a preference, per
+  install. It changes the panel and nothing else: `Pull all` still mirrors that type, and it still
+  reaches the exports and the AI index. Hiding a tab must never quietly shrink the mirror.
+- **Zoho refused it** (`access` in the workspace's `.zoost.json`) — per workspace, because a role is a
+  property of an org and the same person can be an administrator in one and read-only in the next.
+
+There is no reliable way to ask Zoho what a role permits, so it is discovered by pulling, and only an
+outright **401/403** counts: anything else is a failure, stays visible, and is retried. The verdict
+carries the date it was given, because "forbidden" is a record of what was asked and not a permanent
+truth — `Pull all` re-asks, and skips areas already refused so a pull does not become a list of
+failures nobody can act on. An area with no measurement is visible; absence of an answer is never
+read as a no.
+
+The panel publishes a display-only copy of that record to `chrome.storage.local` (`tabAccessView`)
+because the options page has no folder handle and must still be able to say *why* a tab is gone.
+`.zoost.json` stays the authority: the copy is only ever read into a sentence.
+
+Two consequences that were nearly missed. The tab you are **looking at** always has a segment even if
+hidden — Health links jump straight to a workflow or a schedule, and landing on a list whose segment
+is absent reads as the panel having lost its place. And `writeCfg` replaces the whole file, so
+everything that writes to `.zoost.json` now goes through `patchCfg`: the `cacheBinding` trap, arriving
+a second time with a new field.
+
+**Analytics has no tab registry, and that is deliberate, not drift.** It shows one list with a type
+filter — there are no modes to enumerate. What *did* have to land on both sides is the permission
+distinction: `api()` in each bridge raises a typed error carrying `status` and `forbidden`, and both
+carry those two fields **explicitly across `chrome.runtime` messaging**, where `String(e)` would drop
+them. That boundary swallowed the same fact in three separate places before it was written down.
+Only the HTTP form is classified. Analytics also answers `200` with `{"status":"failure"}`, and
+whether a permission refusal ever arrives that way has **not** been measured — so that path stays an
+ordinary failure rather than being labelled a refusal on a guess.
+
 **The AI index is layered, and what does not fit is named — in both apps.** A workspace of a thousand views does
 not fit in a system prompt sent with every message, so the question is never "how big a cap" but
 "what gets dropped". Dropping the tail is the wrong answer: it cuts an arbitrary half and the model

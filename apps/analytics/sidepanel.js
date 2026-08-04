@@ -249,7 +249,14 @@ async function toBridge(msg) {
   await ensureBridge(id);
   const r = await chrome.tabs.sendMessage(id, msg);
   if (!r) throw new Error('No answer from the Analytics page.');
-  if (r.ok === false) throw new Error(r.error || 'unknown error');
+  // Rebuild the Error with the two fields the reply carries, or the classification made in the
+  // bridge is thrown away one line after crossing the boundary — which is how "your role does not
+  // allow this" would end up displayed as a bare status code again.
+  if (r.ok === false) {
+    const e = new Error(r.error || 'unknown error');
+    e.status = r.status || 0; e.forbidden = !!r.forbidden;
+    throw e;
+  }
   return r;
 }
 
@@ -379,7 +386,11 @@ async function pullAll() {
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
   } catch (e) {
-    setBusy(false, 'Pull failed: ' + (e.message || e));
+    // A refusal is not a fault, and saying "Pull failed: 403" for one sends the user looking for a
+    // bug in Zoost instead of to whoever administers their Analytics roles.
+    setBusy(false, e && e.forbidden
+      ? `Your Analytics role does not grant access to this workspace${e.status ? ` (Analytics answered ${e.status})` : ''}. Nothing was written — what is on disk is unchanged.`
+      : 'Pull failed: ' + (e.message || e));
     $('status').className = 'bad';
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);

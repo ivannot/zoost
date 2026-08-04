@@ -46,12 +46,27 @@
   }
   const context = () => ({ ok: true, origin: BASE, workspace: workspaceId(), view: viewIdInUrl() });
 
+  // A refused request is a different fact from a failed one: "your Analytics role does not cover
+  // this" is something the user can act on, "500" is not. The CRM workbench draws the same
+  // distinction at the same place, and the panels must not diverge on what a refusal looks like.
+  //
+  // Only the HTTP form is classified. Analytics also answers 200 with `{"status":"failure"}` and
+  // whether it ever refuses a permission *that* way has not been measured — so that path stays an
+  // ordinary failure rather than being labelled a refusal on a guess. Understating is recoverable;
+  // telling someone their role is the problem when it is not sends them to an administrator for
+  // nothing.
+  function apiError(status, path) {
+    const e = new Error(status + ' on ' + path.split('?')[0]);
+    e.status = status;
+    e.forbidden = status === 401 || status === 403;
+    return e;
+  }
   async function api(path) {
     const res = await fetch(BASE + path, {
       headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
       credentials: 'include',
     });
-    if (!res.ok) throw new Error(res.status + ' on ' + path.split('?')[0]);
+    if (!res.ok) throw apiError(res.status, path);
     const j = await res.json();
     if (j && j.status && String(j.status).toLowerCase() !== 'success') {
       throw new Error('Analytics returned status "' + j.status + '"' + (j.summary ? ': ' + j.summary : ''));
@@ -92,7 +107,7 @@
       credentials: 'include',
       body: new URLSearchParams(params).toString(),
     });
-    if (!res.ok) throw new Error(res.status + ' on ' + path.split('?')[0]);
+    if (!res.ok) throw apiError(res.status, path);
     return res.json();
   }
   const progress = (stage, done, total) =>
@@ -305,7 +320,10 @@
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!IS_ANALYTICS) return false;
-    const reply = (p) => { p.then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e.message || e) })); return true; };
+    // `forbidden` and `status` travel as their own fields: an Error does not survive
+    // chrome.runtime messaging, and String(e) would drop exactly the two facts the panel needs to
+    // tell a refusal from a fault. Same boundary trap as everywhere else in this repository.
+    const reply = (p) => { p.then((r) => sendResponse({ ok: true, ...r })).catch((e) => sendResponse({ ok: false, error: String(e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) })); return true; };
     if (msg?.cmd === 'context') { sendResponse(context()); return; }
     if (msg?.cmd === 'workspaceInfo') return reply(workspaceInfo());
     if (msg?.cmd === 'listViews') return reply(listViews());

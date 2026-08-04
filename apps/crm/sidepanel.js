@@ -69,6 +69,83 @@ let expScope = Object.assign({}, SCOPE_FULL);
 async function loadScope() {
   try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_FULL, st.exportScope); } catch (_) {}
 }
+// The tab preference, and the access verdicts recorded for the workspace that is open. Two sources
+// because they are two different kinds of fact: what you chose (per install) and what Zoho allows
+// (per org). Reading either must never throw the panel — a missing or malformed value just means
+// "show everything", which is the state a first run is in anyway.
+async function loadTabPrefs() {
+  try {
+    const st = await chrome.storage.local.get('tabPrefs');
+    const p = st && st.tabPrefs;
+    if (p && Array.isArray(p.order) && Array.isArray(p.hidden)) {
+      tabPrefs = { order: p.order.filter((id) => TAB[id]), hidden: p.hidden.filter((id) => TAB[id]) };
+    }
+  } catch (_) {}
+}
+async function loadAccess() {
+  tabAccess = {};
+  try { const cfg = await readCfg(); if (cfg && cfg.access && typeof cfg.access === 'object') tabAccess = cfg.access; } catch (_) {}
+  publishAccess();
+}
+// The settings page cannot read the workspace's `.zoost.json` — it has no folder handle and no
+// business acquiring one — but it has to be able to say *why* a tab is off, or "hidden" becomes the
+// silent state this whole change exists to avoid. So the panel publishes a copy for display.
+//
+// `.zoost.json` stays the authority: this is never read back into a decision, only into a sentence.
+// It carries the workspace's name so the settings page can say which org the verdicts belong to,
+// rather than implying they are universal.
+function publishAccess() {
+  try {
+    const w = (wsList || []).find((x) => x.id === activeWsId);
+    chrome.storage.local.set({ tabAccessView: { ws: (w && w.name) || null, access: tabAccess } });
+  } catch (_) {}
+}
+
+// A bridge reply is a plain object, so rebuilding an Error from it drops `forbidden` unless it is
+// carried across explicitly. Same boundary, same trap, third place it could have been lost: the
+// content script raises it, the message channel flattens it, and this is where it becomes an Error
+// again. Every `if (!r?.ok) throw …` in the pulls goes through here.
+function bridgeError(r, fallback) {
+  const e = new Error((r && r.error) || fallback);
+  e.status = (r && r.status) || 0;
+  e.forbidden = !!(r && r.forbidden);
+  return e;
+}
+
+// Record what Zoho answered for one area, in the workspace's own config. Per workspace, because a
+// role is a property of an org: the same person can be an administrator in one and read-only in
+// another, and a verdict carried between them would be a guess.
+//
+// The date is stored with it and shown, because "forbidden" is not a permanent truth — roles change,
+// and a verdict from three months ago is a record of what was asked, not a fact about today. That is
+// also why nothing here ever hides an area *without* an answer: no measurement means visible.
+async function noteAccess(area, err) {
+  if (!TAB[area]) return;
+  const state = !err ? 'ok' : err.forbidden ? 'forbidden' : 'failed';
+  const before = accessOf(area);
+  tabAccess = Object.assign({}, tabAccess, { [area]: { state, status: (err && err.status) || 0, at: new Date().toISOString() } });
+  try { await patchCfg({ access: tabAccess }); } catch (_) {}
+  publishAccess();
+  if (before !== state && (before === 'forbidden' || state === 'forbidden')) renderTabs();   // the set of tabs just changed
+}
+
+// What the user reads when an area is refused. Never the status line on its own: "403 on
+// /crm/v2/settings/functions" reads as Zoost being broken, which is both alarming and wrong.
+function pullFailMessage(area, e) {
+  if (e && e.forbidden) {
+    return `${tabLabel(area)}: your Zoho role does not grant access${e.status ? ` (Zoho answered ${e.status})` : ''}. `
+      + 'Nothing was pulled for it, and the tab is hidden — Settings says why, and lets you check again.';
+  }
+  return `${tabLabel(area)} pull error: ${(e && e.message) || 'unknown'}`;
+}
+
+// After a full pull: one line naming the areas that were refused. Said once, plainly, rather than
+// five separate alarms — and it has to be said, because the tabs have just silently gone away.
+function forbiddenNote() {
+  const off = TABS.map((t) => t.id).filter(isForbidden);
+  if (!off.length) return '';
+  return ` · ${off.length} area${off.length > 1 ? 's' : ''} not granted to your Zoho role (${off.map(tabLabel).join(', ')}) — hidden`;
+}
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });
   const e = $('sc_code'); if (e) e.disabled = !expScope.functions;
@@ -131,6 +208,52 @@ async function* walk(d, prefix = '') {
 }
 const readCfg = async () => { try { return JSON.parse(await readFile(CFG)); } catch { return null; } };
 const writeCfg = async (o) => writeFile(CFG, JSON.stringify(o, null, 2));
+// Merge rather than replace. `.zoost.json` now holds more than the binding — the access verdicts
+// below live there too — and a whole-object write from any one writer silently drops what the others
+// put in it. This is the `cacheBinding` trap in CLAUDE.md, arriving a second time with a new field.
+const patchCfg = async (o) => writeCfg(Object.assign({}, (await readCfg()) || {}, o));
+
+// ---------- tabs ----------
+//
+// One registry. The five tabs used to be spelled out in the markup, in five `.active` toggles, in
+// five click handlers and in two label maps — which is why they could never be reordered and why a
+// sixth would have to be remembered in eight places. Everything that varies per tab is here; the
+// segment row is built from it.
+//
+// `area` is what a pull and a permission verdict are keyed on. It matches the tab id today, and is
+// kept as its own field because the two are different ideas: a tab is a thing you look at, an area
+// is a thing Zoho may refuse.
+const TABS = [
+  { id: 'functions',   label: 'Functions',   graph: 'Graph ↗',  names: true, search: true },
+  { id: 'modules',     label: 'Modules',     graph: 'Schema ↗', names: true },
+  { id: 'workflows',   label: 'Workflows' },
+  { id: 'schedules',   label: 'Schedules' },
+  { id: 'connections', label: 'Connections' },
+];
+const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
+const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
+
+// What the user chose: which tabs to show and in what order. A preference, stored per install and
+// not per workspace — unlike the access verdicts, which are a property of one org's roles.
+let tabPrefs = { order: TABS.map((t) => t.id), hidden: [] };
+// What Zoho answered, for the workspace currently open: area -> { state, status, at }.
+// 'ok' | 'forbidden' | 'failed'. Empty until a pull has actually asked.
+let tabAccess = {};
+
+const accessOf = (id) => (tabAccess[id] && tabAccess[id].state) || null;
+const isForbidden = (id) => accessOf(id) === 'forbidden';
+const isHiddenByUser = (id) => tabPrefs.hidden.includes(id);
+// The order is the preference's, with anything the preference has never heard of appended — so a
+// tab added in a later version appears instead of vanishing for everyone who has saved a setting.
+function tabOrder() {
+  const known = tabPrefs.order.filter((id) => TAB[id]);
+  return known.concat(TABS.map((t) => t.id).filter((id) => !known.includes(id)));
+}
+// A tab is shown unless the user hid it or Zoho refused the area. Both make it *absent*, not
+// disabled: a control that can never do anything is noise, and a greyed one claims there is
+// something here you cannot have. The reason is never lost — it is stated after a pull and again in
+// Settings, which is where hiding stops being silent.
+const visibleTabs = () => tabOrder().filter((id) => !isHiddenByUser(id) && !isForbidden(id));
 
 // ---------- Zoho tab / bridge ----------
 async function tabHasCrmFrame(id) { try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); return !!(r && r.ok && r.origin); } catch (_) { return false; } }
@@ -789,7 +912,7 @@ async function pullAll() {
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
-    const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw new Error(r?.error || 'list failed');
+    const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
     await writeFile('_index/functions.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
@@ -804,7 +927,8 @@ async function pullAll() {
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
-  } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
+    await noteAccess('functions', null);
+  } catch (e) { await noteAccess('functions', e); setStatus(pullFailMessage('functions', e), 'bad'); } finally { pullActive = false; }
 }
 async function openGraph() {
   if (!dir) return;
@@ -1303,6 +1427,10 @@ async function activate(w, viaGesture) {
   dir = w.handle; activeWsId = w.id; await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   bound = w.binding || null;                         // read from the workspace's own .zoost.json
+  // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
+  // Carrying the previous org's answers over would hide a tab in an org that grants it — the same
+  // class of mistake the environment guard exists to prevent, one field further in.
+  await loadAccess(); renderTabs();
   const ok = viaGesture ? await ensurePerm(dir) : await hasPerm(dir);
   if (ok) await rebuildActive(); else { setStatus('Workspace found \u2014 click Refresh to grant access.', 'warn'); await refreshContext(); }
 }
@@ -1426,12 +1554,8 @@ function setMode(mode) {
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = 'Find by name\u2026'; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
-  $('mFunctions').classList.toggle('active', mode === 'functions');
-  $('mModules').classList.toggle('active', mode === 'modules');
-  $('mWorkflows').classList.toggle('active', mode === 'workflows');
-  $('mSchedules').classList.toggle('active', mode === 'schedules');
-  $('mConnections').classList.toggle('active', mode === 'connections');
-  const _typeLabel = ({ functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules', connections: 'connections' }[mode] || 'functions');
+  $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
+  const _typeLabel = tabLabel(mode).toLowerCase();
   $('pullone').textContent = 'Pull';   // local: pulls only the current type; the type is given by the active mode segment above
   $('pullone').title = `Pull only ${_typeLabel} into the local mirror — “Pull all” pulls every type`;
   buildTypeChips();
@@ -1443,11 +1567,27 @@ function setMode(mode) {
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
 }
-$('mFunctions').onclick = () => setMode('functions');
-$('mModules').onclick = () => setMode('modules');
-$('mWorkflows').onclick = () => setMode('workflows');
-$('mSchedules').onclick = () => setMode('schedules');
-$('mConnections').onclick = () => setMode('connections');
+// Rebuild the segment row from the registry. Called whenever the set can have changed: at start-up,
+// when the settings page saves, and after a pull has learned what the org's roles allow.
+//
+// If the active tab is no longer among the visible ones — the user just hid it, or a pull discovered
+// it is refused — the panel moves to the first that is left, rather than showing an empty view whose
+// segment is gone. With every tab hidden it says so instead of rendering a bare strip.
+function renderTabs() {
+  const bar = $('modebar');
+  const vis = visibleTabs();
+  // The tab you are actually looking at always has a segment, even if you hid it. Health links jump
+  // straight to a workflow or a schedule, and landing on a list whose segment is not in the row
+  // reads as the panel having lost its place. It disappears again as soon as you leave.
+  if (viewMode && TAB[viewMode] && !vis.includes(viewMode) && !isForbidden(viewMode)) {
+    vis.splice(tabOrder().filter((id) => vis.includes(id) || id === viewMode).indexOf(viewMode), 0, viewMode);
+  }
+  bar.innerHTML = vis.map((id) =>
+    `<button class="seg${id === viewMode ? ' active' : ''}" data-tab="${escA(id)}">${escHtml(tabLabel(id))}</button>`).join('')
+    || '<span class="segnone">Every tab is hidden — turn one back on in Settings.</span>';
+  bar.querySelectorAll('.seg').forEach((b) => (b.onclick = () => setMode(b.dataset.tab)));
+  if (vis.length && !vis.includes(viewMode)) setMode(vis[0]);
+}
 async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
@@ -1471,11 +1611,26 @@ async function pullCurrent() {
   } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
   finally { setPullBusy(false); }
 }
+// "Pull all" means every area this user can actually reach. An area Zoho refused last time is
+// skipped rather than re-tried on every pull: re-asking a question already answered turns each pull
+// into a list of failures nobody can act on. It is not written off either — Settings has "Check
+// again" for exactly that, because a role can change and this verdict carries the date it was given.
+//
+// A hidden-by-choice area is still pulled. Hiding is about the panel being crowded, not about the
+// mirror being incomplete: the export and the AI index read from disk, and quietly leaving a type
+// out of them because a tab was tidied away would be a mirror that lies by omission.
 async function pullEverything() {
   if (pullBusy) return;
   setPullBusy(true);
-  try { await pullAll(); await pullModules(); await pullWorkflows(); await pullSchedules(); await pullConnections(); } catch (_) {}
+  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, connections: pullConnections };
+  for (const t of TABS) {
+    if (isForbidden(t.id)) continue;
+    try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
+  }
   try { await rebuildActive(); } catch (_) {}
+  renderTabs();                                   // a refusal discovered just now changes the set
+  const note = forbiddenNote();
+  if (note) setStatus($('stxt').textContent + note, 'warn');
   setPullBusy(false);
 }
 
@@ -1489,7 +1644,7 @@ async function pullModules() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Pulling modules…', 'busy');
-    const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw new Error(r?.error || 'pull failed');
+    const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw bridgeError(r, 'pull failed');
     setStatus(`Writing ${r.modules.length} modules…`, 'busy');
     const liveLayoutFiles = new Set(); const index = []; const layIndex = [];
     let mw = 0, lw = 0;
@@ -1513,7 +1668,8 @@ async function pullModules() {
     for await (const p of walk(dir)) { if (p.startsWith('_layouts/') && p.endsWith('.json') && !p.endsWith('_index.json') && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
-  } catch (e) { setStatus('Modules pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
+    await noteAccess('modules', null);
+  } catch (e) { await noteAccess('modules', e); setStatus(pullFailMessage('modules', e), 'bad'); } finally { pullActive = false; }
 }
 
 // ---------- modules: tree ----------
@@ -2528,11 +2684,12 @@ async function pullSchedules() {
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch \u2014 refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
-    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { setStatus('Schedules pull failed: ' + (r?.error || 'unknown'), 'bad'); return; }
+    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); return; }
     await writeFile('_schedules/_index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 — some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
-  } catch (e) { setStatus('Schedules pull error: ' + e.message, 'bad'); }
+    await noteAccess('schedules', null);
+  } catch (e) { await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); }
 }
 // Org-wide connections catalogue → _connections/_index.json. Written once per "Pull all".
 async function pullConnections() {
@@ -2548,7 +2705,8 @@ async function pullConnections() {
     aiConnCache = null;   // the AI's catalogue must not serve what we just replaced
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
-  } catch (e) { setStatus('Connections pull error: ' + e.message, 'bad'); }
+    await noteAccess('connections', null);
+  } catch (e) { await noteAccess('connections', e); setStatus(pullFailMessage('connections', e), 'bad'); }
 }
 // ---------- connections view (org-wide catalogue + usage) ----------
 let connectionData = [], connCatFilter = 'all';
@@ -2649,7 +2807,8 @@ async function pullWorkflows() {
     await downloadMissingWf();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 \u2014 some workflows may be missing', 'warn');
-  } catch (e) { setStatus('Workflows pull error: ' + e.message, 'bad'); } finally { pullActive = false; }
+    await noteAccess('workflows', null);
+  } catch (e) { await noteAccess('workflows', e); setStatus(pullFailMessage('workflows', e), 'bad'); } finally { pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
   const ws = bound || {};
@@ -2783,6 +2942,7 @@ try {
   chrome.storage.onChanged.addListener(async (ch, area) => {
     if (area !== 'local') return;
     if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
+    if (ch.tabPrefs) { await loadTabPrefs(); renderTabs(); }
     if (!ch.settingsStamp) return;
     await loadScope();
     aiEngineChrome();
@@ -2800,6 +2960,10 @@ $('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeTo
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
 loadScope();
+// The tab set is a preference plus a per-workspace measurement, so it is built once at start-up and
+// again whenever either can have moved: a workspace opening (different org, different roles) and a
+// pull learning something new both call renderTabs themselves.
+loadTabPrefs().then(renderTabs);
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'functions' ? openGraph() : openSchemaGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;

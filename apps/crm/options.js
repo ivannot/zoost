@@ -147,9 +147,103 @@ async function loadLay() {
   layToUI();
 }
 
+
+// ---------- tabs ----------
+//
+// The list is the registry's, kept in one place: adding a type to the panel must not mean
+// remembering to add a row here. It is duplicated as a literal rather than imported because the
+// options page and the side panel do not share a module — if they ever do, this is the first thing
+// that should move.
+const TAB_DEFS = [
+  { id: 'functions',   label: 'Functions',   note: 'Deluge functions, namespaces, cross-references' },
+  { id: 'modules',     label: 'Modules',     note: 'fields, layouts, related lists' },
+  { id: 'workflows',   label: 'Workflows',   note: 'rules, triggers, actions' },
+  { id: 'schedules',   label: 'Schedules',   note: 'scheduled functions' },
+  { id: 'connections', label: 'Connections', note: 'the org connection catalogue' },
+];
+const TAB_IDS = TAB_DEFS.map((t) => t.id);
+let tabOrderCur = TAB_IDS.slice();
+let tabHiddenCur = [];
+let tabAccessCur = { ws: null, access: {} };
+
+const dayOf = (iso) => {
+  const d = new Date(iso);
+  // Formatted from local parts. Going through toISOString() shifts the day for anyone east of
+  // Greenwich — the trap is written up in CLAUDE.md and this is a date the user reads.
+  return isNaN(d) ? null : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+function renderTabs() {
+  const box = $('tablist');
+  const acc = tabAccessCur.access || {};
+  box.innerHTML = '';
+  tabOrderCur.forEach((id, i) => {
+    const def = TAB_DEFS.find((t) => t.id === id); if (!def) return;
+    const a = acc[id] || {};
+    const denied = a.state === 'forbidden';
+    const row = document.createElement('div');
+    row.className = 'tabrow' + (denied ? ' denied' : '');
+    // A refused tab is not a checkbox. Offering to "show" something Zoho will not answer for would be
+    // a control that cannot do what it says — the same reason a refused tab is absent from the panel
+    // rather than greyed out there.
+    const why = denied
+      ? `Not granted to your Zoho role${a.status ? ` — Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
+      : def.note;
+    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${id}">
+      <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
+      <button class="mv" data-up="${id}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
+      <button class="mv" data-down="${id}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('input[data-id]').forEach((c) => (c.onchange = () => {
+    const id = c.dataset.id;
+    tabHiddenCur = c.checked ? tabHiddenCur.filter((x) => x !== id) : tabHiddenCur.concat([id]);
+  }));
+  box.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => move(b.dataset.up, -1)));
+  box.querySelectorAll('[data-down]').forEach((b) => (b.onclick = () => move(b.dataset.down, 1)));
+
+  const note = $('tabnote');
+  const denied = TAB_IDS.filter((id) => (acc[id] || {}).state === 'forbidden');
+  if (denied.length) {
+    note.style.display = '';
+    note.textContent = `${denied.length} of these is not available in the workspace `
+      + `${tabAccessCur.ws ? '“' + tabAccessCur.ws + '”' : 'currently open'}: Zoho refused it for your role. `
+      + 'Roles are per org, so another workspace may well grant it.';
+  } else if (!tabAccessCur.ws) {
+    note.style.display = '';
+    note.textContent = 'What your Zoho role allows is discovered by pulling — there is no way to ask in '
+      + 'advance. Until a workspace has been pulled, every tab is offered.';
+  } else { note.style.display = 'none'; }
+}
+function move(id, d) {
+  const i = tabOrderCur.indexOf(id); const j = i + d;
+  if (i < 0 || j < 0 || j >= tabOrderCur.length) return;
+  tabOrderCur.splice(j, 0, tabOrderCur.splice(i, 1)[0]);
+  renderTabs();
+}
+async function loadTabs() {
+  try {
+    const st = await chrome.storage.local.get(['tabPrefs', 'tabAccessView']);
+    const p = st && st.tabPrefs;
+    if (p && Array.isArray(p.order) && Array.isArray(p.hidden)) {
+      const known = p.order.filter((id) => TAB_IDS.includes(id));
+      tabOrderCur = known.concat(TAB_IDS.filter((id) => !known.includes(id)));   // a tab added later must appear, not vanish
+      tabHiddenCur = p.hidden.filter((id) => TAB_IDS.includes(id));
+    }
+    if (st && st.tabAccessView) tabAccessCur = st.tabAccessView;
+  } catch (_) {}
+  renderTabs();
+}
+$('saveTabs').onclick = async () => {
+  await chrome.storage.local.set({ tabPrefs: { order: tabOrderCur, hidden: tabHiddenCur } });
+  await stamp();
+  toast('Tabs saved.');
+};
+$('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []; renderTabs(); };
+
 // ---------- init ----------
 (async function init() {
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   $('legal').textContent = LEGAL_DISCLAIMER;
-  await showRoot(); await loadAi(); await loadScope(); await loadLay();
+  await showRoot(); await loadAi(); await loadScope(); await loadLay(); await loadTabs();
 })();

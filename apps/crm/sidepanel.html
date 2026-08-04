@@ -24,6 +24,7 @@
   .wsbar button{flex:none}
   .modebar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
   .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}
   #pvtable{display:none;flex:1;overflow:auto}
   .ftbl{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
@@ -368,13 +369,10 @@
     </fieldset>
   </div>
   <div id="belowbar">
-  <div class="modebar">
-    <button id="mFunctions" class="seg active">Functions</button>
-    <button id="mModules" class="seg">Modules</button>
-    <button id="mWorkflows" class="seg">Workflows</button>
-    <button id="mSchedules" class="seg">Schedules</button>
-    <button id="mConnections" class="seg">Connections</button>
-  </div>
+  <!-- Built from the TABS registry in sidepanel.js: which segments exist, and in what order, depends
+       on the user's settings and on what the org's roles actually grant. Empty in the markup on
+       purpose — five hard-coded buttons here is what made the set impossible to reorder. -->
+  <div class="modebar" id="modebar"></div>
   <div class="bar">
     <!-- Pull and Refresh are always present → fixed on the left (Pull 1st, Refresh 2nd), so Refresh
          never shifts when tab-specific buttons appear/disappear to its right. -->
