@@ -78,6 +78,16 @@ for f in sorted(glob.glob('site/*.html')):
 EOF
 ```
 
+The site has its own version of the same problem and its own checker. The navigation grew a
+different *shape* on two of six pages — a `<span>` holding two sub-links where the rest had one
+`<a>` — and a bar that changes as you move through a site is disorienting in a way that is easy to
+notice and hard to name. It was reported by the user, which is the failure. **A contextual
+*target* is fine and invisible; a contextual *shape* is not.**
+
+```bash
+python3 tools/sitecheck.py           # header and footer must have one shape across all pages
+```
+
 ```bash
 python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles, CSS declarations
 python3 tools/twincheck.py --all    # everything, product-specific parts included

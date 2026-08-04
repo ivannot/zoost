@@ -32,13 +32,6 @@ header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
    not var(--sel): that token is the *current* page's accent, so a "Zoho CRM" button would turn
    magenta on the Analytics pages — which is the one thing the colours exist to prevent. */
-/* On the horizontal pages a single "How to" cannot name one product without misdescribing the
-   other, so it names both. Removing it instead — which is what the first attempt did — fixed the
-   asymmetry by deleting the function, which is not a fix. */
-header nav .nhow{color:var(--muted);display:inline-flex;align-items:center;gap:5px}
-header nav .nhow a{color:var(--muted)}
-header nav .nhow a:hover{color:var(--ink)}
-header nav .nhow .nsep{color:var(--border)}
 header nav a.nprod{color:#fff;border-radius:7px;padding:5px 11px;font-weight:600;line-height:1.2}
 header nav a.ncrm{background:#2563eb}
 header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
