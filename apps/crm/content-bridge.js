@@ -35,17 +35,33 @@
   }
   const context = () => ({ ok: true, origin: BASE, org: orgId(), instance: instanceName(), zuid: zuid() });
 
-  function csrfToken() {
-    // Same token value for both prefixes; prefer the cookie, fall back to the page's hidden #token.
-    const c = cookie('CT_CSRF_TOKEN') || cookie('crmcsr') || cookie('CSRF_TOKEN');
-    if (c) return c;
+  // The /crm/... APIs want the CSRF as `crmcsrfparam=<token>`; the /deluge/ (DRE) APIs want `drepn=`.
+  //
+  // "Same value, different prefix" was wrong, and wrong in the way that hides itself: the two are
+  // *usually* equal, so reading CT_CSRF_TOKEN for both worked right up until the day they diverged
+  // and the connections pull started answering 400 INVALID_CSRF_TOKEN. Hooking setRequestHeader on
+  // the page and comparing what Zoho's own UI sends against the cookie jar settled it — the deluge
+  // runtime's token is the **`drecn`** cookie, and in the capture where it had rotated it was the
+  // only cookie holding the value Zoho accepted.
+  //
+  // Note the shape of the trap, because it is the same one as the Analytics bridge from the other
+  // side: the header prefix is `drepn`, the cookie is `drecn`. One letter apart, and neither is
+  // derivable from the other. Find the source; never infer it from the prefix.
+  const CSRF_COOKIES = {
+    drepn: ['drecn'],                                          // deluge runtime
+    crmcsrfparam: ['CT_CSRF_TOKEN', 'crmcsr', 'CSRF_TOKEN'],   // CRM APIs
+  };
+  function csrfToken(csrfPrefix) {
+    const names = CSRF_COOKIES[csrfPrefix || 'crmcsrfparam'] || CSRF_COOKIES.crmcsrfparam;
+    for (const n of names) { const v = cookie(n); if (v) return v; }
+    // Fall back to the other family rather than sending nothing: an empty token is a guaranteed 400,
+    // and before this split the shared value was right often enough to be worth trying.
+    for (const n of CSRF_COOKIES.crmcsrfparam.concat(CSRF_COOKIES.drepn)) { const v = cookie(n); if (v) return v; }
     try { const el = document.getElementById('token'); if (el && el.value) return el.value; } catch (_) {}
     return '';
   }
-  // The /crm/... APIs want the CSRF as `crmcsrfparam=<token>`; the /deluge/ (DRE) APIs want the SAME
-  // token as `drepn=<token>`. Same value, different prefix — a mismatch is a 400.
   function headers(csrfPrefix) {
-    const h = { 'X-ZCSRF-TOKEN': (csrfPrefix || 'crmcsrfparam') + '=' + csrfToken(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' };
+    const h = { 'X-ZCSRF-TOKEN': (csrfPrefix || 'crmcsrfparam') + '=' + csrfToken(csrfPrefix), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' };
     const org = orgId(); if (org) h['X-CRM-ORG'] = org;
     return h;
   }

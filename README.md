@@ -211,6 +211,10 @@ offer zero-retention.
   **pull** switch — whether `Pull all` asks Zoho for that type at all. Turning a tab off clears it,
   since a tab is usually turned off for an area the account cannot read. A tab your Zoho role has no
   access to removes itself (see below).
+- **Every area records when it was last read**, so excluding one from the pull cannot quietly leave a
+  four-month-old chapter looking as current as the rest. A section whose data is behind is **unticked
+  by default** in the export dialog with the reason and the date — tick it back on and the report says
+  so. Both reports state the per-area dates whether or not anything is behind.
 - **Pull · Graph ↗ · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
   dropdown — name (grouped by namespace) or lines / API calls / size / last modified, which sorts

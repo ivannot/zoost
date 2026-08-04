@@ -134,7 +134,15 @@ async function noteAccess(area, err) {
   if (!TAB[area]) return;
   const state = !err ? 'ok' : err.forbidden ? 'forbidden' : 'failed';
   const before = accessOf(area);
-  tabAccess = Object.assign({}, tabAccess, { [area]: { state, status: (err && err.status) || 0, at: new Date().toISOString() } });
+  const prev = tabAccess[area] || {};
+  tabAccess = Object.assign({}, tabAccess, { [area]: {
+    state, status: (err && err.status) || 0,
+    at: new Date().toISOString(),
+    // `at` is when we asked; `pulledAt` is when we last actually got the data. They diverge the
+    // moment an area stops being pulled, and that gap is the whole point: it is what makes a stale
+    // section detectable instead of silently old.
+    pulledAt: err ? (prev.pulledAt || null) : new Date().toISOString(),
+  } });
   try { await patchCfg({ access: tabAccess }); } catch (_) {}
   publishAccess();
   if (before !== state && (before === 'forbidden' || state === 'forbidden')) renderTabs();   // the set of tabs just changed
@@ -169,11 +177,41 @@ function scopeFromUI() {
   if (!expScope.modules) { expScope.layouts = false; expScope.relations = false; }
   scopeToUI();
 }
+// Which export sections come from which pulled area. Not a lookup for its own sake: it is what lets
+// the dialog say "this box is off because that data is four months old" instead of quietly offering
+// a report whose Connections chapter is from February and looks exactly as current as the rest.
+const AREA_SCOPE = {
+  functions: ['functions', 'code'],
+  modules: ['modules', 'layouts', 'relations'],
+  workflows: ['workflows'],
+  schedules: ['schedules'],
+  connections: ['connections'],
+};
+
+// Sections whose data is behind are cleared when the dialog opens, and why is written next to them.
+// Cleared rather than removed: an old chapter is sometimes exactly what you want, so the choice
+// stays yours — but it has to be a choice, and the default has to be the safe one. If you tick it
+// back on, the report carries that section's own date, so the reader is told too.
+//
+// This makes the export follow the pull settings without a second set of switches to keep in step.
+// Two lists that must agree are two lists that will not.
+function scopeStaleNote() {
+  const behind = TABS.map((t) => t.id).filter(areaStale);
+  const box = $('scstale');
+  if (!box) return;
+  if (!behind.length) { box.textContent = ''; box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = behind.map((id) =>
+    `<div><b>${escHtml(tabLabel(id))}</b> — ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
+    + 'Unticked; tick it to include it anyway and the report will carry that date.</div>').join('');
+}
 let _scopeResolve = null;
 function askScope() {
   return new Promise((resolve) => {
     _scopeResolve = resolve;
+    TABS.forEach((t) => { if (areaStale(t.id)) (AREA_SCOPE[t.id] || []).forEach((k) => { expScope[k] = false; }); });
     scopeToUI();
+    scopeStaleNote();
     $('scrim').classList.add('on'); $('expscope').classList.add('on');
   });
 }
@@ -252,6 +290,34 @@ let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [] };
 let tabAccess = {};
 
 const accessOf = (id) => (tabAccess[id] && tabAccess[id].state) || null;
+const pulledAt = (id) => (tabAccess[id] && tabAccess[id].pulledAt) || null;
+
+// Staleness is derived, never declared. An area is behind if the mirror holds newer data for
+// something else — which is true whether it was excluded from the pull, refused by Zoho, or simply
+// failed, and stays true without anyone having to remember to set a flag. The margin exists because
+// a full pull writes its areas seconds apart and that is not a difference worth reporting.
+const STALE_MARGIN_MS = 6 * 60 * 60 * 1000;
+function newestPull() {
+  return TABS.map((t) => pulledAt(t.id)).filter(Boolean).sort().slice(-1)[0] || null;
+}
+function areaStale(id) {
+  const newest = newestPull(); if (!newest) return false;      // nothing pulled yet: nothing is behind
+  const mine = pulledAt(id);
+  if (!mine) return true;                                       // never pulled, while others have been
+  return Date.parse(newest) - Date.parse(mine) > STALE_MARGIN_MS;
+}
+// The words a user reads. Never "stale" on its own — a date they can act on, and the reason.
+function areaAsOf(id) {
+  const mine = pulledAt(id);
+  if (!mine) return 'never pulled';
+  const d = new Date(mine);
+  return 'as of ' + (isNaN(d) ? mine : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }));
+}
+function staleReason(id) {
+  if (isForbidden(id)) return 'your Zoho role no longer grants it';
+  if (!isPulled(id)) return 'you excluded it from Pull all';
+  return 'the last pull did not refresh it';
+}
 const isForbidden = (id) => accessOf(id) === 'forbidden';
 const isHiddenByUser = (id) => tabPrefs.hidden.includes(id);
 // Hiding a tab and skipping its pull are separate on purpose, but they are not equally likely: most
@@ -2101,6 +2167,18 @@ tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}
 
 footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
 `;
+// The per-area dates, for the reports. A report that says "generated today" while a third of it is
+// four months old is the misleading half-truth this whole thread is about — so every report states
+// when each part was last read, whether or not anything is behind. The reader gets the fact; nobody
+// here decides for them what it means.
+function freshnessLine() {
+  const parts = TABS.map((t) => {
+    const behind = areaStale(t.id) ? ' (behind)' : '';
+    return `${tabLabel(t.id)} ${areaAsOf(t.id)}${behind}`;
+  });
+  return parts.join(' \u00b7 ');
+}
+
 function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
   if (!scope.functions) fns = [];
@@ -2373,6 +2451,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `<style>${EXPORT_CSS}</style></head><body>`
     + `<header><h1>${esc(PRODUCT_NAME)} — Export</h1>`
     + `<div class="meta">${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
+    + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${esc(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${esc(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${esc(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
@@ -2428,7 +2507,8 @@ function buildExportMarkdown(d, scope) {
   const params = (n) => '(' + ((n.params || []).map((p) => (p && (p.name || p.param_name)) || p).filter(Boolean).join(', ')) + ')';
   const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
   let md = '# Zoho CRM Deluge \u2014 Workspace export (AI context)\n\n';
-  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n\n`;
+  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
+  md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
   md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\u2019s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';

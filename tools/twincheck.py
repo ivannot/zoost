@@ -62,6 +62,7 @@ PRODUCT_ONLY = {
         'nameToggle': 'internal vs display name, a CRM-only distinction',
         'typechips': 'the old chip row, replaced by a picklist',
         'modebar': 'the segment row for the five CRM types; Analytics has one list and a type filter',
+        'scstale': 'per-area staleness: only the CRM pulls its areas separately, so only there can one fall behind',
     },
     'analytics': {
         'typesel': 'the type picklist; the CRM builds its own dynamically',

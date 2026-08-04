@@ -426,6 +426,30 @@ These all failed **silently**, with no console error. They are the expensive kin
   auth failure — misleading. `api(path, csrfPrefix)` in `content-bridge.js` carries the prefix; the
   connections catalogue (`/deluge/api/ui/v1/{org}/services/ZohoCRM/connections`) uses `drepn`, and
   needs the `zuid` (scraped from the page like the org id).
+- **The deluge CSRF token is the `drecn` cookie, not `CT_CSRF_TOKEN`.** "Same token value, different
+  prefix" was measured once and held for months because the cookies usually carry the same value —
+  then `drecn` rotated on its own and the connections pull started answering **400
+  INVALID_CSRF_TOKEN**. Note the shape: the header prefix is `drepn`, the cookie is `drecn`, one
+  letter apart and neither derivable from the other. `CSRF_COOKIES` in `content-bridge.js` maps
+  prefix → cookie names, and there is a cross-family fallback so a missing cookie degrades instead of
+  sending an empty token. This is the same rule as the Analytics bridge, learnt from the other side:
+  **find the source by making the page tell you** (hook `setRequestHeader`, compare what Zoho's own
+  UI sends against the cookie jar, print only the matching *name*), never infer it from the prefix
+  and never assume two tokens that match today are the same token.
+- **A failing response explains itself in its body, and throwing that away costs the answer.**
+  `400 on /deluge/api/…` names the symptom; `— INVALID_CSRF_TOKEN` names the cause. Both bridges read
+  a short prefix of the body and quote `errorMessage`/`message`/`error` if it is there. Nothing
+  branches on it — it is quoted, not parsed.
+- **Freshness is per area, and staleness is derived rather than declared.** Once areas can be
+  excluded from a pull, one `lastPull` for the workspace is a lie: the mirror is current in four
+  places and four months old in the fifth. `access[area]` carries **`at`** (when we asked) and
+  **`pulledAt`** (when we last got data); `areaStale()` compares against the newest `pulledAt` with a
+  six-hour margin, so the seconds between areas in one pull are not a finding. Nobody sets a flag,
+  so nobody can forget to — and it is equally true for an area that was refused or that failed.
+  Consequences, all binding: the export dialog **unticks** a section whose data is behind and says
+  the date and the reason, both reports state the per-area dates **whether or not** anything is
+  behind, and the choice to include an old chapter stays the user's.
+
 - **An HTML numeric entity written into a JavaScript string becomes that byte.** `&#0;` used as a
   sentinel inside a JS string literal put a real NUL byte in the source. Nothing failed: the file
   parsed, the editor showed nothing, and `grep` quietly reported "Binary file matches" and returned
