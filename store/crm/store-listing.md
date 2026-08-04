@@ -70,7 +70,7 @@ Zoost reads from the Zoho CRM instance you are already signed in to and writes t
 
 The one exception is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you — including Deluge source code — is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
 
-Zoost never writes to Zoho. It reads metadata and function source only. It does not read, download or export your CRM records — no contacts, no deals, no customer data.
+Zoost never writes to Zoho. It reads metadata and function source only. It does not read, download or export your Zoho CRM records — no contacts, no deals, no customer data.
 
 WHO IT'S FOR
 
@@ -104,7 +104,7 @@ Zoost has one purpose: to give a Zoho CRM administrator or developer a local, re
 
 Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an entity-relationship diagram, a catalogue of related-list API names, a cross-reference of which functions use which connection, a health audit and offline exports.
 
-Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost never writes back to Zoho, never touches CRM records, and does nothing on any other website.
+Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost never writes back to Zoho, never touches Zoho CRM records, and does nothing on any other website.
 ```
 
 ## 5. sidePanel justification (max 1000)
@@ -132,7 +132,7 @@ What is kept:
 - A display-only copy of which data types the user's Zoho role was granted or refused in the workspace currently open, so the options page can explain why a tab is unavailable. The authoritative record is a file in the user's own folder; this copy is only read into a sentence.
 - A small timestamp used so the side panel notices when settings are changed in the options page.
 
-No browsing data, no CRM data and no personal information are placed in storage. The mirrored Deluge sources and metadata are not stored here: they are written as ordinary files into the local folder the user selected, through the File System Access API.
+No browsing data, no Zoho CRM data and no personal information are placed in storage. The mirrored Deluge sources and metadata are not stored here: they are written as ordinary files into the local folder the user selected, through the File System Access API.
 ```
 
 ## 7. scripting justification (max 1000)
@@ -144,7 +144,7 @@ scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhe
 
 2. A hook that detects when the user saves a Deluge function in the native Zoho editor, so the corresponding local file can be updated automatically and the local mirror stays faithful.
 
-Both scripts are packaged with the extension; no remote code is fetched or executed. They read only; they never modify the Zoho page, its content, or any data in the CRM.
+Both scripts are packaged with the extension; no remote code is fetched or executed. They read only; they never modify the Zoho page, its content, or any data in the Zoho CRM.
 ```
 
 ## 8. tabs justification (max 1000)

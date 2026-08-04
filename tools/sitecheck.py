@@ -128,8 +128,53 @@ def undeclared_form(html: str):
     # where a name hides when the visible label has been reduced to an icon.
     attrs = ' '.join(re.findall(r'(?:aria-label|title|alt)="([^"]*)"', s))
     s = re.sub(r'<[^>]+>', ' ', s) + ' ' + attrs
-    found = re.findall(r'Zoost(?:\s*[—-]\s*)?(?:\s+\w+){0,3}?\s+(?:Zoho\s+)?(?:CRM|Analytics)', s)
+    # Only the words that can genuinely sit inside the name. A looser pattern reported
+    # "Zoost reads from the Zoho CRM instance", where "Zoho CRM" is the platform and correct —
+    # a checker that cries wolf is a checker nobody reads.
+    found = re.findall(r'Zoost(?:\s*[—-]\s*)?\s*(?:workbench\s+)?(?:for\s+)?(?:Zoho\s+)?(?:CRM|Analytics)', s)
     return sorted({f.strip() for f in found if f.strip() not in ok})
+
+
+# Everything a user can read that is not a page: the repository's front door and the copy pasted
+# into the Chrome Web Store. Both are outward-facing, both had drifted, and neither was covered by
+# anything — the checks stopped at site/ because that is where the first bug happened to be.
+OUTWARD_DOCS = ('README.md', 'store')
+
+
+def outward_prose():
+    root = SITE.parent
+    for name in OUTWARD_DOCS:
+        p = root / name
+        if p.is_file():
+            yield p
+        elif p.is_dir():
+            yield from sorted(p.rglob('*.md'))
+
+
+def check_prose(path, findings):
+    """Markdown, with inline code removed — a path is not a sentence.
+
+    Fenced blocks are stripped in README.md, where they are shell commands, and **kept** in the
+    store listings, where the fence *is* the copy that gets pasted into the dashboard. Stripping
+    them there hid the only text on those pages that a user will ever read — which is what happened
+    on the first run of this check, and is why the distinction is here rather than one rule for both.
+    """
+    raw = path.read_text(encoding='utf-8')
+    if path.name == 'README.md':
+        s = re.sub(r'```.*?```', ' ', raw, flags=re.S)
+    else:
+        # Drop the fence *markers*, keep what is inside them. Removing the content would hide the
+        # only text on these pages anyone reads; leaving the backticks in place is worse still,
+        # because the inline-code pattern below then pairs one fence's closing ticks with the next
+        # one's opening ticks and deletes everything between two unrelated sections. That silently
+        # emptied the file and the check passed on prose it had never seen.
+        s = re.sub(r'^\s*```.*$', ' ', raw, flags=re.M)
+    s = re.sub(r'`[^`\n]*`', ' ', s)
+    rel = path.name if path.parent.name in ('', 'zoost') else f'{path.parent.name}/{path.name}'
+    for form in undeclared_form(s):
+        findings.append(f'{rel}: {form!r} is neither the manifest name nor its short_name')
+    for ctx in bare_platform(s):
+        findings.append(f'{rel}: bare platform name — …{ctx}…')
 
 
 def main() -> int:
@@ -160,6 +205,9 @@ def main() -> int:
             findings.append(f'{p.name}: our product labelled with Zoho\'s name — {lbl}')
         for form in undeclared_form(p.read_text(encoding='utf-8')):
             findings.append(f'{p.name}: {form!r} is neither the manifest name nor its short_name')
+
+    for doc in outward_prose():
+        check_prose(doc, findings)
 
     print(f'sitecheck: {len(pages)} pages — ' + ', '.join(p.name for p in pages))
     for f in findings:

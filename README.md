@@ -15,7 +15,7 @@ assistant on top of that mirror. None of them writes anything back. Everything r
 Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
 give you what Zoho's editors do not.
 
-**The rest of this file documents Zoost for Zoho CRM in detail.** The Analytics workbench has its own
+**The rest of this file documents Zoost CRM in detail.** Zoost Analytics has its own
 [page](https://zoost.it/analytics.html) and [guide](https://zoost.it/docs-analytics.html), kept in
 step with it — duplicating a full manual here would be a second copy to keep true, and the one that
 went stale would be this one.

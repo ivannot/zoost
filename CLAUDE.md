@@ -623,6 +623,13 @@ label stands for one of our extensions it reads **"Zoost for Zoho CRM"** / **"Zo
 Analytics"** — `sitecheck.py` reports any link, heading or bold run whose entire text is a bare
 platform name.
 
+### The names, settled
+
+**This is fixed. Outward it never bends; between us it can.** Everything a user or a reviewer can
+read — the site, the Chrome Web Store copy, `README.md`, every string an extension ships, the release
+titles — uses exactly the forms below, always. In conversation, shorthand is fine and nothing needs
+correcting; the rule is about what leaves the building, not about how we talk while working.
+
 **Three legitimate forms, and nothing else.** `Zoho CRM` / `Zoho Analytics` name **Zoho's** products
 and are used only when we mean theirs. **`Zoost — workbench for Zoho CRM`** is ours in full, and it is
 the `name` in `manifest.json` — the authority, never a copy. `Zoost CRM` / `Zoost Analytics` name ours
