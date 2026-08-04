@@ -754,6 +754,12 @@ reading an annotated tag out of an Atom feed, the store scrape's shape guard. **
 tested too**, and that is not ceremony: two of the three shipped broken on the day they were written,
 and a broken checker reports success over the thing it exists to catch, which is worse than none.
 
+**A check worth running once is worth keeping.** Verifying a fix by hand — the `node -e` throwaway,
+the loop that tries five inputs — is already writing a test; the only difference is whether it
+survives the session. It goes into `tests/` before the commit that fixes the thing. No ceremony and
+no separate task: if a defect was worth reasoning about, the reasoning belongs where it can run
+again. The suite grows by the bugs we meet, which is why it has teeth.
+
 **The panels are not restructured to be importable.** `tests/slice.mjs` lifts a named function out
 of a browser script and runs it alone; refactoring 3000 lines of DOM-bound code *in order to* add
 tests would spend the risk before earning the cover. The limit is stated rather than hidden: this
