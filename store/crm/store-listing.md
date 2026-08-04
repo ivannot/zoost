@@ -26,7 +26,7 @@ Independent developer & admin workbench for Zoho CRM: version Deluge locally, ex
 ```
 Zoost turns your Zoho CRM org into a local, version-controllable, searchable codebase — and then draws you a map of it.
 
-If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?", and no way to tell which functions still use a given connection. Zoost fills them, without sending your code anywhere.
+If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?", and no way to tell which functions still use a given connection. Zoost fills them, with no server and no account: everything it reads lands on your own disk. The single exception is the optional AI assistant, which stays off until you enter your own API key — described in full below.
 
 WHAT IT DOES
 
@@ -45,6 +45,10 @@ WHAT IT DOES
 - Relations, with the names you actually need. The API name of a related list is not the api name of either module, and it is what zoho.crm.getRelatedRecords() requires. Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
 
 - ER diagram that stays readable. Modules as tables, foreign keys as arrows. Focus a module, adjust depth, walk the graph by clicking. A relation-first mode pushes modules into the background and brings relation names forward. Click an arc to isolate one relation and fade everything else. Live sliders for spacing and label size, an all-modules scope, and Save PDF for wall-size prints.
+
+- Fits the access you actually have. Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking, once, and records the answer with the date. An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change. You can hide and reorder the tabs yourself too, and choose which types Pull all should ask for at all.
+
+- Every part knows when it was last read. Because a type can be excluded from a pull, the mirror states per area when it last came from Zoho. A report section whose data is behind is unticked in the export dialog, with the date and the reason — you can include it anyway, and the report then says so. Both reports carry the per-area dates whether or not anything is behind.
 
 - Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function.
 

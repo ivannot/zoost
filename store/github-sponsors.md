@@ -4,9 +4,9 @@ I'm Ivan. For a living I keep infrastructure, architecture and integrations stan
 
 In the time I should spend resting, I build tools. Sometimes I solve problems, other times I create them — mostly to avoid boredom and keep my hands busy.
 
-The first one I'm sharing is **[Zoost](https://zoost.it)**, a Chrome extension for Zoho CRM *(independent and unofficial — not affiliated with Zoho)*. It mirrors your Deluge functions into plain files you version with *your* Git — not some mysterious cloud — maps who calls what, draws the schema and the relations between modules, and tells you what's probably broken or unused. It never quietly deletes anything, and it never sends your code anywhere you didn't ask it to.
+What I'm sharing is **[Zoost](https://zoost.it)** — Chrome extensions for **Zoho CRM** and **Zoho Analytics**, one each *(independent and unofficial — not affiliated with Zoho)*. They mirror what you have built inside those products into plain files you version with *your* Git, not some mysterious cloud: Deluge functions, module schema and relations on one side; tables, query-table SQL and the dependency graph on the other. Then they map who calls what, draw the diagrams the platform never shows you, and tell you what is probably broken or unused. Neither writes anything back, and neither sends your code anywhere you did not ask it to.
 
-→ **[zoost.it](https://zoost.it)** · free, Apache-2.0, and it stays that way. No features held hostage, no popups begging you.
+Free, Apache-2.0, and it stays that way. No features held hostage, no popups begging you.
 
 ## Why sponsor me
 
