@@ -9,7 +9,7 @@ so changing them does not touch anything below.
 <https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge>.
 
 Before every resubmission: re-read §2 against the manifest `description` (they must be identical,
-max 132 characters) and confirm every claim below is still true of the code — the same sweep the CRM
+max 132 characters) and confirm every claim below is still true of the code — the same sweep the Zoho CRM
 listing gets.
 
 ---
@@ -168,8 +168,8 @@ for creditworthiness or lending.
 ## Notes before submitting
 
 - §2 must be byte-identical to `description` in `apps/analytics/manifest.json`.
-- The privacy policy URL must point at a page that covers **this** extension, not only the CRM one.
-  `site/privacy.html` must name Analytics explicitly before this is submitted.
+- The privacy policy URL must point at a page that covers **this** extension, not only the Zoho CRM one.
+  `site/privacy.html` must name Zoho Analytics explicitly before this is submitted.
 - Screenshots: the view list with the type filter, a table's columns with foreign keys, the ER
   diagram, the SQL of a query table, the health view. Use a workspace with neutral names.
 - Read §3 top to bottom against the code before submitting. Every "WHAT IT DOES NOT DO" line is a

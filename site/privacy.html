@@ -55,8 +55,8 @@
     respect this document describes: no server, no account, no telemetry, a local mirror in a folder
     you choose, and one optional AI assistant that only ever talks to a provider you configure
     yourself.</p>
-  <p><b>One difference is worth stating plainly.</b> The CRM extension can send your Deluge source
-    code to an AI provider if you enable the assistant. The Analytics extension can send view names,
+  <p><b>One difference is worth stating plainly.</b> Zoost for Zoho CRM can send your Deluge source
+    code to an AI provider if you enable the assistant. Zoost for Zoho Analytics can send view names,
     column names, relations and the SQL of your query tables — and <b>never the rows inside your
     tables</b>, because it does not read them: the endpoints that return cell values are deliberately
     not called.</p>
@@ -129,19 +129,19 @@
     the Zoho Analytics API for the other — using the session you are already
     signed in with. It sends no credentials of its own and creates none. It operates strictly within
     your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.</p>
-  <p>Zoost reads metadata and function source. It does not read, download or export your CRM records
+  <p>Zoost reads metadata and function source. It does not read, download or export your Zoho CRM records
     — no contacts, no deals, no customer data.</p>
 
   <h3>4.2 The AI provider — only if you enable it</h3>
   <div class="box warn">
     <h3>Read this before enabling the assistant</h3>
     <p>The AI assistant is off by default and requires you to enter your own API key. Once enabled, the
-      content it needs to answer you. For the CRM extension that includes <b>Deluge source code</b>, module schemas, workflow
+      content it needs to answer you. For Zoost for Zoho CRM that includes <b>Deluge source code</b>, module schemas, workflow
       definitions, connection names and their connectors (never their secrets or tokens, which Zoost never
       reads) and your questions — is sent directly from your browser to the provider you selected:
       Anthropic or OpenAI. No other destination is possible: the extension is granted network access to
       those two origins and to your Zoho product, and to nothing else.</p>
-    <p>For the <b>Analytics</b> extension the same applies to a different set: view names, column names and
+    <p>For the <b>Zoho Analytics</b> extension the same applies to a different set: view names, column names and
       data types, the relations between tables, the dependency graph, and the <b>SQL of your query
       tables</b>. It can never send the rows inside a table, because it never reads them — so the assistant
       knows your workspace's structure and never its values.</p>
@@ -156,15 +156,15 @@
   <h3>4.3 Exports</h3>
   <p>Export files are written to your working folder and go nowhere on their own. Before each export,
     Zoost asks which sections may be included; the sensitive part is opt-in and flagged when selected —
-    Deluge source code in the CRM extension, the SQL of your query tables in the Analytics one. What
+    Deluge source code in Zoost for Zoho CRM, the SQL of your query tables in Zoost for Zoho Analytics. What
     happens to a file after you create it is your responsibility and that of the organisation whose data
     it describes.</p>
 
   <h2>5. Permissions, and why each one exists</h2>
   <p>Both extensions request the same four API permissions — <code>sidePanel</code>,
     <code>storage</code>, <code>scripting</code> and <code>tabs</code> — for the same reasons. They
-    differ only in which hosts they may reach: the CRM one lists the Zoho CRM and sandbox data
-    centres, the Analytics one lists the Zoho Analytics data centres. Both list
+    differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data
+    centres, the Zoho Analytics one lists the Zoho Analytics data centres. Both list
     <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
     assistant and only if you configure it.</p>
   <ul>
@@ -172,10 +172,10 @@
     <li><code>storage</code> — to keep your settings, as described above.</li>
     <li><code>scripting</code> — to inject the bridge script that talks to the Zoho API using your
       session, and the hook that notices when you save a function so the local copy can follow.</li>
-    <li><code>tabs</code> — to detect which Zoho CRM org, or which Analytics workspace, the active tab belongs to, so that a
+    <li><code>tabs</code> — to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to the Zoho domains each extension reads.</b> The CRM one lists
-      <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>; the Analytics one lists
+    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists
+      <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>; the Zoho Analytics one lists
       <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre
       because an account may live on any of them, and neither lists a domain it does not read. Both also
       list <code>api.anthropic.com</code> and <code>api.openai.com</code>, contacted only by the optional
@@ -189,7 +189,7 @@
 
   <h2>6. Legal basis and your rights</h2>
   <p>Because the developer receives no personal data, there is no processing to consent to, object to,
-    or request access to. Data protection rights in respect of the CRM data itself are exercised against
+    or request access to. Data protection rights in respect of the Zoho CRM data itself are exercised against
     the controller of that data — your organisation — and, where relevant, against the AI provider you
     chose, under their respective policies.</p>
 

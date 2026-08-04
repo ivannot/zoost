@@ -84,7 +84,7 @@
     <p class="lead">Zoost for Zoho Analytics mirrors a workspace into plain files on your disk — every view with its
       type and folder, the columns and data types of every table, the foreign keys between them, and the SQL behind
       each query table as a file of its own. Then it shows you the ER diagram, what reads from what, and what nothing
-      reads any more. It never writes to Analytics, and it never reads the rows in your tables.</p>
+      reads any more. It never writes to Zoho Analytics, and it never reads the rows in your tables.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Get it on the Chrome Web Store</a>
       <a class="btn" href="#features">What's inside</a>
@@ -100,13 +100,13 @@
       <div>
         <h3>A workspace outgrows its author</h3>
         <p>A few years in, a workspace is hundreds of views: tables, query tables holding SQL somebody wrote at 2am,
-          and reports built on reports. Analytics will answer what one view depends on, one view at a time. It will
+          and reports built on reports. Zoho Analytics will answer what one view depends on, one view at a time. It will
           not tell you the shape of the whole thing.</p>
       </div>
       <div>
         <h3>Your history, your Git</h3>
         <p>The mirror is ordinary files. Commit it and <code>git diff</code> answers <em>what changed in this
-          workspace last month</em> — which Analytics cannot answer at all, and which matters most the day a number
+          workspace last month</em> — which Zoho Analytics cannot answer at all, and which matters most the day a number
           moves and nobody knows why.</p>
       </div>
       <div>
@@ -116,13 +116,13 @@
       </div>
       <div>
         <h3>Before you delete anything</h3>
-        <p>Asking Analytics what depends on a view, three hundred times by hand, is how the question never gets
+        <p>Asking Zoho Analytics what depends on a view, three hundred times by hand, is how the question never gets
           asked. Zoost asks it once for everything — and calls the answer a candidate, because a shared link or a
           scheduled export is invisible to that graph.</p>
       </div>
       <div>
         <h3>What you built, and what Zoho put there</h3>
-        <p>Half the tables in a connected workspace arrived by sync and were never yours. Analytics' own ER model
+        <p>Half the tables in a connected workspace arrived by sync and were never yours. Zoho Analytics' own ER model
           knows which, and the view list marks them — so the inventory is of your work, not of everything.</p>
       </div>
     </div>
@@ -191,7 +191,7 @@
       <div class="card">
         <h3>What nothing depends on</h3>
         <ul>
-          <li>Analytics' own dependency answer, asked for every view instead of one at a time.</li>
+          <li>Zoho Analytics' own dependency answer, asked for every view instead of one at a time.</li>
           <li>For any view: what it reads from, what reads from it, and the dashboards it appears on.</li>
           <li><span class="k">Candidates, never a verdict.</span> A shared link, a scheduled export, an embedded
             report or an API consumer is invisible to that graph, and the number says so.</li>
@@ -213,8 +213,8 @@
         <ul>
           <li>The whole workspace as one self-contained HTML file, or as Markdown.</li>
           <li>A dialog decides section by section what the file may contain; the SQL is opt-in and flagged.</li>
-          <li>The Markdown carries the <span class="k">constraints of Analytics' SQL dialect</span> too, so an
-            assistant that has never seen Analytics does not write queries that cannot run.</li>
+          <li>The Markdown carries the <span class="k">constraints of Zoho Analytics' SQL dialect</span> too, so an
+            assistant that has never seen Zoho Analytics does not write queries that cannot run.</li>
         </ul>
       </div>
 
@@ -241,8 +241,8 @@
     <h2>What it does not do</h2>
     <div class="why">
       <div>
-        <h3>It never writes to Analytics</h3>
-        <p>No creating, editing or deleting a view. Ever. Analytics is where you build; this is where you look at
+        <h3>It never writes to Zoho Analytics</h3>
+        <p>No creating, editing or deleting a view. Ever. Zoho Analytics is where you build; this is where you look at
           what you built.</p>
       </div>
       <div>
@@ -258,12 +258,12 @@
       </div>
       <div>
         <h3>It does not validate SQL</h3>
-        <p>Zoost never runs, checks or deploys a query. What the assistant writes is a draft; Analytics is the only
+        <p>Zoost never runs, checks or deploys a query. What the assistant writes is a draft; Zoho Analytics is the only
           thing that can tell you it compiles.</p>
       </div>
       <div>
-        <h3>Relations are Analytics' own</h3>
-        <p>The foreign keys come from the ER model Analytics itself draws. What that model does not draw, Zoost
+        <h3>Relations are Zoho Analytics' own</h3>
+        <p>The foreign keys come from the ER model Zoho Analytics itself draws. What that model does not draw, Zoost
           does not know — and does not invent.</p>
       </div>
 
@@ -317,7 +317,7 @@
       <li><b>Install it</b> from the <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Chrome Web Store</a>.</li>
       <li><b>Set a working folder</b> — the same one your other Zoost uses, if you have one. Each product keeps its
         own subfolder inside it.</li>
-      <li><b>Open a workspace</b> in Analytics. The panel takes the workspace from the tab you are on; there is
+      <li><b>Open a workspace</b> in Zoho Analytics. The panel takes the workspace from the tab you are on; there is
         nothing to configure and nothing to pick wrong.</li>
       <li>Press <b>+ Workspace</b>, then <b>Pull all</b>. A few hundred views take under a minute.</li>
       <li><code>git init</code> in the workspace folder, and from today you have a history.</li>

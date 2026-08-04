@@ -65,6 +65,24 @@ def footer_shape(html: str):
     return (links, blocks)
 
 
+def bare_platform(html: str):
+    """"Analytics" and "CRM" standing alone, meaning Zoho's product.
+
+    On a page whose subject is *our* Zoho Analytics workbench, a sentence like "it never writes to
+    Analytics" does not say which Analytics. The reader has to guess, and half the time they will
+    guess that the bare word means us. Naming the platform in full every time is also the safer
+    trademark posture: nominative use is strongest when the mark is quoted exactly and sits in a
+    descriptive position — an unqualified "Analytics" reads as a word we have adopted.
+
+    Code, paths and markup are exempt: `analytics/` is a folder, not a sentence.
+    """
+    s = re.sub(r'<code>.*?</code>|<pre>.*?</pre>', ' ', html, flags=re.S)
+    s = re.sub(r'<[^>]+>', ' ', s)
+    s = re.sub(r'Zoho (CRM|Analytics)|Zoost for Zoho \w+', ' ', s)
+    return [' '.join(s[max(0, m.start() - 45):m.end() + 25].split())
+            for m in re.finditer(r'\b(Analytics|CRM)\b', s)]
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -85,6 +103,10 @@ def main() -> int:
             for shape, files in sorted(shapes.items(), key=lambda kv: -len(kv[1])):
                 findings.append(f'    {", ".join(files)}')
                 findings.append(f'      {shape[:300]}')
+
+    for p in pages:
+        for ctx in bare_platform(p.read_text(encoding='utf-8')):
+            findings.append(f'{p.name}: bare platform name — …{ctx}…')
 
     print(f'sitecheck: {len(pages)} pages — ' + ', '.join(p.name for p in pages))
     for f in findings:

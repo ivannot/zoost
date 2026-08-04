@@ -573,6 +573,22 @@ Not "IDE": you do not edit code in them, and the audience is wider than develope
 leading element of the name, and never in the icon. Every user-facing surface carries the
 independent/unofficial disclaimer.
 
+**Name the platform in full, every time: "Zoho CRM", "Zoho Analytics", never the bare word.** On a
+page whose subject is *our* Zoho Analytics workbench, "it never writes to Analytics" does not say
+which Analytics — and a reader who guesses will as often guess it means us. It is also the safer
+trademark posture: nominative use is strongest when the mark is quoted exactly and sits in a
+descriptive position, while an unqualified "Analytics" reads as a word we have adopted. The cost is
+repetition, and this project has always priced precision above elegance.
+
+**"Zoost" alone is already the full name of the family** — nothing is being shortened, so it needs no
+qualifier. Where the two products must be told apart, write **"Zoost for Zoho CRM"** and **"Zoost for
+Zoho Analytics"**. Never "Zoost Analytics" in prose (that is only the Chrome `short_name`), and never
+"the CRM extension" or "the Analytics one" as if that were a product's name — that was in
+`privacy.html` and it made our own products sound like they were called after Zoho's.
+
+`tools/sitecheck.py` reports a bare platform name in prose; code, paths and markup are exempt,
+because `analytics/` is a folder and not a sentence.
+
 The name comes from `chrome.runtime.getManifest().name` everywhere. Renaming means editing one
 field in `manifest.json`.
 

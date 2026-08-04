@@ -131,7 +131,7 @@ git checkout <tag> && ./build.sh <app>
 shasum -a 256 dist/zoost-<app>-<version>-store.zip
 ```
 
-It also says what the table cannot tell you — the CRM version currently published predates this
+It also says what the table cannot tell you — the Zoho CRM version currently published predates this
 repository and has no commit to point at.
 
 ## What is in this repository
@@ -294,7 +294,7 @@ Both land in your workspace folder, so they're versioned with your Git.
 
 ## How it works (internals)
 
-- Reverse-engineered CRM settings endpoints (no official function-CRUD API exists): functions,
+- Reverse-engineered Zoho CRM settings endpoints (no official function-CRUD API exists): functions,
   modules, fields, workflows, schedules, the connections catalogue (a `/deluge/` endpoint, which
   takes the CSRF token with a different prefix), and each function's `associated_place`.
 - Auth = your session cookies + `X-ZCSRF-TOKEN` (from the page's CSRF cookie), scoped per host.

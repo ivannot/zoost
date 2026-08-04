@@ -79,7 +79,7 @@
         <td>One folder on your disk that you choose once. Everything Zoost writes lives inside it, and
           each Zoost product keeps its own subfolder, so one folder can serve them all.</td></tr>
       <tr><td class="k">Workspace</td>
-        <td>One folder per Analytics workspace, inside <code>analytics/</code>. Its identity is the
+        <td>One folder per Zoho Analytics workspace, inside <code>analytics/</code>. Its identity is the
           workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name — rename either
           and nothing is orphaned.</td></tr>
       <tr><td class="k">The active tab decides</td>
@@ -88,7 +88,7 @@
           the tab and the folder agree again.</td></tr>
     </tbody>
   </table>
-  <p class="box">Zoost is <b>read-only</b> towards Analytics. It never creates, edits or deletes a view,
+  <p class="box">Zoost is <b>read-only</b> towards Zoho Analytics. It never creates, edits or deletes a view,
     and it never reads the rows inside your tables — the endpoints that return cell values exist and are
     deliberately not called. The worst it can do to your workspace is nothing.</p>
 
@@ -100,7 +100,7 @@
       the only way an extension may write files, and it applies to that folder alone.</li>
     <li>Open the workspace you want to mirror. Its URL looks like
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
-    <li><b class="ui">+ Workspace</b> — creates the folder for it and reads its name from Analytics.</li>
+    <li><b class="ui">+ Workspace</b> — creates the folder for it and reads its name from Zoho Analytics.</li>
   </ol>
   <p>The bar under the toolbar is the guard. Green means the tab and the folder are the same workspace.
     Amber with a bar of actions means they are not, and everything Zoho-bound stays disabled until you
@@ -138,9 +138,9 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
     </tbody>
   </table>
-  <p>The <code>.sql</code> files are the point. They are the only thing in Analytics that is genuinely
+  <p>The <code>.sql</code> files are the point. They are the only thing in Zoho Analytics that is genuinely
     source somebody wrote, and one file each is what lets <code>git diff</code> answer <em>what changed in
-    this workspace last month</em> — a question Analytics cannot answer at all.</p>
+    this workspace last month</em> — a question Zoho Analytics cannot answer at all.</p>
 
   <h2 id="read">5. Reading the workspace</h2>
   <p>The list is every view. Above it, two picklists: <b class="ui">Type</b> filters by kind and carries the
@@ -152,12 +152,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <ul>
     <li><b>Data</b> — when the data last refreshed. Always a real timestamp, always sortable.</li>
     <li><b>Design</b> — when the design last changed. A real date for tables and query tables. For reports
-      and dashboards Analytics only gives text in your interface language, so it is shown <em>exactly as it
+      and dashboards Zoho Analytics only gives text in your interface language, so it is shown <em>exactly as it
       sends it</em>, in italics, never parsed, and sorted last. Reading a localized date is the same mistake
       as reading a localized button label.</li>
   </ul>
   <p>Rows marked <span class="k">system</span> were put there by Zoho — synced from a connected source
-    rather than built by you. Analytics' own ER model knows which; the view list does not.</p>
+    rather than built by you. Zoho Analytics' own ER model knows which; the view list does not.</p>
 
   <h2 id="structure">6. Structure and foreign keys</h2>
   <p>Click any row to open the detail pane. Drag the bar above it to resize; the height is remembered.</p>
@@ -170,7 +170,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li><b>→</b> this column points at another table</li>
     <li><b>←</b> another table's column points at this one</li>
   </ul>
-  <p>Each is a link: click it and you are looking at the other table. They come from the ER model Analytics
+  <p>Each is a link: click it and you are looking at the other table. They come from the ER model Zoho Analytics
     itself draws, with the join written exactly as Zoho writes it.</p>
 
   <h2 id="graph">7. The ER diagram</h2>
@@ -197,13 +197,13 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>On disk every query is its own file, so <code>grep</code> and <code>git log -p</code> work on them
     like any other source.</p>
   <p class="box warn">Zoost never runs, validates or deploys SQL. It reads it and writes it to disk;
-    Analytics remains the only thing that can tell you a query compiles.</p>
+    Zoho Analytics remains the only thing that can tell you a query compiles.</p>
 
   <h2 id="depends">9. What nothing depends on</h2>
-  <p>The pull asks Analytics its own dependency question for every view. The <b>Read by</b> column is how
+  <p>The pull asks Zoho Analytics its own dependency question for every view. The <b>Read by</b> column is how
     many views read from it plus the dashboards it appears on — click the number to open the breakdown.
     Pick <b>Nothing depends on</b> in the Type filter to see only the candidates.</p>
-  <p class="box warn"><b>Candidates, never a verdict.</b> Analytics only knows what its own views read from
+  <p class="box warn"><b>Candidates, never a verdict.</b> Zoho Analytics only knows what its own views read from
     each other. A shared link somebody bookmarked, a scheduled export, an embedded report or an API
     consumer is invisible to that graph. Treat the list as a place to start asking, not a delete queue.</p>
 
@@ -225,7 +225,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>Both land in <code>export/</code> inside the workspace folder, named
     <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, so a folder of them sorts into the order they
     were taken.</p>
-  <p>The Markdown carries one thing the HTML does not: <b>the constraints of Analytics' SQL dialect</b>, so
+  <p>The Markdown carries one thing the HTML does not: <b>the constraints of Zoho Analytics' SQL dialect</b>, so
     an assistant reading that file does not write queries that cannot run.</p>
 
   <h2 id="ai">12. AI assistant &amp; API keys</h2>
@@ -281,16 +281,16 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td>The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
       <tr><td class="k">“Not on a Zoho Analytics tab”</td>
-        <td>The panel acts on the active tab. Switch to the Analytics tab, or use the button on the
+        <td>The panel acts on the active tab. Switch to the Zoho Analytics tab, or use the button on the
           overlay.</td></tr>
       <tr><td class="k">“No workspace open”</td>
-        <td>You are on Analytics but not inside a workspace. Open one — the URL must contain
+        <td>You are on Zoho Analytics but not inside a workspace. Open one — the URL must contain
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
       <tr><td class="k">The folder button is amber</td>
         <td>The browser dropped the permission, which it does between sessions. Click anywhere in the panel
           to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
       <tr><td class="k">“CSRF token not found”</td>
-        <td>The session is not signed in on that tab. Reload the Analytics page and try again.</td></tr>
+        <td>The session is not signed in on that tab. Reload the Zoho Analytics page and try again.</td></tr>
       <tr><td class="k">N items could not be read</td>
         <td>Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
           and Health lists them.</td></tr>
