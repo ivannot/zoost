@@ -46,6 +46,14 @@ jobs:
           APP="${TAG%%-v*}"
           VERSION="${TAG#*-v}"
           echo "app=$APP"         >> "$GITHUB_OUTPUT"
+          # The product's real name, not the directory's. "Zoost for crm 1.9.0" was the release title
+          # until this line existed, which is the naming rule broken on the most public surface there
+          # is: the platform is always named in full, and never in lower case.
+          case "$APP" in
+            crm)       echo 'product=Zoho CRM'       >> "$GITHUB_OUTPUT" ;;
+            analytics) echo 'product=Zoho Analytics' >> "$GITHUB_OUTPUT" ;;
+            *)         echo "product=$APP"           >> "$GITHUB_OUTPUT" ;;
+          esac
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "zip=dist/zoost-$APP-$VERSION-store.zip" >> "$GITHUB_OUTPUT"
 
@@ -89,7 +97,7 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.4.0
         with:
           files: ${{ steps.tag.outputs.zip }}
-          name: Zoost for ${{ steps.tag.outputs.app }} ${{ steps.tag.outputs.version }}
+          name: Zoost for ${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}
           body: |
             Built by GitHub Actions from `${{ github.sha }}`, not on anyone's laptop.
 
