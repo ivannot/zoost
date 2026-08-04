@@ -87,14 +87,17 @@ const stale = load([
 ], {
   get TABS() { return globalThis.__tabs; },
   get tabAccess() { return globalThis.__acc; },
-  pulledAt: (id) => (globalThis.__acc[id] || {}).pulledAt || null,
+  // The real fallback, not a simplified one: an area with no record of its own inherits the
+  // workspace's lastPull. Testing a stand-in here would have hidden the bug this covers.
+  pulledAt: (id) => (globalThis.__acc[id] || {}).pulledAt || globalThis.__lastPull || null,
 });
 
 const AREAS = ['functions', 'modules', 'workflows', 'schedules', 'connections'];
-function withAccess(acc, fn) {
+function withAccess(acc, fn, lastPull = null) {
   globalThis.__tabs = AREAS.map((id) => ({ id }));
   globalThis.__acc = acc;
-  try { return fn(); } finally { delete globalThis.__tabs; delete globalThis.__acc; }
+  globalThis.__lastPull = lastPull;
+  try { return fn(); } finally { delete globalThis.__tabs; delete globalThis.__acc; delete globalThis.__lastPull; }
 }
 const iso = (msAgo) => new Date(Date.now() - msAgo).toISOString();
 
@@ -130,4 +133,46 @@ test('the margin is six hours: five is fine, seven is behind', () => {
     () => assert.equal(stale.areaStale('schedules'), false));
   withAccess({ functions: { pulledAt: iso(0) }, schedules: { pulledAt: iso(7 * 36e5) } },
     () => assert.equal(stale.areaStale('schedules'), true));
+});
+
+test('a workspace mirrored before per-area dates existed is not reported as behind', () => {
+  // Reported bug. `pulledAt` only exists for areas pulled since the feature landed, so a folder
+  // full of current data carried no record and read as "never pulled while others have been".
+  // The export dialog then unticked Functions and Workflows and the report came out smaller than
+  // the user had asked for, without them choosing that.
+  withAccess({ connections: { pulledAt: iso(0) } }, () => {
+    assert.equal(stale.areaStale('functions'), false);
+    assert.equal(stale.areaStale('workflows'), false);
+  }, iso(60 * 1000));   // the workspace itself was pulled a minute ago
+});
+
+test('the fallback does not hide an area that really is months behind', () => {
+  withAccess({ functions: { pulledAt: iso(0) }, connections: { pulledAt: iso(120 * 864e5) } },
+    () => assert.equal(stale.areaStale('connections'), true), iso(0));
+});
+
+// ---------- the export dialog must not rewrite the saved defaults ----------
+
+test('clearing a section for staleness never becomes a stored preference', () => {
+  // The dialog saves what you leave it with, so unticking a box *for* the user rewrote their
+  // settings: one export and Functions and Workflows were gone from Settings too. A transient
+  // warning must not survive as a preference. This mirrors the merge the panel performs.
+  const saved = { functions: true, code: true, workflows: true, modules: true };
+  const dlg = { functions: false, code: false, workflows: false, modules: true };
+  const autoCleared = new Set(['functions', 'code', 'workflows']);
+
+  const keep = Object.assign({}, dlg);
+  autoCleared.forEach((k) => { keep[k] = saved[k]; });
+
+  assert.deepEqual(keep, saved, 'settings are untouched by an automatic clear');
+  assert.equal(dlg.functions, false, 'while the export itself still leaves the stale part out');
+});
+
+test('a box the user re-ticks is theirs, and is remembered', () => {
+  const saved = { workflows: true, schedules: true };
+  const dlg = { workflows: true, schedules: false };      // user cleared schedules by hand
+  const autoCleared = new Set();                          // their edit removed it from the set
+  const keep = Object.assign({}, dlg);
+  autoCleared.forEach((k) => { keep[k] = saved[k]; });
+  assert.equal(keep.schedules, false, 'a deliberate change is kept');
 });

@@ -104,6 +104,13 @@ const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'wor
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
 let expScope = Object.assign({}, SCOPE_FULL);
+// What the dialog is editing right now, and which of its boxes were cleared *for* the user because
+// the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
+// what you leave it with, so mutating the defaults to warn about staleness rewrote them — one
+// export and the settings had silently lost Functions and Workflows. A transient warning must never
+// become a stored preference. Same lost-update shape as two copies of the settings page.
+let dlgScope = Object.assign({}, SCOPE_FULL);
+let dlgAutoCleared = new Set();
 async function loadScope() {
   try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_FULL, st.exportScope); } catch (_) {}
 }
@@ -127,8 +134,12 @@ async function loadTabPrefs() {
   } catch (_) {}
 }
 async function loadAccess() {
-  tabAccess = {};
-  try { const cfg = await readCfg(); if (cfg && cfg.access && typeof cfg.access === 'object') tabAccess = cfg.access; } catch (_) {}
+  tabAccess = {}; wsLastPull = null;
+  try {
+    const cfg = await readCfg();
+    if (cfg && cfg.access && typeof cfg.access === 'object') tabAccess = cfg.access;
+    if (cfg && typeof cfg.lastPull === 'string') wsLastPull = cfg.lastPull;
+  } catch (_) {}
   publishAccess();
 }
 // The settings page cannot read the workspace's `.zoost.json` — it has no folder handle and no
@@ -199,15 +210,15 @@ function forbiddenNote() {
   return ` · ${off.length} area${off.length > 1 ? 's' : ''} not granted to your Zoho role (${off.map(tabLabel).join(', ')}) — hidden`;
 }
 function scopeToUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });
-  const e = $('sc_code'); if (e) e.disabled = !expScope.functions;
-  const l = $('sc_layouts'); if (l) l.disabled = !expScope.modules;
-  $('scwarn').textContent = expScope.code ? '\u26a0 includes full source code' : '';
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!dlgScope[k]; });
+  const e = $('sc_code'); if (e) e.disabled = !dlgScope.functions;
+  const l = $('sc_layouts'); if (l) l.disabled = !dlgScope.modules;
+  $('scwarn').textContent = dlgScope.code ? '\u26a0 includes full source code' : '';
 }
 function scopeFromUI() {
-  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) expScope[k] = !!e.checked; });
-  if (!expScope.functions) expScope.code = false;
-  if (!expScope.modules) { expScope.layouts = false; expScope.relations = false; }
+  SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) { if (!!e.checked !== !!dlgScope[k]) dlgAutoCleared.delete(k); dlgScope[k] = !!e.checked; } });
+  if (!dlgScope.functions) dlgScope.code = false;
+  if (!dlgScope.modules) { dlgScope.layouts = false; dlgScope.relations = false; }
   scopeToUI();
 }
 // Which export sections come from which pulled area. Not a lookup for its own sake: it is what lets
@@ -242,7 +253,9 @@ let _scopeResolve = null;
 function askScope() {
   return new Promise((resolve) => {
     _scopeResolve = resolve;
-    TABS.forEach((t) => { if (areaStale(t.id)) (AREA_SCOPE[t.id] || []).forEach((k) => { expScope[k] = false; }); });
+    dlgScope = Object.assign({}, expScope);
+    dlgAutoCleared = new Set();
+    TABS.forEach((t) => { if (areaStale(t.id)) (AREA_SCOPE[t.id] || []).forEach((k) => { if (dlgScope[k]) { dlgScope[k] = false; dlgAutoCleared.add(k); } }); });
     scopeToUI();
     scopeStaleNote();
     $('scrim').classList.add('on'); $('expscope').classList.add('on');
@@ -251,7 +264,7 @@ function askScope() {
 function closeScope(ok) {
   $('scrim').classList.remove('on'); $('expscope').classList.remove('on');
   const r = _scopeResolve; _scopeResolve = null;
-  if (r) r(ok ? Object.assign({}, expScope) : null);
+  if (r) r(ok ? Object.assign({}, dlgScope) : null);
 }
 function showAbout() {
   $('aboutbody').innerHTML =
@@ -323,7 +336,17 @@ let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [] };
 let tabAccess = {};
 
 const accessOf = (id) => (tabAccess[id] && tabAccess[id].state) || null;
-const pulledAt = (id) => (tabAccess[id] && tabAccess[id].pulledAt) || null;
+// When an area was last read. Falls back to the workspace's own `lastPull` for anything mirrored
+// before per-area dates existed: those folders hold real, current data and simply carry no record.
+// Reading "no measurement" as "behind" is the inversion this project forbids everywhere else, and
+// here it had teeth — it silently unticked Functions and Workflows in the export dialog, so a report
+// quietly came out smaller than the user asked for.
+//
+// Where it must err, it errs towards *not* flagging: an over-stated freshness is visible, because
+// both reports print the per-area dates whether or not anything is behind. A section dropped from a
+// report is not.
+let wsLastPull = null;
+const pulledAt = (id) => (tabAccess[id] && tabAccess[id].pulledAt) || wsLastPull || null;
 
 // Staleness is derived, never declared. An area is behind if the mirror holds newer data for
 // something else — which is true whether it was excluded from the pull, refused by Zoho, or simply
@@ -3091,9 +3114,18 @@ try {
 } catch (_) {}
 $('about').onclick = showAbout; $('aboutx').onclick = closeAbout; $('aboutok').onclick = closeAbout;
 $('expx').onclick = () => closeScope(false); $('expcancel').onclick = () => closeScope(false);
-$('expgo').onclick = () => { scopeFromUI(); try { chrome.storage.local.set({ exportScope: expScope }); } catch (_) {} closeScope(true); };
-$('pspFull').onclick = () => { expScope = Object.assign({}, SCOPE_FULL); scopeToUI(); };
-$('pspSafe').onclick = () => { expScope = Object.assign({}, SCOPE_SAFE); scopeToUI(); };
+// Persist what the user chose, not what staleness cleared on their behalf. A box they left
+// untouched keeps whatever Settings said; one they re-ticked is theirs and is remembered.
+$('expgo').onclick = () => {
+  scopeFromUI();
+  const keep = Object.assign({}, dlgScope);
+  dlgAutoCleared.forEach((k) => { keep[k] = expScope[k]; });
+  expScope = keep;
+  try { chrome.storage.local.set({ exportScope: expScope }); } catch (_) {}
+  closeScope(true);
+};
+$('pspFull').onclick = () => { dlgScope = Object.assign({}, SCOPE_FULL); dlgAutoCleared.clear(); scopeToUI(); };
+$('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); dlgAutoCleared.clear(); scopeToUI(); };
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
 loadScope();
