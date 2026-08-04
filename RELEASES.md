@@ -33,11 +33,17 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 
 ## What this table cannot tell you, and why
 
-**Zoho CRM 0.13.8, the version on the Store today, is not in this table and cannot be.** It predates
-this repository — the earliest commit here is CRM 1.0.0, on 2 August 2026 — so there is no commit to
-point at and no honest hash to publish. The chain starts at the first submission made after this file
-existed. Saying so is the whole point: a verifiable record that quietly papered over its first entry
-would be worth less than no record.
+**No Zoho CRM version before 1.9.0 is in this table, and none can be.** The extension's source
+entered this repository on 3 August 2026, in the commit that restructured it into `apps/`, and it
+arrived already at **1.6.2** — before that this repo held the site, the licence and the build script
+and nothing installable. So 0.13.8, 1.0.0 and everything between them have no commit here to point
+at and no honest hash to publish, including **1.0.0, which is the version the Store is serving
+today**. The chain begins at 1.9.0, the first release built by GitHub from a tag.
+
+This paragraph previously said something else, and what it said was wrong: that 0.13.8 was the
+published version and that the earliest commit here was CRM 1.0.0. Both were stale rather than
+checked. Recording the correction instead of quietly editing it is the same rule the table follows —
+a verifiable record that tidies away its own mistakes is worth less than none.
 
 **Zoost for Zoho Analytics 1.0.0** was submitted on 3 August 2026 from commit `b3db394`, before the
 build was made reproducible. Its tag exists and points at the right source, but no hash is recorded
@@ -49,9 +55,12 @@ serves, so the `.crx` a user installs is not byte-identical to the `.zip` we upl
 table lets you verify is the input to that process: that the source in this repository, at that tag,
 is what was submitted.
 
-**The tag `v1.0.0`** is from before this repository held two products, when a bare version number was
-unambiguous. It is left alone rather than deleted — moving published refs is worse than an untidy
-one. Every tag from here on is `<app>-v<version>`.
+**The tag `v1.0.0` identifies nothing installable.** It points at this repository's first commit,
+which carries the site and the licence and no extension source at all — so despite the name it is not
+the published Zoho CRM 1.0.0, and rebuilding from it would produce nothing. It is left in place
+rather than deleted, because moving or removing a published ref is worse than an untidy one, but it
+should not be read as a release. Every tag from here on is `<app>-v<version>` and points at a commit
+that builds.
 
 ## How the package is produced, and why that matters
 

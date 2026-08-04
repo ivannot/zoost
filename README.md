@@ -1,26 +1,33 @@
 # Zoost
 
-**Turn your Zoho CRM org into a local, versionable, navigable codebase — and talk to it.**
+**You built it. It is yours. And the platform gives you no way to see it whole.**
 
-A Chrome extension (Manifest V3) that mirrors your Zoho CRM **Deluge functions, module schema,
-workflows, schedules and connections** into plain local files you can put under your own Git — then
-layers on a dependency graph, an ER diagram, a connections cross-reference, an honest health audit,
-a whole-org HTML export, and an
-**AI assistant that can read and reason over your entire codebase** (bring your own key).
+Zoost is a small family of Chrome extensions (Manifest V3), **one per Zoho product**. Each mirrors
+what *you* have built inside that product into plain local files you can put under your own Git —
+then layers navigation, diagrams, search, an honest health audit, exports and an optional AI
+assistant on top of that mirror. None of them writes anything back. Everything runs in your browser.
 
-It does **not** replace Zoho's editor. You keep writing and saving where Zoho compiles and
-validates; this gives you everything Zoho's editor doesn't.
+| | What it mirrors | |
+|---|---|---|
+| **Zoost — workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm.html) · [guide](https://zoost.it/docs.html) |
+| **Zoost — workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | *submitted, in review* · [about](https://zoost.it/analytics.html) · [guide](https://zoost.it/docs-analytics.html) |
 
-**Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) ·
-**Zoho CRM:** [zoost.it/crm](https://zoost.it/crm.html) ·
-**Zoho Analytics:** [zoost.it/analytics](https://zoost.it/analytics.html) ·
-**Guide:** [zoost.it/docs](https://zoost.it/docs.html) ·
+Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
+give you what Zoho's editors do not.
+
+**The rest of this file documents Zoost for Zoho CRM in detail.** The Analytics workbench has its own
+[page](https://zoost.it/analytics.html) and [guide](https://zoost.it/docs-analytics.html), kept in
+step with it — duplicating a full manual here would be a second copy to keep true, and the one that
+went stale would be this one.
+
+**Site:** [zoost.it](https://zoost.it) ·
 **Privacy:** [zoost.it/privacy](https://zoost.it/privacy.html) ·
+**Releases & verification:** [RELEASES.md](RELEASES.md) ·
 **Source:** [github.com/ivannot/zoost](https://github.com/ivannot/zoost)
 
-> Independent, unofficial developer tool. Not affiliated with, endorsed by, or sponsored by
-> Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used
-> here nominatively to indicate compatibility.
+> Independent, unofficial developer tools. Not affiliated with, endorsed by, or sponsored by
+> Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks of Zoho
+> Corporation, used here nominatively to indicate compatibility.
 
 ---
 
@@ -131,8 +138,17 @@ git checkout <tag> && ./build.sh <app>
 shasum -a 256 dist/zoost-<app>-<version>-store.zip
 ```
 
-It also says what the table cannot tell you — the Zoho CRM version currently published predates this
-repository and has no commit to point at.
+Every release from Zoho CRM 1.9.0 onward is built by GitHub Actions from the tagged commit, not on
+anyone's laptop, and carries a provenance attestation you can check with one command:
+
+```bash
+gh attestation verify zoost-crm-1.9.0-store.zip --repo ivannot/zoost
+tools/verify.sh crm 1.9.0
+```
+
+`RELEASES.md` also states what it *cannot* tell you: every Zoho CRM version before 1.9.0 predates the
+extension's source being in this repository, so none of them has a commit to point at — including the
+one the Store is serving while 1.9.0 is in review.
 
 ## What is in this repository
 
