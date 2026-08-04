@@ -51,26 +51,35 @@
       if (!d) return;
       fillDocsStamp(d);
       if (!box) return;
+      // One row per product, four aligned columns. Every number here belongs to exactly one
+      // extension, so every number is inside a row that names it: with two products published, an
+      // unqualified "Web Store 0.13.8 · Latest tag v1.0.0" in a single run does not read as
+      // incomplete, it reads as being about whichever product you had in mind.
+      //
+      // The three are different questions and the labels have to keep them apart: what you can
+      // install today, what has been released and can be checked out and verified, and what is
+      // being built right now. "In development" is spelled out so it cannot be read as available.
       var bits = [];
-      // Three different things on purpose: what you can install, what has been released, and what is
-      // being built. "In development" is spelled out so the last one cannot be read as available.
-      // One line per product, each naming itself. Two published extensions and a single unqualified
-      // "Web Store 0.13.8" would read as covering both. Falls back to the old flat fields so a page
-      // served from cache before the endpoint changed still shows something true.
-      var prods = [['Zoho CRM', d.crm || { store: d.store, repo: d.repo }], ['Zoho Analytics', d.analytics]];
+      var prods = [
+        ['Zoho CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
+        ['Zoho Analytics', d.analytics],
+      ];
       prods.forEach(function (pr) {
         var name = pr[0], v = pr[1];
         if (!v || (!v.store && !v.repo)) return;
-        if (bits.length) bits.push('<span class="vbreak"></span>');
-        bits.push('<span class="vitem vprod">' + esc(name) + '</span>');
-        bits.push('<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>');
-        if (v.repo) bits.push('<span class="vitem"><b>In development</b> ' + esc(v.repo) + '</span>');
+        // "none yet" rather than "unknown": for a product with no tag those are opposite claims —
+        // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
+        bits.push(
+          '<div class="vrow">' +
+            '<span class="vitem vprod">' + esc(name) + '</span>' +
+            '<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
+            '<span class="vitem"><b>Released</b> ' + (v.tag ? esc(v.tag) : '<i>none yet</i>') + '</span>' +
+            '<span class="vitem"><b>In development</b> ' + (v.repo ? esc(v.repo) : '<i>unknown</i>') + '</span>' +
+          '</div>');
       });
-      if (bits.length) bits.push('<span class="vbreak"></span>');
-      bits.push('<span class="vitem"><b>Latest tag</b> ' + (d.tag ? esc(d.tag) : '<i>unknown</i>') + '</span>');
       if (d.siteUpdated) {
         var f = fmtDate(d.siteUpdated);
-        if (f) bits.push('<span class="vitem"><b>Site updated</b> ' + esc(f) + '</span>');
+        if (f) bits.push('<div class="vrow vsite"><span class="vitem"><b>Site updated</b> ' + esc(f) + '</span></div>');
       }
       box.innerHTML = bits.join('');
       box.classList.add('on');

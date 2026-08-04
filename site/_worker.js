@@ -34,30 +34,43 @@ const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not
 
 const timeout = (ms) => AbortSignal.timeout(ms);
 
-// Newest git tag, read from GitHub's Atom feed rather than its JSON API.
+// Newest git tag **per product**, read from GitHub's Atom feed rather than its JSON API.
 //
 // api.github.com allows 60 unauthenticated requests an hour *per IP*, and this Worker goes out
 // through Cloudflare's shared egress addresses — where that budget is spent by traffic that has
 // nothing to do with us. The result was three of the four fields coming back null most of the time.
 // The Atom feeds on github.com carry the same facts without that limit and without a credential.
 // They are XML, so the parsing is deliberately shallow and every value still passes a shape guard.
-async function latestTag() {
+//
+// This asked for "the newest tag" and got a wrong answer that looked right. The filter accepted
+// `v1.0.0` and rejected `analytics-v1.0.0`, so the site published the one legacy tag — older than
+// everything, and belonging to neither product — as the state of the project. With one tag per
+// product a single "latest tag" is not an ambiguous fact, it is not a fact at all: the question
+// only means anything once you say which extension you are asking about.
+async function latestTag(app) {
   const r = await fetch(`https://github.com/${REPO}/tags.atom`, {
     headers: { 'user-agent': UA, accept: 'application/atom+xml' },
     signal: timeout(6000),
   });
   if (!r.ok) return null;
   const xml = await r.text();
-  const semver = [...xml.matchAll(/<title>([^<]{1,40})<\/title>/g)]
-    .map((m) => m[1].trim())
-    .filter((n) => /^v?\d+\.\d+\.\d+$/.test(n))   // also drops the feed's own title
+  // An **annotated** tag's entry is titled `name: first line of the message`, not `name` — and every
+  // tag this project cuts from now on is annotated, because release.sh uses `git tag -a`. The old
+  // filter demanded an exact match against the whole title, so it could only ever have matched the
+  // one lightweight legacy tag, and every real release would have gone missing in a way that looks
+  // like "nothing has been released yet". Hence the optional `: …` tail, and a title window wide
+  // enough to hold a message rather than truncating it into a non-match.
+  const re = new RegExp(`^(${app}-v(\\d+\\.\\d+\\.\\d+))(?::|$)`);
+  const tags = [...xml.matchAll(/<title>([^<]{1,200})<\/title>/g)]
+    .map((m) => re.exec(m[1].trim()))
+    .filter(Boolean)                              // also drops the feed's own title
     .sort((a, b) => {
-      const pa = a.replace(/^v/, '').split('.').map(Number);
-      const pb = b.replace(/^v/, '').split('.').map(Number);
+      const pa = a[2].split('.').map(Number);
+      const pb = b[2].split('.').map(Number);
       for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i];
       return 0;
     });
-  return semver[0] || null;
+  return tags.length ? tags[0][1] : null;   // the tag name alone: it is what you check out
 }
 
 // Published version on the Chrome Web Store. No API exists, so this reads the listing page and only
@@ -114,7 +127,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=7';   // bumped: both products, and a date per guide
+const CACHE_KEY = '/api/versions?v=8';   // bumped: the tag is per product now
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -123,20 +136,23 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [crmStore, crmRepo, anStore, anRepo, tag, updated, docsUpd, docsAnUpd] = await Promise.all([
-    settled(storeVersion('crm')), settled(repoVersion('crm')),
-    settled(storeVersion('analytics')), settled(repoVersion('analytics')),
-    settled(latestTag()), settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
-    settled(lastChanged('site/docs-analytics.html')),
-  ]);
+  const [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, updated, docsUpd, docsAnUpd] =
+    await Promise.all([
+      settled(storeVersion('crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
+      settled(storeVersion('analytics')), settled(repoVersion('analytics')),
+      settled(latestTag('analytics')),
+      settled(lastChanged('site')), settled(lastChanged('site/docs.html')),
+      settled(lastChanged('site/docs-analytics.html')),
+    ]);
 
   const res = new Response(JSON.stringify({
-    // `store` and `repo` are kept alongside the per-product fields so an older cached page still
-    // renders something true rather than nothing while the new one propagates.
-    store: crmStore, repo: crmRepo,
-    crm: { store: crmStore, repo: crmRepo },
-    analytics: { store: anStore, repo: anRepo },
-    tag, siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
+    // `store`, `repo` and `tag` are kept alongside the per-product blocks so a page served from
+    // cache before this shape existed still renders something true rather than nothing. `tag` is
+    // deliberately CRM's rather than the old repo-wide value: an unqualified one was the bug.
+    store: crmStore, repo: crmRepo, tag: crmTag,
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag },
+    analytics: { store: anStore, repo: anRepo, tag: anTag },
+    siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {
     headers: {

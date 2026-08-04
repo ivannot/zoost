@@ -76,8 +76,8 @@
   <table>
     <tbody>
       <tr><td class="k">Working folder</td>
-        <td>One folder on your disk for every Zoost product. Each keeps its own subfolder inside it, so
-          the CRM mirror and the Analytics mirror never meet.</td></tr>
+        <td>One folder on your disk that you choose once. Everything Zoost writes lives inside it, and
+          each Zoost product keeps its own subfolder, so one folder can serve them all.</td></tr>
       <tr><td class="k">Workspace</td>
         <td>One folder per Analytics workspace, inside <code>analytics/</code>. Its identity is the
           workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name — rename either
@@ -121,7 +121,7 @@
   </ul>
   <p>To re-read a single view, open it and use <b class="ui">Pull</b> in the detail pane. The <b class="ui">↻</b>
     button next to it is <em>local</em>: it reloads the mirror from disk, or re-grants folder access. It
-    never talks to Zoho — same meaning as in the CRM panel.</p>
+    never talks to Zoho.</p>
 
   <h2 id="git">4. Putting it under Git</h2>
   <p>In the workspace folder:</p>
@@ -223,8 +223,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     health — with <b>Everything</b> and <b>Share-safe</b> presets. The <b>SQL</b> option sits indented under
     Structure because it depends on it, and it is flagged every time: it is the part somebody wrote.</p>
   <p>Both land in <code>export/</code> inside the workspace folder, named
-    <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code> — the same place and the same shape as the CRM
-    workbench's exports.</p>
+    <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, so a folder of them sorts into the order they
+    were taken.</p>
   <p>The Markdown carries one thing the HTML does not: <b>the constraints of Analytics' SQL dialect</b>, so
     an assistant reading that file does not write queries that cannot run.</p>
 
