@@ -366,6 +366,15 @@ Only the HTTP form is classified. Analytics also answers `200` with `{"status":"
 whether a permission refusal ever arrives that way has **not** been measured — so that path stays an
 ordinary failure rather than being labelled a refusal on a guess.
 
+**Excluding an area never deletes its files, and a "remove local files" *flag* was considered and
+refused.** A standing instruction to delete on every future pull is a foot-gun — re-enable the tab,
+forget the flag, and the next pull has already thrown the files away — and deleting solves nothing
+that dating solves: it destroys history that is sitting in Git, the reason the mirror exists, to stop
+a report being misleading, which the per-area dates already stop. A **one-off action** ("delete the N
+local files for this type", with the count and a confirmation) is defensible and is an accepted
+nice-to-have, deliberately not built yet. If you find yourself adding a persistent delete switch,
+this is the argument you are overturning.
+
 **The AI index is layered, and what does not fit is named — in both apps.** A workspace of a thousand views does
 not fit in a system prompt sent with every message, so the question is never "how big a cap" but
 "what gets dropped". Dropping the tail is the wrong answer: it cuts an arbitrary half and the model
