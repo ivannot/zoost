@@ -86,7 +86,9 @@
       each query table as a file of its own. Then it shows you the ER diagram, what reads from what, and what nothing
       reads any more. It never writes to Zoho Analytics, and it never reads the rows in your tables.</p>
     <div class="cta">
-      <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Get it on the Chrome Web Store</a>
+      <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
+         data-install="analytics" hidden>Get it on the Chrome Web Store</a>
+      <a class="btn p" href="/docs-analytics.html" data-pending="analytics">Read the guide</a>
       <a class="btn" href="#features">What's inside</a>
       <span class="meta">Free · Apache-2.0 · no account</span>
     </div>
@@ -314,7 +316,10 @@
   <div class="wrap">
     <h2>Get started</h2>
     <ol class="steps">
-      <li><b>Install it</b> from the <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Chrome Web Store</a>.</li>
+      <li><b>Install it.</b> <span data-install="analytics" hidden>From the
+        <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Chrome Web Store</a>.</span>
+        <span data-pending="analytics">Submitted to the Chrome Web Store and in review. Until it is published,
+        clone the repository and load <code>apps/analytics</code> unpacked from <code>chrome://extensions</code>.</span></li>
       <li><b>Set a working folder</b> — the same one your other Zoost uses, if you have one. Each product keeps its
         own subfolder inside it.</li>
       <li><b>Open a workspace</b> in Zoho Analytics. The panel takes the workspace from the tab you are on; there is
