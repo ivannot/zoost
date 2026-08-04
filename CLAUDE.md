@@ -624,12 +624,20 @@ Analytics"** — `sitecheck.py` reports any link, heading or bold run whose enti
 platform name.
 
 **Three legitimate forms, and nothing else.** `Zoho CRM` / `Zoho Analytics` name **Zoho's** products
-and are used only when we mean theirs. `Zoost for Zoho CRM` / `Zoost for Zoho Analytics` name ours in
-full. `Zoost CRM` / `Zoost Analytics` name ours in short — always carrying *Zoost*, which is why they
+and are used only when we mean theirs. **`Zoost — workbench for Zoho CRM`** is ours in full, and it is
+the `name` in `manifest.json` — the authority, never a copy. `Zoost CRM` / `Zoost Analytics` name ours
+in short — always carrying *Zoost*, which is why they
 are safe. **A bare `CRM` or `Analytics` is never used**, in any position: it is the one form that
 cannot say whose product it means. "Zoost" on its own is fine and needs no qualifier — it is already
 the family's full name — but "the CRM extension" or "the Analytics one" is not a name, and it made
 our own products sound like they were called after Zoho's.
+
+**"workbench" is part of the full name and was nearly lost by accident.** Shortening the nav to fit
+produced `Zoost for Zoho CRM` — a fourth form nobody had declared — and it then spread across the
+site and displaced the real name, taking with it the word that was chosen deliberately over "IDE".
+Nobody shortens the name to make it fit: the nav carries three tiers instead, and the last one is the
+icon. `sitecheck.py` now reads the manifest and reports any Zoost+product form that is neither its
+`name` nor its `short_name`, so the fourth form cannot come back.
 
 `sitecheck.py` enforces all of it: it strips the three legitimate forms and reports whatever bare
 occurrence is left, and separately reports any link, heading or bold run whose *entire* text is a

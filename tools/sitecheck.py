@@ -103,6 +103,35 @@ def ours_named_as_theirs(html: str):
             for m in re.finditer(r'<(a|h1|h2|h3|b|strong)\b[^>]*>\s*(Zoho CRM|Zoho Analytics)\s*</\1>', html)]
 
 
+# The product's full name is the manifest's, read rather than copied — a second copy is a second
+# thing to go stale, which is precisely what happened: shortening the nav to fit invented
+# "Zoost for Zoho CRM", a fourth form nobody had declared, and it quietly replaced the real name
+# across the site. "workbench" went with it, and that word was chosen deliberately over "IDE".
+def product_names():
+    import json
+    root = SITE.parent
+    out = {}
+    for app in ('crm', 'analytics'):
+        m = json.loads((root / f'apps/{app}/manifest.json').read_text(encoding='utf-8'))
+        out[app] = (m['name'], m['short_name'])
+    return out
+
+
+def undeclared_form(html: str):
+    """Any Zoost+product form that is neither the manifest's full name nor its short_name."""
+    names = product_names()
+    ok = {n for pair in names.values() for n in pair}
+    s = re.sub(r'<code>.*?</code>|<pre>.*?</pre>', ' ', html, flags=re.S)
+    # aria-label, title and alt are read aloud or shown on hover — they are text a user receives,
+    # so they are collected before the tags are stripped rather than thrown away with them. The
+    # first version of this check missed a wrong name planted in an aria-label, which is exactly
+    # where a name hides when the visible label has been reduced to an icon.
+    attrs = ' '.join(re.findall(r'(?:aria-label|title|alt)="([^"]*)"', s))
+    s = re.sub(r'<[^>]+>', ' ', s) + ' ' + attrs
+    found = re.findall(r'Zoost(?:\s*[—-]\s*)?(?:\s+\w+){0,3}?\s+(?:Zoho\s+)?(?:CRM|Analytics)', s)
+    return sorted({f.strip() for f in found if f.strip() not in ok})
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -129,6 +158,8 @@ def main() -> int:
             findings.append(f'{p.name}: bare platform name — …{ctx}…')
         for lbl in ours_named_as_theirs(p.read_text(encoding='utf-8')):
             findings.append(f'{p.name}: our product labelled with Zoho\'s name — {lbl}')
+        for form in undeclared_form(p.read_text(encoding='utf-8')):
+            findings.append(f'{p.name}: {form!r} is neither the manifest name nor its short_name')
 
     print(f'sitecheck: {len(pages)} pages — ' + ', '.join(p.name for p in pages))
     for f in findings:
