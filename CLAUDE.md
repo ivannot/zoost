@@ -599,6 +599,14 @@ never stop doing so: Zoost for Zoho CRM 1.9.0 has that URL compiled into it, and
 extension cannot be asked to change. The redirect lives in `_worker.js`, since assets are served
 first and a file at that path would win.
 
+**Pages are responsive, and that is checked at a width, not eyeballed.** Wide content — tables, long
+code tokens, diagrams — scrolls inside its own box; the page body never scrolls sideways. The guides
+overflowed 375px by ~95px from code tokens in table cells, and nobody had looked. The nav carries the
+name in three forms rather than truncating it: full, then `Zoost CRM`, then the product's own icon
+alone under 520px, with `aria-label` holding the full name throughout so the accessible name does not
+shrink with the layout. Measure with the iframe sweep — 7 pages × {375, 768, 1280} must all report
+zero overflow.
+
 **Name the platform in full, every time: "Zoho CRM", "Zoho Analytics", never the bare word.** On a
 page whose subject is *our* Zoho Analytics workbench, "it never writes to Analytics" does not say
 which Analytics — and a reader who guesses will as often guess it means us. It is also the safer
@@ -615,11 +623,17 @@ label stands for one of our extensions it reads **"Zoost for Zoho CRM"** / **"Zo
 Analytics"** — `sitecheck.py` reports any link, heading or bold run whose entire text is a bare
 platform name.
 
-**"Zoost" alone is already the full name of the family** — nothing is being shortened, so it needs no
-qualifier. Where the two products must be told apart, write **"Zoost for Zoho CRM"** and **"Zoost for
-Zoho Analytics"**. Never "Zoost Analytics" in prose (that is only the Chrome `short_name`), and never
-"the CRM extension" or "the Analytics one" as if that were a product's name — that was in
-`privacy.html` and it made our own products sound like they were called after Zoho's.
+**Three legitimate forms, and nothing else.** `Zoho CRM` / `Zoho Analytics` name **Zoho's** products
+and are used only when we mean theirs. `Zoost for Zoho CRM` / `Zoost for Zoho Analytics` name ours in
+full. `Zoost CRM` / `Zoost Analytics` name ours in short — always carrying *Zoost*, which is why they
+are safe. **A bare `CRM` or `Analytics` is never used**, in any position: it is the one form that
+cannot say whose product it means. "Zoost" on its own is fine and needs no qualifier — it is already
+the family's full name — but "the CRM extension" or "the Analytics one" is not a name, and it made
+our own products sound like they were called after Zoho's.
+
+`sitecheck.py` enforces all of it: it strips the three legitimate forms and reports whatever bare
+occurrence is left, and separately reports any link, heading or bold run whose *entire* text is a
+platform name.
 
 `tools/sitecheck.py` reports a bare platform name in prose; code, paths and markup are exempt,
 because `analytics/` is a folder and not a sentence.

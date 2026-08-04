@@ -38,13 +38,26 @@ header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
 header nav a.nana{background:#dc2d7a}
 header nav a.nana:hover{background:#e8508f;color:#fff}
 header nav a.nprod[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px currentColor}
-/* The product names are long, and on a phone they wrapped *inside* their own buttons — four lines
-   of "Zoost / for / Zoho / CRM". The buttons never break now; the bar breaks instead, onto its own
-   full-width row under the brand. */
+/* Three widths, three forms of the same name — never a truncation and never a bare "CRM".
+   Wide: "Zoost for Zoho CRM". Narrower: "Zoost CRM", the short form, always carrying Zoost.
+   Narrowest: the product's own icon alone, which is the one thing that stays legible at any size.
+   aria-label holds the full name throughout, so the accessible name never shrinks with the layout. */
+header nav a.nprod{display:inline-flex;align-items:center;gap:7px}
+header nav a.nprod .npic{width:18px;height:18px;border-radius:5px;display:none}
+header nav a.nprod .nshort{display:none}
+@media (max-width:1040px){
+  header nav a.nprod .nfull{display:none}
+  header nav a.nprod .nshort{display:inline}
+}
 @media (max-width:760px){
   header .wrap{flex-wrap:wrap;row-gap:9px;padding:12px 18px}
   header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:8px 10px;font-size:12.5px}
   header nav a.nprod{padding:4px 9px}
+}
+@media (max-width:520px){
+  header nav a.nprod .nshort{display:none}
+  header nav a.nprod .npic{display:block}
+  header nav a.nprod{padding:5px 9px}
 }
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
@@ -91,3 +104,13 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 #vers .vitem b{color:var(--ink);font-weight:600}
 #vers .vitem i{font-style:normal;opacity:.7}
 .sep{color:var(--border);margin:0 7px}
+
+/* Wide content scrolls inside its own box; the page never scrolls sideways. Measured at 375px: the
+   guides overflowed by ~95px and the privacy table by ~32px, from long code tokens in table cells
+   (`crm/instance[-sandbox]-orgid` and its kind) and from tables wider than the screen. A page you
+   have to drag left and right to read is broken, whatever the desktop looks like. */
+main code{overflow-wrap:anywhere}
+main pre{overflow-x:auto}
+@media (max-width:760px){
+  main table{display:block;overflow-x:auto}
+}
