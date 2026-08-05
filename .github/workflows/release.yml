@@ -46,14 +46,13 @@ jobs:
           APP="${TAG%%-v*}"
           VERSION="${TAG#*-v}"
           echo "app=$APP"         >> "$GITHUB_OUTPUT"
-          # The product's real name, not the directory's. "Zoost for crm 1.9.0" was the release title
-          # until this line existed, which is the naming rule broken on the most public surface there
-          # is: the platform is always named in full, and never in lower case.
-          case "$APP" in
-            crm)       echo 'product=Zoho CRM'       >> "$GITHUB_OUTPUT" ;;
-            analytics) echo 'product=Zoho Analytics' >> "$GITHUB_OUTPUT" ;;
-            *)         echo "product=$APP"           >> "$GITHUB_OUTPUT" ;;
-          esac
+          # The product's real name, read from the manifest, which is the authority on it. Two earlier
+          # versions of this line invented one instead: "Zoost for crm 1.9.0" took the directory name,
+          # and the case statement that replaced it fixed the platform while leaving "Zoost for …" —
+          # a fourth name form the project has explicitly banned, on the most public surface there is.
+          # A copy of a name is a name that drifts; there is nothing to keep in step now.
+          PRODUCT=$(python3 -c "import json,sys; print(json.load(open('apps/$APP/manifest.json'))['name'])")
+          echo "product=$PRODUCT" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "zip=dist/zoost-$APP-$VERSION-store.zip" >> "$GITHUB_OUTPUT"
 
@@ -97,7 +96,7 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.4.0
         with:
           files: ${{ steps.tag.outputs.zip }}
-          name: Zoost for ${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}
+          name: ${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}
           body: |
             Built by GitHub Actions from `${{ github.sha }}`, not on anyone's laptop.
 

@@ -201,7 +201,7 @@ def check_release_workflow(findings: list) -> None:
     if not wf.exists():
         return
     s = wf.read_text(encoding='utf-8')
-    m = re.search(r'^\s*name:\s*(Zoost[^\n]*)$', s, re.M)
+    m = re.search(r'^\s*name:\s*((?:Zoost|\$\{\{)[^\n]*)$', s, re.M)
     if not m:
         findings.append('.github/workflows/release.yml: no release title found')
         return
@@ -209,6 +209,14 @@ def check_release_workflow(findings: list) -> None:
     if 'outputs.app' in title:
         findings.append('.github/workflows/release.yml: the release title interpolates the directory '
                         f'name rather than the product name — {title.strip()!r}')
+    # And the *form* of it, which the first fix left alone: "Zoost for Zoho CRM 1.9.0" was published
+    # for two releases. Checking only "does it use the directory name" was checking the last bug, not
+    # the rule — the same failure this whole file exists to stop. Masking the legitimate forms first is
+    # the technique that does not need a list of what to look for.
+    bare = _mask_legit(title)
+    if 'Zoost' in bare or BARE.search(bare):
+        findings.append('.github/workflows/release.yml: the release title is not one of the declared '
+                        f'name forms — {title.strip()!r}')
 
 
 def main() -> int:

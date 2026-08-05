@@ -216,6 +216,29 @@ class HiddenActuallyHides(unittest.TestCase):
         p = self.page('<div class="row">x</div>', '.row{display:flex}')
         self.assertEqual(htmlcheck.display_override(p), [])
 
+    def test_a_release_title_in_the_banned_fourth_form_is_reported(self):
+        # "Zoost for Zoho CRM 1.11.0" was published twice. The first fix to this line checked only
+        # whether the title used the *directory* name — the last bug, not the rule — so the form the
+        # project explicitly banned went out on the most public surface there is.
+        with tempfile.TemporaryDirectory() as d:
+            wf = pathlib.Path(d) / '.github' / 'workflows'
+            wf.mkdir(parents=True)
+            (wf / 'release.yml').write_text('        with:\n          name: Zoost for ${{ x }} ${{ y }}\n',
+                                            encoding='utf-8')
+            old, namecheck.ROOT = namecheck.ROOT, pathlib.Path(d)
+            try:
+                findings = []
+                namecheck.check_release_workflow(findings)
+            finally:
+                namecheck.ROOT = old
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn('declared name forms', findings[0])
+
+    def test_the_workflow_in_the_repository_is_correct(self):
+        findings = []
+        namecheck.check_release_workflow(findings)
+        self.assertEqual(findings, [])
+
     def test_every_shipped_page_carries_it_today(self):
         findings = []
         for page in sorted((ROOT / 'apps').rglob('*.html')):

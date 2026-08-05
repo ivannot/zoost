@@ -1171,6 +1171,16 @@ What that request means, in order. Do all of it without being asked:
 7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
    date, and commit it.
 
+**The Release title comes from the manifest, and two earlier versions of that line invented one
+instead.** First it took the *directory* name and published "Zoost for crm 1.9.0". The fix for that
+replaced the directory name with the platform's and left `Zoost for …` in place — the fourth form the
+project explicitly bans — so "Zoost for Zoho CRM 1.11.0" went out on the most public surface there is.
+`namecheck.py` had been reading `release.yml` the whole time and checked only whether the title used
+the directory name: **it was checking the last bug rather than the rule**, which is the exact failure
+this repository's checkers exist to stop. It now masks the legitimate forms and reports whatever is
+left, the same technique `sitecheck.py` uses, and the workflow reads `name` out of `manifest.json` so
+there is no second copy to keep in step.
+
 **Every GitHub Action is pinned to a commit hash, never to `@v2`.** A tag is a ref its owner can
 repoint at any time, so a supply chain that ends in "and then whatever that tag says today" is not
 one. The trailing comment records which release each hash was, so an upgrade stays a deliberate edit.
