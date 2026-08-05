@@ -243,7 +243,7 @@ async function refreshWorkspaces() {
     dir = null; bound = null;
     // Word for word the CRM's. The blocker is one click, and saying nothing here left the status line
     // reading "Ready." while nothing could be read at all.
-    status('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
+    status('Click \u00abGrant access\u00bb above, or anywhere in this panel \u2014 one click, no folder picker.', 'warn');
     render(); return updateButtons();
   }
   if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; render(); return updateButtons(); }
@@ -789,8 +789,8 @@ function emptyReason() {
   if (!rootGranted) {
     // Deliberately no explanation of *why* the access is missing: on a first install nothing expired,
     // it was never given, and a stated cause that may not apply is one the reader has to discount.
-    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 one click, '
-      + 'no folder picker, and nothing else is needed.';
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 or simply '
+      + 'click anywhere in this panel, which does the same. One click, no folder picker.';
   }
   if (!wsList.length) {
     return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab \u2014 its URL '
@@ -1919,11 +1919,13 @@ document.querySelectorAll('.dtab').forEach((b) => {
 });
 // A stored folder handle loses its permission between sessions and can only be re-granted from a
 // user gesture. Any click in the panel counts, so the first thing the user does restores access —
-// except clicks on the controls that would themselves ask, or on a dialog.
+// except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
+// chat. The two panels excluded different subsets of those and neither list was wrong, which is how
+// a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
 document.addEventListener('click', async (e) => {
   if (!root || rootGranted) return;
   const t = e.target;
-  if (t.closest && (t.closest('#wsroot') || t.closest('.dlg') || t.closest('#offoverlay'))) return;
+  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }, true);
 

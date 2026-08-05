@@ -1313,6 +1313,14 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   hit **every** `<b>`, so «Press **Grant access** above» became its own line and one sentence arrived as
   four fragments that read as four statements. Only the first `<b>` is the heading.
 
+  And the message now names the shortcut, because it exists and is faster: **a click anywhere in the
+  panel re-grants the folder**. A stored handle loses its permission between sessions and can only be
+  restored from a user gesture, so a capture-phase listener piggybacks on the first click the user
+  makes — staying out of `#wsroot`, `#pfoot`, `.dlg`, `#aiview` and `#offoverlay`, which either ask by
+  themselves or belong to something else. Both panels had it and **excluded different subsets**,
+  neither list wrong, which is how that kind of divergence survives: both looked deliberate. It is the
+  union now, checked.
+
 ## Release routine
 
 **A release happens when I ask for it, for the app I name, and never as a consequence of anything

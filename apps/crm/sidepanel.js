@@ -1720,8 +1720,8 @@ function emptyReason() {
       + 'dedicated, empty folder. Every workspace lives inside it.';
   }
   if (!rootGranted) {
-    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 one click, '
-      + 'no folder picker, and nothing else is needed.';
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 or simply '
+      + 'click anywhere in this panel, which does the same. One click, no folder picker.';
   }
   if (!wsList.length) {
     return '<b>No workspace here yet.</b> Open a Zoho CRM tab and press <b>+</b> to create the workspace '
@@ -1853,7 +1853,7 @@ async function loadWorkspaces() {
   if (!rootGranted) {
     sel.innerHTML = `<option value="">${root.name} \u2014 access not granted</option>`;
     dir = null; setEnabled(false); updateWsButtons();
-    setStatus('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
+    setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel \u2014 one click, no folder picker.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
   const base = await appRoot(false);
@@ -1904,12 +1904,15 @@ async function loadWorkspaces() {
 }
 
 $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
-// A lapsed permission only needs user activation, not a dedicated click. Piggyback on the first
-// click the user makes on a working surface, so in practice the amber button is never needed.
+// A stored folder handle loses its permission between sessions and can only be re-granted from a
+// user gesture. Any click in the panel counts, so the first thing the user does restores access —
+// except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
+// chat. The two panels excluded different subsets of those and neither list was wrong, which is how
+// a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
 document.addEventListener('click', async (e) => {
   if (!root || rootGranted) return;
   const t = e.target;
-  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview'))) return;
+  if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }, true);
 /** What the workspace list shows, and what it must never stop showing.

@@ -511,8 +511,8 @@ test('a lapsed permission is reported in words, on both sides', () => {
   // leaving the reader to work out that «access not granted» in a dropdown is actionable.
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`);
-    assert.ok(src.includes('Grant access\\u00bb above \\u2014 one click, no folder picker'),
-      `${app}: the one-click remedy is not offered in the status line`);
+    assert.ok(src.includes('Grant access\\u00bb above, or anywhere in this panel \\u2014 one click, no folder picker'),
+      `${app}: the status line no longer offers the remedy, or the two sides have drifted`);
   }
 });
 
@@ -552,10 +552,14 @@ test('both panels say the same thing when the folder is not granted', () => {
     return src.slice(i, src.indexOf('\n}', i));
   });
   const sentence = /Folder access is not granted\.<\/b> Press <b>\\u\{1F513\} Grant access<\/b> above/;
+  const shortcut = /click anywhere in this panel/;
   for (const [i, b] of bodies.entries()) {
     assert.match(b, sentence, `${['crm', 'analytics'][i]}: the not-granted wording has drifted`);
     assert.ok(!b.includes('permission lapse'),
       `${['crm', 'analytics'][i]}: explains a cause that does not apply on a first install`);
+    // The shortcut is real on both — a capture-phase click handler re-grants — and it is faster than
+    // reaching for the button, so it is said rather than left to be discovered.
+    assert.match(b, shortcut, `${['crm', 'analytics'][i]}: does not mention the click-anywhere shortcut`);
   }
   // and the CRM has to actually draw it — that is why it never appeared
   assert.match(read('apps/crm/sidepanel.js'), /function renderBlocked\(\)/, 'crm: nothing draws the blocker');
@@ -569,5 +573,24 @@ test('only the first b in an empty state is a heading', () => {
     const css = read(`apps/${app}/sidepanel.html`);
     assert.match(css, /\.empty > b:first-child\{[^}]*display:block/, `${app}: the heading rule is gone`);
     assert.ok(!/\.empty b\{[^}]*display:block/.test(css), `${app}: every b in an empty state is a block again`);
+  }
+});
+
+
+test('the click-anywhere shortcut exists on both, and stays out of the same places', () => {
+  // Saying it in the message is only honest if it is true, and it was true on both — with *different*
+  // exclusion lists, neither of them wrong, which is how a divergence survives: both looked
+  // deliberate. It is the union now.
+  const guards = ['crm', 'analytics'].map((app) => {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const i = src.indexOf("document.addEventListener('click', async");
+    assert.ok(i > 0, `${app}: nothing re-grants on a stray click`);
+    return src.slice(i, src.indexOf('}, true);', i));
+  });
+  for (const [i, g] of guards.entries()) {
+    for (const sel of ['#wsroot', '#pfoot', '.dlg', '#aiview', '#offoverlay']) {
+      assert.ok(g.includes(`closest('${sel}')`),
+        `${['crm', 'analytics'][i]}: a click in ${sel} would ask for permission unprompted`);
+    }
   }
 });
