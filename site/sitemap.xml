@@ -67,8 +67,17 @@
   </url>
   <url>
     <loc>https://zoost.it/docs-analytics.html</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/docs-analytics.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics.html"/>
   </url>
   <url>
     <loc>https://zoost.it/privacy.html</loc>

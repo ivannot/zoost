@@ -24,7 +24,11 @@
   function fmtDate(iso, longMonth) {
     var d = new Date(iso);
     if (isNaN(d)) return null;
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: longMonth ? 'long' : 'short', year: 'numeric' });
+    // The locale follows <html lang>, not the browser's: the page it lands in is Italian or English,
+    // and a date reading "3 August 2026" inside an Italian sentence is the same defect as an
+    // untranslated label. en-GB stays the fallback so nothing changes on the English pages.
+    return d.toLocaleDateString(LANG === 'it' ? 'it-IT' : 'en-GB',
+                                { day: 'numeric', month: longMonth ? 'long' : 'short', year: 'numeric' });
   }
 
   // The version badge is the one thing on the page written by script, so it is the one thing a

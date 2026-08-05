@@ -86,7 +86,10 @@ def bare_platform(html: str):
     # the illegitimate one. "Zoho CRM" is Zoho's product. "Zoost for Zoho CRM" is ours in full.
     # "Zoost CRM" is ours in short — always carrying Zoost, never standing alone. A bare "CRM" or
     # "Analytics" is none of the three and is what this reports.
-    s = re.sub(r'Zoost for Zoho (CRM|Analytics)|Zoho (CRM|Analytics)|Zoost (CRM|Analytics)', ' ', s)
+    # `\s+`, not a literal space: prose wraps, and "Zoho\n    Analytics" is still the legitimate form.
+    # A literal space reported it as a bare platform name and would have had prose reflowed to satisfy
+    # a checker — the wrong direction, and the sort of thing that teaches people to ignore it.
+    s = re.sub(r'Zoost\s+for\s+Zoho\s+(CRM|Analytics)|Zoho\s+(CRM|Analytics)|Zoost\s+(CRM|Analytics)', ' ', s)
     return [' '.join(s[max(0, m.start() - 45):m.end() + 25].split())
             for m in re.finditer(r'\b(Analytics|CRM)\b', s)]
 
