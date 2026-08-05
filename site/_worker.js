@@ -53,23 +53,21 @@ async function latestTag(app) {
     signal: timeout(6000),
   });
   if (!r.ok) return null;
-  const xml = await r.text();
-  // An **annotated** tag's entry is titled `name: first line of the message`, not `name` — and every
-  // tag this project cuts from now on is annotated, because release.sh uses `git tag -a`. The old
-  // filter demanded an exact match against the whole title, so it could only ever have matched the
-  // one lightweight legacy tag, and every real release would have gone missing in a way that looks
-  // like "nothing has been released yet". Hence the optional `: …` tail, and a title window wide
-  // enough to hold a message rather than truncating it into a non-match.
-  return pickLatestTag(xml, app);
+  return pickLatestTag(await r.text(), app);
 }
 
 // The parsing, separated from the fetching so it can be tested against real feed text. This is
 // where the bug was: not in reaching GitHub, but in reading what it sent back.
 export function pickLatestTag(xml, app) {
-  const re = new RegExp(`^(${app}-v(\\d+\\.\\d+\\.\\d+))(?::|$)`);
-  const tags = [...xml.matchAll(/<title>([^<]{1,200})<\/title>/g)]
-    .map((m) => re.exec(m[1].trim()))
-    .filter(Boolean)                              // also drops the feed's own title
+  // Read the tag out of each entry's **link**, never its title.
+  //
+  // The title is the Release's name once a Release exists, and a Release can be renamed: giving
+  // crm-v1.9.0 the title "Zoost for Zoho CRM 1.9.0" made the tag vanish from this parser and the
+  // footer reported "none yet" for a release that plainly existed. The href is
+  // `…/releases/tag/<tag>` and is structural — it says what you would check out, whatever anyone
+  // decided to call the release.
+  const re = new RegExp(`/releases/tag/(${app}-v(\\d+\\.\\d+\\.\\d+))(?:"|/|$)`, 'g');
+  const tags = [...xml.matchAll(re)]
     .sort((a, b) => {
       const pa = a[2].split('.').map(Number);
       const pb = b[2].split('.').map(Number);
@@ -138,7 +136,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=9';   // bumped: the CRM guide moved to docs-crm.html
+const CACHE_KEY = '/api/versions?v=10';  // bumped: the tag is read from the entry link, not the title
 
 async function versions(request, ctx) {
   const cache = caches.default;

@@ -81,15 +81,21 @@
         // commands are. Not to the .zip: a footer that starts a download when clicked is a surprise,
         // and the number beside the file is the point rather than the file. This is the one place
         // the badge stops being a claim and becomes something the reader can check.
+        // Three answers to three different questions, in the order a version travels: what you can
+        // install today, what has been built and signed and can be downloaded now, what is being
+        // worked on. When the release is ahead of the Store — built, attested, waiting for review —
+        // that gap is stated rather than left to be worked out from two numbers. Someone curious can
+        // take the archive from the Release and try it before Google gets to it.
         var tag = v.tag
           ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(v.tag) + '</a>'
           : '<i>none yet</i>';
+        var ahead = newer(verOf(v.tag), v.store) ? ' <i>not on the Store yet</i>' : '';
         bits.push(
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +
             '<div class="vfacts">' +
-              '<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
-              '<span class="vitem"><b>Released</b> ' + tag + '</span>' +
+              '<span class="vitem"><b>On the Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
+              '<span class="vitem"><b>Latest release</b> ' + tag + ahead + '</span>' +
               '<span class="vitem"><b>In development</b> ' + (v.repo ? esc(v.repo) : '<i>unknown</i>') + '</span>' +
             '</div>' +
           '</div>');
@@ -120,6 +126,17 @@
         el.classList.remove('wip'); el.classList.add('live');
       });
     });
+  }
+
+  // A tag is `<app>-v1.9.0`; the version is what follows the -v. Compared numerically, because
+  // "1.10.0" sorts before "1.9.0" as text and the badge would then claim a release is behind.
+  function verOf(tag) { var m = /-v(\d+\.\d+\.\d+)$/.exec(tag || ''); return m ? m[1] : null; }
+  function newer(a, b) {
+    if (!a) return false;
+    if (!b) return true;                       // released, and nothing published to compare against
+    var pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+    for (var i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] > pb[i];
+    return false;
   }
 
   function esc(s) {
