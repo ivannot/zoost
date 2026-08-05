@@ -74,7 +74,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 ## Feature highlights
 
 **Local, Git-friendly version control**
-- Pull all Deluge functions to `.dg` source + `.meta.json` sidecars (namespaced folders).
+- Pull all Deluge functions to `.dg` source + `.meta.json` sidecars under `functions/<namespace>/`.
+  One folder per kind — `functions/`, `modules/`, `layouts/`, `workflows/`, `schedules/`,
+  `connections/`, `export/` — each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.
 - Deletions in Zoho are pruned locally **on the next pull** (reconciled at pull time, not intercepted
   live like a save), so your repo stays a faithful mirror.

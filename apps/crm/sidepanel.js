@@ -633,7 +633,7 @@ async function rebuildTree() {
   setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; aiConnCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   // scan disk: which functions are already downloaded (have a .meta.json), keyed by id
   const downloadedById = new Map(); const metaPaths = [];
-  for await (const p of walk(dir)) { if (p.startsWith('_index/')) continue; if (p.endsWith('.meta.json')) metaPaths.push(p); }
+  for await (const p of walk(dir)) { if (p.startsWith('functions/') && p.endsWith('.meta.json')) metaPaths.push(p); }
   for (const mp of metaPaths) {
     try {
       const meta = JSON.parse(await readFile(mp)); const dgPath = mp.replace(/\.meta\.json$/, '.dg');
@@ -641,12 +641,12 @@ async function rebuildTree() {
     } catch (_) {}
   }
   // the list index shows ALL functions (including not-yet-downloaded); fall back to on-disk meta for legacy workspaces
-  let idx = null; try { idx = JSON.parse(await readFile('_index/functions.json')); } catch {}
+  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch {}
   index = new Map();
   if (idx && idx.length) {
     treeData = idx.map((e) => {
       const id = String(e.id); const d = downloadedById.get(id);
-      const path = d ? d.path : `${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
+      const path = d ? d.path : `functions/${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
       return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, stale: !!d && (d.sv || 0) < META_SV, error: false, updatedTime: (d && d.updatedTime) || null };
     });
@@ -962,8 +962,8 @@ async function reveal(fn) {
   setTimeout(() => { if (!handled) { handled = true; chrome.tabs.onUpdated.removeListener(listener); if (_revealListener === listener) _revealListener = null; } }, 60000);
 }
 async function revealFromPreview(action) {
-  if (currentPath && currentPath.startsWith('_workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
-  if (currentPath && currentPath.startsWith('_modules/')) {
+  if (currentPath && currentPath.startsWith('workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
+  if (currentPath && currentPath.startsWith('modules/')) {
     const m = moduleData.find((x) => x.path === currentPath); if (!m) return; if (action === 'filter') await openModuleLayouts(m.gen); else await openModulePage(m.gen, m.navigable, m.label); return;
   }
   const e = treeData.find((x) => x.path === currentPath); if (!e) return;
@@ -1100,11 +1100,11 @@ async function pullAll() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
     const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
-    await writeFile('_index/functions.json', JSON.stringify(r.entries, null, 2));
+    await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
     for await (const p of walk(dir)) {
-      if (p.startsWith('_index/') || p.startsWith('_modules/') || p.startsWith('export/')) continue;
+      if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await readFile(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
     }
     let prunedF = 0; for (const p of rmF) { try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
@@ -1145,13 +1145,13 @@ async function buildHealth() {
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
-  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
-  let scheds = []; try { scheds = JSON.parse(await readFile('_schedules/_index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
+  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
-  for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
+  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
   const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> \u2014 never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
@@ -1308,14 +1308,14 @@ function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) 
 async function aiLoadModules() {
   if (aiModCache) return aiModCache;
   const map = {};
-  for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
+  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
   aiModCache = map; return map;
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
 // Connections tab: meta.connections[].name, the string in invokeurl [...connection:"..."]).
 async function aiLoadConnections() {
   if (aiConnCache) return aiConnCache;
-  let cat = []; try { cat = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  let cat = []; try { cat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
   if (!Array.isArray(cat)) cat = [];
   const g = await ensureGraph().catch(() => null);
   const used = {};
@@ -1402,7 +1402,7 @@ async function aiFocus() {
       if (n) return block(`the Deluge function ${n.namespace}.${n.name}`, aiTrunc(n.source_code || '', 5000), 'deluge');
       return '';
     }
-    if (p.startsWith('_workflows/')) {
+    if (p.startsWith('workflows/')) {
       const e = workflowData.find((x) => x.path === p);
       // The list entry is the index — name, module, type. What the workflow *does* is its conditions
       // and actions, and those live in the file, which is exactly what "what does this do?" asks for.
@@ -1414,15 +1414,15 @@ async function aiFocus() {
           + (detail ? '' : '\nOnly the index entry is on disk for this workflow; its conditions and actions have not been pulled.\n');
       }
     }
-    if (p.startsWith('_schedules/')) {
+    if (p.startsWith('schedules/')) {
       const e = scheduleData.find((x) => x.path === p);
       if (e) return block(`the schedule «${e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
     }
-    if (p.startsWith('_connections/')) {
+    if (p.startsWith('connections/')) {
       const e = connectionData.find((x) => x.path === p);
       if (e) return block(`the connection «${e.label || e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
     }
-    if (p.startsWith('_modules/')) {
+    if (p.startsWith('modules/')) {
       const e = moduleData.find((x) => x.path === p);
       if (e) return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 6000));
     }
@@ -1497,14 +1497,14 @@ async function aiExecTool(name, input) {
   }
   if (name === 'list_workflows' || name === 'get_workflow') {
     // Both read the rules on disk rather than the index alone: the list endpoint returns neither the
-    // scheduled actions nor the last execution, so an answer built from `_index.json` would have been
+    // scheduled actions nor the last execution, so an answer built from `workflows/index.json` would have been
     // confidently wrong about exactly the question this exists to answer.
-    let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
+    let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
     if (!idx.length) return '(no workflows in this workspace — run Pull all)';
     const rows = [];
     let unread = 0;
     for (const w of idx) {
-      let det = null; try { det = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {}
+      let det = null; try { det = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
       if (!det) unread++;
       const s = wfScheduled(det);
       const fns = []; const instant = [];
@@ -1740,12 +1740,12 @@ async function syncOne(id) {
     const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
-    await writeFile(`${f.folder}/${f.stem}.dg`, f.dg); await writeFile(`${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg); await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     graphCache = null;
     const ent = treeData.find((x) => x.id === String(id));
-    if (ent) { ent.path = `${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
-    if (currentPath === `${f.folder}/${f.stem}.dg`) await openFile(currentPath);
-    setStatus(`Synced: ${f.folder}/${f.stem}.dg`, 'ok');
+    if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
+    if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
+    setStatus(`Synced: functions/${f.folder}/${f.stem}.dg`, 'ok');
   } catch (e) { setStatus(`Sync failed for ${id}: ${e.message}`, 'warn'); }
 }
 
@@ -1762,6 +1762,10 @@ async function syncOne(id) {
 const APP_DIR = 'crm';                       // this app's subfolder
 const APP_DIRS = ['crm', 'analytics'];       // known product folders — not "foreign" content
 let root = null, rootGranted = false;
+// True when the workspace on screen still has the pre-1.13 folders. Nothing reads them — it is
+// there so the empty state can name the real reason instead of saying «nothing pulled yet» about
+// a folder that is visibly full.
+let oldLayout = false;
 /** Why a list is empty, in the order the states actually block each other.
  *
  * An empty state is never silent here: it says what is missing and what to do. Saying the *wrong*
@@ -1794,8 +1798,35 @@ function emptyReason() {
     return '<b>No workspace here yet.</b> Open a Zoho CRM tab and press <b>+</b> to create the workspace '
       + 'for that org.';
   }
+  if (oldLayout) {
+    // Not a migration and not a fallback: nothing here reads the old paths. It is an empty state
+    // telling the truth, the same way the older flat working-folder layout is reported rather than
+    // adopted — «nothing pulled yet» would be a lie about a folder that is plainly full.
+    return '<b>This workspace uses the old folder layout.</b> Functions now live under '
+      + '<b>functions/</b> and the other folders lost their leading underscore. Press <b>Pull all</b> '
+      + 'to write it again in the new shape — nothing is fetched twice that you already have '
+      + '— then delete the old <b>_index</b>, <b>_modules</b>, <b>_layouts</b>, <b>_workflows</b>, '
+      + '<b>_schedules</b> and <b>_connections</b> folders, and the namespace folders sitting beside '
+      + 'them. Zoost never deletes files it did not just write.';
+  }
   return null;
 }
+/** Does this workspace still carry the folders from before the layout was regularised?
+ *
+ * Only the names are looked at, and only at the top level: a workspace written by 1.13 or later has
+ * none of them, and one written before has several. It is deliberately not a fallback — no reader
+ * anywhere knows the old paths — and there is no automatic migration: a re-pull writes the new shape
+ * and the old folders are the user's to delete, because Zoost does not remove files it did not write.
+ */
+const OLD_DIRS = ['_index', '_modules', '_layouts', '_workflows', '_schedules', '_connections'];
+async function hasOldLayout(h) {
+  if (!h) return false;
+  try {
+    for await (const e of h.values()) if (e.kind === 'directory' && OLD_DIRS.includes(e.name)) return true;
+  } catch (_) { /* unreadable: not a claim either way */ }
+  return false;
+}
+
 // Resolved on demand rather than cached: the handle must stay valid across permission lapses.
 async function appRoot(create) {
   if (!root) return null;
@@ -1859,6 +1890,7 @@ async function addWorkspaceForTab() {
 
 async function activate(w, viaGesture) {
   dir = w.handle; activeWsId = w.id; await window.idbHandle.set('activeWs', w.id); setEnabled(true);
+  oldLayout = await hasOldLayout(w.handle);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   bound = w.binding || null;                         // read from the workspace's own .zoost.json
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
@@ -2167,21 +2199,21 @@ async function pullModules() {
     for (const m of r.modules) {
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
       if (fullLayouts.length) {
-        const lf = `_layouts/${sanitize(m.api_name || 'unknown')}.json`;
+        const lf = `layouts/${sanitize(m.api_name || 'unknown')}.json`;
         try { await writeFile(lf, JSON.stringify(fullLayouts, null, 2)); liveLayoutFiles.add(lf); lw++; } catch (_) {}
       }
       // keep a compact summary inside the module JSON (drives the preview line + index)
       m.layouts = fullLayouts.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false, status: l.status || null, sections: (l.sections || []).length }));
       index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
       layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
-      try { await writeFile(`_modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
+      try { await writeFile(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
     }
-    await writeFile('_modules/_index.json', JSON.stringify(index, null, 2));
-    await writeFile('_layouts/_index.json', JSON.stringify(layIndex, null, 2));
-    const liveFiles = new Set(r.modules.map((m) => `_modules/${sanitize(m.api_name || 'unknown')}.json`));
+    await writeFile('modules/index.json', JSON.stringify(index, null, 2));
+    await writeFile('layouts/index.json', JSON.stringify(layIndex, null, 2));
+    const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
-    for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json') && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
-    for await (const p of walk(dir)) { if (p.startsWith('_layouts/') && p.endsWith('.json') && !p.endsWith('_index.json') && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
+    for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json') && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
+    for await (const p of walk(dir)) { if (p.startsWith('layouts/') && p.endsWith('.json') && !p.endsWith('/index.json') && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
     await noteAccess('modules', null);
@@ -2194,7 +2226,7 @@ async function rebuildModules() {
   if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
   setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   const names = [];
-  for await (const p of walk(dir)) if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) names.push(p);
+  for await (const p of walk(dir)) if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) names.push(p);
   names.sort();
   moduleData = [];
   for (const p of names) {
@@ -2355,7 +2387,7 @@ async function openModule(path, layoutId) {
     const body = document.getElementById('laybody'); const v = sel.value;
     if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
     body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
-    let full = []; try { full = JSON.parse(await readFile(`_layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    let full = []; try { full = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     const L = (full || []).find((x) => String(x.id) === String(v));
     body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found \u2014 re-pull modules.</div>';
   };
@@ -2369,14 +2401,14 @@ async function openModule(path, layoutId) {
 async function buildSchemaGraph(focusApi, depth) {
   // modules
   const modPaths = [];
-  for await (const p of walk(dir)) if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) modPaths.push(p);
+  for await (const p of walk(dir)) if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) modPaths.push(p);
   const mods = [];
   for (const p of modPaths) { try { const m = JSON.parse(await readFile(p)); m._path = p; mods.push(m); } catch (_) {} }
   // Field -> layout membership. The module JSON only carries a layout summary; the full
-  // sections/fields structure lives in _layouts/<Module>.json (written by Pull Modules).
+  // sections/fields structure lives in layouts/<Module>.json (written by Pull Modules).
   for (const m of mods) {
     let full = [];
-    try { full = JSON.parse(await readFile(`_layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    try { full = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     if (!Array.isArray(full) || !full.length) continue;
     m._layList = full.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false }));
     const memb = {};
@@ -2487,9 +2519,9 @@ async function downloadOne(entry) {
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source });
     if (!r?.ok || !r.file) throw new Error(r?.error || 'not found');
     const f = r.file;
-    await writeFile(`${f.folder}/${f.stem}.dg`, f.dg);
-    await writeFile(`${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
-    entry.path = `${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
+    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg);
+    await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
     graphCache = null; codeCache = null;
@@ -2888,10 +2920,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
 async function loadExportData() {
     const metaById = new Map();
   for await (const p of walk(dir)) {
-    if (p.startsWith('_index/')) continue;
     if (p.endsWith('.meta.json')) { try { const m = JSON.parse(await readFile(p)); metaById.set(String(m.id), { meta: m, dg: p.replace(/\.meta\.json$/, '.dg') }); } catch (_) {} }
   }
-  let idx = null; try { idx = JSON.parse(await readFile('_index/functions.json')); } catch (_) {}
+  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch (_) {}
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
   for (const e of entries) {
@@ -2900,16 +2931,16 @@ async function loadExportData() {
     fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
   const mods = [];
-  for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`_layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
+  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
   let g = null; try { g = await ensureGraph(); } catch (_) {}
   const modRefs = {};
   mods.forEach((m) => (m.fields || []).forEach((fl) => { if (fl.lookup) (modRefs[fl.lookup] ||= []).push({ module: m.api_name, field: fl.api_name }); }));
   const wfs = [];
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
-  for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
-  let scheds = []; try { scheds = JSON.parse(await readFile('_schedules/_index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
+  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
-  let connCat = []; try { connCat = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  let connCat = []; try { connCat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
   if (!Array.isArray(connCat)) connCat = [];
   const connUse = {};
   fns.forEach((f) => (f.connections || []).forEach((c) => { if (c && c.name) (connUse[c.name] ||= []).push(f.api_name); }));
@@ -3066,8 +3097,8 @@ async function exportHtml() {
 
 // ---------- schedules ----------
 async function loadScheduleIndex() {
-  let idx = []; try { idx = JSON.parse(await readFile('_schedules/_index.json')); } catch (_) {}
-  scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: '_schedules/' + String(e.id) }));
+  let idx = []; try { idx = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
 }
 async function rebuildSchedules() {
   if (!dir) return;
@@ -3140,8 +3171,8 @@ async function openSchedule(e) {
 /** The scheduled-action facts of one rule, read from the rule we already have on disk.
  *
  * "How many workflows have actions that do not run immediately" had no answer anywhere: the list
- * endpoint does not carry it, so `_index.json` does not either, and the fact was sitting unread in
- * every `_workflows/<id>.json` — one level down, inside `conditions[].scheduled_actions[]`.
+ * endpoint does not carry it, so `workflows/index.json` does not either, and the fact was sitting unread in
+ * every `workflows/<id>.json` — one level down, inside `conditions[].scheduled_actions[]`.
  *
  * Derived rather than captured, deliberately. Adding it to the index would mean a field that older
  * workspaces lack and a re-pull to acquire, for something already on the disk: this reads what the
@@ -3161,10 +3192,10 @@ function wfScheduled(rule) {
 
 async function loadWorkflowIndex() {
   wfIndex = new Map();
-  let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
+  let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
   const have = new Set();
-  for await (const p of walk(dir)) { if (p.startsWith('_workflows/') && p.endsWith('.json') && !p.endsWith('_index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
-  workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `_workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
+  for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
+  workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
   // downloaded yet has neither, and says so as absence rather than as a zero — «0 scheduled» about a
   // workflow nobody has read is a measurement that was never taken.
@@ -3280,13 +3311,13 @@ async function pullSchedules() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch \u2014 refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); return; }
-    await writeFile('_schedules/_index.json', JSON.stringify(r.entries, null, 2));
+    await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 — some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null);
   } catch (e) { await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); }
 }
-// Org-wide connections catalogue → _connections/_index.json. Written once per "Pull all".
+// Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
   try {
     if (!(await ensurePerm(dir))) return;
@@ -3296,7 +3327,7 @@ async function pullConnections() {
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
-    await writeFile('_connections/_index.json', JSON.stringify(r.connections || [], null, 2));
+    await writeFile('connections/index.json', JSON.stringify(r.connections || [], null, 2));
     aiConnCache = null;   // the AI's catalogue must not serve what we just replaced
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
@@ -3306,7 +3337,7 @@ async function pullConnections() {
 // ---------- connections view (org-wide catalogue + usage) ----------
 let connectionData = [], connCatFilter = 'all';
 async function loadConnectionsIndex() {
-  let idx = []; try { idx = JSON.parse(await readFile('_connections/_index.json')); } catch (_) {}
+  let idx = []; try { idx = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
   return Array.isArray(idx) ? idx : [];
 }
 async function rebuildConnections() {
@@ -3320,10 +3351,10 @@ async function rebuildConnections() {
     const g = await ensureGraph().catch(() => null);
     const usedBy = {};
     if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
-    connectionData = cat.map((c) => ({ ...c, path: '_connections/' + c.name, uses: (usedBy[c.name] || []).slice() }));
+    connectionData = cat.map((c) => ({ ...c, path: 'connections/' + c.name, uses: (usedBy[c.name] || []).slice() }));
     // connections a function references but that are NOT in the catalogue (renamed / removed)
     const catNames = new Set(cat.map((c) => c.name));
-    Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: '_connections/' + name, uses: usedBy[name].slice() }); });
+    Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: 'connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
     setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet — click Pull all.'), connectionData.length ? 'ok' : 'warn');
   } catch (e) { setStatus('Connections error: ' + e.message, 'bad'); }
@@ -3393,10 +3424,10 @@ async function pullWorkflows() {
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Listing workflows\u2026', 'busy');
     const r = await toBridge({ cmd: 'listWorkflows' }); if (!r?.ok) throw new Error(r?.error || 'list failed');
-    await writeFile('_workflows/_index.json', JSON.stringify(r.entries, null, 2));
+    await writeFile('workflows/index.json', JSON.stringify(r.entries, null, 2));
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
     let prunedW = 0;
-    for await (const p of walk(dir)) { if (p.startsWith('_workflows/') && p.endsWith('.json') && !p.endsWith('_index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await removeFile(p); prunedW++; } catch (_) {} } } }
+    for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await removeFile(p); prunedW++; } catch (_) {} } } }
     await loadWorkflowIndex();
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();

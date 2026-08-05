@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zoost \u2014 workbench for Zoho Analytics",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
   "description": "Independent, unofficial: mirror a Zoho Analytics workspace to local files \u2014 views, columns, foreign keys, query-table SQL.",

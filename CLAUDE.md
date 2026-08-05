@@ -205,7 +205,7 @@ could have caught it. So also compare, by reading both sides:
   `stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')` and `sanitize()` on the name
 - **what the status line says afterwards**, word for word
 - **which guards run before an action** — e.g. `ensurePerm(dir)` before writing an export
-- **which folders a workspace walk skips** (`_index/`, `_modules/`, `export/`)
+- **which folders a workspace walk skips** (`modules/`, `export/`)
 
 An export is the artefact a user collects from both apps. Finding it in a different place in one of
 them is exactly the discontinuity these two are supposed to avoid.
@@ -285,6 +285,35 @@ is inside a folder, and `chrome://extensions` wants the folder.
 
 ## Architectural decisions worth not re-litigating
 
+**One folder per kind, one `index.json` in each, and no underscores.** A CRM workspace is:
+
+```
+functions/<namespace>/<name>.dg + .meta.json      modules/<Module>.json      workflows/<id>.json
+functions/index.json                              modules/index.json         workflows/index.json
+layouts/<Module>.json + index.json                schedules/index.json       connections/index.json
+export/
+```
+
+Before 1.13 the Deluge namespaces sat in the workspace **root** and everything the pull created
+carried a leading underscore — `_index/`, `_modules/`, `_workflows/` — so that a namespace called
+`modules` could not collide with the folder of that name. The underscore was never a convention: it
+was the symptom of there being no hierarchy, and `export/` never had one, so the rule did not even
+hold against itself. Putting the functions under `functions/` removes the collision and the
+underscore with it.
+
+**`layouts/` is a sibling of `modules/`, not a child, and that is deliberate.** Six separate walks
+mean "every `.json` under `modules/` is one module"; nesting a second kind of file inside would need
+a guard in every one of them, and the first attempt at this rename put it there and broke three of
+them at once. Where a rename must not silently invert a condition, `!p.endsWith('_index.json')` is
+the other one: the index moved to `<kind>/index.json`, so the test had to move with it or the index
+would be parsed as an item.
+
+**There is no migration, by decision.** Nothing reads the old paths — no fallback, per the rule
+already here. A workspace still in the old shape is *reported*: the empty state names it, says to
+press Pull all, and lists the folders to delete, in the same spirit as the older flat working-folder
+layout being stated rather than adopted. Nothing reads or writes those paths any more, so nothing
+touches them either.
+
 **Workspace identity is the org id inside `.zoost.json`, never the folder name.** The working folder
 holds **a subfolder per product**, and one workspace folder inside that:
 
@@ -327,7 +356,7 @@ has to be extended and the user has to re-pull — say so in the UI rather than 
 
 **A fact already on disk is derived, not re-captured.** «How many workflows have actions that do not
 run immediately» had no answer anywhere: the workflow *list* endpoint does not carry it, so
-`_workflows/_index.json` does not either — and it was sitting unread in every `_workflows/<id>.json`,
+`workflows/index.json` does not either — and it was sitting unread in every `workflows/<id>.json`,
 one level down, inside `conditions[].scheduled_actions[]`, along with `last_executed_time`.
 `wfScheduled()` reads the rule the pull already wrote. Putting it in the index instead would have
 meant a field older workspaces lack and a re-pull to acquire it, for something that was never
@@ -439,7 +468,7 @@ re-reads exactly the failures, **↻** in the detail pane re-reads one view — 
 `writeSql()` are split out precisely so a single-item refresh rewrites only what it touched.
 
 **A pulled Analytics workspace on disk** is `views.json` (census + folders), `schema.json` (columns
-per table **and the relations**), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/_index.json`
+per table **and the relations**), `lineage.json`, and one **`sql/<name>-<id>.sql` per query table** with `sql/index.json`
 carrying the id-to-file map and the column-level lineage. The `.sql` files are the point: they are
 the only thing in Analytics that is genuinely source someone wrote, and one file each is what makes
 `git diff` able to answer "what changed in this workspace last month" — which Analytics cannot.

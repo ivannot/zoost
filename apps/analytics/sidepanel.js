@@ -565,7 +565,7 @@ async function writeLineage() {
 }
 async function writeSql() {
   if (!dir) return;
-  const index = await readJson('sql/_index.json', {});
+  const index = await readJson('sql/index.json', {});
   for (const [id, q] of Object.entries(sqls)) {
     if (typeof q.sql !== 'string') continue;              // not re-read this session; its file is current
     const v = viewById().get(id);
@@ -573,7 +573,7 @@ async function writeSql() {
     await writeFile(`sql/${stem}.sql`, q.sql);
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
-  await writeJson('sql/_index.json', index);
+  await writeJson('sql/index.json', index);
 }
 
 async function writeToDisk(info) {
@@ -589,7 +589,7 @@ async function writeToDisk(info) {
     await writeFile(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
-  await writeJson('sql/_index.json', index);
+  await writeJson('sql/index.json', index);
   await patchCfg({
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
@@ -606,7 +606,7 @@ async function loadFromDisk() {
   schema = (s && s.tables) || {}; relations = (s && s.relations) || [];
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
   sqls = {};
-  const index = await readJson('sql/_index.json', null);
+  const index = await readJson('sql/index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   selectedId = null; $('detail').classList.remove('show'); $('resizer').classList.remove('show');

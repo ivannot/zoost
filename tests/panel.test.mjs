@@ -211,35 +211,35 @@ test('a selected workflow gets its conditions and actions, not "give me details"
   // The reported bug: select a workflow, open the assistant, ask what it does, and it answered that
   // it had no reference — while the same question about a function worked. currentPath was already
   // set by every tab; only the focus read it for one of them.
-  const out = await looking('_workflows/42.json', {
-    __wf: [{ path: '_workflows/42.json', name: 'Notify owner', id: '42' }],
-    __files: { '_workflows/42.json': JSON.stringify({ name: 'Notify owner', actions: ['send mail'] }) },
+  const out = await looking('workflows/42.json', {
+    __wf: [{ path: 'workflows/42.json', name: 'Notify owner', id: '42' }],
+    __files: { 'workflows/42.json': JSON.stringify({ name: 'Notify owner', actions: ['send mail'] }) },
   });
   assert.match(out, /the workflow «Notify owner»/);
   assert.match(out, /send mail/, 'the file, which is where "what does it do" is answered');
 });
 
 test('a workflow whose detail was never pulled says so rather than looking complete', async () => {
-  const out = await looking('_workflows/7.json', { __wf: [{ path: '_workflows/7.json', name: 'Half known' }] });
+  const out = await looking('workflows/7.json', { __wf: [{ path: 'workflows/7.json', name: 'Half known' }] });
   assert.match(out, /the workflow «Half known»/);
   assert.match(out, /have not been pulled/);
 });
 
 test('schedules, connections and modules each get a focus of their own', async () => {
-  const sc = await looking('_schedules/9', { __sc: [{ path: '_schedules/9', name: 'Nightly' }] });
+  const sc = await looking('schedules/9', { __sc: [{ path: 'schedules/9', name: 'Nightly' }] });
   assert.match(sc, /the schedule «Nightly»/);
 
-  const cn = await looking('_connections/books', { __cn: [{ path: '_connections/books', name: 'books', label: 'Books API' }] });
+  const cn = await looking('connections/books', { __cn: [{ path: 'connections/books', name: 'books', label: 'Books API' }] });
   assert.match(cn, /the connection «Books API»/);
 
-  const md = await looking('_modules/Contacts.json', { __md: [{ path: '_modules/Contacts.json', api_name: 'Contacts', label: 'Contacts' }] });
+  const md = await looking('modules/Contacts.json', { __md: [{ path: 'modules/Contacts.json', api_name: 'Contacts', label: 'Contacts' }] });
   assert.match(md, /the module «Contacts»/);
 });
 
 test('nothing selected, or something with no focus to give, adds nothing', async () => {
   assert.equal(await looking(null), '');
   assert.equal(await looking('export/report.html'), '');
-  assert.equal(await looking('_schedules/404'), '', 'a path with no matching entry is silent, not broken');
+  assert.equal(await looking('schedules/404'), '', 'a path with no matching entry is silent, not broken');
 });
 
 // ---------- absent when there is nothing to do, disabled when merely not yet ----------
@@ -651,4 +651,46 @@ test('a bucket with no execute_after still counts its actions', () => {
   const s = wfScheduled({ conditions: [{ scheduled_actions: [{ actions: [{ name: 'a' }] }] }] });
   assert.equal(s.count, 1);
   assert.equal(s.delays.length, 0);
+});
+
+// ---------- The workspace layout on disk ----------
+
+test('no shipped script writes a folder with a leading underscore', () => {
+  // The underscore was never a convention: it existed only so a folder the pull creates could not
+  // collide with a Deluge namespace, because namespaces sat in the workspace root. Functions live
+  // under functions/ now, so the collision is gone and so is the reason. A new one creeping back in
+  // would be a third naming rule in a layout that has just been reduced to one.
+  for (const f of ['apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js', 'apps/crm/content-bridge.js']) {
+    const src = read(f);
+    const hits = [...src.matchAll(/['"`]_[a-z]+\//g)].map((m) => m[0]);
+    assert.deepEqual(hits, [], `${f} still names an underscore folder: ${hits.join(', ')}`);
+  }
+});
+
+test("every per-kind index is <kind>/index.json, and both apps agree on the name", () => {
+  const crm = read('apps/crm/sidepanel.js');
+  for (const kind of ['functions', 'modules', 'layouts', 'workflows', 'schedules', 'connections']) {
+    assert.ok(crm.includes(`'${kind}/index.json'`), `${kind} has no ${kind}/index.json`);
+  }
+  // The twin: one index file, named the same way, so the two products read alike on disk.
+  assert.ok(read('apps/analytics/sidepanel.js').includes('sql/index.json'));
+  assert.ok(!read('apps/analytics/sidepanel.js').includes('sql/_index.json'));
+});
+
+test('functions are written under functions/<namespace>/, not in the workspace root', () => {
+  const src = read('apps/crm/sidepanel.js');
+  assert.ok(src.includes('`functions/${f.folder}/${f.stem}.dg`'), 'the sync path is not under functions/');
+  assert.ok(src.includes('`functions/${f.folder}/${f.stem}.meta.json`'), 'the sidecar is not under functions/');
+  assert.ok(!/[^/]\$\{f\.folder\}\/\$\{f\.stem\}\.dg/.test(src.replace(/functions\/\$\{f\.folder\}/g, 'X')),
+    'a path still writes a namespace folder at the root');
+});
+
+test('the old layout is reported, never read', () => {
+  // No reader knows the old paths — that is the point. What exists is an empty state that names the
+  // real reason, so a workspace full of files does not report "nothing pulled yet".
+  const src = read('apps/crm/sidepanel.js');
+  assert.match(src, /OLD_DIRS = \['_index', '_modules', '_layouts', '_workflows', '_schedules', '_connections'\]/);
+  assert.match(src, /This workspace uses the old folder layout/);
+  const readers = [...src.matchAll(/readFile\(\s*[`'"]_/g)];
+  assert.deepEqual(readers.map((m) => m[0]), [], 'something still reads an old-layout path');
 });

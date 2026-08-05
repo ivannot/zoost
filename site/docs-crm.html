@@ -141,6 +141,25 @@
 git init
 git add .
 git commit -m "baseline"</code></pre>
+    <p>What you get on disk:</p>
+  <table>
+    <tbody>
+      <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>one <code>.dg</code> source and one <code>.meta.json</code> sidecar per Deluge function, in the namespace Zoho gives it</td></tr>
+      <tr><td class="k"><code>functions/index.json</code></td><td>the census: every function with its namespace, id and where it is wired</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>one file per module — fields, types, lookup targets, picklist values</td></tr>
+      <tr><td class="k"><code>layouts/</code></td><td>one file per module, with the sections and the fields on each layout</td></tr>
+      <tr><td class="k"><code>workflows/</code></td><td>one file per rule: trigger, criteria, instant and scheduled actions</td></tr>
+      <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>the schedule list and the org's connection catalogue</td></tr>
+      <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
+    </tbody>
+  </table>
+  <p class="note">One folder per kind, one <code>index.json</code> inside each, and functions under
+    <code>functions/</code> so a Deluge namespace can never collide with a folder Zoost creates. Before
+    Zoost CRM 1.13 the namespaces sat in the workspace root and the other folders carried a leading
+    underscore to stay out of their way; a workspace in that shape says so and asks for one
+    <b class="ui">Pull all</b>. <b>Nothing is migrated and nothing is deleted for you</b> — the old
+    folders are yours to remove.</p>
+
   <p>From then on, pull and <code>git diff</code> tells you exactly what changed in the org since last time —
     including schema changes, because module and layout metadata are stored as JSON.</p>
 

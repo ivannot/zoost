@@ -273,7 +273,7 @@
         deletable: !!m.deletable, editable: !!m.editable, creatable: !!m.creatable,
         viewable: m.viewable !== false, visible: m.visible !== false,
         api_supported: m.api_supported !== false,
-        layouts: layouts,   // full layout JSON (sections, fields per layout); the panel splits this into _layouts/ files
+        layouts: layouts,   // full layout JSON (sections, fields per layout); the panel splits this into layouts/ files
         fields: fields.map((f) => ({
           api_name: f.api_name, label: f.field_label || f.display_label || f.api_name, data_type: f.data_type,
           length: f.length || null, custom: !!f.custom_field,
