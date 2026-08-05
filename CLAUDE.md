@@ -688,6 +688,29 @@ label stands for one of our extensions it reads **"Zoost for Zoho CRM"** / **"Zo
 Analytics"** — `sitecheck.py` reports any link, heading or bold run whose entire text is a bare
 platform name.
 
+**The name "Zoost" itself was never cleared, and after checking, it is kept.** Three unrelated parties
+use it: `zoost.ai` (an AI shopping assistant — the only one in software), `zoostdigital.com` (a
+marketing agency) and `zoostwellness.com` (pet supplements). None of them claims a mark: no ® or ™ on
+any of the three sites. No "Zoost" registration surfaced in the software classes, and the one filing
+found — Australian, 2009 — is dead for non-use. **That is a web search, not a clearance search**: the
+official registers (EUIPO, UIBM, USPTO, WIPO) are JavaScript-gated and every consultable mirror
+returns 403, so this was not established authoritatively and should not be described as if it were.
+
+The decision is to keep the name and react if something happens, because the legal risk looks low and
+the cost is not what it appears. **Renaming is not a find-and-replace.** The verification chain is
+identity-bound: an attestation records `https://github.com/ivannot/zoost` in its certificate, and
+`gh attestation verify --repo` is validated against the certificate's `SourceRepository`,
+`SourceRepositoryOwner` and SAN fields. Artefacts already signed would stay verifiable **only under
+the old name**, so the chain would run in two pieces and `RELEASES.md` would have to say which row
+belongs to which. On top of that, `zoost.it` could never be retired — published extensions carry
+`zoost.it/docs.html` compiled in — so a rename means two domains for good, plus both Store listings,
+Cloudflare, the Sponsors page, the contact email, and Search Console starting its clock again.
+
+**What would reopen it:** a live registration found in class 9 or 42 in the EU, Italy or the US; a
+complaint from any of the three; or a takedown against a Store listing. The cost of moving grows
+monotonically — every release adds an attestation bound to the current identity — so this is a
+decision to revisit deliberately, not to drift past.
+
 ### The names, settled
 
 **This is fixed. Outward it never bends; between us it can.** Everything a user or a reviewer can
