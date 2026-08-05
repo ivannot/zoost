@@ -23,7 +23,7 @@ Zoost — workbench for Zoho Analytics
 ## 2. Short description (manifest `description`, max 132)
 
 ```
-Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.
+Independent, unofficial: mirror a Zoho Analytics workspace to local files — views, columns, foreign keys, query-table SQL.
 ```
 
 ---

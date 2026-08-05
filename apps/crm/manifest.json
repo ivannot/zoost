@@ -4,7 +4,7 @@
   "version": "1.12.0",
   "short_name": "Zoost CRM",
   "homepage_url": "https://zoost.it",
-  "description": "Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows, connections.",
+  "description": "Independent, unofficial: mirror your Zoho CRM Deluge to local files for Git, plus the call graph, module schema and workflows.",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'"
   },

@@ -100,6 +100,15 @@ what they refuse to do, where each claim is verified, and what none of it proves
 `robots.txt` and the sitemap, and it is checked by `sitecheck.py` like any other outward prose,
 because it makes claims.
 
+**And run them without being asked.** The user should not be the one noticing that a guide describes
+a button the panel stopped drawing, or that a short description repeats the item name it sits under.
+Both of those reached him, and neither was a lapse of attention that more attention would have fixed:
+each was a dimension nothing measured. `featurecheck.py` now compares the panel's *marks* against what
+the guide draws, not only what it names, and `auditcheck.py` reports a description that borrows three
+consecutive words from its own item name. The rule is the one already here — **extend the check, never
+the care** — and the corollary is that the battery is run at every checkpoint, by me, unprompted:
+`tests/run.sh`, then `auditcheck.py`, then `reachcheck.sh` when the site moved.
+
 **Run all three before calling a change done.** They divide the problem three ways and each was
 written after something got past the others. The third exists because of a pattern worth naming:
 five naming defects reached the user, and all five were invisible for the same two reasons.

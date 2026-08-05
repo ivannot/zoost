@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 
 import sitecheck            # noqa: E402
 import htmlcheck            # noqa: E402
+import featurecheck         # noqa: E402
 import namecheck            # noqa: E402
 
 
@@ -429,6 +430,46 @@ class ContentSecurityPolicy(unittest.TestCase):
             src = page.read_text(encoding='utf-8')
             self.assertNotIn('<form', src, f'{page.name}: a form, with form-action none')
             self.assertNotIn('<base', src, f'{page.name}: a base element, with base-uri self')
+
+
+class GuidesDepictMarks(unittest.TestCase):
+    """A control drawn as a mark must be drawn in the guide, not spelled out.
+
+    featurecheck reads aria-label, so the *name* was on the site and the check stayed green while the
+    guide told a reader to press a button whose label the panel no longer shows. Reported by the user,
+    which is the failure: the panel and the page changed in the same session and only one was looked at.
+    """
+
+    def test_both_guides_depict_every_mark_today(self):
+        findings = []
+        featurecheck.guides_depict_marks(findings)
+        self.assertEqual(findings, [])
+
+    def test_a_guide_that_only_spells_it_out_is_reported(self):
+        page = (ROOT / 'site' / 'docs-analytics.html').read_text(encoding='utf-8')
+        stripped = re.sub(r'<b class="ui"><svg class="mk".*?</svg> (Pull all)</b>', r'<b class="ui">\1</b>',
+                          page, flags=re.S)
+        self.assertNotEqual(stripped, page, 'the fixture no longer matches the guide')
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / 'site').mkdir()
+            (root / 'apps' / 'analytics').mkdir(parents=True)
+            (root / 'apps' / 'crm').mkdir(parents=True)
+            (root / 'site' / 'docs-analytics.html').write_text(stripped, encoding='utf-8')
+            (root / 'site' / 'docs-crm.html').write_text(
+                (ROOT / 'site' / 'docs-crm.html').read_text(encoding='utf-8'), encoding='utf-8')
+            for app in ('analytics', 'crm'):
+                (root / 'apps' / app / 'sidepanel.html').write_text(
+                    (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8'), encoding='utf-8')
+            oldr, olds = featurecheck.ROOT, featurecheck.SITE
+            featurecheck.ROOT, featurecheck.SITE = root, root / 'site'
+            try:
+                findings = []
+                featurecheck.guides_depict_marks(findings)
+            finally:
+                featurecheck.ROOT, featurecheck.SITE = oldr, olds
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn('Pull all', findings[0])
 
 
 if __name__ == '__main__':

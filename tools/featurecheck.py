@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SITE = ROOT / 'site'
 
 PAGES = {
     'crm': ['site/crm.html', 'site/docs-crm.html', 'site/index.html'],
@@ -78,6 +79,41 @@ def labels(app: str):
     return out
 
 
+MARKED = re.compile(r'<button([^>]*)>\s*<svg class="mk"')
+
+
+def marked_controls(app: str) -> set:
+    """The controls a panel draws as a mark rather than a word, by name."""
+    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    out = set()
+    for attrs in MARKED.findall(html):
+        m = re.search(r'aria-label="([^"]+)"', attrs)
+        if m:
+            out.add(m.group(1))
+    return out
+
+
+def guides_depict_marks(findings: list) -> None:
+    """A control drawn as a mark must be *drawn* in the guide, not spelled out.
+
+    Naming it is not enough, and that is the gap this closes: `featurecheck` reads `aria-label`, so
+    the name was on the site and the check was green while the guide told a reader to press a button
+    whose label the panel no longer shows. The person reading these pages is not a developer and has
+    no way to translate "Pull all" into a pair of down arrows.
+
+    Reported by the user, which is the failure — the panel and the page changed in the same session
+    and only one of them was looked at.
+    """
+    for app, page in (('crm', 'docs-crm.html'), ('analytics', 'docs-analytics.html')):
+        guide = (SITE / page).read_text(encoding='utf-8')
+        # every b.ui chip that carries a mark, and what it is called
+        depicted = {re.sub(r'<[^>]*>', '', chip).strip()
+                    for chip in re.findall(r'<b class="ui">((?:(?!</b>).)*?<svg class="mk".*?)</b>', guide, re.S)}
+        for name in sorted(marked_controls(app)):
+            if not any(name == d or d.endswith(name) for d in depicted):
+                findings.append(f'{page}: “{name}” is a mark in the panel and the guide only spells it out')
+
+
 def main() -> int:
     findings = []
     for app, pages in PAGES.items():
@@ -90,6 +126,8 @@ def main() -> int:
             if needle not in site:
                 findings.append(f'{app}: “{raw}” exists in the panel and is named nowhere on the site')
         print(f'  {app}: {len(found)} controls checked against {len(pages)} pages')
+
+    guides_depict_marks(findings)
 
     for f in findings:
         print('  ' + f)

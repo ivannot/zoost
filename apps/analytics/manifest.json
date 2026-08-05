@@ -4,7 +4,7 @@
   "version": "1.8.0",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
-  "description": "Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.",
+  "description": "Independent, unofficial: mirror a Zoho Analytics workspace to local files \u2014 views, columns, foreign keys, query-table SQL.",
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'"
   },

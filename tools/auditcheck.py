@@ -173,6 +173,31 @@ def absolutes_reviewed(findings: list, notes: list, accept: bool) -> None:
 
 # ---------------------------------------------------------------------------------------------------
 
+def description_repeats_the_name(findings: list, notes: list) -> None:
+    """The short description is read directly under the item name, so it must not restate it.
+
+    Both extensions opened theirs with a near-copy of their own name — "Independent workbench for Zoho
+    Analytics: …" under "Zoost — workbench for Zoho Analytics" — spending 40 of 132 characters saying
+    the line above again. It is visible in a Web Store search result and invisible in the dashboard,
+    which is why it survived: nobody reads the two fields together except a stranger searching.
+
+    The criterion is a run of three consecutive words shared with the name. Two is normal and
+    necessary — "Zoho Analytics" has to appear — and three is a sentence borrowing the title.
+    """
+    for mf in sorted((ROOT / 'apps').glob('*/manifest.json')):
+        m = json.loads(mf.read_text(encoding='utf-8'))
+        name = re.findall(r"[\w']+", m['name'].lower())
+        desc = re.findall(r"[\w']+", m['description'].lower())
+        runs = {' '.join(name[i:i + 3]) for i in range(len(name) - 2)}
+        for i in range(len(desc) - 2):
+            run = ' '.join(desc[i:i + 3])
+            if run in runs:
+                findings.append(f'apps/{mf.parent.name}/manifest.json: the short description repeats '
+                                f'the item name — «{run}» — under which it is read')
+                break
+    notes.append('short descriptions checked against their item name')
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--offline', action='store_true', help='skip the comparison against the live site')
@@ -185,6 +210,7 @@ def main() -> int:
     else:
         notes.append('live comparison skipped (--offline)')
     store_matches_manifest(findings, notes)
+    description_repeats_the_name(findings, notes)
     absolutes_reviewed(findings, notes, args.accept)
 
     print('auditcheck:')
