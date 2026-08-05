@@ -509,9 +509,14 @@ These all failed **silently**, with no console error. They are the expensive kin
   shipped scripts share one definition of `escA` — escaping `& < > " '` — so nobody has to work out
   which file they are in or which quote style an attribute used. Its own first version carried a list
   of identifiers "known to be ours", which let `n.name` through while reporting the number 42: the
-  criterion has to be a property of the value, never a list of names. Element *content* is not
-  checked — `escHtml` is right there and the shapes vary too much — and that limit is stated rather
-  than hidden. The exposure is narrow and real: MV3 blocks inline script, so what is left is a
+  criterion has to be a property of the value, never a list of names. Element *content* was audited
+  by hand across all 379 slots instead: 378 were numbers, our own literals, or markup this code had
+  just built, and **one** was real — a Zoho namespace written raw into a group header. A general
+  content checker was built to prevent a recurrence and then **discarded**: even after inferring
+  escaper aliases, HTML-typed variables and accumulator patterns per file, it gave 87 false
+  positives for that 1 finding, and a checker with that ratio is one nobody reads. The reason it
+  cannot do better is worth knowing before rebuilding it: "this string is already markup" is a fact
+  about intent, not about syntax. The exposure is narrow and real: MV3 blocks inline script, so what is left is a
   spoofed interface and an `<img src="https://…">` that fires on render, in a panel holding an API
   key.
 - **`esc()` is not attribute-safe (original note).** It escapes `& < >` only. A double quote inside an attribute

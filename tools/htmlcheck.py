@@ -77,6 +77,18 @@ def suspect(expr: str) -> bool:
     return not (LITERAL.match(e) or COMPARISON.match(e) or TERNARY_OF_LITERALS.match(e))
 
 
+# Element *content* is deliberately not checked here, and that is a conclusion rather than an
+# omission. It was audited once, by hand, across all 379 content interpolations in the shipped
+# scripts: 378 were numbers, our own literals, or markup this code had just built and whose own slots
+# this pass already checks. One was real — a Zoho namespace rendered raw as a group header in the
+# functions tree — and it is fixed and covered by a test.
+#
+# A general content checker was written to keep that finding from recurring, and then thrown away:
+# even after inferring escaper aliases, HTML-typed variables and accumulator patterns from each file,
+# it produced 87 false positives for that 1 real finding. A checker with that ratio is one nobody
+# reads, which is worse than none — and the honest reason it cannot do better is that "this string is
+# already markup" is a fact about intent, not about syntax. Do not rebuild it without a new idea.
+
 def main() -> int:
     findings = []
     for path in FILES:

@@ -613,7 +613,7 @@ function renderTree() {
     const list = byNs[ns].sort((a, b) => (treeSortDir === 'asc' ? 1 : -1) * labelOf(a).localeCompare(labelOf(b)));
     const isCol = collapsed.has(ns);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
-    g.innerHTML = `<span class="chev">▾</span><span>${ns}</span><span class="cnt">${list.length}</span>`;
+    g.innerHTML = `<span class="chev">▾</span><span>${escHtml(ns)}</span><span class="cnt">${list.length}</span>`;
     g.onclick = () => { isCol ? collapsed.delete(ns) : collapsed.add(ns); renderTree(); };
     tree.appendChild(g);
     if (isCol) return;

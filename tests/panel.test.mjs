@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load } from './slice.mjs';
+import { sliceFn, sliceConst, load, read } from './slice.mjs';
 
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
@@ -333,4 +333,13 @@ test('the slicer lifts exactly the constant, not the lines around it', () => {
   assert.equal(sliceConst('apps/crm/sidepanel.js', 'escA').trim().split('\n').length, 1);
   assert.equal(sliceConst('site/_worker.js', 'IS_VERSION').trim().split('\n').length, 1);
   assert.equal(sliceConst('apps/crm/content-bridge.js', 'CSRF_COOKIES').trim().split('\n').length, 4);
+});
+
+test('a namespace from Zoho cannot become markup in a group header', () => {
+  // The one real finding of the content audit: the functions tree grouped by namespace and wrote
+  // the namespace straight into innerHTML. The other 378 content slots were numbers, our own
+  // literals, or markup this code had just built.
+  const src = read('apps/crm/sidepanel.js');
+  assert.match(src, /<span>\$\{escHtml\(ns\)\}<\/span>/,
+    'the group header must escape the namespace it renders');
 });
