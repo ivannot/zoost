@@ -340,6 +340,71 @@ def classes_defined(findings: list) -> None:
                             f'in site.css or in this page, so it renders as nothing')
 
 
+def shared_prose_stays_shared(findings: list) -> None:
+    """Prose identical on two English pages must stay identical on their two translations.
+
+    The twin rule, one layer down and previously unchecked. `crm.html` and `analytics.html` say the
+    same twenty things word for word — how a release is built, what an attestation does not prove,
+    what happens when an undocumented interface breaks — because they are one product's claims stated
+    twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
+    against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».
+    Nothing was wrong in either, and that is the point — a reader moving between the two pages meets
+    the same sentence twice in two voices, and the twins stop reading as twins.
+
+    It pairs blocks up by **position**, which works because a translation is structurally the page it
+    was made from: same sections, same paragraphs, in the same order. Counting instead was the first
+    version, and it was demonstrably useless — the Italian pages happened to share one or two blocks
+    the English ones do not, and that spare was exactly enough slack to swallow a real drift when one
+    was reintroduced on purpose. A checker that goes quiet on the bug it was written for is worse
+    than none, so this one names the block.
+
+    Positions must therefore line up, and where a translation legitimately adds something — the note
+    saying the control names stay in English — the element carries `data-it-only` and is skipped.
+    That direction is the point, as everywhere else here: forgetting to declare an addition makes the
+    page *reported*, not silently exempt.
+    """
+    def blocks(p: Path) -> list:
+        s = p.read_text(encoding='utf-8')
+        if '</header>' not in s or '<footer>' not in s:
+            return []
+        starts = [s.index(t) for t in ('<section', '<main') if t in s]
+        s = s[min(starts) if starts else s.index('</header>'):s.index('<footer>')]
+        return [' '.join(re.sub(r'<[^>]+>', ' ', m.group(3)).split())
+                for m in re.finditer(r'<(p|h3|li|td)\b([^>]*)>(.*?)</\1>', s, re.S)
+                if 'data-it-only' not in m.group(2)]
+
+    pages = sorted(p.name for p in SITE.glob('*.html'))
+    aligned = {}
+    for name in pages:
+        it = SITE / 'it' / name
+        if not it.exists():
+            continue
+        en_b, it_b = blocks(SITE / name), blocks(it)
+        if len(en_b) != len(it_b):
+            findings.append(f'it/{name} has {len(it_b)} text blocks where {name} has {len(en_b)} — a '
+                            f'translation follows its original\'s structure; mark anything the Italian '
+                            f'page adds with data-it-only')
+            continue
+        aligned[name] = (en_b, it_b)
+
+    for a, b in ((x, y) for i, x in enumerate(sorted(aligned)) for y in sorted(aligned)[i + 1:]):
+        (ea, ia), (eb, ib) = aligned[a], aligned[b]
+        seen = set()
+        for i, text in enumerate(ea):
+            if len(text) < 40 or text in seen or text not in eb:
+                continue
+            seen.add(text)
+            j = eb.index(text)
+            if ia[i] != ib[j]:
+                # Show where they part, not the first 45 characters: the drift is usually a word deep
+                # into a long sentence, and two identical-looking prefixes name nothing.
+                k = next((n for n, (x, y) in enumerate(zip(ia[i], ib[j])) if x != y),
+                         min(len(ia[i]), len(ib[j])))
+                findings.append(f'it/{a} and it/{b} word the same claim two ways — {a} and {b} both '
+                                f'say "{text[:55]}…"; the Italian differs from …{ia[i][max(0, k - 20):k + 35]}… '
+                                f'/ …{ib[j][max(0, k - 20):k + 35]}…')
+
+
 def canonical_and_alternates(findings: list) -> None:
     """A page's canonical must be its own URL, and a translated pair must point at each other.
 
@@ -428,6 +493,7 @@ def main() -> int:
 
     store_field_limits(findings)
     classes_defined(findings)
+    shared_prose_stays_shared(findings)
     canonical_and_alternates(findings)
     translations_current(findings)
     txt_served_by_worker(findings)

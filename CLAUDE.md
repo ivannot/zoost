@@ -913,11 +913,31 @@ The **version badge is the one thing on a page written by script**, so a transla
 translate it by itself: `site.js` carries a small string table keyed on `<html lang>`, with English as
 the fallback for anything unlisted — a missing key shows English, never a key.
 
-**Four pages are translated and three deliberately are not.** `index`, `crm`, `analytics` and
-`how-to` have Italian versions; `privacy.html` stays English because it carries legal weight and a
-second wording is a second thing that can be argued about, the two guides stay English because the
-extension is, and `llms.txt` stays English because it is read by a machine and one version cannot
-disagree with itself. Every one of those is stated on the page rather than left to be noticed.
+**Six pages are translated and two deliberately are not.** `index`, `crm`, `analytics`, `how-to` and
+both guides have Italian versions; `privacy.html` stays English because it carries legal weight and a
+second wording is a second thing that can be argued about, and `llms.txt` stays English because it is
+read by a machine and one version cannot disagree with itself. Both are stated on the page rather
+than left to be noticed. **The control names inside a guide stay in English**, because the panel is —
+a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
+under each guide's title says so.
+
+**A translation is structurally its original, and that is what makes it checkable.** Same sections,
+same paragraphs, same order, so blocks pair up by position. `shared_prose_stays_shared()` uses that
+to enforce the twin rule one layer down: prose identical on `crm.html` and `analytics.html` must stay
+identical on `it/crm.html` and `it/analytics.html`. Eleven of twenty had drifted — «leggi ciò che
+viene spedito» against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio
+manuale». Nothing was *wrong* in either, which is the point: a reader moving between the two pages
+meets the same sentence twice in two voices, and the twins stop reading as twins.
+
+Where a translation legitimately adds something — the note saying the control names stay in English —
+the element carries **`data-it-only`**. Forgetting to declare an addition makes the page reported,
+never silently exempt, which is the direction every allow-list here runs in.
+
+**The first version of that check counted shared blocks per pair, and it was useless.** The Italian
+pages happened to share one block the English ones did not, and that single spare was exactly enough
+slack to swallow a real drift when one was reintroduced on purpose. It is kept as a test case. The
+rule it proves is the one already in this file: *a checker that goes quiet on the bug it was written
+for is worse than none* — and the only way to know is to break the thing deliberately.
 
 **The language switch is on every page of both languages, and its target is contextual.** A control
 that appears and disappears as you move through a site is the contextual *shape* this file already
@@ -1466,6 +1486,14 @@ and every **absolute claim** in outward prose listed *differentially* against `t
 a new "never" or "only" has to be read once, deliberately, before it ships — printing all 354 every
 run would be the checker nobody reads. `--accept` records them; `--offline` skips the network. Like
 `reachcheck.sh` it is **not** in `tests/run.sh`: it needs the live site.
+
+**It reads `site/it/` too, and the Italian words are in `ABSOLUTE` for the same reason the English
+ones are** — «non scrive mai su Zoho» is exactly the sentence that fell to one POST, and a page
+nobody's ledger reads is a page where an overstatement ships unread. It earned that immediately: the
+Italian CRM page had translated the heading **"Read-first, on purpose"** as *«In sola lettura, per
+scelta»* — promoting it to the absolute the English deliberately avoids, on a page whose whole
+posture is that "read-only" has already had to be walked back once. Reviewing a translation is not
+only asking whether it says the same thing; it is asking whether it says it **as weakly**.
 
 The first section exists because a review opened by asserting that the homepage and `llms.txt` served
 by zoost.it were still an earlier generation, "not a part: all of it". Five hashes refuted it in

@@ -611,6 +611,92 @@ class ClassesAreStyled(unittest.TestCase):
         self.assertEqual(findings, [], 'a class renders as nothing on a live page')
 
 
+class SharedProseStaysShared(unittest.TestCase):
+    """Prose identical on two English pages must stay identical on their two translations.
+
+    The twin rule one layer down. crm.html and analytics.html say the same twenty things word for
+    word; the Italian pages said eleven of them differently — «leggi ciò che viene spedito» against
+    «leggi quello che viene distribuito». Nothing wrong in either, and that is the point: a reader
+    moving between the two meets the same sentence twice in two voices.
+
+    The first version counted shared blocks per pair. It is kept here as a cautionary case: the
+    Italian pages happened to share more blocks than the English ones, and that spare swallowed a
+    drift reintroduced on purpose. Positional pairing replaced it.
+    """
+
+    LONG_A = 'This is a claim both English pages make, word for word, and it is long enough to count.'
+    LONG_B = 'A second shared claim, also stated identically on both pages, also comfortably long.'
+
+    def site(self, pages):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site' / 'it').mkdir(parents=True)
+        for name, body in pages.items():
+            (d / 'site' / name).write_text(
+                f'<header></header><section>{body}</section><footer></footer>', encoding='utf-8')
+        old = sitecheck.SITE
+        sitecheck.SITE = d / 'site'
+        try:
+            findings = []
+            sitecheck.shared_prose_stays_shared(findings)
+            return findings
+        finally:
+            sitecheck.SITE = old
+
+    def test_the_same_wording_on_both_translations_is_silent(self):
+        f = self.site({
+            'a.html': f'<p>{self.LONG_A}</p><p>only on a</p>',
+            'b.html': f'<p>only on b</p><p>{self.LONG_A}</p>',
+            'it/a.html': '<p>Una affermazione condivisa, abbastanza lunga da contare davvero.</p><p>solo su a</p>',
+            'it/b.html': '<p>solo su b</p><p>Una affermazione condivisa, abbastanza lunga da contare davvero.</p>',
+        })
+        self.assertEqual(f, [])
+
+    def test_two_wordings_of_one_shared_claim_are_reported(self):
+        f = self.site({
+            'a.html': f'<p>{self.LONG_A}</p><p>only on a</p>',
+            'b.html': f'<p>only on b</p><p>{self.LONG_A}</p>',
+            'it/a.html': '<p>Una affermazione condivisa, abbastanza lunga da contare davvero.</p><p>solo su a</p>',
+            'it/b.html': '<p>solo su b</p><p>Un asserto condiviso, sufficientemente lungo da contare.</p>',
+        })
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('word the same claim two ways', f[0])
+
+    def test_a_single_drift_is_not_absorbed_by_a_spare_shared_block(self):
+        # Exactly what defeated the counting version: the Italian pair shares a block the English
+        # pair does not, so the count stayed level while a real drift went through.
+        f = self.site({
+            'a.html': f'<p>{self.LONG_A}</p><p>{self.LONG_B}</p><p>only on a, and quite long as well</p>',
+            'b.html': f'<p>{self.LONG_A}</p><p>{self.LONG_B}</p><p>only on b, and quite long as well</p>',
+            'it/a.html': '<p>Prima affermazione condivisa, abbastanza lunga da contare davvero.</p>'
+                         '<p>Seconda affermazione condivisa, anche questa lunga abbastanza.</p>'
+                         '<p>Un blocco che le due pagine italiane condividono e le inglesi no.</p>',
+            'it/b.html': '<p>Prima affermazione condivisa, ma detta in tutt\'altro modo qui.</p>'
+                         '<p>Seconda affermazione condivisa, anche questa lunga abbastanza.</p>'
+                         '<p>Un blocco che le due pagine italiane condividono e le inglesi no.</p>',
+        })
+        self.assertEqual(len(f), 1, f)
+
+    def test_an_undeclared_structural_addition_is_reported(self):
+        f = self.site({
+            'a.html': f'<p>{self.LONG_A}</p>',
+            'it/a.html': f'<p>tradotto</p><p>e una nota in più</p>',
+        })
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('data-it-only', f[0])
+
+    def test_a_declared_addition_is_skipped(self):
+        f = self.site({
+            'a.html': f'<p>{self.LONG_A}</p>',
+            'it/a.html': f'<p>tradotto</p><p data-it-only>e una nota in più</p>',
+        })
+        self.assertEqual(f, [])
+
+    def test_the_site_is_consistent_today(self):
+        findings = []
+        sitecheck.shared_prose_stays_shared(findings)
+        self.assertEqual(findings, [], 'a shared claim is worded two ways in Italian')
+
+
 class CanonicalPointsAtItself(unittest.TestCase):
     """A canonical naming another page tells a search engine the two are one, and the other wins.
 

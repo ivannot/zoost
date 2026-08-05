@@ -38,8 +38,14 @@ BASE_URL = 'https://zoost.it'
 BASELINE = ROOT / 'tools' / 'absolutes.txt'
 
 # Cloudflare serves /foo.html at /foo, so the published path is not always the file name.
-def published_path(name: str) -> str:
-    return '/' if name == 'index.html' else ('/' + name[:-5] if name.endswith('.html') else '/' + name)
+def published_path(rel: str) -> str:
+    """Repository path under site/ → the URL it is served at. `crm.html` is served at `/crm`, and
+    `it/crm.html` at `/it/crm` — the extension is dropped at every level, not only the top one."""
+    if rel == 'index.html':
+        return '/'
+    if rel.endswith('/index.html'):
+        return '/' + rel[:-len('index.html')]
+    return '/' + (rel[:-5] if rel.endswith('.html') else rel)
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -51,9 +57,12 @@ def live_matches_repo(findings: list, notes: list) -> None:
     nothing in the deploy reports it, and the site looks fine because it *is* a real page, just not
     the current one. This is the check that turns a long argument into one line.
     """
-    published = sorted([p for p in SITE.glob('*.html')] + [p for p in SITE.glob('*.txt')])
+    # rglob, not glob: site/it/ is published prose like any other, and a check that stops at the
+    # top level would compare six pages and silently ignore six more. The path is derived from the
+    # file's position, so a third language costs nothing here.
+    published = sorted([p for p in SITE.rglob('*.html')] + [p for p in SITE.rglob('*.txt')])
     for p in published:
-        url = BASE_URL + published_path(p.name)
+        url = BASE_URL + published_path(p.relative_to(SITE).as_posix())
         try:
             out = subprocess.run(['curl', '-sS', '--max-time', '20', '-A',
                                   'zoost auditcheck (+https://zoost.it)', url],
@@ -121,8 +130,13 @@ def store_matches_manifest(findings: list, notes: list) -> None:
 # 3. Absolute claims, presented — never judged
 # ---------------------------------------------------------------------------------------------------
 
-ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of)\b', re.I)
-OUTWARD = ['site/*.html', 'site/*.txt', 'README.md', 'store/*/store-listing.md']
+# The Italian words are here for the same reason as the English ones, not as a courtesy: an absolute
+# invites a literal check whatever language it is written in, and «non scrive mai su Zoho» is exactly
+# the sentence that fell to one POST. A page nobody's ledger reads is a page where an overstatement
+# ships unread.
+ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
+                      r'|mai|sempre|nessun[ao]?|niente|soltanto|soltanto|unic[ao]|ogni|tutt[eio])\b', re.I)
+OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md']
 
 
 def sentences(path: Path) -> list:

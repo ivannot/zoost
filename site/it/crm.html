@@ -95,8 +95,8 @@
       <a class="btn" href="#start">Come funziona</a>
       <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" style="margin-top:22px">Questa pagina è in italiano. Il resto del sito — la guida, la privacy
-      policy e la mappa per gli assistenti — è in inglese, e <b>l'estensione stessa è in inglese</b>: i nomi dei
+    <p class="note" style="margin-top:22px">Questa pagina è in italiano, e così la guida. Restano in inglese la
+      privacy policy e la mappa per gli assistenti, e <b>l'estensione stessa è in inglese</b>: i nomi dei
       comandi che leggi qui (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli che troverai nel pannello,
       non traduzioni. La versione inglese di questa pagina è <a href="/crm.html">qui</a>.</p>
   </div>
@@ -121,7 +121,7 @@
           un unico documento da consegnare a chi l'estensione non ce l'ha.</p>
       </div>
       <div>
-        <h3>In sola lettura, per scelta</h3>
+        <h3>Prima si legge, per scelta</h3>
         <p>Zoost non sostituisce l'editor di Zoho. Continui a scrivere dove Zoho compila e valida.
           Ti dà il versionamento, la comprensione e l'audit che l'editor non ti dà.</p>
       </div>
@@ -148,7 +148,7 @@
     <div class="grid">
 
       <div class="card">
-        <h3>Mirror locale, compatibile con Git</h3>
+        <h3>Mirror locale, fatto per Git</h3>
         <ul>
           <li>Scarica ogni funzione Deluge come sorgente <code>.dg</code> più i metadati a fianco.</li>
           <li><span class="k">Sincronizzazione automatica al salvataggio</span>: salvi in Zoho, il file locale segue.</li>
@@ -200,7 +200,7 @@
           <li>Moduli come tabelle, chiavi esterne come frecce. Pan, zoom, adatta, salva in PDF.</li>
           <li>Metti a fuoco un modulo qualsiasi e cammina nel grafo cliccando; profondità regolabile.</li>
           <li><span class="k">Modalità relazioni</span>: i moduli arretrano, i nomi delle relazioni passano in primo piano.</li>
-          <li>Clicca un arco per isolare una relazione e spingere indietro tutto il resto.</li>
+          <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto.</li>
           <li>Spaziatura, dispersione e dimensione delle etichette sono slider dal vivo — e c'è un ambito
             tutti-i-moduli per le stampe da parete.</li>
         </ul>
@@ -300,24 +300,24 @@
       </div>
       <div>
         <h3>Il che vuol dire che si può rompere</h3>
-        <p>Quelle interfacce non portano nessuna promessa di compatibilità. Zoho può cambiarne una senza preavviso
-          e una funzionalità può smettere di funzionare da un giorno all'altro. Non è un rischio ipotetico da
-          scoprire più avanti: è la fondazione su cui lo strumento sta in piedi, e devi saperlo prima di
-          costruirci sopra un processo.</p>
+        <p>Quelle interfacce non portano nessuna promessa di compatibilità. Zoho può cambiarne una senza preavviso e
+          una funzionalità può smettere di funzionare da un giorno all'altro. Non è un rischio ipotetico da scoprire
+          più avanti: è la fondazione su cui lo strumento sta in piedi, ed è giusto saperlo prima di costruirci
+          intorno un processo.</p>
       </div>
       <div>
         <h3>Cosa è promesso, e cosa no</h3>
-        <p>Niente è garantito — lo dice la licenza e lo dice questa pagina. Quello che è offerto è l'impegno: una
-          rottura verrà guardata e sistemata dove sistemarla è possibile. A volte non lo sarà, e allora la
-          funzionalità dirà chiaramente che non può fare quella cosa invece di tirare a indovinare. Il mirror che
+        <p>Niente è garantito — lo dice la licenza e lo dice questa pagina. Quello che viene offerto è impegno: se
+          qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non lo sarà, e allora la
+          funzionalità dirà chiaramente che quella cosa non la può fare, invece di tirare a indovinare. Il mirror che
           hai già sul disco continua a funzionare comunque: sono file ordinari.</p>
       </div>
       <div>
         <h3>Leggilo prima di fidarti</h3>
-        <p>Tutto quanto sopra è visibile in una ventina di file di JavaScript semplice. Ogni chiamata di rete che
-          l'estensione può fare è lì dentro, e fra ciò che è pubblicato e ciò che leggi non c'è nessun bundler né
-          minificatore. Se qualcosa di tutto questo è squalificante per la tua organizzazione, è meglio scoprirlo
-          qui che dopo averlo installato.</p>
+        <p>Tutto quanto sopra è visibile in una ventina di file di JavaScript in chiaro. Ogni chiamata di rete che
+          l'estensione può fare sta lì dentro, e fra quello che è pubblicato e quello che leggi non c'è nessun
+          bundler né minificatore. Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio
+          scoprirlo qui che dopo averla installata.</p>
       </div>
     </div>
   </div>
@@ -328,36 +328,37 @@
     <h2>Come verificare che stiamo dicendo la verità</h2>
     <div class="why">
       <div>
-        <h3>Leggi ciò che viene spedito</h3>
-        <p>Una ventina di file di JavaScript e HTML semplici. Nessun bundler, nessun minificatore, nessuna
+        <h3>Leggi quello che viene distribuito</h3>
+        <p>Una ventina di file di JavaScript e HTML in chiaro. Nessun bundler, nessun minificatore, nessuna
           dipendenza — quello che scarichi è quello che gira, e non c'è nessuna fase di build che possa mettere nel
-          pacchetto qualcosa che non è nel repository. Puoi leggerlo tutto in un pomeriggio.</p>
+          pacchetto qualcosa che non è nel repository. Si legge tutto in un pomeriggio.</p>
       </div>
       <div>
         <h3>Costruito in pubblico, non su un portatile</h3>
-        <p>Pubblicare un tag di rilascio fa sì che GitHub prenda quel commit, lo costruisca due volte per provare
-          che il risultato è identico byte per byte, e firmi una dichiarazione di provenienza per l'archivio.
-          L'archivio allegato alla Release <em>è</em> il file inviato allo Store. Il log della build è pubblico.</p>
+        <p>Pubblicare un tag di release fa sì che GitHub faccia il checkout di quel commit, lo costruisca due volte
+          per dimostrare che il risultato è identico byte per byte, e firmi una dichiarazione di provenienza per
+          l'archivio. L'archivio allegato alla Release <em>è</em> il file inviato allo Store. Il log della build è
+          pubblico.</p>
       </div>
       <div>
         <h3>Verificalo tu</h3>
         <p><code>gh attestation verify &lt;file&gt; --repo ivannot/zoost</code> chiede a GitHub se ha costruito
           esattamente quell'archivio. <code>tools/verify.sh</code> lo ricostruisce sulla tua macchina e confronta.
-          Nessuno dei due ti chiede di fidarti.</p>
+          Nessuno dei due ti chiede di fidarti di noi.</p>
       </div>
       <div>
-        <h3>Cosa nulla di tutto ciò dimostra</h3>
-        <p>Il caricamento sullo Store è un passo manuale, quindi nessuna firma lo copre: ciò che è dimostrato è
-          come l'archivio di rilascio è stato costruito. Google inoltre ri-impacchetta e ri-firma ogni estensione,
-          quindi ciò che serve non è identico byte per byte a ciò che è stato caricato. Entrambe le cose si
+        <h3>Cosa non dimostra niente di tutto questo</h3>
+        <p>Il caricamento sullo Store è un passaggio manuale, quindi nessuna firma lo copre: quello che è dimostrato
+          è come è stato costruito l'archivio della release. Google poi reimpacchetta e rifirma ogni estensione,
+          quindi quello che serve non è identico byte per byte a quello che è stato caricato. Entrambe le cose si
           chiudono all'altro capo, confrontando l'estensione installata con il tag. E un'attestazione dice chi ha
-          costruito un file, mai che il file sia buono — quella parte resta leggere il codice.</p>
+          costruito un file, mai che quel file è buono — quella parte resta leggere il codice.</p>
       </div>
     </div>
-    <p class="note" style="margin-top:24px">Il registro di ogni versione inviata — commit, tag e lo SHA-256 del
+    <p class="note" style="margin-top:24px">Il registro di ogni versione inviata — commit, tag e SHA-256 del
       pacchetto caricato — è in
-      <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, comprese le due voci che
-      dichiara di <em>non</em> poter verificare, e il perché.</p>
+      <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, incluse le due righe che il
+      registro stesso dichiara di <em>non</em> poter verificare, e perché.</p>
   </div>
 </section>
 
@@ -373,8 +374,8 @@
         l'org. Tutto il resto funziona anche senza.</li>
       <li>Esplora: segui una chiamata, apri il grafo, lancia l'audit di salute, oppure esporta tutto.</li>
     </ol>
-    <p class="note">Guida completa, inclusa la configurazione della chiave API e la risoluzione dei problemi (in inglese):
-      <a href="/docs-crm.html"><b>How to use Zoost</b></a>.</p>
+    <p class="note">Guida completa, inclusa la configurazione della chiave API e la risoluzione dei problemi:
+      <a href="/it/docs-crm.html"><b>Come si usa Zoost CRM</b></a>.</p>
     <p class="note">Devi essere autenticato a Zoho CRM nello stesso browser. Zoost usa la tua sessione e i tuoi
       permessi esistenti — vede esattamente quello che vedi tu, e niente di più.</p>
     <p class="note warn">L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del
