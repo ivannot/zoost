@@ -9,6 +9,10 @@
 .Spotlight-V100
 .Trashes
 
+# Python bytecode — the checkers are scripts, and their .pyc is a build artefact of running them
+__pycache__/
+*.pyc
+
 # Editors
 .vscode/
 .idea/
