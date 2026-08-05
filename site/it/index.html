@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="it">
+<head>
+<!-- translated-from: site/index.html sha256:669fb978bdd64e33 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zoost — workbench per i prodotti Zoho su cui hai costruito</title>
+<meta name="description" content="Una famiglia di estensioni Chrome, una per prodotto Zoho. Rispecchiano quello che hai costruito in file locali, poi ci aggiungono navigazione, diagrammi, ricerca, audit ed export. Nessuna scrive su Zoho.">
+<link rel="canonical" href="https://zoost.it/it/index.html">
+<link rel="alternate" hreflang="en" href="https://zoost.it/">
+<link rel="alternate" hreflang="it" href="https://zoost.it/it/index.html">
+<link rel="alternate" hreflang="x-default" href="https://zoost.it/">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0d121c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Zoost">
+<meta property="og:description" content="Workbench per i prodotti Zoho su cui hai costruito. In sola lettura, file locali, tutto nel browser.">
+<meta property="og:url" content="https://zoost.it/it/index.html">
+<meta property="og:image" content="https://zoost.it/icon-512.png">
+<meta name="author" content="Ivan Notaristefano">
+<link rel="stylesheet" href="/site.css">
+<style>
+  /* landing-page specific — shared base is in site.css */
+  .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+  .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+  .hero h1 span{color:var(--muted)}
+  .hero p.lead{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:64ch;margin:0 0 28px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-block;text-decoration:none;font:600 14.5px var(--sans);padding:11px 20px;
+    border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a}
+  .btn:hover{border-color:var(--sel)}
+  .btn.p{background:var(--sel);border-color:var(--sel);color:#fff}
+  .btn.p:hover{background:#6d7f9e}
+  .meta{font:12.5px var(--mono);color:var(--muted)}
+
+  section{padding:52px 0;border-bottom:1px solid var(--line)}
+  section h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+    margin:0 0 22px;font-weight:600}
+  h3{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+  .card li{margin:5px 0}
+  .card code,p code,li code{font:12.5px var(--mono);color:var(--teal);background:#0f1826;
+    border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .k{color:var(--ink);font-weight:600}
+
+  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+  .why h3{font-size:15.5px}
+  .why p{margin:0;color:var(--muted);font-size:14.5px}
+
+  .steps{counter-reset:s;list-style:none;margin:0;padding:0}
+  .steps li{counter-increment:s;position:relative;padding:0 0 18px 42px;color:var(--muted);font-size:15px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:26px;height:26px;
+    border-radius:50%;background:#22304a;border:1px solid var(--border);color:var(--ink);
+    font:600 12.5px var(--mono);display:flex;align-items:center;justify-content:center}
+  .steps b{color:var(--ink)}
+
+  .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
+    max-width:70ch}
+  .note.warn{border-color:var(--amber);color:#e2c98a}
+  .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+  .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
+  .prod .ph{display:flex;align-items:center;gap:12px}
+  .prod .ph img{width:38px;height:38px;border-radius:9px}
+  .prod .ph h3{margin:0}
+  .prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
+    padding:2px 9px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+  .prod .st.live{color:#83d8c6;border-color:#2f6f62}
+  .prod .st.wip{color:#f0a44a;border-color:#6b4a1c}
+  .prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+  .prod .plinks a{color:var(--sel);text-decoration:none;font-weight:600}
+  .prod .plinks a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/it/index.html" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <nav>
+      <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
+      <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <a href="/it/how-to.html">Come si usa</a>
+      <a href="/privacy.html">Privacy</a>
+      <a class="ncta" href="/" hreflang="en" lang="en" title="This page in English">English</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>L'hai costruito tu. È tuo.<br><span>E la piattaforma non ti dà nessun modo di vederlo per intero.</span></h1>
+    <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per prodotto Zoho. Ognuna rispecchia
+      quello che <em>tu</em> hai costruito dentro quel prodotto — codice, schema, relazioni, dipendenze — in file
+      ordinari sul tuo disco, e su quel mirror costruisce navigazione, diagrammi, ricerca, audit ed export.
+      Nessuna di loro chiama un endpoint di scrittura: leggono definizioni e metadati, mai i record. Tutto gira nel
+      tuo browser.</p>
+    <div class="cta">
+      <a class="btn p" href="#products">Guarda i due prodotti</a>
+      <a class="btn" href="#shared">Cosa hanno in comune</a>
+      <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
+    </div>
+    <p class="note" style="margin-top:22px">Questa pagina è in italiano. Le guide complete, la privacy policy e la
+      mappa per gli assistenti sono in inglese, e <b>l'estensione stessa è in inglese</b>: i nomi dei comandi che
+      leggi qui sono quelli che troverai nel pannello, non traduzioni.
+      <a href="/">English version</a>.</p>
+  </div>
+</div>
+
+<section id="products">
+  <div class="wrap">
+    <h2>I workbench</h2>
+    <div class="prod">
+
+      <div class="card">
+        <div class="ph">
+          <img src="/crm-192.png" alt="">
+          <h3>Zoost — workbench for Zoho CRM</h3>
+          <span class="st live">sul Chrome Web Store</span>
+        </div>
+        <p>Le funzioni Deluge come file versionabili, la ricerca full-text su tutte insieme, il grafo di chi chiama
+          cosa, lo schema dei moduli con i layout, gli API name delle related list che devi sempre andare a
+          ricercare, i workflow, le schedulazioni e il catalogo delle connessioni.</p>
+        <div class="plinks">
+          <a href="/it/crm.html">Cosa fa →</a>
+          <a href="/docs-crm.html">Come si usa →</a>
+          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa ↗</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ph">
+          <img src="/analytics-192.png" alt="">
+          <h3>Zoost — workbench for Zoho Analytics</h3>
+          <span class="st wip" data-store="analytics">inviata, in revisione</span>
+        </div>
+        <p>Ogni vista di un workspace con tipo, cartella e date, le colonne e le chiavi esterne di ogni tabella,
+          la SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa
+          non dipende più da niente.</p>
+        <div class="plinks">
+          <a href="/it/analytics.html">Cosa fa →</a>
+          <a href="/docs-analytics.html">Come si usa →</a>
+          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge" data-install="analytics" hidden>Installa ↗</a>
+        </div>
+      </div>
+
+    </div>
+    <p class="note" style="margin-top:22px">Gratuiti, open source, ognuno con la sua guida scritta.
+      <span data-install="analytics" hidden>Entrambi sono sul Chrome Web Store.</span>
+      <span data-pending="analytics">Zoost CRM è sul Chrome Web Store; Zoost Analytics è stata inviata ed è in revisione.</span></p>
+  </div>
+</section>
+
+<section id="shared">
+  <div class="wrap">
+    <h2>Cosa hanno in comune tutti gli Zoost</h2>
+    <div class="why">
+      <div>
+        <h3>In sola lettura, per scelta</h3>
+        <p>Nessuno Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho — né una funzione, né una
+          vista, né un'impostazione. È una proprietà di quali endpoint chiamiamo, non qualcosa che il browser
+          impone, e ogni chiamata che l'una o l'altra può fare sta in una ventina di file leggibili. Zoho compila e
+          valida lato server, e possedere un percorso di scrittura vorrebbe dire possedere deployment, conflitti e
+          rollback — un altro prodotto. Tu continui a lavorare dove già lavori.</p>
+      </div>
+      <div>
+        <h3>File ordinari, il tuo Git</h3>
+        <p>Il mirror è fatto di file normali in una cartella che scegli tu: sorgente, JSON, SQL. Mettilo sotto
+          controllo di versione e <code>git diff</code> risponde a «cosa è cambiato il mese scorso» — una domanda a
+          cui nessuno dei due prodotti sa rispondere su sé stesso.</p>
+      </div>
+      <div>
+        <h3>Tutto insieme, in una volta</h3>
+        <p>Entrambe le piattaforme ti mostrano un oggetto per volta. Entrambi gli Zoost ti mostrano la forma: cosa
+          dipende da cosa, cosa non dipende da niente, dove un nome è referenziato, e un unico documento da
+          consegnare a chi l'estensione non ce l'ha.</p>
+      </div>
+      <div>
+        <h3>Numeri, mai verdetti</h3>
+        <p>Conteggi ed elenchi, senza soglie e senza punteggi. Una funzione lunga può essere una pulita tabella di
+          conversione; una vista che nessuno legge può alimentare un export schedulato. Ogni cifra dichiara cosa
+          <em>non</em> copre, lì accanto, e il giudizio resta tuo.</p>
+      </div>
+      <div>
+        <h3>Niente esce dalla macchina</h3>
+        <p>Nessun server, nessun account, nessuna telemetria. Le estensioni usano la sessione Zoho con cui sei già
+          autenticato e scrivono in una cartella che scegli tu. L'unica eccezione è l'assistente AI opzionale — e
+          solo se lo configuri, con la tua chiave, e manda soltanto al provider che hai scelto.</p>
+      </div>
+      <div>
+        <h3>Un'interfaccia sola, imparata una volta</h3>
+        <p>Sono gemelli. La barra dei workspace, la protezione sull'ambiente, le finestre di dialogo, i colori dei
+          pulsanti, gli export e i controlli del diagramma sono la stessa cosa in entrambi, parola per parola. Usi
+          uno e sai già usare l'altro.</p>
+      </div>
+      <div>
+        <h3>O certi, o fermi</h3>
+        <p>Nessun ciclo di tentativi contro un'ipotesi, nessun aggancio a etichette tradotte, nessun click
+          sintetico dentro una pagina che non è nostra. Dove un percorso non è certo, la funzionalità si ferma con
+          un messaggio preciso. Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento
+          noto, un solo tentativo in più su un errore davvero transitorio, e il recupero tramite un'azione che è
+          stata <em>misurata</em> — il token CSRF si legge da un elenco noto di cookie invece che dedurlo. Quello
+          che uno Zoost non può sapere, dice che non lo può sapere.</p>
+      </div>
+      <div>
+        <h3>Verificabile, non solo dichiarato</h3>
+        <p>Le release le costruisce GitHub a partire da un commit taggato, due volte per dimostrare che i byte sono
+          riproducibili, e le firma con una dichiarazione di provenienza. L'archivio allegato alla Release è il file
+          inviato allo Store — e un comando ti dice se è vero, senza chiederti di crederci. Il registro di ogni
+          versione inviata è in
+          <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, la build è
+          <a href="https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml">breve e non fa niente di astuto</a>,
+          e <a href="/llms.txt">llms.txt</a> mappa l'intera catena per chiunque — o qualunque cosa — debba
+          valutarla.</p>
+      </div>
+      <div>
+        <h3>Aperto, e tuo da forkare</h3>
+        <p>Apache-2.0, nessuna fase di build, nessuna dipendenza, nessun framework. Il sorgente è leggibile da
+          chiunque stia per dargli accesso ai propri dati — che è poi il punto, visto che è esattamente quello che
+          ti si sta chiedendo di fare.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:26px">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da
+      Claude — “Claudio”, per me — su design, codice e testi. Le decisioni, e la responsabilità del risultato,
+      sono mie.</p>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <h2>Come si comincia</h2>
+    <ol class="steps">
+      <li>Scegli il prodotto che ti interessa: <b><a href="/it/crm.html">Zoost — workbench for Zoho CRM</a></b> oppure
+        <b><a href="/it/analytics.html">Zoost — workbench for Zoho Analytics</a></b>.</li>
+      <li><b>Installa l'estensione</b> — dal Chrome Web Store per Zoho CRM. Zoost Analytics è stata inviata ed è in
+        revisione; finché non è pubblicata la puoi caricare da sorgente.</li>
+      <li><b>Scegli una sola cartella di lavoro.</b> Ogni Zoost ci tiene la propria sottocartella, così una cartella
+        sola li serve tutti e i due non si incontrano mai.</li>
+      <li><b>Apri la scheda Zoho</b> che vuoi rispecchiare, crea il workspace e fai il pull. Poi, se vuoi,
+        <code>git init</code>: da oggi in poi hai una storia.</li>
+    </ol>
+    <p class="note warn" style="margin-top:8px">Nessuno Zoost chiama un endpoint che scrive su Zoho, quindi il peggio
+      che può fare ai tuoi dati è niente — è una proprietà di quali endpoint chiamiamo, e ognuno di essi sta in file
+      che puoi leggere.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/it/crm.html">Zoost — workbench for Zoho CRM</a><span class="sep">·</span>
+      <a href="/it/analytics.html">Zoost — workbench for Zoho Analytics</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
+      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
+      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Creato da Ivan Notaristefano (con il supporto di Claudio). Copyright <span class="cyear">2026</span>. Distribuito sotto licenza Apache 2.0 e fornito
+      <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
+      alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
+      fornire supporto o manutenzione. In caso di divergenza, fa fede la
+      <a href="/">versione inglese</a>.
+    </p>
+    <p class="legal">
+      Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
+      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+</body>
+</html>

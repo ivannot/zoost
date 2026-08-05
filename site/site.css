@@ -17,6 +17,12 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
 a{color:var(--teal)}
 .wrap{max-width:900px;margin:0 auto;padding:0 22px}
+/* `hidden` is only a UA rule, so any author `display` outranks it and the element stays on screen.
+   Both extensions state this on every page they ship after it shipped twice there; the site never
+   did, and `.btn{display:inline-block}` was quietly beating it — the Analytics page showed the
+   install button *and* the "in review" alternative at the same time, live, for as long as the pair
+   has existed. site.js toggles `el.hidden` and had no way to know it was doing nothing. */
+[hidden]{display:none!important}
 
 /* ---- header (identical on every page) ---- */
 header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
@@ -26,7 +32,7 @@ header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
 header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 header .brand:hover{opacity:.85}
 header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
-header nav a{color:var(--muted);text-decoration:none}
+header nav a{color:var(--muted);text-decoration:none;white-space:nowrap}
 header nav a:hover{color:var(--ink)}
 header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
@@ -81,6 +87,18 @@ main table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
 main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
 main th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 main td.k{white-space:nowrap;color:var(--ink)}
+/* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
+   used the same class names with nothing behind them — so /how-to.html's two product cards and the
+   guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note
+   defect already recorded: a class borrowed from the page that defines it. Scoped to main, which is
+   exactly the set of pages that lack an inline copy, so no landing page changes. */
+main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
+main .note.warn{border-color:#6b4a1c;color:#e2c98a}
+main .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin:22px 0}
+main .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
+main .card h3{margin-top:0}
+main .card p:last-child{margin-bottom:0}
+main .meta{font:12.5px var(--mono);color:var(--muted)}
 
 /* ---- footer (identical on every page) ---- */
 footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);font-size:13px}

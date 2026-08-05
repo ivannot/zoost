@@ -253,7 +253,7 @@ f0ee5fa70b395734  site/privacy.html: Local folder (File System Access) Zoho Anal
 2e2f3d9316fc3f76  site/privacy.html: Never the rows inside your tables — the extension does not read them, and the endpoints that return cell values are deliberately not called.
 76f310d8d11e0bfb  site/privacy.html: No other destination is possible: the extension is granted network access to those two origins and to your Zoho product, and to nothing else.
 4c424647d30b07f5  site/privacy.html: Nothing is ever sent to the developer.
-d7937cf16b0db74a  site/privacy.html: Privacy policy — Zoost Zoost Zoost — workbench for Zoho CRM Zoost CRM Zoost — workbench for Zoho Analytics Zoost Analytics How to Privacy Privacy policy Zoost — Chrome extensions · Last updated: 5 August 2026 The short version Zoost collects nothing.
+4a27c4e119e54073  site/privacy.html: Privacy policy — Zoost Zoost Zoost — workbench for Zoho CRM Zoost CRM Zoost — workbench for Zoho Analytics Zoost Analytics How to Privacy Italiano Privacy policy Zoost — Chrome extensions · Last updated: 5 August 2026 The short version Zoost collects nothing.
 eb6722150f64170a  site/privacy.html: So you do not have to re-pick the folder every time.
 ce909525c8373247  site/privacy.html: The Zoho CRM workbench lists crm.zoho.* and crmsandbox.zoho.* — and their crm.zohocloud.ca and crmsandbox.zohocloud.ca counterparts — which it reads, and one.zoho.* with one.zohocloud.ca , which it does not read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is.
 80d953033aeec226  site/privacy.html: The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.

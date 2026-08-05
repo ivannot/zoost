@@ -3,8 +3,17 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://zoost.it/</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/index.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/index.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/index.html"/>
   </url>
   <url>
     <loc>https://zoost.it/crm.html</loc>
@@ -22,8 +31,17 @@
   </url>
   <url>
     <loc>https://zoost.it/analytics.html</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/analytics.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/analytics.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/analytics.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/analytics.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/analytics.html"/>
   </url>
   <url>
     <loc>https://zoost.it/llms.txt</loc>
@@ -32,6 +50,15 @@
   <url>
     <loc>https://zoost.it/how-to.html</loc>
     <changefreq>monthly</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/how-to.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/how-to.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/how-to.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/how-to.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/how-to.html"/>
   </url>
   <url>
     <loc>https://zoost.it/docs-crm.html</loc>

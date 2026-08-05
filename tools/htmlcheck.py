@@ -108,11 +108,21 @@ def display_override(path) -> list:
     "which element got it wrong" but "does this page carry the rule at all". That is deliberate: a
     per-element check would go quiet the moment someone adds a `display` to a class that did not have
     one, which is exactly how it happened.
+
+    It covers the site as well as the panels, because the third time was there: `.btn` is
+    `display:inline-block`, so the Analytics page's install button and its "in review" alternative
+    were **both** on screen on the live site, whichever one site.js had just hidden. The check had
+    read only inline <style>, which for a page that links a stylesheet is most of its CSS missing —
+    so any linked sheet is read too.
     """
     src = path.read_text(encoding='utf-8')
     if not HIDDEN_EL.search(src):
         return []
     css = ' '.join(m.group(1) for m in STYLE_BLOCK.finditer(src))
+    for href in re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', src):
+        sheet = (ROOT / 'site' / href.lstrip('/')) if href.startswith('/') else (path.parent / href)
+        if sheet.is_file():
+            css += ' ' + sheet.read_text(encoding='utf-8')
     if re.search(r'\[hidden\]\s*\{[^}]*display\s*:\s*none', css):
         return []
     return [f'{path.name}: uses the hidden attribute but never states [hidden]{{display:none}} — '
@@ -155,6 +165,7 @@ def main() -> int:
                 findings.append(f'{rel}:{line}: {attr}="${{{" ".join(expr.split())[:60]}}}" is not attribute-escaped')
 
     pages = sorted(p for p in (ROOT / 'apps').rglob('*.html'))
+    pages += sorted((ROOT / 'site').rglob('*.html'))
     for path in pages:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in display_override(path)]
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in duplicate_attributes(path)]

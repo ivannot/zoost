@@ -63,20 +63,15 @@ contains the mistakes already made: this one grew a line after each of ten repor
 was still incomplete every time, because the next drift was always in a dimension nobody had thought
 to list. Run this instead — it compares the two panels rather than remembering to:
 
-A class used but never defined renders as nothing, and nothing is hard to see. This finds them:
-
-```bash
-# every class the page uses, minus every class anything styles
-python3 - <<'EOF'
-import re, glob
-css = ''.join(open(f, encoding='utf-8').read() for f in glob.glob('site/*.css') + glob.glob('site/*.html'))
-for f in sorted(glob.glob('site/*.html')):
-    s = open(f, encoding='utf-8').read()
-    used = {c for m in re.findall(r'class="([^"]*)"', s) for c in m.split()}
-    missing = sorted(c for c in used if f'.{c}' not in css)
-    if missing: print(f, missing)
-EOF
-```
+A class used but never defined renders as nothing, and nothing is hard to see. That check is now
+inside `sitecheck.py` (`classes_defined`), and the one-liner that used to live here is worth
+recording as a failure: it concatenated `site.css` with **every** page's inline `<style>` and then
+asked each page separately, so a class defined in one page's block read as defined on all of them —
+which is exactly the defect it existed to catch. It printed nothing for months while `/how-to.html`
+rendered its two product cards, and both guides their callouts, as unstyled paragraphs. `.card`,
+`.cards`, `.note` and `.meta` now live in `site.css`, scoped to `main` so no landing page changes.
+Per page, the CSS is `site.css` plus that page's own block, and the class name must end at a
+boundary — the substring test counted `.cards` as a definition of `.card`.
 
 The site has its own version of the same problem and its own checker. The navigation grew a
 different *shape* on two of six pages — a `<span>` holding two sub-links where the rest had one
@@ -664,6 +659,13 @@ These all failed **silently**, with no console error. They are the expensive kin
   `htmlcheck.py` reports a page that uses the attribute without carrying the rule. The check is
   deliberately per *page* and not per element: a per-element version goes quiet the moment someone adds
   a `display` to a class that did not have one, which is exactly how this happened.
+  **And then it shipped a third time, on the site, where the check could not see it.** `.btn` is
+  `display:inline-block`, so `analytics.html` showed *both* «Get it on the Chrome Web Store» and its
+  «in review» alternative — live, for as long as the pair has existed — while `site.js` set
+  `el.hidden` on one of them and had no way to know it was doing nothing. Note the shape: the fix was
+  applied wherever the bug had been *seen* (`apps/`) and nowhere else, and `display_override()` read
+  only inline `<style>`, which for a page that links a stylesheet is most of its CSS missing. It reads
+  linked sheets now, `site.css` states the rule once, and the site's pages are in the checked set.
 - **`requestPermission()` needs a user gesture, so it cannot live inside the agent loop.** Chrome lets a
   File System Access permission lapse after inactivity, and the AI path reads the mirror directly — the
   seed index, the tools, the graph — while being the one path that never re-requested it first. The read
@@ -910,6 +912,26 @@ find, and the Italian page says so in a line under the hero rather than leaving 
 The **version badge is the one thing on a page written by script**, so a translated page cannot
 translate it by itself: `site.js` carries a small string table keyed on `<html lang>`, with English as
 the fallback for anything unlisted — a missing key shows English, never a key.
+
+**Four pages are translated and three deliberately are not.** `index`, `crm`, `analytics` and
+`how-to` have Italian versions; `privacy.html` stays English because it carries legal weight and a
+second wording is a second thing that can be argued about, the two guides stay English because the
+extension is, and `llms.txt` stays English because it is read by a machine and one version cannot
+disagree with itself. Every one of those is stated on the page rather than left to be noticed.
+
+**The language switch is on every page of both languages, and its target is contextual.** A control
+that appears and disappears as you move through a site is the contextual *shape* this file already
+bans, so pages with no translation still carry it, pointing at the other language's home with a
+tooltip saying why. It reuses `.ncta`, which was defined in `site.css` and used nowhere.
+
+**A canonical must be the page's own URL, and a translated pair must point both ways.** Neither was
+checked, and both were wrong: `analytics.html` and `index.html` carried `crm.html`'s canonical,
+copied along with the head block — which tells a search engine those pages *are* `crm.html`, so the
+product page and the suite home were each asking to be dropped. The Italian pages declared their
+English original from the day they were written and the English ones said nothing back, which leaves
+the engine to pick the language a reader lands on. `canonical_and_alternates()` derives both
+criteria from the file's own path, so a page added tomorrow is checked without being listed. Every
+check here read the body; nothing read the head.
 
 What is **not** translated, on purpose: `privacy.html`, which is the most claim-dense page and has
 legal weight — English stays canonical; and `llms.txt`, whose reader is a machine and which is the

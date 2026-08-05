@@ -218,6 +218,28 @@ class HiddenActuallyHides(unittest.TestCase):
         p = self.page('<div class="row">x</div>', '.row{display:flex}')
         self.assertEqual(htmlcheck.display_override(p), [])
 
+    def test_a_linked_stylesheet_counts(self):
+        # The third occurrence was on the site, where almost all the CSS is in a linked sheet:
+        # `.btn{display:inline-block}` beat `hidden`, so the Analytics page showed the install button
+        # and its "in review" alternative at once, live. Reading only inline <style> saw none of it.
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'x.css').write_text('[hidden]{display:none!important}\n.btn{display:inline-block}', encoding='utf-8')
+        p = d / 'x.html'
+        p.write_text('<link rel="stylesheet" href="x.css">\n<a class="btn" hidden>x</a>', encoding='utf-8')
+        self.assertEqual(htmlcheck.display_override(p), [])
+
+    def test_a_linked_stylesheet_without_the_rule_is_still_reported(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'x.css').write_text('.btn{display:inline-block}', encoding='utf-8')
+        p = d / 'x.html'
+        p.write_text('<link rel="stylesheet" href="x.css">\n<a class="btn" hidden>x</a>', encoding='utf-8')
+        self.assertEqual(len(htmlcheck.display_override(p)), 1)
+
+    def test_every_site_page_carries_it_today(self):
+        bad = [f for page in sorted((ROOT / 'site').rglob('*.html'))
+               for f in htmlcheck.display_override(page)]
+        self.assertEqual(bad, [], 'a site page can hide nothing')
+
     def test_a_release_title_in_the_banned_fourth_form_is_reported(self):
         # "Zoost for Zoho CRM 1.11.0" was published twice. The first fix to this line checked only
         # whether the title used the *directory* name — the last bug, not the rule — so the form the
@@ -525,6 +547,122 @@ class TranslationsInStep(unittest.TestCase):
             page.write_text(original, encoding='utf-8')
         self.assertEqual(len(findings), 1, findings)
         self.assertIn('has changed since this was translated', findings[0])
+
+
+class ClassesAreStyled(unittest.TestCase):
+    """A class used but never defined renders as nothing, and nothing is hard to see.
+
+    CLAUDE.md carried this as a one-liner that pooled site.css with **every** page's inline <style>
+    and then asked each page separately — so a class defined in one page's block read as defined on
+    all of them. It reported nothing for months while /how-to.html rendered its two product cards,
+    and both guides their callouts, as unstyled paragraphs: `.card`, `.cards` and `.note` lived in
+    the landing pages' inline styles and in no shared file.
+    """
+
+    def site(self, css, pages):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site' / 'it').mkdir(parents=True)
+        (d / 'site' / 'site.css').write_text(css, encoding='utf-8')
+        for name, body in pages.items():
+            (d / 'site' / name).write_text(body, encoding='utf-8')
+        return d
+
+    def run_on(self, css, pages):
+        d = self.site(css, pages)
+        old = sitecheck.SITE
+        sitecheck.SITE = d / 'site'
+        try:
+            findings = []
+            sitecheck.classes_defined(findings)
+            return findings
+        finally:
+            sitecheck.SITE = old
+
+    def test_a_class_nothing_styles_is_reported(self):
+        f = self.run_on('.wrap{}', {'a.html': '<div class="cards">x</div>'})
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('cards', f[0])
+
+    def test_the_shared_sheet_satisfies_it(self):
+        self.assertEqual(self.run_on('main .cards{display:grid}', {'a.html': '<div class="cards">x</div>'}), [])
+
+    def test_a_page_own_style_block_satisfies_it(self):
+        f = self.run_on('.wrap{}', {'a.html': '<style>.cards{display:grid}</style><div class="cards">x</div>'})
+        self.assertEqual(f, [])
+
+    def test_one_page_style_block_does_not_cover_another(self):
+        # The whole reason the one-liner was blind. `.cards` is styled on a.html only.
+        f = self.run_on('.wrap{}', {'a.html': '<style>.cards{display:grid}</style><div class="cards">x</div>',
+                                    'b.html': '<div class="cards">x</div>'})
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('b.html', f[0])
+
+    def test_a_longer_class_is_not_a_definition_of_a_shorter_one(self):
+        # `f'.{c}' in css` — the substring test — counts `.cards` as styling `.card`.
+        f = self.run_on('main .cards{display:grid}', {'a.html': '<div class="card">x</div>'})
+        self.assertEqual(len(f), 1, f)
+
+    def test_a_script_hook_is_not_asked_for_a_rule(self):
+        self.assertEqual(self.run_on('.wrap{}', {'a.html': '<span class="cyear"></span>'}), [])
+
+    def test_every_page_is_fully_styled_today(self):
+        findings = []
+        sitecheck.classes_defined(findings)
+        self.assertEqual(findings, [], 'a class renders as nothing on a live page')
+
+
+class CanonicalPointsAtItself(unittest.TestCase):
+    """A canonical naming another page tells a search engine the two are one, and the other wins.
+
+    `site/analytics.html` and `site/index.html` both carried `crm.html`'s canonical, copied along
+    with the head block — so the Analytics product page and the suite home were each asking to be
+    dropped in favour of the CRM page. Every check here read the body; nothing read the head.
+    """
+
+    def run_on(self, pages):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site' / 'it').mkdir(parents=True)
+        for name, body in pages.items():
+            (d / 'site' / name).write_text(body, encoding='utf-8')
+        old = sitecheck.SITE
+        sitecheck.SITE = d / 'site'
+        try:
+            findings = []
+            sitecheck.canonical_and_alternates(findings)
+            return findings
+        finally:
+            sitecheck.SITE = old
+
+    def test_a_canonical_naming_another_page_is_reported(self):
+        f = self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/crm.html">'})
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('different page', f[0])
+
+    def test_its_own_url_is_silent(self):
+        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a.html">'}), [])
+
+    def test_the_home_may_name_the_bare_origin(self):
+        self.assertEqual(self.run_on({'index.html': '<link rel="canonical" href="https://zoost.it/">'}), [])
+
+    def test_a_translated_pair_must_point_both_ways(self):
+        # The Italian pages declared their original from the day they were written; the English ones
+        # said nothing back. A one-way pair leaves the engine to pick which language a reader lands on.
+        f = self.run_on({
+            'a.html': '<link rel="canonical" href="https://zoost.it/a.html">',
+            'it/a.html': '<link rel="canonical" href="https://zoost.it/it/a.html">'
+                         '<link rel="alternate" hreflang="en" href="https://zoost.it/a.html">'
+                         '<link rel="alternate" hreflang="it" href="https://zoost.it/it/a.html">',
+        })
+        self.assertEqual(len(f), 2, f)          # the English page is missing both directions
+        self.assertTrue(all(x.startswith('a.html') for x in f), f)
+
+    def test_a_page_with_no_translation_is_not_asked_for_alternates(self):
+        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a.html">'}), [])
+
+    def test_the_site_is_correct_today(self):
+        findings = []
+        sitecheck.canonical_and_alternates(findings)
+        self.assertEqual(findings, [], 'a canonical or an hreflang pair is wrong')
 
 
 if __name__ == '__main__':

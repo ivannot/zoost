@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="it">
+<head>
+<!-- translated-from: site/analytics.html sha256:63d802032eb1e1d8 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zoost Analytics — guarda la forma di un workspace</title>
+<meta name="description" content="Rispecchia un workspace di Zoho Analytics in file locali: ogni vista con il suo tipo e le sue date, colonne e chiavi esterne di ogni tabella, la SQL di ogni query table, un diagramma ER e cosa non serve più a nessuno. In sola lettura, in locale, senza account.">
+<link rel="canonical" href="https://zoost.it/it/analytics.html">
+<link rel="alternate" hreflang="en" href="https://zoost.it/analytics.html">
+<link rel="alternate" hreflang="it" href="https://zoost.it/it/analytics.html">
+<link rel="alternate" hreflang="x-default" href="https://zoost.it/analytics.html">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0d121c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Zoost Analytics">
+<meta property="og:description" content="Centinaia di viste, e nessun modo di vederne la forma. Fino ad ora.">
+<meta property="og:url" content="https://zoost.it/it/analytics.html">
+<meta property="og:image" content="https://zoost.it/analytics-192.png">
+<meta name="author" content="Ivan Notaristefano">
+<link rel="stylesheet" href="/site.css">
+<style>
+  /* This page wears its product's accent; the home stays neutral because it is the suite.
+     Same mechanism as the panels: one token, everything else derives from it. */
+  :root{--sel:#dc2d7a;--sel-soft:#3a1226}
+  /* landing-page specific — shared base is in site.css */
+  .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+  .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+  .hero h1 span{color:var(--muted)}
+  .hero p.lead{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:64ch;margin:0 0 28px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-block;text-decoration:none;font:600 14.5px var(--sans);padding:11px 20px;
+    border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a}
+  .btn:hover{border-color:var(--sel)}
+  .btn.p{background:var(--sel);border-color:var(--sel);color:#fff}
+  .btn.p:hover{background:#c4256b}
+  .meta{font:12.5px var(--mono);color:var(--muted)}
+
+  section{padding:52px 0;border-bottom:1px solid var(--line)}
+  section h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+    margin:0 0 22px;font-weight:600}
+  h3{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+  .card li{margin:5px 0}
+  .card code,p code,li code{font:12.5px var(--mono);color:var(--teal);background:#0f1826;
+    border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .k{color:var(--ink);font-weight:600}
+
+  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+  .why h3{font-size:15.5px}
+  .why p{margin:0;color:var(--muted);font-size:14.5px}
+
+  .steps{counter-reset:s;list-style:none;margin:0;padding:0}
+  .steps li{counter-increment:s;position:relative;padding:0 0 18px 42px;color:var(--muted);font-size:15px}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:26px;height:26px;
+    border-radius:50%;background:#22304a;border:1px solid var(--border);color:var(--ink);
+    font:600 12.5px var(--mono);display:flex;align-items:center;justify-content:center}
+  .steps b{color:var(--ink)}
+
+  .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
+    max-width:70ch}
+  .note.warn{border-color:var(--amber);color:#e2c98a}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/it/index.html" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <nav>
+      <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
+      <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <a href="/it/how-to.html">Come si usa</a>
+      <a href="/privacy.html">Privacy</a>
+      <a class="ncta" href="/analytics.html" hreflang="en" lang="en" title="This page in English">English</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Centinaia di viste, e nessun modo<br>di vederne la forma.<br>
+      <span>Questa ti disegna la mappa.</span></h1>
+    <p class="lead">Zoost Analytics rispecchia un workspace in file ordinari sul tuo disco — ogni vista con il suo
+      tipo e la sua cartella, le colonne e i tipi di dato di ogni tabella, le chiavi esterne fra loro, e la SQL
+      dietro ogni query table come file a sé. Poi ti mostra il diagramma ER, cosa legge da cosa, e cosa non legge
+      più nessuno. Non chiama nessun endpoint che crea, modifica o cancella qualcosa in Zoho Analytics, e non legge
+      mai le righe delle tue tabelle.</p>
+    <div class="cta">
+      <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
+         data-install="analytics" hidden>Installa dal Chrome Web Store</a>
+      <a class="btn p" href="/docs-analytics.html" data-pending="analytics">Leggi la guida</a>
+      <a class="btn" href="#features">Cosa c'è dentro</a>
+      <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
+    </div>
+    <p class="note" style="margin-top:22px">Questa pagina è in italiano. La guida completa, la privacy policy e la
+      mappa per gli assistenti sono in inglese, e <b>l'estensione stessa è in inglese</b>: i nomi dei comandi che
+      leggi qui (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli che troverai nel pannello, non
+      traduzioni. La versione inglese di questa pagina è <a href="/analytics.html">qui</a>.</p>
+  </div>
+</div>
+
+<section id="what">
+  <div class="wrap">
+    <h2>Perché esiste</h2>
+    <div class="why">
+      <div>
+        <h3>Un workspace cresce oltre chi l'ha costruito</h3>
+        <p>Dopo qualche anno un workspace è fatto di centinaia di viste: tabelle, query table che contengono SQL
+          scritta da qualcuno alle due di notte, e report costruiti su altri report. Zoho Analytics ti dice da cosa
+          dipende una vista, una vista per volta. Non ti dice che forma ha l'insieme.</p>
+      </div>
+      <div>
+        <h3>Una storia per tutto quello che hai scaricato</h3>
+        <p>Zoho Analytics non tiene lo storico di niente: cambi la SQL di una query table, una colonna o una
+          relazione e lo stato precedente non esiste più. Il mirror è fatto di file ordinari, quindi con Git
+          <code>git diff</code> risponde a <em>cosa è cambiato in questo workspace il mese scorso</em> — la domanda
+          che conta di più il giorno in cui un numero si muove e nessuno sa perché. <b>Git è facoltativo</b>: senza,
+          il mirror resta comunque un insieme di file che puoi cercare e consegnare.</p>
+      </div>
+      <div>
+        <h3>La SQL è sorgente</h3>
+        <p>Le tabelle sono schema e i report sono configurazione, ma la SQL di una query table è codice che qualcuno
+          ha scritto. Finisce su disco come un file <code>.sql</code> per ciascuna, così si può diffare, rivedere e
+          cercare come il codice che è.</p>
+      </div>
+      <div>
+        <h3>Prima di cancellare qualcosa</h3>
+        <p>Chiedere a Zoho Analytics da cosa dipende una vista, trecento volte a mano, è il modo in cui quella
+          domanda non viene mai fatta. Zoost la fa una volta sola per tutto — e chiama la risposta un
+          <em>candidato</em>, perché un link condiviso o un export schedulato quel grafo non li vede.</p>
+      </div>
+      <div>
+        <h3>Cosa hai costruito tu, e cosa ci ha messo Zoho</h3>
+        <p>In un workspace collegato metà delle tabelle sono arrivate da una sincronizzazione e non sono mai state
+          tue. Il modello ER di Zoho Analytics sa quali, e l'elenco delle viste le marca — così l'inventario è del
+          tuo lavoro, non di tutto.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Cosa c'è dentro</h2>
+    <div class="grid">
+
+      <div class="card">
+        <h3>Mirror locale, fatto per Git</h3>
+        <ul>
+          <li>Un solo pull scrive su disco il censimento, la struttura, le relazioni e la lineage.</li>
+          <li>Un file <code>.sql</code> per ogni query table, col suo nome — la parte diffabile.</li>
+          <li>Una sola cartella di lavoro, una sottocartella per prodotto Zoost, una cartella per workspace dentro.</li>
+          <li>Un workspace è identificato dal suo id, non dal nome della cartella: rinomina l'uno o l'altro e non
+            perdi niente.</li>
+          <li>Dai a un workspace <span class="k">un nome tuo</span> — Zoho Analytics chiama allo stesso modo il primo
+            workspace di ogni account, quindi l'elenco può essere fatto di più progetti con la stessa etichetta. Viene
+            mostrato il tuo nome; quello della piattaforma resta lì accanto, perché un elenco che non puoi
+            confrontare con Zoho Analytics non serve a niente.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Tutte le viste, in un elenco solo</h3>
+        <ul>
+          <li>Tutte, con tipo, cartella, proprietario, numero di colonne e date.</li>
+          <li><span class="k">Cerca dentro le colonne</span>: scrivi il nome di una colonna e trovi le tabelle che
+            ce l'hanno.</li>
+          <li><span class="k">Design e dati tenuti distinti</span>: quando è cambiato l'ultima volta il design, e
+            quando si sono aggiornati i dati. Sono due fatti diversi e l'elenco li mostra entrambi.</li>
+          <li>Ordina per nome, tipo, cartella, proprietario, data dei dati — o per quante viste ci leggono dentro.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>La struttura, anche per i report</h3>
+        <ul>
+          <li>Ogni tabella e query table con le sue colonne e i tipi di dato di Zoho.</li>
+          <li>Un report o una pivot non hanno colonne proprie — quindi Zoost segue ciò su cui sono costruiti e
+            mostra <em>quella</em> struttura, <span class="k">dicendo di chi è</span> invece di spacciarla per quella
+            del report.</li>
+          <li><span class="k">Le chiavi esterne su ogni colonna</span>, nelle due direzioni: verso cosa punta, e
+            cosa punta a lei. Ognuna è un link che apre l'altra tabella.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Un diagramma ER che resta leggibile</h3>
+        <ul>
+          <li>Le tabelle come riquadri, le relazioni come frecce, il join scritto sull'arco esattamente come lo
+            scrive Zoho.</li>
+          <li>Metti a fuoco una tabella e cammina nel grafo cliccando; profondità regolabile.</li>
+          <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto.</li>
+          <li>Spaziatura, apertura e dimensione delle etichette sono slider dal vivo. Salva in PDF per stampe da
+            parete.</li>
+          <li>C'è anche una tabella delle relazioni: una riga per join, cercabile e copiabile.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>La SQL delle tue query table</h3>
+        <ul>
+          <li>Leggila nel pannello, e su disco come file su cui puoi fare <code>grep</code>.</li>
+          <li><span class="k">Cerca dentro tutte le query</span> in una volta sola.</li>
+          <li>Ognuna registra le tabelle sorgente che legge e quali loro colonne coinvolge — così «se tolgo questa
+            colonna, cosa si rompe» ha una risposta.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Cosa non serve più a nessuno</h3>
+        <ul>
+          <li>La risposta sulle dipendenze di Zoho Analytics stessa, chiesta per ogni vista invece che una per
+            volta.</li>
+          <li>Per ogni vista: da cosa legge, chi legge da lei, e su quali dashboard compare.</li>
+          <li><span class="k">Candidati, mai un verdetto.</span> Un link condiviso, un export schedulato, un report
+            incorporato o un consumatore via API sono invisibili a quel grafo, e il numero lo dice.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Salute, senza voti</h3>
+        <ul>
+          <li>Viste da cui non dipende niente, tabelle in nessuna relazione, viste senza descrizione, elementi che
+            non è stato possibile leggere.</li>
+          <li>Conteggi ed elenchi. Nessuna soglia, nessun allarme rosso, nessun punteggio.</li>
+          <li>Ogni cifra dichiara, lì accanto, cosa <em>non</em> copre.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Export da consegnare</h3>
+        <ul>
+          <li>Tutto il workspace come un unico file HTML autoconsistente, oppure in Markdown.</li>
+          <li>Una finestra decide sezione per sezione cosa il file può contenere; la SQL va inclusa apposta ed è
+            segnalata.</li>
+          <li>Il Markdown si porta dietro anche i <span class="k">vincoli del dialetto SQL di Zoho Analytics</span>,
+            così un assistente che Zoho Analytics non l'ha mai vista non scrive query che non possono girare.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>AI opzionale, con la tua chiave</h3>
+        <ul>
+          <li>Anthropic (Claude) oppure OpenAI (ChatGPT) — i due che sono stati provati, e gli unici due che
+            l'estensione può raggiungere.</li>
+          <li>Con Claude esplora da sé il mirror locale: legge una struttura, segue una chiave esterna, apre la SQL
+            di una query, cerca fra le colonne, dice cosa dipende da cosa. Ogni chiamata a uno strumento è mostrata.</li>
+          <li>Gli viene detto cosa Zoho documenta sulla SQL delle query table — solo SELECT, identificatori fra
+            virgolette, niente sotto-query correlate, CTE non ricorsive — così quello che scrive è una bozza da
+            incollare, non SQL plausibile che poi non gira.</li>
+          <li>Gli viene detto anche cosa non può sapere: Zoost non legge mai le tue righe, quindi l'assistente ha la
+            struttura e mai i valori.</li>
+          <li>La tua chiave resta nel tuo browser e va solo al tuo provider — e può essere
+            <span class="k">protetta da una passphrase</span> scelta da te, così quello che sta su disco è testo
+            cifrato. Disattivata di default, perché su una macchina personale serve a poco e su una condivisa a
+            molto.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <h2>Cosa non fa</h2>
+    <div class="why">
+      <div>
+        <h3>Non chiama nessun endpoint di scrittura</h3>
+        <p>Non crea, non modifica e non cancella una vista. Uno degli endpoint che chiama è una POST il cui URL
+          contiene <code>CREATE</code> — <code>ZDBCreateERD.ma</code>, la chiamata che restituisce il modello ER del
+          workspace. Calcola; non crea. È nominata qui perché chiunque voglia verificare l'affermazione la troverà.
+          Zoho Analytics è dove costruisci; questo è dove guardi quello che hai costruito.</p>
+      </div>
+      <div>
+        <h3>Non legge mai le tue righe</h3>
+        <p>Solo struttura, relazioni, SQL e metadati. Gli endpoint che restituiscono i valori delle celle esistono, e
+          deliberatamente non vengono chiamati — che è anche il motivo per cui l'assistente AI non potrà mai dirti
+          cosa c'è <em>dentro</em> i dati.</p>
+      </div>
+      <div>
+        <h3>Le definizioni dei report non sono coperte</h3>
+        <p>Quali colonne un grafico mette su quale asse, e come le aggrega, arriverebbero saldate insieme alla serie
+          calcolata — i tuoi dati. Quindi quell'endpoint resta inutilizzato e questa lacuna resta dichiarata.</p>
+      </div>
+      <div>
+        <h3>Non valida la SQL</h3>
+        <p>Zoost non esegue, non controlla e non fa il deploy di nessuna query. Quello che scrive l'assistente è una
+          bozza; l'unica cosa che può dirti se compila è Zoho Analytics.</p>
+      </div>
+      <div>
+        <h3>Le relazioni sono quelle di Zoho Analytics</h3>
+        <p>Le chiavi esterne vengono dal modello ER che Zoho Analytics disegna da sé. Quello che quel modello non
+          disegna, Zoost non lo sa — e non se lo inventa.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="rests-on">
+  <div class="wrap">
+    <h2>Su cosa si regge, e cosa vuol dire per te</h2>
+    <div class="why">
+      <div>
+        <h3>Interfacce non documentate</h3>
+        <p>Zoho Analytics non pubblica API per quasi niente di quello che Zoost legge. Usa gli stessi endpoint
+          interni che usa l'interfaccia web del prodotto, attraverso la sessione con cui sei già autenticato. Uno di
+          questi si chiama <code>CREATE</code> nello schema di URL di Zoho ed è una POST — è la chiamata che
+          restituisce il modello ER del workspace, e calcola invece di creare. È nominata qui invece di essere
+          lasciata trovare a un lettore, perché un lettore la troverà.</p>
+      </div>
+      <div>
+        <h3>Il che vuol dire che si può rompere</h3>
+        <p>Quelle interfacce non portano nessuna promessa di compatibilità. Zoho può cambiarne una senza preavviso e
+          una funzionalità può smettere di funzionare da un giorno all'altro. Non è un rischio ipotetico da scoprire
+          più avanti: è la fondazione su cui lo strumento sta in piedi, ed è giusto saperlo prima di costruirci
+          intorno un processo.</p>
+      </div>
+      <div>
+        <h3>Cosa è promesso, e cosa no</h3>
+        <p>Niente è garantito — lo dice la licenza e lo dice questa pagina. Quello che viene offerto è impegno: se
+          qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non lo sarà, e allora la
+          funzionalità dirà chiaramente che quella cosa non la può fare, invece di tirare a indovinare. Il mirror che
+          hai già sul disco continua a funzionare comunque: sono file ordinari.</p>
+      </div>
+      <div>
+        <h3>Leggilo prima di fidarti</h3>
+        <p>Tutto quanto sopra è visibile in una ventina di file di JavaScript in chiaro. Ogni chiamata di rete che
+          l'estensione può fare sta lì dentro, e fra quello che è pubblicato e quello che leggi non c'è nessun
+          bundler né minificatore. Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio
+          scoprirlo qui che dopo averla installata.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="trust">
+  <div class="wrap">
+    <h2>Come verificare che stiamo dicendo la verità</h2>
+    <div class="why">
+      <div>
+        <h3>Leggi quello che viene distribuito</h3>
+        <p>Una ventina di file di JavaScript e HTML in chiaro. Nessun bundler, nessun minificatore, nessuna
+          dipendenza — quello che scarichi è quello che gira, e non c'è nessuna fase di build che possa mettere nel
+          pacchetto qualcosa che non è nel repository. Si legge tutto in un pomeriggio.</p>
+      </div>
+      <div>
+        <h3>Costruito in pubblico, non su un portatile</h3>
+        <p>Pubblicare un tag di release fa sì che GitHub faccia il checkout di quel commit, lo costruisca due volte
+          per dimostrare che il risultato è identico byte per byte, e firmi una dichiarazione di provenienza per
+          l'archivio. L'archivio allegato alla Release <em>è</em> il file inviato allo Store. Il log della build è
+          pubblico.</p>
+      </div>
+      <div>
+        <h3>Verificalo tu</h3>
+        <p><code>gh attestation verify &lt;file&gt; --repo ivannot/zoost</code> chiede a GitHub se ha costruito
+          esattamente quell'archivio. <code>tools/verify.sh</code> lo ricostruisce sulla tua macchina e confronta.
+          Nessuno dei due ti chiede di fidarti di noi.</p>
+      </div>
+      <div>
+        <h3>Cosa non dimostra niente di tutto questo</h3>
+        <p>Il caricamento sullo Store è un passaggio manuale, quindi nessuna firma lo copre: quello che è dimostrato
+          è come è stato costruito l'archivio della release. Google poi reimpacchetta e rifirma ogni estensione,
+          quindi quello che serve non è identico byte per byte a quello che è stato caricato. Entrambe le cose si
+          chiudono all'altro capo, confrontando l'estensione installata con il tag. E un'attestazione dice chi ha
+          costruito un file, mai che quel file è buono — quella parte resta leggere il codice.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:24px">Il registro di ogni versione inviata — commit, tag e SHA-256 del
+      pacchetto caricato — è in
+      <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, incluse le due righe che il
+      registro stesso dichiara di <em>non</em> poter verificare, e perché.</p>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <h2>Come si comincia</h2>
+    <ol class="steps">
+      <li><b>Installala.</b> <span data-install="analytics" hidden>Dal
+        <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Chrome Web Store</a>.</span>
+        <span data-pending="analytics">È stata inviata al Chrome Web Store ed è in revisione. Finché non è
+        pubblicata, clona il repository e carica <code>apps/analytics</code> da sorgente da
+        <code>chrome://extensions</code>.</span></li>
+      <li><b>Scegli una cartella di lavoro</b> — la stessa che usa l'altro Zoost, se ce l'hai. Ogni prodotto ci tiene
+        la propria sottocartella.</li>
+      <li><b>Apri un workspace</b> in Zoho Analytics. Il pannello prende il workspace dalla scheda su cui sei: non
+        c'è niente da configurare e niente da sbagliare.</li>
+      <li>Premi <b>+ Workspace</b>, poi <b>Pull all</b>. Qualche centinaio di viste ci mette meno di un minuto.</li>
+      <li><b>Facoltativo:</b> <code>git init</code> nella cartella del workspace, e da oggi in poi hai una storia.
+        Tutto il resto funziona anche senza.</li>
+    </ol>
+    <p class="note" style="margin-top:8px">Tutto gira nel tuo browser, usando la sessione Zoho con cui sei già
+      autenticato. Nessun server, nessun account, nessuna telemetria. L'unica cosa che esce dalla tua macchina è
+      quello che scegli di mandare a un provider AI, e mai le righe delle tue tabelle.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/it/crm.html">Zoost — workbench for Zoho CRM</a><span class="sep">·</span>
+      <a href="/it/analytics.html">Zoost — workbench for Zoho Analytics</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
+      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
+      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Creato da Ivan Notaristefano (con il supporto di Claudio). Copyright <span class="cyear">2026</span>. Distribuito sotto licenza Apache 2.0 e fornito
+      <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
+      alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
+      fornire supporto o manutenzione. In caso di divergenza, fa fede la
+      <a href="/analytics.html">versione inglese</a>.
+    </p>
+    <p class="legal">
+      Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
+      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+</body>
+</html>

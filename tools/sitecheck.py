@@ -307,6 +307,82 @@ def translations_current(findings: list) -> None:
                             f'update the marker')
 
 
+# Classes that are hooks for site.js rather than appearance: the element is empty in the markup and
+# its text is written at runtime. Styling them would be the finding, not the absence.
+SCRIPT_HOOKS = {'cyear', 'dv', 'dd'}
+
+
+def classes_defined(findings: list) -> None:
+    """Every class a page uses must be styled by CSS *that page loads*.
+
+    The one-liner in CLAUDE.md concatenated site.css with every page's inline <style> and then asked
+    each page separately — so a class defined in one page's inline block read as defined on all of
+    them, which is precisely the defect it was written to catch. It found nothing for months while
+    /how-to.html rendered its two product cards, and both guides their callouts, as unstyled text:
+    `.card`, `.cards` and `.note` live in the landing pages' inline styles and in no shared file.
+
+    Per page, therefore: site.css plus that page's own <style>, and nothing else.
+    """
+    base = (SITE / 'site.css').read_text(encoding='utf-8')
+    for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        html = p.read_text(encoding='utf-8')
+        css = base + ''.join(re.findall(r'<style>(.*?)</style>', html, re.S))
+        used = {c for m in re.findall(r'class="([^"]*)"', html) for c in m.split()}
+        # `f'.{c}' in css` was the substring test the one-liner used, and it counts `.cards` as a
+        # definition of `.card` — the boundary matters, so it is asserted.
+        missing = sorted(c for c in used - SCRIPT_HOOKS
+                         if not re.search(r'\.' + re.escape(c) + r'(?![\w-])', css))
+        if missing:
+            findings.append(f'{p.relative_to(SITE).as_posix()}: uses {", ".join(missing)} — no rule '
+                            f'in site.css or in this page, so it renders as nothing')
+
+
+def canonical_and_alternates(findings: list) -> None:
+    """A page's canonical must be its own URL, and a translated pair must point at each other.
+
+    Two English pages carried `crm.html`'s canonical, copied along with the head block. That is not a
+    cosmetic slip: a canonical naming another page tells a search engine the two *are* one page, and
+    the other one wins — so the Analytics product page and the suite home were both asking to be
+    dropped in favour of the CRM page. Nothing reported it because every check here reads the body.
+
+    The reciprocal `hreflang` is the same shape of defect one step further out: the Italian pages
+    declared their English original from the day they were written, and the English ones said nothing
+    back for as long as they existed. A one-way pair is not a pair — the language a reader lands on is
+    then decided by which of the two the engine happened to index.
+
+    Both criteria are derived from the file's own path, so a page added tomorrow is checked without
+    anyone remembering to list it.
+    """
+    def url_of(p: Path) -> str:
+        rel = p.relative_to(SITE).as_posix()
+        return 'https://zoost.it/' if rel == 'index.html' else f'https://zoost.it/{rel}'
+
+    for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        html = p.read_text(encoding='utf-8')
+        rel = p.relative_to(SITE).as_posix()
+        m = re.search(r'<link rel="canonical" href="([^"]+)"', html)
+        if not m:
+            findings.append(f'{rel}: no canonical')
+        else:
+            want = {url_of(p)}
+            if p.name == 'index.html':                      # /it/ and /it/index.html are the same page
+                want.add(url_of(p).rsplit('index.html', 1)[0])
+            if m.group(1) not in want:
+                findings.append(f'{rel}: canonical points at {m.group(1)}, which is a different page — '
+                                f'expected {url_of(p)}')
+
+        # the translated pair, in whichever direction this page sits
+        twin = (SITE / 'it' / p.name) if p.parent == SITE else (SITE / p.name)
+        if not twin.exists():
+            continue
+        alts = dict((lang, href) for lang, href in
+                    re.findall(r'<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"', html))
+        for lang, other in (('en', SITE / p.name), ('it', SITE / 'it' / p.name)):
+            if alts.get(lang) not in {url_of(other), url_of(other).rsplit('index.html', 1)[0]}:
+                findings.append(f'{rel}: hreflang="{lang}" is {alts.get(lang)!r}, but the {lang} page '
+                                f'is at {url_of(other)} — a translated pair points both ways or neither')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -348,6 +424,8 @@ def main() -> int:
         check_prose(doc, findings)
 
     store_field_limits(findings)
+    classes_defined(findings)
+    canonical_and_alternates(findings)
     translations_current(findings)
     txt_served_by_worker(findings)
     hosts_declared(findings)
