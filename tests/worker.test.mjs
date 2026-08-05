@@ -81,10 +81,11 @@ test('the first value that looks like a version wins, later prose is not consult
 
 // ---------- the gap between what is released and what the Store serves ----------
 
-const { verOf, newer } = load([
+const { verOf, newer, dev } = load([
   sliceFn('site/site.js', 'verOf'),
   sliceFn('site/site.js', 'newer'),
-]);
+  sliceFn('site/site.js', 'dev'),
+], { REPO_URL: 'https://github.com/ivannot/zoost', esc: (x) => String(x) });
 
 test('a release ahead of the Store is stated, not left to be worked out', () => {
   // The footer showed three numbers and no relationship between them. Someone reading it could not
@@ -154,4 +155,21 @@ test('prose around the table is not mistaken for rows', () => {
 test('a tagged version with no row has not been submitted, and is not claimed to be', () => {
   const subs = pickSubmissions('| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce` | 2026-08-04 |');
   assert.equal(subs.crm['1.9.2'], undefined);
+});
+
+test('the in-development number links to what is in it, not to where it is stored', () => {
+  // A compare against the latest release answers "what would I get beyond the download", which is
+  // the question someone clicking that number actually has.
+  const html = dev('crm', { repo: '1.9.2', tag: 'crm-v1.9.0' });
+  assert.match(html, /\/compare\/crm-v1\.9\.0\.\.\.main/);
+  assert.match(html, />1\.9\.2</);
+});
+
+test('with no release to compare against it falls back to that app\'s commits', () => {
+  const html = dev('analytics', { repo: '1.5.2', tag: null });
+  assert.match(html, /\/commits\/main\/apps\/analytics/);
+});
+
+test('an unknown version is stated, not linked', () => {
+  assert.equal(dev('crm', { repo: null, tag: 'crm-v1.9.0' }), '<i>unknown</i>');
 });

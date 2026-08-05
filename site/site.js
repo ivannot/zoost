@@ -68,11 +68,11 @@
       // the property belongs to. (A label that merely *selects* a platform — the nav buttons, the
       // guide switcher — may say "Zoho CRM", because there you are choosing a platform.)
       var prods = [
-        ['Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
-        ['Zoost Analytics', d.analytics],
+        ['crm', 'Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
+        ['analytics', 'Zoost Analytics', d.analytics],
       ];
       prods.forEach(function (pr) {
-        var name = pr[0], v = pr[1];
+        var app = pr[0], name = pr[1], v = pr[2];
         if (!v || (!v.store && !v.repo)) return;
         // "none yet" rather than "unknown": for a product with no tag those are opposite claims —
         // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
@@ -111,7 +111,7 @@
             '<div class="vfacts">' +
               '<span class="vitem"><b>On the Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
               '<span class="vitem"><b>Latest release</b> ' + tag + ahead + '</span>' +
-              '<span class="vitem"><b>In development</b> ' + (v.repo ? esc(v.repo) : '<i>unknown</i>') + '</span>' +
+              '<span class="vitem"><b>In development</b> ' + dev(app, v) + '</span>' +
             '</div>' +
           '</div>');
       });
@@ -141,6 +141,19 @@
         el.classList.remove('wip'); el.classList.add('live');
       });
     });
+  }
+
+  // The in-development number links to what is *in* it. A compare view against the latest release
+  // answers the question someone actually has — "what would I get that the download does not have"
+  // — rather than merely showing where the number is stored. Without a release to compare against
+  // there is nothing to diff, so it falls back to that app's commits, which is the same question
+  // asked the only way still available.
+  function dev(app, v) {
+    if (!v.repo) return '<i>unknown</i>';
+    var href = v.tag
+      ? REPO_URL + '/compare/' + encodeURIComponent(v.tag) + '...main'
+      : REPO_URL + '/commits/main/apps/' + app;
+    return '<a href="' + href + '">' + esc(v.repo) + '</a>';
   }
 
   // A tag is `<app>-v1.9.0`; the version is what follows the -v. Compared numerically, because
