@@ -273,6 +273,41 @@
   </div>
 </section>
 
+<section id="rests-on">
+  <div class="wrap">
+    <h2>What this rests on, and what that means for you</h2>
+    <div class="why">
+      <div>
+        <h3>Undocumented interfaces</h3>
+        <p>Zoho Analytics publishes no API for most of what Zoost reads. It uses the same internal endpoints
+          the product's own web interface uses, through the session you are already signed in to.
+          One of them is named <code>CREATE</code> in Zoho's own URL scheme and is a POST — it is the call that returns the workspace's ER model, and it computes rather than creates. It is named here rather than left for a reader to find, because a reader will find it.</p>
+      </div>
+      <div>
+        <h3>Which means it can break</h3>
+        <p>Those interfaces carry no compatibility promise. Zoho can change one without notice and a
+          feature can stop working from one day to the next. This is not a hypothetical risk to be
+          discovered later: it is the foundation the tool stands on, and you should know it before you
+          build a process around it.</p>
+      </div>
+      <div>
+        <h3>What is promised, and what is not</h3>
+        <p>Nothing is guaranteed — the licence says so and so does this page. What is offered is
+          effort: a break will be looked at and fixed where fixing it is possible. Sometimes it will
+          not be, and then the feature will say plainly that it cannot do the thing rather than
+          guess. The mirror already on your disk keeps working either way; it is ordinary files.</p>
+      </div>
+      <div>
+        <h3>Read it before you trust it</h3>
+        <p>All of the above is visible in about twenty files of plain JavaScript. Every network call
+          the extension can make is in them, and there is no bundler or minifier between what is
+          published and what you read. If any of this is disqualifying for your organisation, it is
+          better found here than after installing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="trust">
   <div class="wrap">
     <h2>How to check we are telling the truth</h2>

@@ -936,6 +936,19 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   that. Anything pasted in during a session — HAR files, exported JSON, function sources — is
   reference material for the conversation and must never reach the repository.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
+- **An absolute claim invites a literal check, and a literal check is what this project asks for.**
+  `llms.txt` moves an assistant from summarising the page to verifying it sentence by sentence, and in
+  that mode every absolute is a target. "Zoost never writes to Zoho" fell to one authenticated POST
+  whose URL contains `CREATE` — it computes the ER model and creates nothing, but the guarantee is a
+  property of *which endpoints we call*, not one the browser enforces. Say the precise thing instead:
+  it is less elegant and it cannot be knocked down. Where an absolute already exists, name the
+  exception yourself — a reader who finds it after reading "certain, or stopped" concludes the
+  opposite of what the sentence intended.
+- **What the product rests on is stated, not discovered.** Both extensions run on undocumented
+  internal interfaces, read the org and user id out of the page's HTML, and observe the requests the
+  Zoho page makes in order to reuse its token. That is the foundation, it can break without notice,
+  and nothing is guaranteed — only effort. Said in our own voice it is evidence of seriousness; found
+  by a reader in the source after a page of absolutes, it is the opposite.
 - Say what a thing does not do, next to what it does. The health audit states its coverage gaps;
   the AI panel states that OpenAI cannot explore on its own; the export dialog flags source code.
   This is deliberate: an honest limitation prevents a bad review.

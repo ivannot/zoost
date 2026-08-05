@@ -92,7 +92,7 @@
     <p class="lead">Zoost is a small family of Chrome extensions, one per Zoho product. Each mirrors what
       <em>you</em> have built inside that product — code, schema, relations, dependencies — into plain files on your
       own disk, then layers navigation, diagrams, search, audit and export on top of that mirror.
-      None of them writes anything back. Everything runs in your browser.</p>
+      None of them calls a write endpoint: they read definitions and metadata, never records. Everything runs in your browser.</p>
     <div class="cta">
       <a class="btn p" href="#products">See the two</a>
       <a class="btn" href="#shared">What they have in common</a>
@@ -184,8 +184,11 @@
       </div>
       <div>
         <h3>Certain, or stopped</h3>
-        <p>No guessing at a platform's private interface. Where a path is not certain, the feature stops with a
-          precise message instead of retrying against an assumption. What a Zoost cannot know, it says it cannot
+        <p>No loops against a guess, no matching a localised button label, no synthetic clicks into a page we
+          do not own. Where a path is not certain, the feature stops with a precise message. The exceptions are
+          narrow, deliberate and written down: a bounded wait for a known element, one retry on a genuinely
+          transient failure, and recovering by an action that was <em>measured</em> to work — the CSRF token is
+          read from a known list of cookies rather than assumed. What a Zoost cannot know, it says it cannot
           know.</p>
       </div>
       <div>

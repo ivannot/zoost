@@ -30,9 +30,12 @@ the last section says which ones cannot be checked and why.
 
 Stated here rather than buried, because it is the part an assessment needs.
 
-- **No write path to Zoho.** They read. They cannot create, edit or delete a function, a view, a
-  record or a setting. This is a design decision, not a missing feature: owning deployment, conflicts
-  and rollback would be a different product.
+- **No write path to Zoho.** Neither extension calls an endpoint that creates, edits or deletes a
+  function, a view, a record or a setting. Note the precise claim: this is a property of *which*
+  endpoints are called, not something the browser enforces, and every call either makes is in
+  about twenty readable files. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` —
+  `ZDBCreateERD.ma`, the call that returns the workspace's ER model. It computes; it does not
+  create. It is named here because a reader checking the claim will find it.
 - **They never read customer records.** Zoho CRM: no contacts, no deals, no notes — only the
   definitions of what you built. Zoho Analytics: never the rows inside a table; the endpoints that
   would return cell values exist and are deliberately never called.
@@ -64,6 +67,22 @@ Stated here rather than buried, because it is the part an assessment needs.
   `gh attestation verify zoost-crm-<version>-store.zip --repo ivannot/zoost`
   and `tools/verify.sh crm <version>`, which rebuilds it from the tag and compares.
 - [Privacy policy](https://zoost.it/privacy.html) — what is stored, where, and what leaves.
+
+## What the product rests on
+
+An assessment should have this before the verification chain, not after it.
+
+- **Undocumented interfaces.** Zoho publishes no API for most of what Zoost reads, so both extensions
+  use the same internal endpoints the products' own web interfaces use, through the session the user
+  is already signed in to. The Zoho CRM one also reads the org id and user id out of the page's HTML,
+  because nothing exposes them, and observes the requests that page makes in order to use the same
+  authentication token — it watches, and never alters what the page sends or receives.
+- **Which means it can break.** Those interfaces carry no compatibility promise. Zoho can change one
+  without notice and a feature can stop working from one day to the next.
+- **What is promised.** Nothing is guaranteed; the licence says so. What is offered is effort — a
+  break will be looked at and fixed where fixing it is possible, and where it is not, the feature
+  will say it cannot do the thing rather than guess. The mirror already written to disk keeps working
+  regardless, because it is ordinary files.
 
 ## What none of that proves
 
