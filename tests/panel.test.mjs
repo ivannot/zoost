@@ -389,3 +389,90 @@ test('every writer of .zoost.json merges', () => {
       `${app}/sidepanel.js: ${whole.length} whole-object write(s) to .zoost.json — use patchCfg, or the next field added to that file is silently dropped`);
   }
 });
+
+
+// ---------- a mark in the markup must survive the code ----------
+
+test('nothing rebuilds the label of a button whose label is a mark', () => {
+  // Three times in one change: $('pullone').textContent = 'Pull' put the word back on every mode
+  // switch, $('graph').textContent did the same, and updateButtons() blanked #pull's title — which is
+  // where a mark's *name* lives, so the control lost its name on the first repaint. The general shape
+  // is worth the check: a label that lives in the markup must not be rebuilt by whatever updates state.
+  const marked = ['pull', 'pullone', 'graph', 'dpull', 'dgraph'];
+  const findings = [];
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const html = read(`apps/${app}/sidepanel.html`);
+    for (const id of marked) {
+      if (!html.includes(`id="${id}"`)) continue;
+      const isMark = new RegExp(`id="${id}"[^>]*>\\s*<svg`).test(html);
+      if (!isMark) continue;
+      for (const prop of ['textContent', 'innerHTML']) {
+        if (src.includes(`$('${id}').${prop} =`)) findings.push(`${app}: #${id}.${prop} is written in JS, over its mark`);
+      }
+      // its title may vary, but it may never be emptied: that is the name
+      const m = src.match(new RegExp(`\\$\\('${id}'\\)\\.title = [\\s\\S]{0,300}?;`));
+      if (m && /:\s*''\s*;/.test(m[0])) findings.push(`${app}: #${id}.title can be set to '' — a mark with no title has no name`);
+    }
+  }
+  assert.deepEqual(findings, []);
+});
+
+test('every marked button carries a name and a tooltip', () => {
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/sidepanel.html`);
+    for (const m of html.matchAll(/<button([^>]*)>\s*<svg class="mk"/g)) {
+      const attrs = m[1];
+      const id = (attrs.match(/id="([^"]+)"/) || [])[1] || '?';
+      assert.match(attrs, /aria-label="/, `${app}: #${id} draws a mark and has no name`);
+      assert.match(attrs, /title="/, `${app}: #${id} draws a mark and has no tooltip`);
+    }
+  }
+});
+
+
+// ---------- one window, one name; one colour key, one dimension ----------
+
+test('the diagram window is called two things, not four', () => {
+  // «Graph ↗», «Schema ↗», «ER ↗» and «Open ER» all opened the same window, and the author could not
+  // keep them apart either. Two names survive because there are two drawings: a call graph between
+  // functions, and an ER model of modules or tables. Nothing else may name that window.
+  for (const app of ['crm', 'analytics']) {
+    for (const f of ['sidepanel.html', 'sidepanel.js']) {
+      const src = read(`apps/${app}/${f}`).replace(/^\s*\/\/.*$/gm, '');
+      for (const dead of ['Open ER', 'Schema \u2197', 'Graph \u2197', 'ER \u2197']) {
+        assert.ok(!src.includes(dead), `${app}/${f}: «${dead}» is back`);
+      }
+    }
+  }
+});
+
+test('the dot, the chips and the filter read the same fact', () => {
+  // They did not. The chips select a function's *category*; the dot was coloured by its Deluge
+  // *namespace*, and pass() compared the chip against the namespace too — so those five filters only
+  // worked in an org where Zoho returns no namespace, and every dot fell back to grey. One accessor
+  // decides all three now, which is the only thing that stops them drifting apart again.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/graphview.js`);
+    assert.match(src, /const KINDOF = \(n\) => \(DATA\.kind === 'schema' \? n\.namespace : n\.category\)/,
+      `${app}: the shared accessor is gone`);
+    assert.ok(!/NSCOL\(n\.namespace\)/.test(src), `${app}: a dot is coloured by namespace again`);
+    const p = src.slice(src.indexOf('function pass('), src.indexOf('\n}', src.indexOf('function pass(')));
+    assert.ok(!/n\.namespace !== /.test(p), `${app}: a filter compares the namespace again`);
+  }
+});
+
+test('every value the chips select has a colour, and no condition has one', () => {
+  // A hue says "this is a kind of thing". hub, orphan, no-caller and unresolved are not kinds, they
+  // are facts about one — giving them a colour would claim eleven categories where there are six.
+  const VALUES = {
+    crm: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'rest', 'standard', 'custom'],
+    analytics: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'rest', 'table', 'query', 'system'],
+  };
+  const CONDITIONS = ['all', 'hub', 'orphan', 'dead', 'unres'];
+  for (const [app, values] of Object.entries(VALUES)) {
+    const css = read(`apps/${app}/graphview.html`);
+    for (const v of values) assert.match(css, new RegExp(`--n-${v}\\s*:`), `${app}: no colour for «${v}»`);
+    for (const c of CONDITIONS) assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
+  }
+});

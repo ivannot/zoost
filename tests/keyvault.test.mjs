@@ -445,15 +445,15 @@ test('the CRM status bar is under the AI overlay, which is why the above matters
 
 // ---------- the lapsed folder permission ----------
 
-/** aiErrorText() lifted out of a panel. Pure string in, string out. */
+/** friendlyError() lifted out of a panel. Pure string in, string out. */
 function errText(app) {
   const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
-  const start = src.indexOf('function aiErrorText(e)');
-  if (start < 0) throw new Error(`${app}/sidepanel.js: aiErrorText() not found — renamed or removed.`);
+  const start = src.indexOf('function friendlyError(e)');
+  if (start < 0) throw new Error(`${app}/sidepanel.js: friendlyError() not found — renamed or removed.`);
   const end = src.indexOf('\n}', src.indexOf('{', start)) + 2;
   const ctx = vm.createContext({});
   vm.runInContext(src.slice(start, end), ctx);
-  return vm.runInContext('aiErrorText', ctx);
+  return vm.runInContext('friendlyError', ctx);
 }
 
 test('a lapsed folder permission is explained, not quoted', () => {

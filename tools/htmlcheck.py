@@ -119,6 +119,30 @@ def display_override(path) -> list:
             f'any author display rule leaves the element on screen']
 
 
+TAG = re.compile(r'<(\w+)((?:\s+[\w-]+(?:="[^"]*")?)+)\s*/?>')
+ATTR_NAME = re.compile(r'\s([\w-]+)=')
+
+
+def duplicate_attributes(path) -> list:
+    """The same attribute twice on one element: the second is dropped, silently.
+
+    Nothing errors, nothing looks wrong in the source, and the attribute you meant to add is simply
+    not there. It happened while replacing a button's label with a mark — `class="lbtn"` stayed and
+    `class="lbtn icon"` was appended, so the icon padding never applied. Cheap to check, exact, and no
+    false positives: HTML has no case where repeating an attribute means anything.
+    """
+    out = []
+    src = path.read_text(encoding='utf-8')
+    for m in TAG.finditer(src):
+        attrs = ATTR_NAME.findall(m.group(2))
+        dup = sorted({a for a in attrs if attrs.count(a) > 1})
+        if dup:
+            line = src[:m.start()].count('\n') + 1
+            out.append(f'{path.name}:{line}: <{m.group(1)}> repeats {", ".join(dup)} — '
+                       f'the second one is discarded by the parser')
+    return out
+
+
 def main() -> int:
     findings = []
     for path in FILES:
@@ -133,6 +157,7 @@ def main() -> int:
     pages = sorted(p for p in (ROOT / 'apps').rglob('*.html'))
     for path in pages:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in display_override(path)]
+        findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in duplicate_attributes(path)]
 
     print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')
     for f in findings:

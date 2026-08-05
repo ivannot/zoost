@@ -53,14 +53,27 @@ ALIAS = {
 
 
 def labels(app: str):
-    """Every visible control label in a panel, with the trailing affordance glyphs removed."""
+    """Every control's *name* in a panel — what it is called, not what it draws.
+
+    Reading the visible text alone was enough while every control was a word. Then three of them
+    became marks, and the check went quiet on `Pull all`, `Pull` and `Schema` — coverage shrinking
+    silently, which is the failure mode this whole file exists to prevent. A control's name is now
+    taken from `aria-label` when it has one, which is also where a name has to be for anyone not
+    looking at pixels; the visible text is the fallback. A control with neither is unnamed and is
+    reported as such, because a button nobody can name is a button nobody can look up.
+    """
     html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
     out = {}
-    for m in re.finditer(r'<button[^>]*>([^<]{1,40})</button>', html):
-        raw = ' '.join(m.group(1).split())
-        t = raw.strip('↗↻✕⚙♥ ')
+    for m in re.finditer(r'<button([^>]*)>(.*?)</button>', html, re.S):
+        attrs, inner = m.group(1), m.group(2)
+        if 'display:none' in attrs:
+            continue
+        aria = re.search(r'aria-label="([^"]+)"', attrs)
+        text = ' '.join(re.sub(r'<[^>]*>', '', inner).split())
+        raw = aria.group(1) if aria else text
+        t = (aria.group(1) if aria else text).strip('↗↻✕⚙♥ ')
         if not t or t.startswith('&#') or len(t) < 3:
-            continue          # glyph-only controls carry a title attribute, not a name
+            continue          # a bare glyph with no name of its own: nothing to look up
         out[raw] = t
     return out
 
