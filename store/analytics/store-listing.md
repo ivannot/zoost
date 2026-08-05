@@ -60,6 +60,7 @@ WHAT IT DOES
 - Exports you can hand over. The whole workspace as one self-contained HTML file, or as Markdown shaped as context for an external AI tool — the Markdown carries the constraints of Zoho Analytics' own SQL dialect too, so an assistant that has never seen Zoho Analytics does not write queries that cannot run. A dialog decides section by section what the file may contain; the SQL is opt-in and flagged every time.
 
 - Optional AI assistant, bring your own key. Anthropic (Claude) or OpenAI (ChatGPT). With Anthropic it runs as an agent with read-only tools over your local mirror — it can read a structure, follow a foreign key, open a query's SQL, search columns, and say what depends on what. It is told what Zoho documents about query-table SQL, so what it writes is a draft you can paste rather than plausible SQL that will not run.
+- Your key, your machine, your choice. The API key is stored locally and sent only to the provider you pick. You can protect it with a passphrase you choose — it is then stored encrypted and asked for once per browser session. Off by default, because on a personal machine it buys little and on a shared one a lot, and the trade-off is explained where the choice is made.
 
 WHAT IT DOES NOT DO
 

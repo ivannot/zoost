@@ -61,6 +61,7 @@ WHAT IT DOES
 - Exports you can hand over. The whole workspace as one self-contained cross-linked HTML file, or as Markdown shaped as context for an external LLM. A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.
 
 - Optional AI assistant, bring your own key. Anthropic (Claude) or OpenAI (ChatGPT). With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open. The chat states which engine is active and what it can do.
+- Your key, your machine, your choice. The API key is stored locally and sent only to the provider you pick. You can protect it with a passphrase you choose — it is then stored encrypted and asked for once per browser session. Off by default, because on a personal machine it buys little and on a shared one a lot, and the trade-off is explained where the choice is made.
 
 - Built for multi-org reality. One working folder holds a subfolder per Zoho org, created on demand. Each workspace is bound to its org, host and instance, so a production workspace can never be synced against a sandbox by mistake.
 
