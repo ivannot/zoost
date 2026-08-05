@@ -18,7 +18,10 @@
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const escA = (s) => esc(s).replace(/"/g, '&quot;');   // attribute-safe — esc() alone truncates on a quote
+// Attribute-safe: `&`, `<`, `>`, and **both** quote characters. esc() does not escape quotes, and a
+// quote inside an attribute closes it early. Escaping both styles means a reader never has to work
+// out which one an attribute used — the same definition as the CRM panel and both graph windows.
+const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const HOST_RE = /^https:\/\/analytics\.(zoho\.(eu|com|in|com\.au|jp)|zohocloud\.ca)\//;
@@ -707,7 +710,7 @@ function renderTypeFilter() {
   [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([t, n]) => {
     opts.push(`<option value="${escA(t)}">${esc(t)} (${n})</option>`);
   });
-  if (deps) opts.push(`<option value="${ORPHANS}">Nothing depends on (${views.filter(isOrphanCandidate).length})</option>`);
+  if (deps) opts.push(`<option value="${escA(ORPHANS)}">Nothing depends on (${views.filter(isOrphanCandidate).length})</option>`);
   sel.innerHTML = opts.join('');
   sel.value = typeFilter || '';
 }
@@ -1499,7 +1502,7 @@ async function buildExportHtml(sc) {
   const tbl = (head, rows) => `<table><thead><tr>${head.map((h2) => `<th>${esc2(h2)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc2(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   let body = '';
   for (const x of secs) {
-    body += `<h2 id="${x.id}">${esc2(x.title)}</h2>`;
+    body += `<h2 id="${escA(x.id)}">${esc2(x.title)}</h2>`;
     if (x.rows) body += tbl(x.head, x.rows);
     else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
     else if (x.id === 'sql') {

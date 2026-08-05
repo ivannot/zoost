@@ -299,3 +299,38 @@ test('a host that merely contains the word is not Zoho', () => {
 test('a non-http scheme is left entirely alone', () => {
   assert.equal(isZohoUrl('mailto:ivan@zoost.it'), false);
 });
+
+// ---------- attribute escaping ----------
+
+const { escA } = load([sliceConst('apps/crm/sidepanel.js', 'escA')]);
+
+test('a quote cannot close the attribute it sits in', () => {
+  // The documented trap, found again by an outside review: escHtml() escapes & < > and not quotes,
+  // so a name from Zoho containing a quote ends the attribute and whatever follows becomes markup.
+  assert.ok(!escA('x" onerror=alert(1)').includes('"'));
+  assert.ok(!escA("x' onerror=alert(1)").includes("'"));
+});
+
+test('a tag does not survive', () => {
+  assert.equal(escA('<img src=x>'), '&lt;img src=x&gt;');
+});
+
+test('an ampersand is escaped once, not twice', () => {
+  // Double-escaping is the other failure: swapping esc() for escA() rather than wrapping it is what
+  // keeps `a & b` from becoming `a &amp;amp; b` in every title on the page.
+  assert.equal(escA('a & b'), 'a &amp; b');
+});
+
+test('ordinary text is left alone', () => {
+  assert.equal(escA('Update Contact Status'), 'Update Contact Status');
+});
+
+test('the slicer lifts exactly the constant, not the lines around it', () => {
+  // Not decoration. `.*?;` stopped inside a string and cut escA in half; requiring the semicolon at
+  // end-of-line then swallowed two extra lines whenever a trailing comment followed it — and the
+  // tests kept passing, because the surplus happened to be harmless. A mis-slice that still passes
+  // is how a test quietly stops testing the thing it names.
+  assert.equal(sliceConst('apps/crm/sidepanel.js', 'escA').trim().split('\n').length, 1);
+  assert.equal(sliceConst('site/_worker.js', 'IS_VERSION').trim().split('\n').length, 1);
+  assert.equal(sliceConst('apps/crm/content-bridge.js', 'CSRF_COOKIES').trim().split('\n').length, 4);
+});

@@ -55,7 +55,14 @@ export function sliceFn(rel, name) {
  * duplicating it here would let the guard change and the test keep passing on the old one.
  */
 export function sliceConst(rel, name) {
-  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?const\\s+${name}\\s*=.*?;`, 's'));
+  // Ends at a `;` that closes a *line*, not at the first `;` anywhere. The obvious non-greedy `.*?;`
+  // stopped inside a string literal — `const escA = … '&amp;' …` was cut after `&amp` and produced
+  // a syntax error — and it would have mis-sliced any constant containing a semicolon just as
+  // quietly. Every declaration in this codebase ends its statement at the end of a line — allowing
+  // for a trailing comment, which is what made IS_VERSION slice three lines instead of one on the
+  // first attempt. The tests still passed, because the surplus happened to be harmless; that is
+  // exactly how a mis-slice survives, so the shape is asserted below rather than assumed.
+  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?const\\s+${name}\\s*=[\\s\\S]*?;\\s*(//[^\\n]*)?$`, 'm'));
   if (!m) throw new Error(`${rel}: const ${name} not found — renamed or removed.`);
   return m[0].replace(/^\s*export\s+/m, '');
 }

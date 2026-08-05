@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""
+htmlcheck.py — a value going into an HTML attribute must be attribute-escaped.
+
+The trap this enforces is already written up in CLAUDE.md and it still shipped: `esc()` / `escHtml()`
+escape `& < >` and **not quotes**, so a quote inside an attribute closes it early. That is what cut
+the getRelatedRecords snippet in half, and it is what an outside review found again — several
+`title="${esc(...)}"` carrying names that come from Zoho, plus two carrying an API error message with
+no escaping at all.
+
+The consequence is narrow and real. MV3's default policy blocks inline scripts and inline handlers,
+so this is not code execution. What is left is markup injection into a panel that holds an API key:
+a broken or spoofed interface, and an `<img src="https://…">` that makes a request the moment it is
+rendered. It takes someone able to name an object inside the Zoho org — not a stranger, but not
+nobody either.
+
+What is checked: every `attr="${…}"` inside a template literal. The interpolation must go through
+`escA` (or be plainly safe — a number, a literal, a comparison). Element *content* is not checked
+here: `escHtml` is correct there, the shapes are far more varied, and a checker that guesses at
+content would cry wolf until nobody read it. That limit is stated rather than hidden.
+
+    python3 tools/htmlcheck.py
+"""
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+FILES = sorted(p for p in (ROOT / 'apps').rglob('*.js'))
+
+ATTR_SAFE = re.compile(r'\bescA\s*\(')
+
+# A value is safe only if it demonstrably cannot contain a quote: a number, a quoted literal, a
+# boolean, or an expression that renders one. Everything else is reported.
+#
+# The first version of this also carried a list of identifiers "known to be ours" — and that list
+# did exactly what such lists always do here: it let `n.name` through, which is a name straight out
+# of Zoho and the whole reason the check exists, while reporting the number 42. An allow-list of
+# names is a checklist wearing a script's clothes; the criterion has to be a property of the value.
+LITERAL = re.compile(r"""^\s*(
+    -?\d+(\.\d+)?
+  | true | false | null | undefined
+  | '[^'\\]*' | "[^"\\]*"
+)\s*$""", re.X)
+
+COMPARISON = re.compile(r'^[^\'"]*\s(===|!==|==|!=|<=|>=|<|>)\s[^\'"]*$')
+
+# A ternary whose *both* branches are literals renders a literal.
+TERNARY_OF_LITERALS = re.compile(r"""^[^?]*\?\s*(['"][^'"]*['"])\s*:\s*(['"][^'"]*['"])\s*$""")
+
+
+def interpolations(tpl: str):
+    """The `${…}` expressions of a template literal, with nesting handled."""
+    out, i = [], 0
+    while i < len(tpl) - 1:
+        if tpl[i] == '$' and tpl[i + 1] == '{':
+            depth, i, cur = 1, i + 2, ''
+            while i < len(tpl) and depth:
+                c = tpl[i]
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if not depth:
+                        break
+                cur += c
+                i += 1
+            out.append(cur)
+        i += 1
+    return out
+
+
+def suspect(expr: str) -> bool:
+    e = ' '.join(expr.split())
+    if ATTR_SAFE.search(e):
+        return False
+    return not (LITERAL.match(e) or COMPARISON.match(e) or TERNARY_OF_LITERALS.match(e))
+
+
+def main() -> int:
+    findings = []
+    for path in FILES:
+        src = re.sub(r'^\s*//.*$', '', path.read_text(encoding='utf-8'), flags=re.M)
+        for m in re.finditer(r'(\w[\w-]*)="\$\{([^}]*(?:\{[^}]*\}[^}]*)*)\}"', src):
+            attr, expr = m.group(1), m.group(2)
+            if suspect(expr):
+                line = src[:m.start()].count('\n') + 1
+                rel = path.relative_to(ROOT)
+                findings.append(f'{rel}:{line}: {attr}="${{{" ".join(expr.split())[:60]}}}" is not attribute-escaped')
+
+    print(f'htmlcheck: {len(FILES)} shipped scripts')
+    for f in findings:
+        print('  ' + f)
+    print()
+    print(f'{len(findings)} finding(s). A quote in that value closes the attribute early.'
+          if findings else
+          '0 findings. Every value interpolated into an attribute goes through escA.')
+    return 1 if findings else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

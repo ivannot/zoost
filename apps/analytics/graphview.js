@@ -89,7 +89,7 @@ function render() {
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {
       const d = document.createElement('div'); d.className = 'item'; d.setAttribute('aria-selected', n.id === sel);
-      d.innerHTML = `<span class="dot" style="background:${NSCOL(n.namespace)}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${n.namespace.slice(0, 4)}</span><span class="deg">${n.called_by.length}◂</span>`;
+      d.innerHTML = `<span class="dot" style="background:${NSCOL(n.namespace)}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
       d.onclick = () => select(n.id); listEl.appendChild(d);
     });
 }
@@ -125,13 +125,13 @@ function layoutZoneHtml(n) {
     ? `<div class="laychips"><span class="laychip" data-lay="all" aria-pressed="${layFilter === null}">All fields \u00b7 ${all.length}</span>`
       + lays.map((l, i) => {
           const cnt = all.filter((f) => Array.isArray(f._lay) && f._lay.includes(i)).length;
-          return `<span class="laychip" data-lay="${i}" aria-pressed="${layFilter === i}" title="${esc(l.name || String(l.id))}${l.visible === false ? ' (hidden)' : ''}">${esc(l.name || String(l.id))}${l.visible === false ? ' \u00b7 hidden' : ''} \u00b7 ${cnt}</span>`;
+          return `<span class="laychip" data-lay="${escA(i)}" aria-pressed="${layFilter === i}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden)' : ''}">${esc(l.name || String(l.id))}${l.visible === false ? ' \u00b7 hidden' : ''} \u00b7 ${cnt}</span>`;
         }).join('')
       + `</div>`
     : '';
 
   const lhead = detail
-    ? lays.map((l, i) => `<th class="lcol${l.visible === false ? ' hid' : ''}" title="${esc(l.name || String(l.id))}${l.visible === false ? ' (hidden layout)' : ''}">${esc(layShort(l.name || l.id))}</th>`).join('')
+    ? lays.map((l, i) => `<th class="lcol${l.visible === false ? ' hid' : ''}" title="${escA(l.name || String(l.id))}${l.visible === false ? ' (hidden layout)' : ''}">${esc(layShort(l.name || l.id))}</th>`).join('')
     : '';
 
   const rows = rowsSrc.map((f) => {
@@ -140,7 +140,7 @@ function layoutZoneHtml(n) {
     const cells = detail ? lays.map((l, i) => {
       if (!Array.isArray(f._lay) || !f._lay.includes(i)) return '<td class="lcol"></td>';
       const req = Array.isArray(f._req) && f._req.includes(i);
-      return `<td class="lcol"><span class="d${req ? ' req' : ''}" title="${esc(l.name || String(l.id))}${req ? ' \u2014 required here' : ''}"></span></td>`;
+      return `<td class="lcol"><span class="d${req ? ' req' : ''}" title="${escA(l.name || String(l.id))}${req ? ' \u2014 required here' : ''}"></span></td>`;
     }).join('') : '';
     return `<tr class="${orphan ? 'nolay' : ''}">
     <td>${esc(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}${orphan ? '<span class="nolaytag">no layout</span>' : ''}</td>
@@ -200,7 +200,7 @@ function select(id, nopush) {
   if (sel !== id) layFilter = null;   // layout filter is per-module
   sel = id; const n = N[id]; render();
   const schema = DATA.kind === 'schema';
-  const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${h}">${esc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
+  const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${escA(h)}">${esc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
   let assoc = '';
   if (!schema && Array.isArray(n.associated_place) && n.associated_place.length) {
     assoc = '<div class="assoc">Bound to: ' + n.associated_place.map((a) => `<b>${esc(a._type || '')}</b> ${esc(a.name || '')} <span>(${esc(a.module || '')})</span>`).join(' \u00b7 ') + '</div>';
@@ -1051,6 +1051,6 @@ window.addEventListener('afterprint', () => { if (_prevDocTitle != null) { docum
 // Visible attribution (also appears in the printed PDF)
 (function () {
   const el = document.getElementById('credit'); if (!el) return;
-  const url = PRODUCT_URL ? ` \u00b7 <a href="${PRODUCT_URL}">${PRODUCT_URL}</a>` : '';
+  const url = PRODUCT_URL ? ` \u00b7 <a href="${escA(PRODUCT_URL)}">${PRODUCT_URL}</a>` : '';
   el.innerHTML = `${PRODUCT_NAME}${url} \u00b7 Created by ${PRODUCT_AUTHOR} \u00b7 Apache-2.0 \u00b7 Independent, unofficial tool \u2014 not affiliated with Zoho Corporation \u00b7 provided AS IS, no warranty`;
 })();

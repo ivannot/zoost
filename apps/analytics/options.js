@@ -7,6 +7,11 @@
 'use strict';
 
 const $ = (id) => document.getElementById(id);
+// Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
+// the panels and the graph windows — one behaviour under one name, so a reader never has to check
+// which file they are in.
+const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
@@ -107,7 +112,7 @@ function markDirty(key) { dirty.add(key); }
 function conflictBox(key, on) {
   const id = 'cf_' + key;
   let el = document.getElementById(id);
-  const sec = document.querySelector(`[data-section="${key}"]`);
+  const sec = document.querySelector(`[data-section="${escA(key)}"]`);
   if (!sec) return;
   if (!on) { if (el) el.remove(); return; }
   if (el) return;

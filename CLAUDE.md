@@ -502,7 +502,19 @@ These all failed **silently**, with no console error. They are the expensive kin
 
 - **JS escapes inside HTML text.** `\u2699` written into markup renders as the literal string.
   HTML does not interpret JavaScript escapes. Use the character, or an HTML entity.
-- **`esc()` is not attribute-safe.** It escapes `& < >` only. A double quote inside an attribute
+- **`esc()` is not attribute-safe** — and writing that down was not enough, because it shipped again.
+  An outside review found several `title="${esc(...)}"` carrying names that come from Zoho, and two
+  carrying an API error message with no escaping at all. `tools/htmlcheck.py` now reports any
+  `attr="${…}"` whose value is not demonstrably a literal and does not go through `escA`, and all six
+  shipped scripts share one definition of `escA` — escaping `& < > " '` — so nobody has to work out
+  which file they are in or which quote style an attribute used. Its own first version carried a list
+  of identifiers "known to be ours", which let `n.name` through while reporting the number 42: the
+  criterion has to be a property of the value, never a list of names. Element *content* is not
+  checked — `escHtml` is right there and the shapes vary too much — and that limit is stated rather
+  than hidden. The exposure is narrow and real: MV3 blocks inline script, so what is left is a
+  spoofed interface and an `<img src="https://…">` that fires on render, in a panel holding an API
+  key.
+- **`esc()` is not attribute-safe (original note).** It escapes `& < >` only. A double quote inside an attribute
   closes it early and truncates the value — this is what cut the `getRelatedRecords` snippet in
   half. Use `escA()` in attribute contexts.
 - **CSS specificity and source order.** `.erbox.dim .erhdr` placed before `.erbox.custom .erhdr`

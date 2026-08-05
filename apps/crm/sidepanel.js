@@ -36,7 +36,11 @@ const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').clas
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // escHtml is NOT attribute-safe (it leaves " alone). Use escA inside an attribute value, or a
 // double quote in the data closes it early and truncates — the trap that halved the getRelated snippet.
-const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+// Attribute-safe: `&`, `<`, `>`, and **both** quote characters. escHtml() does not escape quotes, and
+// a quote inside an attribute closes it early — that is what cut the getRelatedRecords snippet in
+// half. Escaping both quote styles means a reader never has to work out which one the attribute
+// used, and the two graph windows already did it this way.
+const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); }
@@ -304,9 +308,9 @@ function showAbout() {
   $('aboutbody').innerHTML =
     `<div><b>${escHtml(PRODUCT_NAME)}</b> \u00b7 v${escHtml(chrome.runtime.getManifest().version)}</div>`
     + `<div style="color:var(--muted)">Created by ${escHtml(PRODUCT_AUTHOR)} (with the support of Claudio)</div>`
-    + `<h4>Links</h4><div><a href="${escHtml(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escHtml(PAGE_URL)}" target="_blank" rel="noopener">What it does</a> \u00b7 <a href="${escHtml(DOCS_URL)}" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escHtml(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escHtml(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
-    + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escHtml(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escHtml(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
-    + `<h4>Licence</h4><div><a href="${escHtml(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
+    + `<h4>Links</h4><div><a href="${escA(PRODUCT_URL)}" target="_blank" rel="noopener">zoost.it</a> \u00b7 <a href="${escA(PAGE_URL)}" target="_blank" rel="noopener">What it does</a> \u00b7 <a href="${escA(DOCS_URL)}" target="_blank" rel="noopener">How to use</a> \u00b7 <a href="${escHtml(PRODUCT_URL)}/privacy.html" target="_blank" rel="noopener">Privacy</a> \u00b7 <a href="${escA(STORE_URL)}" target="_blank" rel="noopener">Web Store</a> \u00b7 <a href="${escA(REPO_URL)}" target="_blank" rel="noopener">Source</a> \u00b7 <a href="mailto:${escHtml(CONTACT_EMAIL)}">${escHtml(CONTACT_EMAIL)}</a></div>`
+    + `<h4>Support</h4><div>${SPONSOR_URL ? `<a href="${escA(SPONSOR_URL)}" target="_blank" rel="noopener">GitHub Sponsors</a>` : ''}${SPONSOR_URL && KOFI_URL ? ' \u00b7 ' : ''}${KOFI_URL ? `<a href="${escA(KOFI_URL)}" target="_blank" rel="noopener">\u2615 Ko-fi</a>` : ''}</div>`
+    + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
     + `The extension has no server of its own and sends nothing anywhere. Exports are written to your workspace folder \u2014 what happens to them afterwards is up to you.</div>`;
@@ -555,7 +559,7 @@ function fnRowEl(e) {
     ? `<span class="rest rn" title="${escA(e.namespace || '')}">${escHtml((e.namespace || '').slice(0, 4))}</span>` : '';
   const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
-  el.innerHTML = `<span class="st ${stCls}" title="${stTitle}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
+  el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
   el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
   el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
   return el;
@@ -1125,7 +1129,7 @@ async function buildHealth() {
   const fnById = {}, fnByName = {};
   nodes.forEach((n) => { if (n.id) fnById[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) fnByName[String(k).toLowerCase()] = n; }); });
   const byName = (a, b) => (a.display_name || a.name || '').localeCompare(b.display_name || b.name || '');
-  const fnLink = (n) => `<a data-file="${escHtml(n.file)}">${nmNode(n)}</a>`;
+  const fnLink = (n) => `<a data-file="${escA(n.file)}">${nmNode(n)}</a>`;
   const orphan = nodes.filter((n) => n.dead_suspect).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">${escHtml(n.namespace || '')}</span>` }));
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
@@ -1134,7 +1138,7 @@ async function buildHealth() {
   for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
   let scheds = []; try { scheds = JSON.parse(await readFile('_schedules/_index.json')); } catch (_) {}
   scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
-  const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escHtml(b.kind)}" data-id="${escHtml(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
+  const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
   for await (const p of walk(dir)) { if (p.startsWith('_modules/') && p.endsWith('.json') && !p.endsWith('_index.json')) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
@@ -1970,7 +1974,7 @@ function renderModules() {
       // so module names line up with the other tabs' dot\u2192name spacing.
       const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
       const stTitle = m.error ? 'Failed \u2014 click to retry' : 'In workspace \u2014 click to resync fields from Zoho';
-      el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="${stTitle}">${m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
+      el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="${escA(stTitle)}">${m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
         + `<span class="rest rf" title="${m.fieldCount} field(s)">${m.fieldCount ? m.fieldCount + 'f' : ''}</span>`
         + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>${chev}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); resyncModule(m); };
@@ -2057,7 +2061,7 @@ async function openModule(path, layoutId) {
   const lays = m.layouts || [];
   const selector = lays.length
     ? `<div class="laybar">Layout: <select id="laysel"><option value="__all__">All fields (flat, ${(m.fields || []).length})</option>`
-      + lays.map((l) => `<option value="${escHtml(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
+      + lays.map((l) => `<option value="${escA(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
       + `</select> <button id="laymod" class="laymod" title="Open the selected layout in the Zoho layout editor">Modify \u2197</button></div>`
     : '';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
@@ -2066,7 +2070,7 @@ async function openModule(path, layoutId) {
   const rlBlock = rls.length
     ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">\u2014 API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
       + `<table class="ftbl"><thead><tr><th>API name</th><th>Label</th><th>Target module</th><th>Type</th></tr></thead><tbody>`
-      + rls.map((r) => `<tr><td class="mono rlcopy" data-c="${escHtml(r.api_name)}" title="Click to copy">${escHtml(r.api_name)}</td>`
+      + rls.map((r) => `<tr><td class="mono rlcopy" data-c="${escA(r.api_name)}" title="Click to copy">${escHtml(r.api_name)}</td>`
         + `<td>${escHtml(r.label || '')}</td>`
         + `<td class="mono">${escHtml(r.module || r.connected_module || '')}${r.linking_module ? ` <span style="color:var(--muted)">via ${escHtml(r.linking_module)}</span>` : ''}</td>`
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
@@ -2243,7 +2247,7 @@ async function downloadMissing() {
   $('pull').disabled = false; $('missing').disabled = false;
 }
 function updateRow(e) {
-  const row = document.querySelector(`.f[data-id="${(window.CSS && CSS.escape) ? CSS.escape(e.id) : e.id}"]`); if (!row) return;
+  const row = document.querySelector(`.f[data-id="${escA((window.CSS && CSS.escape) ? CSS.escape(e.id) : e.id)}"]`); if (!row) return;
   row.dataset.path = e.path;
   const st = row.querySelector('.st'); if (!st) return;
   const ok = e.downloaded || e.scanned;
@@ -2397,7 +2401,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
         + (f.stats ? `<span><b>Size:</b> ${f.stats.lines} lines (${f.stats.codeLines} code) · ${(f.stats.chars / 1024).toFixed(1)} KB · <b>outbound calls:</b> ${f.stats.apiCalls || 'none'}${f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} zoho.crm, ${f.stats.zoho} other${f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''})` : ''}</span>` : '')
         + ((f.modified_by || f.updatedTime) ? `<span><b>Modified:</b> ${f.modified_by ? 'by ' + esc(f.modified_by) : ''}${f.updatedTime ? ' · ' + esc(String(f.updatedTime).slice(0, 16)) : ''}</span>` : '')
         + `</div>` : '';
-      fnHtml += `<section class="item" id="${fnAnchor(f.api_name)}" data-name="${esc(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
+      fnHtml += `<section class="item" id="${escA(fnAnchor(f.api_name))}" data-name="${escA(((f.api_name || '') + ' ' + (f.display_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(f.display_name || f.api_name)}</b> <code>${esc(f.api_name)}</code>`
         + `${f.rest ? '<span class="badge rest">REST</span>' : ''}${f.downloaded ? '' : '<span class="badge no">not downloaded</span>'}</div>`
         + `${refs}${(scope.code && f.code) ? `<pre class="code">${hl(f.code)}</pre>` : ''}</section>`;
@@ -2434,7 +2438,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
         const secCount = secArr.length || (typeof L.sections === 'number' ? L.sections : 0);
         return `<details open style="margin-top:6px"><summary style="cursor:pointer"><b>${esc(L.name || String(L.id))}</b>${L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''} <span class=\"none\">\u00b7 ${secCount} sections</span></summary>${secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail not in this export \u2014 re-pull modules for full layout fields.</div>'}</details>`;
       }).join('') : '';
-      modHtml += `<section class="item" id="${modAnchor(m.api_name)}" data-name="${esc(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
+      modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
         + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
     });
@@ -2454,7 +2458,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     allRels.push({ api: r.api_name, label: r.label || '', parent: m.api_name, child, via, type: r.type || 'default', visible: r.visible !== false, sys: SYS_REL_X.test(r.api_name) || !child });
   }));
   allRels.sort((a, b) => (a.sys - b.sys) || a.parent.localeCompare(b.parent) || a.api.localeCompare(b.api));
-  const relRowHtml = (r) => `<tr class="relrow${r.sys ? ' sys' : ''}" data-name="${esc(((r.api || '') + ' ' + (r.label || '') + ' ' + (r.parent || '') + ' ' + (r.child || '')).toLowerCase())}">`
+  const relRowHtml = (r) => `<tr class="relrow${r.sys ? ' sys' : ''}" data-name="${escA(((r.api || '') + ' ' + (r.label || '') + ' ' + (r.parent || '') + ' ' + (r.child || '')).toLowerCase())}">`
     + `<td class="mono"><b>${esc(r.api)}</b></td><td>${esc(r.label)}</td>`
     + `<td class="mono">${modLink(r.parent)}</td><td class="mono">${r.child ? modLink(r.child) : ''}</td>`
     + `<td class="mono">${esc(r.via || '')}</td><td class="ct">${esc(r.type)}${r.visible ? '' : ' \u00b7 hidden'}</td>`
@@ -2478,7 +2482,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     wfByMod[mod].slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((w) => {
       const d = w.detail;
       const modl = mods.some((m) => m.api_name === w.module) ? `<a href="#${modAnchor(w.module)}">${esc(w.module)}</a>` : esc(w.module || '');
-      const head = `<section class="item" id="${wfAnchor(w.id)}" data-name="${esc(((w.name || '') + ' ' + (w.module || '')).toLowerCase())}">`
+      const head = `<section class="item" id="${escA(wfAnchor(w.id))}" data-name="${escA(((w.name || '') + ' ' + (w.module || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(w.name)}</b> <code>${esc(w.type || '')}</code> ${modl}${w.active ? '' : '<span class="badge no">inactive</span>'}</div>`;
       if (!d) { wfHtml += head + `<div class="refs"><span class="none">not downloaded</span></div></section>`; return; }
       const ew = d.execute_when || {}, det = ew.details || {};
@@ -2518,7 +2522,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   scheds.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((sc) => {
     const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()];
     const fl = fn ? `<a href="#${fnAnchor(fn.api_name)}">${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">${esc(sc.function_name || '?')}</span>`;
-    schHtml += `<section class="item" id="${schAnchor(sc.id)}" data-name="${esc(((sc.name || '') + ' ' + (sc.function_name || '')).toLowerCase())}">`
+    schHtml += `<section class="item" id="${escA(schAnchor(sc.id))}" data-name="${escA(((sc.name || '') + ' ' + (sc.function_name || '')).toLowerCase())}">`
       + `<div class="ih"><b>${esc(sc.name)}</b> <code>${esc(sc.frequency || '')}</code>${sc.status !== 'active' ? `<span class="badge no">${esc(sc.status || '')}</span>` : ''}</div>`
       + `<div class="refs"><span><b>Runs function:</b> ${fl}</span>${sc.next ? `<span><b>Next:</b> ${esc(sc.next)}</span>` : ''}</div></section>`;
   });
@@ -2582,7 +2586,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).map((c) => {
     const usesLinks = c.uses.length ? c.uses.map(fnLink).join(', ') : '<span class="none">none</span>';
     const status = c.missing ? '<span style="color:#b45309">not in catalogue</span>' : c.connected === false ? '<span style="color:#b45309">not connected</span>' : 'connected';
-    return `<tr id="${connAnchor(c.name)}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
+    return `<tr id="${escA(connAnchor(c.name))}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
   });
   const connHtml = conns.length
     ? `<p class="hxd">The org's connections and the functions that use each — the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
@@ -2601,14 +2605,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<title>${esc(PRODUCT_NAME)} — ${esc(ws.instance || 'Export')}</title>`
-    + `<meta name="author" content="${esc(PRODUCT_AUTHOR)}"><meta name="generator" content="${esc(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${esc(PRODUCT_URL)}">` : ''}`
+    + `<meta name="author" content="${escA(PRODUCT_AUTHOR)}"><meta name="generator" content="${escA(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${escA(PRODUCT_URL)}">` : ''}`
     + `<style>${EXPORT_CSS}</style></head><body>`
     + `<header><h1>${esc(PRODUCT_NAME)} — Export</h1>`
     + `<div class="meta">${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
-    + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${esc(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${esc(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${esc(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
+    + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
 
@@ -2840,7 +2844,7 @@ async function openSchedule(e) {
   $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
-  const fnLink = `<span class="wf-fn" data-fnid="${escHtml(e.function_id || '')}" data-fnname="${escHtml(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
+  const fnLink = `<span class="wf-fn" data-fnid="${escA(e.function_id || '')}" data-fnname="${escA(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
   $('pvtable').innerHTML = `<div class="wfd">`
     + `<div class="wfrow"><span class="wk">Function</span> ${fnLink}</div>`
     + `<div class="wfrow"><span class="wk">Frequency</span> ${escHtml(e.frequency || '')}</div>`
@@ -2899,7 +2903,7 @@ function renderWorkflows() {
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
       const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
-      el.innerHTML = `<span class="st ${stCls}" title="${wfTitle}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => openWorkflow(e);
       tree.appendChild(el);
@@ -3010,7 +3014,7 @@ function renderConnections() {
     const dc = c.missing ? 'st-err' : c.connected === false ? 'st-stale' : 'st-ok';
     const dch = c.missing ? '⟳' : c.connected === false ? '◐' : '●';
     const dt = (c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected') + ' — click to refresh connections from Zoho';
-    el.innerHTML = `<span class="st ${dc}" title="${dt}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
+    el.innerHTML = `<span class="st ${dc}" title="${escA(dt)}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
       + `<span class="rest rf" title="functions using it">${c.uses.length}×</span>`
       + (c.connector ? `<span class="rest rl" style="color:#a78bfa" title="connector">${escHtml(c.connector)}</span>` : '');
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshConnections(); };   // the status dot acts, like every other tab's does (here: re-pull the catalogue)
@@ -3122,7 +3126,7 @@ function renderWorkflowDetail(rule) {
     return esc(String(t));
   };
   const actionSpan = (a) => a.type === 'functions'
-    ? `<span class="wf-fn" data-fnid="${esc(a.id)}" data-fnname="${esc(a.name)}" title="Open the function">\u0192 ${esc(a.name)}</span>`
+    ? `<span class="wf-fn" data-fnid="${escA(a.id)}" data-fnname="${escA(a.name)}" title="Open the function">\u0192 ${esc(a.name)}</span>`
     : `<span class="wfact">${esc(a.type)}: ${esc(a.name)}</span>`;
   const bucketHtml = (bucket, label) => {
     if (!bucket) return '';
@@ -3160,7 +3164,7 @@ function renderWorkflowDetail(rule) {
     h += bucketHtml(c.scheduled_actions, 'Scheduled');
     h += `</div>`;
   });
-  h += `<div class="wfusage-wrap"><button class="wfusage" data-wfid="${esc(rule.id)}">Show executions (last 30 days)</button><div class="wfusage-out"></div></div>`;
+  h += `<div class="wfusage-wrap"><button class="wfusage" data-wfid="${escA(rule.id)}">Show executions (last 30 days)</button><div class="wfusage-out"></div></div>`;
   h += `<details class="wfraw"><summary>Raw JSON</summary><pre>${esc(JSON.stringify(rule, null, 2))}</pre></details>`;
   return h + `</div>`;
 }

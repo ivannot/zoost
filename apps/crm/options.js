@@ -5,6 +5,11 @@
  * A `settingsStamp` is bumped on every change so an open side panel can react.
  */
 const $ = (id) => document.getElementById(id);
+// Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
+// the panels and the graph windows — one behaviour under one name, so a reader never has to check
+// which file they are in.
+const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 
 const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by '
   + 'Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative '
@@ -193,11 +198,11 @@ function renderTabs() {
     // Two independent switches, because they answer different questions: "do I want to look at this"
     // and "should Zoost even ask Zoho for it". A refused area has neither offered — it is skipped
     // whatever these say, and a control that cannot do what it says is worse than no control.
-    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${id}" title="Show this tab in the side panel">
+    row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${escA(id)}" title="Show this tab in the side panel">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
-      <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${id}">pull</label>
-      <button class="mv" data-up="${id}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
-      <button class="mv" data-down="${id}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
+      <label class="pl" title="Include this type when you click Pull all"><input type="checkbox" ${denied ? 'disabled' : ''} ${(denied || tabNoPullCur.includes(id)) ? '' : 'checked'} data-pull="${escA(id)}">pull</label>
+      <button class="mv" data-up="${escA(id)}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
+      <button class="mv" data-down="${escA(id)}" ${i === tabOrderCur.length - 1 ? 'disabled' : ''} title="Move down">↓</button>`;
     box.appendChild(row);
   });
   box.querySelectorAll('input[data-id]').forEach((c) => (c.onchange = () => {
@@ -295,7 +300,7 @@ function markDirty(key) { dirty.add(key); }
 function conflictBox(key, on) {
   const id = 'cf_' + key;
   let el = document.getElementById(id);
-  const sec = document.querySelector(`[data-section="${key}"]`);
+  const sec = document.querySelector(`[data-section="${escA(key)}"]`);
   if (!sec) return;
   if (!on) { if (el) el.remove(); return; }
   if (el) return;
