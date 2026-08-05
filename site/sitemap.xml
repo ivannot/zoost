@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://zoost.it/</loc>
     <lastmod>2026-08-03</lastmod>
@@ -7,8 +8,17 @@
   </url>
   <url>
     <loc>https://zoost.it/crm.html</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/crm.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/crm.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/crm.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/crm.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/crm.html"/>
   </url>
   <url>
     <loc>https://zoost.it/analytics.html</loc>

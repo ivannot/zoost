@@ -882,6 +882,24 @@ never stop doing so: Zoost for Zoho CRM 1.9.0 has that URL compiled into it, and
 extension cannot be asked to change. The redirect lives in `_worker.js`, since assets are served
 first and a file at that path would win.
 
+**The site is translated page by page, and a translation that falls behind is reported, not
+remembered.** `site/it/` holds the Italian pages. Each one carries
+`<!-- translated-from: site/<page>.html @ <sha> -->`, and `sitecheck.py` compares that sha against the
+English page's last commit — so forgetting to update the Italian makes it **reported**, which is the
+only direction that fails safe. The marker lives in the file rather than a side table, so whoever
+copies the page carries it with them.
+
+Three consequences, all deliberate. The **chrome is one shape per language**, not one shape overall:
+it must not change as you move through a site, and it must change when you change language, because
+the labels are the point. The **naming rules apply in Italian too** — a bare «Analytics» says exactly
+as little about whose product it is. And the **UI control names stay in English**, because the
+extension is: a guide that says *premi **Pull all*** is naming the button the reader will actually
+find, and the Italian page says so in a line under the hero rather than leaving it to be discovered.
+
+What is **not** translated, on purpose: `privacy.html`, which is the most claim-dense page and has
+legal weight — English stays canonical; and `llms.txt`, whose reader is a machine and which is the
+map of the evidence, so there is one version of it and only one.
+
 **Pages are responsive, and that is checked at a width, not eyeballed.** Wide content — tables, long
 code tokens, diagrams — scrolls inside its own box; the page body never scrolls sideways. The guides
 overflowed 375px by ~95px from code tokens in table cells, and nobody had looked. The nav carries the

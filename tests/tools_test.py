@@ -472,5 +472,60 @@ class GuidesDepictMarks(unittest.TestCase):
         self.assertIn('Pull all', findings[0])
 
 
+class TranslationsInStep(unittest.TestCase):
+    """A translated page records the commit of the English page it was made from.
+
+    A second language is the thing this repository spends its effort not having: a surface that can
+    quietly stop being true. Nobody has to remember to update the Italian — forgetting makes it
+    *reported*, which is the only direction that fails safe.
+    """
+
+    def page(self, marker):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site' / 'it').mkdir(parents=True)
+        (d / 'site' / 'it' / 'crm.html').write_text(marker + '\n<html></html>', encoding='utf-8')
+        return d
+
+    def run_on(self, marker):
+        d = self.page(marker)
+        oldr, olds = sitecheck.ROOT, sitecheck.SITE
+        sitecheck.ROOT, sitecheck.SITE = d, d / 'site'
+        try:
+            findings = []
+            sitecheck.translations_current(findings)
+            return findings
+        finally:
+            sitecheck.ROOT, sitecheck.SITE = oldr, olds
+
+    def test_a_page_with_no_marker_is_reported(self):
+        f = self.run_on('<!-- nothing here -->')
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('translated-from', f[0])
+
+    def test_a_marker_naming_a_missing_file_is_reported(self):
+        f = self.run_on('<!-- translated-from: site/does-not-exist.html @ abc1234 -->')
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('does not exist', f[0])
+
+    def test_the_italian_page_is_in_step_today(self):
+        findings = []
+        sitecheck.translations_current(findings)
+        self.assertEqual(findings, [], 'site/it is behind — retranslate what moved and update the marker')
+
+    def test_a_stale_marker_is_reported(self):
+        page = ROOT / 'site' / 'it' / 'crm.html'
+        original = page.read_text(encoding='utf-8')
+        stale = re.sub(r'(translated-from: \S+ @ )[0-9a-f]+', r'\g<1>0000000', original, count=1)
+        self.assertNotEqual(stale, original, 'the marker is gone')
+        page.write_text(stale, encoding='utf-8')
+        try:
+            findings = []
+            sitecheck.translations_current(findings)
+        finally:
+            page.write_text(original, encoding='utf-8')
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn('has changed since this was translated', findings[0])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

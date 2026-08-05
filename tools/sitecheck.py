@@ -257,28 +257,79 @@ def hosts_declared(findings: list) -> None:
                                 f'site/privacy.html never names it')
 
 
+# ---------------------------------------------------------------------------------------------------
+# Translations
+# ---------------------------------------------------------------------------------------------------
+
+TRANSLATED_FROM = re.compile(r'<!--\s*translated-from:\s*(\S+)\s*@\s*([0-9a-f]{7,40})\s*-->')
+
+
+def translations_current(findings: list) -> None:
+    """A translated page records the commit of the English page it was made from, and this compares
+    that against the English page's last change.
+
+    Without it the second language is the thing this repository spends all its effort not having: a
+    surface that can quietly stop being true. Nobody has to remember to update the Italian — forgetting
+    makes it *reported*, which is the only direction that fails safe, and it is the same argument as
+    every allow-list in these tools being a list of what is deliberately different.
+
+    The marker is a comment in the file rather than a side table, so a translator who copies the page
+    carries it with them and cannot leave it behind.
+    """
+    import subprocess
+    for page in sorted((SITE / 'it').glob('*.html')) if (SITE / 'it').is_dir() else []:
+        text = page.read_text(encoding='utf-8')
+        m = TRANSLATED_FROM.search(text)
+        if not m:
+            findings.append(f'site/it/{page.name}: no `translated-from` marker, so nothing can tell '
+                            f'whether it is still in step with the English page')
+            continue
+        src, recorded = m.group(1), m.group(2)
+        origin = ROOT / src
+        if not origin.exists():
+            findings.append(f'site/it/{page.name}: says it was translated from {src}, which does not exist')
+            continue
+        out = subprocess.run(['git', 'log', '-1', '--format=%H', '--', src],
+                             cwd=ROOT, capture_output=True, text=True)
+        head = out.stdout.strip()
+        if not head:
+            findings.append(f'site/it/{page.name}: could not read the history of {src}')
+        elif not head.startswith(recorded) and not recorded.startswith(head[:len(recorded)]):
+            findings.append(f'site/it/{page.name}: {src} has changed since this was translated '
+                            f'(page says {recorded[:12]}, latest is {head[:12]}) — retranslate what moved, '
+                            f'then update the marker')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
         print('No pages found.', file=sys.stderr)
         return 2
+    # One shape per *language*. The chrome must not change as you move through a site; it must change
+    # when you change language, because the labels are the point of translating it.
+    groups = {'en': pages, 'it': sorted((SITE / 'it').glob('*.html'))}
 
     findings = []
-    for name, fn in (('navigation', nav_shape), ('footer', footer_shape)):
-        shapes = {}
-        for p in pages:
-            s = fn(p.read_text(encoding='utf-8'))
-            if s is None:
-                findings.append(f'{p.name}: no {name} at all')
-                continue
-            shapes.setdefault(repr(s), []).append(p.name)
-        if len(shapes) > 1:
-            findings.append(f'The {name} has {len(shapes)} different shapes:')
-            for shape, files in sorted(shapes.items(), key=lambda kv: -len(kv[1])):
-                findings.append(f'    {", ".join(files)}')
-                findings.append(f'      {shape[:300]}')
+    for lang, group in groups.items():
+        if not group:
+            continue
+        for name, fn in (('navigation', nav_shape), ('footer', footer_shape)):
+            shapes = {}
+            for p in group:
+                s = fn(p.read_text(encoding='utf-8'))
+                if s is None:
+                    findings.append(f'{p.name}: no {name} at all')
+                    continue
+                shapes.setdefault(repr(s), []).append(p.name)
+            if len(shapes) > 1:
+                findings.append(f'The {name} has {len(shapes)} different shapes in {lang}:')
+                for shape, files in sorted(shapes.items(), key=lambda kv: -len(kv[1])):
+                    findings.append(f'    {", ".join(files)}')
+                    findings.append(f'      {shape[:300]}')
 
-    for p in pages:
+    # The naming rules are about the *products*, not about English: a bare «Analytics» in Italian prose
+    # says exactly as little about whose product it is.
+    for p in pages + groups['it']:
         for ctx in bare_platform(p.read_text(encoding='utf-8')):
             findings.append(f'{p.name}: bare platform name — …{ctx}…')
         for lbl in ours_named_as_theirs(p.read_text(encoding='utf-8')):
@@ -290,6 +341,7 @@ def main() -> int:
         check_prose(doc, findings)
 
     store_field_limits(findings)
+    translations_current(findings)
     txt_served_by_worker(findings)
     hosts_declared(findings)
 
