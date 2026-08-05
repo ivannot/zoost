@@ -1351,6 +1351,14 @@ Two traps that this layout hides:
   intermittently and with no error. The Atom feeds on `github.com` carry the same facts with no such
   limit and no credential: `tags.atom` for the newest tag, `commits/main/<path>.atom` for when a path
   last changed. They are XML, so parse shallowly and keep the shape guards.
+- **Assets are served first, which means a handler for an existing file never runs.** The `.txt`
+  charset fix sat in `_worker.js` for weeks as **dead code**: `/llms.txt` is a file, so Cloudflare
+  answered it directly and the script was never asked. It took `assets.run_worker_first` to make it
+  real. Worse than the bug is how it survived — it was reported, corrected, and **declared fixed on
+  the wrong evidence**: the live bytes were compared against the repo and matched, which they always
+  had. The bytes were never the problem. A rendering defect is verified by rendering it; the browser
+  reported `document.characterSet === 'windows-1252'` and `â€”` on screen the whole time.
+  `sitecheck.py` now derives the route list from the directory, so a new `.txt` cannot be forgotten.
 - **A `.txt` has no way to declare its own encoding, so the header must.** Cloudflare serves plain
   text as `text/plain` with no charset; the browser then guesses, picks Windows-1252, and every
   em-dash in `llms.txt` arrived as `â€”`. The bytes were valid UTF-8 the whole time — HTML escapes

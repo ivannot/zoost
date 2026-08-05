@@ -288,5 +288,60 @@ class StoreFieldLimits(unittest.TestCase):
         self.assertEqual(findings, [])
 
 
+class TxtNeedsTheWorker(unittest.TestCase):
+    """A .txt cannot declare its own encoding; only the header can, and only the Worker sets it.
+
+    Static assets are served first, so a .txt not listed in run_worker_first never reaches that code.
+    The em-dash bug was reported, declared fixed, and stayed live for exactly this reason — the fix
+    was verified by reading the bytes, which had never been wrong.
+    """
+
+    def cfg(self, routes, files):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site').mkdir()
+        (d / 'site' / 'wrangler.jsonc').write_text(
+            '{ "assets": { "run_worker_first": [%s] } }' % ', '.join(f'"{r}"' for r in routes),
+            encoding='utf-8')
+        for f in files:
+            (d / 'site' / f).write_text('x', encoding='utf-8')
+        return d
+
+    def run_on(self, routes, files):
+        d = self.cfg(routes, files)
+        oldr, olds = sitecheck.ROOT, sitecheck.SITE
+        sitecheck.ROOT, sitecheck.SITE = d, d / 'site'
+        try:
+            findings = []
+            sitecheck.txt_served_by_worker(findings)
+            return findings
+        finally:
+            sitecheck.ROOT, sitecheck.SITE = oldr, olds
+
+    def test_an_unrouted_txt_is_reported(self):
+        f = self.run_on(['/robots.txt'], ['llms.txt', 'robots.txt'])
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('llms.txt', f[0])
+
+    def test_all_routed_is_silent(self):
+        self.assertEqual(self.run_on(['/llms.txt', '/robots.txt'], ['llms.txt', 'robots.txt']), [])
+
+    def test_a_missing_config_is_reported_rather_than_assumed_fine(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site').mkdir()
+        oldr, olds = sitecheck.ROOT, sitecheck.SITE
+        sitecheck.ROOT, sitecheck.SITE = d, d / 'site'
+        try:
+            findings = []
+            sitecheck.txt_served_by_worker(findings)
+        finally:
+            sitecheck.ROOT, sitecheck.SITE = oldr, olds
+        self.assertEqual(len(findings), 1, findings)
+
+    def test_the_site_is_routed_today(self):
+        findings = []
+        sitecheck.txt_served_by_worker(findings)
+        self.assertEqual(findings, [])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

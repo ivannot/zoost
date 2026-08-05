@@ -17,6 +17,13 @@
   "main": "_worker.js",
   "assets": {
     "directory": ".",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // Assets win by default, so the script never saw /llms.txt and the charset it sets was dead code:
+    // the file went out as `text/plain` with no encoding, the browser guessed Windows-1252, and every
+    // em-dash rendered as `â€”` — the reported bug, still live after being called fixed on the wrong
+    // evidence (the bytes were always correct; the header was the whole problem). Only these paths
+    // run the script first; everything else is served exactly as before. sitecheck.py asserts that
+    // every .txt in this directory is listed here, so the list cannot fall behind the files.
+    "run_worker_first": ["/llms.txt", "/robots.txt"]
   }
 }

@@ -200,6 +200,31 @@ def store_field_limits(findings: list) -> None:
                                 f'{n} characters, {n - cap} over the {cap} the dashboard accepts')
 
 
+def txt_served_by_worker(findings: list) -> None:
+    """Every `.txt` the site ships must be routed through the Worker.
+
+    A `.txt` has no way to declare its own encoding, so the header is the only place it can be said —
+    and the Worker is the only thing that can set it. Static assets are served *first*, so a file that
+    is not in `run_worker_first` never reaches the code that adds the charset, and the browser falls
+    back to guessing: every em-dash in llms.txt arrived as `â€”`. That defect was reported, "fixed",
+    and stayed live, because the fix was verified by reading the bytes — which had never been wrong.
+
+    The list in the config is therefore derived from the directory rather than trusted: add a `.txt`
+    and forget the route, and this says so.
+    """
+    cfg = ROOT / 'site' / 'wrangler.jsonc'
+    if not cfg.exists():
+        findings.append('site/wrangler.jsonc: missing — nothing declares how assets are served')
+        return
+    text = cfg.read_text(encoding='utf-8')
+    routed = set(re.findall(r'"(/[^"]*\.txt)"', text))
+    for f in sorted(SITE.glob('*.txt')):
+        want = '/' + f.name
+        if want not in routed:
+            findings.append(f'site/{f.name}: not in run_worker_first, so it is served straight from '
+                            f'assets and goes out with no charset')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -233,6 +258,7 @@ def main() -> int:
         check_prose(doc, findings)
 
     store_field_limits(findings)
+    txt_served_by_worker(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in
     # site.js, not in any page — and nothing was reading them. The fourth form reappeared there
