@@ -273,10 +273,31 @@ async function refreshWorkspaces() {
   await selectWorkspace(pick);
 }
 
+/** Everything that belongs to the workspace you were in, dropped when you leave it.
+ *
+ * The conversation stayed on screen across a workspace switch: the assistant's own replies name
+ * views, columns and query tables from the workspace you have just left, sitting above a question
+ * about the new one, and the whole thread is re-sent with every message — so the model is asked to
+ * reason about two workspaces at once and told nothing about the boundary.
+ *
+ * Byte for byte the CRM panel's, minus the caches it has and this one does not: here `loadFromDisk()`
+ * replaces `views`, `schema` and `lineage` wholesale on every switch, so there is nothing else to drop.
+ */
+function dropWorkspaceState() {
+  const had = aiMessages.length;
+  aiMessages = []; aiSeedWarned = false;
+  aiRenderMessages();
+  return had;
+}
+
 async function selectWorkspace(w) {
+  const sameWs = bound && bound.workspace === w.id;
   dir = w.handle;
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '' };
   await window.idbHandle.set('activeWsAnalytics', w.id);
+  // Not on a re-selection of the workspace already open — regranting a folder must not throw
+  // away a conversation about the workspace you are still in.
+  if (!sameWs) { const n = dropWorkspaceState(); if (n) status(`Workspace changed \u2014 the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn'); }
   await loadFromDisk();
   await refreshContext();
 }
@@ -1575,7 +1596,7 @@ function toggleAI() {
   aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
-function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation?')) return; aiMessages = []; aiSeedWarned = false; aiRenderMessages(); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching workspace does it too, because the old thread was about another workspace.')) return; dropWorkspaceState(); }
 
 // ---------- export ----------
 // Coarse scope on purpose: sections, never single views. Kept in IndexedDB beside the folder handle

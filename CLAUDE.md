@@ -288,10 +288,10 @@ is inside a folder, and `chrome://extensions` wants the folder.
 **One folder per kind, one `index.json` in each, and no underscores.** A CRM workspace is:
 
 ```
-functions/<namespace>/<name>.dg + .meta.json      modules/<Module>.json      workflows/<id>.json
-functions/index.json                              modules/index.json         workflows/index.json
-layouts/<Module>.json + index.json                schedules/index.json       connections/index.json
-export/
+functions/<namespace>/<name>.dg + .meta.json      modules/<Module>.json              workflows/<id>.json
+functions/index.json                              modules/index.json                 workflows/index.json
+schedules/index.json                              modules/layouts/<Module>.json      connections/index.json
+export/                                           modules/layouts/index.json
 ```
 
 Before 1.13 the Deluge namespaces sat in the workspace **root** and everything the pull created
@@ -301,12 +301,17 @@ was the symptom of there being no hierarchy, and `export/` never had one, so the
 hold against itself. Putting the functions under `functions/` removes the collision and the
 underscore with it.
 
-**`layouts/` is a sibling of `modules/`, not a child, and that is deliberate.** Six separate walks
-mean "every `.json` under `modules/` is one module"; nesting a second kind of file inside would need
-a guard in every one of them, and the first attempt at this rename put it there and broke three of
-them at once. Where a rename must not silently invert a condition, `!p.endsWith('_index.json')` is
-the other one: the index moved to `<kind>/index.json`, so the test had to move with it or the index
-would be parsed as an item.
+**`modules/layouts/` is inside `modules/`, because a layout is a property of a module.** It started
+as a sibling and the reason given was that eight walks each said "a `.json` under `modules/` is one
+module", so nesting anything would need a guard in every one of them — which is a folder shape chosen
+to protect the code from a mistake I had just made, and the wrong direction entirely. The user said
+so. The answer to eight repeated conditions is one named predicate: `isModuleFile()` and
+`isLayoutFile()`, defined once, and the objection disappears.
+
+That first attempt is still worth knowing about: a blanket rename inverted three skip-conditions at
+once (`if (p.startsWith('_index/')) continue` became a skip of the very folder being collected), and
+`!p.endsWith('_index.json')` had to move to `'/index.json'` or the index is parsed as an item. Both
+fail silently — a walk that finds nothing and a JSON that parses.
 
 **There is no migration, by decision.** Nothing reads the old paths — no fallback, per the rule
 already here. A workspace still in the old shape is *reported*: the empty state names it, says to
@@ -345,6 +350,18 @@ Zoho**, which is the whole posture of the product. It is written through `patchC
 Analytics had no `patchCfg` at all and its pull replaced the file twice over. Both now merge. The
 lesson is the one already in this file and it keeps costing: **every writer of a shared file merges,
 and the moment a new field lands there, the writers that predate it are wrong.**
+
+**Everything belonging to a workspace is dropped when you leave it, in one function.** Reported by
+the user: the AI conversation survived a workspace switch, so replies naming the previous org's
+functions sat above a question about the new one — and the whole thread is re-sent with every
+message, so the model was asked to reason across two orgs with nothing marking the boundary. Worse,
+and found while fixing it: `graphCache`, `aiModCache` and `aiConnCache` were cleared inside
+`rebuildTree()`, which only runs on the Functions tab, so switching workspace from Workflows left the
+assistant answering from the *previous* org's schema with no sign of it anywhere.
+`dropWorkspaceState()` does both, exists on both sides, and is what `Clear` calls too — two ways to
+empty the chat that reset different things is how the twins drifted on the large-index warning. It is
+skipped when the "switch" is a re-activation of the workspace already open, because regranting a
+lapsed folder permission must not throw away a conversation about the org you never left.
 
 **The environment guard is the most important safety property.** Each workspace is bound to one
 org, host and instance. If the active Zoho tab belongs to a different org, every Zoho-bound action

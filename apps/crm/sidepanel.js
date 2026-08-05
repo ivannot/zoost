@@ -1151,7 +1151,7 @@ async function buildHealth() {
   scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
-  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
+  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
   const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> \u2014 never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
@@ -1308,7 +1308,7 @@ function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) 
 async function aiLoadModules() {
   if (aiModCache) return aiModCache;
   const map = {};
-  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
+  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
   aiModCache = map; return map;
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
@@ -1718,7 +1718,7 @@ function toggleAI() {
   aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
-function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching functions no longer resets it.')) return; aiMessages = []; aiRenderMessages(); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching workspace does it too, because the old thread was about another org.')) return; dropWorkspaceState(); }
 // AI configuration lives in the options page now: the side panel is 400px wide and these are
 // set-once fields. openSettings() focuses the one settings window; the panel picks the change up via
 // chrome.storage.onChanged.
@@ -1888,9 +1888,38 @@ async function addWorkspaceForTab() {
   } catch (e) { setStatus('Add failed: ' + e.message, 'warn'); }
 }
 
+/** Everything that belongs to the workspace you were in, dropped when you leave it.
+ *
+ * Two things were surviving a workspace switch, and the second is worse than the first.
+ *
+ * The **conversation** stayed on screen: the assistant's own replies name functions, modules and
+ * connections from the org you have just left, sitting above a question about the new one, and the
+ * whole thread is re-sent with every message — so the model is asked to reason about two orgs at
+ * once and told nothing about the boundary.
+ *
+ * The **caches** stayed too, which is not confusing but wrong. `graphCache`, `aiModCache` and
+ * `aiConnCache` were cleared in `rebuildTree()` — which only runs if you happen to be on the
+ * Functions tab. Switch workspace while looking at Workflows and the assistant answered from the
+ * previous org's functions and schema, with no sign of it anywhere.
+ *
+ * Both are per-workspace state, so both are dropped in one place, called from the one line that
+ * changes workspace. The Analytics panel has the same function, doing the same thing.
+ */
+function dropWorkspaceState() {
+  const had = aiMessages.length;
+  aiMessages = []; aiSeedWarned = false;
+  graphCache = null; aiModCache = null; aiConnCache = null;
+  aiRenderMessages();
+  return had;
+}
+
 async function activate(w, viaGesture) {
+  const sameWs = activeWsId === w.id;
   dir = w.handle; activeWsId = w.id; await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   oldLayout = await hasOldLayout(w.handle);
+  // Not on a re-activation of the workspace already open — regranting a folder must not throw
+  // away a conversation about the org you are still in.
+  if (!sameWs) { const n = dropWorkspaceState(); if (n) setStatus(`Workspace changed \u2014 the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn'); }
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   bound = w.binding || null;                         // read from the workspace's own .zoost.json
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
@@ -2130,6 +2159,19 @@ function renderTabs() {
   bar.querySelectorAll('.seg').forEach((b) => (b.onclick = () => setMode(b.dataset.tab)));
   if (vis.length && !vis.includes(viewMode)) setMode(vis[0]);
 }
+/** Is this path one module's file?
+ *
+ * Eight walks used to spell this out, each re-stating «a .json under modules/ that is not the index»
+ * — which is why nesting anything else under modules/ looked dangerous, and why the first attempt at
+ * the layout rename broke three of them at once. The shape of the folders should answer to what a
+ * layout *is* (a property of a module), not to how many places repeat a condition. One predicate, and
+ * the objection goes away.
+ */
+const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
+  && !p.startsWith('modules/layouts/') && p !== 'modules/index.json';
+const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
+  && p !== 'modules/layouts/index.json';
+
 async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
@@ -2199,7 +2241,7 @@ async function pullModules() {
     for (const m of r.modules) {
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
       if (fullLayouts.length) {
-        const lf = `layouts/${sanitize(m.api_name || 'unknown')}.json`;
+        const lf = `modules/layouts/${sanitize(m.api_name || 'unknown')}.json`;
         try { await writeFile(lf, JSON.stringify(fullLayouts, null, 2)); liveLayoutFiles.add(lf); lw++; } catch (_) {}
       }
       // keep a compact summary inside the module JSON (drives the preview line + index)
@@ -2209,11 +2251,11 @@ async function pullModules() {
       try { await writeFile(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
     }
     await writeFile('modules/index.json', JSON.stringify(index, null, 2));
-    await writeFile('layouts/index.json', JSON.stringify(layIndex, null, 2));
+    await writeFile('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
-    for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json') && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
-    for await (const p of walk(dir)) { if (p.startsWith('layouts/') && p.endsWith('.json') && !p.endsWith('/index.json') && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
+    for await (const p of walk(dir)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
+    for await (const p of walk(dir)) { if (isLayoutFile(p) && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
     await noteAccess('modules', null);
@@ -2226,7 +2268,7 @@ async function rebuildModules() {
   if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
   setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   const names = [];
-  for await (const p of walk(dir)) if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) names.push(p);
+  for await (const p of walk(dir)) if (isModuleFile(p)) names.push(p);
   names.sort();
   moduleData = [];
   for (const p of names) {
@@ -2387,7 +2429,7 @@ async function openModule(path, layoutId) {
     const body = document.getElementById('laybody'); const v = sel.value;
     if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
     body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
-    let full = []; try { full = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    let full = []; try { full = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     const L = (full || []).find((x) => String(x.id) === String(v));
     body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found \u2014 re-pull modules.</div>';
   };
@@ -2401,14 +2443,14 @@ async function openModule(path, layoutId) {
 async function buildSchemaGraph(focusApi, depth) {
   // modules
   const modPaths = [];
-  for await (const p of walk(dir)) if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) modPaths.push(p);
+  for await (const p of walk(dir)) if (isModuleFile(p)) modPaths.push(p);
   const mods = [];
   for (const p of modPaths) { try { const m = JSON.parse(await readFile(p)); m._path = p; mods.push(m); } catch (_) {} }
   // Field -> layout membership. The module JSON only carries a layout summary; the full
-  // sections/fields structure lives in layouts/<Module>.json (written by Pull Modules).
+  // sections/fields structure lives in modules/layouts/<Module>.json (written by Pull Modules).
   for (const m of mods) {
     let full = [];
-    try { full = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    try { full = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     if (!Array.isArray(full) || !full.length) continue;
     m._layList = full.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false }));
     const memb = {};
@@ -2931,7 +2973,7 @@ async function loadExportData() {
     fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
   const mods = [];
-  for await (const p of walk(dir)) { if (p.startsWith('modules/') && p.endsWith('.json') && !p.endsWith('/index.json')) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
+  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
   let g = null; try { g = await ensureGraph(); } catch (_) {}
   const modRefs = {};
   mods.forEach((m) => (m.fields || []).forEach((fl) => { if (fl.lookup) (modRefs[fl.lookup] ||= []).push({ module: m.api_name, field: fl.api_name }); }));

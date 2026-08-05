@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zoost \u2014 workbench for Zoho CRM",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "short_name": "Zoost CRM",
   "homepage_url": "https://zoost.it",
   "description": "Independent, unofficial: mirror your Zoho CRM Deluge to local files for Git, plus the call graph, module schema and workflows.",

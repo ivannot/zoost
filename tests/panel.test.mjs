@@ -669,7 +669,7 @@ test('no shipped script writes a folder with a leading underscore', () => {
 
 test("every per-kind index is <kind>/index.json, and both apps agree on the name", () => {
   const crm = read('apps/crm/sidepanel.js');
-  for (const kind of ['functions', 'modules', 'layouts', 'workflows', 'schedules', 'connections']) {
+  for (const kind of ['functions', 'modules', 'modules/layouts', 'workflows', 'schedules', 'connections']) {
     assert.ok(crm.includes(`'${kind}/index.json'`), `${kind} has no ${kind}/index.json`);
   }
   // The twin: one index file, named the same way, so the two products read alike on disk.
@@ -693,4 +693,72 @@ test('the old layout is reported, never read', () => {
   assert.match(src, /This workspace uses the old folder layout/);
   const readers = [...src.matchAll(/readFile\(\s*[`'"]_/g)];
   assert.deepEqual(readers.map((m) => m[0]), [], 'something still reads an old-layout path');
+});
+
+// ---------- Switching workspace drops what belonged to the old one ----------
+
+test('both panels drop the conversation when the workspace changes', () => {
+  // The chat's own replies name functions, views and connections from the org you have just left,
+  // and the whole thread is re-sent with every message — so the model was being asked to reason
+  // about two orgs at once, with nothing marking the boundary. Reported by the user.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    assert.match(src, /function dropWorkspaceState\(\)/, `${app} has no dropWorkspaceState`);
+    assert.match(src, /aiMessages = \[\]; aiSeedWarned = false;/, `${app} does not reset both`);
+    assert.match(src, /if \(!sameWs\) \{ const n = dropWorkspaceState\(\)/,
+      `${app} does not call it when the workspace changes`);
+  }
+});
+
+test('re-activating the same workspace keeps the conversation', () => {
+  // Regranting a lapsed folder permission re-runs activate/selectWorkspace for the workspace you are
+  // already in. Clearing there would throw away a conversation about the org you never left.
+  for (const app of ['crm', 'analytics']) {
+    assert.match(read(`apps/${app}/sidepanel.js`), /const sameWs = /, `${app} does not compare first`);
+  }
+});
+
+test("the CRM's per-org caches are dropped there too, not only in the Functions tab", () => {
+  // graphCache, aiModCache and aiConnCache were cleared in rebuildTree(), which only runs if you
+  // happen to be on Functions. Switch workspace from the Workflows tab and the assistant answered
+  // from the previous org's functions and schema, with no sign of it anywhere.
+  const src = read('apps/crm/sidepanel.js');
+  const fn = src.slice(src.indexOf('function dropWorkspaceState()'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  for (const c of ['graphCache = null', 'aiModCache = null', 'aiConnCache = null']) {
+    assert.ok(body.includes(c), `dropWorkspaceState does not clear ${c}`);
+  }
+});
+
+test('Clear and switching workspace go through the same function', () => {
+  // Two ways to empty the chat that reset different things is how the large-index warning came back
+  // on one path and not the other. The twins had already drifted on exactly that.
+  for (const app of ['crm', 'analytics']) {
+    assert.match(read(`apps/${app}/sidepanel.js`), /function aiClear\(\)[^\n]*dropWorkspaceState\(\);/,
+      `${app}: aiClear does not use the shared helper`);
+  }
+});
+
+test('a layout lives under the module it describes, and the walks tell the two apart', () => {
+  // layouts/ started as a sibling of modules/ because eight walks each said "a .json under modules/
+  // is one module" and nesting anything inside would have needed a guard in every one of them — a
+  // folder shape chosen to protect the code from a mistake I had just made, which is the wrong
+  // direction. One named predicate, and the objection goes away; a layout is a property of a module
+  // and now sits under it.
+  const src = read('apps/crm/sidepanel.js');
+  assert.match(src, /const isModuleFile = /);
+  assert.match(src, /const isLayoutFile = /);
+  assert.ok(!/p\.startsWith\('layouts\//.test(src), 'layouts/ is still addressed as a top-level folder');
+  assert.ok(src.includes("'modules/layouts/index.json'"), 'the layout index did not move');
+
+  // and the predicates actually separate the four cases
+  const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
+    && !p.startsWith('modules/layouts/') && p !== 'modules/index.json';
+  const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
+    && p !== 'modules/layouts/index.json';
+  assert.ok(isModuleFile('modules/Contacts.json'));
+  assert.ok(!isModuleFile('modules/index.json'), 'the index would be parsed as a module');
+  assert.ok(!isModuleFile('modules/layouts/Contacts.json'), 'a layout would be parsed as a module');
+  assert.ok(isLayoutFile('modules/layouts/Contacts.json'));
+  assert.ok(!isLayoutFile('modules/layouts/index.json'));
 });
