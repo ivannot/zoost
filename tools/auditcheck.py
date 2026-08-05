@@ -222,6 +222,43 @@ def description_repeats_the_name(findings: list, notes: list) -> None:
     notes.append('short descriptions checked against their item name')
 
 
+def deploy_state(findings: list, notes: list, offline: bool) -> None:
+    """Is what the repository says even *capable* of being what the site serves?
+
+    This exists because of a specific failure, not a hypothetical one. Four commits sat unpushed
+    while the fix they contained was reported as done — «aligned in both languages», which was true
+    of the working tree and false of the page the user was looking at. He found it by opening the
+    site, which is the failure: the difference between "the repo says X" and "the site says X" is
+    the whole point of this file, and the sentence had quietly slid from the second to the first.
+
+    The mechanism was `--offline`. It skips the live comparison — the one check that would have
+    caught it — and reported the skip as a quiet note among the passes, so a run that proved nothing
+    about zoost.it still ended in «0 findings». That is now a finding of its own, and the unpushed
+    state is reported without needing the network at all: git knows.
+    """
+    def git(*a):
+        try:
+            out = subprocess.run(['git', '-C', str(ROOT), *a], capture_output=True, timeout=15)
+            return out.stdout.decode().strip() if out.returncode == 0 else None
+        except Exception:                                        # noqa: BLE001 — reported, not raised
+            return None
+
+    ahead = git('rev-list', '--count', '@{upstream}..HEAD')
+    if ahead is None:
+        notes.append('deploy state unknown: no upstream, or git could not be asked')
+    elif ahead != '0':
+        findings.append(f'{ahead} commit(s) are not pushed. The site is built from what GitHub has, '
+                        f'so nothing here can be true of zoost.it until they are — say "in the '
+                        f'repository", not "fixed", until this is 0.')
+    dirty = git('status', '--porcelain')
+    if dirty:
+        findings.append(f'{len(dirty.splitlines())} file(s) changed and not committed — the '
+                        f'comparison below is against a tree nobody else can see')
+    if offline:
+        findings.append('--offline: the live site was not looked at. This run says what the '
+                        'repository holds, and nothing whatever about what zoost.it serves.')
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--offline', action='store_true', help='skip the comparison against the live site')
@@ -229,10 +266,9 @@ def main() -> int:
     args = ap.parse_args()
 
     findings, notes = [], []
+    deploy_state(findings, notes, args.offline)
     if not args.offline:
         live_matches_repo(findings, notes)
-    else:
-        notes.append('live comparison skipped (--offline)')
     store_matches_manifest(findings, notes)
     description_repeats_the_name(findings, notes)
     absolutes_reviewed(findings, notes, args.accept)

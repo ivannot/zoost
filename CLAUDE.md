@@ -1250,6 +1250,14 @@ tests would spend the risk before earning the cover. The limit is stated rather 
 proves the logic, not the wiring — a correct helper called from the wrong place still passes. If
 `sliceFn` cannot find a function it **throws**, so a rename cannot silently drop the cover.
 
+**A test appended below `unittest.main()` never runs, and the suite still says OK.** Six cases were
+added to the end of `tests/tools_test.py` and `tests/run.sh` reported 78 passing while ignoring them;
+`unittest discover` found 84. Nothing is wrong on screen — a number changes, and a number nobody
+compares against anything is not evidence. The trailer is last in the file and two cases hold it
+there, one reading the source for a class below it and one comparing what the loader collects against
+what is written. The first version of the second shelled out to the same file and recursed until it
+was killed, which is its own small lesson: a test about a suite reads the suite, it does not run it.
+
 **Prove a test can fail before trusting it.** Same rule as the checkers. Break the thing on purpose
 — point the deluge token at the wrong cookie, set the staleness margin to zero, restore the tag
 filter that dropped annotated tags — and confirm red, then restore. A suite that has never failed is
@@ -1312,6 +1320,15 @@ and the sentence a reader starts from did not. Deriving the list rather than rea
 found three nobody had reported: the Canadian `zohocloud.ca` data centres were reachable and declared
 nowhere, and they are a different family from `crm.zoho.*` however similar they look.
 
+**«Fixed» means fixed where the user is looking, and `auditcheck` now refuses to pretend otherwise.**
+Four commits sat unpushed while the fix in them was reported as done — true of the working tree, false
+of the page on screen, and the user found it by opening the site. The mechanism was `--offline`: it
+skips the live comparison, which is the *only* thing in this file that speaks about zoost.it, and
+reported the skip as a quiet note among the passes, so a run that had proved nothing about the site
+still ended in «0 findings». It is a finding now, and `deploy_state()` reports unpushed commits and an
+uncommitted tree without needing the network — git knows. **Say "in the repository" until it is
+pushed, and "live" only after `auditcheck` has said so with the network on.**
+
 **An outside review is evidence, not a verdict — check every claim before acting on it.** One arrived
 saying the homepage and `llms.txt` served by zoost.it were still the pre-analysis versions, "not a
 part: all of it", and recommended an edge purge. All five pages were **byte-identical to the
@@ -1326,6 +1343,22 @@ again, visible in a Web Store search result and invisible in the dashboard. It k
 unofficial"**, because that is the disclaimer doing its job on the most-read sentence the project has,
 and it does **not** say "read-only": that is an absolute this project has already had to walk back
 once, and 132 characters have no room for the qualification the full description gives it.
+
+**«What's new» comes from the commits, not from memory: `python3 tools/whatsnew.py <app>`.** Two
+products come out of one history, so what changed in Zoho CRM is not the last N commits — it is the
+ones that touched `apps/crm/`, with a fortnight of site and other-product work sitting between them.
+The tool lists them since that app's newest tag, marks the ones that also touched the site, the store
+copy or the README (their wording exists already and should not be invented twice), and prints the
+manifest version at each end so a bump nobody made is visible before the tag exists. **It gathers; it
+does not write** — a commit subject is addressed to this repository and a "What's new" to somebody
+who has the extension installed and has never read one. What it guarantees is that nothing is
+missing, which is the part memory gets wrong.
+
+Its first version used `\x1e` as the field separator and reported that **nothing had changed** —
+Python's `splitlines()` treats `\x1e`, `\x1c`, `\x1d`, `\x85`, `\u2028` and `\u2029` as line
+boundaries, so every record broke in half. The worst possible answer from a release-notes tool, and
+another instance of the pattern already named here: a value crossing a boundary and being read
+differently on the other side. Split on `\n`, separate with a tab.
 
 **A release with user-visible change → store copy as well.** Regenerate whatever in
 `store/store-listing.md` no longer matches: description, single purpose, permission

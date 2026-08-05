@@ -16,6 +16,7 @@ Every test below plants a defect that actually reached the user and asserts it i
 import json
 import pathlib
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -24,7 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 
-import sitecheck            # noqa: E402
+import sitecheck
+import whatsnew            # noqa: E402
 import htmlcheck            # noqa: E402
 import featurecheck         # noqa: E402
 import namecheck            # noqa: E402
@@ -800,6 +802,92 @@ class CanonicalPointsAtItself(unittest.TestCase):
         findings = []
         sitecheck.canonical_and_alternates(findings)
         self.assertEqual(findings, [], 'a canonical or an hreflang pair is wrong')
+
+
+class WhatsNew(unittest.TestCase):
+    """Release notes derived from the commits that touched one app.
+
+    Two products come out of one history, so «what changed in Zoho CRM» is not the last N commits.
+    It was being written from memory, which is the wrong source for the one question a release note
+    has to get right: whether anything is missing.
+    """
+
+    def test_versions_sort_numerically(self):
+        # 1.10.0 sorts before 1.9.0 as text, and the ledger will reach 1.10 long before anyone looks.
+        tags = ['crm-v1.9.0', 'crm-v1.10.0', 'crm-v1.2.0']
+        self.assertEqual(max(tags, key=whatsnew.semver), 'crm-v1.10.0')
+
+    def test_a_tag_that_is_not_a_version_sorts_last_rather_than_crashing(self):
+        self.assertEqual(whatsnew.semver('v1.0.0'), (0, 0, 0))       # the legacy unprefixed tag
+        self.assertEqual(whatsnew.semver('crm-vX'), (0, 0, 0))
+
+    def test_the_record_separator_would_have_destroyed_every_row(self):
+        # This is the bug, kept: \x1e is the obvious separator for `git log --format`, and Python's
+        # splitlines() treats it as a line boundary — along with \x1c, \x1d, \x85,  ,  .
+        # Every record broke in half and the tool answered "no commit has touched this app", which is
+        # the worst answer a release-notes tool can give.
+        raw = 'abc123\x1eA subject\ndef456\x1eAnother subject'
+        self.assertEqual(len(raw.splitlines()), 4, 'splitlines() splits on \\x1e — that is the trap')
+        self.assertEqual(len(raw.split('\n')), 2, 'splitting on \\n keeps the records whole')
+        # what the tool uses now
+        tabbed = 'abc123\tA subject\ndef456\tAnother subject'
+        rows = [l.split('\t', 1) for l in tabbed.split('\n') if '\t' in l]
+        self.assertEqual(rows, [['abc123', 'A subject'], ['def456', 'Another subject']])
+
+    def test_it_reports_this_repository_today(self):
+        for app in ('crm', 'analytics'):
+            out = subprocess.run([sys.executable, str(ROOT / 'tools/whatsnew.py'), app],
+                                 capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertIn('commit(s) touched', out.stdout,
+                          f'{app}: the tool found nothing, which is what the \\x1e bug looked like')
+            self.assertNotIn('no commit has touched', out.stdout)
+
+
+class DeployStateIsPartOfTheAudit(unittest.TestCase):
+    """«Fixed» must not mean «fixed in a tree nobody else can see».
+
+    Four commits sat unpushed while the fix in them was reported as done — true of the working tree,
+    false of the page the user was looking at, and he found it by opening the site. The mechanism was
+    `--offline`, which skips the live comparison and reported the skip as a quiet note among the
+    passes, so a run that proved nothing about zoost.it still ended in «0 findings».
+    """
+
+    def test_offline_is_a_finding_not_a_note(self):
+        out = subprocess.run([sys.executable, str(ROOT / 'tools/auditcheck.py'), '--offline'],
+                             capture_output=True, text=True)
+        self.assertIn('the live site was not looked at', out.stdout)
+        self.assertNotEqual(out.returncode, 0, '--offline must never be able to end in success')
+
+    def test_it_asks_git_rather_than_the_network(self):
+        src = (ROOT / 'tools/auditcheck.py').read_text(encoding='utf-8')
+        self.assertIn("'rev-list', '--count', '@{upstream}..HEAD'", src)
+        self.assertIn('are not pushed', src)
+
+
+class TheSuiteRunsEverythingInIt(unittest.TestCase):
+    """A test defined after `unittest.main()` is never run, and the suite still says OK.
+
+    That happened here: six cases were appended below the trailer, and `python3 tests/tools_test.py`
+    — which is what tests/run.sh calls — reported 78 passing while ignoring them. `unittest discover`
+    found 84. A suite that goes quiet about part of itself is the same failure as a checker that goes
+    quiet about a bug, and it is invisible because a number is the only thing that changes.
+
+    Checked by reading the file, not by running it: the first version shelled out to this same file
+    and recursed until it was killed.
+    """
+
+    def test_nothing_is_defined_below_the_trailer(self):
+        src = (ROOT / 'tests/tools_test.py').read_text(encoding='utf-8')
+        i = src.index("if __name__ == '__main__':")
+        self.assertNotIn('\nclass ', src[i:], 'a class after the trailer is never run by run.sh')
+
+    def test_every_case_in_the_file_is_loaded(self):
+        src = (ROOT / 'tests/tools_test.py').read_text(encoding='utf-8')
+        written = len(re.findall(r'^    def (test_\w+)', src, re.M))
+        loaded = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]).countTestCases()
+        self.assertEqual(loaded, written,
+                         f'{written} cases are written in the file and {loaded} are collected')
 
 
 if __name__ == '__main__':
