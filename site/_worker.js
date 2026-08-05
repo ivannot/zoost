@@ -165,7 +165,30 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=13';  // bumped: a partial answer is now cached for a minute, not an hour
+const CACHE_KEY = '/api/versions?v=14';  // bumped: each product now carries what is actually in review
+
+/** The newest version of `app` recorded as submitted, and when — regardless of what is tagged.
+ *
+ * `sub()` below answers "was *this tag* submitted", which is the right question for the release line
+ * and the wrong one for everything else: tag a version and do not submit it, and the release that is
+ * genuinely sitting in review disappears from the page. That is exactly what happened — Zoho CRM read
+ * "Web Store 1.0.0 · latest release 1.11.0 not submitted yet", with no sign that 1.9.0 had been
+ * submitted a day earlier and was still being reviewed. Every word was true and the page was wrong.
+ */
+function newestSubmitted(subs, app) {
+  const rows = (subs && subs[app]) || {};
+  let best = null;
+  for (const [v, date] of Object.entries(rows)) {
+    if (!IS_VERSION.test(v)) continue;
+    if (!best || cmpVersion(v, best.version) > 0) best = { version: v, date };
+  }
+  return best;
+}
+function cmpVersion(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) { if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0); }
+  return 0;
+}
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -203,8 +226,10 @@ async function versions(request, ctx) {
     store: crmStore, repo: crmRepo, tag: crmTag,
     // The listing URL comes from here rather than being written again in site.js: the extension
     // ids already live in this file, and a second copy is a second thing to go stale.
-    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), url: listing('crm') },
-    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), url: listing('analytics') },
+    // `submitted` answers "was this tag submitted"; `pending` answers "is anything in review", which
+    // is a different question the moment a later tag exists that was not submitted.
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), pending: newestSubmitted(subs, 'crm'), url: listing('crm') },
+    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), pending: newestSubmitted(subs, 'analytics'), url: listing('analytics') },
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {

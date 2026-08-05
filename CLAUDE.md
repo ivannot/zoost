@@ -1372,6 +1372,14 @@ Two traps that this layout hides:
   the cache cannot be flooded with junk keys), which means it cannot be busted from outside either.
   `CACHE_KEY` therefore carries a version marker: **bump it whenever the payload's shape changes, or
   the caching itself does**, or the change is invisible until the old entry happens to expire.
+- **"Was this tag submitted" is not "is anything in review", and the footer answered the wrong one.**
+  It read *Web Store 1.0.0 · latest release 1.11.0 not submitted yet* for Zoho CRM while 1.9.0 had been
+  submitted the day before and was still being reviewed. Every word was true and the page was wrong,
+  because the submission was looked up **by the newest tag** — so tagging something and not submitting
+  it erases the release that is genuinely pending. Each product now carries `pending`, the newest
+  version `RELEASES.md` records as submitted, independent of what is tagged; the footer states it only
+  when it adds a fact. Versions there are compared **numerically**: 1.10.0 sorts before 1.9.0 as text,
+  and the ledger will reach 1.10 long before anyone looks.
 - **A failed source must not be cached for as long as a good answer.** One fetch to
   `raw.githubusercontent.com` timed out and both submission dates read "unknown" — correctly, and then
   **for an hour after the source had come back**, because the failure was stored under the same TTL as

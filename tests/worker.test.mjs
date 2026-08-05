@@ -204,5 +204,44 @@ test('a partial answer is not cached for as long as a complete one', () => {
 test('the cache key moves when the caching does', () => {
   // The key ignores the query string on purpose, so a wrong entry cannot be busted from outside. It
   // therefore has to carry a marker, or a change in what gets cached is invisible until expiry.
-  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=13';/);
+  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=14';/);
+});
+
+
+// ---------- what is actually in review ----------
+
+const submitted = load([sliceFn('site/_worker.js', 'newestSubmitted'),
+                        sliceFn('site/_worker.js', 'cmpVersion'),
+                        sliceConst('site/_worker.js', 'IS_VERSION')], {});
+
+test('the newest submitted version is not the newest tag', () => {
+  // The footer read "Web Store 1.0.0 · latest release 1.11.0 not submitted yet" while 1.9.0 was in
+  // review — every word true, and the one fact a reader wanted was missing. `submitted` answers
+  // "was this tag submitted"; that is the wrong question the moment a later, unsubmitted tag exists.
+  const subs = { crm: { '1.9.0': '2026-08-04' }, analytics: { '1.0.0': '2026-08-03', '1.8.0': '2026-08-05' } };
+  const crm = submitted.newestSubmitted(subs, 'crm');
+  assert.equal(crm.version, '1.9.0'); assert.equal(crm.date, '2026-08-04');
+  const ana = submitted.newestSubmitted(subs, 'analytics');
+  assert.equal(ana.version, '1.8.0'); assert.equal(ana.date, '2026-08-05');
+});
+
+test('versions are compared as numbers, not as text', () => {
+  // 1.10.0 sorts before 1.9.0 as a string, and the ledger will reach 1.10 long before anyone notices.
+  assert.equal(submitted.newestSubmitted({ x: { '1.9.0': 'a', '1.10.0': 'b' } }, 'x').version, '1.10.0');
+});
+
+test('an app with no submissions has nothing in review', () => {
+  assert.equal(submitted.newestSubmitted({ crm: { '1.0.0': 'x' } }, 'analytics'), null);
+  assert.equal(submitted.newestSubmitted(null, 'crm'), null);
+});
+
+test('a malformed version in the ledger is skipped, not ranked', () => {
+  assert.equal(submitted.newestSubmitted({ x: { 'not-a-version': 'a', '1.2.3': 'b' } }, 'x').version, '1.2.3');
+});
+
+test('the footer says what is in review only when it adds a fact', () => {
+  const src = read('site/site.js');
+  assert.match(src, /if \(p && newer\(p\.version, v\.store\) && p\.version !== verOf\(v\.tag\)\)/,
+    'the condition that stops it repeating the release line is gone');
+  assert.match(src, /<b>Awaiting review<\/b>/, 'the fact itself is gone');
 });

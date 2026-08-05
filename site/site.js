@@ -105,11 +105,22 @@
             ? ' <i>submitted ' + esc(fmtDate(v.submitted) || v.submitted) + ', awaiting review</i>'
             : ' <i>not submitted yet</i>';
         }
+        // What is actually in review, when that is not the newest tag. Without this the page said
+        // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review — every
+        // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
+        // not already the release line above.
+        var review = '';
+        var p = v.pending;
+        if (p && newer(p.version, v.store) && p.version !== verOf(v.tag)) {
+          review = '<span class="vitem"><b>Awaiting review</b> ' + esc(p.version) +
+            ' <i>submitted ' + esc(fmtDate(p.date) || p.date) + '</i></span>';
+        }
         bits.push(
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +
             '<div class="vfacts">' +
               '<span class="vitem"><b>On the Web Store</b> ' + store(v) + '</span>' +
+              review +
               '<span class="vitem"><b>Latest release</b> ' + tag + ahead + '</span>' +
               '<span class="vitem"><b>In development</b> ' + dev(app, v) + '</span>' +
             '</div>' +
