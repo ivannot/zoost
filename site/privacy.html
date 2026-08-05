@@ -48,8 +48,8 @@
   <h2>0. Which extensions this covers</h2>
   <p>This policy covers every extension in the Zoost family. There are two:</p>
   <ul>
-    <li><b>Zoost — workbench for Zoho CRM</b>, published on the Chrome Web Store.</li>
-    <li><b>Zoost — workbench for Zoho Analytics</b>, published on the Chrome Web Store.</li>
+    <li><b>Zoost — workbench for Zoho CRM</b>, on the Chrome Web Store.</li>
+    <li><b>Zoost — workbench for Zoho Analytics</b>, submitted to the Chrome Web Store and in review.</li>
   </ul>
   <p>They are separate extensions with separate permissions, but they behave identically in every
     respect this document describes: no server, no account, no telemetry, a local mirror in a folder
@@ -174,10 +174,7 @@
       session, and the hook that notices when you save a function so the local copy can follow.</li>
     <li><code>tabs</code> — to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists
-      <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>; the Zoho Analytics one lists
-      <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre
-      because an account may live on any of them, and neither lists a domain it does not read. Both also
+    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>, which it reads, and <code>one.zoho.*</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre because an account may live on any of them. Both also
       list <code>api.anthropic.com</code> and <code>api.openai.com</code>, contacted only by the optional
       assistant and only if you configure it.</li>
     <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> — the only two
