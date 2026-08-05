@@ -81,7 +81,11 @@
   #aiview .aihead .aisp{flex:1}
   #aiview .aiicon{cursor:pointer;color:var(--muted);font-size:14px}
   #aiview .aiicon:hover{color:var(--ink)}
-  .aictx{padding:5px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--surface)}
+  /* Chrome, not content: the context line sits on the panel background so the message bubbles —
+     which are --surface — read as raised above it. It used to share both the background and the
+     border tone with the assistant's bubble, so the two ran together and the first line of an
+     answer looked like a continuation of the status bar. */
+  .aictx{padding:6px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg)}
   .aimsgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
   .aimsg{display:flex;flex-direction:column;gap:2px;max-width:85%}
   .aimsg.user{align-self:flex-end;align-items:flex-end}

@@ -186,7 +186,11 @@
   #aiengbadge{font:10px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px;white-space:nowrap}
   #aiengbadge.agent{color:#83d8c6;border-color:#2f6f62}
   #aiengbadge.single{color:#f0a44a;border-color:#6b4a1c}
-  .aictx{padding:5px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--surface)}
+  /* Chrome, not content: the context line sits on the panel background so the message bubbles —
+     which are --surface — read as raised above it. It used to share both the background and the
+     border tone with the assistant's bubble, so the two ran together and the first line of an
+     answer looked like a continuation of the status bar. */
+  .aictx{padding:6px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg)}
   .aimsgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
   .aimsg{display:flex;flex-direction:column;gap:2px;max-width:85%}
   .aimsg.user{align-self:flex-end;align-items:flex-end}
