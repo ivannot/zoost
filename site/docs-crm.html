@@ -154,6 +154,8 @@ git commit -m "baseline"</code></pre>
     the second when writing Deluge. <b class="ui">Functions page ↗</b> opens Zoho CRM's own function list
     in a tab and filters it to what you had selected, for when you want to edit rather than read.</p>
 
+  <p>Above the list, <b class="ui">Type</b> (or <b class="ui">Status</b>, or <b class="ui">Kind</b>, depending on the tab) narrows what is shown. In Modules it separates <b class="ui">Standard</b> from <b class="ui">Custom</b>; in Workflows and Schedules it is <b class="ui">Active</b> / <b class="ui">Inactive</b>, plus <b class="ui">Has scheduled actions</b> — the rules with at least one action that runs after a delay instead of immediately. Those rows carry a clock and the count, and the tooltip says how long the delay is; the workflow's own panel shows <b>Last run</b>, the same words the Schedules tab uses for the same fact. Both come from the rule already on your disk, so nothing is fetched to answer «which workflows do not fire straight away».</p>
+
   <p class="box"><b>Not every Zoho user may read every one of these.</b> Access to Deluge or to the
     connections catalogue depends on your role, and there is no way to ask in advance — so Zoost finds out
     by pulling. If Zoho refuses an area, the pull says so in plain words instead of showing a status code,
@@ -184,8 +186,7 @@ git commit -m "baseline"</code></pre>
       comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
       not complexity, and every outbound call is work Zoho meters — how to weigh that is your call, not ours.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
-    <li><b class="ui">Sort</b> reorders the list by <b>lines</b>, <b>API calls</b>, <b>size</b> or
-      <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
+    <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> — the default — or by <b>lines</b>, <b>API calls</b>, <b>size</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
       sets the direction you almost certainly want — A→Z for names, biggest first for numbers — and you can
       reverse it. A numeric sort drops the namespace grouping and shows one flat list, with the namespace
       moving onto each row, because "which are the biggest" is a different question from "what is in this

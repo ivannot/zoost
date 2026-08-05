@@ -340,6 +340,23 @@ def classes_defined(findings: list) -> None:
                             f'in site.css or in this page, so it renders as nothing')
 
 
+def anchors_resolve(findings: list) -> None:
+    """Every in-page link must name a section that exists on that page.
+
+    Cheap, exact, and the sort of thing nobody checks until a button does nothing. It does not judge
+    whether the *label* fits the target — that is reading, and it is what actually went wrong here:
+    the CRM page's hero offered «How it works» pointing at `#start`, which is the six-step install
+    list at the very bottom, past everything the button was meant to show, while the twin page's
+    button in the same position said «What's inside» and landed on the feature grid.
+    """
+    for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        html = p.read_text(encoding='utf-8')
+        ids = set(re.findall(r'\bid="([^"]+)"', html))
+        for frag in re.findall(r'href="#([^"]+)"', html):
+            if frag not in ids:
+                findings.append(f'{p.relative_to(SITE).as_posix()}: href="#{frag}" — no element has that id')
+
+
 def translations_link_to_translations(findings: list) -> None:
     """A link from an Italian page to a page that has an Italian version must use it.
 
@@ -522,6 +539,7 @@ def main() -> int:
 
     store_field_limits(findings)
     classes_defined(findings)
+    anchors_resolve(findings)
     translations_link_to_translations(findings)
     shared_prose_stays_shared(findings)
     canonical_and_alternates(findings)

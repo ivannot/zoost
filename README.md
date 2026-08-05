@@ -85,8 +85,10 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   definition and back.
 - **Module schema & ER diagram**: browse fields (type, lookup, picklist) and view foreign-key
   relationships as an entity-relationship diagram (pan / zoom / fit / Save PDF).
-- **Automation map**: Workflows and Schedules with their triggers, criteria, instant and
-  time-based actions, and the functions they invoke — plus on-demand workflow execution stats.
+- **Automation map**: Workflows and Schedules with their triggers, criteria, instant and time-based
+  actions, and the functions they invoke — plus on-demand workflow execution stats. A rule with actions
+  that run *after a delay* carries the count and the delay, **Has scheduled actions** filters the list
+  down to those, and each rule shows its **Last run** — all three read from the rule already on disk.
 - **Reverse usage**: each function shows where it's wired across the org (blueprint, button,
   schedule, …) via Zoho's own `associated_place` signal — no expensive scans.
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it —
@@ -115,7 +117,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - A persistent chat, grounded on your real org. **Provider-agnostic BYOK**: Anthropic (Claude)
   or **OpenAI** (ChatGPT). Two providers, both tested — nothing claimed that has not been tried.
 - With Anthropic it runs as an **agent with read-only tools** — `get_function`, `who_calls`,
-  `get_callees`, `search_code`, `get_module`, `get_workflow`, `get_connection`, `list_functions` —
+  `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`, `get_connection`,
+  `list_functions` —
   so it explores the whole org itself instead of guessing. Every tool it opens is shown in the chat (🔧).
 - **Streaming** responses, **Markdown** rendering, and a configurable **tool-step limit** so you
   control how much it reasons — and spends.

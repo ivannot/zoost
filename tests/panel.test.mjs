@@ -594,3 +594,61 @@ test('the click-anywhere shortcut exists on both, and stays out of the same plac
     }
   }
 });
+
+// ---------- Workflows: the scheduled actions the list endpoint never returns ----------
+
+const { wfScheduled } = load([sliceFn('apps/crm/sidepanel.js', 'wfScheduled')]);
+
+// The shape as Zoho actually returns it, from a real rule (names replaced).
+const RULE = {
+  last_executed_time: '2026-08-04T09:12:33+02:00',
+  conditions: [{
+    instant_actions: { actions: [{ name: 'Notify', id: '1', type: 'tasks' }] },
+    scheduled_actions: [{
+      execute_after: { period: 'minutes', unit: 2 },
+      id: '534982000049892294',
+      actions: [{ name: 'Do the thing', id: '534982000049892189', type: 'functions' }],
+    }],
+  }],
+};
+
+test('a scheduled action is counted and its delay read', () => {
+  const s = wfScheduled(RULE);
+  assert.equal(s.count, 1);
+  assert.equal(s.delays.join('|'), '2 minutes');
+});
+
+test('instant actions are not counted as scheduled', () => {
+  // The whole question is "which do NOT run immediately"; counting both would answer a different one.
+  assert.equal(wfScheduled({ conditions: [{ instant_actions: { actions: [{ name: 'a' }, { name: 'b' }] } }] }).count, 0);
+});
+
+test('several buckets across several conditions add up, and each delay is named once', () => {
+  const s = wfScheduled({ conditions: [
+    { scheduled_actions: [{ execute_after: { period: 'hours', unit: 1 }, actions: [{ name: 'a' }, { name: 'b' }] }] },
+    { scheduled_actions: [{ execute_after: { period: 'hours', unit: 1 }, actions: [{ name: 'c' }] },
+                          { execute_after: { period: 'days', unit: 3 }, actions: [{ name: 'd' }] }] },
+  ] });
+  assert.equal(s.count, 4);
+  assert.equal(s.delays.join('|'), '1 hours|3 days');
+});
+
+test('a rule with no conditions, and a rule that is not there at all, are zero rather than a throw', () => {
+  // It is called on `w.detail`, which is null for a workflow nobody has downloaded yet. Throwing
+  // there would take the whole list render down with it.
+  assert.equal(wfScheduled({}).count, 0);
+  assert.equal(wfScheduled(null).count, 0);
+  assert.equal(wfScheduled(undefined).count, 0);
+});
+
+test('scheduled_actions as an object rather than an array is ignored, not half-read', () => {
+  // Zoho returns an array here; the panel has always guarded the shape elsewhere, and a bucket that
+  // is not an array must not be counted as one action by accident.
+  assert.equal(wfScheduled({ conditions: [{ scheduled_actions: { actions: [{ name: 'a' }] } }] }).count, 0);
+});
+
+test('a bucket with no execute_after still counts its actions', () => {
+  const s = wfScheduled({ conditions: [{ scheduled_actions: [{ actions: [{ name: 'a' }] }] }] });
+  assert.equal(s.count, 1);
+  assert.equal(s.delays.length, 0);
+});

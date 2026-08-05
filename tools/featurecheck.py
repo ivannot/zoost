@@ -93,6 +93,25 @@ def marked_controls(app: str) -> set:
     return out
 
 
+def filter_options(app: str) -> set:
+    """The named choices in the panel's filter and sort dropdowns.
+
+    This file read `<button>` elements in sidepanel.html and nothing else, so a whole class of
+    control was invisible to it: the filter and sort dropdowns are built in JS, from literal pairs
+    inside `buildTypeChips()`, and every choice in them is a capability with a name. Adding
+    "Has scheduled actions" — the answer to "which workflows do not run immediately" — passed this
+    check without the site knowing the feature existed, which is exactly the omission the file is for.
+
+    A "control" here is a thing the user can pick and would search the guide for, so it is the label
+    that is compared, not the internal key. `All` is skipped: it is the absence of a filter.
+    """
+    js = (ROOT / f'apps/{app}/sidepanel.js').read_text(encoding='utf-8')
+    m = re.search(r'function buildTypeChips\(\)[\s\S]*?\n}', js)
+    if not m:
+        return set()          # Analytics has one list and a type filter built elsewhere; not a finding
+    return {label for key, label in re.findall(r"\['([\w-]+)', '([^']+)'\]", m.group(0)) if key != 'all'}
+
+
 def guides_depict_marks(findings: list) -> None:
     """A control drawn as a mark must be *drawn* in the guide, not spelled out.
 
@@ -125,7 +144,15 @@ def main() -> int:
             needle = ALIAS.get(t, t).lower()
             if needle not in site:
                 findings.append(f'{app}: “{raw}” exists in the panel and is named nowhere on the site')
-        print(f'  {app}: {len(found)} controls checked against {len(pages)} pages')
+        opts = filter_options(app)
+        for label in sorted(opts):
+            if label in EXPECTED_ABSENT:
+                continue
+            if ALIAS.get(label, label).lower() not in site:
+                findings.append(f'{app}: the filter/sort choice “{label}” exists in the panel and is '
+                                f'named nowhere on the site')
+        print(f'  {app}: {len(found)} controls and {len(opts)} filter choices checked '
+              f'against {len(pages)} pages')
 
     guides_depict_marks(findings)
 

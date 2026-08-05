@@ -51,6 +51,10 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   Which tabs appear, and in what order, is set in Settings. A tab the user's Zoho role is not allowed
   to read disappears by itself, and Settings says why.
 - "Pull" (next to the tabs): re-reads only the type currently shown.
+- The Status filter above the list. In Workflows it also offers "Has scheduled actions" — the rules
+  with at least one action that runs after a delay rather than immediately. Each such row carries a
+  clock and the count, and the tooltip says how long the delay is. The workflow's own panel shows
+  "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window — which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.

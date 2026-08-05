@@ -268,6 +268,13 @@
   .sr mark{background:rgba(59,111,224,.35);color:#fff;border-radius:2px}
   .wftype{color:var(--muted);font-size:9px;margin-left:auto;text-transform:uppercase}
   .wfoff{color:#f59e0b;font-size:9px;margin-left:6px;text-transform:uppercase}
+  /* Actions that do not run immediately. Its own hue, not the amber `off` uses: "delayed" is a
+     property of the rule, "inactive" is a state, and one colour for two meanings is one fewer
+     meaning. `margin-left:auto` lives on .wftype, so this sits after it without fighting for it. */
+  .wfsched{color:#7dd3c0;font-size:9px;margin-left:6px;white-space:nowrap}
+  /* A figure that states its own gap, in the list where the figure is. */
+  .wfnote{color:var(--muted);font-size:10.5px;line-height:1.5;padding:7px 10px;border-bottom:1px solid var(--line)}
+  .wfnote b{color:var(--ink)}
   .wfd{padding:8px 10px;font:12px var(--mono);line-height:1.6}
   .wfrow{margin:2px 0}.wfrow .wk{color:var(--muted);display:inline-block;min-width:66px}
   .wfcond{margin:8px 0;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#141b29}

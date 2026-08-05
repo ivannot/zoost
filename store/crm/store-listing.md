@@ -50,7 +50,7 @@ WHAT IT DOES
 
 - Every part knows when it was last read. Because a type can be excluded from a pull, the mirror states per area when it last came from Zoho. A report section whose data is behind is unticked in the export dialog, with the date and the reason — you can include it anyway, and the report then says so. Both reports carry the per-area dates whether or not anything is behind.
 
-- Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function.
+- Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function. Rules with actions that run after a delay carry the count and the delay, a filter shows only those, and each rule shows when it last ran.
 
 - Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes — and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
 

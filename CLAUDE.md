@@ -99,7 +99,10 @@ because it makes claims.
 a button the panel stopped drawing, or that a short description repeats the item name it sits under.
 Both of those reached him, and neither was a lapse of attention that more attention would have fixed:
 each was a dimension nothing measured. `featurecheck.py` now compares the panel's *marks* against what
-the guide draws, not only what it names, and `auditcheck.py` reports a description that borrows three
+the guide draws, not only what it names — and its **filter and sort dropdowns**, which it could not
+see at all: it read `<button>` elements in `sidepanel.html`, while those menus are built in JS from
+literal pairs inside `buildTypeChips()`. Every choice in them is a capability with a name, and
+`Has scheduled actions` shipped past the check without the site knowing the feature existed, and `auditcheck.py` reports a description that borrows three
 consecutive words from its own item name. The rule is the one already here — **extend the check, never
 the care** — and the corollary is that the battery is run at every checkpoint, by me, unprompted:
 `tests/run.sh`, then `auditcheck.py`, then `reachcheck.sh` when the site moved.
@@ -312,6 +315,16 @@ is disabled. Do not weaken this for convenience.
 reads what was written to disk. If a feature needs data that is not in the module JSON, the pull
 has to be extended and the user has to re-pull — say so in the UI rather than failing silently.
 
+**A fact already on disk is derived, not re-captured.** «How many workflows have actions that do not
+run immediately» had no answer anywhere: the workflow *list* endpoint does not carry it, so
+`_workflows/_index.json` does not either — and it was sitting unread in every `_workflows/<id>.json`,
+one level down, inside `conditions[].scheduled_actions[]`, along with `last_executed_time`.
+`wfScheduled()` reads the rule the pull already wrote. Putting it in the index instead would have
+meant a field older workspaces lack and a re-pull to acquire it, for something that was never
+missing. **A workflow not downloaded yet has no count rather than a count of zero** — «0 scheduled»
+about a rule nobody has read is a measurement that was never taken, and both the panel and the tool
+say so.
+
 **Function meta carries a schema version (`sv`), and old copies backfill themselves.** When the pull
 starts capturing a new field (e.g. `connections`, `modified_by` in 1.2.0), bump `sv` in
 `content-bridge.js` `toFile()` and in `META_SV` in `sidepanel.js`. Functions on disk below `META_SV`
@@ -502,6 +515,15 @@ out. The page's own writes are marked so it does not warn about itself, and that
 real later change is still seen. **Never resolve this by guessing which side is newer** — the user is
 the only one who knows which they meant.
 
+**«Reveal in folder» was asked for and cannot be built — the reason is worth keeping.** Chrome gives
+an extension no way to open the operating system's file manager: `chrome.downloads.show()` reveals
+only files that went through the downloads API, and the File System Access API deliberately exposes
+no absolute path — a `FileSystemDirectoryHandle` carries the folder's *name* and nothing else, which
+is the whole point of the permission model. So the panel cannot even build the path to put on the
+clipboard, let alone open it. What it can offer is the workspace-relative path, which is what the
+export headers and the AI already print. Do not "just try" a native-messaging host for this: that is
+a second installable component, outside the package a reviewer reads, for a convenience.
+
 **Excluding an area never deletes its files, and a "remove local files" *flag* was considered and
 refused.** A standing instruction to delete on every future pull is a foot-gun — re-enable the tab,
 forget the flag, and the next pull has already thrown the files away — and deleting solves nothing
@@ -544,6 +566,10 @@ the assistant knows more names, and it is billed on every message. A number in a
 choice, though — so the panel measures the index for the workspace actually open and prints it under
 the chat title, in characters and approximate tokens. The knob and the consequence are in the same
 sentence.
+
+**`aiCap()` existed in Analytics only, for months, while this file described it as the rule.** The
+CRM panel had no such helper and `search_code` truncated at 60 hits in silence — the exact defect the
+convention was written against, on the side nobody checked. Ported byte-identical.
 
 **Tool answers are capped too, and say how to narrow.** A tool that returns nine hundred lines has
 not answered. `aiCap()` cuts the list, states the true total, and tells the model which argument

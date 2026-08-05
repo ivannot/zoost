@@ -983,6 +983,8 @@ function buildTypeChips() {
     ? [['all', 'All'], ['standard', 'Standard'], ['custom', 'Custom']]
     : viewMode === 'connections'
     ? [['all', 'All'], ['used', 'Used'], ['unused', 'Unused'], ['disconnected', 'Disconnected']]
+    : viewMode === 'workflows'
+    ? [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['scheduled', 'Has scheduled actions']]
     : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
   if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else if (viewMode === 'schedules') scheduleFilter = 'all'; else connCatFilter = 'all';
   // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
@@ -1439,7 +1441,7 @@ async function aiSystemPromptB(withTools, cap) {
   const seed = await aiBuildSeed(cap);
   const focus = await aiFocus();
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
+    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
   return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
@@ -1451,8 +1453,18 @@ const AI_TOOLS = [
   { name: 'search_code', description: 'Full-text search across all function sources; returns "namespace.name:line" matches.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'get_module', description: 'Field schema of a module by api_name.', input_schema: { type: 'object', properties: { api_name: { type: 'string' } }, required: ['api_name'] } },
   { name: 'get_connection', description: 'A connection by name (the string used in invokeurl [...connection:"..."]): its connector, status, scopes, and every function that uses it.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
-  { name: 'get_workflow', description: 'A workflow by id or name, with trigger and function actions.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'get_workflow', description: 'A workflow by id or name: trigger, status, last execution, how many instant and scheduled actions it has and after how long, and the functions it calls.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'list_workflows', description: 'List workflow rules with their instant/scheduled action counts and last execution. Filter by module, by active, and by has_scheduled_actions \u2014 use that last one to answer "which and how many workflows have actions that do not run immediately" exactly, instead of opening them one by one.', input_schema: { type: 'object', properties: { module: { type: 'string' }, active: { type: 'boolean' }, has_scheduled_actions: { type: 'boolean' } } } },
 ];
+// A tool that answers with nine hundred lines has not answered. Cap the list, say how many there
+// were, and say how to narrow — the model can then ask a better question instead of drowning in the
+// first one.
+function aiCap(lines, total, how, limit = 120) {
+  if (lines.length <= limit) return lines.join('\n');
+  return lines.slice(0, limit).join('\n')
+    + `\n… and ${total - limit} more (${total} in all). ${how}`;
+}
+
 async function aiExecTool(name, input) {
   const g = await ensureGraph(); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
@@ -1471,7 +1483,7 @@ async function aiExecTool(name, input) {
   if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : 'Function not found: ' + input.name; }
-  if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? hits.slice(0, 60).join('\n') : '(no matches)'; }
+  if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
   if (name === 'get_module') { const mods = await aiLoadModules(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'get_connection') {
     const list = await aiLoadConnections();
@@ -1483,7 +1495,62 @@ async function aiExecTool(name, input) {
       + `created_by: ${c.createdBy || ''}\nscopes: ${(c.scopes || []).join(', ') || '(none)'}\n`
       + `used_by (${c.uses.length}): ${c.uses.join(', ') || '(none — unused by the functions in this workspace; Flow, widgets and client scripts are not visible to Zoost)'}`;
   }
-  if (name === 'get_workflow') { let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {} const q = String(input.query || '').toLowerCase(); const w = idx.find((x) => String(x.id) === input.query || (x.name || '').toLowerCase() === q || (x.name || '').toLowerCase().includes(q)); if (!w) return 'Workflow not found: ' + input.query; let det = null; try { det = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {} const fns = []; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => fns.push(a.name)); }); return `Workflow: ${w.name}\nmodule: ${w.module || ''}\nfunctions: ${[...new Set(fns)].join(', ') || '(none)'}`; }
+  if (name === 'list_workflows' || name === 'get_workflow') {
+    // Both read the rules on disk rather than the index alone: the list endpoint returns neither the
+    // scheduled actions nor the last execution, so an answer built from `_index.json` would have been
+    // confidently wrong about exactly the question this exists to answer.
+    let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
+    if (!idx.length) return '(no workflows in this workspace — run Pull all)';
+    const rows = [];
+    let unread = 0;
+    for (const w of idx) {
+      let det = null; try { det = JSON.parse(await readFile(`_workflows/${w.id}.json`)); } catch (_) {}
+      if (!det) unread++;
+      const s = wfScheduled(det);
+      const fns = []; const instant = [];
+      ((det && det.conditions) || []).forEach((c) => {
+        const ia = (c.instant_actions && c.instant_actions.actions) || [];
+        ia.forEach((a) => { instant.push(a); if (a.type === 'functions') fns.push(a.name); });
+        (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) =>
+          (sa.actions || []).forEach((a) => { if (a.type === 'functions') fns.push(a.name); }));
+      });
+      rows.push({ w, det, read: !!det, sched: s.count, delays: s.delays, instant: instant.length,
+                  fns: [...new Set(fns)], last: (det && det.last_executed_time) || null });
+    }
+    if (name === 'get_workflow') {
+      const q = String(input.query || '').toLowerCase();
+      const r = rows.find((x) => String(x.w.id) === input.query || (x.w.name || '').toLowerCase() === q)
+             || rows.find((x) => (x.w.name || '').toLowerCase().includes(q));
+      if (!r) return 'Workflow not found: ' + input.query;
+      return `Workflow: ${r.w.name}\nmodule: ${r.w.module || ''}\ntrigger: ${r.w.type || ''}\n`
+        + `status: ${r.w.active ? 'active' : 'inactive'}\n`
+        + `last_executed: ${r.last || '(never, or not reported by Zoho)'}\n`
+        + `instant_actions: ${r.instant}\n`
+        + `scheduled_actions: ${r.sched}${r.sched && r.delays.length ? ' — after ' + r.delays.join(', ') : ''}\n`
+        + `functions: ${r.fns.join(', ') || '(none)'}`
+        + (r.read ? '' : '\nNOTE: this rule has not been downloaded, so the action and execution figures above are absent, not zero.');
+    }
+    const want = input.has_scheduled_actions;
+    const act = input.active;
+    const mod = String(input.module || '').toLowerCase();
+    let sel = rows;
+    if (want === true) sel = sel.filter((r) => r.sched > 0);
+    if (want === false) sel = sel.filter((r) => r.read && r.sched === 0);
+    if (act === true) sel = sel.filter((r) => r.w.active);
+    if (act === false) sel = sel.filter((r) => !r.w.active);
+    if (mod) sel = sel.filter((r) => (r.w.module || '').toLowerCase() === mod);
+    const crit = [want === true ? 'with scheduled actions' : want === false ? 'without scheduled actions' : '',
+                  act === true ? 'active' : act === false ? 'inactive' : '',
+                  mod ? `module ${input.module}` : ''].filter(Boolean).join(', ') || 'all';
+    const head = `${sel.length} workflow(s) match (${crit}); ${idx.length} in the workspace.`
+      + (unread ? ` ${unread} rule(s) have not been downloaded, so they are counted as unknown rather than as zero — press «Complete missing» in the panel.` : '');
+    if (!sel.length) return head;
+    const lines = sel.map((r) =>
+      `${r.w.name}${r.w.module ? ' [' + r.w.module + ']' : ''}${r.w.active ? '' : ' (inactive)'}`
+      + ` — ${r.sched} scheduled${r.sched && r.delays.length ? ' (' + r.delays.join(', ') + ')' : ''}`
+      + `, ${r.instant} instant${r.last ? ', last run ' + String(r.last).slice(0, 16) : ''}`);
+    return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
+  }
   return 'Unknown tool: ' + name;
 }
 function aiMarkdown(src) {
@@ -2715,7 +2782,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   });
   const wfRows = [];
   Object.keys(wfByMod).sort().forEach((mod) => wfByMod[mod].slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((w) => {
-    wfRows.push(`<tr><td><a href="#${wfAnchor(w.id)}">${esc(w.name)}</a></td><td class="mono">${esc(w.module || '')}</td><td class="ct">${esc(w.type || '')}</td><td class="ct">${w.active ? '\u25cf' : ''}</td><td class="ct">${wfFnActions(w).length}</td></tr>`);
+    const wsc = wfScheduled(w.detail);
+    wfRows.push(`<tr><td><a href="#${wfAnchor(w.id)}">${esc(w.name)}</a></td><td class="mono">${esc(w.module || '')}</td><td class="ct">${esc(w.type || '')}</td><td class="ct">${w.active ? '\u25cf' : ''}</td><td class="ct">${wfFnActions(w).length}</td><td class="ct">${wsc.count || ''}</td><td class="ct">${esc(((w.detail && w.detail.last_executed_time) || '').slice(0, 16))}</td></tr>`);
   }));
 
   // schedules
@@ -2797,7 +2865,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th><th title="source lines">Lines</th><th title="invokeurl + Zoho service tasks">Calls</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="9" class="none">none</td></tr>'}</tbody></table>`
     + `<h3 class="toch">Modules (${mods.length})</h3>`
     + `<table class="toctbl"><thead><tr><th>Module</th><th>API name</th><th>Generated</th><th>Kind</th><th>Fields</th><th>Ref by</th></tr></thead><tbody>${modRows.join('') || '<tr><td colspan="6" class="none">none</td></tr>'}</tbody></table>`
-    + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
+    + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th><th title="Actions that do not run immediately">Scheduled</th><th>Last run</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
     + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
     + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue \u2014 related-list API names for Deluge</a></div>` : '')
     + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue — connectors, status, and which functions use each</a></div>` : '')
@@ -2875,7 +2943,16 @@ function buildExportMarkdown(d, scope) {
   fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' \u2014 ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` \u2014 ${(m.fields || []).length} fields\n`; });
-  if (wfs.length) { md += '\n### Workflows\n'; wfs.forEach((w) => { const fl = wfFns(w); md += `- ${w.name}${w.module ? ' (' + w.module + ')' : ''}${fl.length ? ' \u2192 ' + fl.join(', ') : ''}\n`; }); }
+  if (wfs.length) {
+    md += '\n### Workflows\n';
+    wfs.forEach((w) => {
+      const fl = wfFns(w); const wsc = wfScheduled(w.detail);
+      const last = (w.detail && w.detail.last_executed_time) || '';
+      md += `- ${w.name}${w.module ? ' (' + w.module + ')' : ''}${fl.length ? ' \u2192 ' + fl.join(', ') : ''}`
+        + `${wsc.count ? ` \u00b7 ${wsc.count} scheduled${wsc.delays.length ? ' after ' + wsc.delays.join(', ') : ''}` : ''}`
+        + `${last ? ' \u00b7 last run ' + String(last).slice(0, 16) : ''}\n`;
+    });
+  }
   if (scheds.length) { md += '\n### Schedules\n'; scheds.forEach((sc) => { md += `- ${sc.name} \u2192 ${sc.function_name || '?'}${sc.frequency ? ' (' + sc.frequency + ')' : ''}\n`; }); }
   if (fnList.length) md += `\n---\n\n## Functions${scope.code ? ' (full source)' : ' (signatures only \u2014 source code excluded from this export)'}\n\n`;
   fnList.forEach((n) => {
@@ -3059,12 +3136,47 @@ async function openSchedule(e) {
 }
 
 // ---------- workflows ----------
+
+/** The scheduled-action facts of one rule, read from the rule we already have on disk.
+ *
+ * "How many workflows have actions that do not run immediately" had no answer anywhere: the list
+ * endpoint does not carry it, so `_index.json` does not either, and the fact was sitting unread in
+ * every `_workflows/<id>.json` — one level down, inside `conditions[].scheduled_actions[]`.
+ *
+ * Derived rather than captured, deliberately. Adding it to the index would mean a field that older
+ * workspaces lack and a re-pull to acquire, for something already on the disk: this reads what the
+ * pull wrote, which is the same rule the graph and the health audit follow.
+ */
+function wfScheduled(rule) {
+  let count = 0; const delays = [];
+  ((rule && rule.conditions) || []).forEach((c) => {
+    (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => {
+      count += (sa.actions || []).length;
+      const ea = sa.execute_after;
+      if (ea && ea.unit != null && ea.period) delays.push(`${ea.unit} ${ea.period}`);
+    });
+  });
+  return { count, delays: [...new Set(delays)] };
+}
+
 async function loadWorkflowIndex() {
   wfIndex = new Map();
   let idx = []; try { idx = JSON.parse(await readFile('_workflows/_index.json')); } catch (_) {}
   const have = new Set();
   for await (const p of walk(dir)) { if (p.startsWith('_workflows/') && p.endsWith('.json') && !p.endsWith('_index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
   workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `_workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
+  // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
+  // downloaded yet has neither, and says so as absence rather than as a zero — «0 scheduled» about a
+  // workflow nobody has read is a measurement that was never taken.
+  for (const e of workflowData) {
+    if (!e.downloaded) continue;
+    try {
+      const rule = JSON.parse(await readFile(e.path));
+      const s = wfScheduled(rule);
+      e.sched = s.count; e.schedDelays = s.delays;
+      e.lastRun = rule.last_executed_time || null;
+    } catch (_) { /* unreadable here is the same as not downloaded: no fact, not a false zero */ }
+  }
   workflowData.forEach((e) => wfIndex.set(e.id, e));
 }
 async function rebuildWorkflows() {
@@ -3085,12 +3197,25 @@ function renderWorkflows() {
   const term = $('find').value.trim().toLowerCase();
   const byMod = {};
   workflowData
-    .filter((e) => workflowFilter === 'all' || (workflowFilter === 'active' ? e.active : !e.active))
+    .filter((e) => workflowFilter === 'all'
+      || (workflowFilter === 'scheduled' ? e.sched > 0 : workflowFilter === 'active' ? e.active : !e.active))
     .filter((e) => !term || (e.name || '').toLowerCase().includes(term) || (e.module || '').toLowerCase().includes(term))
     .forEach((e) => (byMod[e.module || '(no module)'] ||= []).push(e));
   const tree = $('tree'); tree.innerHTML = '';
   const keys = Object.keys(byMod).sort();
   if (!keys.length) { tree.innerHTML = '<div class="empty">' + (workflowData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No workflows yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
+  // The scheduled-action count comes from the rule on disk, so a rule not downloaded yet has no
+  // count — it is not a zero. Filtering on it therefore answers about part of the org, and the
+  // figure states its own gap rather than letting the list look complete.
+  if (workflowFilter === 'scheduled') {
+    const unread = workflowData.filter((e) => !e.downloaded).length;
+    if (unread) {
+      const n = document.createElement('div'); n.className = 'wfnote';
+      n.innerHTML = `${unread} workflow(s) have not been downloaded, so they are not counted here either way.`
+        + ' Press <b>Complete missing</b> above to read them.';
+      tree.appendChild(n);
+    }
+  }
   keys.forEach((mod) => {
     const list = byMod[mod].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     const isCol = collapsed.has('wf:' + mod);
@@ -3105,7 +3230,13 @@ function renderWorkflows() {
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
       const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
-      el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${e.active ? '' : '<span class="wfoff">off</span>'}`;
+      // The delay is part of the fact: "2 scheduled" and "2 scheduled, 30 minutes later" are
+      // different things to know before touching a rule, and the second costs a tooltip.
+      const schedBadge = e.sched > 0
+        ? `<span class="wfsched" title="${escA(e.sched + ' action(s) that do not run immediately'
+            + (e.schedDelays && e.schedDelays.length ? ' — after ' + e.schedDelays.join(', ') : ''))}">⏱ ${e.sched}</span>`
+        : '';
+      el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${schedBadge}${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => openWorkflow(e);
       tree.appendChild(el);
@@ -3354,6 +3485,8 @@ function renderWorkflowDetail(rule) {
   const ewCrit = critText(det.criteria || ew.criteria);
   if (ewCrit) h += `<div class="wfrow"><span class="wk">When</span> ${esc(ewCrit)}</div>`;
   h += `<div class="wfrow"><span class="wk">Status</span> ${rule.status && rule.status.active ? 'active' : 'inactive'}</div>`;
+  // Same row, same words as the Schedules preview: "Last run" is one fact and must not be two names.
+  if (rule.last_executed_time) h += `<div class="wfrow"><span class="wk">Last run</span> ${esc(rule.last_executed_time)}</div>`;
   if (rule.description) h += `<div class="wfrow"><span class="wk">Description</span> ${esc(rule.description)}</div>`;
   (rule.conditions || []).forEach((c, i) => {
     h += `<div class="wfcond"><div class="wfch">Condition ${c.sequence_number || i + 1}</div>`;

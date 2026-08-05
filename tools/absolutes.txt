@@ -10,7 +10,7 @@ e5e1d7447bf82535  README.md: - **Size and outbound calls**: every function shows
 8f6f1a9a39354720  README.md: - **Workspace select · + · ✎ · 🗑** — `+` creates the workspace for the org in the active Zoho tab; **✎** gives it a name of your own, shown instead of the folder's (the platform's own name stays in the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
 1451aa2e8c605a3b  README.md: - Not every issue will be fixed and not every pull request will be merged.
 d874573debc501f2  README.md: - Only Anthropic and OpenAI are supported.
-0a25fbcb9bdae38d  README.md: - With Anthropic it runs as an **agent with read-only tools** — `get_function`, `who_calls`, `get_callees`, `search_code`, `get_module`, `get_workflow`, `get_connection`, `list_functions` — so it explores the whole org itself instead of guessing.
+db31558403b09aaf  README.md: - With Anthropic it runs as an **agent with read-only tools** — `get_function`, `who_calls`, `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`, `get_connection`, `list_functions` — so it explores the whole org itself instead of guessing.
 dbd520f0b189a003  README.md: - host permissions `crm.zoho.*` / `crmsandbox.zoho.*` — read/save via your authenticated Zoho session; `api.anthropic.com` / `api.openai.com` — used **only** if you enable the AI with those providers.
 a548a06956eed685  README.md: --- ## The interface **Top bars** - **Working folder** — set once; every workspace is a subfolder inside it, identified by the org id in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
 88a26fcb684de52d  README.md: --- ## Versioning The manifest `version` is bumped on every release and this README tracks the feature set.
@@ -95,6 +95,7 @@ a78584fc99aeb3fb  site/crm.html: Switch the search scope from names to code and 
 e3791577ae421683  site/crm.html: The record of every submitted version — commit, tag and the SHA-256 of the uploaded package — is in RELEASES.md , including the two entries it says it cannot verify and why.
 6d39cd491fc6483c  site/crm.html: What is promised, and what is not Nothing is guaranteed — the licence says so and so does this page.
 873e8de1cc974838  site/crm.html: What's inside Local mirror, Git-friendly Pull every Deluge function to .dg source plus metadata sidecars.
+a62f914fd3277e52  site/crm.html: Which ones do not fire straight away : the count of actions that run after a delay, how long that delay is, and a filter that shows only those rules.
 0fd7a2a919e5cc00  site/crm.html: With Anthropic it runs as an agent with read-only tools, so it opens your functions, traces callers, looks up connections and searches your code instead of guessing.
 49170b1dd3be06ac  site/crm.html: You can read all of it in an afternoon.
 fd3ac02817d36466  site/crm.html: Your name is shown; the instance and org are kept beside it, because a list you cannot check against Zoho CRM is not worth having.
@@ -148,6 +149,7 @@ adb8f39d6c8b70b8  site/docs-analytics.html: They are the only thing in Zoho Anal
 795ad459c95a6f20  site/docs-analytics.html: Zoost is read-only towards Zoho Analytics.
 1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
+32513d5e8f0d32eb  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer «which workflows do not fire straight away».
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 12f98ef7c51b88b5  site/docs-crm.html: Every tool it uses is shown in the chat.
 dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists (Notes, Attachments, Tasks…) so only your own relations remain.
@@ -268,7 +270,7 @@ c511c199d05419bb  site/it/crm.html: Esplora: segui una chiamata, apri il grafo, 
 b374b2aea0070767  site/it/crm.html: Il che vuol dire che si può rompere Quelle interfacce non portano nessuna promessa di compatibilità.
 bbe4847404ddc153  site/it/crm.html: Il codice sorgente è opt-in ed è segnalato ogni volta.
 0fab8d784a084569  site/it/crm.html: Il registro di ogni versione inviata — commit, tag e SHA-256 del pacchetto caricato — è in RELEASES.md , incluse le due righe che il registro stesso dichiara di non poter verificare, e perché.
-40abcb1bfcb645a5  site/it/crm.html: Installa dal Chrome Web Store Come funziona Gratuito · Apache-2.0 · nessun account Questa pagina è in italiano, e così la guida.
+1d55d10924d01e75  site/it/crm.html: Installa dal Chrome Web Store Cosa c'è dentro Gratuito · Apache-2.0 · nessun account Questa pagina è in italiano, e così la guida.
 8eac5e35d88af80f  site/it/crm.html: L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del workspace che gli serve, sorgente Deluge compreso, va al provider che configuri.
 2e53a163ac544859  site/it/crm.html: Legge anche due identificativi — l'id della tua org e quello dell'utente — dall'HTML della pagina, perché nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già.
 c086ef88cde0af6a  site/it/crm.html: Leggilo prima di fidarti Tutto quanto sopra è visibile in una ventina di file di JavaScript in chiaro.
@@ -282,6 +284,7 @@ e20b64e87a8f97f9  site/it/crm.html: Non legge nessun header e nessun corpo di ri
 8369427e7875e056  site/it/crm.html: Ogni strumento usato è mostrato nella chat.
 e2831f233696fe9f  site/it/crm.html: Ogni workspace vivrà lì dentro.
 c5b6fdd668497d91  site/it/crm.html: Perché esiste Una storia per tutto quello che scarichi Lo storico delle versioni di Zoho CRM copre una funzione , una per volta, dentro Zoho.
+a1d48018b4afe7b0  site/it/crm.html: Più l'ultima volta in cui ogni regola è stata eseguita.
 df3e12ff865b90d4  site/it/crm.html: Questo cambia solo il pannello: il mirror, gli export e l'assistente continuano a vedere tutto.
 208becf6c09f2018  site/it/crm.html: Ricerca full-text : una query su tutto il sorgente di ogni funzione.
 f82105afd0544673  site/it/crm.html: Schema, layout e relazioni Ogni campo con tipo, modulo di lookup e valori della picklist.
@@ -417,6 +420,7 @@ ca69cb8366900074  site/it/docs-crm.html: Spegnere una scheda spegne anche quello
 4a3206eb467b140e  site/it/docs-crm.html: Togliere una chiave, e cambiare motore Ogni blocco provider ha un pulsante Forget : svuota il modello e la chiave, e la rimozione ha effetto quando premi Save AI settings .
 d1feb30503f6387f  site/it/docs-crm.html: Trovare il nome di una relazione L'API name di una related list non è l'api name di nessuno dei due moduli.
 de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata a ogni messaggio, quindi un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
+11bf4ce1dde20ab4  site/it/docs-crm.html: Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.
 103ff924d2b7fcdd  site/it/docs-crm.html: Tutto ciò che dipende da questa connessione è già rotto.
 9673f3bcc6c69fca  site/it/docs-crm.html: Tutto il resto di Zoost è locale.
 09efc6d3098224d7  site/it/docs-crm.html: Tutto quello che Zoost scrive sta lì dentro.
@@ -580,6 +584,7 @@ f045dd8ca579ce62  store/crm/store-listing.md: A popup would close on every click
 e6d4029803df17cc  store/crm/store-listing.md: Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking, once, and records the answer with the date.
 d7ca61381803a403  store/crm/store-listing.md: Nothing is stored remotely or synced.
 72b342cdfb00a2cb  store/crm/store-listing.md: Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once — optional, because without it the mirror is still ordinary files you can search and hand over.
+1d21dd5c4bd2ddae  store/crm/store-listing.md: Rules with actions that run after a delay carry the count and the delay, a filter shows only those, and each rule shows when it last ran.
 63b4363eda0ae188  store/crm/store-listing.md: Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
 8581cab64a3617db  store/crm/store-listing.md: Single purpose description (max 1000) ``` Zoost has one purpose: to give a Zoho CRM administrator or developer a local, read-only mirror of their own org's Deluge code and configuration, and the tools to navigate and document it.
 92fed5b03c9f4f5b  store/crm/store-listing.md: The API key is stored locally and sent only to the provider you pick.
