@@ -227,6 +227,18 @@ export default {
     if (url.pathname === '/api/versions') return versions(request, ctx);
     const to = MOVED[url.pathname];
     if (to) return Response.redirect(new URL(to, url).toString(), 301);
+
+    // Plain text is served as `text/plain` with no charset, so a browser falls back to guessing and
+    // lands on Windows-1252: every em-dash in llms.txt arrived as `â€”`. HTML escapes this because
+    // it declares its encoding in-band with a <meta> tag; a .txt file has no way to say it, so the
+    // header is the only place it can be said. The file itself was valid UTF-8 all along.
+    if (url.pathname.endsWith('.txt')) {
+      const res = await env.ASSETS.fetch(request);
+      const headers = new Headers(res.headers);
+      headers.set('content-type', 'text/plain; charset=utf-8');
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    }
+
     return env.ASSETS.fetch(request);   // everything else is a file, served as before
   },
 };
