@@ -1275,7 +1275,15 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 - Say what a thing does not do, next to what it does. The health audit states its coverage gaps;
   the AI panel states that OpenAI cannot explore on its own; the export dialog flags source code.
   This is deliberate: an honest limitation prevents a bad review.
-- Empty states are never silent. "Nothing here" plus the reason plus what to do about it.
+- Empty states are never silent. "Nothing here" plus the reason plus what to do about it — and it
+  must be **the** reason, not a reason. Analytics recited the whole sequence (pick a folder, create a
+  workspace, Pull all) while the only thing in the way was one click on **Grant access**: four
+  instructions where one would do, three of them already done. Saying the wrong missing thing is
+  worse than silence, because the reader goes and does it and nothing changes. `emptyBlocker()` /
+  `emptyReason()` walk the states in the order they actually block each other, and every list asks
+  them before blaming the pull. The CRM looked correct only because its status line happened to say
+  the true thing; its five tree messages had the same defect — **do not align a twin to the one that
+  is accidentally right**, fix both.
 
 ## Release routine
 

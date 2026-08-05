@@ -476,3 +476,42 @@ test('every value the chips select has a colour, and no condition has one', () =
     for (const c of CONDITIONS) assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
   }
 });
+
+
+// ---------- an empty state names the reason it is actually empty ----------
+
+test('every empty list asks what is blocking before blaming the pull', () => {
+  // Reported: Analytics told the reader to pick a folder, create a workspace and press Pull all,
+  // while the only thing in the way was one click on Grant access — four instructions where one
+  // would do, and three of them already done. The CRM looked right only because its status line
+  // happened to say the true thing; its tree messages had the same defect.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const fn = app === 'crm' ? 'emptyBlocker' : 'emptyReason';
+    assert.match(src, new RegExp(`function ${fn}\\(\\)`), `${app}: nothing derives why a list is empty`);
+    // the three states that block before a pull ever could
+    for (const guard of ['!root', '!rootGranted']) {
+      const body = src.slice(src.indexOf(`function ${fn}()`), src.indexOf('\n}', src.indexOf(`function ${fn}()`)));
+      assert.ok(body.includes(guard), `${app}: ${fn}() does not consider ${guard}`);
+    }
+  }
+});
+
+test('no list still tells the reader to pull without asking first', () => {
+  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  for (const m of src.matchAll(/'No [^']*click Pull[^']*'/g)) {
+    const before = src.slice(Math.max(0, m.index - 120), m.index);
+    assert.ok(before.includes('emptyBlocker() ||'),
+      `a list says «${m[0]}» without asking what is actually blocking`);
+  }
+});
+
+test('a lapsed permission is reported in words, on both sides', () => {
+  // The same sentence, word for word: the remedy is one click and both panels say so rather than
+  // leaving the reader to work out that «access not granted» in a dropdown is actionable.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    assert.ok(src.includes('Grant access\\u00bb above \\u2014 one click, no folder picker'),
+      `${app}: the one-click remedy is not offered in the status line`);
+  }
+});

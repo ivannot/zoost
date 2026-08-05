@@ -240,7 +240,11 @@ async function refreshWorkspaces() {
     : `Working folder: ${root.name} \u2014 click to choose a different one`;
   if (root && !rootGranted) {
     sel.innerHTML = '<option value="">access not granted</option>';
-    dir = null; bound = null; return updateButtons();
+    dir = null; bound = null;
+    // Word for word the CRM's. The blocker is one click, and saying nothing here left the status line
+    // reading "Ready." while nothing could be read at all.
+    status('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
+    return updateButtons();
   }
   if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; return updateButtons(); }
 
@@ -770,14 +774,38 @@ function visibleViews() {
   });
 }
 
+/** Why the list is empty, in the order the states actually block each other.
+ *
+ * An empty state is never silent here: it says what is missing and what to do about it. Saying the
+ * *wrong* missing thing is worse than silence, because the reader goes and does it and nothing
+ * changes — which is what happened when a folder whose permission had lapsed was told to pick a
+ * folder, create a workspace and pull.
+ */
+function emptyReason() {
+  if (!root) {
+    return '<b>No working folder yet.</b> Press <b>\u{1F4C1} Set working folder\u2026</b> above and pick a '
+      + 'dedicated, empty folder. Every workspace lives inside it.';
+  }
+  if (!rootGranted) {
+    return '<b>Folder access is not granted.</b> Chrome lets that permission lapse. Press '
+      + '<b>\u{1F513} Grant access</b> above \u2014 one click, no folder picker, and nothing else is needed.';
+  }
+  if (!wsList.length) {
+    return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab \u2014 its URL '
+      + 'looks like <code>/workspace/&lt;id&gt;</code> \u2014 then press <b>+ Workspace</b>.';
+  }
+  return '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to read this workspace into the folder: the '
+    + 'view list, the columns of every table, the relations and the SQL of each query table.';
+}
+
 function render() {
   renderTypeFilter();
   const list = $('list');
   if (!views.length) {
-    list.innerHTML = `<div class="empty"><b>Nothing pulled yet.</b>
-      Pick a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
-      <code>/workspace/&lt;id&gt;</code> — press <b>+</b> to create the workspace folder, then
-      <b>Pull all</b>.</div>`;
+    // "Nothing here" plus **the** reason, not a reason. Reciting the whole sequence while the only
+    // thing in the way is a lapsed folder permission sends the reader to do four things when one
+    // click would do — and it is the step they have already done that gets repeated at them.
+    list.innerHTML = `<div class="empty">${emptyReason()}</div>`;
     return;
   }
   const rows = visibleViews();
