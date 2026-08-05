@@ -487,7 +487,7 @@ test('every empty list asks what is blocking before blaming the pull', () => {
   // happened to say the true thing; its tree messages had the same defect.
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
-    const fn = app === 'crm' ? 'emptyBlocker' : 'emptyReason';
+    const fn = 'emptyReason';   // one name on both sides now, and the same wording behind it
     assert.match(src, new RegExp(`function ${fn}\\(\\)`), `${app}: nothing derives why a list is empty`);
     // the three states that block before a pull ever could
     for (const guard of ['!root', '!rootGranted']) {
@@ -499,10 +499,10 @@ test('every empty list asks what is blocking before blaming the pull', () => {
 
 test('no list still tells the reader to pull without asking first', () => {
   const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
-  for (const m of src.matchAll(/'No [^']*click Pull[^']*'/g)) {
-    const before = src.slice(Math.max(0, m.index - 120), m.index);
-    assert.ok(before.includes('emptyBlocker() ||'),
-      `a list says «${m[0]}» without asking what is actually blocking`);
+  for (const m of src.matchAll(/'<b>No [^']*<\/b> Press <b>Pull[^']*'/g)) {
+    const before = src.slice(Math.max(0, m.index - 140), m.index);
+    assert.ok(before.includes('emptyReason() ||'),
+      `a list points at Pull without asking what is actually blocking`);
   }
 });
 
@@ -537,5 +537,37 @@ test('every early return still redraws the list', () => {
   for (const m of earlies) {
     const before = fn.slice(Math.max(0, m.index - 60), m.index);
     assert.match(before, /render\(\);\s*$/, 'an early return leaves the previous reason on screen');
+  }
+});
+
+
+test('both panels say the same thing when the folder is not granted', () => {
+  // The CRM said it only in the status line and Analytics only in the list, so the same state read as
+  // two different products. Both now put the same sentence in the same place, and the wording is
+  // compared here rather than trusted to stay in step.
+  const bodies = ['crm', 'analytics'].map((app) => {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const i = src.indexOf('function emptyReason()');
+    assert.ok(i > 0, `${app}: emptyReason() is gone`);
+    return src.slice(i, src.indexOf('\n}', i));
+  });
+  const sentence = /Folder access is not granted\.<\/b> Press <b>\\u\{1F513\} Grant access<\/b> above/;
+  for (const [i, b] of bodies.entries()) {
+    assert.match(b, sentence, `${['crm', 'analytics'][i]}: the not-granted wording has drifted`);
+    assert.ok(!b.includes('permission lapse'),
+      `${['crm', 'analytics'][i]}: explains a cause that does not apply on a first install`);
+  }
+  // and the CRM has to actually draw it — that is why it never appeared
+  assert.match(read('apps/crm/sidepanel.js'), /function renderBlocked\(\)/, 'crm: nothing draws the blocker');
+});
+
+test('only the first b in an empty state is a heading', () => {
+  // `.empty b{display:block}` hit every one, so «Press <b>Grant access</b> above» became its own line
+  // and one sentence arrived as four fragments. Reported as the message being misleading, which it
+  // was — not by its words but by its shape.
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/sidepanel.html`);
+    assert.match(css, /\.empty > b:first-child\{[^}]*display:block/, `${app}: the heading rule is gone`);
+    assert.ok(!/\.empty b\{[^}]*display:block/.test(css), `${app}: every b in an empty state is a block again`);
   }
 });

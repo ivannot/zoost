@@ -244,9 +244,9 @@ async function refreshWorkspaces() {
     // Word for word the CRM's. The blocker is one click, and saying nothing here left the status line
     // reading "Ready." while nothing could be read at all.
     status('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
-    return updateButtons();
+    render(); return updateButtons();
   }
-  if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; return updateButtons(); }
+  if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; render(); return updateButtons(); }
 
   const list = await listWorkspaces();
   wsList = list;
@@ -264,7 +264,7 @@ async function refreshWorkspaces() {
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} — no workspaces yet</option>`;
     if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
-    dir = null; bound = null; return updateButtons();
+    dir = null; bound = null; render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
   const active = await window.idbHandle.get('activeWsAnalytics');
@@ -787,8 +787,10 @@ function emptyReason() {
       + 'dedicated, empty folder. Every workspace lives inside it.';
   }
   if (!rootGranted) {
-    return '<b>Folder access is not granted.</b> Chrome lets that permission lapse. Press '
-      + '<b>\u{1F513} Grant access</b> above \u2014 one click, no folder picker, and nothing else is needed.';
+    // Deliberately no explanation of *why* the access is missing: on a first install nothing expired,
+    // it was never given, and a stated cause that may not apply is one the reader has to discount.
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 one click, '
+      + 'no folder picker, and nothing else is needed.';
   }
   if (!wsList.length) {
     return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab \u2014 its URL '

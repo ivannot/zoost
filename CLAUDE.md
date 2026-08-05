@@ -1300,6 +1300,19 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   the true thing; its five tree messages had the same defect — **do not align a twin to the one that
   is accidentally right**, fix both.
 
+  Two more turns of the same screw, both reported by the user because nothing checked them. The
+  sentence existed **twice** in Analytics — `render()` produced it and the markup hard-coded it inside
+  `#list` — and the markup copy is the one on screen at startup, because `refreshWorkspaces` returns
+  early when access is not granted and never redraws; fixing the other one changed nothing. And the
+  CRM never showed it at all, for the same reason one layer up: its early returns did not draw the
+  tree, so the state was announced in the status line on one side and in the list on the other, which
+  reads as two different products. Both panels now share `emptyReason()` **word for word**, both draw
+  it from every early return, and the markup carries no empty state at all.
+
+  Also typographic, and it is what "misleading" actually meant the second time: `.empty b{display:block}`
+  hit **every** `<b>`, so «Press **Grant access** above» became its own line and one sentence arrived as
+  four fragments that read as four statements. Only the first `<b>` is the heading.
+
 ## Release routine
 
 **A release happens when I ask for it, for the app I name, and never as a consequence of anything

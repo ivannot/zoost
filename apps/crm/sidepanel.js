@@ -591,9 +591,9 @@ function renderTree() {
   // "No matches." is right only when there was something to match. With nothing pulled — or with the
   // folder access lapsed — it is the least useful sentence available.
   if (!shown.length) {
-    const m = document.createElement('div'); m.className = 'treemsg';
-    m.textContent = treeData.length ? 'No matches.'
-      : (emptyBlocker() || 'No functions yet — click Pull all.');
+    const m = document.createElement('div'); m.className = 'empty';
+    m.innerHTML = treeData.length ? '<b>No matches.</b>'
+      : (emptyReason() || '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to mirror this org.');
     tree.appendChild(m); return;
   }
   const sorter = TREE_SORTS[treeSort];
@@ -1699,22 +1699,33 @@ let root = null, rootGranted = false;
  *
  * An empty state is never silent here: it says what is missing and what to do. Saying the *wrong*
  * missing thing is worse than silence, because the reader goes and does it and nothing changes — and
- * it is usually the step they have already done that gets repeated at them. Every tab used to say
- * "click Pull" whatever the reason, and with a lapsed folder permission that is four instructions
- * where one click would do. Returns null when the blocker really is that nothing has been pulled,
- * so each tab can name its own thing.
+ * it is usually the step they have already done that gets repeated at them. Returns null when the
+ * blocker really is that nothing has been pulled, so each tab can name its own thing.
+ *
+ * Word for word the Analytics panel's, because the first three states are the same product.
  */
-function emptyBlocker() {
+/** Put the blocker on screen. Called from every early return in loadWorkspaces, because that is
+ *  exactly where the panel used to leave whatever the previous state had drawn — and with a lapsed
+ *  permission it drew nothing at all, so the CRM said in the status line what Analytics said in the
+ *  list and the two looked like different products. */
+function renderBlocked() {
+  const t = $('tree'); if (!t) return;
+  const why = emptyReason();
+  t.innerHTML = why ? `<div class="empty">${why}</div>` : '';
+}
+
+function emptyReason() {
   if (!root) {
-    return 'No working folder yet. Press \u{1F4C1} Set working folder\u2026 above and pick a dedicated, '
-      + 'empty folder \u2014 every workspace lives inside it.';
+    return '<b>No working folder yet.</b> Press <b>\u{1F4C1} Set working folder\u2026</b> above and pick a '
+      + 'dedicated, empty folder. Every workspace lives inside it.';
   }
   if (!rootGranted) {
-    return 'Folder access is not granted. Chrome lets that permission lapse. Press \u{1F513} Grant access '
-      + 'above \u2014 one click, no folder picker, and nothing else is needed.';
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 one click, '
+      + 'no folder picker, and nothing else is needed.';
   }
   if (!wsList.length) {
-    return 'No workspace here yet. Open a Zoho CRM tab and press + to create the workspace for that org.';
+    return '<b>No workspace here yet.</b> Open a Zoho CRM tab and press <b>+</b> to create the workspace '
+      + 'for that org.';
   }
   return null;
 }
@@ -1836,14 +1847,14 @@ async function loadWorkspaces() {
     sel.innerHTML = '<option value="">No working folder</option>';
     dir = null; setEnabled(false); updateWsButtons();
     setStatus('Pick a working folder to start \u2014 every workspace lives inside it.', 'warn');
-    await refreshContext(); return;
+    renderBlocked(); await refreshContext(); return;
   }
   rootGranted = await hasPerm(root);
   if (!rootGranted) {
     sel.innerHTML = `<option value="">${root.name} \u2014 access not granted</option>`;
     dir = null; setEnabled(false); updateWsButtons();
     setStatus('Click \u00abGrant access\u00bb above \u2014 one click, no folder picker.', 'warn');
-    await refreshContext(); return;
+    renderBlocked(); await refreshContext(); return;
   }
   const base = await appRoot(false);
   // The enumeration itself can fail — a handle whose permission lapsed, a folder moved or removed
@@ -1879,7 +1890,7 @@ async function loadWorkspaces() {
     setStatus(stray
       ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own \u2014 move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
-    await refreshContext(); return;
+    renderBlocked(); await refreshContext(); return;
   }
   const active = await window.idbHandle.get('activeWs');
   wsList.forEach((w) => {
@@ -2123,7 +2134,7 @@ async function rebuildModules() {
     } catch (_) {}
   }
   renderModules();
-  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyBlocker() || 'No modules yet — click Pull.'), moduleData.length ? 'ok' : 'warn');
+  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet — click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
 }
 function renderModules() {
@@ -2142,7 +2153,7 @@ function renderModules() {
     .filter((m) => !term || (m.api_name || '').toLowerCase().includes(term) || (m.label || '').toLowerCase().includes(term))
     .forEach((m) => (m.custom ? groups.Custom : groups.Standard).push(m));
   const tree = $('tree'); tree.innerHTML = '';
-  if (!groups.Standard.length && !groups.Custom.length) { tree.innerHTML = '<div class="treemsg">' + (moduleData.length ? 'No modules match.' : (emptyBlocker() || 'No modules yet — click Pull.')) + '</div>'; return; }
+  if (!groups.Standard.length && !groups.Custom.length) { tree.innerHTML = '<div class="empty">' + (moduleData.length ? '<b>No modules match.</b>' : (emptyReason() || '<b>No modules yet.</b> Press <b>Pull</b> to read them.')) + '</div>'; return; }
   for (const g of ['Standard', 'Custom']) {
     const list = groups[g]; if (!list.length) continue;
     const isCol = collapsed.has('mod:' + g);
@@ -2380,7 +2391,7 @@ async function openSchemaGraph() {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus('Building schema graph…', 'busy'); await refreshContext();
     const g = await buildSchemaGraph();
-    if (!g.counts.nodes) throw new Error((emptyBlocker() || 'No modules pulled yet — click Pull in Modules mode.'));
+    if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet — click Pull in Modules mode.'));
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Schema: ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
@@ -3000,7 +3011,7 @@ function renderSchedules() {
     .forEach((e) => (byStatus[e.status === 'active' ? 'Active' : 'Inactive'] ||= []).push(e));
   const tree = $('tree'); tree.innerHTML = '';
   const keys = Object.keys(byStatus).sort();
-  if (!keys.length) { tree.innerHTML = '<div class="treemsg">' + (scheduleData.length ? 'No matches.' : (emptyBlocker() || 'No schedules yet — click Pull all.')) + '</div>'; return; }
+  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (scheduleData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No schedules yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   keys.forEach((st) => {
     const list = byStatus[st].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     const isCol = collapsed.has('sc:' + st);
@@ -3076,7 +3087,7 @@ function renderWorkflows() {
     .forEach((e) => (byMod[e.module || '(no module)'] ||= []).push(e));
   const tree = $('tree'); tree.innerHTML = '';
   const keys = Object.keys(byMod).sort();
-  if (!keys.length) { tree.innerHTML = '<div class="treemsg">' + (workflowData.length ? 'No matches.' : (emptyBlocker() || 'No workflows yet — click Pull all.')) + '</div>'; return; }
+  if (!keys.length) { tree.innerHTML = '<div class="empty">' + (workflowData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No workflows yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   keys.forEach((mod) => {
     const list = byMod[mod].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     const isCol = collapsed.has('wf:' + mod);
@@ -3180,7 +3191,7 @@ async function rebuildConnections() {
     const catNames = new Set(cat.map((c) => c.name));
     Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: '_connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
-    setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyBlocker() || 'No connections pulled yet — click Pull all.'), connectionData.length ? 'ok' : 'warn');
+    setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet — click Pull all.'), connectionData.length ? 'ok' : 'warn');
   } catch (e) { setStatus('Connections error: ' + e.message, 'bad'); }
   await refreshContext();
 }
@@ -3195,7 +3206,7 @@ function renderConnections() {
   };
   const list = connectionData.filter(pass).sort((a, b) => (b.uses.length - a.uses.length) || (a.label || '').localeCompare(b.label || ''));
   const tree = $('tree'); tree.innerHTML = '';
-  if (!list.length) { tree.innerHTML = '<div class="treemsg">' + (connectionData.length ? 'No matches.' : (emptyBlocker() || 'No connections yet — click Pull all.')) + '</div>'; return; }
+  if (!list.length) { tree.innerHTML = '<div class="empty">' + (connectionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No connections yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   list.forEach((c) => {
     const el = document.createElement('div'); el.className = 'f'; el.dataset.path = c.path;
     el.setAttribute('aria-selected', c.path === currentPath);

@@ -258,7 +258,11 @@
   #healthbody .gap{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:5px}
 
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
-  .empty b{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
+  /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline —
+     «Press <b>Grant access</b> above» — became its own line and the sentence arrived in four
+     fragments that read as four separate statements. */
+  .empty > b:first-child{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
+  .empty b{color:var(--ink)}
   .empty code{font:11px var(--mono);color:#f0a8c8}
 
   /* ---- dialogs and overlays — same structure and ids as the CRM panel ---- */
@@ -349,13 +353,10 @@
 
   <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
 
-  <div id="list">
-    <div class="empty">
-      <b>Nothing pulled yet.</b>
-      Set a working folder, open a Zoho Analytics workspace in the active tab — its URL looks like
-      <code>/workspace/&lt;id&gt;</code> — press <b>+ Workspace</b>, then <b>Pull all</b>.
-    </div>
-  </div>
+  <!-- Deliberately empty: the CRM's tree is too. An empty state has to say *why* it is empty, which
+       only the code knows — a copy of that sentence in the markup is a second source of truth, and it
+       is the one on screen at startup, so fixing the other one changed nothing. -->
+  <div id="list"></div>
 
   <div id="aiview">
     <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>

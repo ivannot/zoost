@@ -308,6 +308,13 @@
   #pvhead .reveal2{cursor:pointer;color:#9fc4f5;flex:none;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
   #pvhead .reveal2:hover{background:#2f6fe0;border-color:#2f6fe0}
   .treemsg{color:var(--muted);padding:16px;font-size:12px;text-align:center}
+  .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
+  /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline —
+     «Press <b>Grant access</b> above» — became its own line and the sentence arrived in four
+     fragments that read as four separate statements. */
+  .empty > b:first-child{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
+  .empty b{color:var(--ink)}
+  .empty code{font:11px var(--mono);color:#f0a8c8}
   #resizer{height:8px;flex:none;background:#0a0f18;border-top:1px solid var(--border);border-bottom:1px solid var(--border);cursor:row-resize;display:none;position:relative}
   #resizer.show{display:block}
   #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
