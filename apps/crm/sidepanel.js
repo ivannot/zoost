@@ -44,6 +44,40 @@ async function removeFile(path) { const parts = path.split('/'); const name = pa
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 
+// Anything that is not Zoho opens in its own window, never a tab.
+//
+// chrome.tabs.create *activates* the new tab, so the panel suddenly finds itself looking at a
+// non-Zoho page: the environment guard fires, the interface empties and the mismatch overlay
+// appears. That behaviour is right when it means what it says, and here it meant nothing at all —
+// the user clicked Help and the workbench looked like it had lost its place.
+//
+// Derived rather than listed: every link in the panel goes through here, and the only ones let
+// through to a tab are Zoho's own, which are meant to land in the Zoho tab. A link added tomorrow
+// is covered without anyone remembering.
+// Zoho's own hosts, with or without a subdomain, and nothing that merely contains the word:
+// `notzoho.com` and `evil.com/zoho.x` are not Zoho, and treating them as such would send them to
+// the Zoho tab where the guard would then complain about a mismatch it did not cause.
+function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho\.[a-z.]+(\/|$)/i.test(String(u || '')); }
+
+function openExternal(url) {
+  try {
+    chrome.tabs.query({ url }, (found) => {
+      const t = found && found[0];
+      if (t) { chrome.windows.update(t.windowId, { focused: true }); chrome.tabs.update(t.id, { active: true }); return; }
+      chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 });
+    });
+  } catch (_) {
+    try { chrome.windows.create({ url, type: 'popup', width: 1100, height: 880 }); } catch (__) {}
+  }
+}
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest && e.target.closest('a[href^="http"]');
+  if (!a) return;
+  if (isZohoUrl(a.href)) return;   // Zoho's own pages belong in the Zoho tab
+  e.preventDefault();
+  openExternal(a.href);
+});
+
 // Settings live in one window, and only ever one.
 //
 // `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window —

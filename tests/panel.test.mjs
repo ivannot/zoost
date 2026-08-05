@@ -266,3 +266,36 @@ test('the reasons that clear on their own leave it visible and disabled', () => 
 test('ready to act: visible and enabled', () => {
   assert.deepEqual(addButtonState({ root: true, ctx: true, known: false }), { hidden: false, disabled: false });
 });
+
+// ---------- which links belong in the Zoho tab, and which get their own window ----------
+
+const { isZohoUrl } = load([sliceFn('apps/crm/sidepanel.js', 'isZohoUrl')]);
+
+test('Zoho pages stay in the Zoho tab', () => {
+  // Opening these in a window would defeat the point: they are meant to land where the panel is
+  // looking.
+  ['https://crm.zoho.eu/crm/tab/Contacts',
+   'https://analytics.zoho.com/workspace/123',
+   'https://crmsandbox.zoho.com/crm/x',
+   'https://zoho.com/crm'].forEach((u) => assert.equal(isZohoUrl(u), true, u));
+});
+
+test('everything else opens in its own window', () => {
+  // chrome.tabs.create activates the new tab, so the panel finds itself on a non-Zoho page, the
+  // environment guard fires and the interface empties behind the mismatch overlay. Right behaviour,
+  // wrong cause — the user clicked Help and the workbench looked like it had lost its place.
+  ['https://zoost.it/docs-crm.html',
+   'https://github.com/ivannot/zoost',
+   'https://ko-fi.com/ivannot',
+   'https://chromewebstore.google.com/detail/abc'].forEach((u) => assert.equal(isZohoUrl(u), false, u));
+});
+
+test('a host that merely contains the word is not Zoho', () => {
+  // Sending these to the Zoho tab would make the guard complain about a mismatch it did not cause.
+  assert.equal(isZohoUrl('https://notzoho.com/x'), false);
+  assert.equal(isZohoUrl('https://evil.com/zoho.eu'), false);
+});
+
+test('a non-http scheme is left entirely alone', () => {
+  assert.equal(isZohoUrl('mailto:ivan@zoost.it'), false);
+});

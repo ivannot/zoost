@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zoost \u2014 workbench for Zoho Analytics",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
   "description": "Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.",

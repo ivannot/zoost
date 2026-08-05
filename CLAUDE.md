@@ -394,6 +394,16 @@ Only the HTTP form is classified. Analytics also answers `200` with `{"status":"
 whether a permission refusal ever arrives that way has **not** been measured — so that path stays an
 ordinary failure rather than being labelled a refusal on a guess.
 
+**Anything that is not Zoho opens in its own window, never a tab.** `chrome.tabs.create` *activates*
+the new tab, so the panel suddenly finds itself looking at a non-Zoho page: the environment guard
+fires, the interface empties and the mismatch overlay appears. That is right when it means something
+and disorienting when it does not — clicking Help made the workbench look like it had lost its place.
+A delegated click handler routes every `http` link through `openExternal()`, and the *only* ones let
+through to a tab are Zoho's own, decided by `isZohoUrl()` rather than by a list, so a link added
+tomorrow is covered. `target="_blank"` stays on the markup on purpose: `preventDefault()` suppresses
+it, and if the handler ever failed to attach the fallback is a stray tab rather than the side panel
+navigating itself away.
+
 **Settings open in one window, and the form still refuses to save over a value that moved.** Two
 things, and the second is the one that matters. `openOptionsPage()` opens a *tab* and de-duplicates
 only within the current browser window — while the side panel is per window, so two browser windows
