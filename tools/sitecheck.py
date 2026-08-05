@@ -340,6 +340,35 @@ def classes_defined(findings: list) -> None:
                             f'in site.css or in this page, so it renders as nothing')
 
 
+def translations_link_to_translations(findings: list) -> None:
+    """A link from an Italian page to a page that has an Italian version must use it.
+
+    Reported by the user: the Italian home's two «Come si usa →» links opened the English guides,
+    which are the one thing on that page a reader would click expecting Italian. Nothing was looking
+    — every check here reads prose or chrome, and a wrong href is neither.
+
+    Two of the others were worse than an oversight: they had been fixed, and then thrown away by a
+    `git checkout` used to undo a deliberate mutation while proving a different checker, which
+    reverted the real work sitting uncommitted in the same file. Nothing noticed, and the page went
+    out linking the English guide *and* claiming the guide was English-only.
+
+    Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
+    the nav — declare it with `hreflang="en"`, which is what that attribute is for. Everything else
+    is a slip.
+    """
+    for p in sorted((SITE / 'it').glob('*.html')):
+        html = p.read_text(encoding='utf-8')
+        for m in re.finditer(r'<a\b([^>]*)href="(/[^"]*)"([^>]*)>(.*?)</a>', html, re.S):
+            attrs, href = m.group(1) + m.group(3), m.group(2)
+            if 'hreflang="en"' in attrs:
+                continue
+            target = 'index.html' if href in ('/', '/index.html') else href.lstrip('/')
+            if not target.startswith('it/') and (SITE / 'it' / target).exists():
+                label = ' '.join(re.sub(r'<[^>]+>', ' ', m.group(4)).split())
+                findings.append(f'it/{p.name}: «{label[:40]}» links to {href}, but it/{target} exists '
+                                f'— an Italian page links Italian, or says why with hreflang="en"')
+
+
 def shared_prose_stays_shared(findings: list) -> None:
     """Prose identical on two English pages must stay identical on their two translations.
 
@@ -493,6 +522,7 @@ def main() -> int:
 
     store_field_limits(findings)
     classes_defined(findings)
+    translations_link_to_translations(findings)
     shared_prose_stays_shared(findings)
     canonical_and_alternates(findings)
     translations_current(findings)

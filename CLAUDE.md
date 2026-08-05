@@ -944,6 +944,32 @@ that appears and disappears as you move through a site is the contextual *shape*
 bans, so pages with no translation still carry it, pointing at the other language's home with a
 tooltip saying why. It reuses `.ncta`, which was defined in `site.css` and used nowhere.
 
+**An Italian page links Italian, or says why with `hreflang="en"`.** The Italian home's two
+«Come si usa →» links opened the *English* guides — reported by the user, and invisible to every
+check here, which read prose and chrome and never an `href`.
+`translations_link_to_translations()` reports a link to a page that has a translation unless the
+element declares `hreflang="en"`, which is what that attribute is for; the deliberate ones — the
+switch, «la versione inglese di questa pagina» — all carry it now.
+
+**Two of those links had been fixed and then thrown away by `git checkout <file>`**, used to undo a
+deliberate mutation while proving a *different* checker. It reverted the real, uncommitted work
+sitting in the same file, and nothing noticed — the page then went out linking the English guide
+*and* claiming the guide was English-only. Undo a test mutation from a copy (`cp` the file aside
+first), never from the index, unless the file is known to be clean.
+
+**A translation is reviewed for its Italian, not only for its faithfulness.** A pass over all six
+pages found about forty defects that no check could see: «legge la tua org vero» (a masculine
+adjective postposed to a feminine noun, which is what the user reported); «La colonna References
+*sono* le chiavi esterne»; «quello che *serve*» for "what it serves", inverting the sentence;
+«i campi presenti in **nessun** layout» and «tabelle in nessuna relazione», a bare negative
+determiner with no verb to negate; «un assistente che Zoho Analytics non **l'**ha mai vista», a
+relative with a resumptive clitic; «per la domanda separata **di se**»; «rispondibile», «rimostra»;
+«Zoost compresa» on a page that says «Zoost è gratuito» four paragraphs later; and a dozen
+inanimate `lei`/`lui`. **A mechanical sweep was written for the classes above and then not kept**:
+outside the handful of real hits it was almost all noise — every `un elenco`, `un arco`, `un
+assistente` flagged as a missing elision — and the rule here is the one already written down, that a
+checker with that ratio is one nobody reads. Reading remains the only method for this class.
+
 **A canonical must be the page's own URL, and a translated pair must point both ways.** Neither was
 checked, and both were wrong: `analytics.html` and `index.html` carried `crm.html`'s canonical,
 copied along with the head block — which tells a search engine those pages *are* `crm.html`, so the

@@ -611,6 +611,57 @@ class ClassesAreStyled(unittest.TestCase):
         self.assertEqual(findings, [], 'a class renders as nothing on a live page')
 
 
+class TranslationsLinkToTranslations(unittest.TestCase):
+    """A link from an Italian page to a page that has an Italian version must use it.
+
+    Reported by the user: the Italian home's two «Come si usa →» links opened the English guides.
+    Two more had been fixed and then thrown away by a `git checkout` used to undo a deliberate
+    mutation while proving a different checker — it reverted the real work in the same file, and
+    nothing noticed. Deliberate cross-language links declare themselves with hreflang="en".
+    """
+
+    def run_on(self, pages):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site' / 'it').mkdir(parents=True)
+        for name, body in pages.items():
+            (d / 'site' / name).write_text(body, encoding='utf-8')
+        old = sitecheck.SITE
+        sitecheck.SITE = d / 'site'
+        try:
+            findings = []
+            sitecheck.translations_link_to_translations(findings)
+            return findings
+        finally:
+            sitecheck.SITE = old
+
+    def test_a_link_to_the_english_twin_is_reported(self):
+        f = self.run_on({'a.html': 'x', 'it/a.html': 'x',
+                         'it/b.html': '<a href="/a.html">Come si usa</a>'})
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('it/a.html exists', f[0])
+
+    def test_the_italian_target_is_silent(self):
+        self.assertEqual(self.run_on({'a.html': 'x', 'it/a.html': 'x',
+                                      'it/b.html': '<a href="/it/a.html">Come si usa</a>'}), [])
+
+    def test_a_declared_english_link_is_silent(self):
+        self.assertEqual(self.run_on({'a.html': 'x', 'it/a.html': 'x',
+                                      'it/b.html': '<a href="/a.html" hreflang="en">versione inglese</a>'}), [])
+
+    def test_a_page_with_no_translation_is_not_reported(self):
+        self.assertEqual(self.run_on({'privacy.html': 'x',
+                                      'it/b.html': '<a href="/privacy.html">Privacy</a>'}), [])
+
+    def test_the_home_counts_as_index(self):
+        f = self.run_on({'index.html': 'x', 'it/index.html': 'x', 'it/b.html': '<a href="/">home</a>'})
+        self.assertEqual(len(f), 1, f)
+
+    def test_the_site_is_correct_today(self):
+        findings = []
+        sitecheck.translations_link_to_translations(findings)
+        self.assertEqual(findings, [], 'an Italian page links an English page that has a translation')
+
+
 class SharedProseStaysShared(unittest.TestCase):
     """Prose identical on two English pages must stay identical on their two translations.
 

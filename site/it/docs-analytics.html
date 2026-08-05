@@ -62,7 +62,7 @@
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
-    <a href="/docs-analytics.html">versione inglese di questa guida</a> è quella di riferimento se una
+    <a href="/docs-analytics.html" hreflang="en">versione inglese di questa guida</a> è quella di riferimento se una
     frase qui non ti torna.</p>
 
   <div class="toc">
@@ -126,7 +126,7 @@
     <li>Clicca l'icona di Zoost per aprire il pannello laterale.</li>
     <li><b class="ui">📁 Set working folder…</b> — scegli una cartella. Il browser chiede il permesso: è
       l'unico modo in cui un'estensione può scrivere file, e vale solo per quella cartella.</li>
-    <li>Apri il workspace che vuoi rispecchiare. Il suo URL è tipo
+    <li>Apri il workspace che vuoi rispecchiare. Il suo URL ha questa forma:
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
     <li><b class="ui">+ Workspace</b> — crea la cartella e ne legge il nome da Zoho Analytics.</li>
   </ol>
@@ -153,8 +153,7 @@
       <b class="ui">Retry N failed</b>, che rilegge esattamente quelli.</li>
   </ul>
   <p>Per rileggere una singola vista, aprila e usa <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nel pannello di dettaglio.
-    Il pulsante <b class="ui">↻</b> accanto è <em>locale</em>: ricarica il mirror dal disco, o richiede
-    l'accesso alla cartella. Non parla mai con Zoho.</p>
+    Il pulsante <b class="ui">↻</b> accanto è <em>locale</em>: ricarica il mirror dal disco, o richiede di nuovo l'accesso alla cartella. Non parla mai con Zoho.</p>
 
   <h2 id="git">4. Metterlo sotto Git</h2>
   <p>Nella cartella del workspace:</p>
@@ -207,7 +206,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p><b class="ui">Columns</b> mostra ogni colonna con il suo tipo di dato Zoho. Tabelle e query table hanno
     le proprie; un report o una pivot non ne ha nessuna, quindi Zoost segue ciò su cui è costruito e mostra
     <em>quella</em> struttura — dicendo di chi è, invece di spacciarla per quella del report.</p>
-  <p>La colonna <b>References</b> sono le chiavi esterne, nelle due direzioni, perché un lookup non è
+  <p>La colonna <b>References</b> riporta le chiavi esterne, nelle due direzioni, perché un lookup non è
     simmetrico:</p>
   <ul>
     <li><b>→</b> questa colonna punta a un'altra tabella</li>
@@ -221,7 +220,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     dettaglio di una tabella apre la stessa finestra centrata su quella tabella, a profondità 2.</p>
   <ul>
     <li>Le tabelle come riquadri, le relazioni come frecce, il join scritto sull'arco.</li>
-    <li>Clicca un riquadro per ricentrare su di lui; <b class="ui">±</b> allarga o stringe la profondità
+    <li>Clicca un riquadro per ricentrare il diagramma su di esso; <b class="ui">±</b> allarga o stringe la profondità
       intorno al fuoco.</li>
     <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto — il modo più economico
       di leggere un diagramma affollato.</li>
@@ -236,8 +235,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="sql">8. La SQL delle query table</h2>
   <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
-    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero — che è ciò che rende
-    rispondibile <em>se tolgo questa colonna, cosa si rompe</em>.</p>
+    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero — che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
     qualunque altro sorgente.</p>
   <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessuna SQL. La legge e la scrive su
@@ -253,23 +251,19 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     cominciare a chiedere, non come una coda di cancellazione.</p>
 
   <h2 id="health">10. Salute</h2>
-  <p><b class="ui">♥</b> apre l'audit nel pannello: viste da cui non dipende niente, tabelle in nessuna
-    relazione, tabelle che ci ha messo Zoho invece di te, viste senza descrizione, e tutto quello che non è
+  <p><b class="ui">♥</b> apre l'audit nel pannello: viste da cui non dipende niente, tabelle che non compaiono in nessuna relazione, tabelle che ci ha messo Zoho invece di te, viste senza descrizione, e tutto quello che non è
     stato possibile leggere nell'ultimo pull.</p>
-  <p>Conteggi ed elenchi — nessuna soglia, nessun allarme rosso, nessun punteggio. Una tabella in nessuna
-    relazione può essere una tabella di appoggio voluta; una vista che nessuno legge può alimentare un export
+  <p>Conteggi ed elenchi — nessuna soglia, nessun allarme rosso, nessun punteggio. Una tabella che non compare in nessuna relazione può essere una tabella di appoggio voluta; una vista che nessuno legge può alimentare un export
     schedulato. Ogni cifra dichiara, lì accanto, cosa <em>non</em> copre.</p>
 
   <h2 id="export">11. Gli export</h2>
   <p><b class="ui">HTML</b> produce un unico file autoconsistente con tutto quello che mostra il pannello.
     <b class="ui">Markdown</b> (il pulsante si legge <b class="ui">MD</b>) produce la stessa cosa nella forma
-    adatta a farne contesto per uno strumento AI che il tuo workspace non l'ha mai visto.</p>
+    adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.</p>
   <p>Una finestra decide sezione per sezione cosa ci può entrare — viste, struttura, relazioni, SQL, lineage,
-    salute — con i preset <b>Everything</b> e <b>Share-safe</b>. L'opzione <b>SQL</b> sta rientrata sotto
-    Structure perché dipende da lei, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.</p>
+    salute — con i preset <b>Everything</b> e <b>Share-safe</b>. L'opzione <b>SQL</b> sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.</p>
   <p>Entrambi finiscono in <code>export/</code> dentro la cartella del workspace, con nome
-    <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, così una cartella piena si ordina nell'ordine in
-    cui li hai presi.</p>
+    <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, così una cartella piena di export si ordina da sé nell'ordine in cui li hai presi.</p>
   <p>Il Markdown si porta dietro una cosa che l'HTML non ha: <b>i vincoli del dialetto SQL di Zoho
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
 
@@ -352,7 +346,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p><b>Se perdi la passphrase</b>, la sezione offre <b class="ui">Remove the protection</b>. Dice cosa se ne
     va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei
     modelli e ogni altra impostazione restano, e la chiave API la incolli di nuovo dalla dashboard del tuo
-    provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compresa — questa è
+    provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compreso — questa è
     l'unica via d'uscita, ed è un pulsante invece di una sequenza da ricostruire.</p>
   <p><b>Puoi tornare indietro quando vuoi</b>, e la strada è simmetrica: Zoost chiede la passphrase in uso,
     perché rimettere la chiave in chiaro vuol dire prima decifrarla, e questo lo puoi fare solo tu. Passphrase
@@ -377,7 +371,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     invece che arbitrario: tabelle e query table non vengono mai lasciate fuori, perché sono il vocabolario
     che serve per scrivere una query o seguire una chiave esterna, e i report vanno per primi perché
     l'assistente quelli li sa comunque trovare per nome. Quello che resta fuori viene dichiarato come tale —
-    così non conclude mai che una vista non esiste solo perché non gliel'hanno mostrata.</p>
+    così non conclude mai che una vista non esiste solo perché non gli è stata mostrata.</p>
   <p>All'assistente viene detto cosa Zoho documenta sulla SQL delle query table — solo SELECT, identificatori
     fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
@@ -416,9 +410,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td>Usa <b class="ui">Retry N failed</b>. Finché non entrano, al mirror mancano esattamente quelli, e
           Health li elenca.</td></tr>
       <tr><td class="k">Un report non mostra colonne</td>
-        <td>Solo tabelle e query table hanno colonne proprie. Se Zoost non riesce a risalire a una vista che
-          porta dati attraverso ciò su cui il report è costruito, lo dice invece di mostrare una tabella
-          vuota.</td></tr>
+        <td>Solo tabelle e query table hanno colonne proprie. Se, seguendo ciò su cui il report è costruito, Zoost non arriva a una vista che porta dati, lo dice invece di mostrare una tabella vuota.</td></tr>
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è
@@ -447,7 +439,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
       alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
       fornire supporto o manutenzione. In caso di divergenza, fa fede la
-      <a href="/docs-analytics.html">versione inglese</a>.
+      <a href="/docs-analytics.html" hreflang="en">versione inglese</a>.
     </p>
     <p class="legal">
       Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né

@@ -37,7 +37,7 @@ A workspace that has been alive for a few years is hundreds of views. Some are t
 
 WHAT IT DOES
 
-- Local mirror, your Git. One pull writes the whole workspace to disk: the view census, the column structure of every table and query table, the relations, and one .sql file per query table. Commit it and git diff answers "what changed in this workspace last month" — a question Zoho Analytics cannot answer at all.
+- Local mirror, your Git. One pull writes the whole workspace to disk: the view census, the column structure of every table and query table, the relations, and one .sql file per query table. Zoho Analytics keeps no history of anything: change a query table's SQL, a column or a relation and the previous state is gone. Commit the mirror and git diff answers "what changed in this workspace last month".
 
 - Every view, in one list. All of them with type, folder, owner, column count and dates, filtered by type and searched by name, folder or column name. Search a column name to find which tables carry it, before you go looking for where the data lives.
 

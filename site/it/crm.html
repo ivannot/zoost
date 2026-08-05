@@ -88,8 +88,7 @@
     <p class="lead">Zoost è un'estensione per Chrome che rispecchia funzioni Deluge, schema dei moduli, relazioni,
       layout, workflow, schedulazioni e connessioni in file ordinari sul tuo disco — e ci costruisce sopra il grafo
       delle chiamate, il diagramma ER, la ricerca full-text su tutte le funzioni, il catalogo delle relazioni, quello
-      delle connessioni, un audit di salute, export condivisibili e un assistente AI opzionale che legge la tua org
-      vero. Tutto gira nel tuo browser.</p>
+      delle connessioni, un audit di salute, export condivisibili e un assistente AI opzionale che legge la tua org, quella vera. Tutto gira nel tuo browser.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#start">Come funziona</a>
@@ -98,7 +97,7 @@
     <p class="note" style="margin-top:22px">Questa pagina è in italiano, e così la guida. Restano in inglese la
       privacy policy e la mappa per gli assistenti, e <b>l'estensione stessa è in inglese</b>: i nomi dei
       comandi che leggi qui (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli che troverai nel pannello,
-      non traduzioni. La versione inglese di questa pagina è <a href="/crm.html">qui</a>.</p>
+      non traduzioni. La versione inglese di questa pagina è <a href="/crm.html" hreflang="en">qui</a>.</p>
   </div>
 </div>
 
@@ -110,8 +109,7 @@
         <h3>Una storia per tutto quello che scarichi</h3>
         <p>Lo storico delle versioni di Zoho CRM copre una <em>funzione</em>, una per volta, dentro Zoho.
           Tutto il resto che il pull cattura — schema dei moduli, layout, related list, workflow,
-          schedulazioni, connessioni — arriva sul tuo disco come file ordinari, così con Git una storia ce
-          l'ha anche lui, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
+          schedulazioni, connessioni — arriva sul tuo disco come file ordinari, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
           tutti i tipi insieme invece che una funzione per volta. <b>Git è facoltativo</b>: senza, il mirror
           resta comunque un insieme di file ordinari che puoi cercare e consegnare.</p>
       </div>
@@ -157,16 +155,14 @@
           <li>Una cartella di lavoro, una sottocartella per prodotto, una per org al suo interno — produzione e
             sandbox non si mescolano mai.</li>
           <li>Dai a un workspace <span class="k">un nome tuo</span> — un id di istanza è esatto senza essere
-            memorabile. Si vede il tuo nome; istanza e org restano accanto, perché una lista che non puoi
-            verificare contro Zoho CRM non serve a niente.</li>
+            memorabile. Viene mostrato il tuo nome; istanza e org restano lì accanto, perché un elenco che non puoi confrontare con Zoho CRM non serve a niente.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>Capire l'implementazione</h3>
         <ul>
-          <li><span class="k">Grafo delle chiamate</span>: chi chiama una funzione (impatto) e cosa chiama lei
-            (dipendenze), come explorer ricercabile e come diagramma a nodi.</li>
+          <li><span class="k">Grafo delle chiamate</span>: chi chiama una funzione (impatto) e cosa chiama lei a sua volta (dipendenze), come explorer ricercabile e come diagramma a nodi.</li>
           <li><span class="k">Ricerca full-text</span>: una query su tutto il sorgente di ogni funzione. Sposti
             l'ambito dai nomi al codice e trovi ogni riferimento a un campo, un modulo o un id scritto a mano.</li>
           <li><span class="k">Codice ipertestuale</span>: le chiamate a funzioni custom sono cliccabili — salti alla
@@ -179,7 +175,7 @@
           <li><span class="k">Dimensione e chiamate in uscita</span>: lunghezza in righe e in KB, e quante
             <code>invokeurl</code>, <code>zoho.crm.*</code> e altre chiamate ai servizi Zoho fa una funzione —
             contate fuori da commenti e stringhe. Numeri, non un voto; come leggerli lo decidi tu.
-            <b>Ordina la lista</b> per ciascuno di essi per vedere dove si concentrano lunghezza e costo API.</li>
+            <b>Ordina l'elenco</b> per ciascuno di questi per vedere dove si concentrano lunghezza e costo API.</li>
         </ul>
       </div>
 
@@ -188,7 +184,7 @@
         <ul>
           <li>Ogni campo con tipo, modulo di lookup e valori della picklist.</li>
           <li><span class="k">Matrice dei layout</span>: una colonna per layout, un punto dove il campo compare,
-            ambra dove è obbligatorio — e i campi presenti in <em>nessun</em> layout segnalati come solo-API.</li>
+            ambra dove è obbligatorio — e i campi che non compaiono in <em>nessun</em> layout segnalati come solo-API.</li>
           <li><span class="k">Catalogo delle relazioni</span>: una riga per related list, con modulo di destinazione,
             il lookup o il modulo di collegamento che la regge, e la chiamata <code>getRelatedRecords()</code> da copiare.</li>
         </ul>
@@ -201,7 +197,7 @@
           <li>Metti a fuoco un modulo qualsiasi e cammina nel grafo cliccando; profondità regolabile.</li>
           <li><span class="k">Modalità relazioni</span>: i moduli arretrano, i nomi delle relazioni passano in primo piano.</li>
           <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto.</li>
-          <li>Spaziatura, dispersione e dimensione delle etichette sono slider dal vivo — e c'è un ambito
+          <li>Spaziatura, apertura e dimensione delle etichette sono slider dal vivo — e c'è un ambito
             tutti-i-moduli per le stampe da parete.</li>
         </ul>
       </div>
@@ -211,7 +207,7 @@
         <ul>
           <li>Non ogni utente Zoho può leggere il Deluge o il catalogo delle connessioni, e nessuna API lo dice in
             anticipo — così Zoost lo scopre chiedendo. Un'area che il tuo ruolo si vede rifiutare viene registrata
-            con la data, non le viene scritto niente, e la sua scheda sparisce invece di restare lì ingrigita.</li>
+            con la data, per quell'area non viene scritto niente, e la sua scheda sparisce invece di restare lì ingrigita.</li>
           <li>Il rifiuto è detto a parole, non come codice di stato, e Settings lo spiega e riprova.
             I ruoli sono per org, quindi un altro workspace potrebbe benissimo concederlo.</li>
           <li>Le schede puoi anche nasconderle e riordinarle tu. Questo cambia solo il pannello: il mirror,
@@ -254,8 +250,7 @@
       <div class="card">
         <h3>Export da consegnare</h3>
         <ul>
-          <li><span class="k">HTML</span>: tutto il workspace in un unico file autoconsistente, con collegamenti
-            incrociati e ricercabile.</li>
+          <li><span class="k">HTML</span>: tutto il workspace in un unico file autoconsistente, ricercabile e con collegamenti incrociati.</li>
           <li><span class="k">Markdown</span>: lo stesso materiale nella forma di contesto per un LLM esterno.</li>
           <li>Una finestra di scelta decide cosa può lasciare la tua macchina, sezione per sezione. Il codice
             sorgente è opt-in ed è segnalato ogni volta.</li>
@@ -347,10 +342,10 @@
           Nessuno dei due ti chiede di fidarti di noi.</p>
       </div>
       <div>
-        <h3>Cosa non dimostra niente di tutto questo</h3>
+        <h3>Che cosa tutto questo non dimostra</h3>
         <p>Il caricamento sullo Store è un passaggio manuale, quindi nessuna firma lo copre: quello che è dimostrato
           è come è stato costruito l'archivio della release. Google poi reimpacchetta e rifirma ogni estensione,
-          quindi quello che serve non è identico byte per byte a quello che è stato caricato. Entrambe le cose si
+          quindi quello che distribuisce non è identico byte per byte a quello che è stato caricato. Entrambe le cose si
           chiudono all'altro capo, confrontando l'estensione installata con il tag. E un'attestazione dice chi ha
           costruito un file, mai che quel file è buono — quella parte resta leggere il codice.</p>
       </div>
@@ -403,7 +398,7 @@
       <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
       alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
       fornire supporto o manutenzione. In caso di divergenza, fa fede la
-      <a href="/crm.html">versione inglese</a>.
+      <a href="/crm.html" hreflang="en">versione inglese</a>.
     </p>
     <p class="legal">
       Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
