@@ -1046,6 +1046,15 @@ Two traps that this layout hides:
   committing a config without them would have silently changed the runtime. If the platform's
   defaults ever move, compare against what it generates before assuming ours is complete.
 
+- **An assessment measures what it could reach, and a 403 is invisible from a browser.** A review of
+  this project concluded "still to be validated" while stating it had not managed to open the site —
+  so its verdict measured its own reach rather than the product, and every "needs verifying" it
+  listed was already answered on a page it never read. Cloudflare's default managed rules do 403 a
+  couple of legacy scripted-client signatures (`Python-urllib`, `libwww-perl`); everything the
+  strategy depends on — ClaudeBot, GPTBot, PerplexityBot, bingbot, Googlebot, curl, requests, no user
+  agent at all — gets through, and `tools/reachcheck.sh` proves it rather than assuming it. Run it
+  after any change to the Cloudflare configuration. It is **not** in `tests/run.sh`: it needs the
+  network and the live site, and a suite that fails because DNS was slow is a suite nobody believes.
 - **Do not call `api.github.com` from the Worker.** It allows 60 unauthenticated requests an hour
   *per IP*, and the Worker leaves through Cloudflare's shared egress addresses, where that budget is
   already spent by strangers' traffic. Three of the badge's four fields came back null because of it,
