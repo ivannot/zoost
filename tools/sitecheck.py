@@ -13,6 +13,7 @@ is *allowed* to differ, never of what to look at. Forgetting to declare somethin
 
     python3 tools/sitecheck.py
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -225,6 +226,37 @@ def txt_served_by_worker(findings: list) -> None:
                             f'assets and goes out with no charset')
 
 
+def hosts_declared(findings: list) -> None:
+    """Every host an extension may reach must be named in the privacy policy.
+
+    `one.zoho.*` sat in the Zoho CRM manifest and not in §5's opening paragraph, which said the CRM
+    workbench reaches "the Zoho CRM and sandbox data centres" — six hosts short. A bullet further down
+    did list it, which is how it survived three readings: the page contained the fact and the sentence
+    a reader starts from did not.
+
+    Derived from the manifests, so a host added tomorrow is checked without anyone remembering, and a
+    host removed stops being required. The unit is the family (`crm.zoho`, `one.zoho`) rather than each
+    data centre, because the page names them that way and listing twenty domains would be worse prose.
+    """
+    policy = (SITE / 'privacy.html')
+    if not policy.exists():
+        findings.append('site/privacy.html: missing — nothing declares where the extensions may reach')
+        return
+    text = policy.read_text(encoding='utf-8')
+    for mf in sorted(ROOT.glob('apps/*/manifest.json')):
+        app = mf.parent.name
+        data = json.loads(mf.read_text(encoding='utf-8'))
+        families = set()
+        for h in data.get('host_permissions', []):
+            host = re.sub(r'^https?://', '', h).split('/')[0]
+            parts = host.split('.')
+            families.add('.'.join(parts[:2]) if len(parts) > 2 else host)
+        for fam in sorted(families):
+            if fam not in text:
+                findings.append(f'apps/{app}/manifest.json: host_permissions reach {fam}.* and '
+                                f'site/privacy.html never names it')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -259,6 +291,7 @@ def main() -> int:
 
     store_field_limits(findings)
     txt_served_by_worker(findings)
+    hosts_declared(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in
     # site.js, not in any page — and nothing was reading them. The fourth form reappeared there

@@ -191,7 +191,8 @@
   <p>Both extensions request the same four API permissions — <code>sidePanel</code>,
     <code>storage</code>, <code>scripting</code> and <code>tabs</code> — for the same reasons. They
     differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data
-    centres, the Zoho Analytics one lists the Zoho Analytics data centres. Both list
+    centres <em>and</em> the Zoho One data centres, the Zoho Analytics one lists the Zoho Analytics data
+    centres. Both list
     <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
     assistant and only if you configure it.</p>
   <ul>
@@ -201,7 +202,7 @@
       session, and the hook that notices when you save a function so the local copy can follow.</li>
     <li><code>tabs</code> — to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>, which it reads, and <code>one.zoho.*</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre because an account may live on any of them. Both also
+    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code> — and their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts — which it reads, and <code>one.zoho.*</code> with <code>one.zohocloud.ca</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre because an account may live on any of them. Both also
       list <code>api.anthropic.com</code> and <code>api.openai.com</code>, contacted only by the optional
       assistant and only if you configure it.</li>
     <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> — the only two

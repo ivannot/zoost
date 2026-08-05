@@ -13,6 +13,7 @@ Every test below plants a defect that actually reached the user and asserts it i
 
     python3 -m unittest discover -s tests -p 'tools_test.py'
 """
+import json
 import pathlib
 import re
 import sys
@@ -340,6 +341,49 @@ class TxtNeedsTheWorker(unittest.TestCase):
     def test_the_site_is_routed_today(self):
         findings = []
         sitecheck.txt_served_by_worker(findings)
+        self.assertEqual(findings, [])
+
+
+class HostsAreDeclared(unittest.TestCase):
+    """Every host a manifest may reach must be named in the privacy policy.
+
+    `one.zoho.*` was in the Zoho CRM manifest and missing from §5's opening paragraph for three
+    readings — the page contained the fact further down, and the sentence a reader starts from did
+    not. Deriving the list from the manifests also found three nobody had reported: the Canadian
+    `zohocloud.ca` data centres were reachable and named nowhere.
+    """
+
+    def run_on(self, hosts, policy_text):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'site').mkdir(); (d / 'apps' / 'crm').mkdir(parents=True)
+        (d / 'site' / 'privacy.html').write_text(policy_text, encoding='utf-8')
+        (d / 'apps' / 'crm' / 'manifest.json').write_text(
+            json.dumps({'host_permissions': hosts}), encoding='utf-8')
+        oldr, olds = sitecheck.ROOT, sitecheck.SITE
+        sitecheck.ROOT, sitecheck.SITE = d, d / 'site'
+        try:
+            findings = []
+            sitecheck.hosts_declared(findings)
+            return findings
+        finally:
+            sitecheck.ROOT, sitecheck.SITE = oldr, olds
+
+    def test_an_undeclared_host_family_is_reported(self):
+        f = self.run_on(['https://crm.zoho.com/*', 'https://one.zoho.com/*'], 'we reach crm.zoho.*')
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('one.zoho', f[0])
+
+    def test_a_different_tld_is_a_different_family(self):
+        # crm.zohocloud.ca is not covered by "crm.zoho.*", which is exactly how it went unnoticed.
+        f = self.run_on(['https://crm.zohocloud.ca/*'], 'we reach crm.zoho.*')
+        self.assertEqual(len(f), 1, f)
+
+    def test_all_declared_is_silent(self):
+        self.assertEqual(self.run_on(['https://crm.zoho.com/*'], 'we reach crm.zoho.* only'), [])
+
+    def test_the_repository_declares_everything_today(self):
+        findings = []
+        sitecheck.hosts_declared(findings)
         self.assertEqual(findings, [])
 
 

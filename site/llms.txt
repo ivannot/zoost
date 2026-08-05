@@ -82,8 +82,10 @@ An assessment should have this before the verification chain, not after it.
 - **Undocumented interfaces.** Zoho publishes no API for most of what Zoost reads, so both extensions
   use the same internal endpoints the products' own web interfaces use, through the session the user
   is already signed in to. The Zoho CRM one also reads the org id and user id out of the page's HTML,
-  because nothing exposes them, and observes the requests that page makes in order to use the same
-  authentication token — it watches, and never alters what the page sends or receives.
+  because nothing exposes them, and takes the CSRF token from the cookies the browser already holds.
+  Separately it watches that page for one thing only: the URL and method of the request that saves a
+  function, so the local copy can follow. It reads no headers and no response bodies, and alters
+  nothing the page sends or receives.
 - **Which means it can break.** Those interfaces carry no compatibility promise. Zoho can change one
   without notice and a feature can stop working from one day to the next.
 - **What is promised.** Nothing is guaranteed; the licence says so. What is offered is effort — a

@@ -1122,6 +1122,21 @@ heading and the check reads it there, so a section added tomorrow is measured wi
 remembering and changing a limit means editing one place. A submission that stops at the dashboard
 form costs a round trip of two to three days.
 
+**Every host a manifest may reach is named in `privacy.html`, and `sitecheck.py` derives that from
+the manifests.** `one.zoho.*` was in the Zoho CRM manifest and missing from §5's opening paragraph
+through three separate readings, because the page *did* contain the fact — in a bullet further down —
+and the sentence a reader starts from did not. Deriving the list rather than reading the prose also
+found three nobody had reported: the Canadian `zohocloud.ca` data centres were reachable and declared
+nowhere, and they are a different family from `crm.zoho.*` however similar they look.
+
+**An outside review is evidence, not a verdict — check every claim before acting on it.** One arrived
+saying the homepage and `llms.txt` served by zoost.it were still the pre-analysis versions, "not a
+part: all of it", and recommended an edge purge. All five pages were **byte-identical to the
+repository** when compared with `shasum`; the stale copy was between the reviewer and the origin, as
+their own caveat allowed. Two of the same review's smaller findings were exactly right and are fixed
+here. Take the findings, verify each one, and say which were real — agreeing with a confident report
+is as much a failure as ignoring it.
+
 **The short description is read under the item name, so it must not repeat it.** Both extensions
 opened theirs with a near-copy of their own name — 40 of 132 characters spent saying the line above
 again, visible in a Web Store search result and invisible in the dashboard. It keeps **"Independent,
