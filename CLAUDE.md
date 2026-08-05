@@ -840,6 +840,14 @@ than a confident answer would have been.
 **Own mistakes plainly.** When a bug traces back to something you wrote, say that, name the cause,
 and fix it. No hedging, no diffusing it into the passive voice.
 
+**At handover time, give me the steps and nothing else.** When a release is ready, or anything is
+waiting on an action of mine, lead with a numbered list of what *I* do: which file to download and
+from where, which fields change and what to paste, what stays untouched. Leave out what you verified
+and how — that is your business unless it changes one of my steps. A decision genuinely needing me
+goes in a short paragraph after the list, not woven through it. Store review takes two to three days
+while we iterate hourly, so a submission redone because a step was buried is expensive out of all
+proportion to the change.
+
 **One step at a time when I am learning something new.** If I am on unfamiliar ground — git, ssh,
 a dashboard I have never opened — give me one instruction, wait for the output, then the next. Ten
 steps at once is how people get lost and blame themselves for it.
