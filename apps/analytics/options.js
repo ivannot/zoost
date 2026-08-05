@@ -213,25 +213,31 @@ async function currentAi() {
 async function loadAi() {
   let c = {};
   try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  $('aiengine').value = c.active || 'anthropic';
-  $('ai_a_model').value = (c.anthropic && c.anthropic.model) || '';
-  $('ai_a_key').value = (c.anthropic && c.anthropic.apiKey) || '';
+  const cfg = {
+    active: c.active || 'anthropic',
+    anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
+    openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}),
+  };
+  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* — which is
+  // the right criterion, and only if the form has already been filled in. Called before it, they judge
+  // whatever the previous render left behind, which after a save is the key the user had just typed.
+  $('aiengine').value = cfg.active;
+  $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
+  $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
+  $('ai_maxiter').value = c.maxIter || 20;
+  $('ai_seedcap').value = c.seedCap || 72000;
   // A key already protected shows as protected, with the field left empty: the passphrase is not
   // stored, so there is nothing to put back in it.
-  const locked = !!((c.anthropic && c.anthropic.apiKeyEnc) || (c.openai && c.openai.apiKeyEnc));
+  [['ai_a_key', cfg.anthropic], ['ai_o_key', cfg.openai]].forEach(([id, prov]) => {
+    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
+  });
   aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
   prevEngine = cfg.active;
   aiForget.clear();
   wireForget('anthropic', 'ai_a_key', 'ai_a_model'); wireForget('openai', 'ai_o_key', 'ai_o_model');
-  aiLockStored = locked; $('ai_lock').checked = locked; syncLockRow(); markEngineOptions();
-  [['ai_a_key', c.anthropic], ['ai_o_key', c.openai]].forEach(([id, prov]) => {
-    if (prov && prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
-  });
-  $('ai_o_model').value = (c.openai && c.openai.model) || '';
-  $('ai_o_key').value = (c.openai && c.openai.apiKey) || '';
-  $('ai_maxiter').value = c.maxIter || 20;
-  $('ai_seedcap').value = c.seedCap || 72000;
-  markEngine();
+  aiLockStored = !!(cfg.anthropic.apiKeyEnc || cfg.openai.apiKeyEnc);
+  $('ai_lock').checked = aiLockStored;
+  syncLockRow(); markEngineOptions(); markEngine();
 }
 // A selector that changes a *mode* saves on change, not behind a Save button — the same rule as the
 // CRM options page.

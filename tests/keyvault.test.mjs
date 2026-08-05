@@ -608,3 +608,95 @@ test('the caret goes to the first field being asked for, whichever that is', () 
       `${app}: Change passphrase focuses the new field again, skipping the one in use`);
   }
 });
+
+// ---------- the options form actually loads ----------
+
+/** Run an options page's real loadAi() against a stub DOM.
+ *
+ * This is the only kind of check that catches a *free variable*. Analytics' loadAi referred to `cfg`,
+ * which exists in the CRM's copy of the function and not in its own: a ReferenceError three lines in,
+ * silently abandoning everything after it — the OpenAI fields, the tool-step cap, the index cap, the
+ * engine highlight and the dropdown labels all stopped being filled in, with nothing on screen saying
+ * so. `node --check` sees only syntax, and a regex approximation of no-undef was written, measured at
+ * 2251 findings across these files, and thrown away for the same reason the content checker was:
+ * a checker with that ratio is one nobody reads. Running the function is exact and costs nothing.
+ */
+function runLoadAi(app, stored) {
+  const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
+  const fields = {};
+  const el = (id) => (fields[id] ||= {
+    value: '', textContent: '', placeholder: '', checked: false, hidden: false, dataset: {},
+    options: [], classList: { add() {}, remove() {}, toggle() {} },
+    focus() {}, select() {}, closest: () => ({ hidden: false }),
+  });
+  // The engine dropdown is the one element with real content, because markEngineOptions() rewrites it.
+  el('aiengine').options = [
+    { value: 'anthropic', textContent: 'Anthropic (Claude) — full agent', dataset: {} },
+    { value: 'openai', textContent: 'OpenAI (ChatGPT) — single-shot', dataset: {} },
+  ];
+
+  const ctx = vm.createContext({
+    $: el, document: { getElementById: el },
+    chrome: { storage: { local: { get: async () => ({ aicfg: stored }) }, session: { remove: async () => {} } } },
+    console, Object, Array, JSON, Set, Map, String, Number, Boolean, Promise, Date, Math, RegExp, Error,
+    window: {}, setTimeout, clearTimeout,
+  });
+  // Everything loadAi needs, lifted whole. If one of these is renamed the slice throws rather than
+  // quietly proving less.
+  const pieces = ['aiForget', 'aiStored', 'aiLockStored', 'aiPassChanging', 'prevEngine'];
+  for (const name of pieces) {
+    const m = src.match(new RegExp(`^(?:const|let)\\s+${name}\\s*=[^\\n]*$`, 'm'));
+    if (m) vm.runInContext(m[0], ctx);
+  }
+  for (const fn of ['wireForget', 'engineIncomplete', 'markEngineOptions', 'aiNeedCurrent',
+                    'syncLockRow', 'markEngine', 'loadAi']) {
+    const i = src.indexOf(`function ${fn}(`);
+    if (i < 0) throw new Error(`${app}/options.js: ${fn}() not found — renamed or removed. Fix the test or restore the cover.`);
+    const start = src.lastIndexOf('\n', i) + 1;
+    vm.runInContext(src.slice(start, src.indexOf('\n}', i) + 2), ctx);
+  }
+  return { run: () => vm.runInContext('loadAi()', ctx), fields };
+}
+
+const STORED = {
+  active: 'openai',
+  anthropic: { model: 'claude-x', apiKey: 'sk-ant-x' },
+  openai: { model: 'gpt-x', apiKey: 'sk-o-x' },
+  maxIter: 12, seedCap: 51000,
+};
+
+test('loadAi runs to the end, on both sides', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const { run } = runLoadAi(app, STORED);
+    await run();          // a free variable throws here and nowhere else
+  }
+});
+
+test('loadAi fills every field, not the ones before the first mistake', async () => {
+  // Each of these sat after the ReferenceError and silently stopped being written.
+  for (const app of ['crm', 'analytics']) {
+    const { run, fields } = runLoadAi(app, STORED);
+    await run();
+    assert.equal(fields.ai_a_model.value, 'claude-x', `${app}: Anthropic model`);
+    assert.equal(fields.ai_o_model.value, 'gpt-x', `${app}: OpenAI model`);
+    assert.equal(fields.ai_o_key.value, 'sk-o-x', `${app}: OpenAI key`);
+    assert.equal(String(fields.ai_maxiter.value), '12', `${app}: tool-step cap`);
+    assert.equal(String(fields.ai_seedcap.value), '51000', `${app}: index cap`);
+    assert.equal(fields.aiengine.value, 'openai', `${app}: selected engine`);
+  }
+});
+
+test('the dropdown states which engines are ready, on both sides', async () => {
+  for (const app of ['crm', 'analytics']) {
+    const ready = runLoadAi(app, STORED);
+    await ready.run();
+    assert.ok(!ready.fields.aiengine.options.some((o) => /needs/.test(o.textContent)),
+      `${app}: a fully configured pair should carry no warning`);
+
+    const half = runLoadAi(app, { active: 'openai', openai: { model: 'gpt-x', apiKey: 'sk-o-x' } });
+    await half.run();
+    const anthropic = half.fields.aiengine.options.find((o) => o.value === 'anthropic');
+    assert.match(anthropic.textContent, /needs a model and an API key/,
+      `${app}: an unconfigured engine must say so in the list`);
+  }
+});

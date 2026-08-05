@@ -255,24 +255,26 @@ async function loadAi() {
     maxIter: c.maxIter || 20,
     seedCap: c.seedCap || 72000,
   };
+  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* — which is
+  // the right criterion, and only if the form has already been filled in. Called before it, they judge
+  // whatever the previous render left behind, which after a save is the key the user had just typed.
   $('aiengine').value = cfg.active;
-  // A key already protected shows as protected, with the fields left empty: the passphrase is not
-  // stored, so there is nothing to put back in them.
-  const locked = !!(cfg.anthropic.apiKeyEnc || cfg.openai.apiKeyEnc);
-  aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
-  prevEngine = cfg.active;
-  aiForget.clear();
-  wireForget('anthropic', 'ai_a_key', 'ai_a_model'); wireForget('openai', 'ai_o_key', 'ai_o_model');
-  aiLockStored = locked; $('ai_lock').checked = locked; syncLockRow(); markEngineOptions();
-  ['ai_a_key', 'ai_o_key'].forEach((id, i) => {
-    const enc = (i === 0 ? cfg.anthropic : cfg.openai).apiKeyEnc;
-    if (enc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
-  });
   $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
   $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
   $('ai_maxiter').value = cfg.maxIter;
   $('ai_seedcap').value = cfg.seedCap;
-  markEngine();
+  // A key already protected shows as protected, with the field left empty: the passphrase is not
+  // stored, so there is nothing to put back in it.
+  [['ai_a_key', cfg.anthropic], ['ai_o_key', cfg.openai]].forEach(([id, prov]) => {
+    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
+  });
+  aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
+  prevEngine = cfg.active;
+  aiForget.clear();
+  wireForget('anthropic', 'ai_a_key', 'ai_a_model'); wireForget('openai', 'ai_o_key', 'ai_o_model');
+  aiLockStored = !!(cfg.anthropic.apiKeyEnc || cfg.openai.apiKeyEnc);
+  $('ai_lock').checked = aiLockStored;
+  syncLockRow(); markEngineOptions(); markEngine();
 }
 function markEngine() {
   const a = $('aiengine').value === 'anthropic';

@@ -589,6 +589,19 @@ the user's key away on any unrelated save.
 
 These all failed **silently**, with no console error. They are the expensive kind.
 
+- **A free variable is a syntax-clean bug, and only *running* the function finds it.** A bulk edit gave
+  Analytics' `loadAi()` a reference to `cfg`, which exists in the CRM's copy of that function and not
+  in its own: a ReferenceError three lines in, silently abandoning everything after it — the OpenAI
+  fields, the tool-step cap, the index cap, the engine highlight, the dropdown labels. The page looked
+  half-filled and said nothing, and `node --check` passes because the syntax is fine. A regex
+  approximation of `no-undef` was written and **measured at 2251 findings** across the shipped scripts,
+  then thrown away for the reason the content checker was: a checker with that ratio is one nobody
+  reads. What works is the technique already here — lift the function and **run it** against a stub
+  DOM. Zero false positives, exact, and it costs a test rather than a tool.
+- **Fields first, state second.** The same `loadAi()` called `syncLockRow()` and `markEngineOptions()`
+  before filling the form they both read, on *both* sides. It worked by accident, because the fallback
+  path reads what is stored; after a save, the form still holds what the user typed, and the row would
+  ask for a passphrase nobody needed.
 - **An author `display` beats the `hidden` attribute, and nothing says so.** `hidden` is a UA rule, so
   `.lockrow{display:flex}` on an element that also carries `hidden` leaves it on screen — no console
   error, no layout break, just a row that is always there. It shipped **twice in one change** (the
