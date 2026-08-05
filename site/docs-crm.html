@@ -54,6 +54,7 @@
   <div class="toc">
     <b>On this page</b>
     <ol>
+      <li><a href="#data">Does anything leave my computer?</a></li>
       <li><a href="#model">The mental model</a></li>
       <li><a href="#setup">First run</a></li>
       <li><a href="#pull">Pulling and syncing</a></li>
@@ -69,6 +70,16 @@
       <li><a href="#trouble">When something goes wrong</a></li>
     </ol>
   </div>
+
+  <h2 id="data">0. Does anything leave my computer?</h2>
+  <p class="box"><b>No, with one exception you switch on yourself.</b> Zoost has no server and no account.
+    What it reads from Zoho CRM is written straight to a folder on your own disk and stays there. Nothing
+    is sent to the developer, and there is no analytics or tracking of any kind.</p>
+  <p>The exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
+    enable it, what it needs to answer you is sent from your browser directly to the provider you chose —
+    Anthropic or OpenAI — and to nobody else. If your organisation does not allow that, leave it off:
+    everything else works exactly the same. The <a href="/privacy.html">privacy policy</a> lists what is
+    stored, where, and why.</p>
 
   <h2 id="model">1. The mental model</h2>
   <p>Three things, and everything else follows from them.</p>
@@ -270,6 +281,7 @@ git commit -m "baseline"</code></pre>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
 
   <h2 id="ai">11. AI assistant &amp; API keys</h2>
+  <p><b>It also knows this extension.</b> Ask it “how do I export this?”, “what happens when I press Health?” or “can this change anything in Zoho CRM?” and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
     <b>AI assistant</b>. Two providers are supported.</p>
   <p>Two settings decide what a question costs. <b class="ui">Org index</b> is how much of the org is

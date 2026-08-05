@@ -1332,13 +1332,20 @@ async function aiFocus() {
   return '';
 }
 
+// The extension's own help, so "how do I export this?" is answered where the user already is
+// rather than by sending them to a website — which would move the question rather than answer it.
+// Guarded: a missing script must cost the product primer, never the whole assistant.
+function productHelp() {
+  try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
+}
+
 async function aiSystemPromptB(withTools, cap) {
   const seed = await aiBuildSeed(cap);
   const focus = await aiFocus();
   const toolsLine = withTools
     ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
-  return `You are an expert assistant for Zoho CRM Deluge scripting and CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${focus}\n# ORG INDEX\n${seed}`;
+  return `You are an expert assistant for Zoho CRM Deluge scripting and CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
 const AI_TOOLS = [
   { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) — use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
@@ -1532,7 +1539,7 @@ async function aiContextLabel() {
   try {
     const cfg = await aiGetCfg();
     await aiBuildSeed(cfg.seedCap);
-    cost = ` \u00b7 index ${(aiSeedSize / 1000).toFixed(0)}k characters, ~${Math.round(aiSeedSize / 4).toLocaleString()} tokens per message`
+    cost = ` \u00b7 sent with every message: ${((aiSeedSize + productHelp().length) / 1000).toFixed(0)}k characters, ~${Math.round((aiSeedSize + productHelp().length) / 4).toLocaleString()} tokens`
       + (aiSeedOmitted.length ? ` \u00b7 ${aiSeedOmitted.join(' and ')} left out` : '');
   } catch (_) {}
   el.textContent = focus + cost;

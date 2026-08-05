@@ -54,6 +54,7 @@
   <div class="toc">
     <b>On this page</b>
     <ol>
+      <li><a href="#data">Does anything leave my computer?</a></li>
       <li><a href="#model">The mental model</a></li>
       <li><a href="#setup">First run</a></li>
       <li><a href="#pull">Pulling</a></li>
@@ -69,6 +70,16 @@
       <li><a href="#trouble">When something goes wrong</a></li>
     </ol>
   </div>
+
+  <h2 id="data">0. Does anything leave my computer?</h2>
+  <p class="box"><b>No, with one exception you switch on yourself.</b> Zoost has no server and no account.
+    What it reads from Zoho Analytics is written straight to a folder on your own disk and stays there. Nothing
+    is sent to the developer, and there is no analytics or tracking of any kind.</p>
+  <p>The exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
+    enable it, what it needs to answer you is sent from your browser directly to the provider you chose —
+    Anthropic or OpenAI — and to nobody else. If your organisation does not allow that, leave it off:
+    everything else works exactly the same. The <a href="/privacy.html">privacy policy</a> lists what is
+    stored, where, and why.</p>
 
   <h2 id="model">1. The mental model</h2>
   <p>Three things, and the rest follows.</p>
@@ -228,6 +239,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     an assistant reading that file does not write queries that cannot run.</p>
 
   <h2 id="ai">12. AI assistant &amp; API keys</h2>
+  <p><b>It also knows this extension.</b> Ask it “how do I export this?”, “what happens when I press Health?” or “can this change anything in Zoho Analytics?” and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional, and off until you configure it. <b class="ui">⚙ Settings</b> → pick a provider, paste a
     model name and your own API key.</p>
   <h3>Anthropic (Claude) — full agent</h3>

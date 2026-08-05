@@ -432,6 +432,22 @@ local files for this type", with the count and a confirmation) is defensible and
 nice-to-have, deliberately not built yet. If you find yourself adding a persistent delete switch,
 this is the argument you are overturning.
 
+**The assistant is told what the extension itself does, and that is the point of the product.**
+`product-help.js` in each app is a plain-language description of what exists, where it is, and what it
+will not do — same shape as `analytics-sql.js`: one text, more than one consumer, so it cannot drift
+between them. The reason is not convenience. Zoost is used by people who know their org and are not
+developers, and the assistant exists so their questions stop travelling to whoever administers the
+system. That fails if the questions merely change shape: replacing "what does this workflow do?" with
+"how do I use Zoost?" solves nothing, because the same person is still being asked. So "how do I
+export this?" is answered in the panel, where the user already is.
+
+It costs about a thousand tokens on **every** message, so the context line under the chat title
+counts it: it reads *sent with every message*, not *index*, because a figure that reported only the
+org index would understate what is billed. What belongs in that file is what exists and what it
+refuses to do; how anything works inside does not — nobody asking "what happens if I click Export?"
+wants to hear about the file system API. **A capability added to a panel belongs there too**, or the
+assistant will confidently describe a product that is one version out of date.
+
 **The AI index is layered, and what does not fit is named — in both apps.** A workspace of a thousand views does
 not fit in a system prompt sent with every message, so the question is never "how big a cap" but
 "what gets dropped". Dropping the tail is the wrong answer: it cuts an arbitrary half and the model

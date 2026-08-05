@@ -1119,6 +1119,13 @@ async function aiBuildSeed(cap) {
   return out;
 }
 
+// The extension's own help, so "how do I export this?" is answered where the user already is
+// rather than by sending them to a website — which would move the question rather than answer it.
+// Guarded: a missing script must cost the product primer, never the whole assistant.
+function productHelp() {
+  try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
+}
+
 async function aiSystemPrompt(withTools, cap) {
   const seed = await aiBuildSeed(cap);
   let focus = '';
@@ -1134,7 +1141,7 @@ async function aiSystemPrompt(withTools, cap) {
   return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
     + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic \u2014 a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
     + `${window.ZOHO_ANALYTICS_SQL.text()}\n`
-    + `${focus}\n# WORKSPACE INDEX\n${seed}`;
+    + `${productHelp()}${focus}\n# WORKSPACE INDEX\n${seed}`;
 }
 
 const AI_TOOLS = [
@@ -1405,8 +1412,12 @@ async function aiContextLabel() {
   try {
     const cfg = await aiGetCfg();
     await aiBuildSeed(cfg.seedCap);
-    const tok = Math.round(aiSeedSize / 4);
-    cost = ` · index ${(aiSeedSize / 1000).toFixed(0)}k characters, ~${tok.toLocaleString()} tokens per message`
+    // Counts the product primer too. A figure reporting only the index would understate what is
+    // actually billed, and this line exists precisely so the knob and its consequence sit in the
+    // same sentence.
+    const total = aiSeedSize + productHelp().length;
+    const tok = Math.round(total / 4);
+    cost = ` · sent with every message: ${(total / 1000).toFixed(0)}k characters, ~${tok.toLocaleString()} tokens`
       + (aiSeedOmitted.length ? ` · ${aiSeedOmitted.join(' and ')} left out` : '');
   } catch (_) {}
   el.textContent = focus + cost;
