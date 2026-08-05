@@ -1,0 +1,83 @@
+# Zoost
+
+> A small family of Chrome extensions (Manifest V3), one per Zoho product. Each mirrors what *you*
+> have built inside that product into plain files on your own disk, then layers navigation, diagrams,
+> search, an audit, exports and an optional AI assistant on top of that mirror. None of them writes
+> anything back to Zoho. Everything runs in the browser; there is no server and no account.
+
+This file exists so that an assistant sent to zoost.it can reach every claim the site makes **and the
+evidence for it**, rather than summarising the marketing page. Every statement below is checkable, and
+the last section says which ones cannot be checked and why.
+
+## The two products
+
+- [Zoost — workbench for Zoho CRM](https://zoost.it/crm.html): mirrors Deluge functions, module
+  schema, layouts, related lists, workflows, schedules and the connections catalogue. Adds a
+  reference graph, an ER diagram, full-text search across every function, a health audit, HTML and
+  Markdown exports, and an optional AI assistant.
+- [Zoost — workbench for Zoho Analytics](https://zoost.it/analytics.html): mirrors every view with
+  its type and folder, the columns of every table and query table, the foreign keys between them, the
+  SQL of each query table as its own file, and the dependency graph. Adds an ER diagram, a list of
+  what nothing depends on any more, exports, and the same assistant.
+
+## How to use them
+
+- [How to use Zoost CRM](https://zoost.it/docs-crm.html)
+- [How to use Zoost Analytics](https://zoost.it/docs-analytics.html)
+- [Which guide you want](https://zoost.it/how-to.html)
+
+## What they do not do
+
+Stated here rather than buried, because it is the part an assessment needs.
+
+- **No write path to Zoho.** They read. They cannot create, edit or delete a function, a view, a
+  record or a setting. This is a design decision, not a missing feature: owning deployment, conflicts
+  and rollback would be a different product.
+- **They never read customer records.** Zoho CRM: no contacts, no deals, no notes — only the
+  definitions of what you built. Zoho Analytics: never the rows inside a table; the endpoints that
+  would return cell values exist and are deliberately never called.
+- **Report definitions in Zoho Analytics are not covered.** Chart type, groupings and thresholds
+  would require an endpoint that returns the computed data with them, so it is not called and the
+  gap is stated wherever a report is shown.
+- **Nothing leaves the machine except through the optional AI assistant**, which is off until the
+  user supplies their own API key, and then talks only to Anthropic or OpenAI — the only two origins
+  the manifest grants. Nothing is ever sent to the developer; there is no telemetry.
+- **"Unused" is a candidate, never a verdict.** Both products state the coverage gap next to the
+  number: a connection may be used by Zoho Flow or a widget, a view by a shared link or an API
+  consumer, and neither platform reports that.
+- **Counts are exposed, never graded.** Size and call counts come with what they do not capture, and
+  there is no score, threshold or "worst offenders" list anywhere.
+
+## Verifying the claims rather than believing them
+
+- [Source](https://github.com/ivannot/zoost) — Apache-2.0. Around twenty files of plain JavaScript
+  and HTML per extension. No bundler, no minifier, no dependencies, so what is published is what is
+  in the repository and there is no build step that could add anything.
+- [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) — every version submitted to
+  the Chrome Web Store with its tag, commit and the SHA-256 of the uploaded archive. It also records
+  what it *cannot* prove, including versions that predate the reproducible build.
+- [The release workflow](https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml) —
+  pushing a tag makes GitHub check out that commit, build it twice to prove the bytes are
+  deterministic, publish the archive and sign a provenance attestation. Every action is pinned to a
+  commit hash. The build log is public.
+- Check an archive against that record without trusting anyone:
+  `gh attestation verify zoost-crm-<version>-store.zip --repo ivannot/zoost`
+  and `tools/verify.sh crm <version>`, which rebuilds it from the tag and compares.
+- [Privacy policy](https://zoost.it/privacy.html) — what is stored, where, and what leaves.
+
+## What none of that proves
+
+- Google repackages and re-signs every extension, so what the Chrome Web Store serves is not
+  byte-identical to what was uploaded. The chain covers the input to that step; the far end is
+  checked by unpacking the installed extension and diffing it against the tag.
+- Uploading to the Store is a manual step and no signature covers it.
+- An attestation says who built a file, never that the file is good. That part is reading the code,
+  and nothing removes it.
+- Reproducibility is verified on two environments (Info-ZIP 3.0 on macOS, and CI on ubuntu-latest),
+  not asserted for every machine.
+
+## Independence
+
+Zoost is an independent, unofficial developer tool. It is not affiliated with, endorsed by or
+sponsored by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks of
+Zoho Corporation, used nominatively to indicate compatibility.

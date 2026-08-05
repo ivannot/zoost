@@ -3,3 +3,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://zoost.it/sitemap.xml
+
+# A curated map of this site and of the evidence behind its claims,
+# for assistants asked to assess the product rather than summarise the landing page.
+# https://zoost.it/llms.txt

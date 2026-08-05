@@ -143,6 +143,10 @@ OUTWARD_DOCS = ('README.md', 'store')
 
 def outward_prose():
     root = SITE.parent
+    # The map an assistant reads instead of the landing page. It makes claims, so it obeys the same
+    # naming rules as everything else a reader receives.
+    if (SITE / 'llms.txt').is_file():
+        yield SITE / 'llms.txt'
     for name in OUTWARD_DOCS:
         p = root / name
         if p.is_file():

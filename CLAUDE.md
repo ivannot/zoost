@@ -87,7 +87,18 @@ notice and hard to name. It was reported by the user, which is the failure. **A 
 ```bash
 python3 tools/sitecheck.py           # header and footer must have one shape across all pages
 python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
+python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
 ```
+
+**The site may keep a technical register; it may not be incomplete.** The test it has to survive is a
+real one: hand `zoost.it` to an assistant, ask what the product does and whether it is trustworthy,
+and see whether the answer matches the software. A capability that exists in the panel and is
+described nowhere makes that answer wrong by omission, so `featurecheck.py` compares the panels'
+control labels against the pages. It cannot judge whether the prose is good — nothing can — only that
+nothing is missing. **`site/llms.txt` is the map that assessment starts from**: what the products are,
+what they refuse to do, where each claim is verified, and what none of it proves. It is listed in
+`robots.txt` and the sitemap, and it is checked by `sitecheck.py` like any other outward prose,
+because it makes claims.
 
 **Run all three before calling a change done.** They divide the problem three ways and each was
 written after something got past the others. The third exists because of a pattern worth naming:

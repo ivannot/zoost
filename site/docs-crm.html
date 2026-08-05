@@ -141,6 +141,11 @@ git commit -m "baseline"</code></pre>
   <p>The mode segments switch what the tree lists: <b class="ui">Functions</b>, <b class="ui">Modules</b>,
     <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>. Select an item and
     the preview opens below.</p>
+  <p>Two controls in that row are easy to miss. <b class="ui">Name: display</b> toggles between the name
+    Zoho CRM shows you and the API name the code uses — the same function, told two ways, and you need
+    the second when writing Deluge. <b class="ui">Functions page ↗</b> opens Zoho CRM's own function list
+    in a tab and filters it to what you had selected, for when you want to edit rather than read.</p>
+
   <p class="box"><b>Not every Zoho user may read every one of these.</b> Access to Deluge or to the
     connections catalogue depends on your role, and there is no way to ask in advance — so Zoost finds out
     by pulling. If Zoho refuses an area, the pull says so in plain words instead of showing a status code,
@@ -354,7 +359,8 @@ git commit -m "baseline"</code></pre>
     inside the file, not in the folder name.</p>
 
   <h2 id="trouble">13. When something goes wrong</h2>
-  <table>
+  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Go to Zoho CRM ↗</b> opens the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward — it is the one guard that stops you mirroring one org into another org’s folder.</p>
+<table>
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
       <tr><td class="k">Folder button is amber</td><td>The browser dropped the file-system permission. One click restores it; no file picker opens.</td></tr>
