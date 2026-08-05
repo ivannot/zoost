@@ -30,6 +30,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 |---|---|---|---|---|---|
 | analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible — see below* | 2026-08-03 |
 | crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` | 2026-08-04 |
+| analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` | 2026-08-05 |
 
 ## What this table cannot tell you, and why
 
