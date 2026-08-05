@@ -209,6 +209,16 @@ def main() -> int:
     for doc in outward_prose():
         check_prose(doc, findings)
 
+    # The site's own scripts build visible text — the footer badge's product labels live in
+    # site.js, not in any page — and nothing was reading them. The fourth form reappeared there
+    # within the hour, invisible to a check that stopped at .html.
+    for js in sorted(SITE.glob('*.js')):
+        src = js.read_text(encoding='utf-8')
+        src = re.sub(r'^\s*//.*$', ' ', src, flags=re.M)      # comments discuss the rule, they do not state it
+        src = re.sub(r'/\*.*?\*/', ' ', src, flags=re.S)
+        for form in undeclared_form(src):
+            findings.append(f'{js.name}: {form!r} is neither the manifest name nor its short_name')
+
     print(f'sitecheck: {len(pages)} pages — ' + ', '.join(p.name for p in pages))
     for f in findings:
         print('  ' + f)

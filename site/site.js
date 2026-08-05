@@ -16,6 +16,7 @@
 
   // One request feeds two independent things: the footer badge and the guide's "covers" stamp.
   // Either may be absent on a given page, so neither is allowed to be the other's precondition.
+  var REPO_URL = 'https://github.com/ivannot/zoost';
   var box = document.getElementById('vers');
   var stamp = document.querySelector('.upd .dv, .upd .dd');
   if ((!box && !stamp) || !window.fetch) return;
@@ -67,20 +68,30 @@
       // the property belongs to. (A label that merely *selects* a platform — the nav buttons, the
       // guide switcher — may say "Zoho CRM", because there you are choosing a platform.)
       var prods = [
-        ['Zoost for Zoho CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
-        ['Zoost for Zoho Analytics', d.analytics],
+        ['Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
+        ['Zoost Analytics', d.analytics],
       ];
       prods.forEach(function (pr) {
         var name = pr[0], v = pr[1];
         if (!v || (!v.store && !v.repo)) return;
         // "none yet" rather than "unknown": for a product with no tag those are opposite claims —
         // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
+        //
+        // The tag is a link to its Release, where the archive, its SHA-256 and the two verification
+        // commands are. Not to the .zip: a footer that starts a download when clicked is a surprise,
+        // and the number beside the file is the point rather than the file. This is the one place
+        // the badge stops being a claim and becomes something the reader can check.
+        var tag = v.tag
+          ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(v.tag) + '</a>'
+          : '<i>none yet</i>';
         bits.push(
           '<div class="vrow">' +
-            '<span class="vitem vprod">' + esc(name) + '</span>' +
-            '<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
-            '<span class="vitem"><b>Released</b> ' + (v.tag ? esc(v.tag) : '<i>none yet</i>') + '</span>' +
-            '<span class="vitem"><b>In development</b> ' + (v.repo ? esc(v.repo) : '<i>unknown</i>') + '</span>' +
+            '<div class="vprod">' + esc(name) + '</div>' +
+            '<div class="vfacts">' +
+              '<span class="vitem"><b>Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
+              '<span class="vitem"><b>Released</b> ' + tag + '</span>' +
+              '<span class="vitem"><b>In development</b> ' + (v.repo ? esc(v.repo) : '<i>unknown</i>') + '</span>' +
+            '</div>' +
           '</div>');
       });
       if (d.siteUpdated) {

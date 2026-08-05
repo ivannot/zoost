@@ -89,20 +89,19 @@ footer .flinks{margin:0 0 14px}
 footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 /* Version alignment badge — hidden until site.js has something true to put in it. */
 #vers{display:none}
-/* A grid, so the four facts line up in columns down the two rows — the whole point is that you can
-   read "Web Store" across the products without hunting for it. .vrow dissolves into the grid on wide
-   screens and becomes its own wrapping line when there is no room for four columns. */
-#vers.on{display:grid;grid-template-columns:repeat(4,max-content);gap:5px 18px;margin:0 0 12px;font:11.5px var(--mono);color:var(--muted)}
-#vers .vrow{display:contents}
-#vers .vsite{color:var(--muted)}
+/* One block per product: its name on a line of its own, then its three facts beneath it.
+   This was a four-column grid with `display:contents` on the rows, which aligned beautifully and
+   fell apart the moment anything wrapped — the rows dissolved into the grid, so a wrapped line had
+   nothing separating it from the next product and the numbers ran together unreadably. Alignment is
+   worth less than staying legible at every width. */
+#vers.on{display:flex;flex-direction:column;gap:9px;margin:0 0 12px;font:11.5px var(--mono);color:var(--muted)}
+#vers .vrow{display:flex;flex-direction:column;gap:2px;padding-left:9px;border-left:2px solid var(--line)}
+#vers .vprod{color:var(--ink);font-weight:600}
+#vers .vfacts{display:flex;flex-wrap:wrap;gap:2px 14px}
 #vers .vitem{white-space:nowrap}
-@media (max-width:720px){
-  #vers.on{display:block}
-  #vers .vrow{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 6px}
-}
-#vers .vprod{color:var(--ink);font-weight:600;opacity:1}
-#vers .vitem b{color:var(--ink);font-weight:600}
-#vers .vitem i{font-style:normal;opacity:.7}
+#vers .vsite{border-left-color:transparent;padding-left:11px}
+#vers a{color:var(--muted);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--border)}
+#vers a:hover{color:var(--ink);text-decoration-color:var(--ink)}
 .sep{color:var(--border);margin:0 7px}
 
 /* Wide content scrolls inside its own box; the page never scrolls sideways. Measured at 375px: the
