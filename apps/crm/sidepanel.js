@@ -357,8 +357,8 @@ const patchCfg = async (o) => writeCfg(Object.assign({}, (await readCfg()) || {}
 // kept as its own field because the two are different ideas: a tab is a thing you look at, an area
 // is a thing Zoho may refuse.
 const TABS = [
-  { id: 'functions',   label: 'Functions',   graph: 'Graph ↗',  names: true, search: true },
-  { id: 'modules',     label: 'Modules',     graph: 'Schema ↗', names: true },
+  { id: 'functions',   label: 'Functions',   names: true, search: true },
+  { id: 'modules',     label: 'Modules',     names: true },
   { id: 'workflows',   label: 'Workflows' },
   { id: 'schedules',   label: 'Schedules' },
   { id: 'connections', label: 'Connections' },
@@ -850,13 +850,13 @@ async function openModuleLayouts(gen) {
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
-async function openModuleLayoutEdit(gen, layoutId) {
+async function openModuleLayout(gen, layoutId) {
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus('Unknown module target — pull once, or open Zoho first.', 'warn'); return; }
   const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
-  setStatus(layoutId ? 'Opened layout for editing in Zoho.' : `Opened ${gen} layouts in Zoho.`, 'ok');
+  setStatus(layoutId ? 'Opened the layout in Zoho.' : `Opened ${gen} layouts in Zoho.`, 'ok');
 }
 function moduleNavigable(m) {
   const gen = m.module_name || '', api = m.api_name || '';
@@ -1238,12 +1238,13 @@ function aiShowLock(on) {
 /** A DOMException's message names the symptom and never the remedy.
  *
  * "The request is not allowed by the user agent or the platform in the current context." is what a
- * lapsed folder permission looks like from inside the agent loop, and it reads as a bug in the
- * extension. Translated where it surfaces, so a user who meets it once more is told which button to
+ * lapsed folder permission looks like from anywhere that touches the disk, and it reads as a bug in
+ * the extension. It has surfaced three times now — the agent loop, and renaming a workspace — so this
+ * is deliberately not AI-specific. Translated where it surfaces, so a user who meets it once more is told which button to
  * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
  * passed through untouched rather than dressed up.
  */
-function aiErrorText(e) {
+function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
     return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
@@ -1598,7 +1599,7 @@ async function aiSend() {
     if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20); }
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     setStatus('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: aiErrorText(e) }); setStatus('AI error', 'warn'); }
+  } catch (e) { aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -1907,10 +1908,15 @@ async function renameWorkspace() {
   const label = typed.trim().slice(0, 60);         // it has to fit a 400px bar; longer is not a name
   if (label === current) return;
   try {
+    // Chrome lets the folder permission lapse, and this writes to disk. Asked for here because here
+    // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
+    // DOMException the AI path used to. Third time this shape has surfaced — a write reached from a
+    // control is a write that must re-request first.
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — press ↻ Refresh, then try again.', 'warn'); return; }
     await patchCfg({ label });
     setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
     await loadWorkspaces();
-  } catch (e) { setStatus('Could not save the name: ' + (e.message || e), 'bad'); }
+  } catch (e) { setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
@@ -1938,13 +1944,24 @@ function setMode(mode) {
   $('smode').style.display = mode === 'functions' ? '' : 'none';
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   const _typeLabel = tabLabel(mode).toLowerCase();
-  $('pullone').textContent = 'Pull';   // local: pulls only the current type; the type is given by the active mode segment above
+  // The label is in the markup and stays there — writing textContent here replaced the mark with
+  // the word on every mode change, so the button reverted the moment anyone touched a segment.
+  // Only the title varies, because only the type does.
   $('pullone').title = `Pull only ${_typeLabel} into the local mirror — “Pull all” pulls every type`;
   buildTypeChips();
   $('funcs').style.display = mode === 'functions' ? '' : 'none';
   $('graph').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
   $('nameToggle').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
-  $('graph').textContent = mode === 'functions' ? 'Graph \u2197' : 'Schema \u2197';
+  // The mark stays; only what it opens changes. Writing textContent here wiped it on the first
+  // mode switch — the same defect as #pullone, and the general shape: a control whose label lives
+  // in the markup must not have that label rebuilt by whatever updates its state.
+  // Two names, because two different drawings: functions are a call graph, modules are an ER model.
+  // Everything else that opens this window uses one of these two and no third word — «Schema»,
+  // «Graph ↗» and «Open ER» were four names for one thing and the author could not keep them apart.
+  $('graph').setAttribute('aria-label', mode === 'functions' ? 'Call graph' : 'ER diagram');
+  $('graph').title = mode === 'functions'
+    ? 'Call graph \u2014 which function calls which, in its own window'
+    : 'ER diagram \u2014 modules and the relations between them, in its own window';
   $('nameToggle').textContent = 'Name: ' + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
@@ -2202,10 +2219,10 @@ async function openModule(path, layoutId) {
   const selector = lays.length
     ? `<div class="laybar">Layout: <select id="laysel"><option value="__all__">All fields (flat, ${(m.fields || []).length})</option>`
       + lays.map((l) => `<option value="${escA(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
-      + `</select> <button id="laymod" class="laymod" title="Open the selected layout in the Zoho layout editor">Modify \u2197</button></div>`
+      + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho \u2014 Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
     : '';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
-  const relBar = `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal">Open ER \u2197</button></div>`;
+  const relBar = `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram \u2014 opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
   const rls = m.related_lists || [];
   const rlBlock = rls.length
     ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">\u2014 API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
@@ -2232,7 +2249,7 @@ async function openModule(path, layoutId) {
     body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found \u2014 re-pull modules.</div>';
   };
   const mod = document.getElementById('laymod');
-  if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayoutEdit(m.module_name || m.api_name, v === '__all__' ? null : v); };
+  if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayout(m.module_name || m.api_name, v === '__all__' ? null : v); };
   if (layoutId && sel) { sel.value = String(layoutId); if (sel.value === String(layoutId)) await sel.onchange(); }
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }

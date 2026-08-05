@@ -196,8 +196,8 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <h2 id="graph">6. The diagram</h2>
-  <p><b class="ui">Graph ↗</b> (in Functions mode) opens the call graph; <b class="ui">Schema ↗</b> (in Modules
-    mode) opens the module graph. From a module preview, <b class="ui">Open ER ↗</b> opens the entity-relationship
+  <p><b class="ui">Call graph</b> (in Functions mode) opens which function calls which; <b class="ui">ER diagram</b> (in Modules
+    mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
   <ul>
     <li>Four tabs: <b>Explorer</b> (list + detail), <b>Visual</b> (node-link), <b>ER diagram</b> (tables and keys),
@@ -272,7 +272,7 @@ git commit -m "baseline"</code></pre>
   <ul>
     <li><b class="ui">Export → HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
       handing to a colleague or a manager.</li>
-    <li><b class="ui">Export → Markdown</b> — the same material as Markdown, shaped as context for an external LLM.</li>
+    <li><b class="ui">Export → Markdown</b> (the button reads <b class="ui">MD</b>) — the same material, shaped as context for an external LLM.</li>
   </ul>
   <p>Both carry everything the panel shows, including each function's size and outbound-call counts (a
     <b>Size and outbound calls</b> table in the Markdown, columns in the HTML index): a report should never be
@@ -341,7 +341,9 @@ git commit -m "baseline"</code></pre>
   <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
     Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
     on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
-    <b class="ui">✎</b> button next to the list gives a workspace a name of your own.</p>
+    <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
+    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder — the local mirror only, never
+    anything in Zoho, and a pull brings it back.</p>
   <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
     stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
     the folder is bound to. That is deliberate — the name is your convenience, the identity is Zoho's,

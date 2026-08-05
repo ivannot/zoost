@@ -25,6 +25,7 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const HOST_RE = /^https:\/\/analytics\.(zoho\.(eu|com|in|com\.au|jp)|zohocloud\.ca)\//;
+const PULL_TITLE = 'Pull all \u2014 views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders — not "foreign" content
 const CFG = '.zoost.json';
@@ -437,8 +438,12 @@ function updateButtons() {
   $('graph').disabled = busy || !Object.keys(schema).length;
   $('health').disabled = busy || !loaded;
   $('askai').disabled = busy || !loaded;
+  // Back to the button's own title, never to nothing. This wrote '' on every state refresh, which
+  // was survivable while the button said "Pull all" and is not now that it is a mark: the tooltip is
+  // where the name lives. A control that loses its name on the first repaint has no name.
   $('pull').title = $('pull').disabled && dir && ctx && ctx.workspace && !guardOk()
-    ? 'The active tab is a different workspace from the one selected here.' : '';
+    ? 'The active tab is a different workspace from the one selected here.'
+    : PULL_TITLE;
 }
 function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : ''); updateButtons(); }
 
@@ -802,11 +807,16 @@ function render() {
     const chain = structureChain(v, m0);
     if (!chain) return '—';
     const src = chain[chain.length - 1];
-    return `<span title="${escA('inherited from ' + src.name)}" style="color:var(--muted)">↳${schema[src.id].columns.length}</span>`;
+    // In brackets, never with a glyph in front. `↳19` sat flush against the digits in a column of
+    // numbers and read as «419» — a mark that changes how a number reads is worse than no mark, and
+    // this one is in the one column where the reader is scanning figures. Brackets cannot be mistaken
+    // for a digit, the muted colour still separates it from an own count, and the tooltip still names
+    // the view the structure comes from.
+    return `<span title="${escA('columns inherited from ' + src.name + ' — this view has none of its own')}" style="color:var(--muted)">(${schema[src.id].columns.length})</span>`;
   };
   list.innerHTML = `<table class="vtbl">
     <thead><tr>
-      <th>View</th><th>Type</th><th class="num" title="Columns, for tables and query tables">Cols</th>
+      <th>View</th><th>Type</th><th class="num" title="Columns. A number in brackets is inherited: the view has none of its own, and the count is the view it is built on.">Cols</th>
       <th class="num" title="As Zoho words it, in your interface language — not sortable, see the note below">Design</th>
       <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on \u2014 the Lineage tab breaks the same figure down">Read by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
@@ -851,7 +861,7 @@ async function openDetail(id) {
   // than no symbol.
   $('dpull').disabled = busy || !guardOk();
   $('dpull').title = guardOk()
-    ? 'Pull only this view into the local mirror — its SQL and its lineage'
+    ? 'Pull — this view only, its SQL and its lineage; «Pull all» does every view'
     : 'The active tab is a different workspace, so nothing can be pulled';
   $('dpull').onclick = () => pullOne(v.id);
   // Focused ER, exactly as the CRM opens a module's relations: the window takes it from here and
@@ -860,8 +870,8 @@ async function openDetail(id) {
   const srcId = chain ? chain[chain.length - 1].id : null;
   $('dgraph').disabled = !srcId || !relationsOf(srcId).length;
   $('dgraph').title = srcId && relationsOf(srcId).length
-    ? 'Open the ER diagram focused on this table'
-    : 'This table takes part in no relation, so there is nothing to diagram';
+    ? 'ER diagram — opened on this table, in its own window'
+    : 'ER diagram — this table takes part in no relation, so there is nothing to draw';
   $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
@@ -1068,12 +1078,13 @@ function aiShowLock(on) {
 /** A DOMException's message names the symptom and never the remedy.
  *
  * "The request is not allowed by the user agent or the platform in the current context." is what a
- * lapsed folder permission looks like from inside the agent loop, and it reads as a bug in the
- * extension. Translated where it surfaces, so a user who meets it once more is told which button to
+ * lapsed folder permission looks like from anywhere that touches the disk, and it reads as a bug in
+ * the extension. It has surfaced three times now — the agent loop, and renaming a workspace — so this
+ * is deliberately not AI-specific. Translated where it surfaces, so a user who meets it once more is told which button to
  * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
  * passed through untouched rather than dressed up.
  */
-function aiErrorText(e) {
+function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
     return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
@@ -1485,7 +1496,7 @@ async function aiSend() {
     if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     status('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: aiErrorText(e) }); status('AI error', 'warn'); }
+  } catch (e) { aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -1817,10 +1828,15 @@ async function renameWorkspace() {
   const label = typed.trim().slice(0, 60);         // it has to fit a 400px bar; longer is not a name
   if (label === current) return;
   try {
+    // Chrome lets the folder permission lapse, and this writes to disk. Asked for here because here
+    // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
+    // DOMException the AI path used to. Third time this shape has surfaced — a write reached from a
+    // control is a write that must re-request first.
+    if (!(await ensurePerm(dir))) { status('Folder access needs re-granting — press ↻ Refresh, then try again.', 'warn'); return; }
     await patchCfg({ label });
     status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
     await refreshWorkspaces();
-  } catch (e) { status('Could not save the name: ' + (e.message || e), 'bad'); }
+  } catch (e) { status('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = addWorkspace;

@@ -12,7 +12,15 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 const label = (n) => (nameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
-const NSCOL = (ns) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + ns).trim() || '#94a3b8';
+// The one dimension the list and the chips share. In functions mode the chips select a function's
+// *category* — standalone, automation, button, schedule, validation rule — and the dot was coloured
+// by its Deluge *namespace*, which is a different fact and usually has no colour defined, so every
+// dot came out the fallback grey. `pass()` had the same confusion and compared the chip against
+// `namespace` too, which means those five filters only ever worked in an org where Zoho returns no
+// namespace at all. One accessor now decides both, so they cannot drift apart again.
+const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
+const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
+const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
   const store = await chrome.storage.local.get('graphData');
@@ -60,7 +68,10 @@ const FILTERS_SCHEMA = [['all', 'All'], ['standard', 'standard'], ['custom', 'cu
 function buildChips() {
   const chips = $('chips'); const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
   F.forEach(([k, l]) => {
-    const c = document.createElement('span'); c.className = 'chip'; c.textContent = l; c.setAttribute('aria-pressed', k === 'all');
+    const c = document.createElement('span'); c.className = 'chip'; c.setAttribute('aria-pressed', k === 'all');
+    const hue = KINDCOL(k);
+    if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
+    c.appendChild(document.createTextNode(l));
     c.onclick = () => { filter = k;[...chips.children].forEach((x) => x.setAttribute('aria-pressed', x === c)); render(); };
     chips.appendChild(c);
   });
@@ -68,8 +79,8 @@ function buildChips() {
 function pass(n, q) {
   const matchQ = !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
   if (DATA.kind === 'schema') {
-    if (filter === 'standard' && n.namespace !== 'standard') return false;
-    if (filter === 'custom' && n.namespace !== 'custom') return false;
+    if (filter === 'standard' && KINDOF(n) !== 'standard') return false;
+    if (filter === 'custom' && KINDOF(n) !== 'custom') return false;
     if (filter === 'hub' && n.called_by.length < 3) return false;
     if (filter === 'orphan' && !(n.called_by.length === 0 && n.calls.length === 0)) return false;
     return matchQ;
@@ -77,7 +88,7 @@ function pass(n, q) {
   if (filter === 'rest' && !n.rest) return false;
   if (filter === 'dead' && !n.dead_suspect) return false;
   if (filter === 'unres' && !n.unresolved.length) return false;
-  if (['standalone', 'automation', 'button', 'schedule', 'validation_rule'].includes(filter) && n.namespace !== filter) return false;
+  if (['standalone', 'automation', 'button', 'schedule', 'validation_rule'].includes(filter) && KINDOF(n) !== filter) return false;
   return matchQ;
 }
 function render() {
@@ -86,13 +97,13 @@ function render() {
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {
       const d = document.createElement('div'); d.className = 'item'; d.setAttribute('aria-selected', n.id === sel);
-      d.innerHTML = `<span class="dot" style="background:${NSCOL(n.namespace)}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
+      d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
       d.onclick = () => select(n.id); listEl.appendChild(d);
     });
 }
 function refRow(id) {
   const n = N[id]; const d = document.createElement('div'); d.className = 'ref';
-  d.innerHTML = `<span class="dot" style="background:${NSCOL(n.namespace)}"></span><span class="nm">${esc(n.namespace + "." + label(n))}</span><span class="deg">${n.called_by.length}◂</span>`;
+  d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(n.namespace + "." + label(n))}</span><span class="deg">${n.called_by.length}◂</span>`;
   d.onclick = () => select(id); return d;
 }
 function srcBlock(n) {
@@ -363,7 +374,9 @@ function showVisualTooBig() {
 function hideVisualTooBig() { const ov = document.getElementById('vistoobig'); if (ov) ov.style.display = 'none'; }
 
 function buildLegend() {
-  const seen = {}; Object.values(N).forEach((n) => (seen[n.namespace] = 1));
+  // The same dimension as the list and the chips, or the window would carry two colour keys that
+  // disagree — which is how it read before: dots by namespace, chips by category.
+  const seen = {}; Object.values(N).forEach((n) => (seen[KINDOF(n)] = 1));
   const leg = $('legend');
   Object.keys(seen).sort().forEach((ns) => {
     const li = document.createElement('div'); li.className = 'li';

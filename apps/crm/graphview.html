@@ -17,8 +17,13 @@
     --rest:#6b4fbb; --warn:#c2410c;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
     /* namespace colors (shared with canvas) */
-    --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b; --n-schedule:#8b5cf6; --n-validation_rule:#ef4444;
-    --n-standard:#3b82f6; --n-custom:#a78bfa;
+  /* One hue per value the chips filter on, and nothing else gets one. The dot and the chip read the
+     same fact, so a colour in the list can be looked up in the row of chips above it. Conditions —
+     hub, orphan, no-caller, unresolved — deliberately have none: they are not a kind of thing, they
+     are something true about it, and giving them a hue would say there are eleven kinds. */
+  --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b;
+  --n-schedule:#8b5cf6; --n-validation_rule:#ef4444; --n-rest:#06b6d4;
+  --n-standard:#3b82f6; --n-custom:#a78bfa;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -38,6 +43,12 @@
   .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
   .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
   .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  /* A chip carries the colour of what it selects: pressed fills, released outlines. Without this the
+     dots in the list were a code with no key anywhere on the screen. */
+  .chip[data-hue]{border-color:var(--hue);color:var(--hue)}
+  .chip[data-hue][aria-pressed=true]{background:var(--hue);border-color:var(--hue);color:#fff}
+  .chip .cdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hue);margin-right:5px;vertical-align:1px}
+  .chip[aria-pressed=true] .cdot{background:#fff}
   .list{overflow:auto;flex:1;border-top:1px solid var(--line)}
   .item{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:8px}
   .item:hover{background:var(--sel-soft)} .item[aria-selected=true]{background:var(--sel-soft);box-shadow:inset 3px 0 0 var(--sel)}
@@ -219,7 +230,7 @@
           <button id="pdfBtn" title="Save the graph as PDF">Save PDF</button>
         </div>
         <canvas id="cv"></canvas>
-        <div class="legend" id="legend"><b>Namespaces</b></div>
+        <div class="legend" id="legend"><b>Colour key</b></div>
         <div class="hint2">scroll to zoom · drag to pan · click a node to inspect</div>
         <div id="tip"></div>
       </div>

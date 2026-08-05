@@ -181,6 +181,15 @@ could have caught it. So also compare, by reading both sides:
   access" — and **anything that reads from Zoho says "Pull"** and wears `.zbtn`, whether it is
   "Pull all", the per-type "Pull", or the per-item one. The Analytics detail pane shipped a `↻` that
   called Zoho; it was the right colour and the wrong glyph, which is the confusing combination.
+  **A mark may replace the visible word, and never the name.** The toolbar's `Pull all`, `Pull` and the
+  diagram button are inline SVG in `.mk` — 1.6px stroke at 13px, `currentColor`, so each inherits its
+  button's role colour instead of introducing a sixth. The rule above still holds, with the emphasis
+  moved: anything that reads from Zoho is still *called* Pull and still wears `.zbtn`; the name lives
+  in `aria-label` and `title`, which is where a name has to be for anyone not looking at pixels. Two
+  down arrows mean **all** — adding the word beside them was saying it twice.
+  This cost coverage the moment it landed: `featurecheck.py` read visible text, so three controls went
+  from checked to invisible without a word. It reads `aria-label` first now, and the first thing it did
+  was find two controls the site had never named.
   **A glyph that merely *resembles* another is the same defect.** The AI chat's Clear wore `↺`, which
   differs from `↻` only in the direction of an arrow, at 11px, a few pixels from the real Refresh.
   It lost the glyph rather than gaining a new one: the label already says Clear, and the vocabulary is
@@ -309,6 +318,28 @@ it travelled all the way into the diagram as if it were a table.
 node called "undefined". The bridge now accepts an object with `objId`/`id` or a bare id, requires it
 to look like a Zoho id, drops what does not, and **counts what it dropped** so a silent gap becomes a
 stated one.
+
+**One window, two names, and never a third.** The same diagram window was reached as `Graph ↗`,
+`Schema ↗`, `ER ↗` and `Open ER` — four names the author himself could not keep apart. Two survive,
+because there are genuinely two drawings: **Call graph** for functions, **ER diagram** for modules and
+for tables. Anything that opens it focused on one item uses the same name and says *what* it is opened
+on in the tooltip. The dead `graph:` field in the `TABS` registry, which nothing read and which kept
+two retired names alive, is gone.
+
+**A colour is a claim about a dimension, and this one was wired to the wrong dimension.** In the graph
+window the filter chips select a function's **category**; the dot beside each row was coloured by its
+Deluge **namespace**, and `pass()` compared the chip against the namespace too — so those five filters
+only ever worked in an org where Zoho returns no namespace, and every dot fell back to grey. The
+`--n-*` variables were named after categories and consumed as namespaces, which is why the mismatch
+survived: it looked right in the stylesheet. One accessor (`KINDOF`) now feeds the dot, the chips, the
+filter and the legend, so they cannot disagree; **values get a hue, conditions do not** — hub, orphan,
+no-caller and unresolved are facts *about* a thing, not kinds of thing, and colouring them would claim
+eleven categories where there are six.
+
+**"Modify" promised something the product refuses to do.** The Modules preview offered `Modify ↗`,
+which opens Zoho's layout page and changes nothing — the button said the opposite of the first
+non-negotiable. It is `View ↗` now, and so are the function name and the status message behind it: an
+internal `openModuleLayoutEdit` is how the word gets back onto a surface later.
 
 **The graph window is one engine, fed by two products.** `graphview.js` consumes a generic shape —
 `{kind:'schema', nodes:{id:{fields[], calls[], called_by[], …}}, edges:[[a,b]], focus, depth}` — and
@@ -650,6 +681,26 @@ These all failed **silently**, with no console error. They are the expensive kin
   on a machine where no passphrase had ever been set — correct for the only case it was written for,
   wrong the first time anyone opened the page. The row's *visibility* was right; the text was
   conditioned on the checkbox instead of on whether anything was actually protected.
+- **A mark fused to a number changes the number.** The Analytics view list printed inherited column
+  counts as `↳19`, flush against the digits, in the one column the reader scans as figures — and it
+  read as «419». The fact is real (the view has no columns of its own; the count belongs to the view it
+  is built on) so it stays, in brackets: `(19)`, muted, with the tooltip naming the source and the
+  header explaining what brackets mean. **A mark that can be mistaken for a digit is worse than no
+  mark**, and this is the same family as the `↺`/`↻` collision — a symbol judged on its own instead of
+  next to what it sits beside.
+- **A label that lives in the markup must not be rebuilt by the code that updates state.** Replacing
+  three words with marks broke in three separate places at once, all of them invisible until you
+  touched something: `$('pullone').textContent = 'Pull'` put the word back on every mode switch,
+  `$('graph').textContent` did the same, and Analytics' `updateButtons()` set `$('pull').title = ''`
+  on every repaint — which for a mark is not cosmetic, because **the tooltip is where the name lives**.
+  Only what genuinely varies is written from code (the title's *detail*, the aria-label when a button
+  means two things in two modes); the label itself stays where it was authored. A test asserts it,
+  because the same defect appeared three times in one afternoon.
+- **An icon button is not a text button with the padding removed.** `padding:0` made the marked
+  controls visibly shorter than the words beside them: the height comes from the line box, and a 13px
+  block is one pixel under the 14px a word makes. Keep the vertical padding, give the mark a 14px box,
+  and note the general form — six buttons carried `style="font-size:15px;line-height:1"` inline and
+  are now one `.glyph` class, because the next 1px difference should be fixable in one place.
 - **JS escapes inside HTML text.** `\u2699` written into markup renders as the literal string.
   HTML does not interpret JavaScript escapes. Use the character, or an HTML entity.
 - **`esc()` is not attribute-safe** — and writing that down was not enough, because it shipped again.
@@ -1025,6 +1076,12 @@ a claim.
 `chrome://extensions` → *Load unpacked* → `~/Developer/zoost/apps/<app>`, then hit reload after edits.
 No zip, no reinstall. Just tell me what to look at and what should have changed.
 
+**Commit messages carry no co-author trailer, and no attribution of any kind.** Not `Co-Authored-By`,
+not a generated-with line, nothing. The repository's first 136 commits have none; nine acquired one in
+a single session without being asked for, and they are on GitHub. The default the tooling suggests is
+overridden here and stays overridden — **only Ivan decides what goes in a commit message.** Ask if you
+think there is a reason; do not infer one.
+
 **A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
 minor for features. Propose the commit message; do not batch unrelated work into one commit.
 
@@ -1164,6 +1221,20 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 - Empty states are never silent. "Nothing here" plus the reason plus what to do about it.
 
 ## Release routine
+
+**A release happens when I ask for it, for the app I name, and never as a consequence of anything
+else.** This is the standing instruction and it overrides every inference. Naming one product is not
+naming both; finishing a feature is not asking for a release; a clean tree and a passing suite are not
+permission. Tagging is the one step here that is *public and irreversible* — a tag, a Release and a
+signed attestation exist the moment it runs — so the bar for it is an explicit instruction, not a
+reasonable reading of one.
+
+It has already cost twice in a single session, and the second cost is the argument: asked to package
+Analytics, I applied the routine to the whole repository and tagged Zoho CRM too, while its previous
+version was still in review. And the Analytics tag itself was cut before the user had finished
+testing, so it captured a `ReferenceError` that made the whole options page stop loading — a defect
+found by *him*, minutes later, in an artefact already published and attested. **Tagging early does not
+save time; it publishes whatever has not been checked yet.** Wait for the word.
 
 **"Give me the zip to publish" is a request for the whole chain, never for a file.** This is standing
 instruction, not a per-release choice: a package built here and handed over is exactly the weak link

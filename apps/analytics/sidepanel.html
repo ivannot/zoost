@@ -37,6 +37,20 @@
      .lbtn  teal outline  — produces a local artefact (file or window)
      .pbtn  violet outline— in-panel view, no output, no Zoho call
      .abtn  amber outline — AI                                                */
+  /* Toolbar marks. Same weight as the ↻ glyph beside them — 1.6px stroke at 13px — and
+     currentColor, so each inherits its button's role colour instead of introducing a new one.
+     A mark replaces the *visible* word only: the name lives in aria-label and title, which is
+     where a name has to be anyway for anyone not looking at pixels. */
+  .mk{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;flex:none}
+  /* Only the horizontal padding is tightened. Zeroing it top and bottom made the marked buttons
+     visibly shorter than the words beside them, which is the sort of thing you notice without
+     being able to name it. */
+  button.icon{padding:6px 8px}
+  button.glyph{font-size:15px;line-height:14px;padding:6px 8px}
+  /* 14px, not 13: the line box a word makes here is 14px, so a 13px block left the marked
+     buttons one pixel shorter than their neighbours. The drawing is unchanged — only its box. */
+  button.icon .mk{display:block;width:14px;height:14px}
+  .dhead button .mk{display:block;width:12px;height:12px}
   .zbtn{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
   .zbtn:hover:not(:disabled){background:#c4256b;border-color:#c4256b}
   .znav{background:rgba(220,45,122,.14);border:1px solid #9c4670;color:#f0a8c8}
@@ -90,7 +104,6 @@
   .wsgroup::-webkit-scrollbar{height:5px}
   .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
   .wsgroup::-webkit-scrollbar-track{background:transparent}
-  .wsgroup legend{font-size:9px;color:var(--muted);padding:0 5px;text-transform:uppercase;letter-spacing:.6px}
   .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls if it truly cannot fit */
   .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:4px 6px;display:inline-flex;gap:5px;align-items:center;flex:none}
   .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
@@ -285,7 +298,7 @@
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
   <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button>
-  <button id="wsrename" title="Name this workspace — a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" style="font-size:15px;line-height:1">🗑</button>
+  <button id="wsrename" title="Name this workspace — a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
 </div>
 
 <div id="ctx" class="unbound">
@@ -296,18 +309,17 @@
 
 <div class="genbar">
   <fieldset class="wsgroup">
-    <legend>workspace</legend>
-    <button id="pull" class="zbtn" disabled title="Pull views, structure, relations, SQL and lineage">Pull all</button>
+    <button id="pull" class="zbtn icon" disabled title="Pull all — views, structure, relations, SQL and lineage" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
     <button id="retry" style="display:none" title="Re-read only the items that failed in the last pull"></button>
-    <button id="refresh" disabled title="Refresh — reload from disk / re-grant folder access" aria-label="Refresh" style="font-size:15px;line-height:1">↻</button>
+    <button id="refresh" disabled title="Refresh — reload from disk / re-grant folder access" aria-label="Refresh" class="glyph">↻</button>
     <span class="gsep"></span>
     <span class="expgroup"><span class="explabel">export</span>
       <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
-      <button id="exportmd" class="lbtn" disabled title="Markdown export — context for an external AI tool">Markdown</button>
+      <button id="exportmd" class="lbtn" disabled aria-label="Markdown" title="Markdown export — context for an external AI tool">MD</button>
     </span>
     <span class="gsep"></span>
-    <button id="graph" class="lbtn" disabled title="ER diagram — tables, columns and the relations between them, in its own window">Schema ↗</button>
-    <button id="health" class="pbtn" disabled title="Health — workspace audit, shown in this panel" aria-label="Health" style="font-size:15px;line-height:1">♥</button>
+    <button id="graph" class="lbtn icon" disabled title="ER diagram — tables, columns and the relations between them, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
+    <button id="health" class="pbtn glyph" disabled title="Health — workspace audit, shown in this panel" aria-label="Health">♥</button>
     <button id="askai" class="abtn" disabled title="Ask AI about this workspace">AI</button>
   </fieldset>
 </div>
@@ -361,7 +373,7 @@
 
   <div id="resizer"></div>
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="Open the ER diagram focused on this table">ER ↗</button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view">Pull</button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram \u2014 opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
