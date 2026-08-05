@@ -340,21 +340,70 @@ def classes_defined(findings: list) -> None:
                             f'in site.css or in this page, so it renders as nothing')
 
 
-def anchors_resolve(findings: list) -> None:
-    """Every in-page link must name a section that exists on that page.
+def headings_by_id(html: str) -> dict:
+    """id → the heading text a reader sees when they land on it."""
+    out = {}
+    for m in re.finditer(r'<section[^>]*\bid="([^"]+)"[^>]*>([\s\S]{0,500}?)</h2>', html):
+        t = re.search(r'<h2[^>]*>(.*?)$', m.group(2), re.S)
+        if t:
+            out[m.group(1)] = ' '.join(re.sub(r'<[^>]+>', ' ', t.group(1)).split())
+    for m in re.finditer(r'<(h1|h2|h3)[^>]*\bid="([^"]+)"[^>]*>(.*?)</\1>', html, re.S):
+        out[m.group(2)] = ' '.join(re.sub(r'<[^>]+>', ' ', m.group(3)).split())
+    return out
 
-    Cheap, exact, and the sort of thing nobody checks until a button does nothing. It does not judge
-    whether the *label* fits the target — that is reading, and it is what actually went wrong here:
-    the CRM page's hero offered «How it works» pointing at `#start`, which is the six-step install
-    list at the very bottom, past everything the button was meant to show, while the twin page's
-    button in the same position said «What's inside» and landed on the feature grid.
+
+def anchors_resolve(findings: list) -> None:
+    """An in-page link must exist, and must be called what it lands on.
+
+    The second half is the one that was actually wrong, and it is a contract older than the web we
+    build on: a link labelled X takes you to a heading labelled X. The CRM page's hero offered
+    «How it works» pointing at `#start`, which is the six-step install list at the very bottom, past
+    everything the button was meant to show. «See the two» landed on «The workbenches». Nothing was
+    broken; the reader was simply told one name and shown another, and had to translate.
+
+    The **id** is held to the same rule, because it is not invisible — it is in the address bar and
+    in a copied link — so `#shared` for a section called «What every Zoost has in common» is the same
+    defect one layer down. It is compared loosely (a slug of the heading, or a prefix of it): the
+    heading is sometimes a sentence and a URL should not be.
+
+    Numbering is not a name: «section 8, Connections» is fine, and so is a guide's table of contents
+    whose entries drop the number the heading carries.
     """
+    def slug(t: str) -> str:
+        t = re.sub(r'^\d+\.\s*', '', t).lower().replace('\u2019', '').replace("'", '')
+        return re.sub(r'[^a-z0-9]+', '-', t).strip('-')
+
     for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        rel = p.relative_to(SITE).as_posix()
         html = p.read_text(encoding='utf-8')
         ids = set(re.findall(r'\bid="([^"]+)"', html))
-        for frag in re.findall(r'href="#([^"]+)"', html):
+        heads = headings_by_id(html)
+        for m in re.finditer(r'<a[^>]*href="#([^"]+)"[^>]*>(.*?)</a>', html, re.S):
+            frag = m.group(1)
             if frag not in ids:
-                findings.append(f'{p.relative_to(SITE).as_posix()}: href="#{frag}" — no element has that id')
+                findings.append(f'{rel}: href="#{frag}" — no element has that id')
+                continue
+            head = heads.get(frag)
+            if head is None:
+                continue                       # an anchor on something that is not a heading
+            label = ' '.join(re.sub(r'<[^>]+>', ' ', m.group(2)).split()).strip(' →?')
+            hs = slug(head)
+            if slug(label) != hs and hs not in slug(label):
+                findings.append(f'{rel}: the link «{label}» goes to a section called “{head}” — '
+                                f'a link is called what it lands on')
+        for frag, head in heads.items():
+            if f'href="#{frag}"' not in html:
+                continue                       # nothing links it; the id is not a promise to anyone
+            if rel.startswith('it/'):
+                # The id is the section's structural name and is deliberately the same in both
+                # languages, so a fragment keeps working when you switch language. Holding it to the
+                # *Italian* heading would force two different anchors for one section and break that.
+                # The label rule above still applies here, and it is the one a reader sees.
+                continue
+            hs = slug(head)
+            if frag != hs and not hs.startswith(frag.replace('-', '')) and frag not in hs:
+                findings.append(f'{rel}: id="{frag}" sits on “{head}” — the fragment in the address '
+                                f'bar should be that heading, not a synonym for it')
 
 
 def translations_link_to_translations(findings: list) -> None:

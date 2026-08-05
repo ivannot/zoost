@@ -61,24 +61,24 @@
   <div class="toc">
     <b>On this page</b>
     <ol>
-      <li><a href="#data">Does anything leave my computer?</a></li>
+      <li><a href="#leave-my-computer">Does anything leave my computer?</a></li>
       <li><a href="#model">The mental model</a></li>
-      <li><a href="#setup">First run</a></li>
+      <li><a href="#first-run">First run</a></li>
       <li><a href="#pull">Pulling and syncing</a></li>
       <li><a href="#git">Putting it under Git</a></li>
       <li><a href="#read">Reading your org</a></li>
-      <li><a href="#graph">The diagram</a></li>
-      <li><a href="#relations">Finding a relation name</a></li>
+      <li><a href="#diagram">The diagram</a></li>
+      <li><a href="#relation-name">Finding a relation name</a></li>
       <li><a href="#connections">Connections</a></li>
       <li><a href="#health">Health audit</a></li>
       <li><a href="#export">Exports</a></li>
       <li><a href="#ai">AI assistant &amp; API keys</a></li>
-      <li><a href="#guard">Production vs sandbox</a></li>
-      <li><a href="#trouble">When something goes wrong</a></li>
+      <li><a href="#sandbox">Production vs sandbox</a></li>
+      <li><a href="#goes-wrong">When something goes wrong</a></li>
     </ol>
   </div>
 
-  <h2 id="data">0. Does anything leave my computer?</h2>
+  <h2 id="leave-my-computer">0. Does anything leave my computer?</h2>
   <p class="box"><b>No, with one exception you switch on yourself.</b> Zoost has no server and no account.
     What it reads from Zoho CRM is written straight to a folder on your own disk and stays there. Nothing
     is sent to the developer, and there is no analytics or tracking of any kind.</p>
@@ -99,7 +99,7 @@
   </table>
   <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives you the map, the audit, and — with Git — a history of the parts Zoho does not version.</p>
 
-  <h2 id="setup">2. First run</h2>
+  <h2 id="first-run">2. First run</h2>
   <ol>
     <li>Open a Zoho CRM tab and open the Zoost side panel (the extension icon).</li>
     <li>Click <b class="ui">📁 Set working folder…</b> and choose a <b>dedicated, empty folder</b>.
@@ -191,7 +191,7 @@ git commit -m "baseline"</code></pre>
       moving onto each row, because "which are the biggest" is a different question from "what is in this
       namespace". Functions not downloaded yet have no numbers, so they stay at the bottom either way.</li>
     <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide — see
-      <a href="#connections">section 8</a>.</li>
+      <a href="#connections">section 8, Connections</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
       open it from Zoho’s own <b class="ui">⋯</b> menu. Zoost takes you to it, but the last click is yours —
       it never drives the Zoho interface for you.</li>
@@ -203,7 +203,7 @@ git commit -m "baseline"</code></pre>
       amber dot means it is required there. Rows highlighted in cream are fields on <b>no</b> layout — API-only.</li>
   </ul>
 
-  <h2 id="graph">6. The diagram</h2>
+  <h2 id="diagram">6. The diagram</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> (in Functions mode) opens which function calls which; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
@@ -228,7 +228,7 @@ git commit -m "baseline"</code></pre>
     whole-org <b class="ui">Scope</b>. The <b>Explorer</b> and the focused <b>ER diagram</b> stay fast at any org
     size; use a module focus and a small depth.</p>
 
-  <h2 id="relations">7. Finding a relation name</h2>
+  <h2 id="relation-name">7. Finding a relation name</h2>
   <div class="box">
     <p>The API name of a related list is <b>not</b> the api&nbsp;name of either module. It is a third string,
       and it is what <code>zoho.crm.getRelatedRecords()</code> requires. This is the single most common way to
@@ -421,7 +421,7 @@ git commit -m "baseline"</code></pre>
       sending source code to third-party AI services, leave it off. Everything else in Zoost is local.</p>
   </div>
 
-  <h2 id="guard">12. Production vs sandbox</h2>
+  <h2 id="sandbox">12. Production vs sandbox</h2>
   <p>Every workspace is bound to one org, host and instance, recorded in its <code>.zoost.json</code>. If the
     Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar
     offering to switch tab or switch workspace. This is deliberate friction: it is what stops a sandbox pull
@@ -429,7 +429,7 @@ git commit -m "baseline"</code></pre>
   <p>Renaming a folder, or renaming the portal in Zoho, does not break anything — identity lives in the org id
     inside the file, not in the folder name.</p>
 
-  <h2 id="trouble">13. When something goes wrong</h2>
+  <h2 id="goes-wrong">13. When something goes wrong</h2>
   <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Go to Zoho CRM ↗</b> opens the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward — it is the one guard that stops you mirroring one org into another org’s folder.</p>
 <table>
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:1e3f5451413176f6 -->
+<!-- translated-from: site/docs-crm.html sha256:c66c65adb1ef4e5a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -68,24 +68,24 @@
   <div class="toc">
     <b>In questa pagina</b>
     <ol>
-      <li><a href="#data">Esce qualcosa dal mio computer?</a></li>
+      <li><a href="#leave-my-computer">Esce qualcosa dal mio computer?</a></li>
       <li><a href="#model">Il modello mentale</a></li>
-      <li><a href="#setup">Primo avvio</a></li>
+      <li><a href="#first-run">Primo avvio</a></li>
       <li><a href="#pull">Pull e sincronizzazione</a></li>
       <li><a href="#git">Metterlo sotto Git</a></li>
       <li><a href="#read">Leggere la tua org</a></li>
-      <li><a href="#graph">Il diagramma</a></li>
-      <li><a href="#relations">Trovare il nome di una relazione</a></li>
+      <li><a href="#diagram">Il diagramma</a></li>
+      <li><a href="#relation-name">Trovare il nome di una relazione</a></li>
       <li><a href="#connections">Le connessioni</a></li>
       <li><a href="#health">L'audit di salute</a></li>
       <li><a href="#export">Gli export</a></li>
       <li><a href="#ai">Assistente AI e chiavi API</a></li>
-      <li><a href="#guard">Produzione e sandbox</a></li>
-      <li><a href="#trouble">Quando qualcosa non va</a></li>
+      <li><a href="#sandbox">Produzione e sandbox</a></li>
+      <li><a href="#goes-wrong">Quando qualcosa non va</a></li>
     </ol>
   </div>
 
-  <h2 id="data">0. Esce qualcosa dal mio computer?</h2>
+  <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
   <p class="box"><b>No, con un'unica eccezione che accendi tu.</b> Zoost non ha server e non ha account.
     Quello che legge da Zoho CRM viene scritto direttamente in una cartella sul tuo disco e resta lì. Non
     viene mandato niente allo sviluppatore, e non c'è nessuna forma di analytics o di tracciamento.</p>
@@ -107,7 +107,7 @@
   <p>Zoost non è un editor. Il Deluge continui a scriverlo in Zoho, dove compila e viene validato. Zoost ti
     dà la mappa, l'audit e — con Git — una storia delle parti che Zoho non versiona.</p>
 
-  <h2 id="setup">2. Primo avvio</h2>
+  <h2 id="first-run">2. Primo avvio</h2>
   <ol>
     <li>Apri una scheda di Zoho CRM e apri il pannello laterale di Zoost (l'icona dell'estensione).</li>
     <li>Clicca <b class="ui">📁 Set working folder…</b> e scegli una <b>cartella dedicata e vuota</b>.
@@ -215,7 +215,7 @@ git commit -m "baseline"</code></pre>
       grandi» è una domanda diversa da «cosa c'è in questo namespace». Le funzioni non ancora scaricate non
       hanno numeri, quindi in ogni caso restano in fondo.</li>
     <li>La scheda <b class="ui">Connections</b> ribalta la prospettiva: tutto il catalogo, a livello di org
-      — vedi la <a href="#connections">sezione 8</a>.</li>
+      — vedi la <a href="#connections">sezione 8, Le connessioni</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filtra l'elenco delle funzioni di Zoho fino alla funzione aperta;
       poi la apri dal menù <b class="ui">⋯</b> di Zoho stesso. Zoost ti ci porta, ma l'ultimo click è tuo —
       non guida mai l'interfaccia di Zoho al posto tuo.</li>
@@ -227,7 +227,7 @@ git commit -m "baseline"</code></pre>
       quel layout, un pallino ambra che lì è obbligatorio. Le righe evidenziate in crema sono campi che non stanno su <b>nessun</b> layout — solo API.</li>
   </ul>
 
-  <h2 id="graph">6. Il diagramma</h2>
+  <h2 id="diagram">6. Il diagramma</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> (in modalità Functions) apre quale funzione chiama quale;
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in modalità Modules) apre i moduli e le loro relazioni.
     Dall'anteprima di un modulo, lo stesso pulsante apre il diagramma entità-relazioni centrato su quel
@@ -252,7 +252,7 @@ git commit -m "baseline"</code></pre>
     lo <b class="ui">Scope</b> sull'org intera. <b>Explorer</b> e l'<b>ER diagram</b> centrato restano veloci
     a qualsiasi dimensione di org; usa un modulo come fuoco e una profondità piccola.</p>
 
-  <h2 id="relations">7. Trovare il nome di una relazione</h2>
+  <h2 id="relation-name">7. Trovare il nome di una relazione</h2>
   <div class="box">
     <p>L'API name di una related list <b>non</b> è l'api&nbsp;name di nessuno dei due moduli. È una terza
       stringa, ed è quella che serve a <code>zoho.crm.getRelatedRecords()</code>. È il modo più comune in
@@ -461,7 +461,7 @@ git commit -m "baseline"</code></pre>
       resto di Zoost è locale.</p>
   </div>
 
-  <h2 id="guard">12. Produzione e sandbox</h2>
+  <h2 id="sandbox">12. Produzione e sandbox</h2>
   <p>Ogni workspace è legato a una sola org, host e istanza, registrati nel suo <code>.zoost.json</code>. Se
     la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho
     e mostra una barra che ti offre di cambiare scheda o cambiare workspace. È un attrito voluto: è quello
@@ -469,7 +469,7 @@ git commit -m "baseline"</code></pre>
   <p>Rinominare una cartella, o rinominare il portale in Zoho, non rompe niente — l'identità sta nell'id
     dell'org dentro il file, non nel nome della cartella.</p>
 
-  <h2 id="trouble">13. Quando qualcosa non va</h2>
+  <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e il workspace che hai selezionato
     appartengono a due org diverse, e tutto quello che parla con Zoho CRM è disattivato finché non si
     accordano. La barra offre due vie d'uscita: <b class="ui">Go to Zoho CRM ↗</b> apre l'org a cui

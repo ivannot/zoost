@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:808e7f06e8ebfc49 -->
+<!-- translated-from: site/docs-analytics.html sha256:3dbb2e3c335a4a98 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -68,24 +68,24 @@
   <div class="toc">
     <b>In questa pagina</b>
     <ol>
-      <li><a href="#data">Esce qualcosa dal mio computer?</a></li>
+      <li><a href="#leave-my-computer">Esce qualcosa dal mio computer?</a></li>
       <li><a href="#model">Il modello mentale</a></li>
-      <li><a href="#setup">Primo avvio</a></li>
+      <li><a href="#first-run">Primo avvio</a></li>
       <li><a href="#pull">Il pull</a></li>
       <li><a href="#git">Metterlo sotto Git</a></li>
       <li><a href="#read">Leggere il workspace</a></li>
       <li><a href="#structure">Struttura e chiavi esterne</a></li>
-      <li><a href="#graph">Il diagramma ER</a></li>
+      <li><a href="#diagram">Il diagramma ER</a></li>
       <li><a href="#sql">La SQL delle query table</a></li>
       <li><a href="#depends">Cosa non serve più a nessuno</a></li>
       <li><a href="#health">Salute</a></li>
       <li><a href="#export">Gli export</a></li>
       <li><a href="#ai">Assistente AI e chiavi API</a></li>
-      <li><a href="#trouble">Quando qualcosa non va</a></li>
+      <li><a href="#goes-wrong">Quando qualcosa non va</a></li>
     </ol>
   </div>
 
-  <h2 id="data">0. Esce qualcosa dal mio computer?</h2>
+  <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
   <p class="box"><b>No, con un'unica eccezione che accendi tu.</b> Zoost non ha server e non ha account.
     Quello che legge da Zoho Analytics viene scritto direttamente in una cartella sul tuo disco e resta lì.
     Non viene mandato niente allo sviluppatore, e non c'è nessuna forma di analytics o di tracciamento.</p>
@@ -120,7 +120,7 @@
     dà alla richiesta che restituisce il modello ER, e calcola invece di creare. È detto qui perché trovarlo
     non sembri una scoperta.</p>
 
-  <h2 id="setup">2. Primo avvio</h2>
+  <h2 id="first-run">2. Primo avvio</h2>
   <ol>
     <li>Installa dal Chrome Web Store e apri una scheda di Zoho Analytics.</li>
     <li>Clicca l'icona di Zoost per aprire il pannello laterale.</li>
@@ -215,7 +215,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>Ognuna è un link: cliccalo e stai guardando l'altra tabella. Vengono dal modello ER che Zoho Analytics
     disegna da sé, con il join scritto esattamente come lo scrive Zoho.</p>
 
-  <h2 id="graph">7. Il diagramma ER</h2>
+  <h2 id="diagram">7. Il diagramma ER</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> apre tutto il workspace in una finestra a sé; lo stesso pulsante nel
     dettaglio di una tabella apre la stessa finestra centrata su quella tabella, a profondità 2.</p>
   <ul>
@@ -381,7 +381,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
-  <h2 id="trouble">13. Quando qualcosa non va</h2>
+  <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e la cartella del workspace che hai
     selezionato sono due workspace diversi, e tutto quello che parla con Zoho Analytics è disattivato finché
     non si accordano. <b class="ui">Go to Zoho Analytics ↗</b> apre il workspace a cui appartiene la cartella,
