@@ -16,6 +16,9 @@
   :root{--sel:#2563eb;--sel-soft:#16263f}
   /* docs-specific — shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
+  /* The same marks the toolbar draws, at the same weight — a guide that names a control the panel
+     no longer spells out is a guide the reader has to translate. */
+  b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -101,13 +104,14 @@
     <li>Click <b class="ui">+</b>. Zoost creates the subfolder for the org in your active tab, named
       <code>crm/instance[-sandbox]-orgid</code>, and selects it. Each Zoost product keeps its own
       subfolder inside the working folder, so one folder can serve them all.</li>
-    <li>Click <b class="ui">Pull all</b>.</li>
+    <li>Click <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>.</li>
   </ol>
   <div class="box warn">
     <p><b>Do not put the working folder in OneDrive, Dropbox or iCloud Drive.</b> You will be creating Git
       repositories inside it, and file-sync services corrupt <code>.git</code> directories by touching index
       and lock files mid-operation. On-demand (placeholder) files also break the full-text search. Use a
       local folder and push to a private Git remote if you want an off-machine copy.</p>
+<p class="note">Three toolbar controls are drawn as marks rather than words — <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   </div>
   <p>Chrome does not keep file-system permissions across side-panel reopens: this is how the browser's
     File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
@@ -116,9 +120,9 @@
 
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>
-    <li><b class="ui">Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
+    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
       and the connections catalogue.</li>
-    <li><b class="ui">Pull</b> (in the mode bar) refreshes only the current type — whichever of Functions,
+    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type — whichever of Functions,
       Modules, Workflows, Schedules or Connections is the active tab — faster when you just changed one thing.</li>
     <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
       updates by itself. No action needed.</li>
@@ -150,7 +154,7 @@ git commit -m "baseline"</code></pre>
     connections catalogue depends on your role, and there is no way to ask in advance — so Zoost finds out
     by pulling. If Zoho refuses an area, the pull says so in plain words instead of showing a status code,
     nothing is written for it, and its tab disappears rather than sitting there greyed out. The reason,
-    and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, where <b class="ui">Pull all</b>
+    and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, where <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>
     will check again. Roles are per org: a workspace that refuses an area says nothing about the next one.</p>
   <p>The same page is where you choose <b>which tabs to show at all, and in what order</b> — the panel is
     narrow, and a type you never look at is only in the way. Each row has a second switch, <b>pull</b>, for
@@ -196,7 +200,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <h2 id="graph">6. The diagram</h2>
-  <p><b class="ui">Call graph</b> (in Functions mode) opens which function calls which; <b class="ui">ER diagram</b> (in Modules
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> (in Functions mode) opens which function calls which; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
   <ul>
@@ -237,7 +241,7 @@ git commit -m "baseline"</code></pre>
   <h2 id="connections">8. Connections</h2>
   <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists
     them in setup, but never tells you which functions actually use one — so nobody dares delete any.</p>
-  <p>The <b class="ui">Connections</b> tab is the org's catalogue, pulled with <b class="ui">Pull all</b>. One row
+  <p>The <b class="ui">Connections</b> tab is the org's catalogue, pulled with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>. One row
     per connection, with its connector, its status, and <b>how many functions use it</b>. Open one to see exactly
     which functions, and click through to any of them.</p>
   <ul>
@@ -428,8 +432,8 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k">Folder button is amber</td><td>The browser dropped the file-system permission. One click restores it; no file picker opens.</td></tr>
       <tr><td class="k">Everything is disabled</td><td>Either no Zoho CRM tab is active, or the tab's org does not match the selected workspace. The bar at the top says which.</td></tr>
-      <tr><td class="k">No related lists / no layout matrix</td><td>That workspace was pulled before those existed. Run <b class="ui">Pull all</b> again and reopen the diagram.</td></tr>
-      <tr><td class="k">Connections tab is empty</td><td>The catalogue arrives with <b class="ui">Pull all</b> (or <b class="ui">Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
+      <tr><td class="k">No related lists / no layout matrix</td><td>That workspace was pulled before those existed. Run <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> again and reopen the diagram.</td></tr>
+      <tr><td class="k">Connections tab is empty</td><td>The catalogue arrives with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (or <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
       <tr><td class="k">Functions show an amber <b>◐</b> dot</td><td>They were pulled before connections and authorship were captured. Click <b class="ui">Refresh outdated</b> in the button bar above the list to top them up — no full re-download.</td></tr>
       <tr><td class="k">Visual graph says there are too many nodes</td><td>Above a few hundred nodes the free layout is not attempted, because it would freeze the window. Use <b>Explorer</b>, or focus one module and lower the depth.</td></tr>
       <tr><td class="k">AI: <code>401</code></td><td>Wrong key, or whitespace pasted with it.</td></tr>

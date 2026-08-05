@@ -16,6 +16,9 @@
   :root{--sel:#dc2d7a;--sel-soft:#3a1226}
   /* docs-specific — shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
+  /* The same marks the toolbar draws, at the same weight — a guide that names a control the panel
+     no longer spells out is a guide the reader has to translate. */
+  b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -117,9 +120,10 @@
     pick one of the two ways out it offers.</p>
 
   <h2 id="pull">3. Pulling</h2>
-  <p><b class="ui">Pull all</b> reads the whole workspace in one pass: the list of views, the columns and
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> reads the whole workspace in one pass: the list of views, the columns and
     types of every table and query table, the relations between them, the SQL of each query table, and the
     dependency graph. A few hundred views take under a minute.</p>
+<p class="note">Three toolbar controls are drawn as marks rather than words — <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b>. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   <p>Two kinds of failure, told apart on purpose:</p>
   <ul>
     <li>A <b>stage</b> — the view list, the structure, the ER model — is one call. If it does not answer
@@ -129,7 +133,7 @@
       the other four hundred, so failures are collected, the pull finishes, and the status line says how
       many were missed. <b class="ui">Retry N failed</b> appears and re-reads exactly those.</li>
   </ul>
-  <p>To re-read a single view, open it and use <b class="ui">Pull</b> in the detail pane. The <b class="ui">↻</b>
+  <p>To re-read a single view, open it and use <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> in the detail pane. The <b class="ui">↻</b>
     button next to it is <em>local</em>: it reloads the mirror from disk, or re-grants folder access. It
     never talks to Zoho.</p>
 
@@ -188,7 +192,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     itself draws, with the join written exactly as Zoho writes it.</p>
 
   <h2 id="graph">7. The ER diagram</h2>
-  <p><b class="ui">ER diagram</b> opens the whole workspace in its own window; the same button in a
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> opens the whole workspace in its own window; the same button in a
     table's detail pane opens the same window focused on that table, at depth 2.</p>
   <ul>
     <li>Tables as boxes, relations as arrows, the join written on the arc.</li>
