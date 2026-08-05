@@ -71,7 +71,13 @@ done
 
 echo
 if [ "$fail" -eq 0 ]; then
-  echo "Every probe reached the site. Known exceptions, blocked by Cloudflare's default managed rules"
+  echo "Every probe reached the site — but note what that does and does not prove. These are ordinary"
+  echo "requests carrying a bot's user agent from an ordinary address. Cloudflare identifies a verified"
+  echo "crawler by its network, not by the string it sends, so a rule that blocks ClaudeBot will not"
+  echo "block this probe and a 200 here says nothing about it. The bot toggles in AI Crawl Control are"
+  echo "the authority for that; the robots.txt section below is the only part of it this can read."
+  echo
+  echo "Known exceptions, blocked by Cloudflare's default managed rules"
   echo "and deliberately not probed above: Python-urllib and libwww-perl, both legacy scanner"
   echo "signatures. If an assistant reports it could not read the site, ask which client it used."
 else

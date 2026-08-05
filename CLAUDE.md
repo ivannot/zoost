@@ -1388,6 +1388,12 @@ exactly right about two smaller things, and both are fixed.
   — a user pasting the URL still gets a live fetch, which is the test this project is designed around
   — but AI *indexing* is refused, so an assistant that answers from an index has never seen the site.
   `reachcheck.sh` now parses robots.txt for the agents the strategy names.
+- **And its HTTP probes prove less than they look.** They send a bot's user-agent string from an
+  ordinary address; Cloudflare identifies a verified crawler by its **network**, not by that string, so
+  a rule blocking ClaudeBot does not block the probe and the 200 is meaningless for it. The claim
+  "every probe reached the site" was true and was being read as "every crawler can", which it never
+  said. The script says so now. The authority is the toggle list in AI Crawl Control, which nothing
+  here can read — so this is one of the few things that has to be looked at rather than checked.
 - **An assessment measures what it could reach, and a 403 is invisible from a browser.** A review of
   this project concluded "still to be validated" while stating it had not managed to open the site —
   so its verdict measured its own reach rather than the product, and every "needs verifying" it
