@@ -1362,8 +1362,14 @@ Two traps that this layout hides:
   checks the cache before doing anything, so new code can run and still return the old body — no
   error, no 404, just a value that will not change. The key ignores the query string on purpose (so
   the cache cannot be flooded with junk keys), which means it cannot be busted from outside either.
-  `CACHE_KEY` therefore carries a version marker: **bump it whenever the payload's shape changes**,
-  or the change is invisible until the old entry happens to expire.
+  `CACHE_KEY` therefore carries a version marker: **bump it whenever the payload's shape changes, or
+  the caching itself does**, or the change is invisible until the old entry happens to expire.
+- **A failed source must not be cached for as long as a good answer.** One fetch to
+  `raw.githubusercontent.com` timed out and both submission dates read "unknown" — correctly, and then
+  **for an hour after the source had come back**, because the failure was stored under the same TTL as
+  a complete reply. The point of caching here is that a blip is invisible; caching the blip is the
+  opposite of that. `TTL_PARTIAL` is 60 seconds and applies whenever any source returned null, so an
+  outage expires with the outage.
 
 Preview deploys are enabled for non-production branches, and the URL is
 `<branch>-zoost-it.ivannot.workers.dev`. Anything touching the deployment goes there first and gets

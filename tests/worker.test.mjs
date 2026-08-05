@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load } from './slice.mjs';
+import { sliceFn, sliceConst, load, read } from './slice.mjs';
 
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
@@ -186,4 +186,23 @@ test('an unpublished listing is never linked', () => {
   // fact. While Zoost Analytics is in review this stays plain text rather than pointing at a page
   // that serves nothing — the homepage already made that mistake once.
   assert.equal(store({ store: null, url: 'https://chromewebstore.google.com/detail/abc' }), '<i>unknown</i>');
+});
+
+
+test('a partial answer is not cached for as long as a complete one', () => {
+  // One fetch to raw.githubusercontent failed and both submission dates read "unknown" — for an hour
+  // after the source had come back, because the failure was cached with the same TTL as a good
+  // answer. Caching exists so a blip is invisible; caching the blip is the opposite.
+  const src = read('site/_worker.js');
+  assert.match(src, /const TTL_PARTIAL = 60;/, 'the short TTL is gone');
+  assert.match(src, /const complete = \[[^\]]+\]\.every\(\(v\) => v != null\);/,
+    'nothing decides whether the answer is complete');
+  assert.match(src, /const ttl = complete \? TTL : TTL_PARTIAL;/, 'the TTL no longer depends on it');
+  assert.match(src, /max-age=\$\{ttl\}/, 'the header still hard-codes one TTL');
+});
+
+test('the cache key moves when the caching does', () => {
+  // The key ignores the query string on purpose, so a wrong entry cannot be busted from outside. It
+  // therefore has to carry a marker, or a change in what gets cached is invisible until expiry.
+  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=13';/);
 });

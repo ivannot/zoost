@@ -28,7 +28,8 @@ const EXT_ID = {
   crm: 'flffecjpbmjfonhoojaiemgjanbjkmpj',
   analytics: 'gmelnigbgklfjgceldicakkomhgplgge',
 };
-const TTL = 3600;                       // seconds
+const TTL = 3600;                       // seconds, when every source answered
+const TTL_PARTIAL = 60;                 // …and when one did not, so an outage expires with the outage
 const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
 
@@ -164,7 +165,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=12';  // bumped: the payload carries each listing's URL
+const CACHE_KEY = '/api/versions?v=13';  // bumped: a partial answer is now cached for a minute, not an hour
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -187,6 +188,14 @@ async function versions(request, ctx) {
     return (m && subs && subs[app] && subs[app][m[1]]) || null;
   };
 
+  // A source that failed is cached for a minute, not an hour. `settled()` turns a blip into null and
+  // the page then says "unknown" — which is the honest word, and exactly the wrong thing to hold on to
+  // for an hour after the source came back. This happened: one fetch to raw.githubusercontent failed,
+  // and both submission dates read "unknown" long after the file was serving fine. Caching is there so
+  // a blip is invisible; caching the blip itself is the opposite of that.
+  const complete = [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, subs, updated].every((v) => v != null);
+  const ttl = complete ? TTL : TTL_PARTIAL;
+
   const res = new Response(JSON.stringify({
     // `store`, `repo` and `tag` are kept alongside the per-product blocks so a page served from
     // cache before this shape existed still renders something true rather than nothing. `tag` is
@@ -201,7 +210,7 @@ async function versions(request, ctx) {
   }), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': `public, max-age=${TTL}`,
+      'cache-control': `public, max-age=${ttl}`,
     },
   });
   ctx.waitUntil(cache.put(key, res.clone()));
