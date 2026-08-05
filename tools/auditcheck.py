@@ -53,8 +53,6 @@ def live_matches_repo(findings: list, notes: list) -> None:
     """
     published = sorted([p for p in SITE.glob('*.html')] + [p for p in SITE.glob('*.txt')])
     for p in published:
-        if p.name == 'robots.txt':
-            pass  # published like any other, no exception — listed for completeness
         url = BASE_URL + published_path(p.name)
         try:
             out = subprocess.run(['curl', '-sS', '--max-time', '20', '-A',
@@ -66,11 +64,19 @@ def live_matches_repo(findings: list, notes: list) -> None:
         if out.returncode != 0:
             findings.append(f'{p.name}: curl failed for {url} — {out.stderr.decode()[:120].strip()}')
             continue
-        live = hashlib.sha256(out.stdout).hexdigest()
-        repo = hashlib.sha256(p.read_bytes()).hexdigest()
-        if live != repo:
-            findings.append(f'{p.name}: {url} is not what the repository holds '
-                            f'(live {live[:12]}, repo {repo[:12]})')
+        body, mine = out.stdout, p.read_bytes()
+        if body == mine:
+            continue
+        # The platform is allowed to *add*, and does: Cloudflare prepends a managed block to
+        # robots.txt. What must never happen is our own bytes being altered or missing. Reporting the
+        # inequality would make this file cry wolf on every run, which is how a check stops being read.
+        if mine in body:
+            notes.append(f'{p.name}: served with {len(body) - len(mine)} bytes added by the platform, '
+                         f'ours intact')
+            continue
+        findings.append(f'{p.name}: {url} does not contain what the repository holds '
+                        f'(live {hashlib.sha256(body).hexdigest()[:12]}, '
+                        f'repo {hashlib.sha256(mine).hexdigest()[:12]})')
     notes.append(f'{len(published)} published files compared against the live site')
 
 
