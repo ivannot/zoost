@@ -53,10 +53,11 @@ request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 
 The pieces exist scattered across other tools; the **combination** doesn't:
 
-- **Plain files, and Git if you want it.** Zoho CRM does keep versions of a function, one function at a
-  time. What the mirror adds is the whole org at once, on your disk: diff every function between two
-  points, branch, review and roll back with the tools you already use. Functions are plain `.dg` files, so
-  Git works on all of it — and it is optional: without Git the mirror is still ordinary files.
+- **A history for everything you pulled.** Zoho CRM's own version history covers a *function*, one at a
+  time. Everything else the pull captures — module schema, layouts, related lists, workflows, schedules,
+  connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff
+  answers what changed across every kind at once rather than one function at a time. Git is optional:
+  without it the mirror is still ordinary files.
 - **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
   in one navigable place and one shareable document.
 - **Read-first, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles

@@ -30,7 +30,7 @@ If you administer or develop on Zoho CRM you know the gaps: no external editor, 
 
 WHAT IT DOES
 
-- Local mirror, and Git if you want it. Zoho CRM does keep versions of a function, one function at a time. What the mirror adds is the whole org at once, on your disk: diff every function between two points, branch, review and roll back with your own tools. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once — optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures — module schema, layouts, related lists, workflows, schedules, connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once — optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
 - Search across every function at once. Full-text search over all your Deluge sources — the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
 

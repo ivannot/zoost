@@ -515,3 +515,27 @@ test('a lapsed permission is reported in words, on both sides', () => {
       `${app}: the one-click remedy is not offered in the status line`);
   }
 });
+
+
+test('the empty state is written in one place, not two', () => {
+  // The Analytics markup hard-coded "Nothing pulled yet …" inside #list, and render() produced the
+  // same sentence. Fixing the one in the code changed nothing on screen, because the markup copy is
+  // what is there at startup — refreshWorkspaces returns early when the folder is not granted and
+  // never redraws. The CRM's tree has always been empty in the markup for exactly this reason.
+  const html = read('apps/analytics/sidepanel.html');
+  const list = html.slice(html.indexOf('<div id="list"'), html.indexOf('</div>', html.indexOf('<div id="list"')) + 6);
+  assert.doesNotMatch(list, /Nothing pulled|Pull all|working folder/,
+    'the list carries an empty state in the markup, which the code cannot keep true');
+});
+
+test('every early return still redraws the list', () => {
+  // Otherwise the reason on screen is whichever one was true last.
+  const src = read('apps/analytics/sidepanel.js');
+  const fn = src.slice(src.indexOf('async function refreshWorkspaces'), src.indexOf('\n}', src.indexOf('async function refreshWorkspaces')));
+  const earlies = [...fn.matchAll(/return updateButtons\(\);/g)];
+  assert.ok(earlies.length >= 3, 'fewer early returns than expected — check this test still matches');
+  for (const m of earlies) {
+    const before = fn.slice(Math.max(0, m.index - 60), m.index);
+    assert.match(before, /render\(\);\s*$/, 'an early return leaves the previous reason on screen');
+  }
+});

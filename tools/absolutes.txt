@@ -21,9 +21,9 @@ a548a06956eed685  README.md: --- ## The interface **Top bars** - **Working folde
 ca04d39b3c4d8f40  README.md: Every case is a defect that actually occurred, and the checkers are tested too — two of them shipped broken, and a checker that reports success over the thing it was built to catch is worse than no checker.
 ede6fa9df5ce7da0  README.md: Every tool it opens is shown in the chat (🔧).
 12c38245b1d6e6e0  README.md: Every workspace will be a subfolder inside it at `crm/instance[-sandbox]-orgid`, created automatically.
+7258b2a4689cf829  README.md: Everything else the pull captures — module schema, layouts, related lists, workflows, schedules, connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once rather than one function at a time.
 923a7787442427b0  README.md: Filter to **Unused** (used by no function) or **Disconnected**; open one to see every function that uses it.
 97077ecb53d39be0  README.md: From there the agent uses read-only tools to fetch exact code and schemas on demand — so it sees the entire org, one piece at a time, only when needed.
-f94333f1c12c514c  README.md: Functions are plain `.dg` files, so Git works on all of it — and it is optional: without Git the mirror is still ordinary files.
 35751f9049c41436  README.md: If you are about to depend on this for something that matters, read the code — that is precisely why it is here — and keep in mind that the tool is read-only towards Zoho by design, so the worst it can do to your org is nothing.
 d35ad09ec66cd62c  README.md: It also lists the **connections** the function uses (click one to filter the tree to every function that uses it) and its last-modified author and date.
 b39e0944a0ea3814  README.md: It can be turned back off at any time, which asks for the current passphrase — clear text means decrypting first — and a wrong or missing one changes nothing rather than discarding the key.
@@ -41,7 +41,6 @@ f590caafb5d2f25b  README.md: The extension talks to your own Zoho CRM (your sess
 b20a89448f8b996d  README.md: The first two restate what Manifest V3 enforces anyway; the last two are stricter than the default and free, because nothing shipped uses a form or a `<base>`.
 cbb4cdb9b433f57e  README.md: Turning a tab off clears it, since a tab is usually turned off for an area the account cannot read.
 136ef8c86744614d  README.md: Two providers, both tested — nothing claimed that has not been tried.
-646d609a0f41fba2  README.md: What the mirror adds is the whole org at once, on your disk: diff every function between two points, branch, review and roll back with the tools you already use.
 fb263742802650c6  README.md: Zoost never drives Zoho's interface: it navigates by URL and reads through the API — it does not script clicks it cannot be sure of.
 5e48fc713871bdaa  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) | | `apps/analytics` | **Zoost — workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them — plus what nothing depends on.
 fc33c48e40f4e6f0  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) | Nothing is shared between the two yet, on purpose: they read different platforms with different shapes, and factoring code out before both sides actually need it costs more than the duplication.
@@ -79,10 +78,10 @@ c71a5b09554376fa  site/crm.html: Connections catalogue Every connection in the o
 9b331d5688029b67  site/crm.html: Every network call the extension can make is in them, and there is no bundler or minifier between what is published and what you read.
 a4aa759babdab6e3  site/crm.html: Every tool call is shown.
 3cba15ec9a57639a  site/crm.html: Every workspace will live inside it.
+3014583f9b8bfae7  site/crm.html: Everything else the pull captures — module schema, layouts, related lists, workflows, schedules, connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed in this org last month across every kind at once rather than one function at a time.
 5a115cce67d188cc  site/crm.html: Find every place a field, a module, an endpoint or a hardcoded id is referenced, before you change it.
 8f7f0e6ff72950a4  site/crm.html: Fits the access you actually have Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking.
 171111b9b5760df7  site/crm.html: Full-text search : one query across every function's source.
-7de581e26a3db927  site/crm.html: Functions arrive as plain .dg files with .meta.json sidecars in namespaced folders, so Git works on all of it at once — and Git is optional : without it the mirror is still ordinary files you can search and hand over.
 ac7204a234da2218  site/crm.html: Google also repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
 6f7171351dac5483  site/crm.html: Grep your whole org Full-text search across every Deluge function at once — the thing Zoho has never had.
 39873aa74ba3b289  site/crm.html: Layout matrix : one column per layout, a dot where a field belongs, amber where it is required there — and fields in no layout flagged as API-only.
@@ -330,6 +329,7 @@ f045dd8ca579ce62  store/crm/store-listing.md: A popup would close on every click
 8b52c44ed28189a1  store/crm/store-listing.md: Every field with type, lookup target, picklist values and mandatory flag.
 80f7b3a76fd975d1  store/crm/store-listing.md: Every function also lists the connections it uses, and who last changed it.
 0b0ce4186f466874  store/crm/store-listing.md: Every function shows its length and how many outbound calls it makes — invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals — so you can see at a glance where length and API cost concentrate.
+916248ca94cb4534  store/crm/store-listing.md: Everything else the pull captures — module schema, layouts, related lists, workflows, schedules, connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once.
 4b6a48b16e039bd4  store/crm/store-listing.md: Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
 8752d25853c6c7c2  store/crm/store-listing.md: It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code, and nothing is ever sent to the developer.
 16f36006d0d031c7  store/crm/store-listing.md: It is memory-only and cleared when the browser closes.
@@ -346,7 +346,6 @@ b40a3eccd2df07a5  store/crm/store-listing.md: These two origins are the only AI 
 11ed9206af2498c3  store/crm/store-listing.md: They read only; they never modify the Zoho page, its content, or any data in the Zoho CRM.
 bc06590584837971  store/crm/store-listing.md: This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org — production versus sandbox in particular — every Zoho-bound action is disabled until they match.
 fbfce5b1a893f987  store/crm/store-listing.md: What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept — AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
-f0f7cdba77887597  store/crm/store-listing.md: What the mirror adds is the whole org at once, on your disk: diff every function between two points, branch, review and roll back with your own tools.
 f9c6fd904203ccc4  store/crm/store-listing.md: With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open.
 904dea406880d763  store/crm/store-listing.md: Zoho CRM domains — crm.zoho.com, .eu, .in, .com.au, .jp, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* — cover every Zoho data centre and their sandboxes.
 cae0029df9149604  store/crm/store-listing.md: Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
