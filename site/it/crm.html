@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/crm.html @ c226a5c -->
+<!-- translated-from: site/crm.html sha256:0c0f26104bac9b07 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost CRM — il Deluge sotto Git, e la mappa del tuo org</title>
+<title>Zoost CRM — il Deluge sotto Git, e la mappa della tua org</title>
 <meta name="description" content="Rispecchia funzioni Deluge, schema dei moduli, relazioni, layout, workflow, schedulazioni e connessioni del tuo Zoho CRM in file locali da mettere sotto Git — poi esplorali con grafo delle chiamate, diagramma ER, catalogo delle relazioni e delle connessioni, audit ed export.">
 <link rel="canonical" href="https://zoost.it/it/crm.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/crm.html">
@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#0d121c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Zoost CRM">
-<meta property="og:description" content="Il tuo org Zoho CRM come codebase locale, versionabile e navigabile.">
+<meta property="og:description" content="La tua org Zoho CRM come codebase locale, versionabile e navigabile.">
 <meta property="og:url" content="https://zoost.it/it/crm.html">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="author" content="Ivan Notaristefano">
@@ -83,11 +83,11 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>Il tuo org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
+    <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
     <p class="lead">Zoost è un'estensione per Chrome che rispecchia funzioni Deluge, schema dei moduli, relazioni,
       layout, workflow, schedulazioni e connessioni in file ordinari sul tuo disco — e ci costruisce sopra il grafo
       delle chiamate, il diagramma ER, la ricerca full-text su tutte le funzioni, il catalogo delle relazioni, quello
-      delle connessioni, un audit di salute, export condivisibili e un assistente AI opzionale che legge il tuo org
+      delle connessioni, un audit di salute, export condivisibili e un assistente AI opzionale che legge la tua org
       vero. Tutto gira nel tuo browser.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
@@ -106,13 +106,16 @@
     <h2>Perché esiste</h2>
     <div class="why">
       <div>
-        <h3>La tua storia, il tuo Git</h3>
-        <p>Le funzioni arrivano come normali file <code>.dg</code> con a fianco un <code>.meta.json</code>, in
-          cartelle per namespace. Diff, branch, revisione e rollback con gli strumenti che usi già — nessuna
-          sincronizzazione proprietaria su cloud.</p>
+        <h3>File ordinari, e Git se lo vuoi</h3>
+        <p>Zoho CRM lo storico delle versioni di una funzione ce l'ha — una funzione per volta, dentro Zoho.
+          Quello che non ti dà è l'org intera in un posto solo: un diff su tutte le funzioni fra due momenti,
+          i branch, la revisione prima che una modifica entri. Le funzioni arrivano come normali file
+          <code>.dg</code> con a fianco un <code>.meta.json</code>, in cartelle per namespace, così Git lavora
+          su tutto insieme — e <b>Git è facoltativo</b>: senza, il mirror resta comunque un insieme di file
+          ordinari che puoi cercare e consegnare.</p>
       </div>
       <div>
-        <h3>Tutto l'org in un colpo solo</h3>
+        <h3>Tutta l'org in un colpo solo</h3>
         <p>Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto navigabile, e in
           un unico documento da consegnare a chi l'estensione non ce l'ha.</p>
       </div>
@@ -122,7 +125,7 @@
           Ti dà il versionamento, la comprensione e l'audit che l'editor non ti dà.</p>
       </div>
       <div>
-        <h3>Un grep su tutto l'org</h3>
+        <h3>Un grep su tutta l'org</h3>
         <p>Ricerca full-text su <b>tutte</b> le funzioni Deluge insieme — la cosa che Zoho non ha mai avuto. Trova
           ogni punto in cui un campo, un modulo, un endpoint o un id scritto a mano è referenziato, prima di
           cambiarlo.</p>
@@ -288,7 +291,7 @@
         <h3>Interfacce non documentate</h3>
         <p>Zoho CRM non pubblica API per la maggior parte di ciò che Zoost legge. Usa gli stessi endpoint interni
           che usa l'interfaccia web del prodotto, attraverso la sessione con cui sei già autenticato.
-          Legge anche due identificativi — l'id del tuo org e quello dell'utente — dall'HTML della pagina, perché
+          Legge anche due identificativi — l'id della tua org e quello dell'utente — dall'HTML della pagina, perché
           nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già. Separatamente osserva
           la pagina di Zoho CRM per una cosa sola: URL e metodo della richiesta che salva una funzione, così la
           copia locale può seguire. Non legge nessun header e nessun corpo di risposta, e non altera niente di ciò
@@ -365,7 +368,8 @@
       <li>In <b>Settings</b>, scegli una <b>cartella di lavoro</b> — dedicata e vuota. Ogni workspace vivrà lì dentro.</li>
       <li>Apri una scheda Zoho CRM e premi <b>+</b>. Zoost crea il workspace per quell'org.</li>
       <li>Premi <b>Pull all</b> per rispecchiare funzioni, moduli, layout, relazioni, workflow, schedulazioni e connessioni.</li>
-      <li><code>git init</code> nella cartella, e da qui in poi hai la storia.</li>
+      <li><b>Facoltativo:</b> <code>git init</code> nella cartella, e da qui in poi hai la storia di tutta
+        l'org. Tutto il resto funziona anche senza.</li>
       <li>Esplora: segui una chiamata, apri il grafo, lancia l'audit di salute, oppure esporta tutto.</li>
     </ol>
     <p class="note">Guida completa, inclusa la configurazione della chiave API e la risoluzione dei problemi (in inglese):
@@ -382,10 +386,10 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/crm.html">Zoost — workbench for Zoho CRM</a><span class="sep">·</span>
+      <a href="/it/crm.html">Zoost — workbench for Zoho CRM</a><span class="sep">·</span>
       <a href="/analytics.html">Zoost — workbench for Zoho Analytics</a><span class="sep">·</span>
-      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
-      <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
+      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
       <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
       <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
@@ -393,15 +397,16 @@
       <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
     </div>
     <p class="legal">
-      Created by Ivan Notaristefano (with the support of Claudio). Copyright <span class="cyear">2026</span>. Licensed under the Apache License 2.0 and provided
-      <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
-      liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
-      support or maintenance.
+      Creato da Ivan Notaristefano (con il supporto di Claudio). Copyright <span class="cyear">2026</span>. Distribuito sotto licenza Apache 2.0 e fornito
+      <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
+      alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
+      fornire supporto o manutenzione. In caso di divergenza, fa fede la
+      <a href="/crm.html">versione inglese</a>.
     </p>
     <p class="legal">
-      Zoost is an independent, unofficial developer tool. It is <b>not</b> affiliated with, endorsed by,
-      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
-      trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+      Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
+      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
     </p>
   </div>
 </footer>

@@ -13,9 +13,11 @@ is *allowed* to differ, never of what to look at. Forgetting to declare somethin
 
     python3 tools/sitecheck.py
 """
+import hashlib
 import json
 import re
 import sys
+import pathlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -261,23 +263,32 @@ def hosts_declared(findings: list) -> None:
 # Translations
 # ---------------------------------------------------------------------------------------------------
 
-TRANSLATED_FROM = re.compile(r'<!--\s*translated-from:\s*(\S+)\s*@\s*([0-9a-f]{7,40})\s*-->')
+TRANSLATED_FROM = re.compile(r'<!--\s*translated-from:\s*(\S+)\s*sha256:([0-9a-f]{8,64})\s*-->')
+
+
+def source_digest(path: pathlib.Path) -> str:
+    """A short digest of the English page's bytes."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
 def translations_current(findings: list) -> None:
-    """A translated page records the commit of the English page it was made from, and this compares
-    that against the English page's last change.
+    """A translated page records a digest of the English page it was made from, and this compares it.
 
     Without it the second language is the thing this repository spends all its effort not having: a
     surface that can quietly stop being true. Nobody has to remember to update the Italian — forgetting
-    makes it *reported*, which is the only direction that fails safe, and it is the same argument as
-    every allow-list in these tools being a list of what is deliberately different.
+    makes it *reported*, which is the only direction that fails safe.
 
-    The marker is a comment in the file rather than a side table, so a translator who copies the page
-    carries it with them and cannot leave it behind.
+    The digest is of the **content**, not of the commit that last touched it. The first version used
+    the commit and was wrong in a way only using it revealed: editing the English page and its
+    translation in one change leaves the marker naming the commit *before* that change, so the check
+    fires on a translation that is perfectly current and cannot be satisfied until a second commit
+    exists. A content digest is atomic — update both files and the marker in one go and it is right.
+
+    The marker lives in the file rather than a side table, so whoever copies the page carries it.
     """
-    import subprocess
-    for page in sorted((SITE / 'it').glob('*.html')) if (SITE / 'it').is_dir() else []:
+    if not (SITE / 'it').is_dir():
+        return
+    for page in sorted((SITE / 'it').glob('*.html')):
         text = page.read_text(encoding='utf-8')
         m = TRANSLATED_FROM.search(text)
         if not m:
@@ -289,15 +300,11 @@ def translations_current(findings: list) -> None:
         if not origin.exists():
             findings.append(f'site/it/{page.name}: says it was translated from {src}, which does not exist')
             continue
-        out = subprocess.run(['git', 'log', '-1', '--format=%H', '--', src],
-                             cwd=ROOT, capture_output=True, text=True)
-        head = out.stdout.strip()
-        if not head:
-            findings.append(f'site/it/{page.name}: could not read the history of {src}')
-        elif not head.startswith(recorded) and not recorded.startswith(head[:len(recorded)]):
+        now = source_digest(origin)
+        if now != recorded:
             findings.append(f'site/it/{page.name}: {src} has changed since this was translated '
-                            f'(page says {recorded[:12]}, latest is {head[:12]}) — retranslate what moved, '
-                            f'then update the marker')
+                            f'(page says {recorded}, it is now {now}) — retranslate what moved, then '
+                            f'update the marker')
 
 
 def main() -> int:

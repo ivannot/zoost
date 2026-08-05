@@ -81,12 +81,14 @@ test('the first value that looks like a version wins, later prose is not consult
 
 // ---------- the gap between what is released and what the Store serves ----------
 
-const { verOf, newer, dev, store } = load([
+const { verOf, newer, dev, store, t } = load([
+  sliceConst('site/site.js', 'STR'),
+  sliceFn('site/site.js', 't'),
   sliceFn('site/site.js', 'verOf'),
   sliceFn('site/site.js', 'newer'),
   sliceFn('site/site.js', 'dev'),
   sliceFn('site/site.js', 'store'),
-], { REPO_URL: 'https://github.com/ivannot/zoost', esc: (x) => String(x) });
+], { REPO_URL: 'https://github.com/ivannot/zoost', esc: (x) => String(x), LANG: 'en' });
 
 test('a release ahead of the Store is stated, not left to be worked out', () => {
   // The footer showed three numbers and no relationship between them. Someone reading it could not
@@ -243,5 +245,8 @@ test('the footer says what is in review only when it adds a fact', () => {
   const src = read('site/site.js');
   assert.match(src, /if \(p && newer\(p\.version, v\.store\) && p\.version !== verOf\(v\.tag\)\)/,
     'the condition that stops it repeating the release line is gone');
-  assert.match(src, /<b>Awaiting review<\/b>/, 'the fact itself is gone');
+  // The label moved into the string table when the site learnt Italian; what must still exist is the
+  // fact being stated, in both languages.
+  assert.match(src, /review: '[^']+'/, 'the English label for what is in review is gone');
+  assert.match(src, /t\('review'\)/, 'the footer no longer states what is in review');
 });

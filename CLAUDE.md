@@ -241,6 +241,12 @@ is inside a folder, and `chrome://extensions` wants the folder.
   is a release that will not load — the test catches it first.
 - **No new `manifest.json` permissions** without discussing it first. Every one has to be
   justified to the Web Store and to users, and the justification text lives in `store/`.
+- **Zoho CRM does keep version history for a Deluge function**, one function at a time, and the site
+  used to imply otherwise with "Your history, your Git". What Zoost adds is the org in one place — a
+  diff across every function between two points, branches, review — and the `git init` step is
+  **optional**: without it the mirror is still ordinary files. Corrected on both product pages, the
+  README and the Store copy. It was the author who noticed, which is the failure: nothing can check a
+  claim about what another product does, so this is the class where reading remains the only method.
 - **Never ship a claim that has not been tested.** Only Anthropic and OpenAI are supported as AI
   engines, because those are the two that are tested and the only two the manifest grants network
   access to. An untested feature is worse than a missing one.
@@ -889,12 +895,21 @@ English page's last commit — so forgetting to update the Italian makes it **re
 only direction that fails safe. The marker lives in the file rather than a side table, so whoever
 copies the page carries it with them.
 
-Three consequences, all deliberate. The **chrome is one shape per language**, not one shape overall:
+The marker is a digest of the **content**, not of the commit that last touched it. The first version
+used the commit and was wrong in a way only using it revealed: editing an English page and its
+translation in one change leaves the marker naming the commit *before* that change, so the check fires
+on a translation that is perfectly current and cannot be satisfied until a second commit exists.
+
+Four consequences, all deliberate. The **chrome is one shape per language**, not one shape overall:
 it must not change as you move through a site, and it must change when you change language, because
 the labels are the point. The **naming rules apply in Italian too** — a bare «Analytics» says exactly
 as little about whose product it is. And the **UI control names stay in English**, because the
 extension is: a guide that says *premi **Pull all*** is naming the button the reader will actually
 find, and the Italian page says so in a line under the hero rather than leaving it to be discovered.
+
+The **version badge is the one thing on a page written by script**, so a translated page cannot
+translate it by itself: `site.js` carries a small string table keyed on `<html lang>`, with English as
+the fallback for anything unlisted — a missing key shows English, never a key.
 
 What is **not** translated, on purpose: `privacy.html`, which is the most claim-dense page and has
 legal weight — English stays canonical; and `llms.txt`, whose reader is a machine and which is the

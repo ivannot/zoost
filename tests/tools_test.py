@@ -503,7 +503,7 @@ class TranslationsInStep(unittest.TestCase):
         self.assertIn('translated-from', f[0])
 
     def test_a_marker_naming_a_missing_file_is_reported(self):
-        f = self.run_on('<!-- translated-from: site/does-not-exist.html @ abc1234 -->')
+        f = self.run_on('<!-- translated-from: site/does-not-exist.html sha256:abc1234def5678 -->')
         self.assertEqual(len(f), 1, f)
         self.assertIn('does not exist', f[0])
 
@@ -515,7 +515,7 @@ class TranslationsInStep(unittest.TestCase):
     def test_a_stale_marker_is_reported(self):
         page = ROOT / 'site' / 'it' / 'crm.html'
         original = page.read_text(encoding='utf-8')
-        stale = re.sub(r'(translated-from: \S+ @ )[0-9a-f]+', r'\g<1>0000000', original, count=1)
+        stale = re.sub(r'(translated-from: \S+ sha256:)[0-9a-f]+', r'\g<1>0000000000000000', original, count=1)
         self.assertNotEqual(stale, original, 'the marker is gone')
         page.write_text(stale, encoding='utf-8')
         try:

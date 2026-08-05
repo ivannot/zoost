@@ -27,6 +27,26 @@
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: longMonth ? 'long' : 'short', year: 'numeric' });
   }
 
+  // The version badge is the one thing on the page written by script, so it is the one thing a
+  // translated page cannot translate by itself. The language comes from <html lang>, which every page
+  // already declares; anything not listed falls back to English rather than showing a key.
+  var LANG = (document.documentElement.lang || 'en').slice(0, 2);
+  var STR = {
+    en: {
+      store: 'On the Web Store', release: 'Latest release', dev: 'In development',
+      review: 'Awaiting review', updated: 'Site updated',
+      submitted: 'submitted ', awaiting: ', awaiting review', notSubmitted: 'not submitted yet',
+      none: 'none yet', unknown: 'unknown',
+    },
+    it: {
+      store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
+      review: 'In revisione', updated: 'Sito aggiornato',
+      submitted: 'inviata il ', awaiting: ', in attesa di revisione', notSubmitted: 'non ancora inviata',
+      none: 'nessuna', unknown: 'sconosciuta',
+    },
+  };
+  function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
+
   // "Covers Zoost X · updated Y" on the guide. Kept in step with the repo automatically: the rule is
   // that documentation ships with the code that changed it, so the version the docs describe is the
   // version in the manifest. The date is the last change to that guide specifically — using the whole
@@ -93,7 +113,7 @@
         var rel = verOf(v.tag) || v.tag;
         var tag = v.tag
           ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
-          : '<i>none yet</i>';
+          : '<i>' + t('none') + '</i>';
         // Said only when it is known. "Submitted on 4 Aug — awaiting review" is a fact with a
         // source: RELEASES.md records the date, and the reader can go and check the row. A tag that
         // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
@@ -102,8 +122,8 @@
         var ahead = '';
         if (newer(verOf(v.tag), v.store)) {
           ahead = v.submitted
-            ? ' <i>submitted ' + esc(fmtDate(v.submitted) || v.submitted) + ', awaiting review</i>'
-            : ' <i>not submitted yet</i>';
+            ? ' <i>' + t('submitted') + esc(fmtDate(v.submitted) || v.submitted) + t('awaiting') + '</i>'
+            : ' <i>' + t('notSubmitted') + '</i>';
         }
         // What is actually in review, when that is not the newest tag. Without this the page said
         // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review — every
@@ -112,23 +132,23 @@
         var review = '';
         var p = v.pending;
         if (p && newer(p.version, v.store) && p.version !== verOf(v.tag)) {
-          review = '<span class="vitem"><b>Awaiting review</b> ' + esc(p.version) +
-            ' <i>submitted ' + esc(fmtDate(p.date) || p.date) + '</i></span>';
+          review = '<span class="vitem"><b>' + t('review') + '</b> ' + esc(p.version) +
+            ' <i>' + t('submitted') + esc(fmtDate(p.date) || p.date) + '</i></span>';
         }
         bits.push(
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +
             '<div class="vfacts">' +
-              '<span class="vitem"><b>On the Web Store</b> ' + store(v) + '</span>' +
+              '<span class="vitem"><b>' + t('store') + '</b> ' + store(v) + '</span>' +
               review +
-              '<span class="vitem"><b>Latest release</b> ' + tag + ahead + '</span>' +
-              '<span class="vitem"><b>In development</b> ' + dev(app, v) + '</span>' +
+              '<span class="vitem"><b>' + t('release') + '</b> ' + tag + ahead + '</span>' +
+              '<span class="vitem"><b>' + t('dev') + '</b> ' + dev(app, v) + '</span>' +
             '</div>' +
           '</div>');
       });
       if (d.siteUpdated) {
         var f = fmtDate(d.siteUpdated);
-        if (f) bits.push('<div class="vrow vsite"><span class="vitem"><b>Site updated</b> ' + esc(f) + '</span></div>');
+        if (f) bits.push('<div class="vrow vsite"><span class="vitem"><b>' + t('updated') + '</b> ' + esc(f) + '</span></div>');
       }
       box.innerHTML = bits.join('');
       box.classList.add('on');
@@ -158,7 +178,7 @@
   // the number comes from scraping that page. So the link cannot lead somewhere empty — while
   // Zoost Analytics is in review the figure reads "unknown" and stays plain text.
   function store(v) {
-    if (!v.store) return '<i>unknown</i>';
+    if (!v.store) return '<i>' + t('unknown') + '</i>';
     return v.url ? '<a href="' + v.url + '">' + esc(v.store) + '</a>' : esc(v.store);
   }
 
@@ -168,7 +188,7 @@
   // there is nothing to diff, so it falls back to that app's commits, which is the same question
   // asked the only way still available.
   function dev(app, v) {
-    if (!v.repo) return '<i>unknown</i>';
+    if (!v.repo) return '<i>' + t('unknown') + '</i>';
     var href = v.tag
       ? REPO_URL + '/compare/' + encodeURIComponent(v.tag) + '...main'
       : REPO_URL + '/commits/main/apps/' + app;

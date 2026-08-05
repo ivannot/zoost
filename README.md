@@ -53,8 +53,10 @@ request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 
 The pieces exist scattered across other tools; the **combination** doesn't:
 
-- **Your history, your Git.** Functions are plain `.dg` files on your disk — not a proprietary
-  cloud sync. Diff, branch, review, roll back with the tools you already use.
+- **Plain files, and Git if you want it.** Zoho CRM does keep versions of a function, one function at a
+  time. What it does not give you is the whole org in one place: a diff across every function between two
+  points, branches, review. Functions are plain `.dg` files on your disk, so Git works on all of it at
+  once — and it is optional: without Git the mirror is still ordinary files you can search and hand over.
 - **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
   in one navigable place and one shareable document.
 - **Read-first, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
@@ -194,7 +196,7 @@ lifted out of the panels and run in isolation, which proves the logic and not th
    product keeps its own subfolder, so one working folder can serve them all.
 2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
 3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules and connections.
-4. `git init` in the workspace folder to start versioning.
+4. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
 5. Explore: open a function, follow its links, open the **Call graph**, run **Health** (♥), or **Export**.
 6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
 

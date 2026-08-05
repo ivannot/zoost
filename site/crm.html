@@ -100,9 +100,12 @@
     <h2>Why it exists</h2>
     <div class="why">
       <div>
-        <h3>Your history, your Git</h3>
-        <p>Functions land as plain <code>.dg</code> files with <code>.meta.json</code> sidecars, in namespaced
-          folders. Diff, branch, review and roll back with the tools you already use — no proprietary cloud sync.</p>
+        <h3>Plain files, and Git if you want it</h3>
+        <p>Zoho CRM does keep versions of a function — one function at a time, inside Zoho. What it does not
+          give you is the whole org in one place: a diff across every function between two points in time,
+          branches, review before a change lands. Functions arrive as plain <code>.dg</code> files with
+          <code>.meta.json</code> sidecars in namespaced folders, so Git works on all of it at once —
+          and <b>Git is optional</b>: without it the mirror is still ordinary files you can search and hand over.</p>
       </div>
       <div>
         <h3>The whole org at once</h3>
@@ -348,7 +351,8 @@
       <li>In <b>Settings</b>, pick a <b>working folder</b> — a dedicated, empty folder. Every workspace will live inside it.</li>
       <li>Open a Zoho CRM tab and click <b>+</b>. Zoost creates the workspace for that org.</li>
       <li>Click <b>Pull all</b> to mirror functions, modules, layouts, relations, workflows, schedules and connections.</li>
-      <li><code>git init</code> in the folder, and you have history from here on.</li>
+      <li><b>Optional:</b> <code>git init</code> in the folder, and you have the whole org's history from here
+        on. Everything else works without it.</li>
       <li>Explore: follow a call, open the graph, run the health audit, or export the lot.</li>
     </ol>
     <p class="note">Full walkthrough, including API key setup and troubleshooting:

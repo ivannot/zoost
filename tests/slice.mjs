@@ -62,8 +62,11 @@ export function sliceConst(rel, name) {
   // for a trailing comment, which is what made IS_VERSION slice three lines instead of one on the
   // first attempt. The tests still passed, because the surplus happened to be harmless; that is
   // exactly how a mis-slice survives, so the shape is asserted below rather than assumed.
-  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?const\\s+${name}\\s*=[\\s\\S]*?;\\s*(//[^\\n]*)?$`, 'm'));
-  if (!m) throw new Error(`${rel}: const ${name} not found — renamed or removed.`);
+  // `var` as well as `const`: site.js is a no-build classic script and declares everything with var,
+  // 27 times and never once const. Bending the file to suit the test helper would be the wrong way
+  // round — the helper exists to read the code as written.
+  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?(?:const|var|let)\\s+${name}\\s*=[\\s\\S]*?;\\s*(//[^\\n]*)?$`, 'm'));
+  if (!m) throw new Error(`${rel}: const/var ${name} not found — renamed or removed.`);
   return m[0].replace(/^\s*export\s+/m, '');
 }
 
