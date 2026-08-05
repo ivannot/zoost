@@ -1122,6 +1122,13 @@ heading and the check reads it there, so a section added tomorrow is measured wi
 remembering and changing a limit means editing one place. A submission that stops at the dashboard
 form costs a round trip of two to three days.
 
+**The short description is read under the item name, so it must not repeat it.** Both extensions
+opened theirs with a near-copy of their own name — 40 of 132 characters spent saying the line above
+again, visible in a Web Store search result and invisible in the dashboard. It keeps **"Independent,
+unofficial"**, because that is the disclaimer doing its job on the most-read sentence the project has,
+and it does **not** say "read-only": that is an absolute this project has already had to walk back
+once, and 132 characters have no room for the qualification the full description gives it.
+
 **A release with user-visible change → store copy as well.** Regenerate whatever in
 `store/store-listing.md` no longer matches: description, single purpose, permission
 justifications. Hand me the finished text ready to paste, and tell me which dashboard fields to
