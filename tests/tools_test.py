@@ -246,5 +246,47 @@ class HiddenActuallyHides(unittest.TestCase):
         self.assertEqual(findings, [])
 
 
+class StoreFieldLimits(unittest.TestCase):
+    """A store field that does not fit is a submission that stops at the form.
+
+    The CRM's storage justification had been over its 1000-character ceiling for some time and nothing
+    was counting. It was found by counting while editing it, which is luck. The heading names the
+    ceiling, so the criterion is derived: a section added tomorrow is measured without anyone
+    remembering, and changing a limit means editing the heading and nothing else.
+    """
+
+    def listing(self, body):
+        d = pathlib.Path(tempfile.mkdtemp())
+        (d / 'store' / 'x').mkdir(parents=True)
+        (d / 'store' / 'x' / 'store-listing.md').write_text(body, encoding='utf-8')
+        return d
+
+    def run_on(self, body):
+        d = self.listing(body)
+        old, sitecheck.ROOT = sitecheck.ROOT, d
+        try:
+            findings = []
+            sitecheck.store_field_limits(findings)
+            return findings
+        finally:
+            sitecheck.ROOT = old
+
+    def test_a_field_over_its_stated_ceiling_is_reported(self):
+        f = self.run_on('## 6. storage justification (max 10)\n\n```\n' + 'x' * 25 + '\n```\n')
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('15 over the 10', f[0])
+
+    def test_a_field_that_fits_is_silent(self):
+        self.assertEqual(self.run_on('## 6. storage justification (max 100)\n\n```\nshort\n```\n'), [])
+
+    def test_a_section_with_no_stated_ceiling_is_not_invented_one(self):
+        self.assertEqual(self.run_on('## 3. Detailed description\n\n```\n' + 'x' * 5000 + '\n```\n'), [])
+
+    def test_both_listings_fit_today(self):
+        findings = []
+        sitecheck.store_field_limits(findings)
+        self.assertEqual(findings, [])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

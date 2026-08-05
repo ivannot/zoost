@@ -122,18 +122,13 @@ No content is injected into the page for UI purposes. The sidePanel permission i
 ## 6. storage justification (max 1000)
 
 ```
-storage is used to persist the user's own settings between sessions, using chrome.storage.local only. Nothing is stored remotely and nothing is synced.
+storage persists the user's own settings between sessions, in chrome.storage.local only. Nothing is stored remotely or synced.
 
-What is kept:
-- Which AI engine the user selected, the model id, and the API key they entered (the assistant is optional and off by default). The key is used only to call the provider the user chose. The user may optionally protect it with a passphrase, in which case only the encrypted form is kept here (AES-GCM, key derived with PBKDF2-SHA256) and the decrypted key is held in chrome.storage.session for the browser session only.
-- Export defaults: which sections a generated export file may contain.
-- Diagram preferences: spacing, spread and label size for the ER diagram.
-- Which side panel tabs the user shows, in what order, and which of them a pull should ask Zoho for.
-- A display-only copy of which data types the user's Zoho role was granted or refused in the workspace currently open, so the options page can explain why a tab is unavailable. The authoritative record is a file in the user's own folder; this copy is only read into a sentence.
-- A small timestamp used so the side panel notices when settings are changed in the options page.
-chrome.storage.session holds the decrypted API key, and only while the user has chosen passphrase protection and unlocked it. It is memory-only and is cleared when the browser closes.
+What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept — AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
 
-No browsing data, no Zoho CRM data and no personal information are placed in storage. The mirrored Deluge sources and metadata are not stored here: they are written as ordinary files into the local folder the user selected, through the File System Access API.
+chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
+
+No browsing data, no Zoho CRM data and no personal information go into storage. The mirrored Deluge sources are written as ordinary files into the folder the user selected.
 ```
 
 ## 7. scripting justification (max 1000)

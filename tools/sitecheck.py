@@ -17,7 +17,8 @@ import re
 import sys
 from pathlib import Path
 
-SITE = Path(__file__).resolve().parent.parent / 'site'
+ROOT = Path(__file__).resolve().parent.parent
+SITE = ROOT / 'site'
 
 # Attributes that carry a page's own identity rather than the chrome's shape.
 PER_PAGE_ATTRS = {'aria-current'}
@@ -181,6 +182,24 @@ def check_prose(path, findings):
         findings.append(f'{rel}: bare platform name — …{ctx}…')
 
 
+def store_field_limits(findings: list) -> None:
+    """A store field that does not fit is a submission that stops at the form.
+
+    Each section in `store/<app>/store-listing.md` names its own ceiling in its heading, so the
+    criterion is derived rather than listed — a section added tomorrow is measured without anyone
+    remembering, and changing a limit means editing the heading and nothing else. The CRM's storage
+    justification had been over 1000 characters for some time and nothing was counting; it was found
+    by counting while editing it, which is luck rather than process.
+    """
+    for md in sorted(ROOT.glob('store/*/store-listing.md')):
+        text = md.read_text(encoding='utf-8')
+        for m in re.finditer(r'## (\d+)\. ([^\n]*?)\(max (\d+)\)\n+```\n(.*?)\n```', text, re.S):
+            n, cap = len(m.group(4)), int(m.group(3))
+            if n > cap:
+                findings.append(f'{md.relative_to(ROOT)}: §{m.group(1)} {m.group(2).strip()} is '
+                                f'{n} characters, {n - cap} over the {cap} the dashboard accepts')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -212,6 +231,8 @@ def main() -> int:
 
     for doc in outward_prose():
         check_prose(doc, findings)
+
+    store_field_limits(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in
     # site.js, not in any page — and nothing was reading them. The fourth form reappeared there

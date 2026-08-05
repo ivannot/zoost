@@ -1045,6 +1045,13 @@ the version on the Store — predates this repository and has no commit to point
 Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A
 verifiable record that quietly papered over its first entries would be worth less than none.
 
+**Every store field states its own ceiling, and `sitecheck.py` counts.** The CRM's storage
+justification had been over 1000 characters for an unknown length of time and nothing was measuring —
+it was found by counting while editing it, which is luck, not process. The limit lives in the section
+heading and the check reads it there, so a section added tomorrow is measured without anyone
+remembering and changing a limit means editing one place. A submission that stops at the dashboard
+form costs a round trip of two to three days.
+
 **A release with user-visible change → store copy as well.** Regenerate whatever in
 `store/store-listing.md` no longer matches: description, single purpose, permission
 justifications. Hand me the finished text ready to paste, and tell me which dashboard fields to
