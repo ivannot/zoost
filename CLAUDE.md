@@ -245,6 +245,16 @@ is inside a folder, and `chrome://extensions` wants the folder.
   **optional**: without it the mirror is still ordinary files. Corrected on both product pages, the
   README and the Store copy. It was the author who noticed, which is the failure: nothing can check a
   claim about what another product does, so this is the class where reading remains the only method.
+  **And the correction itself was incomplete, which the author also had to notice.** «It gives you the
+  versioning, comprehension and audit that the editor does not» survived on `crm.html`, in both guides
+  and in `README.md` — four surfaces, three paragraphs below a block that had just been rewritten to say
+  the opposite and correct thing. This is the enumeration trap running backwards: a *claim* is repeated
+  in as many places as a feature is, so correcting one and not grepping for the rest leaves the page
+  contradicting itself. Grep the claim, not the paragraph.
+  The heading above it had the same shape of defect twice over: «Read-only, on purpose» was the absolute
+  this project walks back, and «Read-first, on purpose» — its replacement — promises a second step that
+  does not exist, since reading is all there is. It is **«Not an editor, on purpose»**, which is what the
+  paragraph was always about.
 - **Never ship a claim that has not been tested.** Only Anthropic and OpenAI are supported as AI
   engines, because those are the two that are tested and the only two the manifest grants network
   access to. An untested feature is worse than a missing one.

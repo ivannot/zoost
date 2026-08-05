@@ -60,8 +60,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   without it the mirror is still ordinary files.
 - **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
   in one navigable place and one shareable document.
-- **Read-first, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
-  server-side; we give you versioning, comprehension, audit — and now an agent. Zoost never drives
+- **Not an editor, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
+  server-side and versions a function, one at a time; we give you comprehension, audit, a history of the
+  parts Zoho does not version — and now an agent. Zoost never drives
   Zoho's interface: it navigates by URL and reads through the API — it does not script clicks it
   cannot be sure of.
 - **An AI that actually knows your org.** Not a generic chatbot: it opens your functions, traces
