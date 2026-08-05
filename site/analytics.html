@@ -84,7 +84,7 @@
     <p class="lead">Zoost Analytics mirrors a workspace into plain files on your disk — every view with its
       type and folder, the columns and data types of every table, the foreign keys between them, and the SQL behind
       each query table as a file of its own. Then it shows you the ER diagram, what reads from what, and what nothing
-      reads any more. It never writes to Zoho Analytics, and it never reads the rows in your tables.</p>
+      reads any more. It calls no endpoint that creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in your tables.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
          data-install="analytics" hidden>Get it on the Chrome Web Store</a>
@@ -243,8 +243,8 @@
     <h2>What it does not do</h2>
     <div class="why">
       <div>
-        <h3>It never writes to Zoho Analytics</h3>
-        <p>No creating, editing or deleting a view. Ever. Zoho Analytics is where you build; this is where you look at
+        <h3>It calls no write endpoint</h3>
+        <p>No creating, editing or deleting a view. One endpoint it calls is a POST whose URL contains <code>CREATE</code> — <code>ZDBCreateERD.ma</code>, the call that returns the workspace's ER model. It computes; it does not create. It is named here because anyone checking the claim will find it. Zoho Analytics is where you build; this is where you look at
           what you built.</p>
       </div>
       <div>

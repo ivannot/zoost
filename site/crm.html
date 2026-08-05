@@ -266,7 +266,7 @@
         <h3>Undocumented interfaces</h3>
         <p>Zoho CRM publishes no API for most of what Zoost reads. It uses the same internal endpoints
           the product's own web interface uses, through the session you are already signed in to.
-          It also reads two identifiers — your org id and user id — out of the page's own HTML, because no endpoint offers them, and it observes the requests the Zoho CRM page makes so it can use the same authentication token: it watches, and never alters what the page sends or receives.</p>
+          It also reads two identifiers — your org id and user id — out of the page's own HTML, because no endpoint offers them, and it takes the CSRF token from the cookies your browser already holds. Separately, it watches the Zoho CRM page for one thing only: the URL and method of the request that saves a function, so your local copy can follow. It reads no headers and no response bodies, and alters nothing the page sends or receives.</p>
       </div>
       <div>
         <h3>Which means it can break</h3>

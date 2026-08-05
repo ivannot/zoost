@@ -139,7 +139,9 @@
       </div>
 
     </div>
-    <p class="note" style="margin-top:22px">Both are on the Chrome Web Store, free and open source, and both have a written guide.</p>
+    <p class="note" style="margin-top:22px">Free, open source, and each with a written guide.
+      <span data-install="analytics" hidden>Both are on the Chrome Web Store.</span>
+      <span data-pending="analytics">Zoost CRM is on the Chrome Web Store; Zoost Analytics is submitted and in review.</span></p>
   </div>
 </section>
 
@@ -149,7 +151,7 @@
     <div class="why">
       <div>
         <h3>Read-only, on purpose</h3>
-        <p>No Zoost writes to Zoho. Not a function, not a view, not a setting. Zoho compiles and validates
+        <p>No Zoost calls an endpoint that creates, edits or deletes anything in Zoho — not a function, not a view, not a setting. That is a property of which endpoints we call, not something the browser enforces, and every call either one can make is in about twenty readable files. Zoho compiles and validates
           server-side, and owning a write path would mean owning deployment, conflicts and rollback — a different
           product. You keep working where you already work.</p>
       </div>
@@ -226,9 +228,7 @@
       <li><b>Open the Zoho tab</b> you want to mirror, create the workspace and pull. Then <code>git init</code>,
         and you have a history from today onwards.</li>
     </ol>
-    <p class="note warn" style="margin-top:8px">Zoost never writes to Zoho, so the worst it can do to your data is
-      nothing. What it writes is the folder you chose — and what happens to an export after you have made it is
-      up to you.</p>
+    <p class="note warn" style="margin-top:8px">No Zoost calls an endpoint that writes to Zoho, so the worst it can do to your data is nothing — a property of which endpoints we call, and every one of them is in files you can read.</p>
   </div>
 </section>
 
