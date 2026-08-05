@@ -1366,6 +1366,28 @@ Two traps that this layout hides:
   committing a config without them would have silently changed the runtime. If the platform's
   defaults ever move, compare against what it generates before assuming ours is complete.
 
+**A release gate for the outside view: `python3 tools/auditcheck.py`.** Three things, all mechanical:
+every published page and `.txt` fetched from zoost.it and compared **byte for byte** against the
+repository; each store listing's §1 and §2 compared against the manifest's `name` and `description`;
+and every **absolute claim** in outward prose listed *differentially* against `tools/absolutes.txt`, so
+a new "never" or "only" has to be read once, deliberately, before it ships — printing all 354 every
+run would be the checker nobody reads. `--accept` records them; `--offline` skips the network. Like
+`reachcheck.sh` it is **not** in `tests/run.sh`: it needs the live site.
+
+The first section exists because a review opened by asserting that the homepage and `llms.txt` served
+by zoost.it were still an earlier generation, "not a part: all of it". Five hashes refuted it in
+thirty seconds. **Take an outside review as evidence, never as a verdict** — that same review was
+exactly right about two smaller things, and both are fixed.
+
+- **Reaching a site and being allowed to read it are different questions, and `reachcheck.sh` only
+  asked the first.** Every probe returned 200 while Cloudflare's *managed robots.txt content* was
+  injecting `Disallow: /` for **ClaudeBot, GPTBot, CCBot, Google-Extended, Applebot-Extended,
+  Amazonbot, Bytespider and meta-externalagent**, above our own `Allow: /`. The door was open and the
+  sign said keep out. Nothing in this repository could have caught it by reading the repository: it is
+  an account setting, and `site/robots.txt` is correct. The practical effect is narrower than it looks
+  — a user pasting the URL still gets a live fetch, which is the test this project is designed around
+  — but AI *indexing* is refused, so an assistant that answers from an index has never seen the site.
+  `reachcheck.sh` now parses robots.txt for the agents the strategy names.
 - **An assessment measures what it could reach, and a 403 is invisible from a browser.** A review of
   this project concluded "still to be validated" while stating it had not managed to open the site —
   so its verdict measured its own reach rather than the product, and every "needs verifying" it

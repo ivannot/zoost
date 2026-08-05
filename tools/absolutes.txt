@@ -1,0 +1,354 @@
+2ba857d025abc74c  README.md: **Health / audit** (candidates to review — never automatic deletions) - Three tabs — **Functions** (orphans, unresolved calls, ambiguous calls), **Wiring** (broken automations, missing module references) and **Size & calls** (longest functions, most outbound calls) — each with an explicit coverage note stating exactly what is and isn't analyzed.
+4bf05c2e1c376147  README.md: **How it works.** The system prompt carries a compact **index of the whole org** (every function signature, modules, automations, and the connections with their usage counts) plus the function you're currently viewing.
+b63bb54006e525c8  README.md: **Protecting the key (optional).** By default the key is stored in clear text, because Chrome offers extensions no encryption at rest and no credential store: a key the extension can read on its own is a key anyone with the browser profile can read, and encrypting it with a secret kept beside it would be protection in appearance only.
+35b58f6cba82e8f9  README.md: - **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow, Circuits, widgets or client scripts, which Zoost does not read — so "unused" means "unused by your functions", a candidate to review, not a verdict.
+07b87e93a2cf66ac  README.md: - **Deploy from repo → Zoho** (write-back) is intentionally not implemented; pull + save-sync only.
+2ae5cb33c8821630  README.md: - **Every area records when it was last read**, so excluding one from the pull cannot quietly leave a four-month-old chapter looking as current as the rest.
+1a09d9755b3b0aed  README.md: - **Size and call counts are counts, not complexity.** Lines measure verbosity; the call count is static (it does not know how often a branch runs, or that a call sits inside a loop), and it only sees `invokeurl` and the documented `zoho.<service>.*` tasks.
+e5e1d7447bf82535  README.md: - **Size and outbound calls**: every function shows its length (lines, code lines, KB) and how many outbound calls it makes — `invokeurl`, `zoho.crm.*` and the other Zoho service tasks, counted outside comments and string literals.
+5ab8d7933b045607  README.md: - **What your Zoho role allows can only be discovered by asking.** There is no reliable way to know in advance whether a user may read Deluge functions or the connections catalogue, so Zoost finds out by pulling: an area Zoho refuses (401/403) is recorded per workspace with the date, its tab is hidden, and the reason is stated in **Settings → Tabs**.
+8f6f1a9a39354720  README.md: - **Workspace select · + · ✎ · 🗑** — `+` creates the workspace for the org in the active Zoho tab; **✎** gives it a name of your own, shown instead of the folder's (the platform's own name stays in the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
+1451aa2e8c605a3b  README.md: - Not every issue will be fixed and not every pull request will be merged.
+d874573debc501f2  README.md: - Only Anthropic and OpenAI are supported.
+0a25fbcb9bdae38d  README.md: - With Anthropic it runs as an **agent with read-only tools** — `get_function`, `who_calls`, `get_callees`, `search_code`, `get_module`, `get_workflow`, `get_connection`, `list_functions` — so it explores the whole org itself instead of guessing.
+dbd520f0b189a003  README.md: - host permissions `crm.zoho.*` / `crmsandbox.zoho.*` — read/save via your authenticated Zoho session; `api.anthropic.com` / `api.openai.com` — used **only** if you enable the AI with those providers.
+a548a06956eed685  README.md: --- ## The interface **Top bars** - **Working folder** — set once; every workspace is a subfolder inside it, identified by the org id in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
+88a26fcb684de52d  README.md: --- ## Versioning The manifest `version` is bumped on every release and this README tracks the feature set.
+3ac4372b407fe3fa  README.md: --- ## Which commit is on the Web Store [`RELEASES.md`](RELEASES.md) lists every version submitted to the Store with the commit it was built from and the SHA-256 of the package that was uploaded.
+4aa992a9235fc009  README.md: Answers reflect the **current** version of the code; there's a single persistent conversation you clear yourself (switching functions never wipes it).
+70eb33dc45d46037  README.md: Both keys are stored **only in your browser** (`chrome.storage.local`) and each request goes **directly to the provider you choose** — never to the developer.
+8447ec6ea8ddff5e  README.md: Computed from the sources on disk — no extra Zoho calls, nothing stored, so it can never disagree with the file.
+ca04d39b3c4d8f40  README.md: Every case is a defect that actually occurred, and the checkers are tested too — two of them shipped broken, and a checker that reports success over the thing it was built to catch is worse than no checker.
+ede6fa9df5ce7da0  README.md: Every tool it opens is shown in the chat (🔧).
+12c38245b1d6e6e0  README.md: Every workspace will be a subfolder inside it at `crm/instance[-sandbox]-orgid`, created automatically.
+923a7787442427b0  README.md: Filter to **Unused** (used by no function) or **Disconnected**; open one to see every function that uses it.
+97077ecb53d39be0  README.md: From there the agent uses read-only tools to fetch exact code and schemas on demand — so it sees the entire org, one piece at a time, only when needed.
+35751f9049c41436  README.md: If you are about to depend on this for something that matters, read the code — that is precisely why it is here — and keep in mind that the tool is read-only towards Zoho by design, so the worst it can do to your org is nothing.
+d35ad09ec66cd62c  README.md: It also lists the **connections** the function uses (click one to filter the tree to every function that uses it) and its last-modified author and date.
+b39e0944a0ea3814  README.md: It can be turned back off at any time, which asks for the current passphrase — clear text means decrypting first — and a wrong or missing one changes nothing rather than discarding the key.
+b9fbbed417d53684  README.md: It has no server of its own and sends nothing anywhere.
+c833c593c07bdbfa  README.md: It is the only place an empty field means *erase* rather than *keep*, and the way out if a passphrase is lost.
+f3ab152a4ca5b497  README.md: It is written down because every other security property here is.
+815cd6b50adc1f6d  README.md: No framework and nothing to install: node's own test runner and Python's `unittest`.
+a15e75db8d464e16  README.md: Nothing goes to us.
+7a7a559cc571b9ca  README.md: Only an outright HTTP refusal counts: an area that fails for another reason is reported as a failure and stays visible.
+223c32d18f8175f0  README.md: Other OpenAI-compatible endpoints (OpenRouter, Azure, local models) are deliberately **not** offered: the manifest grants host access to those two origins only, and an untested claim is worse than a missing feature.
+26fe58f2804b7114  README.md: Read them as "worth a look", never as a score.
+d930dec1a14d284e  README.md: Settings therefore offers **Protect the API key with a passphrase** — PBKDF2-SHA256 then AES-GCM-256, both from the browser's own Web Crypto, with only ciphertext left on disk.
+93c44e86e00f40d7  README.md: The build is reproducible, so you can check that yourself rather than take our word for it: ```bash git checkout <tag> && ./build.sh <app> shasum -a 256 dist/zoost-<app>-<version>-store.zip ``` Every release from Zoho CRM 1.9.0 onward is built by GitHub Actions from the tagged commit, not on anyone's laptop, and carries a provenance attestation you can check with one command: ```bash gh attestation verify zoost-crm-1.9.0-store.zip --repo ivannot/zoost tools/verify.sh crm 1.9.0 ``` `RELEASES.md` also states what it *cannot* tell you: every Zoho CRM version before 1.9.0 predates the extension's source being in this repository, so none of them has a commit to point at — including whichever one the Store happens to be serving.
+f590caafb5d2f25b  README.md: The extension talks to your own Zoho CRM (your session) and, **only if you enable the AI**, to the LLM provider you configure.
+b20a89448f8b996d  README.md: The first two restate what Manifest V3 enforces anyway; the last two are stricter than the default and free, because nothing shipped uses a form or a `<base>`.
+cbb4cdb9b433f57e  README.md: Turning a tab off clears it, since a tab is usually turned off for an area the account cannot read.
+136ef8c86744614d  README.md: Two providers, both tested — nothing claimed that has not been tried.
+fb263742802650c6  README.md: Zoost never drives Zoho's interface: it navigates by URL and reads through the API — it does not script clicks it cannot be sure of.
+5e48fc713871bdaa  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) | | `apps/analytics` | **Zoost — workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them — plus what nothing depends on.
+fc33c48e40f4e6f0  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) | Nothing is shared between the two yet, on purpose: they read different platforms with different shapes, and factoring code out before both sides actually need it costs more than the duplication.
+9d618dcd5b71408a  README.md: | | What it mirrors | | |---|---|---| | **Zoost — workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm.html) · [guide](https://zoost.it/docs-crm.html) | | **Zoost — workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | *submitted, in review* · [about](https://zoost.it/analytics.html) · [guide](https://zoost.it/docs-analytics.html) | Neither replaces Zoho's editor.
+d8c237c9485fad11  site/analytics.html: A workspace is identified by its id, not by its folder name: rename either and nothing is orphaned.
+b47a8ce53f79f7fc  site/analytics.html: Before you delete anything Asking Zoho Analytics what depends on a view, three hundred times by hand, is how the question never gets asked.
+bff89ffbb6238820  site/analytics.html: Commit it and git diff answers what changed in this workspace last month — which Zoho Analytics cannot answer at all, and which matters most the day a number moves and nobody knows why.
+f3acc713f100f622  site/analytics.html: Every view, in one list All of them with type, folder, owner, column count and dates.
+62dcc42a7839d9e5  site/analytics.html: Foreign keys on every column , in both directions: what it points at, and what points at it.
+40d7f5f846d35021  site/analytics.html: Give a workspace a name of your own — Zoho Analytics calls the first workspace of every account the same thing, so the list can be several projects with one label.
+ff0d325c8754bdd6  site/analytics.html: Health, without a score Views nothing depends on, tables in no relation, views with no description, items that could not be read.
+715d142644d7ea64  site/analytics.html: It calls no endpoint that creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in your tables.
+91140679c8fd6a14  site/analytics.html: It does not validate SQL Zoost never runs, checks or deploys a query.
+d021ae189a56f816  site/analytics.html: It is also told what it cannot know: Zoost never reads your rows, so the assistant has structure and never values.
+1cf9bef7d9086a8e  site/analytics.html: It is told what Zoho documents about query-table SQL — SELECT only, quoted identifiers, no correlated sub-queries, non-recursive CTEs — so what it writes is a draft to paste, not plausible SQL that fails.
+1918e52328c4c44c  site/analytics.html: It never reads your rows Structure, relations, SQL and metadata only.
+98af5274de841076  site/analytics.html: Optional AI, your own key Anthropic (Claude) or OpenAI (ChatGPT) — the two that are tested, and the only two the extension can reach.
+a1cb92f95e0b1c17  site/analytics.html: Search across every query at once.
+be6447364d82b5b2  site/analytics.html: Structure, including for reports Every table and query table with its columns and Zoho data types.
+72a62d082e39e7cb  site/analytics.html: The Markdown carries the constraints of Zoho Analytics' SQL dialect too, so an assistant that has never seen Zoho Analytics does not write queries that cannot run.
+d7a475863ab9ed31  site/analytics.html: The endpoints that return cell values exist, and are deliberately not called — which is also why the AI assistant can never tell you what is in the data.
+1d5da17392a87ca2  site/analytics.html: The only thing that ever leaves your machine is what you choose to send to an AI provider, and never the rows in your tables.
+d8816b3bf795f3b4  site/analytics.html: The panel takes the workspace from the tab you are on; there is nothing to configure and nothing to pick wrong.
+f2c11759efc8f048  site/analytics.html: Then it shows you the ER diagram, what reads from what, and what nothing reads any more.
+619835c26c11e2f7  site/analytics.html: What nothing depends on Zoho Analytics' own dependency answer, asked for every view instead of one at a time.
+fbe79589c7c194d9  site/analytics.html: What the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
+d2a8aead229f1846  site/analytics.html: What you built, and what Zoho put there Half the tables in a connected workspace arrived by sync and were never yours.
+87472167e4eed1ab  site/analytics.html: Your key stays in your browser and goes only to your provider — and it can be protected by a passphrase you choose, so what sits on disk is ciphertext.
+7341c5f5bd63085f  site/analytics.html: Your name is shown; the platform's is kept beside it, because a list you cannot check against Zoho Analytics is not worth having.
+8113612cff68e2e7  site/analytics.html: Zoost Analytics mirrors a workspace into plain files on your disk — every view with its type and folder, the columns and data types of every table, the foreign keys between them, and the SQL behind each query table as a file of its own.
+fc457cdfcea5df22  site/crm.html: An area your role is refused is recorded with the date, nothing is written for it, and its tab is removed instead of sitting there greyed out.
+e7f01c859b8578cf  site/crm.html: And an attestation says who built a file, never that the file is good — that part is still reading the code.
+c71a5b09554376fa  site/crm.html: Connections catalogue Every connection in the org, pulled from Zoho: its connector, who created it, and its OAuth scopes.
+97d539fe8f41f9cb  site/crm.html: Connections per function : every function lists the connections it uses — click one to filter the tree to every other function that uses it.
+9b331d5688029b67  site/crm.html: Every network call the extension can make is in them, and there is no bundler or minifier between what is published and what you read.
+a4aa759babdab6e3  site/crm.html: Every tool call is shown.
+3cba15ec9a57639a  site/crm.html: Every workspace will live inside it.
+5a115cce67d188cc  site/crm.html: Find every place a field, a module, an endpoint or a hardcoded id is referenced, before you change it.
+8f7f0e6ff72950a4  site/crm.html: Fits the access you actually have Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking.
+171111b9b5760df7  site/crm.html: Full-text search : one query across every function's source.
+ac7204a234da2218  site/crm.html: Google also repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
+6f7171351dac5483  site/crm.html: Grep your whole org Full-text search across every Deluge function at once — the thing Zoho has never had.
+39873aa74ba3b289  site/crm.html: Layout matrix : one column per layout, a dot where a field belongs, amber where it is required there — and fields in no layout flagged as API-only.
+d78ac43ffe083d02  site/crm.html: One working folder, a subfolder per product, one per org inside it — production and sandbox never mix.
+46ceabb7f7a777ac  site/crm.html: Read it before you trust it All of the above is visible in about twenty files of plain JavaScript.
+1dd073b7f60a8fd1  site/crm.html: Schema, layouts and relations Every field with type, lookup target and picklist values.
+521dbc99568a9b24  site/crm.html: Separately, it watches the Zoho CRM page for one thing only: the URL and method of the request that saves a function, so your local copy can follow.
+780ca681dd3de010  site/crm.html: Sometimes it will not be, and then the feature will say plainly that it cannot do the thing rather than guess.
+7ea4630903b6e399  site/crm.html: Source code is opt-in and flagged every time.
+a78584fc99aeb3fb  site/crm.html: Switch the search scope from names to code and find every reference to a field, module or hardcoded id in the org.
+1343815c91d16f45  site/crm.html: That changes the panel only: the mirror, the exports and the assistant still see everything.
+e3791577ae421683  site/crm.html: The record of every submitted version — commit, tag and the SHA-256 of the uploaded package — is in RELEASES.md , including the two entries it says it cannot verify and why.
+6d39cd491fc6483c  site/crm.html: What is promised, and what is not Nothing is guaranteed — the licence says so and so does this page.
+873e8de1cc974838  site/crm.html: What's inside Local mirror, Git-friendly Pull every Deluge function to .dg source plus metadata sidecars.
+0fd7a2a919e5cc00  site/crm.html: With Anthropic it runs as an agent with read-only tools, so it opens your functions, traces callers, looks up connections and searches your code instead of guessing.
+49170b1dd3be06ac  site/crm.html: You can read all of it in an afternoon.
+fd3ac02817d36466  site/crm.html: Your name is shown; the instance and org are kept beside it, because a list you cannot check against Zoho CRM is not worth having.
+d25714f7b43b08a1  site/crm.html: Zoost catalogues every relation with the call ready to copy.
+397c965ef87f778e  site/crm.html: Zoost is a Chrome extension that mirrors your Deluge functions, module schema, relations, layouts, workflows, schedules and connections into plain files on your disk — then layers on reference graphs, ER diagrams, full-text search across every function, a relation catalogue, a connections catalogue, a health audit, shareable exports and an optional AI assistant that reads your actual org.
+eaf4c737f67bb85b  site/crm.html: Zoost uses your existing session and your existing permissions — it can see exactly what you can see, and nothing more.
+588d936f4c3cfac9  site/docs-analytics.html: A report shows no columns Only tables and query tables have columns of their own.
+a86e2d5fe5a30c52  site/docs-analytics.html: A table in no relation may be a deliberate lookup list; a view nothing reads may feed a scheduled export.
+e21e0b1d8c2b61b3  site/docs-analytics.html: Always a real timestamp, always sortable.
+e4b7fe9a38cb7729  site/docs-analytics.html: Anthropic (Claude) OpenAI (ChatGPT) Mode Agent with read-only tools Single pass What it sees Whatever it decides to open: any view's structure, foreign keys, SQL and lineage, plus column and SQL search The workspace index and the view currently open Progress Each tool call appears in the chat as it happens A “thinking…” indicator until the answer arrives Best for “What reads from this table?”, “is there already a query joining these two?” Focused questions about the view in front of you Which one to choose Claude for anything that needs looking around — "what reads from this table", "is there already a query joining these two" — because those take several lookups.
+9bb6e69ad7e79bad  site/docs-analytics.html: Anthropic (Claude) — full agent Runs with read-only tools over your local mirror: it reads a structure, follows a foreign key, opens a query's SQL, searches columns and says what depends on what, choosing for itself which to use.
+4b09e612ba69c27f  site/docs-analytics.html: Candidates, never a verdict.
+b128849879a42286  site/docs-analytics.html: Columns shows every column with its Zoho data type.
+f3af8f2c364588a9  site/docs-analytics.html: Every figure states what it does not cover, next to itself.
+24feb815f1ec68eb  site/docs-analytics.html: Every tool call is shown in the chat, so you can see what it looked at before answering.
+0f06b1e154d24679  site/docs-analytics.html: For reports and dashboards Zoho Analytics only gives text in your interface language, so it is shown exactly as it sends it , in italics, never parsed, and sorted last.
+71a3df6ec276a6f6  site/docs-analytics.html: Health ♥ opens the audit in the panel: views nothing depends on, tables in no relation at all, tables Zoho put there rather than you, views with no description, and anything that could not be read in the last pull.
+e4977826910cf340  site/docs-analytics.html: If Zoost cannot reach a data-bearing view through what the report is built on, it says so rather than showing an empty table.
+8a483defa6ad6c64  site/docs-analytics.html: If it does not answer there is no partial result worth keeping, so the pull stops and nothing is written .
+7eb0a1642188aba6  site/docs-analytics.html: It cannot go and read anything itself, so it will tell you what it is missing rather than fetch it.
+fd90ddbfe92bbd5b  site/docs-analytics.html: It never creates, edits or deletes a view, and it never reads the rows inside your tables — the endpoints that return cell values exist and are deliberately not called.
+46fe38899e7fcf6b  site/docs-analytics.html: It never sends the rows inside your tables, because Zoost does not read them.
+e1bc1ae51dfcd1e7  site/docs-analytics.html: It never talks to Zoho.
+669d75f463f570fb  site/docs-analytics.html: It reads it and writes it to disk; Zoho Analytics remains the only thing that can tell you a query compiles.
+01f3c2d78e2ad8c4  site/docs-analytics.html: Its identity is the workspace id written in .zoost.json , never the folder name — rename either and nothing is orphaned.
+d8783ff2244d4db4  site/docs-analytics.html: Markdown (the button reads MD ) produces the same shaped as context for an AI tool that has never seen your workspace.
+2b49a27cdee9b978  site/docs-analytics.html: Move to another workspace and every Zoho-bound action is disabled until the tab and the folder agree again.
+503f2e7127394d7c  site/docs-analytics.html: Nothing goes to the developer.
+19250b999b73f778  site/docs-analytics.html: On disk every query is its own file, so grep and git log -p work on them like any other source.
+b79fe41d9d34be67  site/docs-analytics.html: Pick Nothing depends on in the Type filter to see only the candidates.
+f944da6c2df85337  site/docs-analytics.html: Pulling Pull all reads the whole workspace in one pass: the list of views, the columns and types of every table and query table, the relations between them, the SQL of each query table, and the dependency graph.
+0b88026538c59980  site/docs-analytics.html: Putting it under Git In the workspace folder: cd <working folder>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" What you get on disk: views.json the census: every view with type, folder, owner, dates, tags schema.json columns and data types per table, plus the relations lineage.json what reads from what, both directions sql/*.sql one file per query table — the diffable part sql/_index.json id-to-file map, and which source columns each query involves export/ the reports you generate The .sql files are the point.
+f11541dcbe113f85  site/docs-analytics.html: Reading the workspace The list is every view.
+e2cfd044eb528279  site/docs-analytics.html: The Cols column counts columns, and a number in brackets means the view has none of its own: only tables and query tables carry columns, so a report or a chart shows the count of the view it is built on, and the tooltip names it.
+f1608bbd1ea626f8  site/docs-analytics.html: The Markdown carries one thing the HTML does not: the constraints of Zoho Analytics' SQL dialect , so an assistant reading that file does not write queries that cannot run.
+1e707cd0d2b8d007  site/docs-analytics.html: The SQL option sits indented under Structure because it depends on it, and it is flagged every time: it is the part somebody wrote.
+4dbadfdbf0f8cdcf  site/docs-analytics.html: The assistant is told what Zoho documents about query-table SQL — SELECT only, double-quoted identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of query-over-query.
+e26a820e83f13220  site/docs-analytics.html: The browser asks for permission; it is the only way an extension may write files, and it applies to that folder alone.
+08febbfc5c514f4d  site/docs-analytics.html: The mental model First run Pulling Putting it under Git Reading the workspace Structure and foreign keys The ER diagram Query-table SQL What nothing depends on Health Exports AI assistant & API keys When something goes wrong 0.
+00c6c6e5a78e3d87  site/docs-analytics.html: The window also has a Relations tab: one row per join, searchable by table, column or join, and every join copyable.
+aeaf04ab914655cf  site/docs-analytics.html: The worst it can do to your workspace is nothing.
+31c35d662b06b969  site/docs-analytics.html: There is nothing to pick and nothing to pick wrong.
+437c99bb6ae6d161  site/docs-analytics.html: These two are the only providers supported, because they are the two that are tested and the only two the extension may reach.
+adb8f39d6c8b70b8  site/docs-analytics.html: They are the only thing in Zoho Analytics that is genuinely source somebody wrote, and one file each is what lets git diff answer what changed in this workspace last month — a question Zoho Analytics cannot answer at all.
+6414ce3bc931368c  site/docs-analytics.html: What it writes is a draft for you to paste, never something Zoost has checked.
+0d455a8a5218c19f  site/docs-analytics.html: What nothing depends on The pull asks Zoho Analytics its own dependency question for every view.
+3ae48d4bf7fdb3e0  site/docs-analytics.html: Whatever is left out is named as left out — so it never concludes a view does not exist because it was not shown one.
+63b37067695ba792  site/docs-analytics.html: When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary: tables and query tables are never dropped, because they are the vocabulary needed to write a query or follow a foreign key, and reports go first because the assistant can still find those by name.
+81a833499fbd7369  site/docs-analytics.html: Workspace index is how much of the workspace is described to the assistant with every message — bigger means it knows more names, and it is billed each time.
+45ec1e855ad024e5  site/docs-analytics.html: Zoho Analytics only knows what its own views read from each other.
+795ad459c95a6f20  site/docs-analytics.html: Zoost is read-only towards Zoho Analytics.
+1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
+5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
+ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
+12f98ef7c51b88b5  site/docs-crm.html: Every tool it uses is shown in the chat.
+dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists (Notes, Attachments, Tasks…) so only your own relations remain.
+b082a3e92f147350  site/docs-crm.html: Find has a scope switch attached to it: in: names matches file names, in: code runs a full-text search across every function source in the org — the closest thing to grep over your Deluge, and something Zoho does not provide.
+f13a92a1cf15097b  site/docs-crm.html: If Zoho refuses an area, the pull says so in plain words instead of showing a status code, nothing is written for it, and its tab disappears rather than sitting there greyed out.
+75b20437b7a7b080  site/docs-crm.html: If the Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar offering to switch tab or switch workspace.
+d4e403e2f9e7e31f  site/docs-crm.html: It also lists the connections the function uses and who last changed it — click a connection to filter the tree to every function that uses it (no more "find in file" for a connection name).
+1a2255f7ad8e77cc  site/docs-crm.html: It cannot go and read another function by itself, so it will ask you for what it is missing rather than invent it.
+e5832c2af79f3465  site/docs-crm.html: It is shown instead of the platform's name, and the platform's name never goes away: it stays in the list's tooltip and in the bar underneath, which always states the real workspace or org the folder is bound to.
+428c0398d98b220f  site/docs-crm.html: It is the one place where an empty field means erase — everywhere else an empty key field means "keep what is stored", which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
+9564ada47e772afd  site/docs-crm.html: It says what goes and what stays before it acts: the encrypted key is removed and the protection turned off, your model names and every other setting are kept, and you paste the API key in again from your provider's dashboard.
+98ef1a98d931d615  site/docs-crm.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: Zoho Analytics names the first workspace of every account the same way, so two projects can arrive on disk looking identical, and a Zoho CRM instance id is exact without being memorable.
+9088f6b9ef5f865d  site/docs-crm.html: Nobody can decrypt that key without the passphrase, Zoost included — this is the only way out, and it is a button rather than a sequence you have to work out.
+77128ef67a1ead78  site/docs-crm.html: Not every Zoho user may read every one of these.
+c3be0edf6c1b7c15  site/docs-crm.html: Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.
+8c8cd47ce92b0562  site/docs-crm.html: Nothing is disabled to be awkward — it is the one guard that stops you mirroring one org into another org’s folder.
+18cdfd3e535709f6  site/docs-crm.html: Nothing is ever deleted for you, and an "orphan" may simply be called from somewhere the API does not report.
+a47b310009d653b8  site/docs-crm.html: Nothing is sent to the developer, and there is no analytics or tracking of any kind.
+b4d0d4bf33a32d98  site/docs-crm.html: Once it is set the fields go away — the passphrase is not stored, so there is nothing to show in them — and the section says the key is encrypted, with a Change passphrase button when you want a different one.
+33c34300b942caec  site/docs-crm.html: Org index is how much of the org is described to the assistant with every message — bigger means it knows more names, and it is billed each time.
+ce00f2abaa40258f  site/docs-crm.html: Production vs sandbox Every workspace is bound to one org, host and instance, recorded in its .zoost.json .
+7ad67999a879cb4e  site/docs-crm.html: Pull (in the mode bar) refreshes only the current type — whichever of Functions, Modules, Workflows, Schedules or Connections is the active tab — faster when you just changed one thing.
+417d35878ad4de50  site/docs-crm.html: Putting it under Git Nothing is automatic here, on purpose: it is your repository, with your conventions.
+bc92a8be1a457ff0  site/docs-crm.html: Roles are per org: a workspace that refuses an area says nothing about the next one.
+a49d5139c6cac3df  site/docs-crm.html: Rows highlighted in cream are fields on no layout — API-only.
+4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
+e4bae9583d66d863  site/docs-crm.html: That is deliberate — the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
+3a0c8ab696c91247  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order — the panel is narrow, and a type you never look at is only in the way.
+98ecb6a7dd36d2ac  site/docs-crm.html: The whole conversation is re-sent with every message, so a long thread costs more per question and drags old, irrelevant context into new answers.
+cd3c1d4f3699b2a8  site/docs-crm.html: The ✎ Name this workspace button next to the list gives it a name of your own, and 🗑 Remove workspace beside it deletes that folder — the local mirror only, never anything in Zoho, and a pull brings it back.
+8b8247558c0a41de  site/docs-crm.html: These are counts, not a score : length measures verbosity, not complexity, and every outbound call is work Zoho meters — how to weigh that is your call, not ours.
+69344e50033052fb  site/docs-crm.html: They look different and are the same fact — the stored key has to be decrypted before it can be written again — and Zoost checks what you type against the stored key before saving anything, so a mistyped passphrase cannot leave you locked out of a key you believe you know.
+e381a6dd705f05ba  site/docs-crm.html: Treat every entry as a candidate to review .
+e50ff7a8b20ab69e  site/docs-crm.html: Turning a tab off clears it, because most tabs are turned off for an area the account cannot read and pulling it then only produces an error — turn it back on if you mirror a type for Git without browsing it.
+f2be60441d80c752  site/docs-crm.html: Usage counts only cover Deluge functions in this workspace .
+280c03fe6eafe8f6  site/docs-crm.html: Whatever is left out is named as left out — so it never concludes something does not exist because it was not shown it.
+dd49702b8c25eb0a  site/docs-crm.html: When an org is too large to describe in full, what gets dropped is decided rather than arbitrary: the function list is never dropped, because it is the vocabulary everything else refers to, and module and connection names go first because the assistant can still fetch those by name.
+5e5ee9eebf7ee86c  site/docs-crm.html: Which one to choose Anthropic (Claude) OpenAI (ChatGPT) Mode Agent with read-only tools Single pass What it sees Whatever it decides to open: any function, module, workflow or connection, plus code search The org index and the function currently open Progress Each tool call appears in the chat as it happens A “thinking…” indicator until the answer arrives Best for “What breaks if I change this?”, tracing behaviour across the org Focused questions about the function in front of you The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.
+4842eb3809f5c858  site/docs-crm.html: With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers, reads schemas, looks up a connection and who uses it, and searches code by itself.
+7fc4bd1ba5bd9af7  site/docs-crm.html: Wrong passphrase or none, and nothing is changed — the encrypted key is left exactly as it was rather than discarded.
+2276f78bba443b13  site/docs-crm.html: You can turn it back off at any time , and the way back is symmetrical: Zoost asks for the current passphrase, because storing the key in clear text again means decrypting it first, and only you can do that.
+0904c52b5d559880  site/docs-crm.html: Zoho lists them in setup, but never tells you which functions actually use one — so nobody dares delete any.
+097876d967f1bf67  site/docs-crm.html: Zoost only reads from Zoho — it never writes back.
+f1006491092000c3  site/docs-crm.html: Zoost takes you to it, but the last click is yours — it never drives the Zoho interface for you.
+16fe75cff2a36b13  site/docs-crm.html: ↺ Whole graph clears the focus and shows every module again.
+b01197109bf28bd7  site/how-to.html: Read the guide → Zoost — workbench for Zoho Analytics Working folder and workspaces, pulling a workspace in one pass, a table's structure and its foreign keys, the ER diagram, query-table SQL as files, what nothing depends on any more, exports, and the AI assistant.
+3f62147687f50b45  site/how-to.html: Zoost — workbench for Zoho CRM Working folder and workspaces, pulling functions, module schema and automations, the reference graph and the ER diagram, full-text search across every function, the health audit, exports, and the AI assistant.
+40ac24561a39aad7  site/index.html: A long function may be a clean mapping table; a view nothing reads may feed a scheduled export.
+4ba19f7990842672  site/index.html: Both Zoosts show you the shape: what depends on what, what nothing depends on, where a name is referenced, and one document you can hand to someone who does not have the extension.
+c03de625dbaec76b  site/index.html: Each Zoost keeps its own subfolder inside it, so a single folder serves them all and the two never meet.
+022f376e6073cb35  site/index.html: Every figure says what it does not cover, right next to itself, and the judgement stays yours.
+57ef5089231bacb8  site/index.html: No Zoost calls an endpoint that writes to Zoho, so the worst it can do to your data is nothing — a property of which endpoints we call, and every one of them is in files you can read.
+02ef675e5015a70f  site/index.html: None of them calls a write endpoint: they read definitions and metadata, never records.
+f1bb58292cbc1041  site/index.html: Nothing leaves the machine No server, no account, no telemetry.
+426d9645987652b8  site/index.html: Numbers, never verdicts Counts and lists, with no thresholds and no score.
+62780dcf27335c03  site/index.html: See the two What they have in common Free · Apache-2.0 · no account The workbenches Zoost — workbench for Zoho CRM on the Web Store Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
+fbb29979b23c670f  site/index.html: That is a property of which endpoints we call, not something the browser enforces, and every call either one can make is in about twenty readable files.
+c06d743a8189abd9  site/index.html: The one exception is the optional AI assistant — and only if you configure it, with your own key, sending only to the provider you picked.
+b47b2959b9857e54  site/index.html: The record of every submitted version is in RELEASES.md , the build is short and does nothing clever , and llms.txt maps the whole chain for anyone — or anything — assessing it.
+ce9438fb296d2b3f  site/index.html: What a Zoost cannot know, it says it cannot know.
+aeb43b33baba5cf2  site/index.html: What every Zoost has in common Read-only, on purpose No Zoost calls an endpoint that creates, edits or deletes anything in Zoho — not a function, not a view, not a setting.
+42339d0e96f4d94a  site/index.html: What it does → How to use it → Install ↗ Zoost — workbench for Zoho Analytics submitted, in review Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of what nothing depends on any more.
+dfdd70b3074c396d  site/llms.txt: ## What none of that proves - Google repackages and re-signs every extension, so what the Chrome Web Store serves is not byte-identical to what was uploaded.
+47c1f7fb88428335  site/llms.txt: - **"Unused" is a candidate, never a verdict.** Both products state the coverage gap next to the number: a connection may be used by Zoho Flow or a widget, a view by a shared link or an API consumer, and neither platform reports that.
+807130fa67c335bb  site/llms.txt: - **Counts are exposed, never graded.** Size and call counts come with what they do not capture, and there is no score, threshold or "worst offenders" list anywhere.
+e33e836a0960af45  site/llms.txt: - **Nothing leaves the machine except through the optional AI assistant**, which is off until the user supplies their own API key, and then talks only to Anthropic or OpenAI — the only two origins the manifest grants.
+94d903168bb57914  site/llms.txt: - **They never read customer records.** Zoho CRM: no contacts, no deals, no notes — only the definitions of what you built.
+f0a50ef6c45f19df  site/llms.txt: - **What is promised.** Nothing is guaranteed; the licence says so.
+14d8b9d3b4b7dad8  site/llms.txt: - An attestation says who built a file, never that the file is good.
+31a25ecc18a93c4c  site/llms.txt: - Reproducibility is verified on two environments (Info-ZIP 3.0 on macOS, and CI on ubuntu-latest), not asserted for every machine.
+190e4264ad192236  site/llms.txt: - [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) — every version submitted to the Chrome Web Store with its tag, commit and the SHA-256 of the uploaded archive.
+c5dd126fc9efb2cd  site/llms.txt: - [Zoost — workbench for Zoho Analytics](https://zoost.it/analytics.html): mirrors every view with its type and folder, the columns of every table and query table, the foreign keys between them, the SQL of each query table as its own file, and the dependency graph.
+65192a5c031e1e7a  site/llms.txt: A passphrase the user chooses is offered as an opt-in (PBKDF2-SHA256 then AES-GCM-256, from the browser's own Web Crypto), leaving only ciphertext on disk and holding the unlocked key in session memory.
+1ac3c49d1381b7f9  site/llms.txt: Adds a reference graph, an ER diagram, full-text search across every function, a health audit, HTML and Markdown exports, and an optional AI assistant.
+af564d79be22cbc7  site/llms.txt: Adds an ER diagram, a list of what nothing depends on any more, exports, and the same assistant.
+53183583ce772e43  site/llms.txt: Every action is pinned to a commit hash.
+f49716e095d6f5e3  site/llms.txt: Every statement below is checkable, and the last section says which ones cannot be checked and why.
+fe1a3d028735a173  site/llms.txt: It also records what it *cannot* prove, including versions that predate the reproducible build.
+93f3f223ab1a4fdc  site/llms.txt: It reads no headers and no response bodies, and alters nothing the page sends or receives.
+ca1491f79d4dc05d  site/llms.txt: Note the precise claim: this is a property of *which* endpoints are called, not something the browser enforces, and every call either makes is in about twenty readable files.
+f0e7d68175895e68  site/llms.txt: Nothing is ever sent to the developer; there is no telemetry.
+147e79068e408c5d  site/llms.txt: Separately it watches that page for one thing only: the URL and method of the request that saves a function, so the local copy can follow.
+8f0426e1a7a15681  site/llms.txt: That part is reading the code, and nothing removes it.
+efd2d9c2d3464cad  site/llms.txt: The Zoho CRM one also reads the org id and user id out of the page's HTML, because nothing exposes them, and takes the CSRF token from the cookies the browser already holds.
+76b9b5a001f4af25  site/llms.txt: This file exists so that an assistant sent to zoost.it can reach every claim the site makes **and the evidence for it**, rather than summarising the marketing page.
+9765c23d8f640c6c  site/llms.txt: What is offered is effort — a break will be looked at and fixed where fixing it is possible, and where it is not, the feature will say it cannot do the thing rather than guess.
+af407f331faf29d1  site/llms.txt: Zoho Analytics: never the rows inside a table; the endpoints that would return cell values exist and are deliberately never called.
+1b47f77e5b022842  site/privacy.html: "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+99eca95b7e321491  site/privacy.html: 4.2 The AI provider — only if you enable it Read this before enabling the assistant The AI assistant is off by default and requires you to enter your own API key.
+8ceaaa09f8a1ffac  site/privacy.html: A policy can only be tightened this way: Chrome refuses a manifest that tries to relax the first two.
+8c40a5bca3d292e4  site/privacy.html: Both also list api.anthropic.com and api.openai.com , contacted only by the optional assistant and only if you configure it.
+abd504c9d56f1430  site/privacy.html: Both list api.anthropic.com and api.openai.com , used only by the optional assistant and only if you configure it.
+ba4e5ea596d25b6d  site/privacy.html: Both list every data centre because an account may live on any of them.
+e4b28888185ddc3c  site/privacy.html: Data held inside your Zoho products remains governed by your own agreement with Zoho and by your organisation's policies; this document covers only what the Zoost extensions do with it.
+87d70ba5a1bf3dfa  site/privacy.html: For Zoost CRM that includes Deluge source code , module schemas, workflow definitions, connection names and their connectors (never their secrets or tokens, which Zoost never reads) and your questions — is sent directly from your browser to the provider you selected: Anthropic or OpenAI.
+4b4478d162693424  site/privacy.html: Held in memory, never written to disk.
+a7495fe32e0ca1a6  site/privacy.html: Host access to api.anthropic.com and api.openai.com — the only two AI destinations the extension can reach, used solely by the optional AI assistant and only after you configure it.
+4f4564ca25083daa  site/privacy.html: It can never send the rows inside a table, because it never reads them — so the assistant knows your workspace's structure and never its values.
+273a31d883270f7f  site/privacy.html: It operates strictly within your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.
+f0ee5fa70b395734  site/privacy.html: Local folder (File System Access) Zoho Analytics The workspace's structure: the list of views with their type, folder, owner and dates; the columns and data types of every table and query table; the relations between them; the dependency graph; and the SQL of each query table as its own .sql file.
+437cdc62836fc4d5  site/privacy.html: Losing the passphrase costs you the stored key, never anything else.
+2e2f3d9316fc3f76  site/privacy.html: Never the rows inside your tables — the extension does not read them, and the endpoints that return cell values are deliberately not called.
+76f310d8d11e0bfb  site/privacy.html: No other destination is possible: the extension is granted network access to those two origins and to your Zoho product, and to nothing else.
+4c424647d30b07f5  site/privacy.html: Nothing is ever sent to the developer.
+d7937cf16b0db74a  site/privacy.html: Privacy policy — Zoost Zoost Zoost — workbench for Zoho CRM Zoost CRM Zoost — workbench for Zoho Analytics Zoost Analytics How to Privacy Privacy policy Zoost — Chrome extensions · Last updated: 5 August 2026 The short version Zoost collects nothing.
+eb6722150f64170a  site/privacy.html: So you do not have to re-pick the folder every time.
+ce909525c8373247  site/privacy.html: The Zoho CRM workbench lists crm.zoho.* and crmsandbox.zoho.* — and their crm.zohocloud.ca and crmsandbox.zohocloud.ca counterparts — which it reads, and one.zoho.* with one.zohocloud.ca , which it does not read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is.
+80d953033aeec226  site/privacy.html: The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
+f7c2debacbfc9fdb  site/privacy.html: The developer therefore does not sell, share, transfer or otherwise process your personal data, because it never receives any.
+4a20b93bc3c75c26  site/privacy.html: The key is then encrypted with a passphrase only you know — PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own Web Crypto — and what sits on disk is ciphertext.
+607cfde6b6e65a7b  site/privacy.html: The last two are stricter than the default and cost nothing, because nothing shipped uses a form or a <base> element.
+9ba5cb9631117dd1  site/privacy.html: The pages are static files; the only script is one small file served from this same domain, which fills in the copyright year and the version badge in the footer.
+e4923f391597023b  site/privacy.html: The passphrase itself is never stored, never sent anywhere, and cannot be recovered: if you forget it, you enter your API key again and choose a new one.
+3178bb82167c1561  site/privacy.html: They are separate extensions with separate permissions, but they behave identically in every respect this document describes: no server, no account, no telemetry, a local mirror in a folder you choose, and one optional AI assistant that only ever talks to a provider you configure yourself.
+a1ea490335e10a52  site/privacy.html: They differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data centres and the Zoho One data centres, the Zoho Analytics one lists the Zoho Analytics data centres.
+c6bebbc6db81a705  site/privacy.html: Those requests are made by the server, not by your browser : nothing about you is sent to Google or GitHub, no identifier of yours is involved, and the answer is cached for everyone alike.
+098eb1610f74c1b9  site/privacy.html: Turning the protection off asks for the current passphrase, because clear text means decrypting the key first; if it is wrong or missing, nothing is changed and the encrypted key is kept rather than discarded.
+6da816de4b2d1c01  site/privacy.html: What the developer collects Nothing.
+a3d4541b04639d56  site/privacy.html: Where What Why Local folder (File System Access) Zoho CRM Deluge function source and its metadata (including which connections each function uses and who last changed it), module and layout metadata, related lists, workflows, schedules, the org's connections catalogue (names, connectors and OAuth scopes — never connection secrets or tokens), exports, and a small .zoost.json per workspace holding the Zoho org id, host and instance name, plus which types Zoho answered for and which it refused, with the date it was asked and the date each type was last read, plus a name for the workspace if you have given it one.
+ccfb7214b5cb4c79  site/privacy.html: Which extensions this covers This policy covers every extension in the Zoost family.
+d76ab061eb0df075  site/privacy.html: You can erase all of it at any time by removing the extension and deleting the working folder.
+2426c0482698d9ae  site/privacy.html: Your API key is stored on your machine in chrome.storage.local , which is where a Chrome extension keeps its settings, and it is sent only to the provider it belongs to.
+7bc06e18e70fa2ec  site/privacy.html: Zoost Analytics can send view names, column names, relations and the SQL of your query tables — and never the rows inside your tables , because it does not read them: the endpoints that return cell values are deliberately not called.
+1e48136a239fb2d8  site/privacy.html: chrome.storage.session Only the API key, and only while it is unlocked — that is, only if you turned on passphrase protection.
+563204a696459fae  site/privacy.html: tabs — to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a production workspace can never be synced against a sandbox by mistake.
+2a7e0b82f00b92af  store/analytics/store-listing.md: - Every view, in one list.
+fd6c294af113d488  store/analytics/store-listing.md: - Foreign keys on every column, and they are links.
+49773b43ee74aff1  store/analytics/store-listing.md: - It never reads the rows in your tables.
+d5edd561177e5d6e  store/analytics/store-listing.md: - The privacy policy URL must point at a page that covers **this** extension, not only the Zoho CRM one.
+cea95bbc5a16019e  store/analytics/store-listing.md: - What nothing depends on.
+871364923250ce2c  store/analytics/store-listing.md: A dialog decides section by section what the file may contain; the SQL is opt-in and flagged every time.
+9ef8210fe151af11  store/analytics/store-listing.md: A popup, which closes on every click, cannot do that.
+89e048c5b9e26259  store/analytics/store-listing.md: All of them with type, folder, owner, column count and dates, filtered by type and searched by name, folder or column name.
+bfc95cca0b3471b7  store/analytics/store-listing.md: Ask Zoho Analytics its own dependency question for every view, and see which ones nothing in the workspace reads.
+e350fca10229e79a  store/analytics/store-listing.md: Before every resubmission: re-read §2 against the manifest `description` (they must be identical, max 132 characters) and confirm every claim below is still true of the code — the same sweep the Zoho CRM listing gets.
+b03c73889c5669f8  store/analytics/store-listing.md: Commit it and git diff answers "what changed in this workspace last month" — a question Zoho Analytics cannot answer at all.
+0ea2238017366035  store/analytics/store-listing.md: Counts and lists, with no thresholds and no score, and every figure stating what it does not cover.
+f972463077c6379a  store/analytics/store-listing.md: Detailed description (store listing) ``` Zoost mirrors a Zoho Analytics workspace into plain local files, then draws you the map that Zoho Analytics never shows you.
+2b1193386d1a1258  store/analytics/store-listing.md: Every "WHAT IT DOES NOT DO" line is a promise, and the two about never writing and never reading rows are the ones that matter most.
+8e15a2045c0eb006  store/analytics/store-listing.md: It also carries the graph data from the side panel to the diagram window, which is a separate extension page and cannot be handed the object directly.
+5c9cab11504a168a  store/analytics/store-listing.md: It cannot know which one in advance, and the set is exactly the list of Zoho Analytics regions, no wider.
+2f345006d01d1963  store/analytics/store-listing.md: It reads only what the signed-in user can already see in the Zoho Analytics interface, using their existing session, and never modifies anything in Zoho Analytics and never reads the data rows inside tables.
+5cd92fd3cbe3e465  store/analytics/store-listing.md: It will not tell you the shape of the whole thing, it will not tell you what changed last month, and it will not tell you which of those hundreds of views nothing reads any more.
+946aae875249b98f  store/analytics/store-listing.md: No code is ever injected into any other site, and nothing is injected that is not part of this extension's own package.
+5ef9cd611c3fefcc  store/analytics/store-listing.md: Nothing is sent anywhere, and there is no remote storage of any kind.
+ba10989196388a66  store/analytics/store-listing.md: Nothing is sent to the developer, and the rows > inside tables are never sent, because the extension does not read them.
+4380abf95010f821  store/analytics/store-listing.md: One pull writes the whole workspace to disk: the view census, the column structure of every table and query table, the relations, and one .sql file per query table.
+cadd7b7db3c35226  store/analytics/store-listing.md: Read in the panel, written to disk one file each, and searchable across all of them at once.
+1796c52185131d7c  store/analytics/store-listing.md: Short description (manifest `description`, max 132) ``` Independent workbench for Zoho Analytics: census every view in a workspace, when each last changed, and what nothing depends on.
+a8029092aec24d00  store/analytics/store-listing.md: Single purpose description (max 1000) ``` Zoost gives a Zoho Analytics user a read-only, local view of the workspace they have built: it mirrors the workspace's structure — views, tables, columns, relations, the SQL of query tables and the dependencies between them — into plain files on the user's own disk, and presents that mirror as a navigable catalogue, an ER diagram, an audit and a shareable report.
+961fadcb7d488cf2  store/analytics/store-listing.md: Stated as candidates, never as a verdict: a shared link, a scheduled export, an embedded report or an API consumer is invisible to that graph, and Zoost says so next to the number.
+8a49ce9c473c8de3  store/analytics/store-listing.md: Structure, relations, SQL and metadata only.
+f7452b4afb8df770  store/analytics/store-listing.md: Tabs on other sites are never read.
+29b64602a25c4cc3  store/analytics/store-listing.md: The API key may be protected by a passphrase, in which case only the encrypted form is kept (AES-GCM, key derived with PBKDF2-SHA256).
+b10fcbc0aca0b22b  store/analytics/store-listing.md: The only thing that ever leaves your machine is what you send to an AI provider, if you choose to configure one — and never the rows in your tables, because Zoost does not read them.
+ee5452bb17b5b2fa  store/analytics/store-listing.md: The panel has to stay visible while the user navigates Zoho Analytics, because the workspace it acts on is whichever one the active tab is in — the panel reads the workspace id from the tab's URL and disables every Zoho-bound action when the tab moves to a different workspace.
+2cc1c7166fb56bf7  store/analytics/store-listing.md: The whole workspace as one self-contained HTML file, or as Markdown shaped as context for an external AI tool — the Markdown carries the constraints of Zoho Analytics' own SQL dialect too, so an assistant that has never seen Zoho Analytics does not write queries that cannot run.
+fc6d00895511858c  store/analytics/store-listing.md: These two are the only AI endpoints supported, because they are the two that are tested; no other endpoint can be configured.
+6bbe316464fbc3c8  store/analytics/store-listing.md: Views nothing depends on, tables in no relation at all, views with no description, items that could not be read.
+52394b196be084c4  store/analytics/store-listing.md: Whatever the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
+9941be4eb008c253  store/analytics/store-listing.md: With Anthropic it runs as an agent with read-only tools over your local mirror — it can read a structure, follow a foreign key, open a query's SQL, search columns, and say what depends on what.
+6c57dd97a623d83b  store/analytics/store-listing.md: With no AI provider > configured, nothing leaves the machine.
+8602cada0110e89d  store/analytics/store-listing.md: Without it the panel would work only on tabs opened after the extension started.
+90901188e44fec94  store/analytics/store-listing.md: https://api.anthropic.com/* and https://api.openai.com/* — used only by the optional AI assistant, and only if the user configures a provider and an API key.
+24bf458abc9b0ed6  store/analytics/store-listing.md: scripting justification (max 1000) ``` The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies.
+c5472299dad2384c  store/analytics/store-listing.md: storage justification (max 1000) ``` chrome.storage.local holds the user's own settings, on their machine only: which AI provider is selected, the model name and the API key entered, the maximum number of tool steps for the agent, and the ER diagram's layout defaults.
+bec2a980f2a6d5ad  store/analytics/store-listing.md: | Notes | |---|---|---| | Personally identifiable information | No | | | Health information | No | | | Financial and payment information | No | | | Authentication information | No | The API key the user enters stays on their own machine — in `chrome.storage.local`, encrypted with a passphrase if they choose that — and is sent only to the provider they chose | | Personal communications | No | | | Location | No | | | Web history | No | | | User activity | No | | | Website content | **Yes** — see below | Only when the user configures the AI assistant | The one disclosure to make, and to word carefully: > If the user configures the optional AI assistant, the parts of the workspace needed to answer their > question — view and column names, relations, and the SQL of query tables — are sent from their > browser directly to the AI provider they chose.
+1b4e05ad32f5d73a  store/crm/store-listing.md: "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+ddf674b812c4b6c2  store/crm/store-listing.md: - Every part knows when it was last read.
+cb78a0169fe8a79f  store/crm/store-listing.md: - Search across every function at once.
+76dbe0bba9090cac  store/crm/store-listing.md: - The old description claimed the extension "never sends your code or data to the developer or any third party".
+515a1a78dd67a223  store/crm/store-listing.md: A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.
+f045dd8ca579ce62  store/crm/store-listing.md: A popup would close on every click on the page, and an injected overlay would modify Zoho's own interface, which we explicitly avoid.
+984130bf96ae4bf9  store/crm/store-listing.md: An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change.
+95834d189c418101  store/crm/store-listing.md: Candidates to review — never automatic deletions.
+9aedc25c181c20d9  store/crm/store-listing.md: Each workspace is bound to its org, host and instance, so a production workspace can never be synced against a sandbox by mistake.
+8b7f7cb413bcf45d  store/crm/store-listing.md: Every check states what it does and does not analyse.
+426670b974b2770f  store/crm/store-listing.md: Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation.
+8b52c44ed28189a1  store/crm/store-listing.md: Every field with type, lookup target, picklist values and mandatory flag.
+80f7b3a76fd975d1  store/crm/store-listing.md: Every function also lists the connections it uses, and who last changed it.
+0b0ce4186f466874  store/crm/store-listing.md: Every function shows its length and how many outbound calls it makes — invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals — so you can see at a glance where length and API cost concentrate.
+4b6a48b16e039bd4  store/crm/store-listing.md: Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
+8752d25853c6c7c2  store/crm/store-listing.md: It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code, and nothing is ever sent to the developer.
+16f36006d0d031c7  store/crm/store-listing.md: It is memory-only and cleared when the browser closes.
+3c66bebc5156c8bf  store/crm/store-listing.md: It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses — those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing.
+e6d4029803df17cc  store/crm/store-listing.md: Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking, once, and records the answer with the date.
+d7ca61381803a403  store/crm/store-listing.md: Nothing is stored remotely or synced.
+eb3d922dbe75f607  store/crm/store-listing.md: Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders.
+63b4363eda0ae188  store/crm/store-listing.md: Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
+8581cab64a3617db  store/crm/store-listing.md: Single purpose description (max 1000) ``` Zoost has one purpose: to give a Zoho CRM administrator or developer a local, read-only mirror of their own org's Deluge code and configuration, and the tools to navigate and document it.
+92fed5b03c9f4f5b  store/crm/store-listing.md: The API key is stored locally and sent only to the provider you pick.
+4984bdcd73e87c04  store/crm/store-listing.md: The extension is inert on every other site.
+9d25858ce82dca10  store/crm/store-listing.md: The sidePanel permission is used only to open and manage that panel.
+b40a3eccd2df07a5  store/crm/store-listing.md: These two origins are the only AI destinations the extension can reach; no other endpoint is configurable.
+11ed9206af2498c3  store/crm/store-listing.md: They read only; they never modify the Zoho page, its content, or any data in the Zoho CRM.
+bc06590584837971  store/crm/store-listing.md: This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org — production versus sandbox in particular — every Zoho-bound action is disabled until they match.
+fbfce5b1a893f987  store/crm/store-listing.md: What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept — AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
+f9c6fd904203ccc4  store/crm/store-listing.md: With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open.
+904dea406880d763  store/crm/store-listing.md: Zoho CRM domains — crm.zoho.com, .eu, .in, .com.au, .jp, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* — cover every Zoho data centre and their sandboxes.
+cae0029df9149604  store/crm/store-listing.md: Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
+582bb9e8a3f5b1de  store/crm/store-listing.md: Zoost never writes back to Zoho, never touches Zoho CRM records, and does nothing on any other website.
+90235ba3e05ea10f  store/crm/store-listing.md: api.anthropic.com and api.openai.com are needed only by the optional AI assistant, and only after the user enters their own API key for one of them.
+9b81c03cf4fa533b  store/crm/store-listing.md: chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked.
+c70170fe0b49d83d  store/crm/store-listing.md: scripting justification (max 1000) ``` scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhere else.
+437f17f9d927c50b  store/crm/store-listing.md: storage justification (max 1000) ``` storage persists the user's own settings between sessions, in chrome.storage.local only.

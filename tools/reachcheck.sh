@@ -46,13 +46,38 @@ probe "no user agent"   ""                        "$SITE/"
 # The map itself, which is the first thing an assessment should reach.
 probe "llms.txt"        "ClaudeBot/1.0"           "$SITE/llms.txt"
 
+# Reaching the site and being *allowed* to are two different questions, and this file only ever asked
+# the first. A well-behaved crawler fetches robots.txt and obeys it, so a 200 here proves the door
+# opens while the sign on it may say keep out — which is exactly what was found: Cloudflare's managed
+# robots.txt content was injecting `Disallow: /` for ClaudeBot, GPTBot, CCBot, Google-Extended and
+# four others, above our own `Allow: /`. Every probe above still passed. The block is a dashboard
+# setting, not a file in this repository, which is why nothing here could have caught it by reading
+# the repo.
+echo
+echo "── robots.txt ──"
+robots=$(curl -s --max-time 15 "$SITE/robots.txt")
+for ua in ClaudeBot GPTBot PerplexityBot CCBot Google-Extended Applebot-Extended Amazonbot bingbot Googlebot; do
+  if printf '%s' "$robots" | awk -v ua="$ua" '
+      BEGIN{IGNORECASE=1; hit=0}
+      /^[Uu]ser-agent:/ { cur = ($2 == ua) }
+      cur && /^[Dd]isallow:[[:space:]]*\/[[:space:]]*$/ { hit=1 }
+      END{ exit !hit }'; then
+    printf '  %-22s %s\n' "$ua" "DISALLOWED by robots.txt"
+    fail=1
+  else
+    printf '  %-22s %s\n' "$ua" "allowed"
+  fi
+done
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "Every probe reached the site. Known exceptions, blocked by Cloudflare's default managed rules"
   echo "and deliberately not probed above: Python-urllib and libwww-perl, both legacy scanner"
   echo "signatures. If an assistant reports it could not read the site, ask which client it used."
 else
-  echo "At least one probe could not read the site. Everything the project claims about being"
-  echo "checkable depends on this, and the failure is invisible from a browser."
+  echo "At least one probe could not read the site, or is told not to. Everything the project claims"
+  echo "about being checkable depends on this, and the failure is invisible from a browser."
+  echo "A robots.txt disallow is a Cloudflare setting, not a file here: AI Crawl Control / managed"
+  echo "robots.txt content in the dashboard for zoost.it."
 fi
 exit "$fail"
