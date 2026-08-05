@@ -33,6 +33,7 @@ const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
 
 const timeout = (ms) => AbortSignal.timeout(ms);
+const listing = (app) => `https://chromewebstore.google.com/detail/${EXT_ID[app]}`;
 
 // Newest git tag **per product**, read from GitHub's Atom feed rather than its JSON API.
 //
@@ -80,7 +81,7 @@ export function pickLatestTag(xml, app) {
 // Published version on the Chrome Web Store. No API exists, so this reads the listing page and only
 // accepts a value shaped like a version.
 async function storeVersion(app) {
-  const r = await fetch(`https://chromewebstore.google.com/detail/${EXT_ID[app]}`, {
+  const r = await fetch(listing(app), {
     headers: {
       'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'accept-language': 'en-US,en;q=0.9',
@@ -163,7 +164,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=11';  // bumped: submission dates come from RELEASES.md
+const CACHE_KEY = '/api/versions?v=12';  // bumped: the payload carries each listing's URL
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -191,8 +192,10 @@ async function versions(request, ctx) {
     // cache before this shape existed still renders something true rather than nothing. `tag` is
     // deliberately CRM's rather than the old repo-wide value: an unqualified one was the bug.
     store: crmStore, repo: crmRepo, tag: crmTag,
-    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag) },
-    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag) },
+    // The listing URL comes from here rather than being written again in site.js: the extension
+    // ids already live in this file, and a second copy is a second thing to go stale.
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), url: listing('crm') },
+    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), url: listing('analytics') },
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {

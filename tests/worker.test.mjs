@@ -81,10 +81,11 @@ test('the first value that looks like a version wins, later prose is not consult
 
 // ---------- the gap between what is released and what the Store serves ----------
 
-const { verOf, newer, dev } = load([
+const { verOf, newer, dev, store } = load([
   sliceFn('site/site.js', 'verOf'),
   sliceFn('site/site.js', 'newer'),
   sliceFn('site/site.js', 'dev'),
+  sliceFn('site/site.js', 'store'),
 ], { REPO_URL: 'https://github.com/ivannot/zoost', esc: (x) => String(x) });
 
 test('a release ahead of the Store is stated, not left to be worked out', () => {
@@ -172,4 +173,17 @@ test('with no release to compare against it falls back to that app\'s commits', 
 
 test('an unknown version is stated, not linked', () => {
   assert.equal(dev('crm', { repo: null, tag: 'crm-v1.9.0' }), '<i>unknown</i>');
+});
+
+test('the Store figure links to the listing when there is one', () => {
+  const html = store({ store: '1.0.0', url: 'https://chromewebstore.google.com/detail/abc' });
+  assert.match(html, /href="https:\/\/chromewebstore\.google\.com\/detail\/abc"/);
+  assert.match(html, />1\.0\.0</);
+});
+
+test('an unpublished listing is never linked', () => {
+  // A version exists only because the listing was scraped, so "unknown" and "no link" are the same
+  // fact. While Zoost Analytics is in review this stays plain text rather than pointing at a page
+  // that serves nothing — the homepage already made that mistake once.
+  assert.equal(store({ store: null, url: 'https://chromewebstore.google.com/detail/abc' }), '<i>unknown</i>');
 });

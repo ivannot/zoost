@@ -109,7 +109,7 @@
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +
             '<div class="vfacts">' +
-              '<span class="vitem"><b>On the Web Store</b> ' + (v.store ? esc(v.store) : '<i>unknown</i>') + '</span>' +
+              '<span class="vitem"><b>On the Web Store</b> ' + store(v) + '</span>' +
               '<span class="vitem"><b>Latest release</b> ' + tag + ahead + '</span>' +
               '<span class="vitem"><b>In development</b> ' + dev(app, v) + '</span>' +
             '</div>' +
@@ -141,6 +141,14 @@
         el.classList.remove('wip'); el.classList.add('live');
       });
     });
+  }
+
+  // Linked only when there is a version, which is the same thing as the listing serving content:
+  // the number comes from scraping that page. So the link cannot lead somewhere empty — while
+  // Zoost Analytics is in review the figure reads "unknown" and stays plain text.
+  function store(v) {
+    if (!v.store) return '<i>unknown</i>';
+    return v.url ? '<a href="' + v.url + '">' + esc(v.store) + '</a>' : esc(v.store);
   }
 
   // The in-development number links to what is *in* it. A compare view against the latest release
