@@ -444,6 +444,17 @@ sentence.
 not answered. `aiCap()` cuts the list, states the true total, and tells the model which argument
 would narrow it.
 
+**The assistant is told what you are looking at, whatever kind of thing it is.** `aiFocus()` builds
+the `CURRENT FOCUS` block from `currentPath`, which every tab already sets. It handled `.dg` files
+only for a long time, so selecting a workflow and asking "what does this do?" got "give me details"
+while the same question about a function worked — the "one of a set" miss, invisible until somebody
+asks the obvious question. The non-function kinds are **serialised from the captured data** rather
+than described field by field: a second description of each shape is free to drift from the pull
+that produces it, and a field named here that does not exist is how an assistant ends up discussing
+something that was never there. Workflows read their **file**, not the index entry, because
+conditions and actions are what the question is about — and when only the index is on disk the
+prompt says so instead of looking complete.
+
 **AI configuration lives in the options page**, not the side panel. The panel is ~400px wide and
 those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
 `window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.

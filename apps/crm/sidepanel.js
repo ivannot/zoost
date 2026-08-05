@@ -1245,10 +1245,62 @@ async function aiBuildSeed(cap) {
   return out;
 }
 
+// What the user is looking at, whatever kind of thing it is.
+//
+// This existed for Deluge functions only. Select a workflow, open the assistant, ask "what does this
+// do?" and it answered that it had no reference and asked for details — while the same question
+// about a function worked. `currentPath` was already being set by every tab; only this read it for
+// one of them. Adding a tab and not extending the focus is the "one of a set" miss the conventions
+// warn about, and it is invisible until someone asks the obvious question.
+//
+// The non-function kinds are serialised from the data actually captured rather than described field
+// by field. Naming fields here would be a second description of each shape, free to drift from the
+// pull that produces it — and inventing one that does not exist is how an assistant ends up
+// confidently discussing something that was never there.
+async function aiFocus() {
+  const p = currentPath;
+  if (!p) return '';
+  const block = (what, body, lang) =>
+    `\n# CURRENT FOCUS\nThe user is looking at ${what}. Answer about this unless they say otherwise.\n`
+    + '```' + (lang || 'json') + '\n' + body + '\n```\n';
+  try {
+    if (p.endsWith('.dg')) {
+      const g = await ensureGraph();
+      const n = Object.values(g.nodes).find((x) => x.file === p);
+      if (n) return block(`the Deluge function ${n.namespace}.${n.name}`, aiTrunc(n.source_code || '', 5000), 'deluge');
+      return '';
+    }
+    if (p.startsWith('_workflows/')) {
+      const e = workflowData.find((x) => x.path === p);
+      // The list entry is the index — name, module, type. What the workflow *does* is its conditions
+      // and actions, and those live in the file, which is exactly what "what does this do?" asks for.
+      let detail = null;
+      try { detail = JSON.parse(await readFile(p)); } catch (_) {}
+      if (detail || e) {
+        return block(`the workflow «${(e && e.name) || (detail && detail.name) || '?'}»`,
+          aiTrunc(JSON.stringify(detail || e, null, 2), 6000))
+          + (detail ? '' : '\nOnly the index entry is on disk for this workflow; its conditions and actions have not been pulled.\n');
+      }
+    }
+    if (p.startsWith('_schedules/')) {
+      const e = scheduleData.find((x) => x.path === p);
+      if (e) return block(`the schedule «${e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
+    }
+    if (p.startsWith('_connections/')) {
+      const e = connectionData.find((x) => x.path === p);
+      if (e) return block(`the connection «${e.label || e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
+    }
+    if (p.startsWith('_modules/')) {
+      const e = moduleData.find((x) => x.path === p);
+      if (e) return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 6000));
+    }
+  } catch (_) { /* a focus that cannot be built is simply absent: never a reason to fail the chat */ }
+  return '';
+}
+
 async function aiSystemPromptB(withTools, cap) {
   const seed = await aiBuildSeed(cap);
-  let focus = '';
-  if (currentPath && currentPath.endsWith('.dg')) { const g = await ensureGraph(); const n = Object.values(g.nodes).find((x) => x.file === currentPath); if (n) focus = `\n# CURRENT FOCUS\nThe user is currently viewing ${n.namespace}.${n.name}:\n\`\`\`deluge\n${aiTrunc(n.source_code || '', 5000)}\n\`\`\`\n`; }
+  const focus = await aiFocus();
   const toolsLine = withTools
     ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';

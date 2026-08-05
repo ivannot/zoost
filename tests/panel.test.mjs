@@ -176,3 +176,68 @@ test('a box the user re-ticks is theirs, and is remembered', () => {
   autoCleared.forEach((k) => { keep[k] = saved[k]; });
   assert.equal(keep.schedules, false, 'a deliberate change is kept');
 });
+
+// ---------- what the assistant is told you are looking at ----------
+
+const focusCtx = {
+  get currentPath() { return globalThis.__cur; },
+  get workflowData() { return globalThis.__wf || []; },
+  get scheduleData() { return globalThis.__sc || []; },
+  get connectionData() { return globalThis.__cn || []; },
+  get moduleData() { return globalThis.__md || []; },
+  aiTrunc: (t, n) => String(t).slice(0, n),
+  ensureGraph: async () => ({ nodes: { a: { file: 'ns/Fn.dg', namespace: 'ns', name: 'Fn', source_code: 'info 1;' } } }),
+  readFile: async (p) => {
+    if (globalThis.__files && globalThis.__files[p]) return globalThis.__files[p];
+    throw new Error('not on disk');
+  },
+  JSON, Object,
+};
+const { aiFocus } = load([sliceFn('apps/crm/sidepanel.js', 'aiFocus')], focusCtx);
+
+function looking(at, extra = {}) {
+  Object.assign(globalThis, { __cur: at, __wf: [], __sc: [], __cn: [], __md: [], __files: {} }, extra);
+  return aiFocus();
+}
+
+test('a Deluge function still gets its source as focus', async () => {
+  const out = await looking('ns/Fn.dg');
+  assert.match(out, /CURRENT FOCUS/);
+  assert.match(out, /Deluge function ns\.Fn/);
+  assert.match(out, /info 1;/);
+});
+
+test('a selected workflow gets its conditions and actions, not "give me details"', async () => {
+  // The reported bug: select a workflow, open the assistant, ask what it does, and it answered that
+  // it had no reference — while the same question about a function worked. currentPath was already
+  // set by every tab; only the focus read it for one of them.
+  const out = await looking('_workflows/42.json', {
+    __wf: [{ path: '_workflows/42.json', name: 'Notify owner', id: '42' }],
+    __files: { '_workflows/42.json': JSON.stringify({ name: 'Notify owner', actions: ['send mail'] }) },
+  });
+  assert.match(out, /the workflow «Notify owner»/);
+  assert.match(out, /send mail/, 'the file, which is where "what does it do" is answered');
+});
+
+test('a workflow whose detail was never pulled says so rather than looking complete', async () => {
+  const out = await looking('_workflows/7.json', { __wf: [{ path: '_workflows/7.json', name: 'Half known' }] });
+  assert.match(out, /the workflow «Half known»/);
+  assert.match(out, /have not been pulled/);
+});
+
+test('schedules, connections and modules each get a focus of their own', async () => {
+  const sc = await looking('_schedules/9', { __sc: [{ path: '_schedules/9', name: 'Nightly' }] });
+  assert.match(sc, /the schedule «Nightly»/);
+
+  const cn = await looking('_connections/books', { __cn: [{ path: '_connections/books', name: 'books', label: 'Books API' }] });
+  assert.match(cn, /the connection «Books API»/);
+
+  const md = await looking('_modules/Contacts.json', { __md: [{ path: '_modules/Contacts.json', api_name: 'Contacts', label: 'Contacts' }] });
+  assert.match(md, /the module «Contacts»/);
+});
+
+test('nothing selected, or something with no focus to give, adds nothing', async () => {
+  assert.equal(await looking(null), '');
+  assert.equal(await looking('export/report.html'), '');
+  assert.equal(await looking('_schedules/404'), '', 'a path with no matching entry is silent, not broken');
+});
