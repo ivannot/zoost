@@ -236,6 +236,11 @@ export default {
       const res = await env.ASSETS.fetch(request);
       const headers = new Headers(res.headers);
       headers.set('content-type', 'text/plain; charset=utf-8');
+      // Five minutes, not the default. llms.txt is a document that will change, and the edge cache
+      // key ignores the query string — so a wrong response cannot be busted from outside and simply
+      // has to expire. That is exactly what happened to the missing charset: the fix deployed and
+      // the old header kept being served. A short TTL is what stops the next one lasting as long.
+      headers.set('cache-control', 'public, max-age=300');
       return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
     }
 

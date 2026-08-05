@@ -1039,6 +1039,13 @@ Two traps that this layout hides:
   intermittently and with no error. The Atom feeds on `github.com` carry the same facts with no such
   limit and no credential: `tags.atom` for the newest tag, `commits/main/<path>.atom` for when a path
   last changed. They are XML, so parse shallowly and keep the shape guards.
+- **A `.txt` has no way to declare its own encoding, so the header must.** Cloudflare serves plain
+  text as `text/plain` with no charset; the browser then guesses, picks Windows-1252, and every
+  em-dash in `llms.txt` arrived as `â€”`. The bytes were valid UTF-8 the whole time — HTML escapes
+  this only because `<meta charset>` says it in-band. `_worker.js` sets the charset for any `.txt`,
+  and a short `max-age` with it: the asset cache key ignores the query string, so a wrong response
+  cannot be busted from outside and has to expire on its own. The fix deployed and the old header
+  kept being served for as long as the default TTL allowed.
 - **The edge cache will hide your deploy.** `/api/versions` is cached for an hour and the Worker
   checks the cache before doing anything, so new code can run and still return the old body — no
   error, no 404, just a value that will not change. The key ignores the query string on purpose (so
