@@ -86,8 +86,13 @@
         // worked on. When the release is ahead of the Store — built, attested, waiting for review —
         // that gap is stated rather than left to be worked out from two numbers. Someone curious can
         // take the archive from the Release and try it before Google gets to it.
+        // The number, not the tag name. Every other figure in this badge is a version, and
+        // "crm-v1.9.0" beside "1.0.0" reads as two different kinds of thing — the reader has to
+        // work out that one of them contains the other. The tag is still where the link goes,
+        // because that is what identifies the release; it just is not what needs saying.
+        var rel = verOf(v.tag) || v.tag;
         var tag = v.tag
-          ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(v.tag) + '</a>'
+          ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
           : '<i>none yet</i>';
         var ahead = newer(verOf(v.tag), v.store) ? ' <i>not on the Store yet</i>' : '';
         bits.push(

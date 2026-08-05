@@ -108,3 +108,15 @@ test('no tag is never ahead of anything', () => {
 test('the comparison is numeric: 1.10.0 is ahead of 1.9.0', () => {
   assert.equal(newer('1.10.0', '1.9.0'), true);
 });
+
+test('the badge shows a version number, and links to the tag', () => {
+  // Mixed registers: "crm-v1.9.0" sat beside "1.0.0" and read as a different kind of thing, so the
+  // reader had to work out that one contained the other. The tag still identifies the release and
+  // is still where the link points — it just is not what needs saying.
+  assert.equal(verOf('crm-v1.9.0'), '1.9.0');
+  assert.equal(verOf('analytics-v1.0.0'), '1.0.0');
+});
+
+test('a tag shaped unexpectedly falls back to its own name rather than showing nothing', () => {
+  assert.equal(verOf('v1.0.0'), null);   // the caller falls back to the tag itself
+});
