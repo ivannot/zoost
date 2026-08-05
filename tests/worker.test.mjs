@@ -12,10 +12,11 @@ import { sliceFn, sliceConst, load } from './slice.mjs';
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
 // tests. The tests do not get to reshape the project.
-const { pickLatestTag, pickStoreVersion } = load([
+const { pickLatestTag, pickStoreVersion, pickSubmissions } = load([
   sliceConst('site/_worker.js', 'IS_VERSION'),
   sliceFn('site/_worker.js', 'pickLatestTag'),
   sliceFn('site/_worker.js', 'pickStoreVersion'),
+  sliceFn('site/_worker.js', 'pickSubmissions'),
 ]);
 
 const entry = (tag, title) =>
@@ -119,4 +120,38 @@ test('the badge shows a version number, and links to the tag', () => {
 
 test('a tag shaped unexpectedly falls back to its own name rather than showing nothing', () => {
   assert.equal(verOf('v1.0.0'), null);   // the caller falls back to the tag itself
+});
+
+// ---------- what has actually been submitted, read from RELEASES.md ----------
+
+test('a submitted version is read with its date', () => {
+  // "submission pending" would assert something never measured — a tag can exist and never have
+  // been sent to Google. The date is in RELEASES.md, so the badge states a fact with a source and
+  // the reader can go and check the row.
+  const md = [
+    '| App | Version | Tag | Commit | SHA-256 | Submitted |',
+    '|---|---|---|---|---|---|',
+    '| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible* | 2026-08-03 |',
+    '| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce` | 2026-08-04 |',
+  ].join('\n');
+  const subs = pickSubmissions(md);
+  assert.equal(subs.crm['1.9.0'], '2026-08-04');
+  assert.equal(subs.analytics['1.0.0'], '2026-08-03');
+});
+
+test('a row whose date is a placeholder is not read as a submission', () => {
+  const md = '| crm | 2.0.0 | `crm-v2.0.0` | `abc1234` | `hash` | (date submitted) |';
+  // Object.keys rather than deepEqual: the object is created inside the vm context, so its
+  // prototype is from another realm and a strict deep comparison fails on that alone.
+  assert.equal(Object.keys(pickSubmissions(md)).length, 0);
+});
+
+test('prose around the table is not mistaken for rows', () => {
+  const md = 'Every version submitted to the Chrome Web Store, with the commit it was built from.';
+  assert.equal(Object.keys(pickSubmissions(md)).length, 0);
+});
+
+test('a tagged version with no row has not been submitted, and is not claimed to be', () => {
+  const subs = pickSubmissions('| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce` | 2026-08-04 |');
+  assert.equal(subs.crm['1.9.2'], undefined);
 });

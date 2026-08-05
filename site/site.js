@@ -94,7 +94,17 @@
         var tag = v.tag
           ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
           : '<i>none yet</i>';
-        var ahead = newer(verOf(v.tag), v.store) ? ' <i>not on the Store yet</i>' : '';
+        // Said only when it is known. "Submitted on 4 Aug — awaiting review" is a fact with a
+        // source: RELEASES.md records the date, and the reader can go and check the row. A tag that
+        // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
+        // tell, and saying "submission pending" there would be asserting something we never
+        // measured — the same shape as every claim this project has had to walk back.
+        var ahead = '';
+        if (newer(verOf(v.tag), v.store)) {
+          ahead = v.submitted
+            ? ' <i>submitted ' + esc(fmtDate(v.submitted) || v.submitted) + ', awaiting review</i>'
+            : ' <i>not submitted yet</i>';
+        }
         bits.push(
           '<div class="vrow">' +
             '<div class="vprod">' + esc(name) + '</div>' +

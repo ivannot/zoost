@@ -101,6 +101,33 @@ export function pickStoreVersion(html) {
   return null;
 }
 
+// When a version was submitted to the Store, read from RELEASES.md — the same record a reader can
+// check. Deriving this is the difference between "submission pending", which asserts something we
+// have not measured, and "submitted on 4 August", which is a fact with a source. A tag can exist
+// without ever having been submitted, so the two must not be conflated.
+async function submissions() {
+  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/RELEASES.md`, {
+    headers: { 'user-agent': UA }, signal: timeout(6000),
+  });
+  if (!r.ok) return {};
+  return pickSubmissions(await r.text());
+}
+
+export function pickSubmissions(md) {
+  const out = {};
+  for (const line of md.split('\n')) {
+    const c = line.split('|').map((x) => x.trim().replace(/^`|`$/g, ''));
+    // | app | version | tag | commit | sha | submitted |
+    if (c.length < 7) continue;
+    const [, app, version, , , , when] = c;
+    if (!/^(crm|analytics)$/.test(app) || !IS_VERSION.test(version)) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) continue;      // shape guard: a real date or nothing
+    out[app] = out[app] || {};
+    out[app][version] = when;
+  }
+  return out;
+}
+
 // The version the code is at right now, straight from the manifest on the default branch. This is
 // deliberately not the same thing as the tag: it is what is built, not what has been released, and
 // the badge labels it "in development" so nobody reads it as something they can install.
@@ -136,7 +163,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=10';  // bumped: the tag is read from the entry link, not the title
+const CACHE_KEY = '/api/versions?v=11';  // bumped: submission dates come from RELEASES.md
 
 async function versions(request, ctx) {
   const cache = caches.default;
@@ -145,22 +172,27 @@ async function versions(request, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, updated, docsUpd, docsAnUpd] =
+  const [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, subs, updated, docsUpd, docsAnUpd] =
     await Promise.all([
       settled(storeVersion('crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
       settled(storeVersion('analytics')), settled(repoVersion('analytics')),
       settled(latestTag('analytics')),
+      settled(submissions()),
       settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
+  const sub = (app, tag) => {
+    const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
+    return (m && subs && subs[app] && subs[app][m[1]]) || null;
+  };
 
   const res = new Response(JSON.stringify({
     // `store`, `repo` and `tag` are kept alongside the per-product blocks so a page served from
     // cache before this shape existed still renders something true rather than nothing. `tag` is
     // deliberately CRM's rather than the old repo-wide value: an unqualified one was the bug.
     store: crmStore, repo: crmRepo, tag: crmTag,
-    crm: { store: crmStore, repo: crmRepo, tag: crmTag },
-    analytics: { store: anStore, repo: anRepo, tag: anTag },
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag) },
+    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag) },
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {
