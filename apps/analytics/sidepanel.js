@@ -116,7 +116,7 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
   + '"Zoho" and "Zoho Analytics" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility. '
   + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
   + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
-  + 'Deciding what may be extracted from Analytics, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
+  + 'Deciding what may be extracted from Zoho Analytics, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
 
 // ---------- state ----------
 let root = null;            // the working folder handle
@@ -151,6 +151,10 @@ async function readFile(rel) {
 }
 const readJson = async (rel, fallback) => { try { return JSON.parse(await readFile(rel)); } catch { return fallback; } };
 const writeJson = (rel, o) => writeFile(rel, JSON.stringify(o, null, 2));
+// Merge rather than replace. `.zoost.json` holds more than the binding — the workspace's own name
+// lives there too — and a whole-object write from any one writer silently drops what the others put
+// in it. The CRM learnt this twice; this side inherits the lesson rather than the bug.
+const patchCfg = async (o) => writeJson(CFG, Object.assign({}, await readJson(CFG, {}), o));
 // Filenames are derived from Zoho's names, so anything a filesystem dislikes has to go. The id is
 // appended because two views in different folders may legitimately share a name.
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
@@ -221,10 +225,19 @@ async function listWorkspaces() {
 
 async function refreshWorkspaces() {
   const sel = $('ws');
-  $('wsroot').textContent = root ? `${root.name}/${APP_DIR}` : 'Choose folder…';
-  $('wsroot').classList.toggle('needgrant', !!root && !rootGranted);
+  // Word for word the CRM's, including the glyphs and the titles: it is the same control, and it read
+  // as a different product for showing «Zoost/analytics» where the other side shows «📁 Zoost». The
+  // subfolder is an implementation detail of where workspaces live, not the folder the user picked.
+  const rt = $('wsroot');
+  const needsGrant = !!root && !rootGranted;
+  rt.classList.toggle('needgrant', needsGrant);
+  rt.textContent = !root ? '\u{1F4C1} Set working folder\u2026'
+    : needsGrant ? `\u{1F513} Grant access to ${root.name}`
+    : `\u{1F4C1} ${root.name}`;
+  rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
+    : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it \u2014 no folder picker.'
+    : `Working folder: ${root.name} \u2014 click to choose a different one`;
   if (root && !rootGranted) {
-    $('wsroot').textContent = `${root.name} — click to grant access`;
     sel.innerHTML = '<option value="">access not granted</option>';
     dir = null; bound = null; return updateButtons();
   }
@@ -245,10 +258,10 @@ async function refreshWorkspaces() {
 
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} — no workspaces yet</option>`;
-    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move the Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
+    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
     dir = null; bound = null; return updateButtons();
   }
-  sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}">${esc(w.name || w.folder)} · ${esc(w.id)}</option>`).join('');
+  sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
   const active = await window.idbHandle.get('activeWsAnalytics');
   const pick = list.find((w) => w.id === active) || list[0];
   sel.value = pick.id;
@@ -257,7 +270,7 @@ async function refreshWorkspaces() {
 
 async function selectWorkspace(w) {
   dir = w.handle;
-  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '' };
+  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '' };
   await window.idbHandle.set('activeWsAnalytics', w.id);
   await loadFromDisk();
   await refreshContext();
@@ -265,7 +278,7 @@ async function selectWorkspace(w) {
 
 async function addWorkspace() {
   if (!root) return status('Pick a working folder first.', 'warn');
-  if (!ctx || !ctx.workspace) return status('Open an Analytics workspace in the active tab first.', 'warn');
+  if (!ctx || !ctx.workspace) return status('Open a Zoho Analytics workspace in the active tab first.', 'warn');
   setBusy(true, 'Creating the workspace folder…');
   try {
     const info = await toBridge({ cmd: 'workspaceInfo' });
@@ -274,7 +287,7 @@ async function addWorkspace() {
     const folder = stemOf(info.name || 'workspace', info.workspace);
     const h = await base.getDirectoryHandle(folder, { create: true });
     dir = h;
-    await writeJson(CFG, { workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV, lastPull: null });
+    await patchCfg({ workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV, lastPull: null });
     setBusy(false, `Workspace «${info.name || info.workspace}» created. Press Pull all.`);
     $('status').className = 'ok';
     await refreshWorkspaces();
@@ -323,7 +336,7 @@ async function toBridge(msg) {
   if (id == null) throw new Error('The active tab is not Zoho Analytics.');
   await ensureBridge(id);
   const r = await chrome.tabs.sendMessage(id, msg);
-  if (!r) throw new Error('No answer from the Analytics page.');
+  if (!r) throw new Error('No answer from the Zoho Analytics page.');
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
   // bridge is thrown away one line after crossing the boundary — which is how "your role does not
   // allow this" would end up displayed as a bare status code again.
@@ -356,10 +369,10 @@ async function refreshContext() {
   await ensureBridge(id);
   try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); ctx = r && r.ok ? r : null; } catch { ctx = null; }
 
-  if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Analytics tab (not ready — reload it)'; bnd.innerHTML = localLbl; }
-  else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
+  if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready — reload it)'; bnd.innerHTML = localLbl; }
+  else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Zoho Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
   else {
-    who.innerHTML = `<span class="rlbl remote">Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
+    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
     else { el.className = 'mismatch'; bnd.innerHTML = localLbl + ' ✗'; }
@@ -408,6 +421,7 @@ function updateButtons() {
   $('wsadd').hidden = known;
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
+  $('wsrename').disabled = busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
   $('pull').disabled = busy || !dir || !guardOk();
   // Absent, not disabled, when there is nothing to retry — the CRM's equivalent does the same.
   // A greyed button still says "there is something here you cannot have", which is misleading
@@ -469,7 +483,7 @@ async function pullAll() {
     // A refusal is not a fault, and saying "Pull failed: 403" for one sends the user looking for a
     // bug in Zoost instead of to whoever administers their Analytics roles.
     setBusy(false, e && e.forbidden
-      ? `Your Analytics role does not grant access to this workspace${e.status ? ` (Analytics answered ${e.status})` : ''}. Nothing was written — what is on disk is unchanged.`
+      ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written — what is on disk is unchanged.`
       : 'Pull failed: ' + (e.message || e));
     $('status').className = 'bad';
   } finally {
@@ -567,12 +581,12 @@ async function writeToDisk(info) {
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
   await writeJson('sql/_index.json', index);
-  await writeJson(CFG, {
+  await patchCfg({
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
     counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, relations: relations.length, sql: Object.keys(sqls).length },
   });
-  bound = { workspace: info.workspace, name: info.name, origin: info.origin };
+  bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '' };
 }
 
 async function loadFromDisk() {
@@ -598,7 +612,7 @@ async function loadFromDisk() {
 //   null  → the file is not there or could not be opened
 //   ''    → Analytics answered with an empty query
 const SQL_UNREADABLE = '(the .sql file could not be read — use Pull on this view to fetch it again)';
-const SQL_EMPTY = '(Analytics returned this query table with no SQL text at all)';
+const SQL_EMPTY = '(Zoho Analytics returned this query table with no SQL text at all)';
 const sqlText = (body) => (body == null ? SQL_UNREADABLE : (body.trim() ? body : SQL_EMPTY));
 
 // SQL bodies are not held in memory after a reload — they are read from their file on demand, which
@@ -796,7 +810,7 @@ function render() {
       <th class="num" title="As Zoho words it, in your interface language — not sortable, see the note below">Design</th>
       <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on \u2014 the Lineage tab breaks the same figure down">Read by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
-      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Analytics flags this as a system table — it came from a connected source, you did not build it">system</span>' : ''}</div></td>
+      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Zoho Analytics flags this as a system table — it came from a connected source, you did not build it">system</span>' : ''}</div></td>
       <td><span class="vtype">${esc(v.type)}</span></td>
       <td class="num">${colCount(v)}</td>
       ${v.designModifiedAt
@@ -870,7 +884,7 @@ async function renderDetail(v) {
     const chain = structureChain(v, m);
     if (!chain) {
       body.innerHTML = `<div class="dpad"><div class="empty" style="padding:0"><b>No structure to show.</b>
-        A ${esc(v.type)} has no columns of its own, and Analytics does not tell us which view it is
+        A ${esc(v.type)} has no columns of its own, and Zoho Analytics does not tell us which view it is
         built on — so there is nothing here that would be true.</div></div>`;
       return;
     }
@@ -1024,9 +1038,92 @@ let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false, aiSeedOmitted
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
+  const cfg = { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
+  // A protected key is on disk as ciphertext only. The plaintext lives in chrome.storage.session for
+  // as long as the browser runs, and is put back here so every caller downstream sees an ordinary key
+  // and nothing else has to learn about the passphrase.
+  for (const prov of ['anthropic', 'openai']) {
+    if (cfg[prov].apiKeyEnc && !cfg[prov].apiKey) cfg[prov].apiKey = (await window.ZOOST_KEYVAULT.recall(prov)) || '';
+  }
+  return cfg;
 }
+/** Locked = there is a key, it is encrypted, and this session has not unlocked it yet. Distinct from
+ *  not-configured: the remedy is a passphrase here, not a trip to Settings. */
+function aiLocked(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKeyEnc && !p.apiKey); }
 function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
+
+// ---------- unlocking a protected API key ----------
+// The passphrase is never stored and never leaves this function: it decrypts once, the plaintext goes
+// to chrome.storage.session, and the field is cleared. Forgetting it is recoverable only by entering
+// the API key again — stated in Settings, and not softened here.
+function aiShowLock(on) {
+  const row = $('ailockrow'); if (!row) return;
+  // Idempotent on purpose: this runs on every window focus and every settings change, and re-showing
+  // a row that is already showing would clear a half-typed passphrase and steal the caret back.
+  if (row.hidden !== !on) {
+    row.hidden = !on;
+    if (on) { $('ailockpass').value = ''; aiLockMsg(''); $('ailockpass').focus(); }
+  }
+}
+/** A DOMException's message names the symptom and never the remedy.
+ *
+ * "The request is not allowed by the user agent or the platform in the current context." is what a
+ * lapsed folder permission looks like from inside the agent loop, and it reads as a bug in the
+ * extension. Translated where it surfaces, so a user who meets it once more is told which button to
+ * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
+ * passed through untouched rather than dressed up.
+ */
+function aiErrorText(e) {
+  const m = (e && e.message) || String(e);
+  if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
+    return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
+      + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
+  }
+  return 'Error: ' + m;
+}
+
+/** Re-grant the working folder before the assistant touches it.
+ *
+ * Chrome lets a File System Access permission lapse after inactivity, and every read then throws
+ * `NotAllowedError: The request is not allowed by the user agent or the platform in the current
+ * context.` — a message that names neither the folder nor the remedy. The AI path reads the mirror
+ * directly (the seed index, the tools, the graph) and was the one path that never asked first, so it
+ * surfaced as "the chat is broken until I click an item and come back": clicking an item runs
+ * ensurePerm() under a real gesture and fixes it as a side effect.
+ *
+ * It has to happen *here*, at the click. requestPermission() needs transient user activation, so the
+ * same call made inside the agent loop — after a network round trip to the model — is refused for want
+ * of a gesture, which is the very error being reported. Same fix the Health view already carries.
+ */
+async function aiEnsureFiles() {
+  if (!dir) return true;
+  try { return await ensurePerm(dir); } catch (_) { return false; }
+}
+
+/** The verdict on a passphrase goes beside the field, because that is where the eye is — and because
+ *  in the CRM panel the AI view covers the status bar completely, so a warning sent there while the
+ *  chat is open is written to an element nobody can see. Same code on both sides regardless. */
+function aiLockMsg(text) {
+  const el = $('ailockmsg'); if (!el) return;
+  el.textContent = text; el.hidden = !text;
+}
+async function aiUnlock() {
+  const pass = $('ailockpass').value;
+  if (!pass) { aiLockMsg('Type the passphrase you chose in Settings.'); $('ailockpass').focus(); return; }
+  const cfg = await aiGetCfg();
+  const prov = cfg.active; const box = (cfg[prov] || {}).apiKeyEnc;
+  if (!box) { aiShowLock(false); return; }
+  const key = await window.ZOOST_KEYVAULT.unlock(box, pass);
+  // AES-GCM authenticates, so failure means the passphrase is wrong or the stored value is damaged.
+  // Which of the two cannot be told apart, and the message says so rather than picking one.
+  if (!key) {
+    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
+    status('Wrong passphrase.', 'warn');
+    $('ailockpass').select(); return;
+  }
+  await window.ZOOST_KEYVAULT.remember(prov, key);
+  aiLockMsg(''); aiShowLock(false); status('API key unlocked for this browser session.', 'ok');
+}
 function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }
 
 const aiFindView = (q) => {
@@ -1142,7 +1239,7 @@ async function aiSystemPrompt(withTools, cap) {
     ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view — structure, foreign keys, SQL and lineage — so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
     : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
   return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
-    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic \u2014 a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
+    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic \u2014 a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
     + `${window.ZOHO_ANALYTICS_SQL.text()}\n`
     + `${productHelp()}${focus}\n# WORKSPACE INDEX\n${seed}`;
 }
@@ -1204,7 +1301,7 @@ async function aiExecTool(name, input) {
     }
     out += d
       ? `\nreads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}\n`
-        + 'Note: Analytics only knows what its own views read from each other — a shared link, a scheduled export or an API consumer is invisible to it.'
+        + 'Note: Zoho Analytics only knows what its own views read from each other — a shared link, a scheduled export or an API consumer is invisible to it.'
       : '\nlineage: not pulled';
     return out;
   }
@@ -1248,7 +1345,7 @@ async function aiExecTool(name, input) {
     if (!d) return `No lineage for ${v.name} — it was not pulled.`;
     return `${v.name} is read by ${d.children.length} view(s) and appears on ${d.dashboards.length} dashboard(s).\n`
       + (d.children.map((x) => `- ${nameOf(x.id, m)} (level ${x.level})`).join('\n') || '(nothing reads from it)')
-      + `\nNote: Analytics only knows what its own views read from each other. A shared link, a scheduled export, an embedded report or an API consumer is invisible to it.`;
+      + `\nNote: Zoho Analytics only knows what its own views read from each other. A shared link, a scheduled export, an embedded report or an API consumer is invisible to it.`;
   }
   if (name === 'orphans') {
     if (!deps) return 'Lineage was not pulled, so this cannot be answered.';
@@ -1366,6 +1463,8 @@ function aiRenderMessages() {
 async function aiSend() {
   const cfg = await aiGetCfg();
   aiEngineChrome();
+  if (aiLocked(cfg)) { aiShowLock(true); return; }
+  if (!(await aiEnsureFiles())) { status('Folder access needs re-granting \u2014 press \u21bb Refresh, then ask again.', 'warn'); return; }
   if (!aiActiveReady(cfg)) { openSettings(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -1386,7 +1485,7 @@ async function aiSend() {
     if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     status('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); status('AI error', 'warn'); }
+  } catch (e) { aiMessages.push({ role: 'assistant', content: aiErrorText(e) }); status('AI error', 'warn'); }
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -1395,6 +1494,7 @@ async function aiEngineChrome() {
   const b = $('aiengbadge'), note = $('ainote');
   if (!b || !note) return;
   const cfg = await aiGetCfg();
+  aiShowLock(aiLocked(cfg));      // the chrome refresh is the one place that already re-reads the config
   if (cfg.active === 'anthropic') { b.textContent = 'Claude · agent'; b.className = 'agent'; note.className = 'ainote'; }
   else {
     b.textContent = 'OpenAI · single-shot'; b.className = 'single';
@@ -1430,7 +1530,8 @@ function toggleAI() {
   if (!views.length) return;
   closeHealth();   // one panel at a time
   $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open');
-  aiContextLabel(); aiEngineChrome(); aiRenderMessages();   // the label fills in when its measurement lands
+  aiEngineChrome(); aiRenderMessages();
+  aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
 function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation?')) return; aiMessages = []; aiSeedWarned = false; aiRenderMessages(); }
@@ -1515,14 +1616,14 @@ async function buildExportHtml(sc) {
       const H = x.h;
       body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
         + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
-        + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Analytics' own dependency graph.</p>`
+        + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
         + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${esc2(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
         + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${esc2(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
         + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${esc2(v.name)}</li>`).join('')}</ul>`
         + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} — ${esc2(f.error)}</li>`).join('')}</ul>` : '');
     }
   }
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost — ${esc2(bound.name || bound.workspace)}</title><style>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost — ${esc2(bound.label || bound.name || bound.workspace)}</title><style>
 body{font:14px/1.6 system-ui,sans-serif;color:#1b2431;background:#fff;margin:0;padding:28px;max-width:1100px}
 h1{margin:0 0 4px} h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid #e6ebf2} h3{margin:18px 0 6px;font-size:15px}
 small,i{color:#6b7a90;font-weight:400;font-style:normal}
@@ -1534,8 +1635,8 @@ pre{background:#f7f9fc;border:1px solid #e3e9f2;border-radius:6px;padding:10px;o
 nav ul{columns:2;list-style:none;padding:0} nav a{color:#0e9488;text-decoration:none}
 footer{margin-top:36px;padding-top:12px;border-top:1px solid #e6ebf2;color:#6b7a90;font-size:12px}
 </style></head><body>
-<h1>${esc2(bound.name || bound.workspace)}</h1>
-<div class="meta">Zoho Analytics workspace ${esc2(bound.workspace)} · ${esc2(bound.origin || '')} · exported ${new Date().toISOString().slice(0, 10)} by ${esc2(PRODUCT_NAME)} v${esc2(chrome.runtime.getManifest().version)}</div>
+<h1>${esc2(bound.label || bound.name || bound.workspace)}</h1>
+<div class="meta">${bound.label ? `Zoho Analytics workspace ${esc2(bound.name || '')} \u00b7 ` : 'Zoho Analytics workspace '}${esc2(bound.workspace)} · ${esc2(bound.origin || '')} · exported ${new Date().toISOString().slice(0, 10)} by ${esc2(PRODUCT_NAME)} v${esc2(chrome.runtime.getManifest().version)}</div>
 <nav><ul>${toc}</ul></nav>
 ${body}
 <footer>Read-only mirror. Zoost never creates, edits or deletes anything in Zoho Analytics, and never reads record data.<br>${esc2(LEGAL_DISCLAIMER)}</footer>
@@ -1545,7 +1646,7 @@ ${body}
 async function buildExportMarkdown(sc) {
   const secs = exportSections(sc);
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
-  let out = `# ${bound.name || bound.workspace}\n\nZoho Analytics workspace \`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
+  let out = `# ${bound.label || bound.name || bound.workspace}\n\nZoho Analytics workspace ${bound.label && bound.name ? `${bound.name} ` : ''}\`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
   out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
   out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n- Zoho Analytics SQL — what query tables allow\n\n';
   // The dialect reference travels with the export on purpose: this file exists to be handed to an
@@ -1566,7 +1667,7 @@ async function buildExportMarkdown(sc) {
       const H = x.h;
       out += `${H.counts.views} views · ${H.counts.tables} tables · ${H.counts.columns} columns · ${H.counts.relations} relations · ${H.counts.sql} SQL\n\n`;
       out += '> Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.\n\n';
-      out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Analytics' own dependency graph.\n\n`;
+      out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.\n\n`;
       if (H.orphans) out += H.orphans.map((v) => `- ${v.name} (${v.type})`).join('\n') + '\n\n';
       out += `### Tables in no relation (${H.islands.length})\n\n` + H.islands.map((t) => `- ${t.name} (${t.kind})`).join('\n') + '\n\n';
       out += `### Put there by Zoho, not by you (${H.system.length})\n\n` + H.system.map((v) => `- ${v.name}`).join('\n') + '\n\n';
@@ -1633,7 +1734,7 @@ function renderHealth() {
 
     + `<h4>Nothing depends on them <span class="hnum">${h.orphans ? h.orphans.length : '—'}</span></h4>`
     + (h.orphans ? list(h.orphans, nm) : '<div class="gap">Lineage was not pulled.</div>')
-    + `<div class="gap">Candidates, not a verdict. Analytics only knows what its own views read from each other; a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.</div>`
+    + `<div class="gap">Candidates, not a verdict. Zoho Analytics only knows what its own views read from each other; a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.</div>`
 
     + `<h4>Tables in no relation <span class="hnum">${h.islands.length}</span></h4>`
     + list(h.islands, nm)
@@ -1641,7 +1742,7 @@ function renderHealth() {
 
     + `<h4>Put there by Zoho, not by you <span class="hnum">${h.system.length}</span></h4>`
     + list(h.system, nm)
-    + `<div class="gap">Flagged <code>isSystemTable</code> by Analytics itself — typically synced from a connected source. The view list does not flag any of them, so this comes from the ER model alone.</div>`
+    + `<div class="gap">Flagged <code>isSystemTable</code> by Zoho Analytics itself — typically synced from a connected source. The view list does not flag any of them, so this comes from the ER model alone.</div>`
 
     + `<h4>No description <span class="hnum">${h.undescribed.length}</span> of ${h.counts.views}</h4>`
     + `<div class="gap">A count, not a judgement. Plenty of views need no description.</div>`
@@ -1679,6 +1780,49 @@ function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classLi
 
 // ---------- wiring ----------
 $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
+/** What the workspace list shows, and what it must never stop showing.
+ *
+ * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
+ * the derived name is kept — in the option's tooltip, always, whether or not a label is set. A list
+ * that showed only the user's name for something would be a list you cannot check against the
+ * platform.
+ */
+function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || `${w.name || w.folder} \u00b7 ${w.id}`; }
+function wsOptionTitle(w) {
+  const label = ((w.cfg && w.cfg.label) || '').trim();
+  return label ? `${label} \u2014 folder ${`${w.name || w.folder} \u00b7 ${w.id}`}` : `${w.name || w.folder} \u00b7 ${w.id}`;
+}
+
+/** A name of the user's own for a workspace.
+ *
+ * The folder name is derived from the platform, and the platform is not always evocative: Zoho
+ * Analytics names the first workspace of every account the same way, so three projects can arrive on
+ * disk with the same label and nothing to tell them apart. Zoho CRM has the instance and the org id,
+ * which are unambiguous and still not memorable.
+ *
+ * So the label is *displayed instead of* the derived name, and the derived name never disappears —
+ * it stays in the option's tooltip and in the bar beneath, because the label is a convenience and the
+ * identity is the org or workspace id. Storing it in `.zoost.json` (through `patchCfg`, never
+ * `writeCfg`) keeps it with the workspace: it survives a re-pull, and it travels with the folder if
+ * the folder does.
+ */
+async function renameWorkspace() {
+  const w = wsList.find((x) => x.id === $('ws').value);
+  if (!w || !dir) return;
+  const current = (w.cfg && w.cfg.label) || '';
+  const typed = window.prompt(
+    `Name for this workspace.\n\nShown in the list instead of \u00ab${w.name}\u00bb, which stays visible as the tooltip.\nLeave it empty to go back to that name.`,
+    current);
+  if (typed === null) return;                      // cancelled: not the same as cleared
+  const label = typed.trim().slice(0, 60);         // it has to fit a 400px bar; longer is not a name
+  if (label === current) return;
+  try {
+    await patchCfg({ label });
+    status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
+    await refreshWorkspaces();
+  } catch (e) { status('Could not save the name: ' + (e.message || e), 'bad'); }
+}
+$('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = addWorkspace;
 $('wsdel').onclick = delWorkspace;
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
@@ -1700,6 +1844,7 @@ $('aix').onclick = closeAI;
 $('aiclear').onclick = aiClear;
 $('aigear').onclick = () => openSettings();
 $('ainotex').onclick = () => $('ainote').classList.remove('show');
+$('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('aisend').onclick = aiSend;
 $('aiinput').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); aiSend(); } });
 chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.aicfg) aiEngineChrome(); });

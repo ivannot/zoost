@@ -181,6 +181,10 @@ could have caught it. So also compare, by reading both sides:
   access" — and **anything that reads from Zoho says "Pull"** and wears `.zbtn`, whether it is
   "Pull all", the per-type "Pull", or the per-item one. The Analytics detail pane shipped a `↻` that
   called Zoho; it was the right colour and the wrong glyph, which is the confusing combination.
+  **A glyph that merely *resembles* another is the same defect.** The AI chat's Clear wore `↺`, which
+  differs from `↻` only in the direction of an arrow, at 11px, a few pixels from the real Refresh.
+  It lost the glyph rather than gaining a new one: the label already says Clear, and the vocabulary is
+  better one symbol smaller than one ambiguity larger.
 - **where a file is written and what it is called** — `export/zoost-<name>-<stamp>.<ext>`, with
   `stamp = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')` and `sanitize()` on the name
 - **what the status line says afterwards**, word for word
@@ -257,6 +261,21 @@ Workspaces found sitting directly in the working folder are the older flat layou
 not adopt them; it says precisely how many there are and where to move them. Detecting them is not a
 compatibility fallback — nothing keeps working the old way — it is an empty state that tells the
 truth instead of reporting "no workspaces" while the folders are plainly there.
+
+**A workspace can carry a name of the user's own, and it never replaces the identity.** The derived
+name comes from the platform and the platform is not always helpful: Zoho Analytics names the first
+workspace of every account the same way, so several projects arrive on disk indistinguishable, and a
+Zoho CRM instance id is exact without being memorable. `label` in `.zoost.json` is displayed *instead
+of* the derived name in the workspace list — and the derived name is kept in the option's tooltip, in
+the bar underneath (which always states the real org or workspace the folder is bound to) and in both
+exports beside the label. **A list showing only our own words would be one nobody could check against
+Zoho**, which is the whole posture of the product. It is written through `patchCfg`, never `writeCfg`.
+
+**And the `cacheBinding` trap was still live in two places while this was being built.** The CRM's own
+`pullAll()` wrote `.zoost.json` whole, dropping the access verdicts every other writer had put there;
+Analytics had no `patchCfg` at all and its pull replaced the file twice over. Both now merge. The
+lesson is the one already in this file and it keeps costing: **every writer of a shared file merges,
+and the moment a new field lands there, the writers that predate it are wrong.**
 
 **The environment guard is the most important safety property.** Each workspace is bound to one
 org, host and instance. If the active Zoho tab belongs to a different org, every Zoho-bound action
@@ -496,10 +515,128 @@ prompt says so instead of looking complete.
 those are set-once fields. The panel picks changes up via `chrome.storage.onChanged` plus a
 `window.focus` re-read. A selector that changes a *mode* saves on change, not behind a Save button.
 
+**The API key is stored in clear text by default, and the passphrase that changes that is opt-in.**
+Chrome gives extensions no encryption at rest and no credential store, so anything the extension can
+unlock by itself, anyone with the browser profile can unlock too — encrypting with a key kept beside
+the ciphertext would be **theatre, and worse than storing plainly**, because it lets us claim a
+protection we do not provide. The only real protection is a secret we do not hold. So `keyvault.js`
+(byte-identical in both apps) offers PBKDF2-SHA256 → AES-GCM-256 over a passphrase the user chooses,
+the ciphertext is what sits in `chrome.storage.local`, and the unlocked key lives in
+`chrome.storage.session` for the browser session. **There is no recovery** — no hint, no escrow, no
+reset — because a secret whose replacement costs one visit to a provider's dashboard does not deserve
+a back door, and a back door is what a recovery path is.
+
+**The switch works in both directions, and getting that wrong was nearly the worst bug in the
+feature.** Turning the protection *off* needs the passphrase too — clear text means decrypting what is
+stored, and we do not hold the secret — so the first version simply deleted the ciphertext and wrote a
+config with no key at all: silent, total, irreversible. Two rules came out of it, both binding.
+`mergeKeys()` **never destroys**: a failed or absent unlock keeps the ciphertext exactly as it was.
+And the handler **refuses to save** a config that says "no protection" while a ciphertext survives,
+because that state is a key nobody can read described as one anybody can. The question that found it
+was the obvious one — *can I go back?* — asked by the user, not by a test, which is the failure.
+
+**You cannot re-encrypt what you have not decrypted, and three different-looking actions are that one
+fact.** Changing the passphrase, replacing the API key while protected, and turning the protection off
+all end in a write that must start from the plaintext — which only the user can produce. Missing it
+made **Change passphrase ask for the new one twice, save, report success and change nothing**: the
+merge read `had.apiKeyEnc && !typed` as "leave it alone" and never looked at the new passphrase at all.
+The form therefore asks for the passphrase **in use** whenever any of the three is happening
+(`aiNeedCurrent()`), and the handler **proves it against the stored ciphertext before writing** rather
+than taking it on trust — encrypting a new key with a mistyped passphrase locks the user out of a key
+they believe they can open, and nothing would tell them until the next browser restart.
+
+**A blank key field means "keep", except in the one place that says "erase".** Those two are the same
+screen state and must do opposite things: blank-means-keep is what stops an unrelated save from wiping a
+key the user cannot retype because it is encrypted, and a **Forget** button per provider is the declared
+exception — it clears model and key on the next Save, and it is the only way out for a key whose
+passphrase is gone. Without it "I have forgotten the passphrase" would have no answer inside the page,
+because the merge rightly refuses to drop a ciphertext it cannot read.
+
+**A rule enforced on the user and not on the default is worse than no rule.** The engine selector
+refused a move *to* an unconfigured provider and said nothing about *sitting on* one — and a fresh
+install sits on Anthropic with nothing filled in, so it showed a chosen, working engine that could not
+answer a single question. Two consequences: every option states whether it is ready
+(`markEngineOptions()`), and a save that leaves **exactly one** usable engine selects it and says so,
+because choosing the only engine that works is not a decision worth asking about.
+
+**A recovery path that has to be worked out is not a recovery path.** Losing the passphrase already had
+an answer — Forget on each provider, untick, save — and it was reachable only by deduction, which is no
+use to somebody who has just lost a passphrase. **Remove the protection** does it in one control, acts
+immediately rather than through Save (Save asks for the passphrase in use, which is the one thing that
+does not exist here), is offered in **every** state where a passphrase exists rather than only the quiet
+one, and states what goes and what stays before acting. Every message that mentioned the old sequence
+now names this button; a test asserts none of them says "Forget above" again.
+
+**The engine selector refuses a provider with no model or no key**, names what is missing, and puts
+itself back. Not a preference: choosing an engine that cannot answer is a dead end the *panel* discovers
+later, in another window, at the moment of a question. It judges the **form**, never what is stored —
+refusing a key the user can see they have just typed would be the tool arguing with its own screen — and
+it is not a dead end either way, because both providers' fields are on the same page.
+
+It is **off by default and stated rather than defaulted**, on the user's own reasoning: on a personal
+machine a passphrase each session buys little, on a shared one it buys a lot, and nobody but the user
+can price that. Three consequences that are not optional. The limit is named next to the promise — a
+key already unlocked is in the browser's memory, so what a passphrase protects is the key *at rest*.
+`aiGetCfg()` is the **single** place that puts the plaintext back into the config, so nothing
+downstream learns about passphrases at all — which is why `aiSaveCfg()` had to go: it was already
+dead, and the moment `aiGetCfg()` started returning a decrypted key, a config written back would have
+put the plaintext on disk. And `mergeKeys()` in `options.js` exists as a named function purely so it
+can be tested: **a blank key field with a key already stored means "leave it alone", never "erase
+it"**, because a protected key cannot be redisplayed and reading that blank as a deletion would throw
+the user's key away on any unrelated save.
+
 ## Traps already hit — check for these
 
 These all failed **silently**, with no console error. They are the expensive kind.
 
+- **An author `display` beats the `hidden` attribute, and nothing says so.** `hidden` is a UA rule, so
+  `.lockrow{display:flex}` on an element that also carries `hidden` leaves it on screen — no console
+  error, no layout break, just a row that is always there. It shipped **twice in one change** (the
+  passphrase row in Settings, the unlock row in the panel) and was found by the user opening the page,
+  not by a check. Every shipped page now states `[hidden]{display:none!important}` once, and
+  `htmlcheck.py` reports a page that uses the attribute without carrying the rule. The check is
+  deliberately per *page* and not per element: a per-element version goes quiet the moment someone adds
+  a `display` to a class that did not have one, which is exactly how this happened.
+- **`requestPermission()` needs a user gesture, so it cannot live inside the agent loop.** Chrome lets a
+  File System Access permission lapse after inactivity, and the AI path reads the mirror directly — the
+  seed index, the tools, the graph — while being the one path that never re-requested it first. The read
+  then throws `NotAllowedError: The request is not allowed by the user agent or the platform in the
+  current context.`, which names neither the folder nor the remedy and reads as the extension being
+  broken. It surfaced as "the chat fails until I click an item and come back", because clicking an item
+  runs `ensurePerm()` under a real click and fixes it as a side effect. `aiEnsureFiles()` now runs at
+  both entry points — **Send and opening the view, which are gestures** — and note *why* it has to be
+  there: the same call made after a round trip to the model is refused for want of activation, which is
+  the error itself. The Health view hit this first and its fix was never generalised; that is the
+  recurring shape, not the DOMException.
+- **A platform exception's message is a symptom, and shipping it verbatim ships a symptom.**
+  `aiErrorText()` translates that one string into which button to press, and passes everything else
+  through untouched rather than dressing it up. It matches, it does not parse, and it branches on
+  nothing.
+- **In the CRM panel `#status` is *inside* `#belowbar`, so the AI view covers it.** `#aiview` is
+  `position:absolute; inset:0` in that container, which is the documented decision — the view owns
+  everything below the main toolbar — but the consequence had never been drawn: **every `setStatus()`
+  made while the chat is open is written to an element nobody can see.** In Analytics the status bar is
+  a top-level sibling *above* the view, so the same code reports and the CRM does not. It surfaced as
+  "typing a wrong passphrase shows no error", which was true on one side and not the other. The rule
+  that follows is general and not about passphrases: **a verdict about a field goes beside that field**;
+  the status line is a second copy, never the only one. A test asserts the containment so that whoever
+  changes the layout finds this note instead of rediscovering it.
+- **A form that has just written state must re-read it, not patch its own flags.** After saving a
+  passphrase the two boxes were still on screen, empty — which reads as "the save did not take", and was
+  reported as exactly that. The page carries three facts that have to stay in step (is a key stored, is
+  it encrypted, is a passphrase set) and the save updated storage without updating any of them.
+  Reconstructing them at the end of a handler is a second copy of `loadAi()` waiting to drift, so the
+  handler calls `loadAi()` instead: the form agrees with the disk because it was read from it.
+- **A control with nothing to ask is absent, not empty.** Same bug, other half: once a passphrase *is*
+  set there is no question left — the passphrase is not ours to redisplay — so a pair of empty boxes is
+  not "the field for it", it is a prompt with no prompt. The row now states that the key is encrypted
+  and offers **Change passphrase**, which is what brings the boxes back. This is the same rule as the
+  CRM's "Complete missing" button being `display:none` rather than greyed.
+- **A sentence in the UI must derive from the state it describes, not from the control next to it.**
+  The same change put "Enter the current passphrase to turn the protection off" under an unticked box
+  on a machine where no passphrase had ever been set — correct for the only case it was written for,
+  wrong the first time anyone opened the page. The row's *visibility* was right; the text was
+  conditioned on the checkbox instead of on whether anything was actually protected.
 - **JS escapes inside HTML text.** `\u2699` written into markup renders as the literal string.
   HTML does not interpret JavaScript escapes. Use the character, or an HTML entity.
 - **`esc()` is not attribute-safe** — and writing that down was not enough, because it shipped again.
@@ -740,6 +877,18 @@ platform name.
 
 `tools/sitecheck.py` reports a bare platform name in prose; code, paths and markup are exempt,
 because `analytics/` is a folder and not a sentence.
+
+**The same rule binds the extensions, and for a long time only the site was checked for it.** The
+apps had drifted **27 times** — "No answer from the Analytics page", "Your Analytics role does not
+grant access", a `+ Workspace` tooltip, a system-table chip, the CRM's own system prompt — and none
+of it was found by a check. Two of them were spotted **by eye, in one file, while doing something
+else**, which is the definition of a check that does not exist. `namecheck.py` now runs the same
+strip-the-legitimate-forms technique over what an app ships: **JS string literals outside comments**,
+and in HTML **the text between tags plus `title` / `placeholder` / `aria-label` / `alt`**. Comments
+stay exempt — outward it never bends, between us it can — and anything under 12 characters is skipped,
+because a chip reading `Analytics tab` has nowhere to put the platform and demanding prose of a badge
+is how a checker starts being ignored. Proven by reintroducing three of the defects, one per surface
+type, and getting three findings.
 
 The name comes from `chrome.runtime.getManifest().name` everywhere. Renaming means editing one
 field in `manifest.json`.

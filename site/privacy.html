@@ -49,7 +49,7 @@
   <p>This policy covers every extension in the Zoost family. There are two:</p>
   <ul>
     <li><b>Zoost — workbench for Zoho CRM</b>, on the Chrome Web Store.</li>
-    <li><b>Zoost — workbench for Zoho Analytics</b>, submitted to the Chrome Web Store and in review.</li>
+    <li><b>Zoost — workbench for Zoho Analytics</b>, on the Chrome Web Store.</li>
   </ul>
   <p>They are separate extensions with separate permissions, but they behave identically in every
     respect this document describes: no server, no account, no telemetry, a local mirror in a folder
@@ -88,7 +88,8 @@
           connections catalogue (names, connectors and OAuth scopes — <b>never</b> connection secrets or
           tokens), exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host
           and instance name, plus which types Zoho answered for and which it refused, with the date it was
-          asked and the date each type was last read.</td>
+          asked and the date each type was last read, plus a name for the workspace if you have given it
+          one.</td>
         <td>This is the point of the tool: a local, versionable mirror you can put under Git.</td>
       </tr>
       <tr>
@@ -96,7 +97,8 @@
         <td>The workspace's structure: the list of views with their type, folder, owner and dates; the
           columns and data types of every table and query table; the relations between them; the dependency
           graph; and the SQL of each query table as its own <code>.sql</code> file. Plus exports and a
-          <code>.zoost.json</code> holding the workspace id, name and host.
+          <code>.zoost.json</code> holding the workspace id, name and host, plus a name of your own if you
+          have given it one.
           <b>Never the rows inside your tables</b> — the extension does not read them, and the endpoints
           that return cell values are deliberately not called.</td>
         <td>Same purpose: a local, versionable mirror. The <code>.sql</code> files are the part that makes
@@ -104,11 +106,19 @@
       </tr>
       <tr>
         <td class="p">chrome.storage.local</td>
-        <td>Your preferences: AI engine choice, model, API key, export defaults, diagram layout settings,
+        <td>Your preferences: AI engine choice, model, API key (in clear text, or encrypted if you turn on
+          passphrase protection), export defaults, diagram layout settings,
           and which side-panel tabs you show, in what order, and which are included when you pull. Alongside them, a copy of the open
           workspace's access record — the same "answered / refused" list as above — so the settings page can
           say <i>why</i> a tab is unavailable instead of just hiding it.</td>
         <td>Settings must survive a browser restart.</td>
+      </tr>
+      <tr>
+        <td class="p">chrome.storage.session</td>
+        <td>Only the API key, and only while it is unlocked — that is, only if you turned on passphrase
+          protection. Held in memory, never written to disk.</td>
+        <td>So the passphrase is typed once per browser session rather than once per question. Cleared when
+          the browser closes.</td>
       </tr>
       <tr>
         <td class="p">IndexedDB</td>
@@ -150,8 +160,25 @@
       If your organisation restricts sending source code, SQL or business logic to third-party AI services,
       do not enable this feature.</p>
   </div>
-  <p>Your API key is stored <b>in clear text</b> in <code>chrome.storage.local</code> on your machine — that is where a Chrome extension keeps its settings, and it is not encrypted. Anyone with access to your browser profile can read it, so on a shared or managed machine treat it as you would any other credential sitting in a config file: use a key scoped to this purpose and revoke it if the machine changes hands. It is sent only to
-    the provider it belongs to.</p>
+  <p>Your API key is stored on your machine in <code>chrome.storage.local</code>, which is where a Chrome
+    extension keeps its settings, and it is sent only to the provider it belongs to. By default it is stored
+    <b>in clear text</b>: Chrome offers extensions no encryption at rest and no credential store, so anyone
+    with access to your browser profile can read it.</p>
+  <p>You can turn on <b>passphrase protection</b> in Settings. The key is then encrypted with a passphrase
+    only you know — PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own
+    Web Crypto — and what sits on disk is ciphertext. You type the passphrase once per browser session, in
+    the AI panel; the unlocked key is held in memory (<code>chrome.storage.session</code>) and disappears
+    when the browser closes. The passphrase itself is never stored, never sent anywhere, and cannot be
+    recovered: if you forget it, you enter your API key again and choose a new one.</p>
+  <p>The switch works in both directions. Turning the protection off asks for the current passphrase,
+    because clear text means decrypting the key first; if it is wrong or missing, nothing is changed and
+    the encrypted key is kept rather than discarded. Losing the passphrase costs you the stored key, never
+    anything else.</p>
+  <p>It is off by default because the trade is yours to price rather than ours. On a personal machine,
+    typing a passphrase each session buys little; on a shared or managed one it buys a great deal. Note the
+    honest limit of what encryption can do here: while the key is unlocked it is in the browser's memory,
+    where the browser can read it. What the passphrase protects is the key <em>at rest</em> — a copied
+    profile, a backup, another user of the same machine.</p>
 
   <h3>4.3 Exports</h3>
   <p>Export files are written to your working folder and go nowhere on their own. Before each export,

@@ -99,7 +99,9 @@ The extension's entire interface is a side panel shown beside the Zoho Analytics
 ## 6. storage justification (max 1000)
 
 ```
-chrome.storage.local holds the user's own settings, on their machine only: which AI provider is selected, the model name and the API key they entered, the maximum number of tool steps for the agent, and the ER diagram's layout defaults. It also carries the graph data from the side panel to the diagram window, which is a separate extension page and cannot be handed the object directly.
+chrome.storage.local holds the user's own settings, on their machine only: which AI provider is selected, the model name and the API key they entered, the maximum number of tool steps for the agent, and the ER diagram's layout defaults. The user may optionally protect the API key with a passphrase, in which case only the encrypted form is kept here (AES-GCM, key derived with PBKDF2-SHA256) and the decrypted key is held in chrome.storage.session for the browser session only. It also carries the graph data from the side panel to the diagram window, which is a separate extension page and cannot be handed the object directly.
+
+chrome.storage.session holds the decrypted API key, and only while the user has chosen passphrase protection and unlocked it. It is memory-only and is cleared when the browser closes.
 
 No workspace content is stored there. The mirror of the workspace is written to the folder the user picks, through the File System Access API. Nothing is sent anywhere, and there is no remote storage of any kind.
 ```
@@ -145,7 +147,7 @@ No other host is requested, and none of these are contacted unless the user acts
 | Personally identifiable information | No | |
 | Health information | No | |
 | Financial and payment information | No | |
-| Authentication information | No | The API key the user enters stays in `chrome.storage.local` and is sent only to the provider they chose |
+| Authentication information | No | The API key the user enters stays on their own machine — in `chrome.storage.local`, encrypted with a passphrase if they choose that — and is sent only to the provider they chose |
 | Personal communications | No | |
 | Location | No | |
 | Web history | No | |

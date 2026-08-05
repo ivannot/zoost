@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Settings · Zoost — workbench for Zoho CRM</title>
 <style>
+  /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
+     visible — silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
+     than remembering it at every element that grows a display later. */
+  [hidden]{display:none!important}
   :root{
     --bg:#0d121c; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6; --sel-soft:#16263f;
@@ -36,7 +41,8 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
   .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
-  .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
+  .prov h3 button{margin-left:auto;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}
   .prov.on{border-color:#3f6ea8;background:rgba(47,111,237,.06)}
   .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
   .ck.ind{padding-left:22px}
@@ -73,6 +79,12 @@
   .conflict b{color:#fbbf24;display:block}
   .conflict .cfb{display:flex;gap:8px;margin-top:8px}
   .conflict .cfb button{padding:3px 10px;font-size:12px}
+  .keyprot{margin:14px 0 0;padding:12px 14px;border:1px solid var(--border);border-radius:9px;background:#0f1826}
+  .lockrow{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .keynote{margin:10px 0 0;max-width:none}
+  .lockhint{margin:2px 0 0;max-width:none}
+  .lockhint button{margin-left:6px;font-size:11px;padding:2px 8px}
+  .lockhint.bad{color:#f4b8b8}
 </style>
 </head>
 <body>
@@ -107,14 +119,14 @@
       </select>
     </label>
     <div class="prov" id="provAnthropic">
-      <h3>Anthropic</h3>
+      <h3>Anthropic<button class="danger" id="ai_a_forget" type="button">Forget</button></h3>
       <div class="grid2">
         <label><span class="lt">Model</span><input type="text" id="ai_a_model" placeholder="e.g. claude-sonnet-4-5"></label>
         <label><span class="lt">API key</span><input type="password" id="ai_a_key" placeholder="sk-ant-…"></label>
       </div>
     </div>
     <div class="prov" id="provOpenai">
-      <h3>OpenAI (ChatGPT)</h3>
+      <h3>OpenAI (ChatGPT)<button class="danger" id="ai_o_forget" type="button">Forget</button></h3>
       <div class="grid2">
         <label><span class="lt">Model</span><input type="text" id="ai_o_model" placeholder="e.g. gpt-4o-mini"></label>
         <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
@@ -132,6 +144,28 @@
       was not shown one.</p>
 
     <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
+    <div class="keyprot">
+      <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> —
+        it is stored encrypted, and you type the passphrase once per browser session</span></label>
+      <div id="ai_lockrow" class="lockrow" hidden>
+        <label id="ai_currow"><span class="lt">Current passphrase</span><input type="password" id="ai_passcur" placeholder="the one in use now"></label>
+        <label id="ai_passrow"><span class="lt">New passphrase</span><input type="password" id="ai_pass" placeholder="chosen by you, never stored"></label>
+        <label id="ai_pass2row"><span class="lt">Repeat</span><input type="password" id="ai_pass2" placeholder="must match"></label>
+        <p class="sub lockhint" id="ai_lockhint"></p>
+        <p class="sub lockhint" id="ai_lockset" hidden>The key is encrypted. The passphrase is not stored, so there is nothing to show here. <button type="button" id="ai_passchange">Change passphrase</button></p>
+        <p class="sub lockhint" id="ai_lostrow" hidden>Lost the passphrase? <button type="button" id="ai_passlost" class="danger">Remove the protection</button></p>
+      </div>
+      <p class="sub keynote">Off by default, and that is a real choice rather than a lapse. Chrome gives extensions
+        no encryption at rest and no credential store, so anything the extension can unlock on its own, anyone with
+        your browser profile can unlock too — encrypting with a key kept beside it would be theatre. The only real
+        protection is a secret we do not hold. On your own laptop that buys little and costs a passphrase every time
+        the browser restarts; on a shared or managed machine it buys a lot. Nobody but you can price that.
+        <b>There is no recovery.</b> Forget it and you paste the API key again and choose again — which costs one
+        visit to your provider's dashboard, and is the honest shape for a secret that cheap to replace.
+        And what it does <b>not</b> do: while the key is unlocked it sits in the browser's memory, where the browser
+        can read it. A passphrase protects the key at rest — a copied profile, a backup, someone else on this
+        machine — not a key already unlocked in a running browser.</p>
+    </div>
     <p class="note" style="margin-top:0">How many times the assistant may reach for a tool before it has to
       answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
       single question can cost. It is a ceiling, not a target — most answers use two or three.</p>
@@ -202,6 +236,7 @@
 </div>
 <div id="toast"></div>
 <script src="idb.js"></script>
+<script src="keyvault.js"></script>
 <script src="options.js"></script>
 </body>
 </html>

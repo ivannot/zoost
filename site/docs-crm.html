@@ -337,6 +337,67 @@ git commit -m "baseline"</code></pre>
   </table>
   <p>The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.</p>
 
+  <h3>Naming a workspace</h3>
+  <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
+    Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
+    on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
+    <b class="ui">✎</b> button next to the list gives a workspace a name of your own.</p>
+  <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
+    stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
+    the folder is bound to. That is deliberate — the name is your convenience, the identity is Zoho's,
+    and a list showing only your own words would be one you could not check against Zoho. The name is
+    stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
+    folder. Clear the field to go back to the platform's name.</p>
+
+  <h3>Removing a key, and switching engine</h3>
+  <p>Each provider block has a <b class="ui">Forget</b> button: it empties the model and the key, and the
+    removal takes effect when you press <b class="ui">Save AI settings</b>. It is the one place where an
+    empty field means <em>erase</em> — everywhere else an empty key field means "keep what is stored",
+    which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
+    <b class="ui">Forget</b> is also the way out if you have lost the passphrase.</p>
+  <p>The <b class="ui">Engine</b> selector will not move to a provider that has no model or no API key: it
+    says which is missing and stays where it was, rather than leaving you with an assistant that fails at
+    the first question. Each option also states whether it is ready, so the one selected on a fresh
+    install does not read as a working choice, and a save that leaves exactly one usable engine selects
+    that engine and says so. Both providers' fields are on the same page, so filling them in and picking again
+    is two steps, not a dead end.</p>
+
+  <h3>Protecting the API key with a passphrase</h3>
+  <p>By default the key is stored in clear text in the browser's extension storage. That is not an
+    oversight and it is not fixable in general: Chrome gives extensions no encryption at rest and no
+    credential store, so a key the extension can read on its own is a key anyone with your browser profile
+    can read. Encrypting it with a secret kept beside it would look like protection and provide none.</p>
+  <p>The one real protection is a secret the extension does not hold, so <b class="ui">⚙ Settings</b> →
+    <b>AI assistant</b> offers <b class="ui">Protect the API key with a passphrase</b>. Turn it on and
+    choose one: the key is encrypted with it (PBKDF2-SHA256, then AES-GCM-256, both from the browser's own
+    cryptography), and what remains on disk is ciphertext. The first time you use the chat after starting
+    the browser, the panel asks for the passphrase and offers <b class="ui">Unlock</b>; the key then stays
+    available in memory until the browser closes.</p>
+  <p>Once it is set the fields go away — the passphrase is not stored, so there is nothing to show in
+    them — and the section says the key is encrypted, with a <b class="ui">Change passphrase</b> button
+    when you want a different one.</p>
+  <p>Three things ask for the passphrase you are already using: changing it, replacing the API key, and
+    turning the protection off. They look different and are the same fact — the stored key has to be
+    decrypted before it can be written again — and Zoost checks what you type against the stored key
+    <em>before</em> saving anything, so a mistyped passphrase cannot leave you locked out of a key you
+    believe you know.</p>
+  <p><b>If you lose the passphrase</b>, the section offers <b class="ui">Remove the protection</b>. It
+    says what goes and what stays before it acts: the encrypted key is removed and the protection turned
+    off, your model names and every other setting are kept, and you paste the API key in again from your
+    provider's dashboard. Nobody can decrypt that key without the passphrase, Zoost included — this is
+    the only way out, and it is a button rather than a sequence you have to work out.</p>
+  <p><b>You can turn it back off at any time</b>, and the way back is symmetrical: Zoost asks for the
+    current passphrase, because storing the key in clear text again means decrypting it first, and only
+    you can do that. Wrong passphrase or none, and <em>nothing is changed</em> — the encrypted key is
+    left exactly as it was rather than discarded. If the passphrase is lost, the way out is to paste the
+    API key in again.</p>
+  <p>It is off by default because the trade is yours, not ours. On a personal machine, typing a passphrase
+    once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> — no
+    hint, no reset, no back door: forget the passphrase and you paste your API key in again and pick a new
+    one, which costs one visit to the provider's dashboard. And note what it does not do: while the key is
+    unlocked it is in the browser's memory, where the browser can read it. What a passphrase protects is the
+    key at rest — a copied profile, a backup, someone else on the same machine.</p>
+
   <h3>Keeping the conversation — and the bill — under control</h3>
   <p><b class="ui">↺ Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
     thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change

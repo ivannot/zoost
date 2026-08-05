@@ -64,7 +64,17 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   sensitive part. Sections whose data is older than the rest are unticked, with the date and reason.
 - "Find": searches names, or the full text of every function at once — the thing Zoho CRM has no way
   of doing. Useful before changing a field: it finds every function that mentions it.
+- "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
+  folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
+  Clearing the field goes back to it.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults.
+  The API key can optionally be protected by a passphrase, chosen there. It is then stored
+  encrypted and asked for once per browser session, in this chat. It can be switched back off there
+  too, which asks for the current passphrase, since clear text means decrypting it first. There is no
+  recovery: if the passphrase is lost, Settings offers "Remove the protection", which removes the
+  encrypted key, turns the protection off and keeps everything else — then the API key is pasted in
+  again. The engine selector refuses a provider that has no model or no key, says which is missing,
+  and each option in the list states whether it is ready.
 
 WHAT THE ASSISTANT CAN AND CANNOT DO
 It reads what has been pulled into the folder, so anything not pulled yet is invisible to it, and it
@@ -78,6 +88,12 @@ IF SOMETHING LOOKS WRONG
   to the Zoho CRM tab and the panel returns.
 - A tab has disappeared: either it was hidden in Settings, or the user's Zoho role does not grant it.
   Settings shows which, and the date it was checked.
+- "The working folder is no longer readable": Chrome lets folder permission lapse after a while.
+  Press the ↻ Refresh button in the toolbar to grant it again. Nothing is lost and nothing has to be
+  pulled again.
+- The chat asks for a passphrase: the API key was protected in Settings, and this is the first
+  question since the browser started. If the passphrase is lost, enter the API key again in
+  Settings and choose a new one — nothing else is affected.
 `.trim();
 
   window.ZOOST_PRODUCT_HELP = { text: () => HELP };

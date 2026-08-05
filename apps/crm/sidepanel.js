@@ -1100,8 +1100,10 @@ async function pullAll() {
     }
     let prunedF = 0; for (const p of rmF) { try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
     codeCache = null;
-    await writeCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
-    bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance }; await cacheBinding(bound);
+    // patchCfg, not writeCfg: this file also holds the access verdicts and the workspace's own
+    // name, and a whole-object write here drops both. The trap arriving a third time.
+    await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
+    bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: (await readCfg())?.label || '' }; await cacheBinding(bound);
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
@@ -1206,10 +1208,92 @@ function closeHealth() { $('healthview').classList.remove('show'); $('health').c
 let aiMessages = [], aiModCache = null, aiConnCache = null, aiSeedTruncated = false, aiSeedWarned = false;
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
-  return { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
+  const cfg = { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
+  // A protected key is on disk as ciphertext only. The plaintext lives in chrome.storage.session for
+  // as long as the browser runs, and is put back here so every caller downstream sees an ordinary key
+  // and nothing else has to learn about the passphrase.
+  for (const prov of ['anthropic', 'openai']) {
+    if (cfg[prov].apiKeyEnc && !cfg[prov].apiKey) cfg[prov].apiKey = (await window.ZOOST_KEYVAULT.recall(prov)) || '';
+  }
+  return cfg;
 }
+/** Locked = there is a key, it is encrypted, and this session has not unlocked it yet. Distinct from
+ *  not-configured: the remedy is a passphrase here, not a trip to Settings. */
+function aiLocked(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKeyEnc && !p.apiKey); }
 function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKey && p.model); }
-async function aiSaveCfg(cfg) { try { await chrome.storage.local.set({ aicfg: cfg }); } catch (_) {} }
+
+// ---------- unlocking a protected API key ----------
+// The passphrase is never stored and never leaves this function: it decrypts once, the plaintext goes
+// to chrome.storage.session, and the field is cleared. Forgetting it is recoverable only by entering
+// the API key again — stated in Settings, and not softened here.
+function aiShowLock(on) {
+  const row = $('ailockrow'); if (!row) return;
+  // Idempotent on purpose: this runs on every window focus and every settings change, and re-showing
+  // a row that is already showing would clear a half-typed passphrase and steal the caret back.
+  if (row.hidden !== !on) {
+    row.hidden = !on;
+    if (on) { $('ailockpass').value = ''; aiLockMsg(''); $('ailockpass').focus(); }
+  }
+}
+/** A DOMException's message names the symptom and never the remedy.
+ *
+ * "The request is not allowed by the user agent or the platform in the current context." is what a
+ * lapsed folder permission looks like from inside the agent loop, and it reads as a bug in the
+ * extension. Translated where it surfaces, so a user who meets it once more is told which button to
+ * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
+ * passed through untouched rather than dressed up.
+ */
+function aiErrorText(e) {
+  const m = (e && e.message) || String(e);
+  if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
+    return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
+      + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
+  }
+  return 'Error: ' + m;
+}
+
+/** Re-grant the working folder before the assistant touches it.
+ *
+ * Chrome lets a File System Access permission lapse after inactivity, and every read then throws
+ * `NotAllowedError: The request is not allowed by the user agent or the platform in the current
+ * context.` — a message that names neither the folder nor the remedy. The AI path reads the mirror
+ * directly (the seed index, the tools, the graph) and was the one path that never asked first, so it
+ * surfaced as "the chat is broken until I click an item and come back": clicking an item runs
+ * ensurePerm() under a real gesture and fixes it as a side effect.
+ *
+ * It has to happen *here*, at the click. requestPermission() needs transient user activation, so the
+ * same call made inside the agent loop — after a network round trip to the model — is refused for want
+ * of a gesture, which is the very error being reported. Same fix the Health view already carries.
+ */
+async function aiEnsureFiles() {
+  if (!dir) return true;
+  try { return await ensurePerm(dir); } catch (_) { return false; }
+}
+
+/** The verdict on a passphrase goes beside the field, because that is where the eye is — and because
+ *  in the CRM panel the AI view covers the status bar completely, so a warning sent there while the
+ *  chat is open is written to an element nobody can see. Same code on both sides regardless. */
+function aiLockMsg(text) {
+  const el = $('ailockmsg'); if (!el) return;
+  el.textContent = text; el.hidden = !text;
+}
+async function aiUnlock() {
+  const pass = $('ailockpass').value;
+  if (!pass) { aiLockMsg('Type the passphrase you chose in Settings.'); $('ailockpass').focus(); return; }
+  const cfg = await aiGetCfg();
+  const prov = cfg.active; const box = (cfg[prov] || {}).apiKeyEnc;
+  if (!box) { aiShowLock(false); return; }
+  const key = await window.ZOOST_KEYVAULT.unlock(box, pass);
+  // AES-GCM authenticates, so failure means the passphrase is wrong or the stored value is damaged.
+  // Which of the two cannot be told apart, and the message says so rather than picking one.
+  if (!key) {
+    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
+    setStatus('Wrong passphrase.', 'warn');
+    $('ailockpass').select(); return;
+  }
+  await window.ZOOST_KEYVAULT.remember(prov, key);
+  aiLockMsg(''); aiShowLock(false); setStatus('API key unlocked for this browser session.', 'ok');
+}
 function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
 async function aiLoadModules() {
   if (aiModCache) return aiModCache;
@@ -1349,7 +1433,7 @@ async function aiSystemPromptB(withTools, cap) {
   const toolsLine = withTools
     ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
-  return `You are an expert assistant for Zoho CRM Deluge scripting and CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
+  return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
 const AI_TOOLS = [
   { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) — use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
@@ -1492,6 +1576,8 @@ function aiRenderMessages() {
 async function aiSend() {
   const cfg = await aiGetCfg();
   aiEngineChrome();
+  if (aiLocked(cfg)) { aiShowLock(true); return; }
+  if (!(await aiEnsureFiles())) { setStatus('Folder access needs re-granting \u2014 press \u21bb Refresh, then ask again.', 'warn'); return; }
   if (!aiActiveReady(cfg)) { aiOpenSettings(); setStatus('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -1512,7 +1598,7 @@ async function aiSend() {
     if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20); }
     else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     setStatus('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: 'Error: ' + e.message }); setStatus('AI error', 'warn'); }
+  } catch (e) { aiMessages.push({ role: 'assistant', content: aiErrorText(e) }); setStatus('AI error', 'warn'); }
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -1520,6 +1606,7 @@ async function aiEngineChrome() {
   const b = $('aiengbadge'), note = $('ainote');
   if (!b || !note) return;
   const cfg = await aiGetCfg();
+  aiShowLock(aiLocked(cfg));      // the chrome refresh is the one place that already re-reads the config
   if (cfg.active === 'anthropic') {
     b.textContent = 'Claude \u00b7 agent'; b.className = 'agent';
     note.className = 'ainote';
@@ -1552,7 +1639,8 @@ function toggleAI() {
   if ($('aiview').classList.contains('show')) { closeAI(); return; }
   if (!dir) return;
   closeHealth();   // one panel at a time
-  $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open'); aiContextLabel(); aiEngineChrome(); aiRenderMessages();
+  $('aiview').classList.add('show'); $('askai').classList.add('on'); document.body.classList.add('ai-open'); aiEngineChrome(); aiRenderMessages();
+  aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
 function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching functions no longer resets it.')) return; aiMessages = []; aiRenderMessages(); }
@@ -1676,12 +1764,17 @@ async function activate(w, viaGesture) {
 // it here would clobber fields this function does not carry (lastPull).
 async function cacheBinding(b) {
   if (!b || !b.org) return;
-  bound = { org: b.org, base: b.base, instance: b.instance };
+  bound = { org: b.org, base: b.base, instance: b.instance, label: b.label || '' };
   const w = (wsList || []).find((x) => x.id === activeWsId); if (w) w.binding = bound;
 }
 
 function updateWsButtons() {
   const add = $('wsadd'), rt = $('wsroot');
+  // Both are temporarily unavailable, never permanently: pick a workspace and they work. Analytics
+  // has disabled its Remove this way from the start; this side never did, and the two buttons sat
+  // beside each other behaving differently.
+  $('wsrename').disabled = !dir || !wsList.length;
+  $('wsdel').disabled = !dir || !wsList.length;
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);
   rt.textContent = !root ? '\u{1F4C1} Set working folder\u2026'
@@ -1731,7 +1824,7 @@ async function loadWorkspaces() {
         if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
         let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
         if (!cfg || !cfg.org) continue;
-        wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+        wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, cfg, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
       }
     } catch (e) {
       rootGranted = false;
@@ -1758,7 +1851,11 @@ async function loadWorkspaces() {
     await refreshContext(); return;
   }
   const active = await window.idbHandle.get('activeWs');
-  wsList.forEach((w) => { const o = document.createElement('option'); o.value = w.id; o.textContent = w.name; sel.appendChild(o); });
+  wsList.forEach((w) => {
+    const o = document.createElement('option');
+    o.value = w.id; o.textContent = wsOptionText(w); o.title = wsOptionTitle(w);
+    sel.appendChild(o);
+  });
   const act = wsList.find((w) => w.id === active) || wsList[0];
   sel.value = act.id; activeWsId = act.id; updateWsButtons();
   await activate(act, false);
@@ -1773,6 +1870,49 @@ document.addEventListener('click', async (e) => {
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview'))) return;
   try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }, true);
+/** What the workspace list shows, and what it must never stop showing.
+ *
+ * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
+ * the derived name is kept — in the option's tooltip, always, whether or not a label is set. A list
+ * that showed only the user's name for something would be a list you cannot check against the
+ * platform.
+ */
+function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || w.name; }
+function wsOptionTitle(w) {
+  const label = ((w.cfg && w.cfg.label) || '').trim();
+  return label ? `${label} \u2014 folder ${w.name}` : w.name;
+}
+
+/** A name of the user's own for a workspace.
+ *
+ * The folder name is derived from the platform, and the platform is not always evocative: Zoho
+ * Analytics names the first workspace of every account the same way, so three projects can arrive on
+ * disk with the same label and nothing to tell them apart. Zoho CRM has the instance and the org id,
+ * which are unambiguous and still not memorable.
+ *
+ * So the label is *displayed instead of* the derived name, and the derived name never disappears —
+ * it stays in the option's tooltip and in the bar beneath, because the label is a convenience and the
+ * identity is the org or workspace id. Storing it in `.zoost.json` (through `patchCfg`, never
+ * `writeCfg`) keeps it with the workspace: it survives a re-pull, and it travels with the folder if
+ * the folder does.
+ */
+async function renameWorkspace() {
+  const w = wsList.find((x) => x.id === $('ws').value);
+  if (!w || !dir) return;
+  const current = (w.cfg && w.cfg.label) || '';
+  const typed = window.prompt(
+    `Name for this workspace.\n\nShown in the list instead of \u00ab${w.name}\u00bb, which stays visible as the tooltip.\nLeave it empty to go back to that name.`,
+    current);
+  if (typed === null) return;                      // cancelled: not the same as cleared
+  const label = typed.trim().slice(0, 60);         // it has to fit a 400px bar; longer is not a name
+  if (label === current) return;
+  try {
+    await patchCfg({ label });
+    setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
+    await loadWorkspaces();
+  } catch (e) { setStatus('Could not save the name: ' + (e.message || e), 'bad'); }
+}
+$('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
 $('wsdel').onclick = async () => {
@@ -2604,11 +2744,11 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `</nav>`;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<title>${esc(PRODUCT_NAME)} — ${esc(ws.instance || 'Export')}</title>`
+    + `<title>${esc(PRODUCT_NAME)} — ${esc(ws.label || ws.instance || 'Export')}</title>`
     + `<meta name="author" content="${escA(PRODUCT_AUTHOR)}"><meta name="generator" content="${escA(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${escA(PRODUCT_URL)}">` : ''}`
     + `<style>${EXPORT_CSS}</style></head><body>`
     + `<header><h1>${esc(PRODUCT_NAME)} — Export</h1>`
-    + `<div class="meta">${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
+    + `<div class="meta">${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
     + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
@@ -2665,6 +2805,7 @@ function buildExportMarkdown(d, scope) {
   const params = (n) => '(' + ((n.params || []).map((p) => (p && (p.name || p.param_name)) || p).filter(Boolean).join(', ')) + ')';
   const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
   let md = '# Zoho CRM Deluge \u2014 Workspace export (AI context)\n\n';
+  if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
   md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
@@ -3237,6 +3378,7 @@ loadScope();
 loadTabPrefs().then(renderTabs);
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'functions' ? openGraph() : openSchemaGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
+$('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;
 $('aiinput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); aiSend(); } });
 buildTypeChips();

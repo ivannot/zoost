@@ -37,7 +37,7 @@ worst it can do to a workspace is nothing at all. Say this plainly if the user s
 
 THE THREE THINGS TO UNDERSTAND
 - Working folder: one folder on the computer, chosen once. Everything Zoost writes goes inside it.
-- Workspace: a subfolder for one Analytics workspace, created by the "+ Workspace" button. Which
+- Workspace: a subfolder for one Zoho Analytics workspace, created by the "+ Workspace" button. Which
   workspace is decided by the tab the user is on — there is nothing to pick and nothing to pick wrong.
 - Pull: the action that copies from Zoho Analytics into that folder. Nothing appears until a pull is
   done, and nothing updates by itself.
@@ -52,15 +52,25 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
 - "Schema ↗": opens the ER diagram in its own window — tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
-- "Health ♥": what looks unused or unreachable. It states what it cannot see: Analytics only knows
+- "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.
 - "HTML" and "Markdown" (Export): write a single file into the export folder inside the workspace.
   HTML is for reading and sharing — one page containing the whole workspace, openable in any browser
   by someone who has neither Zoost nor Zoho Analytics. Markdown is for giving to another AI
-  assistant, and it carries the rules of Analytics' own SQL dialect so that assistant does not write
+  assistant, and it carries the rules of Zoho Analytics' own SQL dialect so that assistant does not write
   queries that cannot run.
+- "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
+  folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
+  Clearing the field goes back to it.
 - "Settings ⚙": AI engine and key, export defaults, diagram defaults.
+  The API key can optionally be protected by a passphrase, chosen there. It is then stored
+  encrypted and asked for once per browser session, in this chat. It can be switched back off there
+  too, which asks for the current passphrase, since clear text means decrypting it first. There is no
+  recovery: if the passphrase is lost, Settings offers "Remove the protection", which removes the
+  encrypted key, turns the protection off and keeps everything else — then the API key is pasted in
+  again. The engine selector refuses a provider that has no model or no key, says which is missing,
+  and each option in the list states whether it is ready.
 
 WHAT THE ASSISTANT CAN AND CANNOT DO
 It reads what has been pulled into the folder, so anything not pulled yet is invisible to it, and it
@@ -75,7 +85,13 @@ IF SOMETHING LOOKS WRONG
   than the folder selected. The bar at the top says which.
 - "No workspace open": the tab is on Zoho Analytics but not inside a workspace. Open one.
 - The panel looks empty after clicking a link: the link opened a page that is not Zoho Analytics. Go
-  back to the Analytics tab and the panel returns.
+  back to the Zoho Analytics tab and the panel returns.
+- "The working folder is no longer readable": Chrome lets folder permission lapse after a while.
+  Press the ↻ Refresh button in the toolbar to grant it again. Nothing is lost and nothing has to be
+  pulled again.
+- The chat asks for a passphrase: the API key was protected in Settings, and this is the first
+  question since the browser started. If the passphrase is lost, enter the API key again in
+  Settings and choose a new one — nothing else is affected.
 `.trim();
 
   window.ZOOST_PRODUCT_HELP = { text: () => HELP };

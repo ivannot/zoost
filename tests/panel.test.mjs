@@ -343,3 +343,49 @@ test('a namespace from Zoho cannot become markup in a group header', () => {
   assert.match(src, /<span>\$\{escHtml\(ns\)\}<\/span>/,
     'the group header must escape the namespace it renders');
 });
+
+
+// ---------- a workspace's own name ----------
+
+test('the label is shown and the platform name is kept', () => {
+  // Both halves matter. Showing the user's name is the feature; keeping the platform's is what makes
+  // the list checkable against Zoho, and it is the half that is easy to drop.
+  for (const app of ['crm', 'analytics']) {
+    const text = sliceFn(`apps/${app}/sidepanel.js`, 'wsOptionText');
+    const title = sliceFn(`apps/${app}/sidepanel.js`, 'wsOptionTitle');
+    const ctx = load([text, title], {});
+    const derived = app === 'crm' ? { name: 'acme-1234567890' } : { name: 'Sales', folder: 'Sales', id: '99' };
+    const bare = { ...derived, cfg: {} };
+    const named = { ...derived, cfg: { label: 'Q4 migration' } };
+
+    assert.notEqual(ctx.wsOptionText(bare), '', `${app}: an unnamed workspace must still say something`);
+    assert.equal(ctx.wsOptionText(named), 'Q4 migration', `${app}: the label is what is shown`);
+    assert.match(ctx.wsOptionTitle(named), /Q4 migration/, `${app}: and the tooltip carries it`);
+    assert.match(ctx.wsOptionTitle(named), new RegExp(derived.name), `${app}: the platform name must survive in the tooltip`);
+    assert.match(ctx.wsOptionTitle(bare), new RegExp(derived.name), `${app}: with no label, the tooltip is the platform name`);
+  }
+});
+
+test('whitespace is not a name', () => {
+  for (const app of ['crm', 'analytics']) {
+    const ctx = load([sliceFn(`apps/${app}/sidepanel.js`, 'wsOptionText')], {});
+    const derived = app === 'crm' ? { name: 'acme-1234567890' } : { name: 'Sales', folder: 'Sales', id: '99' };
+    assert.notEqual(ctx.wsOptionText({ ...derived, cfg: { label: '   ' } }), '   ');
+  }
+});
+
+test('every writer of .zoost.json merges', () => {
+  // The cacheBinding trap, found live in two more places while adding `label`: the CRM's own pullAll
+  // wrote the file whole and dropped the access verdicts, and Analytics had no patchCfg at all. A
+  // whole-object write is correct only until someone else puts a field in the same file — which has
+  // now happened three times.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);   // `read` from slice.mjs; this file imports no fs
+    const body = src.replace(/^\s*\/\/.*$/gm, '');
+    const whole = [...body.matchAll(/\bwrite(Cfg|Json)\(\s*(CFG\s*,)?/g)]
+      .filter((m) => m[1] === 'Cfg' || (m[2] || '').includes('CFG'))
+      .filter((m) => !body.slice(Math.max(0, m.index - 40), m.index).includes('patchCfg'));
+    assert.equal(whole.length, 0,
+      `${app}/sidepanel.js: ${whole.length} whole-object write(s) to .zoost.json — use patchCfg, or the next field added to that file is silently dropped`);
+  }
+});

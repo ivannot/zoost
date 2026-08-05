@@ -147,8 +147,8 @@ tools/verify.sh crm 1.9.0
 ```
 
 `RELEASES.md` also states what it *cannot* tell you: every Zoho CRM version before 1.9.0 predates the
-extension's source being in this repository, so none of them has a commit to point at — including the
-one the Store is serving while 1.9.0 is in review.
+extension's source being in this repository, so none of them has a commit to point at — including
+whichever one the Store happens to be serving.
 
 ## What is in this repository
 
@@ -210,9 +210,24 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 - **OpenAI**: paste an API key from the OpenAI platform and the model id (e.g. `gpt-4o-mini`).
   The endpoint is fixed to `https://api.openai.com/v1`.
 - **Max tool steps**: how many explore-then-answer rounds the agent may take (default 8).
+- **Forget**, per provider: clears its model and key on the next Save. It is the only place an empty
+  field means *erase* rather than *keep*, and the way out if a passphrase is lost.
+- The **Engine** selector refuses a provider with no model or no key, naming what is missing, rather
+  than letting the panel fail at the first question.
 
 Both keys are stored **only in your browser** (`chrome.storage.local`) and each request goes
 **directly to the provider you choose** — never to the developer.
+
+**Protecting the key (optional).** By default the key is stored in clear text, because Chrome offers
+extensions no encryption at rest and no credential store: a key the extension can read on its own is a
+key anyone with the browser profile can read, and encrypting it with a secret kept beside it would be
+protection in appearance only. Settings therefore offers **Protect the API key with a passphrase** —
+PBKDF2-SHA256 then AES-GCM-256, both from the browser's own Web Crypto, with only ciphertext left on
+disk. The passphrase is asked once per browser session, in the AI panel, and the unlocked key is held
+in memory (`chrome.storage.session`) until the browser closes. It is off by default because the trade
+is the user's to price, and **there is no recovery**: if it is lost, **Remove the protection** in Settings drops the encrypted key, turns the protection off and keeps everything else, and the API key is pasted in again. It can be turned back off at any time, which asks for the current passphrase — clear text means decrypting first — and a wrong or missing one changes nothing rather than discarding the key. What
+it protects is the key at rest — a copied profile, a backup, another user of the machine — not a key
+already unlocked in a running browser.
 
 **How it works.** The system prompt carries a compact **index of the whole org** (every function
 signature, modules, automations, and the connections with their usage counts) plus the function
@@ -233,8 +248,10 @@ offer zero-retention.
 **Top bars**
 - **Working folder** — set once; every workspace is a subfolder inside it, identified by the org id
   in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
-- **Workspace select · + · 🗑** — `+` creates the workspace for the org in the active Zoho tab;
-  the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
+- **Workspace select · + · ✎ · 🗑** — `+` creates the workspace for the org in the active Zoho tab;
+  **✎** gives it a name of your own, shown instead of the folder's (the platform's own name stays in
+  the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove)
+  button deletes that subfolder (local mirror only, re-pullable).
 - Workspace actions: **Pull all · Export (HTML · Markdown) · Health (♥) · AI · Settings ↗ · About**.
 - Mode segments: **Functions · Modules · Workflows · Schedules · Connections** — which of these
   appear, and in what order, is yours to set in **Settings → Tabs**, where each also carries a

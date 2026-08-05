@@ -45,6 +45,13 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **Nothing leaves the machine except through the optional AI assistant**, which is off until the
   user supplies their own API key, and then talks only to Anthropic or OpenAI — the only two origins
   the manifest grants. Nothing is ever sent to the developer; there is no telemetry.
+- **The API key is stored in clear text by default, and the product says so rather than implying
+  otherwise.** Chrome offers extensions no encryption at rest and no credential store, so a key the
+  extension can unlock by itself is one anyone with the browser profile can unlock. A passphrase the
+  user chooses is offered as an opt-in (PBKDF2-SHA256 then AES-GCM-256, from the browser's own Web
+  Crypto), leaving only ciphertext on disk and holding the unlocked key in session memory. There is
+  no recovery, and the limit is stated where the choice is made: it protects the key at rest, not a
+  key already unlocked in a running browser.
 - **"Unused" is a candidate, never a verdict.** Both products state the coverage gap next to the
   number: a connection may be used by Zoho Flow or a widget, a view by a shared link or an API
   consumer, and neither platform reports that.

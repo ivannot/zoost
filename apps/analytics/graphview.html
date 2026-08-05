@@ -6,6 +6,11 @@
 <meta name="author" content="Ivan Notaristefano">
 <meta name="generator" content="Zoost">
 <style>
+  /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
+     visible — silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
+     than remembering it at every element that grows a display later. */
+  [hidden]{display:none!important}
   :root{
     --bg:#eef1f6; --surface:#fff; --ink:#182130; --muted:#647085; --border:#d7deea; --line:#e7ecf4;
     --sel:#2f6fed; --sel-soft:#e7effd; --up:#b0531f; --up-soft:#fbecdf; --down:#1f7a5c; --down-soft:#e0f2ea;

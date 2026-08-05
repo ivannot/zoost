@@ -139,6 +139,9 @@
           <li><span class="k">Auto-sync on save</span>: save in Zoho, the local file follows.</li>
           <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b>, so the folder stays a faithful mirror.</li>
           <li>One working folder, a subfolder per product, one per org inside it — production and sandbox never mix.</li>
+          <li>Give a workspace a <span class="k">name of your own</span> — an instance id is exact without being
+            memorable. Your name is shown; the instance and org are kept beside it, because a list you cannot check
+            against Zoho CRM is not worth having.</li>
         </ul>
       </div>
 
@@ -248,7 +251,9 @@
           <li>With Anthropic it runs as an agent with read-only tools, so it opens your functions, traces
             callers, looks up connections and searches your code instead of guessing. Every tool call is shown.</li>
           <li>Streaming answers, Markdown rendering, a tool-step limit you control.</li>
-          <li>Entirely optional. Keys stay in your browser; requests go straight to your provider.</li>
+          <li>Entirely optional. Keys stay in your browser; requests go straight to your provider — and the key
+            can be <span class="k">protected by a passphrase</span> you choose, so what sits on disk is
+            ciphertext. Off by default, because on a personal machine it buys little and on a shared one a lot.</li>
           <li><span class="k">Clear</span> resets the thread — which also trims what is re-sent each time, so it
             is the main lever on cost.</li>
         </ul>

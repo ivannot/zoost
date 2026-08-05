@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Zoost — workbench for Zoho Analytics</title>
 <style>
+  /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
+     visible — silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
+     than remembering it at every element that grows a display later. */
+  [hidden]{display:none!important}
   /* The two Zoost extensions are twins. Anything they have in common — the workspace bar, the
      environment guard, the dialogs, the button semantics, the empty states — is the *same* thing
      here as in apps/crm, down to the element ids, so that someone who uses both never has to learn
@@ -211,6 +216,13 @@
   .ainote.show{display:block;position:relative;padding-right:26px}
   .ainote .ainotex{position:absolute;top:5px;right:8px;cursor:pointer;color:#b08b52;font-size:12px;line-height:1}
   .ainote .ainotex:hover{color:#f0a44a}
+  .ailockrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
+  .ailockrow .ailocktxt{flex:1 1 100%;color:var(--muted);font-size:11.5px;line-height:1.45}
+  .ailockrow input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans)}
+  .ailockrow input:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  /* The verdict belongs beside the field, not in the status bar: in the CRM panel #aiview covers
+     #status entirely, so a message sent there while the chat is open is written to nothing. */
+  .ailockrow .ailockmsg{flex:1 1 100%;font-size:11.5px;line-height:1.45;color:var(--warn)}
   .aiinrow{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
   .aiinrow textarea{flex:1;resize:vertical;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:7px 9px;font:12.5px var(--sans);min-height:38px}
   .aiinrow textarea:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
@@ -272,8 +284,8 @@
 </div>
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
-  <button id="wsadd" title="Create a workspace for the Analytics workspace in the active tab">+ Workspace</button>
-  <button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" style="font-size:15px;line-height:1">🗑</button>
+  <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button>
+  <button id="wsrename" title="Name this workspace — a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" style="font-size:15px;line-height:1">🗑</button>
 </div>
 
 <div id="ctx" class="unbound">
@@ -323,7 +335,7 @@
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
 </div>
 
-  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
+  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
 
   <div id="list">
     <div class="empty">
@@ -334,10 +346,11 @@
   </div>
 
   <div id="aiview">
-    <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">↺ Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
+    <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
     <div id="aictx" class="aictx"></div>
     <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
     <div id="aimsgs" class="aimsgs"></div>
+    <div id="ailockrow" class="ailockrow" hidden><span class="ailocktxt">The API key is protected by a passphrase. It is needed once per browser session.</span><input id="ailockpass" type="password" placeholder="Passphrase" autocomplete="off"><button id="ailockgo" class="abtn">Unlock</button><span id="ailockmsg" class="ailockmsg" hidden></span></div>
     <div class="aiinrow"><textarea id="aiinput" rows="2" placeholder="Ask about a view, a column, what depends on what… (Ctrl/Cmd+Enter to send)"></textarea><button id="aisend">Send</button></div>
   </div>
 
@@ -399,6 +412,7 @@
 </div>
 
 <script src="idb.js"></script>
+<script src="keyvault.js"></script>
 <script src="analytics-sql.js"></script>
 <script src="product-help.js"></script>
 <script src="sidepanel.js"></script>
