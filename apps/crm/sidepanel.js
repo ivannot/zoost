@@ -1645,12 +1645,17 @@ function updateWsButtons() {
   rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
     : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it \u2014 no folder picker.'
     : `Working folder: ${root.name} \u2014 click to choose a different one`;
+  // Absent when there is nothing to do, disabled only while it is *temporarily* unavailable.
+  // A workspace already exists for this org and never will not: that is not a wait, it is a
+  // permanent no, and a greyed button there reads as something broken. The other three reasons —
+  // no working folder, no Zoho tab, no org on the tab — all clear on their own, so the button
+  // stays visible and says what is missing.
   const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
-  add.disabled = !root || !lastCtx || !lastCtx.org || known;
-  add.textContent = (lastCtx && lastCtx.instance && !known) ? `+ ${lastCtx.instance}` : '+ Workspace';
+  add.hidden = known;
+  add.disabled = !root || !lastCtx || !lastCtx.org;
+  add.textContent = (lastCtx && lastCtx.instance) ? `+ ${lastCtx.instance}` : '+ Workspace';
   add.title = !root ? 'Set the working folder first'
     : !lastCtx ? 'Open a Zoho CRM tab first'
-    : known ? 'A workspace already exists for this org'
     : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
 }
 

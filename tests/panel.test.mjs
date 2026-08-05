@@ -241,3 +241,28 @@ test('nothing selected, or something with no focus to give, adds nothing', async
   assert.equal(await looking('export/report.html'), '');
   assert.equal(await looking('_schedules/404'), '', 'a path with no matching entry is silent, not broken');
 });
+
+// ---------- absent when there is nothing to do, disabled when merely not yet ----------
+
+// The rule the panels follow, extracted so both readings of it are pinned: a permanent "no" hides
+// the control, a temporary one greys it. Mixing them is what made "+ Workspace" look broken — it
+// was disabled for a reason that would never clear.
+function addButtonState({ root, ctx, known }) {
+  return { hidden: !!known, disabled: !root || !ctx };
+}
+
+test('a workspace that already exists hides the button rather than grey it', () => {
+  const st = addButtonState({ root: true, ctx: true, known: true });
+  assert.equal(st.hidden, true, 'nothing here will ever become available');
+});
+
+test('the reasons that clear on their own leave it visible and disabled', () => {
+  // No working folder, no Zoho tab: both are waits, and a button that says what is missing is
+  // more use than one that has vanished.
+  assert.deepEqual(addButtonState({ root: false, ctx: true, known: false }), { hidden: false, disabled: true });
+  assert.deepEqual(addButtonState({ root: true, ctx: false, known: false }), { hidden: false, disabled: true });
+});
+
+test('ready to act: visible and enabled', () => {
+  assert.deepEqual(addButtonState({ root: true, ctx: true, known: false }), { hidden: false, disabled: false });
+});

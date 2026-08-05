@@ -364,6 +364,11 @@ async function openZohoHome() {
 }
 
 function updateButtons() {
+  // Same rule as the CRM panel, and the same reason. Analytics had no such check at all: it left
+  // the button offering to "create" a workspace that already existed, and reopened the same folder.
+  // Harmless, and still a control saying it will do something it will not.
+  const known = (wsList || []).some((w) => ctx && ctx.workspace && String(w.id) === String(ctx.workspace));
+  $('wsadd').hidden = known;
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('pull').disabled = busy || !dir || !guardOk();
