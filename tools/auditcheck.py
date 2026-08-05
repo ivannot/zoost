@@ -62,16 +62,19 @@ def live_matches_repo(findings: list, notes: list) -> None:
     # file's position, so a third language costs nothing here.
     published = sorted([p for p in SITE.rglob('*.html')] + [p for p in SITE.rglob('*.txt')])
     for p in published:
-        url = BASE_URL + published_path(p.relative_to(SITE).as_posix())
+        rel = p.relative_to(SITE).as_posix()
+        # the label is the path, not the basename: with a translation directory there are two
+        # `how-to.html`, and a finding that names neither directory names nothing.
+        url = BASE_URL + published_path(rel)
         try:
             out = subprocess.run(['curl', '-sS', '--max-time', '20', '-A',
                                   'zoost auditcheck (+https://zoost.it)', url],
                                  capture_output=True, timeout=30)
         except Exception as e:                                   # noqa: BLE001 — reported, not raised
-            findings.append(f'{p.name}: could not be fetched from {url} ({e})')
+            findings.append(f'{rel}: could not be fetched from {url} ({e})')
             continue
         if out.returncode != 0:
-            findings.append(f'{p.name}: curl failed for {url} — {out.stderr.decode()[:120].strip()}')
+            findings.append(f'{rel}: curl failed for {url} — {out.stderr.decode()[:120].strip()}')
             continue
         body, mine = out.stdout, p.read_bytes()
         if body == mine:
@@ -80,10 +83,17 @@ def live_matches_repo(findings: list, notes: list) -> None:
         # robots.txt. What must never happen is our own bytes being altered or missing. Reporting the
         # inequality would make this file cry wolf on every run, which is how a check stops being read.
         if mine in body:
-            notes.append(f'{p.name}: served with {len(body) - len(mine)} bytes added by the platform, '
+            notes.append(f'{rel}: served with {len(body) - len(mine)} bytes added by the platform, '
                          f'ours intact')
             continue
-        findings.append(f'{p.name}: {url} does not contain what the repository holds '
+        if not body:
+            # An empty body hashed to e3b0c442… and was reported as a content mismatch, which sends
+            # you looking for a stale deploy. It is a fetch that returned nothing — usually a 404 or
+            # a request that landed mid-deploy — and saying so is the difference between one retry
+            # and half an hour.
+            findings.append(f'{rel}: {url} returned an empty body — not a stale page, no page')
+            continue
+        findings.append(f'{rel}: {url} does not contain what the repository holds '
                         f'(live {hashlib.sha256(body).hexdigest()[:12]}, '
                         f'repo {hashlib.sha256(mine).hexdigest()[:12]})')
     notes.append(f'{len(published)} published files compared against the live site')
