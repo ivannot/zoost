@@ -328,6 +328,11 @@ Both land in your workspace folder, so they're versioned with your Git.
 
 ## Permissions (why)
 
+Both manifests also declare `script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'`.
+The first two restate what Manifest V3 enforces anyway; the last two are stricter than the default and
+free, because nothing shipped uses a form or a `<base>`. It is written down because every other
+security property here is.
+
 - `sidePanel` — the entire UI is a Chrome side panel.
 - `storage` — persist the workspace list/binding, generated graph data, and AI settings locally.
 - `scripting` — inject the extension's own content scripts into an already-open Zoho tab if

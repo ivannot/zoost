@@ -212,6 +212,13 @@
   <p>Zoost requests no access to your browsing history, bookmarks, downloads, saved passwords or any site
     other than those listed above.</p>
 
+  <p>Both extensions also declare a <b>content security policy</b> of their own:
+    <code>script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'</code>. The first two
+    are what Manifest V3 already enforces — no inline script, no code loaded from anywhere else — written
+    down rather than relied on silently. The last two are stricter than the default and cost nothing,
+    because nothing shipped uses a form or a <code>&lt;base&gt;</code> element. A policy can only be
+    tightened this way: Chrome refuses a manifest that tries to relax the first two.</p>
+
   <h2>6. Legal basis and your rights</h2>
   <p>Because the developer receives no personal data, there is no processing to consent to, object to,
     or request access to. Data protection rights in respect of the Zoho CRM data itself are exercised against

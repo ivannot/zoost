@@ -5,6 +5,9 @@
   "short_name": "Zoost CRM",
   "homepage_url": "https://zoost.it",
   "description": "Independent developer & admin workbench for Zoho CRM: version Deluge locally, explore schema, relations, workflows, connections.",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'"
+  },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true

@@ -387,5 +387,49 @@ class HostsAreDeclared(unittest.TestCase):
         self.assertEqual(findings, [])
 
 
+class ContentSecurityPolicy(unittest.TestCase):
+    """The one security decision the project had left implicit.
+
+    MV3's default already blocks inline script and remote code, and the extensions relied on it
+    without saying so — every other security property here is written down. Declaring it changes no
+    behaviour and makes the decision reviewable, and it can only be *tightened*: Chrome rejects a
+    policy that relaxes script-src or object-src, so a future edit that tries cannot ship.
+    """
+
+    def policies(self):
+        out = {}
+        for mf in sorted((ROOT / 'apps').glob('*/manifest.json')):
+            out[mf.parent.name] = json.loads(mf.read_text(encoding='utf-8')).get('content_security_policy')
+        return out
+
+    def test_both_apps_declare_one(self):
+        for app, csp in self.policies().items():
+            self.assertIsNotNone(csp, f'{app}: no content_security_policy')
+            self.assertIn('extension_pages', csp, app)
+
+    def test_the_two_are_identical(self):
+        vals = {app: csp['extension_pages'] for app, csp in self.policies().items()}
+        self.assertEqual(len(set(vals.values())), 1, vals)
+
+    def test_it_never_relaxes_what_mv3_enforces(self):
+        # 'unsafe-inline', 'unsafe-eval', a remote origin or a data: source would each be a relaxation
+        # Chrome refuses — and the point of writing the policy down is that the refusal is visible here
+        # first, at the moment someone tries.
+        for app, csp in self.policies().items():
+            p = csp['extension_pages']
+            for bad in ("'unsafe-inline'", "'unsafe-eval'", 'http://', 'https://', 'data:', "'wasm-unsafe-eval'"):
+                self.assertNotIn(bad, p, f'{app}: policy relaxes with {bad}')
+            self.assertIn("script-src 'self'", p, app)
+            self.assertIn("object-src 'self'", p, app)
+
+    def test_nothing_shipped_needs_what_the_policy_forbids(self):
+        # base-uri and form-action are tightenings, safe only because nothing uses them. If a <form>
+        # or a <base> ever lands, this says so before a user meets a control that silently does not work.
+        for page in sorted((ROOT / 'apps').glob('*/*.html')):
+            src = page.read_text(encoding='utf-8')
+            self.assertNotIn('<form', src, f'{page.name}: a form, with form-action none')
+            self.assertNotIn('<base', src, f'{page.name}: a base element, with base-uri self')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

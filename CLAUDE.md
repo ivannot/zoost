@@ -222,6 +222,14 @@ is inside a folder, and `chrome://extensions` wants the folder.
   deployment, conflicts and rollback — a different product.
 - **No dependencies, no build step, no framework.** Plain JavaScript. The extension ships as
   readable source and must stay auditable by anyone about to give it access to their CRM.
+- **Both manifests declare a content security policy**, and it may only ever be tightened:
+  `script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'`. The first two are what
+  MV3 enforces regardless — writing them down is the point, because this was the one security decision
+  the project left implicit while every other one is stated. The last two are stricter than the default
+  and free *today*, which is the condition to keep checking: a `<form>` or a `<base>` anywhere in a
+  shipped page would silently stop working, so `tests/tools_test.py` asserts neither exists. Chrome
+  refuses a manifest that relaxes `script-src` or `object-src`, so the failure mode of a careless edit
+  is a release that will not load — the test catches it first.
 - **No new `manifest.json` permissions** without discussing it first. Every one has to be
   justified to the Web Store and to users, and the justification text lives in `store/`.
 - **Never ship a claim that has not been tested.** Only Anthropic and OpenAI are supported as AI
