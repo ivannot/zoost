@@ -13,8 +13,10 @@ Every test below plants a defect that actually reached the user and asserts it i
 
     python3 -m unittest discover -s tests -p 'tools_test.py'
 """
+import pathlib
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -22,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 
 import sitecheck            # noqa: E402
+import htmlcheck            # noqa: E402
 import namecheck            # noqa: E402
 
 
@@ -120,6 +123,103 @@ class NameCheck(unittest.TestCase):
         findings = []
         for app in namecheck.APPS:
             namecheck.check_app(app, findings)
+            namecheck.check_bare_names(app, findings)
+        self.assertEqual(findings, [])
+
+
+class BareNamesInTheApps(unittest.TestCase):
+    """The rule was enforced on the site and on nothing else, and the apps had drifted 27 times.
+
+    Each case below is one of the three surfaces those defects actually lived on. The masking is the
+    part that can go quietly wrong: strip the legitimate forms carelessly and "Zoho Analytics" starts
+    reporting its own second word, which is the failure that makes a checker unreadable.
+    """
+
+    def bare(self, text):
+        return list(namecheck.BARE.finditer(namecheck._mask_legit(text)))
+
+    def test_a_bare_platform_name_in_prose_is_reported(self):
+        self.assertTrue(self.bare('No answer from the Analytics page.'))
+        self.assertTrue(self.bare('it never writes anything to CRM, ever'))
+
+    def test_the_platform_named_in_full_is_silent(self):
+        self.assertFalse(self.bare('No answer from the Zoho Analytics page.'))
+        self.assertFalse(self.bare('it never writes anything to Zoho CRM, ever'))
+
+    def test_our_own_names_are_silent(self):
+        self.assertFalse(self.bare('Zoost CRM mirrors what you built'))
+        self.assertFalse(self.bare('Zoost Analytics mirrors what you built'))
+        self.assertFalse(self.bare('Zoost — workbench for Zoho Analytics'))
+
+    def test_paths_and_identifiers_are_exempt(self):
+        # `analytics/` is a folder and `CRM_HOSTS` is an identifier; neither is a sentence.
+        self.assertFalse(self.bare('apps/analytics/sidepanel.js was written first'))
+        self.assertFalse(self.bare('the value comes from CRM_HOSTS at the top'))
+
+    def test_a_defect_in_an_html_attribute_is_reported(self):
+        # This one shipped: a + Workspace tooltip reading "for the Analytics workspace".
+        findings = []
+        src = '<button title="Create a workspace for the Analytics workspace in the tab">Go</button>'
+        with tempfile.TemporaryDirectory() as d:
+            app = pathlib.Path(d) / 'apps' / 'analytics'
+            app.mkdir(parents=True)
+            (app / 'sidepanel.html').write_text(src, encoding='utf-8')
+            old, namecheck.ROOT = namecheck.ROOT, pathlib.Path(d)
+            try:
+                namecheck.check_bare_names('analytics', findings)
+            finally:
+                namecheck.ROOT = old
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn('bare "Analytics"', findings[0])
+
+    def test_a_short_label_is_not_a_sentence(self):
+        # "Analytics tab" as a whole chip label has nowhere to put the platform; the check skips
+        # anything under 12 characters rather than demanding prose of a badge.
+        findings = []
+        with tempfile.TemporaryDirectory() as d:
+            app = pathlib.Path(d) / 'apps' / 'analytics'
+            app.mkdir(parents=True)
+            (app / 'x.js').write_text("const a = 'Analytics';", encoding='utf-8')
+            old, namecheck.ROOT = namecheck.ROOT, pathlib.Path(d)
+            try:
+                namecheck.check_bare_names('analytics', findings)
+            finally:
+                namecheck.ROOT = old
+        self.assertEqual(findings, [])
+
+
+class HiddenActuallyHides(unittest.TestCase):
+    """`hidden` is a UA rule and loses to any author `display`, silently.
+
+    It shipped twice in one change and was found by the user opening Settings, not by a check. The
+    check asks whether a page carries `[hidden]{display:none}` at all, rather than which element got
+    it wrong — a per-element version would go quiet the moment a class grew a `display` later, which
+    is precisely how this happened.
+    """
+
+    def page(self, body, css):
+        d = tempfile.mkdtemp()
+        p = pathlib.Path(d) / 'x.html'
+        p.write_text(f'<style>\n{css}\n</style>\n{body}', encoding='utf-8')
+        return p
+
+    def test_a_page_using_hidden_without_the_rule_is_reported(self):
+        p = self.page('<div id="r" class="row" hidden>x</div>', '.row{display:flex}')
+        self.assertEqual(len(htmlcheck.display_override(p)), 1)
+
+    def test_the_rule_silences_it(self):
+        p = self.page('<div id="r" class="row" hidden>x</div>',
+                      '[hidden]{display:none!important}\n.row{display:flex}')
+        self.assertEqual(htmlcheck.display_override(p), [])
+
+    def test_a_page_that_never_uses_hidden_is_not_asked_for_the_rule(self):
+        p = self.page('<div class="row">x</div>', '.row{display:flex}')
+        self.assertEqual(htmlcheck.display_override(p), [])
+
+    def test_every_shipped_page_carries_it_today(self):
+        findings = []
+        for page in sorted((ROOT / 'apps').rglob('*.html')):
+            findings += htmlcheck.display_override(page)
         self.assertEqual(findings, [])
 
 

@@ -77,7 +77,7 @@
     if (!res.ok) throw apiError(res.status, path, await errorDetail(res));
     const j = await res.json();
     if (j && j.status && String(j.status).toLowerCase() !== 'success') {
-      throw new Error('Analytics returned status "' + j.status + '"' + (j.summary ? ': ' + j.summary : ''));
+      throw new Error('Zoho Analytics returned status "' + j.status + '"' + (j.summary ? ': ' + j.summary : ''));
     }
     return j;
   }

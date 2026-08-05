@@ -89,6 +89,36 @@ def suspect(expr: str) -> bool:
 # reads, which is worse than none — and the honest reason it cannot do better is that "this string is
 # already markup" is a fact about intent, not about syntax. Do not rebuild it without a new idea.
 
+# ---------------------------------------------------------------------------------------------------
+# An author `display` beats `hidden`.
+# ---------------------------------------------------------------------------------------------------
+
+HIDDEN_EL = re.compile(r'<(\w+)([^>]*\bhidden\b[^>]*)>')
+STYLE_BLOCK = re.compile(r'<style>(.*?)</style>', re.S)
+
+
+def display_override(path) -> list:
+    """`hidden` is a UA rule, and any author `display` outranks it — so the element stays on screen.
+
+    Nothing fails: no console error, no layout break, just a row that is always there. It shipped
+    twice in a single change — the passphrase row in Settings and the unlock row in the panel, both
+    permanently visible, both reported by the user rather than by a check.
+
+    The fix is one rule per page (`[hidden]{display:none!important}`), so what this looks for is not
+    "which element got it wrong" but "does this page carry the rule at all". That is deliberate: a
+    per-element check would go quiet the moment someone adds a `display` to a class that did not have
+    one, which is exactly how it happened.
+    """
+    src = path.read_text(encoding='utf-8')
+    if not HIDDEN_EL.search(src):
+        return []
+    css = ' '.join(m.group(1) for m in STYLE_BLOCK.finditer(src))
+    if re.search(r'\[hidden\]\s*\{[^}]*display\s*:\s*none', css):
+        return []
+    return [f'{path.name}: uses the hidden attribute but never states [hidden]{{display:none}} — '
+            f'any author display rule leaves the element on screen']
+
+
 def main() -> int:
     findings = []
     for path in FILES:
@@ -100,13 +130,17 @@ def main() -> int:
                 rel = path.relative_to(ROOT)
                 findings.append(f'{rel}:{line}: {attr}="${{{" ".join(expr.split())[:60]}}}" is not attribute-escaped')
 
-    print(f'htmlcheck: {len(FILES)} shipped scripts')
+    pages = sorted(p for p in (ROOT / 'apps').rglob('*.html'))
+    for path in pages:
+        findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in display_override(path)]
+
+    print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')
     for f in findings:
         print('  ' + f)
     print()
-    print(f'{len(findings)} finding(s). A quote in that value closes the attribute early.'
+    print(f'{len(findings)} finding(s). Markup that does not do what it looks like it does.'
           if findings else
-          '0 findings. Every value interpolated into an attribute goes through escA.')
+          '0 findings. Attributes are escaped, and hidden hides.')
     return 1 if findings else 0
 
 

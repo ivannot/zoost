@@ -129,6 +129,68 @@ def check_app(app: str, findings: list) -> None:
                 findings.append(f'{rel}: links to {page}, which belongs to {theirs["platform"]}')
 
 
+# The three legitimate forms, and nothing else. Stripping them first and reporting whatever bare
+# occurrence survives is the same technique sitecheck.py uses on the pages — because it is the only
+# one that does not need a list of the places a name might appear.
+LEGIT = (
+    'Zoost — workbench for Zoho CRM', 'Zoost — workbench for Zoho Analytics',
+    'Zoho CRM', 'Zoho Analytics', 'Zoost CRM', 'Zoost Analytics',
+)
+BARE = re.compile(r'(?<![\w./-])(CRM|Analytics)(?![\w./-])')
+STRING = re.compile(r"'((?:[^'\\\n]|\\.)*)'|\"((?:[^\"\\\n]|\\.)*)\"|`((?:[^`\\]|\\.)*)`")
+
+
+def _mask_legit(text: str) -> str:
+    """Blank out the legitimate forms, keeping every offset, so what is left is genuinely bare."""
+    for form in sorted(LEGIT, key=len, reverse=True):
+        text = re.sub(re.escape(form), lambda m: '\x00' * len(m.group(0)), text)
+    return text
+
+
+def check_bare_names(app: str, findings: list) -> None:
+    """A bare "CRM" or "Analytics" in anything a user reads.
+
+    This is the rule the project settled and then broke twenty-seven times without noticing, because
+    nothing read for it: on a page whose subject is *our* workbench, "it never writes to Analytics"
+    does not say whose Analytics, and a reader who guesses will as often guess it means ours. It is
+    also the safer trademark posture — nominative use is strongest when the mark is quoted exactly.
+
+    sitecheck.py has enforced this on the site since the day it was settled; nothing enforced it on
+    the thing the site describes. Two of the defects it now catches were found by eye, in a single
+    file, while doing something else — which is the definition of a check that does not exist.
+
+    Scope is deliberately narrow and derived rather than listed: JS *string literals* outside
+    comments, and in HTML the text between tags plus the four attributes a user actually reads.
+    Comments are exempt because internal prose may use shorthand — "outward it never bends; between
+    us it can" — and code is exempt because `analytics/` is a folder, not a sentence. Short literals
+    are skipped: a name on its own is a label, and there is nowhere in a label to put the platform.
+    """
+    for path in sorted((ROOT / f'apps/{app}').rglob('*')):
+        if path.suffix not in ('.html', '.js') or not path.is_file():
+            continue
+        rel = str(path.relative_to(ROOT))
+        raw = path.read_text(encoding='utf-8')
+
+        spans = []
+        if path.suffix == '.js':
+            body = strip_comments(raw, True)
+            for m in STRING.finditer(body):
+                spans.append(m.group(1) or m.group(2) or m.group(3) or '')
+        else:
+            body = re.sub(r'<style.*?</style>|<script.*?</script>', ' ',
+                          strip_comments(raw, False), flags=re.S)
+            spans += [m.group(1) for m in re.finditer(r'>([^<>]{6,})<', body)]
+            spans += [m.group(2) for m in
+                      re.finditer(r'\b(title|placeholder|aria-label|alt)="([^"]{6,})"', body)]
+
+        for text in spans:
+            if len(text) < 12:
+                continue
+            for hit in BARE.finditer(_mask_legit(text)):
+                ctx = ' '.join(text[max(0, hit.start() - 45):hit.end() + 30].split())
+                findings.append(f'{rel}: bare "{hit.group(1)}" in text a user reads — …{ctx}…')
+
+
 def check_release_workflow(findings: list) -> None:
     """The release title is a public surface too, and it is the one nothing was watching.
 
@@ -153,6 +215,7 @@ def main() -> int:
     findings = []
     for app in APPS:
         check_app(app, findings)
+        check_bare_names(app, findings)
     check_release_workflow(findings)
 
     files = sum(1 for app in APPS for p in (ROOT / f'apps/{app}').rglob('*')

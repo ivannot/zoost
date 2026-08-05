@@ -30,7 +30,7 @@ window.ZOHO_ANALYTICS_SQL = {
     '**Only non-recursive CTEs**, at most **3 per query**. A CTE may not contain a sub-query, may not be combined with PIVOT/UNPIVOT, and may not recurse.',
     'A query table may be built on another query table to a maximum of **3 levels**.',
     '`SELECT *` is discouraged for performance; name the columns.',
-    'Zoho provides in-built function families — Logical, Aggregate, Tabular, String, Mathematical, Date, Duration and Business. The list shown under "Insert SQL Functions" in the Analytics UI is the set guaranteed to work; anything outside it may or may not be accepted, so prefer the listed ones and tell the user when you have used something you cannot vouch for.',
+    'Zoho provides in-built function families — Logical, Aggregate, Tabular, String, Mathematical, Date, Duration and Business. The list shown under "Insert SQL Functions" in the Zoho Analytics UI is the set guaranteed to work; anything outside it may or may not be accepted, so prefer the listed ones and tell the user when you have used something you cannot vouch for.',
   ],
   // One block, for a system prompt or a Markdown file.
   text() {

@@ -191,7 +191,7 @@ function fieldsTableHtml(n) {
   const tbl = `<div id="layzone">${layoutZoneHtml(n)}</div>` + joinsHtml(n);
   const rd = n.reads || [];
   const who = rd.length
-    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) \u2014 from Analytics\u2019 own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => esc(t)).join('<br>')}</div></div>`
+    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) \u2014 from Zoho Analytics\u2019 own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => esc(t)).join('<br>')}</div></div>`
     : '<div class="none" style="margin-top:12px">Nothing in this workspace reads from it. A shared link, a scheduled export or an API consumer would be invisible here \u2014 a candidate, not a verdict.</div>';
   return tbl + who;
 }
