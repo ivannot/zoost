@@ -73,10 +73,15 @@
   // Not verified: whether Zoho ever signals a permission refusal as 200 with an error body. If it
   // does, that case will read as a normal failure here rather than being mislabelled - which is the
   // right way round for a guess we have not tested.
-  function apiError(status, path, detail) {
-    const e = new Error(status + ' on ' + path + (detail ? ' - ' + detail : ''));
+  function apiError(status, path, detail, code) {
+    const e = new Error(status + ' on ' + path + (detail ? ' - ' + detail : '') + (code && code !== detail ? ' [' + code + ']' : ''));
     e.status = status;
     e.forbidden = status === 401 || status === 403;
+    e.detail = detail || null;
+    // Zoho's machine-readable reason, kept apart from the sentence. `INVALID_MODULE` is the one a
+    // caller can act on; "operation cannot be performed for hidden module" is the one to show a
+    // person. Nothing branches on either here - both are carried, and the caller decides.
+    e.code = code || null;
     return e;
   }
   // Zoho explains itself in the body and we were throwing it away. A connections pull failing with
@@ -87,8 +92,12 @@
     try {
       const t = (await res.text()).slice(0, 400);
       const m = t.match(/"(?:errorMessage|message|error)"\s*:\s*"([^"]{1,120})"/);
-      return m ? m[1] : null;
-    } catch (_) { return null; }
+      // `code` is read separately rather than added to the alternation above: it appears *first* in
+      // a CRM error body, so folding it in would have made the regex return INVALID_MODULE and lose
+      // the sentence - and `api()` compares this value against INVALID_CSRF_TOKEN.
+      const c = t.match(/"code"\s*:\s*"([A-Z0-9_]{1,60})"/);
+      return { message: m ? m[1] : null, code: c ? c[1] : null };
+    } catch (_) { return { message: null, code: null }; }
   }
   // Right after a fresh login the deluge runtime rejects the very first `/deluge/` call with
   // 400 INVALID_CSRF_TOKEN, and any `/crm/` call in between makes the next attempt succeed -
@@ -113,12 +122,12 @@
   async function api(path, csrfPrefix, retried) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
     if (res.ok) return res.json();
-    const detail = await errorDetail(res);
-    if (!retried && csrfPrefix === 'drepn' && res.status === 400 && detail === 'INVALID_CSRF_TOKEN') {
+    const { message, code } = await errorDetail(res);
+    if (!retried && csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
       await warmDeluge();
       return api(path, csrfPrefix, true);
     }
-    throw apiError(res.status, path, detail);
+    throw apiError(res.status, path, message, code);
   }
   function toFile(fn, fallback) {
     const ns = fn.nameSpace || fallback?.namespace || fn.category || 'misc';
@@ -226,9 +235,24 @@
     const out = [];
     for (let i = 0; i < mods.length; i++) {
       const m = mods[i]; if (!m.api_name) continue;
-      let fields = [], fieldsOk = false;
+      // Why the fields did not come, when they did not. Both attempts used to be `catch {}`, so a
+      // module Zoho refuses looked exactly like one that had never been pulled: zero fields, zero
+      // layouts, zero related lists, and a panel saying "re-run Pull Modules to fetch them" - advice
+      // that could not work, offered forever. Reported with a HAR: Invoices is hidden in that org and
+      // Zoho answers 400 INVALID_MODULE, "operation cannot be performed for hidden module".
+      //
+      // Nothing here decides what that means. The status, Zoho's code and Zoho's own sentence are
+      // written to the module file with the date they were given, in the same spirit as the per-area
+      // access record: it is what was asked and what came back, not a permanent verdict.
+      let fields = [], fieldsOk = false, unreadable = null;
       try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}&type=all`)).fields || []; fieldsOk = true; }
-      catch { try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}`)).fields || []; fieldsOk = true; } catch {} }
+      catch (e1) {
+        try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}`)).fields || []; fieldsOk = true; }
+        catch (e2) {
+          const err = e2.status ? e2 : e1;   // the second attempt drops the URL variant, not the reason
+          unreadable = { status: err.status || 0, code: err.code || null, message: err.detail || String(err.message || err), at: new Date().toISOString() };
+        }
+      }
       let layouts = [];
       // Only real record modules have layouts. Exact call the CRM UI uses (verified via HAR):
       // v2.2 with the comma URL-encoded (id%2Cstatus) returns every layout WITH full sections/fields.
@@ -267,6 +291,9 @@
       }
       out.push({
         related_lists: related,
+        // null when the module read fine. Present only when Zoho refused, and then it is the whole
+        // reason the three lists below are empty.
+        unreadable,
         api_name: m.api_name, module_name: m.module_name || m.api_name,
         singular_label: m.singular_label || null, plural_label: m.plural_label || null,
         id: m.id, generated_type: m.generated_type || null,
@@ -348,7 +375,8 @@
   // `String(e)` throws away everything except the text. That is the boundary trap CLAUDE.md is about:
   // `forbidden` would be lost exactly here, and the panel would go back to guessing from a string.
   // So every handler replies through this, and the two facts travel as their own fields.
-  const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) });
+  const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0,
+    forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
 
     if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) - skips wrapper service frames
     if (msg?.cmd === 'pullAll') { pullAll().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }

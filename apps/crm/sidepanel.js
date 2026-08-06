@@ -748,6 +748,34 @@ function makeCallResolver(g) {
 }
 
 // ---------- preview ----------
+// The preview header, written in one place so the five tabs cannot say different things.
+//
+// Reported: selecting a function showed `functions/<namespace>/<name>.dg` in a 400px header, so the
+// ellipsis ate the file name - the one part worth reading - and left the folder. And no other tab
+// named a file at all, which reads as five products rather than five tabs. So: the item's own name,
+// then the file, then the whole workspace-relative path in the tooltip, which is where a long string
+// belongs.
+//
+// Schedules and connections carry a synthetic path (`schedules/<id>`, `connections/<name>`): there is
+// no such file, they are rows inside one index. Naming a file that is not there would be worse than
+// naming none, so those name the file that does hold them and say what they are inside it.
+function pvFileOf(path) {
+  if (!path) return null;
+  const parts = path.split('/');
+  const last = parts[parts.length - 1];
+  if (/\.[a-z0-9]+$/i.test(last)) return { name: last, title: path };
+  return { name: 'index.json', title: `${parts.slice(0, -1).join('/')}/index.json - one row inside it` };
+}
+function setPvName(label, path) {
+  const f = pvFileOf(path);
+  // A function's name *is* its file name, so printing both would say it twice. Derived from the two
+  // strings rather than decided per tab, which is how the tabs drifted apart in the first place.
+  const same = !!f && label === f.name;
+  $('pvname').textContent = label;
+  $('pvname').title = same ? f.title : label;
+  $('pvfile').textContent = f && !same ? f.name : '';
+  $('pvfile').title = f && !same ? f.title : '';
+}
 function updateBack() { $('pvback').classList.toggle('show', pvHist.length > 0); }
 function openFromTree(path) { pvHist = []; openFile(path); }
 async function openFile(path, push = false, line = null) {
@@ -757,7 +785,7 @@ async function openFile(path, push = false, line = null) {
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
-  $('pvname').textContent = path; $('pvcallers').className = ''; $('pvcallers').textContent = '';
+  setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   let code; try { code = await readFile(path); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
   const lines = code.split('\n').length;
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
@@ -1326,6 +1354,10 @@ async function aiLoadConnections() {
   aiConnCache = list; return list;
 }
 function aiModuleText(m) {
+  // Told before the empty table, not after: an assistant handed "Module Invoices" with no fields
+  // will reason about why a module has none, and the answer is that nobody was ever allowed to look.
+  const ref = moduleRefusal(m.unreadable);
+  if (ref) return `Module ${m.api_name}\nNOT DESCRIBED BY ZOHO. ${ref.text}\nDo not infer its fields, layouts or relations from anywhere else - they were never read.\n`;
   let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist |\n`;
   (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${(f.picklist && f.picklist.length) ? f.picklist.slice(0, 15).join(', ') : ''} |\n`; });
   return s;
@@ -1351,7 +1383,9 @@ async function aiBuildSeed(cap) {
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
 
   const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
-  const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k).join('\n') + '\n';
+  // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
+  // about, rather than at the moment the answer would already have been guessed.
+  const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
 
   const conns = await aiLoadConnections();
   const connections = conns.length
@@ -1424,7 +1458,11 @@ async function aiFocus() {
     }
     if (p.startsWith('modules/')) {
       const e = moduleData.find((x) => x.path === p);
-      if (e) return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 6000));
+      if (e) {
+        const ref = moduleRefusal(e.unreadable);
+        return block(`the module «${e.label || e.api_name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 6000))
+          + (ref ? `\n${ref.text} Its fields, layouts and relations are absent because they were never read, not because there are none.\n` : '');
+      }
     }
   } catch (_) { /* a focus that cannot be built is simply absent: never a reason to fail the chat */ }
   return '';
@@ -2274,12 +2312,27 @@ async function rebuildModules() {
   for (const p of names) {
     try {
       const m = JSON.parse(await readFile(p));
-      moduleData.push({ path: p, api_name: m.api_name, gen: m.module_name || m.api_name, label: m.plural_label || m.singular_label || m.module_name || m.api_name, custom: m.generated_type === 'custom', generated_type: m.generated_type || '', fieldCount: (m.fields || []).length, lookupCount: (m.fields || []).filter((f) => f.lookup).length, layoutCount: (m.layouts || []).length, layouts: (m.layouts || []), viewable: (m.viewable !== false && m.visible !== false), navigable: moduleNavigable(m) });
+      moduleData.push({ path: p, api_name: m.api_name, gen: m.module_name || m.api_name, label: m.plural_label || m.singular_label || m.module_name || m.api_name, custom: m.generated_type === 'custom', generated_type: m.generated_type || '', fieldCount: (m.fields || []).length, lookupCount: (m.fields || []).filter((f) => f.lookup).length, layoutCount: (m.layouts || []).length, layouts: (m.layouts || []), viewable: (m.viewable !== false && m.visible !== false), navigable: moduleNavigable(m), unreadable: m.unreadable || null });
     } catch (_) {}
   }
   renderModules();
   setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
+}
+// What Zoho said when it refused to describe a module, in one sentence, in one place - the row, the
+// detail pane and both exports all ask this. Zoho's own words are quoted rather than reworded: the
+// fact is the product, and our paraphrase of it would be an interpretation.
+function moduleRefusal(u) {
+  if (!u) return null;
+  const when = u.at ? new Date(u.at) : null;
+  const day = when && !isNaN(when) ? `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}` : null;
+  const said = u.message || u.code || `HTTP ${u.status || '?'}`;
+  return {
+    short: u.code === 'INVALID_MODULE' ? 'not described' : 'refused',
+    text: `Zoho would not describe this module, so its fields, layouts and related lists were never read. `
+        + `It answered ${u.status || '?'}${u.code ? ' ' + u.code : ''}: \u00ab${said}\u00bb${day ? `, asked on ${day}` : ''}. `
+        + `Pulling again re-asks - a refusal is a record of one answer, not a permanent one - but nothing here can change it.`,
+  };
 }
 function renderModules() {
   if (viewMode !== 'modules') return;
@@ -2315,8 +2368,10 @@ function renderModules() {
       // The layouts chevron lives on the RIGHT (next to the layout count), not between dot and name,
       // so module names line up with the other tabs' dot\u2192name spacing.
       const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
-      const stTitle = m.error ? 'Failed - click to retry' : 'In workspace - click to resync fields from Zoho';
-      el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="${escA(stTitle)}">${m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
+      const ref = moduleRefusal(m.unreadable);
+      const stTitle = m.error ? 'Failed - click to retry' : ref ? ref.text : 'In workspace - click to resync fields from Zoho';
+      el.innerHTML = `<span class="st ${m.error ? 'st-err' : ref ? 'st-stale' : 'st-ok'}" title="${escA(stTitle)}">${m.error ? '\u27f3' : ref ? '\u25d0' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
+        + (ref ? `<span class="rest rx" title="${escA(ref.text)}">${escHtml(ref.short)}</span>` : '')
         + `<span class="rest rf" title="${m.fieldCount} field(s)">${m.fieldCount ? m.fieldCount + 'f' : ''}</span>`
         + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>${chev}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); resyncModule(m); };
@@ -2339,10 +2394,22 @@ async function resyncModule(m) {
   if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
   setStatus(`Resyncing ${m.api_name}…`, 'busy');
   const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
-  if (!r?.ok) { m.error = true; renderModules(); setStatus(`Resync of ${m.api_name} failed.`, 'warn'); return; }
   let mod = {}; try { mod = JSON.parse(await readFile(m.path)); } catch (_) {}
-  mod.fields = r.fields; try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
-  m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false;
+  // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
+  // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
+  // module Zoho has just described, which is the same class of lie in the other direction.
+  if (!r?.ok) {
+    mod.unreadable = { status: r?.status || 0, code: r?.code || null, message: r?.detail || r?.error || 'no answer', at: new Date().toISOString() };
+    try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
+    m.unreadable = mod.unreadable; m.error = true;
+    renderModules(); if (currentPath === m.path) openModule(m.path);
+    const ref = moduleRefusal(m.unreadable);
+    setStatus(`${m.api_name}: ${ref ? ref.text : 'resync failed.'}`, 'warn');
+    return;
+  }
+  mod.fields = r.fields; delete mod.unreadable;
+  try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
+  m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
   graphCache = null;
   renderModules(); if (currentPath === m.path) openModule(m.path);
   setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
@@ -2356,6 +2423,11 @@ function renderFieldsTable(m) {
     <td class="mono">${f.lookup ? '\u2192 ' + escHtml(typeof f.lookup === 'string' ? f.lookup : (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module)) || '')) : ''}</td>
     <td>${f.picklist && f.picklist.length ? escHtml(f.picklist.slice(0, 8).join(', ')) + (f.picklist.length > 8 ? ` \u2026(+${f.picklist.length - 8})` : '') : ''}</td>
   </tr>`).join('');
+  if (!rows) {
+    const ref = moduleRefusal(m.unreadable);
+    return `<div class="empty" style="padding:12px 10px">${ref ? '<b>No fields, and they were not missed.</b> ' + escHtml(ref.text)
+      : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
+  }
   return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 // Selecting a different item must start the reader at the top of the new content;
@@ -2389,7 +2461,8 @@ async function openModule(path, layoutId) {
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
   const nav = moduleNavigable(m);
-  $('pvname').textContent = `${m.plural_label || m.singular_label || m.module_name || m.api_name} \u00b7 ${m.api_name} \u00b7 ${(m.fields || []).length} fields${nav ? '' : ' \u00b7 no records tab'}`;
+  const refusal = moduleRefusal(m.unreadable);
+  setPvName(`${m.plural_label || m.singular_label || m.module_name || m.api_name} \u00b7 ${m.api_name} \u00b7 ${(m.fields || []).length} fields${nav ? '' : ' \u00b7 no records tab'}`, path);
   $('pvreveal').style.display = nav ? '' : 'none'; $('pvreveal').textContent = 'Records \u2197'; $('pvreveal').title = 'Open the module\'s records list in Zoho';
   $('pvfind').style.display = nav ? '' : 'none'; $('pvfind').textContent = 'Layouts \u2197'; $('pvfind').title = 'Open the module\'s layouts (add/edit fields & layout) in Zoho';
   $('pvcallers').className = ''; $('pvcallers').textContent = '';
@@ -2417,8 +2490,12 @@ async function openModule(path, layoutId) {
         + `<td class="mono">${escHtml(r.module || r.connected_module || '')}${r.linking_module ? ` <span style="color:var(--muted)">via ${escHtml(r.linking_module)}</span>` : ''}</td>`
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`
-    : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">None recorded - re-run <b>Pull Modules</b> to fetch them.</div>`;
-  $('pvtable').innerHTML = namesBlock + relBar + selector + `<div id="laybody">${renderFieldsTable(m)}</div>` + rlBlock;
+    : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">${
+        refusal ? escHtml(refusal.text) : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
+  const refBanner = refusal
+    ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
+    : '';
+  $('pvtable').innerHTML = namesBlock + refBanner + relBar + selector + `<div id="laybody">${renderFieldsTable(m)}</div>` + rlBlock;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {
     navigator.clipboard.writeText(c.dataset.c).then(() => setStatus(`Copied \u00ab${c.dataset.c}\u00bb`, 'ok')).catch(() => {});
   }));
@@ -2780,8 +2857,12 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
         const secCount = secArr.length || (typeof L.sections === 'number' ? L.sections : 0);
         return `<details open style="margin-top:6px"><summary style="cursor:pointer"><b>${esc(L.name || String(L.id))}</b>${L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''} <span class=\"none\">\u00b7 ${secCount} sections</span></summary>${secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail not in this export - re-pull modules for full layout fields.</div>'}</details>`;
       }).join('') : '';
+      // A section with three empty tables and no reason reads as a module with nothing in it. The
+      // reader of an export cannot ask the panel, which is the whole point of the export.
+      const mref = moduleRefusal(m.unreadable);
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
+        + (mref ? `<div class="refs"><span><b>Not described by Zoho.</b> ${esc(mref.text)}</span></div>` : '')
         + `${refBy}<table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>${relsHtmlFor(m)}${layoutsHtml}</section>`;
     });
   }
@@ -2923,7 +3004,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     const rb = (modRefs && modRefs[m.api_name]) ? modRefs[m.api_name].length : 0;
     modRows.push(`<tr><td><a href="#${modAnchor(m.api_name)}">${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</a></td>`
       + `<td class="mono">${esc(m.api_name)}</td><td class="mono">${esc(m.module_name || '')}</td>`
-      + `<td class="ct">${k}</td><td class="ct">${(m.fields || []).length}</td><td class="ct">${rb}</td></tr>`);
+      + `<td class="ct">${k}</td><td class="ct">${(m.fields || []).length ? (m.fields || []).length : (m.unreadable ? `<span title="${escA(moduleRefusal(m.unreadable).text)}">not described</span>` : 0)}</td><td class="ct">${rb}</td></tr>`);
   }));
   // Connections: catalogue + which functions use each
   const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).map((c) => {
@@ -3015,7 +3096,7 @@ function buildExportMarkdown(d, scope) {
   md += '## Index\n\n### Functions\n';
   fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
-  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` - ${(m.fields || []).length} fields\n`; });
+  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {
     md += '\n### Workflows\n';
     wfs.forEach((w) => {
@@ -3069,7 +3150,10 @@ function buildExportMarkdown(d, scope) {
   }
   if (mods.length) md += '---\n\n## Modules (schema)\n\n';
   mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => {
-    md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |\n|---|---|---|---|---|\n`;
+    md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
+    const mref = moduleRefusal(m.unreadable);
+    if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
+    md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |\n|---|---|---|---|---|\n`;
     (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${(f.picklist && f.picklist.length) ? _mdCell(f.picklist.slice(0, 12).join(', ')) : ''} |\n`; });
     md += '\n';
     if (scope.relations && (m.related_lists || []).length) {
@@ -3192,7 +3276,7 @@ async function refreshSchedules() {
 async function openSchedule(e) {
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
-  $('pvname').textContent = e.name;
+  setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
@@ -3436,7 +3520,7 @@ async function refreshConnections() {
 function openConnection(c) {
   currentPath = c.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
-  $('pvname').textContent = c.label || c.name;
+  setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
@@ -3491,7 +3575,7 @@ async function openWorkflow(e) {
   let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus('Read failed: ' + err.message, 'bad'); return; }
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
-  $('pvname').textContent = e.name;
+  setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = 'Go to \u2197'; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';

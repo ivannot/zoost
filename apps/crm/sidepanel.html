@@ -176,6 +176,9 @@
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
   .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
+  /* A module Zoho would not describe. Its own class rather than widening .rf/.rl, which the
+     Connections rows also use - see the note in CLAUDE.md about the badge classes. */
+  .f .rest.rx{margin-left:0;color:var(--warn);font-weight:600}
   .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
   .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
   #missing{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
@@ -330,7 +333,12 @@
   #preview.show{display:flex}
   #pvhead{display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
   #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none} #pvhead .back.show{display:inline}
-  #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
+     in the element that also holds the name - so the one part worth reading, the file name,
+     was the part the ellipsis ate, and the other four tabs did not say which file at all. */
+  #pvhead #pvfile{flex:none;color:var(--muted);font-size:11px;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #pvhead #pvfile:empty{display:none}
   #pvhead .reveal{cursor:pointer;color:#9fc4f5;flex:none;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
   #pvhead .reveal:hover,#pvhead .reveal2:hover{background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}
   #pvhead .x{cursor:pointer;color:var(--muted);flex:none}
@@ -445,6 +453,7 @@
       <div id="pvhead">
         <span class="back" id="pvback" title="Back">◂</span>
         <span id="pvname"></span>
+        <span id="pvfile"></span>
         <span class="reveal" id="pvreveal" title="Open in Zoho">Open in Zoho ↗</span>
         <span class="reveal2" id="pvfind" title="Filter in the Zoho list (for the ⋯ menu: Edit / Delete / Duplicate…)">Find ↗</span>
         <span class="x" id="pvx" title="Close">✕</span>

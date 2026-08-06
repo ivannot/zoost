@@ -193,7 +193,8 @@ const focusCtx = {
   },
   JSON, Object,
 };
-const { aiFocus } = load([sliceFn('apps/crm/sidepanel.js', 'aiFocus')], focusCtx);
+const { aiFocus } = load([sliceFn('apps/crm/sidepanel.js', 'moduleRefusal'),
+                          sliceFn('apps/crm/sidepanel.js', 'aiFocus')], focusCtx);
 
 function looking(at, extra = {}) {
   Object.assign(globalThis, { __cur: at, __wf: [], __sc: [], __cn: [], __md: [], __files: {} }, extra);
@@ -234,6 +235,25 @@ test('schedules, connections and modules each get a focus of their own', async (
 
   const md = await looking('modules/Contacts.json', { __md: [{ path: 'modules/Contacts.json', api_name: 'Contacts', label: 'Contacts' }] });
   assert.match(md, /the module «Contacts»/);
+});
+
+test('a module Zoho refused is said to be unreadable, not empty', async () => {
+  // Reported with a HAR. Invoices is hidden in that org, Zoho answers 400 INVALID_MODULE, and both
+  // fields calls were `catch {}` - so the module was written with nothing in it and the panel said
+  // "None recorded - re-run Pull Modules to fetch them", advice that could never work. An assistant
+  // handed a module with no fields will explain why a module has none; the answer is that nobody was
+  // ever allowed to look, and it has to be told that before the empty list, not after.
+  const md = await looking('modules/Invoices.json', {
+    __md: [{
+      path: 'modules/Invoices.json', api_name: 'Invoices', label: 'Invoices', fieldCount: 0,
+      unreadable: { status: 400, code: 'INVALID_MODULE', message: 'operation cannot be performed for hidden module', at: '2026-08-06T09:30:45.000Z' },
+    }],
+  });
+  assert.match(md, /the module «Invoices»/);
+  assert.match(md, /hidden module/, "Zoho's own words, not ours");
+  assert.match(md, /INVALID_MODULE/);
+  assert.match(md, /2026-08-06/, 'a refusal is dated: it records one answer, not a permanent truth');
+  assert.match(md, /never read, not because there are none/);
 });
 
 test('nothing selected, or something with no focus to give, adds nothing', async () => {
@@ -789,6 +809,21 @@ test('the Z is one stroked path, not three shapes butted together', () => {
       `${f}: a butt cap leaves the capped ends 9px short of the joined ones`);
     assert.match(svg, /stroke-linecap="(square|round)"/, `${f}: the caps must extend like the joins`);
     assert.match(svg, /fill="none"/, `${f}: a filled path is not a stroke`);
+
+    // Square, because he looked at it large and said it was wider than tall. It was: 80 x 74, a
+    // 7.9% difference, measured off the render rather than argued about. Derived from the path so
+    // that moving a number is caught, not from a comment restating it: the extent on each axis is
+    // the centreline span plus a whole stroke, since a square cap and a round join both extend by
+    // half of one - which is why this test only makes sense next to the cap rule above it.
+    const pts = [...read(f).matchAll(/[ML] (\d+) (\d+)/g)].map((m) => [+m[1], +m[2]]);
+    assert.equal(pts.length, 4, `${f}: the mark is no longer four points`);
+    const span = (i) => Math.max(...pts.map((q) => q[i])) - Math.min(...pts.map((q) => q[i]));
+    assert.equal(span(0), span(1), `${f}: the Z is ${span(0) + 18} x ${span(1) + 18}, not a square`);
+    // and centred in the 128 tile, or a square box still sits off to one side
+    for (const i of [0, 1]) {
+      const lo = Math.min(...pts.map((q) => q[i])) - 9, hi = Math.max(...pts.map((q) => q[i])) + 9;
+      assert.equal(lo + hi, 128, `${f}: axis ${i} runs ${lo}..${hi}, which is not centred on 64`);
+    }
   }
 });
 

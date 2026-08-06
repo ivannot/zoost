@@ -92,6 +92,10 @@ IF SOMETHING LOOKS WRONG
   to the Zoho CRM tab and the panel returns.
 - A tab has disappeared: either it was hidden in Settings, or the user's Zoho role does not grant it.
   Settings shows which, and the date it was checked.
+- A module shows no fields and carries a half-filled amber dot: Zoho refused to describe it - usually
+  because the module is hidden in that org - so its fields, layouts and related lists were never read.
+  The panel quotes what Zoho answered and when it was asked. Pulling again re-asks, which is worth
+  doing if the module has since been unhidden, but nothing in Zoost can change the answer.
 - "The working folder is no longer readable": Chrome lets folder permission lapse after a while.
   Press the ↻ Refresh button in the toolbar to grant it again. Nothing is lost and nothing has to be
   pulled again.

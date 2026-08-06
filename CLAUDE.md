@@ -421,6 +421,32 @@ render as **stale** (amber ◐ dot) and are folded into the "Complete missing / 
 flow, so existing workspaces top up the new fields with one click instead of a full re-download.
 This is how you evolve the captured data without orphaning already-pulled workspaces.
 
+**A refusal is data, and `catch {}` throws the answer away.** Both `settings/fields` attempts in
+`pullModules()` were swallowed, so a module Zoho will not describe was written with zero fields, zero
+layouts and zero related lists and looked exactly like one nobody had pulled - under a panel saying
+«None recorded - re-run **Pull Modules** to fetch them», advice that could not work and was offered
+for ever. Reported with a HAR: a hidden module answers `400 INVALID_MODULE`, «operation cannot be
+performed for hidden module». The status, Zoho's `code` and Zoho's own sentence are now written to the
+module file with the **date they were given** - the same shape as the per-area `access` record, and
+for the same reason: it is what was asked and what came back, never a permanent verdict, so the dot
+still re-asks and a module since unhidden clears itself. `errorDetail()` returns `{message, code}`,
+and `code` is read by its own regex rather than added to the alternation, because it appears *first*
+in a CRM error body and folding it in would have returned `INVALID_MODULE` where `api()` compares
+against `INVALID_CSRF_TOKEN`.
+
+One sentence, one function, five consumers: `moduleRefusal()` feeds the row, the detail banner, the
+fields table, the HTML and Markdown exports and the AI - and the assistant is told **before** the
+empty table, because a model handed a module with no fields will explain why a module has none.
+
+**The preview header names the file, and it named it in one place badly.** Selecting a function put
+`functions/<namespace>/<name>.dg` into a 400px header, so the ellipsis ate the file name and left the
+folder - and no other tab named a file at all, which reads as five products rather than five tabs.
+`setPvName(label, path)` is the only writer of `#pvname`: the item's name, then the file, then the
+whole path in the tooltip. Where the label *is* the file name it is not printed twice, decided by
+comparing the two strings rather than per tab. Schedules and connections carry a synthetic path
+(`schedules/<id>`) with no such file on disk, so they name the index that holds them instead of a
+file that is not there.
+
 **Related-list API names are a first-class concept.** The API name of a related list is neither
 module's `api_name`, and it is what `zoho.crm.getRelatedRecords()` requires. This is the single
 most valuable thing the tool surfaces; treat it accordingly.
@@ -1240,6 +1266,14 @@ path = the centreline, inset by half the stroke: M 33 36 L 95 36 L 33 92 L 95 92
 
 Round joins, not miter: a Z's corners are acute and miter spikes them past the tile edge - which was
 checked by drawing it, not assumed.
+
+**The box is square, and it was not.** It was 80 x 74 - 7.9% wider than tall - which he saw the
+second time he looked at it large, and which no test measured because every test read the file
+instead of the render. The bars moved to y=33 and y=95, the same two numbers as x, so the box is
+80 x 80 centred on 64,64 and the diagonal comes out at exactly 45 degrees. The check is derived from
+the path rather than restating it in a comment: the extent on each axis is the centreline span plus
+one whole stroke, because a square cap and a round join both extend by half of one - which is why
+that test only makes sense sitting next to the cap rule below.
 
 **Square caps, not butt, and this one shipped for an hour before he caught it.** A butt cap ends
 exactly on the path's endpoint; a round join bulges half a stroke *past* the vertex. So the top bar

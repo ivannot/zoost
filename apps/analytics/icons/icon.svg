@@ -8,8 +8,12 @@
        care.
 
        Geometry, shared by all three marks so the family reads as one:
-         box     24,27 to 104,101   (80 x 74 in a 128 tile)
+         box     24,24 to 104,104   (80 x 80 in a 128 tile, centred on 64,64)
          weight  18   square caps, round joins
+
+       The box is square because he looked at it large and said the Z was wider than it was tall.
+       It was: 80 x 74. The bars are now at y=33 and y=95, the same two numbers as x, which makes
+       the diagonal exactly 45 degrees as well - one number pair describes the whole mark.
 
        A butt cap ends exactly on the path's endpoint, while a round join bulges half a stroke past
        the vertex - so the top bar reached x=33 on its capped side and x=104 on its joined side, and
@@ -23,6 +27,6 @@
        The three marks differ by HUE and nothing else. At 16px in a toolbar the hue is the only thing
        that still carries, so it has to be the thing doing the work. -->
   <rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/>
-  <path d="M 33 36 L 95 36 L 33 92 L 95 92"
+  <path d="M 33 33 L 95 33 L 33 95 L 95 95"
         fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/>
 </svg>
