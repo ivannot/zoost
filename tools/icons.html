@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Zoost icons</title>
+<!--
+  Renders the three SVG marks to every PNG the two extensions and the site ship, and hands them to a
+  local receiver that writes them. There is no rasteriser in this repository and there will not be
+  one - a build step for six icons a year is not worth the first dependency - so the browser is the
+  renderer. The multi-size favicon.ico is assembled from the PNGs afterwards.
+
+      python3 -m http.server 8798          # from the repository root
+      open http://localhost:8798/tools/icons.html
+      then run generate() from the console, or click the button.
+-->
+<style>body{background:#0d121c;color:#e7edf6;font:14px system-ui;padding:24px}
+canvas{display:none}button{font:14px system-ui;padding:8px 14px}pre{color:#8ea0bb}</style>
+<button onclick="generate()">Generate</button>
+<pre id="log"></pre>
+<canvas id="c"></canvas>
+<script>
+const JOBS = [
+  ['/apps/crm/icons/icon.svg', 16, 'apps/crm/icons/16.png'],
+  ['/apps/crm/icons/icon.svg', 32, 'apps/crm/icons/32.png'],
+  ['/apps/crm/icons/icon.svg', 48, 'apps/crm/icons/48.png'],
+  ['/apps/crm/icons/icon.svg', 128, 'apps/crm/icons/128.png'],
+  ['/apps/crm/icons/icon.svg', 192, 'site/crm-192.png'],
+  ['/apps/analytics/icons/icon.svg', 16, 'apps/analytics/icons/16.png'],
+  ['/apps/analytics/icons/icon.svg', 32, 'apps/analytics/icons/32.png'],
+  ['/apps/analytics/icons/icon.svg', 48, 'apps/analytics/icons/48.png'],
+  ['/apps/analytics/icons/icon.svg', 128, 'apps/analytics/icons/128.png'],
+  ['/apps/analytics/icons/icon.svg', 192, 'site/analytics-192.png'],
+  ['/site/icon.svg', 180, 'site/apple-touch-icon.png'],
+  ['/site/icon.svg', 192, 'site/icon-192.png'],
+  ['/site/icon.svg', 512, 'site/icon-512.png'],
+  ['/site/icon.svg', 16, 'ico/16.png'], ['/site/icon.svg', 32, 'ico/32.png'],
+  ['/site/icon.svg', 48, 'ico/48.png'], ['/site/icon.svg', 64, 'ico/64.png'],
+  ['/site/icon.svg', 128, 'ico/128.png'], ['/site/icon.svg', 256, 'ico/256.png'],
+];
+async function render(svgUrl, size) {
+  const txt = await (await fetch(svgUrl)).text();
+  const url = URL.createObjectURL(new Blob([txt], { type: 'image/svg+xml' }));
+  const img = new Image();
+  await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = url; });
+  const c = document.getElementById('c');
+  c.width = c.height = size;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, size, size);
+  x.drawImage(img, 0, 0, size, size);
+  URL.revokeObjectURL(url);
+  return c.toDataURL('image/png').split(',')[1];
+}
+async function generate() {
+  const out = [];
+  for (const [svg, size, dest] of JOBS) out.push([dest, size, await render(svg, size)]);
+  const r = await fetch('/', { method: 'POST', body: JSON.stringify(out) });
+  document.getElementById('log').textContent = r.ok
+    ? (await r.json()).join('\n')
+    : 'No receiver: start tools/icons-receive.py instead of http.server.';
+}
+</script>

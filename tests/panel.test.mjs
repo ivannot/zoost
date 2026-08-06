@@ -762,3 +762,38 @@ test('a layout lives under the module it describes, and the walks tell the two a
   assert.ok(isLayoutFile('modules/layouts/Contacts.json'));
   assert.ok(!isLayoutFile('modules/layouts/index.json'));
 });
+
+// ---------- The mark ----------
+
+test('the Z is one stroked path, not three shapes butted together', () => {
+  // Reported after seeing it big: the strokes were visibly separate pieces meeting by accident. It
+  // was three shapes - two rects with their own corner radius and a polygon whose thickness was
+  // defined by horizontal offsets, so the diagonal came out at three quarters of the bars' weight
+  // and the corners had notches. A stroked centreline gives one weight everywhere and real joins by
+  // construction, so it cannot drift back by careless drawing.
+  for (const f of ['apps/crm/icons/icon.svg', 'apps/analytics/icons/icon.svg', 'site/icon.svg']) {
+    const svg = read(f);
+    const paths = [...svg.matchAll(/<path\b/g)].length;
+    assert.equal(paths, 1, `${f}: the mark should be exactly one path`);
+    assert.equal([...svg.matchAll(/<polygon\b|<circle\b|<line\b/g)].length, 0,
+      `${f}: something other than the tile and the path is being drawn`);
+    // exactly one rect: the tile
+    assert.equal([...svg.matchAll(/<rect\b/g)].length, 1, `${f}: more than the tile is a rect`);
+    assert.match(svg, /stroke-width="18"/, `${f}: the weight moved`);
+    assert.match(svg, /stroke-linejoin="round"/, `${f}: miter joins spike past the tile on a Z`);
+    assert.match(svg, /fill="none"/, `${f}: a filled path is not a stroke`);
+  }
+});
+
+test('the three marks share one geometry and differ only in hue', () => {
+  // At 16px in a toolbar the hue is the only thing that still carries, so it has to be the thing
+  // doing the work - and the geometry has to be identical or one reads as a worse drawing of the
+  // other.
+  const geom = (f) => read(f).replace(/fill="#[0-9a-f]{6}"/gi, 'fill="X"').replace(/<!--[\s\S]*?-->/g, '');
+  const a = geom('apps/crm/icons/icon.svg');
+  assert.equal(geom('apps/analytics/icons/icon.svg'), a, 'Analytics differs by more than its hue');
+  assert.equal(geom('site/icon.svg'), a, 'the suite mark differs by more than its hue');
+  const hues = ['apps/crm/icons/icon.svg', 'apps/analytics/icons/icon.svg', 'site/icon.svg']
+    .map((f) => read(f).match(/<rect[^>]*fill="(#[0-9a-f]{6})"/i)[1]);
+  assert.equal(new Set(hues).size, 3, 'two marks share a hue, so nothing tells them apart');
+});

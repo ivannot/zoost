@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- Zoost - workbench for Zoho Analytics.
+  <!-- Zoost - workbench for Zoho CRM.
        The Z is ONE path, stroked - not three shapes butted together, which is what it was until
-       Zoost Analytics 1.11.0. That mark had 21px bars and a diagonal only ~9px thick measured perpendicular
+       Zoost CRM 1.15.0. That mark had 21px bars and a diagonal only ~9px thick measured perpendicular
        to itself, because the diagonal was a polygon defined by horizontal offsets: at any size above
        a favicon you could see three separate pieces meeting by accident. A stroked centreline gives
        one weight everywhere and real joins at the corners, by construction rather than by drawing
@@ -15,7 +15,7 @@
 
        The three marks differ by HUE and nothing else. At 16px in a toolbar the hue is the only thing
        that still carries, so it has to be the thing doing the work. -->
-  <rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/>
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="#2563eb"/>
   <path d="M 33 36 L 95 36 L 33 92 L 95 92"
         fill="none" stroke="#fff" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round"/>
 </svg>

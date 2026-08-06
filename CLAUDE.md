@@ -1223,9 +1223,32 @@ own: Chrome shows `short_name` where space is tight (the extensions menu) and
 `action.default_title` as the toolbar tooltip, and a bare "Zoost" on both is how you end up unable
 to tell them apart. Each app therefore carries a **qualified `short_name`** (`Zoost CRM`,
 `Zoost Analytics`), a `default_title` **identical to its `name`**, and its own `<title>` on every
-page it ships. The icons share one mark, measured off the CRM one so the geometry matches exactly —
-a 52×48 Z at 14px bar weight in a 128 tile — and differ by **hue**, because at 16px in the toolbar
-the hue is the only thing left that carries. Adding a third product means doing all four again.
+page it ships. The icons share one mark and differ by **hue**, because at 16px in the toolbar the hue
+is the only thing left that carries. Adding a third product means doing all four again.
+
+**The Z is one stroked path, and that is the fix for a defect that shipped for months.** It was three
+shapes butted together - two rects with their own corner radius, and a polygon whose thickness was
+defined by *horizontal* offsets, so the diagonal rendered at three quarters of the bars' weight and
+the corners had notches. At favicon size nobody saw it; the first time it was looked at large, it was
+obviously three pieces meeting by accident. A stroked centreline gives one weight everywhere and real
+joins **by construction**, so it cannot come back through careless drawing.
+
+```
+box 24,27 to 104,101 (80x74 in a 128 tile) · stroke-width 18 · butt caps · round joins
+path = the centreline, inset by half the stroke: M 33 36 L 95 36 L 33 92 L 95 92
+```
+
+Round joins, not miter: a Z's corners are acute and miter spikes them past the tile edge - which was
+checked by drawing it, not assumed. Three tests hold the geometry, the weight and the one-hue-each
+rule, each proven by breaking it.
+
+**The SVG sources are the source of truth, and until now two of the three did not exist.** `apps/crm`
+had no `icon.svg` at all - its PNGs came from something nobody kept - and `apps/analytics/icons/icon.svg`
+drew a Z *plus three columns* that appear in no shipped PNG, so the one file that looked like a source
+was not one. All three now exist and every raster comes from them. There is no rasteriser in this
+repository and there will not be one: the PNGs are rendered through a browser canvas
+(`tools/icons.html`) and the multi-size `favicon.ico` is assembled from those PNGs by hand, because a
+build step for six icons a year is not worth the first dependency.
 
 ## Definition of done
 
