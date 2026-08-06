@@ -1443,11 +1443,6 @@ the other**: TAP reads it as the start of a comment, so `${app}: #${id} does not
 arrived as `analytics: ` and said nothing. Write ids as `id=exportmd`, and assert with
 `assert.ok(regex.test(x), 'why')` whenever `x` is a slice of source. Both times the suite went
 red, so the guard worked; both times whoever tripped it would have learnt nothing.
-`match` prints the whole `actual` string into the failure, and node 19's TAP lexer dies on a
-multi-byte character split across a socket read - `ERR_TAP_LEXER_ERROR`, "Unexpected character",
-pointing at line 1 of nothing. The suite still went red, so the guard worked; whoever tripped it
-would have learnt nothing. Assert with `assert.ok(regex.test(x), 'why')` whenever `x` is a slice of
-source, so the failure carries the sentence and not the file.
 
 **`sed -i ''` corrupts a UTF-8 source on macOS, and it corrupts it silently.** Used to apply a
 deliberate mutation while proving the check above, it mangled the panel's `\u00ab\u00bb` and arrows into bytes
