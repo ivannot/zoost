@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/crm.html sha256:c0402e7331c3b1eb -->
+<!-- translated-from: site/crm.html sha256:2b9e24882bf21f87 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost CRM - il Deluge sotto Git, e la mappa della tua org</title>
@@ -88,7 +88,7 @@
     <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
     <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama cosa, di
       quale modulo è in relazione con quale, e di quale automazione scatta quando. Tutta la tua org Zoho CRM sul tuo
-      disco, cercabile in un colpo solo - e in sola lettura verso Zoho.</p>
+      disco, cercabile in un colpo solo - e in sola lettura su Zoho.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
@@ -109,7 +109,7 @@
         <h3>Una storia per tutto quello che scarichi</h3>
         <p>Lo storico delle versioni di Zoho CRM copre una <em>funzione</em>, una per volta, dentro Zoho.
           Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow,
-          schedulazioni, connessioni - arriva sul tuo disco come file di testo, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
+          schedulazioni, connessioni - arriva sul tuo disco come file leggibili - sorgente, JSON - quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
           tutti i tipi insieme invece che una funzione per volta. <b>Git è facoltativo</b>: senza, il mirror
           resta comunque un insieme di file di testo che puoi cercare e condividere.</p>
       </div>
@@ -135,7 +135,7 @@
           <code>getRelatedRecords()</code> pretende. Zoost cataloga ogni relazione con la chiamata pronta da copiare.</p>
       </div>
     </div>
-    <p class="note">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da Claude - "Claudio", per me -
+    <p class="note">Costruito e mantenuto da una persona sola, con un aiuto importante da Claude - "Claudio", per me -
       su design, codice e testi. Le decisioni, e la responsabilità, sono mie.</p>
   </div>
 </section>
@@ -168,11 +168,11 @@
       </div>
 
       <div class="card">
-        <h3>I nomi delle relazioni che continui a perdere</h3>
+        <h3>Relazioni e layout</h3>
         <ul>
-          <li>L'API name di una related list non è quello di nessuno dei due moduli - ed è quello che serve a
-            <code>getRelatedRecords()</code>.</li>
-          <li>Una riga per relazione, con la chiamata pronta da copiare.</li>
+          <li>Una riga per related list, con il suo API name e la chiamata
+            <code>getRelatedRecords()</code> pronta da copiare.</li>
+          <li>Il campo lookup o il modulo di collegamento che ci sta dietro, così vedi com'è agganciata.</li>
           <li>Ogni campo con il suo tipo, e una matrice che mostra su quale layout compare.</li>
         </ul>
       </div>
@@ -189,7 +189,7 @@
       </div>
 
       <div class="card">
-        <h3>Un controllo di salute senza voti</h3>
+        <h3>Il controllo di salute</h3>
         <ul>
           <li>Candidati orfani, chiamate non risolte, automazioni rotte, lookup che puntano al nulla.</li>
           <li>Conteggi ed elenchi. Nessuna soglia, nessun allarme rosso, nessun punteggio.</li>

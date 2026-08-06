@@ -61,22 +61,22 @@
 
   <div class="toc">
     <b>On this page</b>
-    <ol>
-      <li><a href="#leave-my-computer">Does anything leave my computer?</a></li>
-      <li><a href="#model">The mental model</a></li>
-      <li><a href="#first-run">First run</a></li>
-      <li><a href="#pull">Pulling</a></li>
-      <li><a href="#git">Putting it under Git</a></li>
-      <li><a href="#read">Reading the workspace</a></li>
-      <li><a href="#structure">Structure and foreign keys</a></li>
-      <li><a href="#diagram">The ER diagram</a></li>
-      <li><a href="#sql">Query-table SQL</a></li>
-      <li><a href="#depends">What nothing depends on</a></li>
-      <li><a href="#health">Health</a></li>
-      <li><a href="#export">Exports</a></li>
-      <li><a href="#ai">AI assistant &amp; API keys</a></li>
-      <li><a href="#goes-wrong">When something goes wrong</a></li>
-    </ol>
+    <ul style="list-style:none;padding-left:0">
+      <li><a href="#leave-my-computer">0. Does anything leave my computer?</a></li>
+      <li><a href="#model">1. The mental model</a></li>
+      <li><a href="#first-run">2. First run</a></li>
+      <li><a href="#pull">3. Pulling</a></li>
+      <li><a href="#git">4. Putting it under Git</a></li>
+      <li><a href="#read">5. Reading the workspace</a></li>
+      <li><a href="#structure">6. Structure and foreign keys</a></li>
+      <li><a href="#diagram">7. The ER diagram</a></li>
+      <li><a href="#sql">8. Query-table SQL</a></li>
+      <li><a href="#depends">9. What nothing depends on</a></li>
+      <li><a href="#health">10. Health</a></li>
+      <li><a href="#export">11. Exports</a></li>
+      <li><a href="#ai">12. AI assistant &amp; API keys</a></li>
+      <li><a href="#goes-wrong">13. When something goes wrong</a></li>
+    </ul>
   </div>
 
   <h2 id="leave-my-computer">0. Does anything leave my computer?</h2>
@@ -123,6 +123,20 @@
   <p>The bar under the toolbar is the guard. Green means the tab and the folder are the same workspace.
     Amber with a bar of actions means they are not, and everything Zoho-bound stays disabled until you
     pick one of the two ways out it offers.</p>
+
+  <h3>Naming a workspace</h3>
+  <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
+    Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
+    on disk looking identical. The
+    <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
+    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
+    anything in Zoho, and a pull brings it back.</p>
+  <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
+    stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
+    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
+    and a list showing only your own words would be one you could not check against Zoho. The name is
+    stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
+    folder. Clear the field to go back to the platform's name.</p>
 
   <h2 id="pull">3. Pulling</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> reads the whole workspace in one pass: the list of views, the columns and
@@ -277,20 +291,6 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     query joining these two" - because those take several lookups. OpenAI is fine for questions about
     something you already have open. These two are the only providers supported, because they are the two
     that are tested and the only two the extension may reach.</p>
-  <h3>Naming a workspace</h3>
-  <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
-    Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
-    on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
-    <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
-    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
-    anything in Zoho, and a pull brings it back.</p>
-  <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
-    stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
-    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
-    and a list showing only your own words would be one you could not check against Zoho. The name is
-    stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
-    folder. Clear the field to go back to the platform's name.</p>
-
   <h3>Removing a key, and switching engine</h3>
   <p>Each provider block has a <b class="ui">Forget</b> button: it empties the model and the key, and the
     removal takes effect when you press <b class="ui">Save AI settings</b>. It is the one place where an
@@ -333,7 +333,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     you can do that. Wrong passphrase or none, and <em>nothing is changed</em> - the encrypted key is
     left exactly as it was rather than discarded. If the passphrase is lost, the way out is to paste the
     API key in again.</p>
-  <p>It is off by default because the trade is yours, not ours. On a personal machine, typing a passphrase
+  <p>It is off by default because the trade is yours, not mine. On a personal machine, typing a passphrase
     once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> - no
     hint, no reset, no back door: forget the passphrase and you paste your API key in again and pick a new
     one, which costs one visit to the provider's dashboard. And note what it does not do: while the key is

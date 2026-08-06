@@ -172,14 +172,21 @@
           document.</p>
       </div>
       <div>
-        <h3>Numbers, never verdicts</h3>
-        <p>Counts and lists, no scores. A long function may be a clean mapping table. Every figure says what it does
-          not cover, and the judgement stays yours.</p>
+        <h3>Numbers without a grade</h3>
+        <p>You get counts and lists. A function that runs to four hundred lines may be a perfectly clean mapping
+          table, and only you know which of yours those are, so nothing here is scored or flagged. Every figure
+          says what it does not cover, right beside itself.</p>
       </div>
       <div>
         <h3>Nothing leaves the machine</h3>
         <p>No server, no account, no telemetry. The only exception is the optional AI assistant, and only if you give
           it your own key.</p>
+      </div>
+      <div>
+        <h3>Checkable, not just claimed</h3>
+        <p>GitHub builds each release from a tagged commit, twice over to prove the bytes are reproducible,
+          and signs it. The archive on the Release is the file sent to the Store, and one command tells you
+          whether that is true.</p>
       </div>
       <div>
         <h3>Free, open, and yours to fork</h3>
@@ -195,20 +202,38 @@
   </div>
 </section>
 
+<section id="approving-it">
+  <div class="wrap">
+    <h2>If you have to approve it</h2>
+    <p class="lead" style="max-width:62ch">Somebody has asked you whether they can install a browser
+      extension that reads the company Zoho CRM. Six lines, no jargon.</p>
+    <table style="max-width:62ch">
+      <tbody>
+        <tr><td class="k">What it reads</td><td>Configuration only: code, field definitions, automations. <b>Never a customer record</b> - no contacts, no deals, no notes.</td></tr>
+        <tr><td class="k">What it writes</td><td>To Zoho, nothing. It calls no endpoint that creates, edits or deletes.</td></tr>
+        <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No server of ours, no account, no telemetry.</td></tr>
+        <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
+        <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
+        <tr><td class="k">How you can check</td><td>The source is about twenty readable files. Each release is built by GitHub twice over and signed, and one command verifies the file that was published.</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:20px">Details, endpoint by endpoint: <a href="/nerd.html">the nerd
+      page</a>. What is stored and where it travels: <a href="/privacy.html">the privacy policy</a>.</p>
+  </div>
+</section>
+
 <section id="get-started">
   <div class="wrap">
     <h2>Get started</h2>
     <ol class="steps">
       <li>Pick the product you want to look at: <b><a href="/crm.html">Zoost - workbench for Zoho CRM</a></b> or
         <b><a href="/analytics.html">Zoost - workbench for Zoho Analytics</a></b>.</li>
-      <li><b>Install the extension</b> - from the Chrome Web Store for Zoho CRM. Zoost Analytics is submitted and in
-        review; until it is published you can load it unpacked from source.</li>
+      <li><b>Install the extension</b> from the Chrome Web Store. Both are there.</li>
       <li><b>Choose one working folder.</b> Each Zoost keeps its own subfolder inside it, so a single folder serves
         them all and the two never meet.</li>
       <li><b>Open the Zoho tab</b> you want to mirror, create the workspace and pull. Then <code>git init</code>,
         and you have a history from today onwards.</li>
     </ol>
-    <p class="note warn" style="margin-top:8px">No Zoost calls an endpoint that writes to Zoho, so the worst it can do to your data is nothing - a property of which endpoints we call, and every one of them is in files you can read.</p>
   </div>
 </section>
 

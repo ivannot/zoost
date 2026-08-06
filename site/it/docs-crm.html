@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:9a1de6120b01662e -->
+<!-- translated-from: site/docs-crm.html sha256:e33855f151f40f02 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -68,22 +68,22 @@
 
   <div class="toc">
     <b>In questa pagina</b>
-    <ol>
-      <li><a href="#leave-my-computer">Esce qualcosa dal mio computer?</a></li>
-      <li><a href="#model">Il modello mentale</a></li>
-      <li><a href="#first-run">Primo avvio</a></li>
-      <li><a href="#pull">Pull e sincronizzazione</a></li>
-      <li><a href="#git">Metterlo sotto Git</a></li>
-      <li><a href="#read">Leggere la tua org</a></li>
-      <li><a href="#diagram">Il diagramma</a></li>
-      <li><a href="#relation-name">Trovare il nome di una relazione</a></li>
-      <li><a href="#connections">Le connessioni</a></li>
-      <li><a href="#health">L'audit di salute</a></li>
-      <li><a href="#export">Gli export</a></li>
-      <li><a href="#ai">Assistente AI e chiavi API</a></li>
-      <li><a href="#sandbox">Produzione e sandbox</a></li>
-      <li><a href="#goes-wrong">Quando qualcosa non va</a></li>
-    </ol>
+    <ul style="list-style:none;padding-left:0">
+      <li><a href="#leave-my-computer">0. Esce qualcosa dal mio computer?</a></li>
+      <li><a href="#model">1. Il modello mentale</a></li>
+      <li><a href="#first-run">2. Primo avvio</a></li>
+      <li><a href="#pull">3. Pull e sincronizzazione</a></li>
+      <li><a href="#git">4. Metterlo sotto Git</a></li>
+      <li><a href="#read">5. Leggere la tua org</a></li>
+      <li><a href="#diagram">6. Il diagramma</a></li>
+      <li><a href="#relation-name">7. Trovare il nome di una relazione</a></li>
+      <li><a href="#connections">8. Le connessioni</a></li>
+      <li><a href="#health">9. L'audit di salute</a></li>
+      <li><a href="#export">10. Gli export</a></li>
+      <li><a href="#ai">11. Assistente AI e chiavi API</a></li>
+      <li><a href="#sandbox">12. Produzione e sandbox</a></li>
+      <li><a href="#goes-wrong">13. Quando qualcosa non va</a></li>
+    </ul>
   </div>
 
   <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
@@ -101,7 +101,7 @@
   <table>
     <tbody>
       <tr><td class="k">Cartella di lavoro</td><td>Una cartella sul tuo disco che scegli una volta sola. Tutto quello che Zoost scrive sta lì dentro.</td></tr>
-      <tr><td class="k">Workspace</td><td>Una sottocartella, una per org Zoho, creata per te. Contiene funzioni, schema, automazioni e connessioni di quell'org come file di testo.</td></tr>
+      <tr><td class="k">Workspace</td><td>Una sottocartella, una per org Zoho, creata per te. Contiene funzioni, schema, automazioni e connessioni di quell'org come file leggibili (sorgente, JSON).</td></tr>
       <tr><td class="k">Pull</td><td>L'azione che riempie un workspace a partire da Zoho. Zoost legge soltanto da Zoho - non riscrive mai indietro.</td></tr>
     </tbody>
   </table>
@@ -135,6 +135,20 @@
     ripristina al tuo primo click in un punto qualsiasi del pannello, quindi normalmente non te ne accorgi.
     Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge
     <b class="ui">🔓 Grant access</b> - un click, e non si apre nessun selettore di file.</p>
+
+  <h3>Dare un nome a un workspace</h3>
+  <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho
+    Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
+    arrivare su disco identici, e l'id di un'istanza Zoho CRM è esatto senza essere memorabile. Il pulsante
+    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
+    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
+    niente dentro Zoho, e un pull la riporta indietro.</p>
+  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
+    mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
+    legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
+    solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
+    <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
+    Svuota il campo per tornare al nome della piattaforma.</p>
 
   <h2 id="pull">3. Pull e sincronizzazione</h2>
   <ul>
@@ -226,7 +240,7 @@ git commit -m "baseline"</code></pre>
       servizi Zoho - come badge nell'elenco e nell'anteprima. Le chiamate sono contate fuori dai commenti e
       dalle stringhe, così un task nominato in un commento non gonfia il numero. Sono <b>conteggi, non un
       voto</b>: la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che
-      Zoho contabilizza - come pesarlo è una tua decisione, non nostra. Non viene chiesto niente in più a
+      Zoho contabilizza - come pesarlo lo decidi tu, non io. Non viene chiesto niente in più a
       Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.</li>
     <li><b class="ui">Sort</b> riordina l'elenco per <b>Name (grouped)</b> - il default - oppure per <b>righe</b>, <b>chiamate API</b>, <b>dimensione</b> o <b>ultima modifica</b>; il pulsante <b class="ui">↑/↓</b> accanto inverte la direzione. Scegliere un
       ordinamento imposta la direzione che quasi certamente vuoi - A→Z per i nomi, dal più grande per i
@@ -346,9 +360,9 @@ git commit -m "baseline"</code></pre>
     <code>zoost-instance-timestamp</code>.</p>
 
   <h2 id="ai">11. Assistente AI e chiavi API</h2>
-  <p><b>Conosce anche questa estensione.</b> Chiedigli «how do I export this?», «what happens when I press
-    Health?» oppure «can this change anything in Zoho CRM?» e risponde dal pannello, senza mandarti da
-    nessuna parte. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
+  <p><b>Conosce anche questa estensione.</b> Chiedigli «come esporto questo?», «cosa succede se premo
+    Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da
+    nessuna parte. Gli scrivi nella lingua che preferisci e ti risponde in quella. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
     e ti indica questa pagina invece di inventarsi un passaggio.</p>
   <p>Opzionale e spento finché non lo configuri. Apri <b class="ui">⚙ Settings</b> (in fondo al pannello) →
     <b>AI assistant</b>. I provider supportati sono due.</p>
@@ -402,20 +416,6 @@ git commit -m "baseline"</code></pre>
   <p>Il motore in uso è mostrato come badge nell'intestazione della chat, così sai sempre quale comportamento
     aspettarti.</p>
 
-  <h3>Dare un nome a un workspace</h3>
-  <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho
-    Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
-    arrivare su disco identici, e l'id di un'istanza Zoho CRM è esatto senza essere memorabile. Il pulsante
-    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
-    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
-    niente dentro Zoho, e un pull la riporta indietro.</p>
-  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
-    mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
-    legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
-    solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
-    <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
-    Svuota il campo per tornare al nome della piattaforma.</p>
-
   <h3>Togliere una chiave, e cambiare motore</h3>
   <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
     rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
@@ -458,7 +458,7 @@ git commit -m "baseline"</code></pre>
     perché rimettere la chiave in chiaro vuol dire prima decifrarla, e questo lo puoi fare solo tu. Passphrase
     sbagliata o assente, e <em>non viene cambiato niente</em> - la chiave cifrata resta esattamente com'era
     invece di essere buttata. Se la passphrase è persa, la via d'uscita è reincollare la chiave API.</p>
-  <p>È disattivata di default perché il compromesso è tuo, non nostro. Su una macchina personale, digitare una
+  <p>È disattivata di default perché il compromesso è tuo, non mio. Su una macchina personale, digitare una
     passphrase una volta a sessione serve a poco. Su una condivisa o gestita serve a molto. <b>Non c'è nessun
     recupero</b> - nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e
     reincolli la chiave API scegliendone una nuova, il che costa una visita alla dashboard del provider. E
@@ -472,8 +472,6 @@ git commit -m "baseline"</code></pre>
     Svuotala quando cambi argomento: ottieni chiamate più economiche e risposte più a fuoco. Con Claude,
     <b>Max tool steps</b> è l'altra leva - limita quanti giri di esplora-poi-rispondi può fare l'agente prima
     di dover rispondere.</p>
-  <p><b>Max tool steps</b> limita quanti giri di esplora-poi-rispondi può fare l'agente di Anthropic. Più
-    alto vuol dire risposte migliori e più spesa.</p>
   <div class="box warn">
     <p><b>L'assistente è l'unica funzionalità che manda dati fuori dalla tua macchina.</b> Sorgenti Deluge,
       schemi e definizioni dei workflow vanno al provider che configuri, sotto i suoi termini. Se la tua

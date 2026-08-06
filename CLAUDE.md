@@ -85,6 +85,26 @@ python3 tools/namecheck.py           # no shipped file may name, link to or iden
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
 ```
 
+**There is a third reader, and the site had no page for them: whoever has to *approve* the install.**
+The IT lead, the DPO, the manager who receives «can I install an extension that reads the CRM?».
+Everything they need was already written - read-only, no server, which permissions, reproducible
+builds - and spread across five pages in a peer-to-peer developer voice. «If you have to approve it»
+on the home is six rows of table, no jargon, and it is the single addition with the most commercial
+value the site has had.
+
+**The voice has a tic, and it is visible at scale.** «X, never Y» - «Numbers, never verdicts»,
+«Candidates, never a verdict», «Counts and lists, no scores», «Certain, or stopped», «Read-only, on
+purpose», «Checkable, not just claimed» - 29 of them across eleven pages, plus the reflex of
+answering an objection nobody made («It computes; it does not create») and four «no»s in five lines.
+Each is good; together the reader stops hearing the content and hears the formula, and the formula
+reads as machine-written on a site whose whole argument is that a person is accountable for it. Break
+some: a long sentence, a claim left standing without its counterweight, a heading that is just a
+noun. And **say «I», never «we»** - «the trade is yours, not ours» sat two paragraphs from «built by
+one person»; the one-man-shop position is the asset and the plural quietly denies it.
+
+**A promise repeated past a certain count starts to sound insisted on.** «It only reads» was on the
+home three times; twice is the maximum and one of those should be where it decides something.
+
 **The product pages are for someone deciding, not for someone auditing.** They were 2000 words each
 and read as a specification — «nobody will ever read all that text; it needs highlights, not
 Wikipedia», which was right. What a reader needs first is what it does for them; what it rests on,

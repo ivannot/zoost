@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:aa7f49d97a073a6b -->
+<!-- translated-from: site/docs-analytics.html sha256:b495187d1521e0f7 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -68,22 +68,22 @@
 
   <div class="toc">
     <b>In questa pagina</b>
-    <ol>
-      <li><a href="#leave-my-computer">Esce qualcosa dal mio computer?</a></li>
-      <li><a href="#model">Il modello mentale</a></li>
-      <li><a href="#first-run">Primo avvio</a></li>
-      <li><a href="#pull">Il pull</a></li>
-      <li><a href="#git">Metterlo sotto Git</a></li>
-      <li><a href="#read">Leggere il workspace</a></li>
-      <li><a href="#structure">Struttura e chiavi esterne</a></li>
-      <li><a href="#diagram">Il diagramma ER</a></li>
-      <li><a href="#sql">La SQL delle query table</a></li>
-      <li><a href="#depends">Cosa non serve più a nessuno</a></li>
-      <li><a href="#health">Salute</a></li>
-      <li><a href="#export">Gli export</a></li>
-      <li><a href="#ai">Assistente AI e chiavi API</a></li>
-      <li><a href="#goes-wrong">Quando qualcosa non va</a></li>
-    </ol>
+    <ul style="list-style:none;padding-left:0">
+      <li><a href="#leave-my-computer">0. Esce qualcosa dal mio computer?</a></li>
+      <li><a href="#model">1. Il modello mentale</a></li>
+      <li><a href="#first-run">2. Primo avvio</a></li>
+      <li><a href="#pull">3. Il pull</a></li>
+      <li><a href="#git">4. Metterlo sotto Git</a></li>
+      <li><a href="#read">5. Leggere il workspace</a></li>
+      <li><a href="#structure">6. Struttura e chiavi esterne</a></li>
+      <li><a href="#diagram">7. Il diagramma ER</a></li>
+      <li><a href="#sql">8. La SQL delle query table</a></li>
+      <li><a href="#depends">9. Cosa non serve più a nessuno</a></li>
+      <li><a href="#health">10. Salute</a></li>
+      <li><a href="#export">11. Gli export</a></li>
+      <li><a href="#ai">12. Assistente AI e chiavi API</a></li>
+      <li><a href="#goes-wrong">13. Quando qualcosa non va</a></li>
+    </ul>
   </div>
 
   <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
@@ -114,7 +114,7 @@
           finché la scheda e la cartella non tornano d'accordo.</td></tr>
     </tbody>
   </table>
-  <p class="box">Zoost è in <b>sola lettura</b> verso Zoho Analytics. Non crea, non modifica e non cancella
+  <p class="box">Zoost è in <b>sola lettura</b> su Zoho Analytics. Non crea, non modifica e non cancella
     mai una vista, e non legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori
     delle celle esistono e deliberatamente non vengono chiamati. Il peggio che può fare al tuo workspace è
     niente. Una delle chiamate che fa è una POST il cui URL contiene <code>CREATE</code>: è il nome che Zoho
@@ -134,6 +134,20 @@
   <p>La barra sotto la toolbar è la protezione. Verde vuol dire che la scheda e la cartella sono lo stesso
     workspace. Ambra con una fila di azioni vuol dire che non lo sono, e tutto quello che parla con Zoho
     resta disattivato finché non scegli una delle due vie d'uscita che ti offre.</p>
+
+  <h3>Dare un nome a un workspace</h3>
+  <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho
+    Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
+    arrivare su disco identici. Il pulsante
+    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
+    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
+    niente dentro Zoho, e un pull la riporta indietro.</p>
+  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
+    mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
+    legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
+    solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
+    <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
+    Svuota il campo per tornare al nome della piattaforma.</p>
 
   <h2 id="pull">3. Il pull</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> legge tutto il workspace in un passaggio: l'elenco delle viste, le
@@ -166,7 +180,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>views.json</code></td><td>il censimento: ogni vista con tipo, cartella, proprietario, date, tag</td></tr>
       <tr><td class="k"><code>schema.json</code></td><td>colonne e tipi di dato per tabella, più le relazioni</td></tr>
       <tr><td class="k"><code>lineage.json</code></td><td>chi legge da cosa, nelle due direzioni</td></tr>
-      <tr><td class="k"><code>sql/*.sql</code></td><td>un file per query table - la parte diffabile</td></tr>
+      <tr><td class="k"><code>sql/*.sql</code></td><td>un file per query table - la parte su cui il diff ha qualcosa da dire</td></tr>
       <tr><td class="k"><code>sql/index.json</code></td><td>la mappa id-file, e quali colonne sorgente coinvolge ogni query</td></tr>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
@@ -269,9 +283,9 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
 
   <h2 id="ai">12. Assistente AI e chiavi API</h2>
-  <p><b>Conosce anche questa estensione.</b> Chiedigli «how do I export this?», «what happens when I press
-    Health?» oppure «can this change anything in Zoho Analytics?» e risponde dal pannello, senza mandarti da
-    nessuna parte. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
+  <p><b>Conosce anche questa estensione.</b> Chiedigli «come esporto questo?», «cosa succede se premo
+    Health?» oppure «può cambiare qualcosa dentro Zoho Analytics?» e risponde dal pannello, senza mandarti
+    da nessuna parte. Gli scrivi nella lingua che preferisci e ti risponde in quella. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
     e ti indica questa pagina invece di inventarsi un passaggio.</p>
   <p>Opzionale, e spento finché non lo configuri. <b class="ui">⚙ Settings</b> → scegli un provider, incolla
     il nome di un modello e la tua chiave API.</p>
@@ -297,20 +311,6 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     una query che unisce queste due» - perché sono domande che costano più letture. OpenAI va benissimo per
     domande su qualcosa che hai già aperto. Questi due sono gli unici provider supportati, perché sono i due
     che sono stati provati e gli unici due che l'estensione può raggiungere.</p>
-  <h3>Dare un nome a un workspace</h3>
-  <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho
-    Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
-    arrivare su disco identici, e l'id di un'istanza Zoho CRM è esatto senza essere memorabile. Il pulsante
-    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
-    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
-    niente dentro Zoho, e un pull la riporta indietro.</p>
-  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
-    mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
-    legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
-    solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
-    <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
-    Svuota il campo per tornare al nome della piattaforma.</p>
-
   <h3>Togliere una chiave, e cambiare motore</h3>
   <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
     rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
@@ -353,7 +353,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     perché rimettere la chiave in chiaro vuol dire prima decifrarla, e questo lo puoi fare solo tu. Passphrase
     sbagliata o assente, e <em>non viene cambiato niente</em> - la chiave cifrata resta esattamente com'era
     invece di essere buttata. Se la passphrase è persa, la via d'uscita è reincollare la chiave API.</p>
-  <p>È disattivata di default perché il compromesso è tuo, non nostro. Su una macchina personale, digitare una
+  <p>È disattivata di default perché il compromesso è tuo, non mio. Su una macchina personale, digitare una
     passphrase una volta a sessione serve a poco. Su una condivisa o gestita serve a molto. <b>Non c'è nessun
     recupero</b> - nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e
     reincolli la chiave API scegliendone una nuova, il che costa una visita alla dashboard del provider. E

@@ -61,22 +61,22 @@
 
   <div class="toc">
     <b>On this page</b>
-    <ol>
-      <li><a href="#leave-my-computer">Does anything leave my computer?</a></li>
-      <li><a href="#model">The mental model</a></li>
-      <li><a href="#first-run">First run</a></li>
-      <li><a href="#pull">Pulling and syncing</a></li>
-      <li><a href="#git">Putting it under Git</a></li>
-      <li><a href="#read">Reading your org</a></li>
-      <li><a href="#diagram">The diagram</a></li>
-      <li><a href="#relation-name">Finding a relation name</a></li>
-      <li><a href="#connections">Connections</a></li>
-      <li><a href="#health">Health audit</a></li>
-      <li><a href="#export">Exports</a></li>
-      <li><a href="#ai">AI assistant &amp; API keys</a></li>
-      <li><a href="#sandbox">Production vs sandbox</a></li>
-      <li><a href="#goes-wrong">When something goes wrong</a></li>
-    </ol>
+    <ul style="list-style:none;padding-left:0">
+      <li><a href="#leave-my-computer">0. Does anything leave my computer?</a></li>
+      <li><a href="#model">1. The mental model</a></li>
+      <li><a href="#first-run">2. First run</a></li>
+      <li><a href="#pull">3. Pulling and syncing</a></li>
+      <li><a href="#git">4. Putting it under Git</a></li>
+      <li><a href="#read">5. Reading your org</a></li>
+      <li><a href="#diagram">6. The diagram</a></li>
+      <li><a href="#relation-name">7. Finding a relation name</a></li>
+      <li><a href="#connections">8. Connections</a></li>
+      <li><a href="#health">9. Health audit</a></li>
+      <li><a href="#export">10. Exports</a></li>
+      <li><a href="#ai">11. AI assistant &amp; API keys</a></li>
+      <li><a href="#sandbox">12. Production vs sandbox</a></li>
+      <li><a href="#goes-wrong">13. When something goes wrong</a></li>
+    </ul>
   </div>
 
   <h2 id="leave-my-computer">0. Does anything leave my computer?</h2>
@@ -121,6 +121,20 @@
     File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
     in the panel, so normally you will not notice. If it needs you, the folder button turns amber and reads
     <b class="ui">🔓 Grant access</b> - one click, and no file picker opens.</p>
+
+  <h3>Naming a workspace</h3>
+  <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
+    Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
+    on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
+    <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
+    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
+    anything in Zoho, and a pull brings it back.</p>
+  <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
+    stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
+    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
+    and a list showing only your own words would be one you could not check against Zoho. The name is
+    stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
+    folder. Clear the field to go back to the platform's name.</p>
 
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>
@@ -173,7 +187,7 @@ git commit -m "baseline"</code></pre>
     the second when writing Deluge. <b class="ui">Functions page ↗</b> opens Zoho CRM's own function list
     in a tab and filters it to what you had selected, for when you want to edit rather than read.</p>
 
-  <p>Above the list, <b class="ui">Type</b> (or <b class="ui">Status</b>, or <b class="ui">Kind</b>, depending on the tab) narrows what is shown. In Modules it separates <b class="ui">Standard</b> from <b class="ui">Custom</b>; in Workflows and Schedules it is <b class="ui">Active</b> / <b class="ui">Inactive</b>, plus <b class="ui">Has scheduled actions</b> - the rules with at least one action that runs after a delay instead of immediately. Those rows carry a clock and the count, and the tooltip says how long the delay is; the workflow's own panel shows <b>Last run</b>, the same words the Schedules tab uses for the same fact. Both come from the rule already on your disk, so nothing is fetched to answer «which workflows do not fire straight away».</p>
+  <p>Above the list, <b class="ui">Type</b> (or <b class="ui">Status</b>, or <b class="ui">Kind</b>, depending on the tab) narrows what is shown. In Modules it separates <b class="ui">Standard</b> from <b class="ui">Custom</b>; in Workflows and Schedules it is <b class="ui">Active</b> / <b class="ui">Inactive</b>, plus <b class="ui">Has scheduled actions</b> - the rules with at least one action that runs after a delay instead of immediately. Those rows carry a clock and the count, and the tooltip says how long the delay is; the workflow's own panel shows <b>Last run</b>, the same words the Schedules tab uses for the same fact. Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".</p>
 
   <p class="box"><b>Not every Zoho user may read every one of these.</b> Access to Deluge or to the
     connections catalogue depends on your role, and there is no way to ask in advance - so Zoost finds out
@@ -203,7 +217,7 @@ git commit -m "baseline"</code></pre>
       <code>invokeurl</code>, <code>zoho.crm.*</code> and the other Zoho service tasks - as a badge in the
       list and in the preview. Calls are counted outside comments and string literals, so a task named in a
       comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
-      not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not ours.
+      not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not mine.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
     <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> - the default - or by <b>lines</b>, <b>API calls</b>, <b>size</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
       sets the direction you almost certainly want - A→Z for names, biggest first for numbers - and you can
@@ -365,20 +379,6 @@ git commit -m "baseline"</code></pre>
   </table>
   <p>The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.</p>
 
-  <h3>Naming a workspace</h3>
-  <p>The name in the workspace list comes from the platform, and the platform is not always helpful:
-    Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
-    on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
-    <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
-    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
-    anything in Zoho, and a pull brings it back.</p>
-  <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
-    stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
-    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
-    and a list showing only your own words would be one you could not check against Zoho. The name is
-    stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
-    folder. Clear the field to go back to the platform's name.</p>
-
   <h3>Removing a key, and switching engine</h3>
   <p>Each provider block has a <b class="ui">Forget</b> button: it empties the model and the key, and the
     removal takes effect when you press <b class="ui">Save AI settings</b>. It is the one place where an
@@ -421,7 +421,7 @@ git commit -m "baseline"</code></pre>
     you can do that. Wrong passphrase or none, and <em>nothing is changed</em> - the encrypted key is
     left exactly as it was rather than discarded. If the passphrase is lost, the way out is to paste the
     API key in again.</p>
-  <p>It is off by default because the trade is yours, not ours. On a personal machine, typing a passphrase
+  <p>It is off by default because the trade is yours, not mine. On a personal machine, typing a passphrase
     once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> - no
     hint, no reset, no back door: forget the passphrase and you paste your API key in again and pick a new
     one, which costs one visit to the provider's dashboard. And note what it does not do: while the key is
@@ -433,8 +433,6 @@ git commit -m "baseline"</code></pre>
     thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
     subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever -
     it caps how many explore-then-answer rounds the agent may take before it must reply.</p>
-  <p><b>Max tool steps</b> caps how many explore-then-answer rounds the Anthropic agent may take. Higher means
-    better answers and more spend.</p>
   <div class="box warn">
     <p><b>The assistant is the one feature that sends data off your machine.</b> Deluge source, schemas and
       workflow definitions go to the provider you configure, under their terms. If your organisation restricts

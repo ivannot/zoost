@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:2ed3d69a79fee13b -->
+<!-- translated-from: site/index.html sha256:5d53bb7bad39c595 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui hai costruito</title>
@@ -95,13 +95,14 @@
 <div class="hero">
   <div class="wrap">
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E da oggi con Zoost puoi vederlo tutto insieme.</span></h1>
-    <p class="lead">Il tuo codice Deluge, lo schema dei tuoi moduli, i tuoi workspace e la SQL che ci sta dietro -
-      un oggetto per volta, in una scheda del browser. Zoost copia tutto in file di testo sul tuo disco, e poi ti
-      disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.</p>
+    <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per prodotto Zoho. Il tuo codice
+      Deluge, lo schema dei tuoi moduli, i tuoi workspace e la SQL che ci sta dietro oggi li puoi guardare solo
+      un oggetto per volta, dentro una scheda del browser. Zoost li copia tutti in file leggibili sul tuo disco,
+      e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
-      <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
+      <span class="meta">Gratuiti · Apache-2.0 · nessun account</span>
     </div>
     <p class="note" style="margin-top:22px">Il sito è in italiano, guide comprese. Restano in inglese la privacy
       policy e la mappa per gli assistenti, e <b>l'estensione stessa è in inglese</b>: i nomi dei comandi che
@@ -113,6 +114,7 @@
 <section id="the-workbenches">
   <div class="wrap">
     <h2>I workbench</h2>
+    <p class="note" data-it-only style="margin-bottom:20px">Workbench: il banco da lavoro, non l'editor. Si guarda e si misura quello che hai costruito; a scriverlo si continua in Zoho.</p>
     <div class="prod">
 
       <div class="card">
@@ -150,7 +152,7 @@
     </div>
     <p class="note" style="margin-top:22px">Gratuiti, open source, ognuno con la sua guida scritta.
       <span data-install="analytics" hidden>Entrambi sono sul Chrome Web Store.</span>
-      <span data-pending="analytics">Zoost CRM è sul Chrome Web Store; Zoost Analytics è stata inviata ed è in revisione.</span></p>
+      <span data-pending="analytics">Zoost CRM è sul Chrome Web Store; l'estensione per Zoho Analytics è stata inviata ed è in revisione.</span></p>
   </div>
 </section>
 
@@ -160,12 +162,12 @@
     <div class="why">
       <div>
         <h3>Legge soltanto</h3>
-        <p>Nessuno Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho. Tu continui a lavorare
+        <p>Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho. Tu continui a lavorare
           dove già lavori; questa è la finestra da cui lo guardi.</p>
       </div>
       <div>
         <h3>File di testo, il tuo Git</h3>
-        <p>Una cartella che scegli tu, piena di file di testo. Mettila sotto controllo di versione e
+        <p>Una cartella che scegli tu, piena di file che si leggono con un editor qualsiasi: sorgente, JSON, SQL. Mettila sotto controllo di versione e
           <code>git diff</code> risponde a <em>cosa è cambiato il mese scorso</em> - cosa che nessuno dei due
           prodotti sa dire di sé stesso.</p>
       </div>
@@ -175,9 +177,10 @@
           un unico documento.</p>
       </div>
       <div>
-        <h3>Numeri, mai verdetti</h3>
-        <p>Conteggi ed elenchi, niente punteggi. Una funzione lunga può essere una pulita tabella di conversione.
-          Ogni cifra dichiara cosa non copre, e il giudizio resta tuo.</p>
+        <h3>Numeri senza voti</h3>
+        <p>Trovi conteggi ed elenchi. Una funzione che arriva a quattrocento righe può essere una tabella di
+          conversione scritta benissimo, e quali sono le tue lo sai solo tu: per questo qui niente viene
+          valutato o segnalato in rosso. Ogni cifra dichiara cosa non copre, lì accanto.</p>
       </div>
       <div>
         <h3>Niente esce dalla macchina</h3>
@@ -185,16 +188,43 @@
           se gli dai una chiave tua.</p>
       </div>
       <div>
-        <h3>Gratuito, aperto, e tuo da forkare</h3>
+        <h3>Verificabile, non solo dichiarato</h3>
+        <p>Ogni release la costruisce GitHub da un commit taggato, due volte per dimostrare che i byte sono
+          riproducibili, e la firma. L'archivio allegato alla Release è il file mandato allo Store, e un
+          comando ti dice se è vero.</p>
+      </div>
+      <div>
+        <h3>Gratuito, aperto, e puoi forkarlo</h3>
         <p>Apache-2.0, nessuna fase di build, nessuna dipendenza. Leggibile da chiunque stia per dargli accesso ai
           propri dati - che è poi quello che ti si sta chiedendo di fare.</p>
       </div>
     </div>
     <p class="note" style="margin-top:26px">Vuoi il dettaglio - quali endpoint, cosa lo rompe, come viene firmata
       una release? Sta tutto sulla <a href="/it/nerd.html">pagina nerd</a>, che è dove deve stare.</p>
-    <p class="note" style="margin-top:14px">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da
+    <p class="note" style="margin-top:14px">Costruito e mantenuto da una persona sola, con un aiuto importante da
       Claude - "Claudio", per me - su design, codice e testi. Le decisioni, e la responsabilità del risultato,
       sono mie.</p>
+  </div>
+</section>
+
+<section id="approving-it">
+  <div class="wrap">
+    <h2>Se sei tu che devi approvarlo</h2>
+    <p class="lead" style="max-width:62ch">Qualcuno ti ha chiesto se può installare un'estensione del
+      browser che legge il vostro Zoho CRM. Sei righe, senza gergo.</p>
+    <table style="max-width:62ch">
+      <tbody>
+        <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni. <b>Mai un record di un cliente</b>: né contatti, né trattative, né note.</td></tr>
+        <tr><td class="k">Cosa scrive</td><td>Su Zoho, niente. Non chiama nessun endpoint che crea, modifica o cancella.</td></tr>
+        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di quella persona. Nessun nostro server, nessun account, nessuna telemetria.</td></tr>
+        <tr><td class="k">L'unica eccezione</td><td>Un assistente AI opzionale, spento finché qualcuno non inserisce una chiave API sua. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
+        <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona già vede in Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
+        <tr><td class="k">Come verificarlo</td><td>Il sorgente è una ventina di file leggibili. Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:20px">I dettagli, endpoint per endpoint, stanno sulla
+      <a href="/it/nerd.html">pagina nerd</a>. Cosa viene conservato e dove viaggia, sulla
+      <a href="/privacy.html">privacy policy</a>.</p>
   </div>
 </section>
 
@@ -204,16 +234,12 @@
     <ol class="steps">
       <li>Scegli il prodotto che ti interessa: <b><a href="/it/crm.html">Zoost - workbench for Zoho CRM</a></b> oppure
         <b><a href="/it/analytics.html">Zoost - workbench for Zoho Analytics</a></b>.</li>
-      <li><b>Installa l'estensione</b> - dal Chrome Web Store per Zoho CRM. Zoost Analytics è stata inviata ed è in
-        revisione; finché non è pubblicata la puoi caricare da sorgente.</li>
+      <li><b>Installa l'estensione</b> dal Chrome Web Store. Ci sono tutte e due.</li>
       <li><b>Scegli una sola cartella di lavoro.</b> Ogni Zoost ci tiene la propria sottocartella, così una cartella
-        sola li serve tutti e i due non si incontrano mai.</li>
+        sola li serve tutti senza che si pestino i piedi.</li>
       <li><b>Apri la scheda Zoho</b> che vuoi rispecchiare, crea il workspace e fai il pull. Poi, se vuoi,
         <code>git init</code>: da oggi in poi hai una storia.</li>
     </ol>
-    <p class="note warn" style="margin-top:8px">Nessuno Zoost chiama un endpoint che scrive su Zoho, quindi il peggio
-      che può fare ai tuoi dati è niente - è una proprietà di quali endpoint chiamiamo, e ognuno di essi sta in file
-      che puoi leggere.</p>
   </div>
 </section>
 
