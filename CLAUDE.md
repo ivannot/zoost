@@ -972,7 +972,14 @@ These all failed **silently**, with no console error. They are the expensive kin
   `#v-explorer`**, where it cannot be anywhere else. The third is the one worth remembering: *put a
   control inside the thing it acts on and the question stops being asked.* It is a tab on the column's
   edge now, not a button in the header, and the header carries the view tabs on their own row under
-  the title instead of opposite it.
+  the title instead of opposite it. **The same edge drags to resize**, told apart from a click by four
+  pixels of movement - the way the ER boxes already separate the two - and the width goes into a custom
+  property rather than an inline style, or it would beat the fold rule on specificity the first time
+  anyone dragged. `asideWidth()` is lifted out of the drag so the clamp can be tested without a DOM,
+  and it treats **a container reporting no width as no constraint**: a hidden pane measures 0, and
+  reading that as a bound snapped the column to its minimum. Giving the tabs square bottom corners to
+  sit flush against the pane below was tried and reverted - it makes the header and the content argue
+  about where the line is, and he said so.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window
   stayed exactly as wide as its search box. The rule was applying - `visibility:hidden` from the same
