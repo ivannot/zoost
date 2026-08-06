@@ -526,15 +526,37 @@ test('no list still tells the reader to pull without asking first', () => {
   }
 });
 
-test('the export buttons carry their own name, with no box to lend them one', () => {
-  // The bordered "export" legend is gone - it was decoration whose masking label kept being drawn
-  // through by the fade, twice reported - so the two buttons sit in the bar like every other one and
-  // the .gsep on either side does the grouping. The word that was in the legend has to live
-  // somewhere a reader and a screen reader can still find it, which is the aria-label. Same rule as
-  // the marked toolbar buttons: a mark may replace the visible word, never the name.
+test('the export box is never faded with opacity, and the bar is never outlined', () => {
+  // Two separate things, both about the same strip of interface.
+  //
+  // .explabel sits over .expgroup's top border with an opaque background, which is what gives the
+  // export box its legend look and what makes HTML and MD mean something - they name a file format,
+  // not an action, and the legend is what says "export". `opacity` on .expgroup composites the whole
+  // subtree, so that background stops hiding anything and the border draws straight through the
+  // word: measured at 6.5px down an 8px label. So the box dims from the inside instead.
+  //
+  // And .wsgroup used to take an accent border while Health or the assistant was open. It was
+  // decoration and he said so - the faded controls and the lit-up button already say which mode you
+  // are in, and an outline around everything says it a third time.
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/sidepanel.html`);
+    for (const m of css.matchAll(/^ *([^\n{]*\.expgroup[^\n{]*)\{([^}]*)\}/gm)) {
+      // the *subject* of the selector, not any mention: `.expgroup button{opacity:.32}` is how the
+      // box is meant to dim, and the first version of this test flagged it.
+      if (!m[1].split(',').some((sel) => /\.expgroup$/.test(sel.trim()))) continue;
+      assert.ok(!/(^|;)\s*opacity\s*:/.test(m[2]),
+        `${app}: opacity on .expgroup makes its own border show through EXPORT - "${m[1].trim().slice(0, 60)}"`);
+    }
+    assert.ok(/\.explabel\{[^}]*background:var\(--surface\)/.test(css), `${app}: .explabel lost the background that masks the border`);
+    assert.ok(!/body\.(ai|health)-open \.wsgroup\{/.test(css), `${app}: the bar is outlined again when a mode opens`);
+  }
+});
+
+test('the export buttons say they export, not just which file they write', () => {
+  // HTML and MD name a format. The legend says what pressing them does, for anyone looking; the
+  // aria-label has to say it for anyone not.
   for (const app of ['crm', 'analytics']) {
     const html = read(`apps/${app}/sidepanel.html`);
-    assert.ok(!/expgroup|explabel/.test(html), `${app}: the export box is back`);
     for (const [id, name] of [['export', 'Export HTML'], ['exportmd', 'Export Markdown']]) {
       // No `#` in an assertion message: it opens a comment in TAP, so `#exportmd` truncated the
       // failure to "analytics: " and said nothing. Second unreadable failure in two days, different
