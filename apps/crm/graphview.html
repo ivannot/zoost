@@ -40,7 +40,22 @@
   .wrap{flex:1;min-height:0;position:relative}
   .view{position:absolute;inset:0;display:none} .view.on{display:flex}
   /* explorer */
-  aside{width:340px;flex:none;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+  aside{width:340px;flex:none;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
+  /* The list can be folded away so a wide reference pane gets the whole window. Width to 0
+     rather than display:none, so the transition has something to animate and nothing has to
+     be re-created when it comes back; `visibility` stops the contents being tabbed to while
+     they are folded, which `overflow:hidden` alone does not.
+     `min-width:0` is not decoration: a flex item's default `min-width:auto` resolves to its
+     min-content size, which floors `width:0` at whatever the search box needs. The rule was
+     applying - `visibility` from the same declaration took effect - and the panel simply did
+     not move, which is the kind of nothing that is hard to diagnose by looking. */
+  body.no-aside #v-explorer aside{width:0;min-width:0;border-right:0;overflow:hidden;visibility:hidden}
+  #asidebtn{font:12px var(--sans);padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
+  #asidebtn:hover{color:var(--ink)}
+  /* .tabs already claims the free space; with two auto margins the header spread them apart
+     instead of keeping the button beside the tabs it belongs with. */
+  header #asidebtn + .tabs{margin-left:6px}
+  @media print{ #asidebtn{display:none} }
   .search{padding:12px}
   .search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
   .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
@@ -216,7 +231,9 @@
     <h1 id="gtitle">Zoost</h1>
     <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
     <span class="stat" id="s-ws"></span>
-    <div class="tabs" style="margin-left:auto"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+    <button id="asidebtn" style="margin-left:auto" aria-pressed="false" aria-label="Hide the list"
+            title="Hide the list and give the whole window to what is on the right">Hide list</button>
+    <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
   </header>
   <div class="wrap">
     <div class="view on" id="v-explorer">

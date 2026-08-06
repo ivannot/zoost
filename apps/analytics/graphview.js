@@ -323,6 +323,29 @@ function buildRelChips() {
   $('relq').addEventListener('input', () => { relQ = $('relq').value.trim(); relRender(); });
 }
 
+// ---------------- The list, folded away ----------------
+// A reference pane, an ER box or a source listing is easier to read across the whole window than
+// across the window minus 340px, and the list is not needed while reading one. Per window and per
+// session: nothing is stored, so nothing new has to be declared in the privacy policy for a
+// preference that costs one click to set again.
+//
+// It is offered in every view, not only Explorer, because the button would otherwise appear and
+// disappear as the tabs change - a control that comes and goes is the thing the conventions warn
+// about - and because it is harmless where the list is already off screen.
+(function () {
+  const btn = document.getElementById('asidebtn');
+  if (!btn) return;
+  btn.onclick = () => {
+    const off = document.body.classList.toggle('no-aside');
+    btn.textContent = off ? 'Show list' : 'Hide list';
+    btn.setAttribute('aria-pressed', String(off));
+    btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
+    btn.title = off ? 'Show the list again' : 'Hide the list and give the whole window to what is on the right';
+    // The canvas is sized from its box, so it has to be told the box changed.
+    if (typeof resize === 'function' && curView === 'visual') { resize(); if (typeof fitView === 'function') fitView(); if (typeof draw === 'function') draw(); }
+  };
+})();
+
 // ---------------- View toggle ----------------
 let curView = 'explorer';
 document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {

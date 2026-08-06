@@ -599,6 +599,24 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('the list folds to zero on both sides, min-width included', () => {
+  // The rule applied and the panel did not move: `visibility:hidden` from the same declaration took
+  // effect while `width:0` was ignored, because a flex item's default `min-width:auto` resolves to
+  // its min-content size and floors the width at whatever the search box needs. Nothing errors, and
+  // there is no way to see it except by measuring - which is why it is asserted rather than trusted.
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/graphview.html`);
+    const m = css.match(/body\.no-aside #v-explorer aside\{([^}]*)\}/);
+    assert.ok(m, `${app}: the list cannot be folded away`);
+    assert.match(m[1], /(^|;)width:0(;|$)/, `${app}: the folded list has no width rule`);
+    assert.match(m[1], /min-width:0/, `${app}: width:0 is floored by min-width:auto and nothing happens`);
+    // and the control that drives it carries its name where a screen reader can reach it
+    const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
+    assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
+    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
+  }
+});
+
 test('a selection that cannot be projected takes the projections with it', () => {
   // Reported, and caused by the guard added the turn before: refusing to move the focus left the ER
   // diagram showing the previous module while the list said this one. Both halves looked right on

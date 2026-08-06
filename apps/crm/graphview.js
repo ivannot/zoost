@@ -163,7 +163,7 @@ function layoutZoneHtml(n) {
 
   const head = detail && layFilter !== null
     ? `Fields in \u00ab${esc(lays[layFilter].name || lays[layFilter].id)}\u00bb \u00b7 ${rowsSrc.length} of ${all.length}`
-    : `Fields \u00b7 ${all.length}${detail ? ` \u00b7 ${lays.length} layout(s)` : ''}`;
+    : (n.unreadable ? 'Fields - never read' : `Fields \u00b7 ${all.length}${detail ? ` \u00b7 ${lays.length} layout(s)` : ''}`);
 
   const legend = detail
     ? `<div class="laylegend"><span class="d"></span> in layout \u00b7 <span class="d req"></span> required in that layout \u00b7 highlighted rows are fields in <b>no</b> layout (API-only)</div>`
@@ -180,6 +180,12 @@ function wireLayoutZone(n) {
 }
 function relatedListsHtml(n) {
   const rls = n.related_lists || [];
+  // The exact sentence the panel stopped giving, still here: "run Pull Modules again" cannot work on
+  // a module Zoho refuses to describe, and «Related lists · 0» claims a count nobody took.
+  if (n.unreadable) {
+    return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Related lists</div>`
+      + `<div style="padding:9px 10px;color:#94a3b8;font:11.5px var(--sans)">Never read. Zoho would not describe this module, so its related lists were not fetched - pulling again will not change that by itself.</div></div>`;
+  }
   if (!rls.length) {
     return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Related lists \u00b7 0</div>`
       + `<div style="padding:9px 10px;color:#94a3b8;font:11.5px var(--sans)">Nothing recorded for this module. Related lists are fetched by <b>Pull Modules</b> - run it again, then reopen this diagram.</div></div>`;
@@ -212,10 +218,15 @@ function select(id, nopush) {
     assoc = '<div class="assoc">Bound to: ' + n.associated_place.map((a) => `<b>${esc(a._type || '')}</b> ${esc(a.name || '')} <span>(${esc(a.module || '')})</span>`).join(' \u00b7 ') + '</div>';
   }
   const sig = schema
-    ? `${(n.fields || []).length} fields \u00b7 ${(n.layouts || []).length} layouts \u00b7 ${(n.related_lists || []).length} related lists \u00b7 ${esc(n.category || 'module')}`
+    ? (n.unreadable
+      ? `not described by Zoho \u00b7 ${esc(n.category || 'module')}`
+      : `${(n.fields || []).length} fields \u00b7 ${(n.layouts || []).length} layouts \u00b7 ${(n.related_lists || []).length} related lists \u00b7 ${esc(n.category || 'module')}`)
     : `${n.return_type || 'void'} ${n.namespace}.${n.name}(` + (n.params || []).map((p) => `${p.type} ${p.name}`).join(', ') + ')';
-  const upHead = schema ? `Referenced by (${n.called_by.length}) <span class="hint">- modules linking here</span>` : `Called by (${n.called_by.length}) <span class="hint">- breaks if you change it</span>`;
-  const downHead = schema ? `Lookups (${n.calls.length}) <span class="hint">- modules it references</span>` : `Calls (${n.calls.length}) <span class="hint">- its dependencies</span>`;
+  // A count of zero is a measurement. On a module Zoho refused to describe neither direction was
+  // measured - its own fields were never read either - so both headings drop the number.
+  const unread = schema && n.unreadable;
+  const upHead = schema ? `Referenced by${unread ? '' : ` (${n.called_by.length})`} <span class="hint">- modules linking here</span>` : `Called by (${n.called_by.length}) <span class="hint">- breaks if you change it</span>`;
+  const downHead = schema ? `Lookups${unread ? '' : ` (${n.calls.length})`} <span class="hint">- modules it references</span>` : `Calls (${n.calls.length}) <span class="hint">- its dependencies</span>`;
   const badges = schema
     ? `<span class="badge">${esc(n.namespace)}</span>${n.unreadable ? '<span class="badge">not described by Zoho</span>' : ''}${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
     : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
@@ -239,8 +250,9 @@ function select(id, nopush) {
     <div class="file">${esc(n.file || '')}</div>
     ${extra}`;
   const up = $('up'), down = $('down');
-  n.called_by.length ? n.called_by.forEach((i) => up.appendChild(refRow(i))) : (up.innerHTML = `<div class="none">no ${schema ? 'incoming lookup' : 'internal caller'}</div>`);
-  n.calls.length ? n.calls.forEach((i) => down.appendChild(refRow(i))) : (down.innerHTML = `<div class="none">no ${schema ? 'lookup fields' : 'internal calls'}</div>`);
+  const nothingRead = 'never read - Zoho would not describe this module';
+  n.called_by.length ? n.called_by.forEach((i) => up.appendChild(refRow(i))) : (up.innerHTML = `<div class="none">${unread ? nothingRead : `no ${schema ? 'incoming lookup' : 'internal caller'}`}</div>`);
+  n.calls.length ? n.calls.forEach((i) => down.appendChild(refRow(i))) : (down.innerHTML = `<div class="none">${unread ? nothingRead : `no ${schema ? 'lookup fields' : 'internal calls'}`}</div>`);
   const back = $('back'); if (back) back.onclick = () => { const p = hist.pop(); if (p) select(p, true); };
   document.querySelectorAll('.crumbs a[data-id]').forEach((a) => (a.onclick = () => select(a.dataset.id)));
   if (schema) wireLayoutZone(n);
@@ -327,6 +339,29 @@ function buildRelChips() {
   });
   $('relq').addEventListener('input', () => { relQ = $('relq').value.trim(); relRender(); });
 }
+
+// ---------------- The list, folded away ----------------
+// A reference pane, an ER box or a source listing is easier to read across the whole window than
+// across the window minus 340px, and the list is not needed while reading one. Per window and per
+// session: nothing is stored, so nothing new has to be declared in the privacy policy for a
+// preference that costs one click to set again.
+//
+// It is offered in every view, not only Explorer, because the button would otherwise appear and
+// disappear as the tabs change - a control that comes and goes is the thing the conventions warn
+// about - and because it is harmless where the list is already off screen.
+(function () {
+  const btn = document.getElementById('asidebtn');
+  if (!btn) return;
+  btn.onclick = () => {
+    const off = document.body.classList.toggle('no-aside');
+    btn.textContent = off ? 'Show list' : 'Hide list';
+    btn.setAttribute('aria-pressed', String(off));
+    btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
+    btn.title = off ? 'Show the list again' : 'Hide the list and give the whole window to what is on the right';
+    // The canvas is sized from its box, so it has to be told the box changed.
+    if (typeof resize === 'function' && curView === 'visual') { resize(); if (typeof fitView === 'function') fitView(); if (typeof draw === 'function') draw(); }
+  };
+})();
 
 // ---------------- View toggle ----------------
 let curView = 'explorer';

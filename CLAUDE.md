@@ -444,6 +444,14 @@ appears in - it stays in them, because dropping it would quietly shrink the modu
 `dead_suspect` is false for it: «nothing references this» is a measurement, and on that module it was
 never taken. Same rule as a workflow with no scheduled-action count until it is downloaded.
 
+**A refusal reaches the diagram window's detail pane too, and I only found that by looking.** While
+checking something else, the refused module's pane still printed «0 fields · 0 layouts · 0 related
+lists», «Referenced by (0) - no incoming lookup», «Lookups (0) - no lookup fields» and - word for word
+- the sentence the side panel had already stopped giving: «Nothing recorded for this module. Related
+lists are fetched by **Pull Modules** - run it again». Five surfaces in one pane, all of them counts
+of zero where no count was taken. **When a fact turns out to be a claim, grep for every place that
+states it** - the same discipline as grepping a corrected claim rather than the paragraph it sat in.
+
 **And refusing to move the focus left the other two projections showing the previous module.** The
 guard above returns early from `setFocus()`, so the ER diagram went on drawing the last valid item
 while the Explorer list said this one - reported, and caused by the fix rather than surviving it.
@@ -956,6 +964,11 @@ These all failed **silently**, with no console error. They are the expensive kin
   it, confirm which thing before deleting it**, because deleting is the one direction that cannot be
   reviewed from a screenshot. What survived the round trip is the `aria-label` on each button, which
   is worth keeping either way.
+- **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
+  `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window
+  stayed exactly as wide as its search box. The rule was applying - `visibility:hidden` from the same
+  declaration took effect - and the panel simply did not move, which is the hardest kind of nothing to
+  diagnose by looking at it. Found by measuring, and asserted since.
 - **CSS specificity and source order.** `.erbox.dim .erhdr` placed before `.erbox.custom .erhdr`
   loses at equal specificity. Muting rules must come after the rules they override.
 - **Sticky headers need a z-index.** Without one, later siblings paint over them and rows appear
