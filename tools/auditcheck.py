@@ -57,10 +57,18 @@ def live_matches_repo(findings: list, notes: list) -> None:
     nothing in the deploy reports it, and the site looks fine because it *is* a real page, just not
     the current one. This is the check that turns a long argument into one line.
     """
-    # rglob, not glob: site/it/ is published prose like any other, and a check that stops at the
-    # top level would compare six pages and silently ignore six more. The path is derived from the
-    # file's position, so a third language costs nothing here.
-    published = sorted([p for p in SITE.rglob('*.html')] + [p for p in SITE.rglob('*.txt')])
+    # Everything the site publishes, not just its prose. This compared `.html` and `.txt` only, and
+    # said «what is served is what is in the repository» while never looking at site.css, site.js, the
+    # sitemap, the manifest or a single icon - so a release that replaced fourteen PNGs and rewrote two
+    # scripts passed with 0 findings having verified none of them. The exclusions come from
+    # .assetsignore, which is the same list Cloudflare uses, rather than from a copy kept here.
+    ignored = {ln.strip() for ln in (SITE / '.assetsignore').read_text(encoding='utf-8').splitlines()
+               if ln.strip() and not ln.startswith('#')} if (SITE / '.assetsignore').exists() else set()
+    published = sorted(f for f in SITE.rglob('*')
+                       if f.is_file()
+                       and f.name not in ignored
+                       and not f.name.startswith('.')
+                       and 'functions' not in f.relative_to(SITE).parts)
     for p in published:
         rel = p.relative_to(SITE).as_posix()
         # the label is the path, not the basename: with a translation directory there are two
@@ -85,6 +93,10 @@ def live_matches_repo(findings: list, notes: list) -> None:
         if mine in body:
             notes.append(f'{rel}: served with {len(body) - len(mine)} bytes added by the platform, '
                          f'ours intact')
+            continue
+        if p.suffix not in ('.html', '.txt', '.css', '.js', '.json', '.xml', '.webmanifest', '.svg'):
+            findings.append(f'{rel}: {url} is not the file in the repository '
+                            f'({len(body)} bytes served, {len(mine)} here)')
             continue
         if not body:
             # An empty body hashed to e3b0c442… and was reported as a content mismatch, which sends

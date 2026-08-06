@@ -878,8 +878,11 @@ class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """
 
     def test_nothing_is_defined_below_the_trailer(self):
+        # At the start of a line, not anywhere: the first occurrence of that text in this file is
+        # inside this very test, so a naive search starts scanning from here and reports every class
+        # written after it. The guard flagged itself the first time a class was added below it.
         src = (ROOT / 'tests/tools_test.py').read_text(encoding='utf-8')
-        i = src.index("if __name__ == '__main__':")
+        i = src.index("\nif __name__ == '__main__':")
         self.assertNotIn('\nclass ', src[i:], 'a class after the trailer is never run by run.sh')
 
     def test_every_case_in_the_file_is_loaded(self):
@@ -888,6 +891,36 @@ class TheSuiteRunsEverythingInIt(unittest.TestCase):
         loaded = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]).countTestCases()
         self.assertEqual(loaded, written,
                          f'{written} cases are written in the file and {loaded} are collected')
+
+
+class TheLiveComparisonCoversEverythingPublished(unittest.TestCase):
+    """"What is served is what is in the repository" was true of the prose and of nothing else.
+
+    It compared .html and .txt, so site.css, site.js, the sitemap, the web manifest and every icon
+    were never looked at - and it said 0 findings through a release that replaced fourteen PNGs and
+    rewrote two scripts. The exclusions are read from .assetsignore, which is the list Cloudflare
+    itself uses, rather than from a second copy kept in the tool.
+    """
+
+    def test_it_reads_assetsignore_rather_than_a_copy(self):
+        src = (ROOT / 'tools/auditcheck.py').read_text(encoding='utf-8')
+        self.assertIn('.assetsignore', src)
+
+    def test_every_published_file_is_in_the_set(self):
+        site = ROOT / 'site'
+        ignored = {ln.strip() for ln in (site / '.assetsignore').read_text(encoding='utf-8').splitlines()
+                   if ln.strip() and not ln.startswith('#')}
+        want = {f.relative_to(site).as_posix() for f in site.rglob('*')
+                if f.is_file() and f.name not in ignored and not f.name.startswith('.')
+                and 'functions' not in f.relative_to(site).parts}
+        for kind in ('site.css', 'site.js', 'sitemap.xml', 'favicon.ico', 'icon-512.png',
+                     'site.webmanifest', 'it/privacy.html'):
+            self.assertIn(kind, want, kind + ' would not be compared against the live site')
+        self.assertNotIn('_worker.js', want, 'the Worker script is not a published asset')
+
+    def test_a_binary_is_compared_by_bytes(self):
+        src = (ROOT / 'tools/auditcheck.py').read_text(encoding='utf-8')
+        self.assertIn('is not the file in the repository', src)
 
 
 if __name__ == '__main__':

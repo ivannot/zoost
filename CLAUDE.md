@@ -1718,8 +1718,12 @@ Two traps that this layout hides:
   defaults ever move, compare against what it generates before assuming ours is complete.
 
 **A release gate for the outside view: `python3 tools/auditcheck.py`.** Three things, all mechanical:
-every published page and `.txt` fetched from zoost.it and compared **byte for byte** against the
-repository; each store listing's §1 and §2 compared against the manifest's `name` and `description`;
+**every file the site publishes** fetched from zoost.it and compared **byte for byte** against the
+repository - and it means every file, which it did not until the icons were redrawn: it globbed
+`.html` and `.txt`, so `site.css`, `site.js`, the sitemap, the web manifest and every icon were never
+looked at, and it reported «what is served is what is in the repository» through a release that
+replaced fourteen PNGs and rewrote two scripts. The exclusions come from `.assetsignore`, the same
+list Cloudflare uses, rather than from a second copy kept in the tool; each store listing's §1 and §2 compared against the manifest's `name` and `description`;
 and every **absolute claim** in outward prose listed *differentially* against `tools/absolutes.txt`, so
 a new "never" or "only" has to be read once, deliberately, before it ships — printing all 354 every
 run would be the checker nobody reads. `--accept` records them; `--offline` skips the network. Like
