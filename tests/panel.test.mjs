@@ -599,6 +599,65 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('one click folds the list, and one click brings it back', () => {
+  // Reported: after the drag landed, the tab dragged and no longer clicked. `pointerup` folded and
+  // the `click` that follows it read the class it had just changed and unfolded again - the two
+  // cancelled each other and the control looked dead. Both handlers are exercised here rather than
+  // read, because that is the only way this class of bug shows itself.
+  for (const app of ['crm', 'analytics']) {
+    const on = {};
+    const cls = new Set();
+    const btn = {
+      addEventListener: (t, f) => (on[t] = f), setPointerCapture() {}, releasePointerCapture() {},
+      textContent: '', title: '', setAttribute() {},
+    };
+    const body = { classList: {
+      contains: (c) => cls.has(c),
+      add: (c) => cls.add(c), remove: (c) => cls.delete(c),
+      toggle: (c, v) => (v === undefined ? (cls.has(c) ? cls.delete(c) : cls.add(c)) : (v ? cls.add(c) : cls.delete(c))),
+    } };
+    const ctx = {
+      document: { getElementById: () => btn, body, querySelector: () => ({ getBoundingClientRect: () => ({ width: 340 }) }),
+                  documentElement: { style: { setProperty() {} } } },
+      curView: 'explorer', Math,
+    };
+    const { wireAsideFold } = load([sliceConst(`apps/${app}/graphview.js`, 'MIN'),
+                                    sliceConst(`apps/${app}/graphview.js`, 'KEEP'),
+                                    sliceConst(`apps/${app}/graphview.js`, 'DRAG'),
+                                    sliceFn(`apps/${app}/graphview.js`, 'asideWidth'),
+                                    sliceFn(`apps/${app}/graphview.js`, 'wireAsideFold')], ctx);
+    wireAsideFold();
+
+    const click = (x = 10) => {
+      on.pointerdown({ clientX: x, pointerId: 1, preventDefault() {} });
+      on.pointerup({ pointerId: 1 });
+      if (on.click) on.click({ detail: 1 });          // the browser sends this after every pointerup
+    };
+    click();
+    assert.ok(cls.has('no-aside'), `${app}: one click does not fold the list`);
+    click();
+    assert.ok(!cls.has('no-aside'), `${app}: a second click does not bring it back`);
+
+    // A real drag is not a click...
+    cls.clear();
+    on.pointerdown({ clientX: 10, pointerId: 1, preventDefault() {} });
+    on.pointermove({ clientX: 90 });
+    on.pointerup({ pointerId: 1 });
+    if (on.click) on.click({ detail: 1 });
+    assert.ok(!cls.has('no-aside'), `${app}: dragging the edge folded the list`);
+
+    // ...and a click with a wobble in it still is. This is the whole reason DRAG exists, and the
+    // first version of this test moved 80px, which is a drag with or without the threshold - so
+    // removing the threshold altogether passed. Two pixels is what a hand does on the way down.
+    cls.clear();
+    on.pointerdown({ clientX: 10, pointerId: 1, preventDefault() {} });
+    on.pointermove({ clientX: 12 });
+    on.pointerup({ pointerId: 1 });
+    if (on.click) on.click({ detail: 1 });
+    assert.ok(cls.has('no-aside'), `${app}: a click that wobbled two pixels was read as a drag`);
+  }
+});
+
 test('the list resizes within bounds, and a container with no width is not a bound', () => {
   // The same edge resizes and folds; the clamp is lifted out of the drag so it can be run without a
   // DOM. A container reporting zero width - a hidden or detached pane - would otherwise snap the

@@ -335,13 +335,9 @@ function buildRelChips() {
 // *shape* and not about a control whose target is not on screen - then guarded in the view switch,
 // and now simply placed where it belongs. A control with nothing to do is absent; a control that
 // lives inside the thing it acts on cannot be anywhere else.
-(function () {
-  const btn = document.getElementById('asidebtn');
-  if (!btn) return;
-  const MIN = 220;    // the list is never dragged narrower than this
-  const KEEP = 260;   // ...nor so wide that the detail beside it has less than this
-  const DRAG = 4;     // ...and under this many pixels of movement it was a click, not a drag
-  let down = null;
+const MIN = 220;    // the list is never dragged narrower than this
+const KEEP = 260;   // ...nor so wide that the detail beside it has less than this
+const DRAG = 4;     // ...and under this many pixels of movement it was a click, not a drag
 
 // The clamp, named and out of the drag so it can be tested without a DOM: never below MIN, and
 // never so wide that the detail beside it has less than KEEP. A container reporting no width is not
@@ -352,6 +348,11 @@ function asideWidth(want, wrapW) {
   const max = wrapW - KEEP;
   return max > MIN ? Math.min(max, w) : w;
 }
+
+function wireAsideFold() {
+  const btn = document.getElementById('asidebtn');
+  if (!btn) return;
+  let down = null;
 
   function setFolded(off) {
     document.body.classList.toggle('no-aside', off);
@@ -391,11 +392,14 @@ function asideWidth(want, wrapW) {
     try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
     if (!wasDrag) setFolded(!document.body.classList.contains('no-aside'));
   });
-  // Keyboard and the folded state, where pointerdown returns early and never arms a click.
-  btn.addEventListener('click', (e) => {
-    if (e.detail === 0 || document.body.classList.contains('no-aside')) setFolded(!document.body.classList.contains('no-aside'));
-  });
-})();
+  // Keyboard only. `pointerup` already handles both directions - it fires whether or not
+  // `pointerdown` armed a drag - and the first version had this reading `no-aside` as well, so a
+  // plain click folded on pointerup and was immediately unfolded again by the click that followed
+  // it. The two cancelled each other and the tab looked dead. A `click` from the keyboard carries
+  // detail 0 and no pointer events at all, which is the only case left for it to do.
+  btn.addEventListener('click', (e) => { if (e.detail === 0) setFolded(!document.body.classList.contains('no-aside')); });
+}
+wireAsideFold();
 
 // ---------------- View toggle ----------------
 let curView = 'explorer';
@@ -729,7 +733,6 @@ $('labelBtn').onclick = () => {
   $('labelBtn').textContent = 'Labels: ' + labelMode;
   draw();
 };
-
 
 // ---------------- ER diagram (entities + FK arrows) ----------------
 let erLaidOut = false, erAll = false, erScale = 1, erTx = 0, erTy = 0;

@@ -977,7 +977,12 @@ These all failed **silently**, with no console error. They are the expensive kin
   property rather than an inline style, or it would beat the fold rule on specificity the first time
   anyone dragged. `asideWidth()` is lifted out of the drag so the clamp can be tested without a DOM,
   and it treats **a container reporting no width as no constraint**: a hidden pane measures 0, and
-  reading that as a bound snapped the column to its minimum. Giving the tabs square bottom corners to
+  reading that as a bound snapped the column to its minimum. **The click stopped working the moment
+  the drag landed** and I shipped it: `pointerup` folded, and the `click` the browser sends straight
+  after read the class that had just changed and unfolded again. Two handlers cancelling each other
+  is invisible in the source and obvious the first time anyone presses it - which is why the fold is
+  now wired by a **named** function the tests can lift and drive, instead of an anonymous IIFE they
+  could only read. Giving the tabs square bottom corners to
   sit flush against the pane below was tried and reverted - it makes the header and the content argue
   about where the line is, and he said so.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
