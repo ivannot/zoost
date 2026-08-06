@@ -250,7 +250,10 @@
         try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}`)).fields || []; fieldsOk = true; }
         catch (e2) {
           const err = e2.status ? e2 : e1;   // the second attempt drops the URL variant, not the reason
-          unreadable = { status: err.status || 0, code: err.code || null, message: err.detail || String(err.message || err), at: new Date().toISOString() };
+          // Only a 4xx is a refusal: Zoho understood and said no. A dropped connection or a 5xx is a
+          // failure, and dating it on disk as a settled answer would be a measurement never taken.
+          const st = Number(err.status) || 0;
+          if (st >= 400 && st < 500) unreadable = { status: st, code: err.code || null, message: err.detail || String(err.message || err), at: new Date().toISOString() };
         }
       }
       let layouts = [];

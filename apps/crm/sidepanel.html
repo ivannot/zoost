@@ -178,9 +178,13 @@
   .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
   /* A module Zoho would not describe. Its own class rather than widening .rf/.rl, which the
      Connections rows also use - see the note in CLAUDE.md about the badge classes. */
-  .f .rest.rx{margin-left:0;color:var(--warn);font-weight:600}
+  .f .rest.rx{margin-left:0;color:var(--muted);font-weight:600}
   .f .st{cursor:pointer;font-size:11px;width:13px;text-align:center;flex:none}
   .st-ok{color:var(--ok)} .st-no{color:#5b6b82} .st-err{color:var(--warn)} .st-stale{color:#f59e0b}
+  /* Refused by Zoho. Neutral on purpose and readable: amber in this panel means "do something",
+     and there is nothing to do. Lighter than .st-no, which means "not here yet" and is dim
+     because it is waiting; this one is settled and has to be legible. */
+  .st-none{color:var(--muted)}
   #missing{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
   .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0}
   /* nowrap keeps the row on one line; min-width:0 lets it scroll INSIDE its own box instead of

@@ -2322,6 +2322,10 @@ async function rebuildModules() {
 // What Zoho said when it refused to describe a module, in one sentence, in one place - the row, the
 // detail pane and both exports all ask this. Zoho's own words are quoted rather than reworded: the
 // fact is the product, and our paraphrase of it would be an interpretation.
+// Zoho understood and said no (4xx), as against everything else - a dropped connection, a 5xx, a
+// tab that went away - which is a failure and stays retryable. A blip written to disk as a dated
+// refusal would be a measurement that was never taken, presented as a settled one.
+function isRefusal(status) { return Number(status) >= 400 && Number(status) < 500; }
 function moduleRefusal(u) {
   if (!u) return null;
   const when = u.at ? new Date(u.at) : null;
@@ -2331,7 +2335,7 @@ function moduleRefusal(u) {
     short: u.code === 'INVALID_MODULE' ? 'not described' : 'refused',
     text: `Zoho would not describe this module, so its fields, layouts and related lists were never read. `
         + `It answered ${u.status || '?'}${u.code ? ' ' + u.code : ''}: \u00ab${said}\u00bb${day ? `, asked on ${day}` : ''}. `
-        + `Pulling again re-asks - a refusal is a record of one answer, not a permanent one - but nothing here can change it.`,
+        + `Pulling again will not change that by itself - the answer has to change in Zoho first.`,
   };
 }
 function renderModules() {
@@ -2368,9 +2372,17 @@ function renderModules() {
       // The layouts chevron lives on the RIGHT (next to the layout count), not between dot and name,
       // so module names line up with the other tabs' dot\u2192name spacing.
       const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
+      // The refusal wins over `error`: it is the more specific answer, and it is the one that says
+      // whether doing anything again is worth it.
+      //
+      // \u2298, and grey. It wore \u27f3 in amber - the panel's "failed, click to retry" - which
+      // advertised an action that changes nothing, and he said so. The vocabulary now runs
+      // \u25cf here \u00b7 \u25cb not here yet \u00b7 \u25d0 partial \u00b7 \u27f3 failed \u00b7 \u2298 refused, and only the last
+      // means "no" rather than "not yet". Reusing \u25cb would have been worse than a new glyph: in the
+      // functions list it means "click to download", which is the opposite claim.
       const ref = moduleRefusal(m.unreadable);
-      const stTitle = m.error ? 'Failed - click to retry' : ref ? ref.text : 'In workspace - click to resync fields from Zoho';
-      el.innerHTML = `<span class="st ${m.error ? 'st-err' : ref ? 'st-stale' : 'st-ok'}" title="${escA(stTitle)}">${m.error ? '\u27f3' : ref ? '\u25d0' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
+      const stTitle = ref ? ref.text : m.error ? 'Failed - click to retry' : 'In workspace - click to resync fields from Zoho';
+      el.innerHTML = `<span class="st ${ref ? 'st-none' : m.error ? 'st-err' : 'st-ok'}" title="${escA(stTitle)}">${ref ? '\u2298' : m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
         + (ref ? `<span class="rest rx" title="${escA(ref.text)}">${escHtml(ref.short)}</span>` : '')
         + `<span class="rest rf" title="${m.fieldCount} field(s)">${m.fieldCount ? m.fieldCount + 'f' : ''}</span>`
         + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>${chev}`;
@@ -2399,12 +2411,16 @@ async function resyncModule(m) {
   // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
   // module Zoho has just described, which is the same class of lie in the other direction.
   if (!r?.ok) {
-    mod.unreadable = { status: r?.status || 0, code: r?.code || null, message: r?.detail || r?.error || 'no answer', at: new Date().toISOString() };
-    try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
-    m.unreadable = mod.unreadable; m.error = true;
-    renderModules(); if (currentPath === m.path) openModule(m.path);
-    const ref = moduleRefusal(m.unreadable);
-    setStatus(`${m.api_name}: ${ref ? ref.text : 'resync failed.'}`, 'warn');
+    if (isRefusal(r?.status)) {
+      mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
+      try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
+      m.unreadable = mod.unreadable; m.error = false;
+      renderModules(); if (currentPath === m.path) openModule(m.path);
+      setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
+      return;
+    }
+    m.error = true; renderModules();
+    setStatus(`Resync of ${m.api_name} failed: ${r?.error || 'no answer'}`, 'warn');
     return;
   }
   mod.fields = r.fields; delete mod.unreadable;

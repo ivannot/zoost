@@ -438,6 +438,21 @@ One sentence, one function, five consumers: `moduleRefusal()` feeds the row, the
 fields table, the HTML and Markdown exports and the AI - and the assistant is told **before** the
 empty table, because a model handed a module with no fields will explain why a module has none.
 
+**The mark says "no", not "not yet", and it may not borrow one that already says something else.**
+The refused row wore `\u27f3` in amber - the panel's *failed, click to retry* - so it advertised an
+action that changes nothing, and he said so. It is **`\u2298` in `var(--muted)`**. Two things decided
+that. Amber in this panel means *do something*, and there is nothing to do, so the colour had to be
+neutral **and legible** - not `.st-no`'s dim `#5b6b82`, which means "not here yet" and is dim because
+it is waiting. And `\u25cb` was the obvious reuse and would have been worse than a new glyph: three tabs
+away it means *click to download*, which is the opposite claim. The vocabulary now runs
+**`\u25cf` here \u00b7 `\u25cb` not here yet \u00b7 `\u25d0` partial \u00b7 `\u27f3` failed \u00b7 `\u2298` refused**, and only the last is a no.
+
+**A refusal is a 4xx; everything else stays a failure.** The first version wrote `unreadable` on any
+thrown error, so a dropped connection would have been dated on disk as a settled refusal and the row
+would never have looked retryable again. `isRefusal()` guards both writers - the pull and the
+per-module resync - and it is the same rule as the per-area `access` verdicts, which count an
+outright 401/403 and nothing else.
+
 **One sentence per surface, though, not per empty section.** Having one function meant every place
 that had something to say could say the whole thing, so the first version put the same sixty words on
 screen **three times** in a 300px pane - the banner, the fields area, the related lists area - and he
@@ -1408,6 +1423,24 @@ compares against anything is not evidence. The trailer is last in the file and t
 there, one reading the source for a class below it and one comparing what the loader collects against
 what is written. The first version of the second shelled out to the same file and recursed until it
 was killed, which is its own small lesson: a test about a suite reads the suite, it does not run it.
+
+**A test that fails unreadably is half a test, and `assert.match` on a large haystack is how.**
+`match` prints the whole `actual` string into the failure, and node 19's TAP lexer dies on a
+multi-byte character split across a socket read - `ERR_TAP_LEXER_ERROR`, "Unexpected character",
+pointing at line 1 of nothing. The suite still went red, so the guard worked; whoever tripped it
+would have learnt nothing. Assert with `assert.ok(regex.test(x), 'why')` whenever `x` is a slice of
+source, so the failure carries the sentence and not the file.
+
+**`sed -i ''` corrupts a UTF-8 source on macOS, and it corrupts it silently.** Used to apply a
+deliberate mutation while proving the check above, it mangled the panel's `\u00ab\u00bb` and arrows into bytes
+that would not parse - and the resulting error looked exactly like the reporter bug being chased.
+Mutations are applied from Python, which is what every working one in this repository already used.
+
+**And `git checkout <file>` to undo one is still the trap this file already names.** It happened
+again, in the same context - proving a checker - and it discarded real uncommitted work in the same
+file. The rule was already written down: copy the file aside first and restore from the copy. Writing
+a lesson down is not the same as having learnt it; the only thing that actually prevents this is
+never typing the command.
 
 **Prove a test can fail before trusting it.** Same rule as the checkers. Break the thing on purpose
 — point the deluge token at the wrong cookie, set the staleness margin to zero, restore the tag

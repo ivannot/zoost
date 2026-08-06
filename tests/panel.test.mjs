@@ -526,6 +526,37 @@ test('no list still tells the reader to pull without asking first', () => {
   }
 });
 
+test('a refusal is a 4xx, and everything else stays a failure', () => {
+  // The first version wrote `unreadable` on any thrown error, so a dropped connection would have
+  // been dated on disk as a settled refusal and the row would have stopped looking retryable for
+  // good. Same rule as the per-area access verdicts: only what Zoho actually answered counts.
+  const { isRefusal } = load([sliceFn('apps/crm/sidepanel.js', 'isRefusal')]);
+  for (const s of [400, 401, 403, 404, 429, 499]) assert.equal(isRefusal(s), true, `${s} is a refusal`);
+  for (const s of [0, undefined, null, 200, 500, 502, 503]) assert.equal(isRefusal(s), false, `${s} is not`);
+});
+
+test('the refused mark is neutral, and not one the panel uses for "try again"', () => {
+  // Reported: the row wore the amber circular arrow, which in this panel means "failed, click to
+  // retry" - advertising an action that changes nothing. The mark has to say "no", not "not yet",
+  // and it cannot borrow one that already says something else: the hollow circle is "click to
+  // download" three tabs away, which is the opposite claim.
+  const src = read('apps/crm/sidepanel.js');
+  // from the start index, not from zero: the functions list has an `el.querySelector('.st')` of its
+  // own further up, and searching from the top sliced an empty string that matched nothing.
+  const at = src.indexOf('const ref = moduleRefusal(m.unreadable);');
+  assert.ok(at > 0, 'the module row no longer asks moduleRefusal');
+  const row = src.slice(at, src.indexOf("el.querySelector('.st')", at));
+  // assert.ok, never assert.match, on a haystack this size: match prints the whole `actual` string
+  // into the failure, and node 19's TAP lexer dies on a multi-byte character split across a socket
+  // read. The test still failed - exit 1 - with a message nobody could read, which is half a test.
+  assert.ok(/ref \? '\\u2298'/.test(row), 'the refused row no longer carries its own glyph');
+  assert.ok(!/ref \? '\\u27f3'|ref \? '\\u25cb'|ref \? '\\u25d0'/.test(row), 'it borrowed a mark that means something else');
+  assert.ok(/ref \? 'st-none'/.test(row), 'the refused row is not neutral');
+  const css = read('apps/crm/sidepanel.html');
+  assert.ok(/\.st-none\{color:var\(--muted\)\}/.test(css), 'st-none must be legible, not the dim "not here yet" grey');
+  assert.ok(!/\.f \.rest\.rx\{[^}]*var\(--warn\)/.test(css), 'the chip still calls for attention');
+});
+
 test('a module refusal is explained once in the pane, not once per empty section', () => {
   // Reported with a screenshot: the same sixty-word sentence three times in a 300px pane - the
   // banner, the fields area and the related lists area. A reason repeated under the reason stops
