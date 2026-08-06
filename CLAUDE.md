@@ -1162,6 +1162,26 @@ outside the handful of real hits it was almost all noise — every `un elenco`, 
 assistente` flagged as a missing elision — and the rule here is the one already written down, that a
 checker with that ratio is one nobody reads. Reading remains the only method for this class.
 
+**The guides' version stamp was the store badge's defect, one page over.** `site.js` fills «Covers
+Zoost CRM X · updated <date>» from `/api/versions`, so a browser always sees the truth and the markup
+is only a fallback - which nobody had touched since August 3. A reader who does not run scripts met
+«Covers Zoost CRM 1.6.1» on a page whose own §4 describes 1.13 as past, and semver says those cannot
+both be true. `docs_stamp_is_current()` derives both halves rather than restating them: the version
+must equal the app's `manifest.json`, and the date must not be older than the last commit that
+touched the page. **Any fact a script fills in has a written fallback, and the fallback is a claim.**
+
+**A disclaimer that is worded differently on each page is doing less than a disclaimer.** The
+trademark note in every footer had drifted into four wordings - three English, one of which read «a
+family of ... tools. **It is** not affiliated» (plural subject, singular verb), plus a singular
+Italian that was correct when there was one product. `trademark_disclaimer_is_one_sentence()` groups
+every `<p class="legal">` naming Zoho Corporation by its text and reports more than one per language.
+
+**A contextual target is fine; the two languages disagreeing about it is not.** In English the
+product pages' «How to» went straight to that product's guide, in Italian it went to the hub. Neither
+is wrong and they cannot both be deliberate on the same pages.
+`nav_targets_match_across_languages()` pairs the navs positionally and skips anything carrying
+`hreflang`, which is the one link whose target must *not* match - the language switch.
+
 **A canonical must be the page's own URL, and a translated pair must point both ways.** Neither was
 checked, and both were wrong: `analytics.html` and `index.html` carried `crm.html`'s canonical,
 copied along with the head block — which tells a search engine those pages *are* `crm.html`, so the

@@ -11,11 +11,11 @@ the last section says which ones cannot be checked and why.
 
 ## The two products
 
-- [Zoost - workbench for Zoho CRM](https://zoost.it/crm.html): mirrors Deluge functions, module
+- [Zoost - workbench for Zoho CRM](https://zoost.it/crm.html) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj): mirrors Deluge functions, module
   schema, layouts, related lists, workflows, schedules and the connections catalogue. Adds a
   reference graph, an ER diagram, full-text search across every function, a health audit, HTML and
   Markdown exports, and an optional AI assistant.
-- [Zoost - workbench for Zoho Analytics](https://zoost.it/analytics.html): mirrors every view with
+- [Zoost - workbench for Zoho Analytics](https://zoost.it/analytics.html) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge): mirrors every view with
   its type and folder, the columns of every table and query table, the foreign keys between them, the
   SQL of each query table as its own file, and the dependency graph. Adds an ER diagram, a list of
   what nothing depends on any more, exports, and the same assistant.
@@ -58,6 +58,13 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **"Unused" is a candidate, never a verdict.** Both products state the coverage gap next to the
   number: a connection may be used by Zoho Flow or a widget, a view by a shared link or an API
   consumer, and neither platform reports that.
+- **The one exception is this website, and it is declared rather than waved away.** zoost.it is
+  served by Cloudflare, whose edge keeps ordinary request logs - IP, time, URL, user agent - with no
+  cookie and no identifier. That is a processing of personal data, however small, and for it the
+  developer is the controller; §8 of the privacy policy states it, names the basis and gives an
+  address to exercise a right against it. For everything the extensions touch the developer is
+  neither controller nor processor, because no processing happens: nothing is received, nothing is
+  stored, and there is no service anything could reach.
 - **Counts are exposed, never graded.** Size and call counts come with what they do not capture, and
   there is no score, threshold or "worst offenders" list anywhere.
 
@@ -109,6 +116,6 @@ An assessment should have this before the verification chain, not after it.
 
 ## Independence
 
-Zoost is an independent, unofficial developer tool. It is not affiliated with, endorsed by or
-sponsored by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks of
+Zoost is a family of independent, unofficial developer tools. They are not affiliated with, endorsed
+by or sponsored by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks of
 Zoho Corporation, used nominatively to indicate compatibility.

@@ -86,7 +86,7 @@
 
   <h2 id="certain-or-stopped">Certain, or stopped</h2>
   <p>No retry loops against a guess. No matching a button label that changes with the interface
-    language. No synthetic clicks into a page we do not own. Where a path is not certain, the feature
+    language. No synthetic clicks into a page I do not own. Where a path is not certain, the feature
     stops with a precise message instead of trying something and hoping.</p>
   <p>This is why Zoost CRM's function <b>Go to</b> was removed in 1.1.0: it drove Zoho's editor by
     clicking a localised "Edit function" label, looped ten times, and then failed with the wrong
@@ -122,7 +122,7 @@
   <p>Nothing is guaranteed - the licence says so and so does this page. What is offered is effort: a
     break will be looked at and fixed where fixing it is possible. Sometimes it will not be, and then
     the feature will say plainly that it cannot do the thing rather than guess. <b>The mirror already
-    on your disk keeps working either way</b>, because it is ordinary files.</p>
+    on your disk keeps working either way</b>, because it is files you can open in any editor.</p>
 
   <h2 id="how-a-release-is-built">How a release is built</h2>
   <p>Pushing a release tag makes GitHub check out that commit, build it <b>twice</b> to prove the
@@ -130,7 +130,7 @@
     attestation for it. The archive attached to the Release <em>is</em> the file submitted to the
     Chrome Web Store - never a build from a laptop.</p>
   <p>Reproducibility is load-bearing rather than decorative: publishing a SHA-256 is worth nothing if
-    two builds of the same commit differ, and ours did, because <code>zip</code> stores each file's
+    two builds of the same commit differ, and mine did, because <code>zip</code> stores each file's
     mtime and walks the directory in filesystem order. The build now stamps every file with the
     commit's own date, sorts the file list, and passes <code>-X</code>.</p>
   <p>Every GitHub Action is pinned to a commit hash, never to a moving tag. A supply chain that ends
@@ -191,7 +191,7 @@
       support or maintenance.
     </p>
     <p class="legal">
-      Zoost is an independent, unofficial developer tool. It is <b>not</b> affiliated with, endorsed by,
+      Zoost is a family of independent, unofficial developer tools. They are <b>not</b> affiliated with, endorsed by,
       sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
       trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
     </p>

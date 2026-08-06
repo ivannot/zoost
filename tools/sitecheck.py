@@ -16,6 +16,7 @@ is *allowed* to differ, never of what to look at. Forgetting to declare somethin
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import pathlib
 from pathlib import Path
@@ -546,6 +547,106 @@ def canonical_and_alternates(findings: list) -> None:
                                 f'is at {url_of(other)} — a translated pair points both ways or neither')
 
 
+# ---------------------------------------------------------------------------------------------------
+# The trademark disclaimer, and the guides' version stamp
+# ---------------------------------------------------------------------------------------------------
+
+def trademark_disclaimer_is_one_sentence(findings: list) -> None:
+    """Quasi-legal text repeated in every footer, and it had drifted into four wordings.
+
+    Three in English - "an independent, unofficial developer tool. It is not", "a family of ... tools.
+    They are not", and a home page reading "a family of ... tools. **It is** not", which is a plural
+    subject with a singular verb - plus a singular Italian, correct when there was one product. A
+    disclaimer that is worded differently on each page is doing less than a disclaimer.
+    """
+    for lang, pages in (('en', sorted(SITE.glob('*.html'))), ('it', sorted((SITE / 'it').glob('*.html')))):
+        seen = {}
+        for f in pages:
+            for m in re.finditer(r'<p class="legal">([\s\S]*?)</p>', f.read_text(encoding='utf-8')):
+                txt = ' '.join(re.sub(r'<[^>]+>', '', m.group(1)).split())
+                if 'Zoho Corporation' not in txt:
+                    continue
+                seen.setdefault(txt, []).append(f.name)
+        if len(seen) > 1:
+            findings.append(f'The trademark disclaimer has {len(seen)} wordings in {lang}:')
+            for txt, files in sorted(seen.items(), key=lambda kv: -len(kv[1])):
+                findings.append(f'    {", ".join(files)}')
+                findings.append(f'      {txt[:120]}')
+
+
+MONTHS = {'en': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+                 'October', 'November', 'December'],
+          'it': ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto',
+                 'settembre', 'ottobre', 'novembre', 'dicembre']}
+
+
+def docs_stamp_is_current(findings: list) -> None:
+    """The guides' "Covers Zoost X · updated <date>" line, as it is *written*.
+
+    `site.js` fills both spans from /api/versions, so a browser always sees the truth and the markup
+    is only the fallback. That is the defect already removed from the store badge, one page over: the
+    reader this site is built for does not run scripts. It read «Covers Zoost CRM 1.6.1» on a page
+    whose own section describes 1.13 as past - which semver says cannot both be true - and a date
+    three days behind the edits it was stamping.
+
+    Two criteria, both derived: the version is the app's manifest, and the date is not older than the
+    last commit that touched the page.
+    """
+    for f in sorted(SITE.glob('docs-*.html')) + sorted((SITE / 'it').glob('docs-*.html')):
+        html = f.read_text(encoding='utf-8')
+        m = re.search(r'<p class="upd"[^>]*data-app="(\w+)"[^>]*>.*?<span class="dv">([^<]*)</span>'
+                      r'.*?<span class="dd">([^<]*)</span>', html, re.S)
+        if not m:
+            findings.append(f'{f.relative_to(SITE.parent)}: no version stamp to check')
+            continue
+        app, ver, when = m.group(1), m.group(2).strip(), m.group(3).strip()
+        mf = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))['version']
+        if ver != mf:
+            findings.append(f'{f.relative_to(SITE.parent)}: the stamp says {ver}, the {app} manifest says {mf} '
+                            f'— a reader who does not run scripts sees only what is written here')
+        lang = 'it' if f.parent.name == 'it' else 'en'
+        d = re.match(r'(\d{1,2})\s+(\S+)\s+(\d{4})', when)
+        if not d or d.group(2) not in MONTHS[lang]:
+            findings.append(f'{f.relative_to(SITE.parent)}: cannot read the date {when!r}')
+            continue
+        stamped = f'{d.group(3)}-{MONTHS[lang].index(d.group(2)) + 1:02d}-{int(d.group(1)):02d}'
+        out = subprocess.run(['git', 'log', '-1', '--format=%cs', '--', str(f.relative_to(ROOT))],
+                             cwd=ROOT, capture_output=True, text=True)
+        last = out.stdout.strip()
+        if last and stamped < last:
+            findings.append(f'{f.relative_to(SITE.parent)}: stamped {stamped}, last changed {last} '
+                            f'— the page says it is older than it is')
+
+
+def nav_targets_match_across_languages(findings: list) -> None:
+    """A contextual *target* is fine; the two languages disagreeing about it is not.
+
+    In English the product pages' "How to" went straight to that product's guide, in Italian it went
+    to the hub. Neither is wrong, and they cannot both be deliberate on the same pages.
+    """
+    for it in sorted((SITE / 'it').glob('*.html')):
+        en = SITE / it.name
+        if not en.exists():
+            continue
+        # The language switch is skipped: it points at the other language by design, which is the
+        # one link whose target must *not* match. It declares itself with hreflang, which is what
+        # that attribute is for and what translations_link_to_translations already relies on.
+        pair = []
+        for p in (en, it):
+            nav = re.search(r'<nav[\s\S]*?</nav>', p.read_text(encoding='utf-8'))
+            links = re.findall(r'<a\b([^>]*)>', nav.group(0)) if nav else []
+            pair.append([re.search(r'href="([^"]+)"', a).group(1) for a in links
+                         if 'hreflang' not in a and re.search(r'href="([^"]+)"', a)])
+        want = [h if h.startswith(('http', 'mailto', '/llms')) else
+                ('/it' + h if not h.startswith('/it/') else h) for h in pair[0]]
+        norm = pair[1]
+        if len(want) == len(norm):
+            for a, b in zip(want, norm):
+                if a != b and not (a.endswith('index.html') or b.endswith('index.html')):
+                    findings.append(f'site/it/{it.name}: nav points at {b}, the English page points at '
+                                    f'{a.replace("/it/", "/", 1)} — same label, different destination')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -593,6 +694,9 @@ def main() -> int:
     shared_prose_stays_shared(findings)
     canonical_and_alternates(findings)
     translations_current(findings)
+    trademark_disclaimer_is_one_sentence(findings)
+    docs_stamp_is_current(findings)
+    nav_targets_match_across_languages(findings)
     txt_served_by_worker(findings)
     hosts_declared(findings)
 
