@@ -781,6 +781,13 @@ test('the Z is one stroked path, not three shapes butted together', () => {
     assert.equal([...svg.matchAll(/<rect\b/g)].length, 1, `${f}: more than the tile is a rect`);
     assert.match(svg, /stroke-width="18"/, `${f}: the weight moved`);
     assert.match(svg, /stroke-linejoin="round"/, `${f}: miter joins spike past the tile on a Z`);
+    // Not butt. A butt cap stops on the endpoint while a round join bulges half a stroke past the
+    // vertex, so the two horizontals ended 9px out of register with each other - the corner not
+    // lining up with the bar opposite it, which is the first thing you see at poster size. A square
+    // cap extends by the same half stroke the join does, so all four extremities land together.
+    assert.doesNotMatch(svg, /stroke-linecap="butt"/,
+      `${f}: a butt cap leaves the capped ends 9px short of the joined ones`);
+    assert.match(svg, /stroke-linecap="(square|round)"/, `${f}: the caps must extend like the joins`);
     assert.match(svg, /fill="none"/, `${f}: a filled path is not a stroke`);
   }
 });

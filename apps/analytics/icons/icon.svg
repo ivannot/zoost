@@ -9,7 +9,14 @@
 
        Geometry, shared by all three marks so the family reads as one:
          box     24,27 to 104,101   (80 x 74 in a 128 tile)
-         weight  18   butt caps, round joins
+         weight  18   square caps, round joins
+
+       A butt cap ends exactly on the path's endpoint, while a round join bulges half a stroke past
+       the vertex - so the top bar reached x=33 on its capped side and x=104 on its joined side, and
+       the bottom bar the mirror of that. The two horizontals were offset from each other by 9px:
+       the corner did not line up with the bar opposite it, which is visible the moment the mark is
+       drawn large. A square cap extends by the same half stroke a round join does, so all four
+       extremities land on 24 and 104. Do not put it back to butt.
        The path is the centreline, so it is inset by half the stroke on every side. Round joins, not
        miter: a Z's corners are acute and miter spikes them past the tile edge.
 
@@ -17,5 +24,5 @@
        that still carries, so it has to be the thing doing the work. -->
   <rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/>
   <path d="M 33 36 L 95 36 L 33 92 L 95 92"
-        fill="none" stroke="#fff" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round"/>
+        fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/>
 </svg>

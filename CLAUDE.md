@@ -1234,13 +1234,21 @@ obviously three pieces meeting by accident. A stroked centreline gives one weigh
 joins **by construction**, so it cannot come back through careless drawing.
 
 ```
-box 24,27 to 104,101 (80x74 in a 128 tile) · stroke-width 18 · butt caps · round joins
+box 24,27 to 104,101 (80x74 in a 128 tile) · stroke-width 18 · square caps · round joins
 path = the centreline, inset by half the stroke: M 33 36 L 95 36 L 33 92 L 95 92
 ```
 
 Round joins, not miter: a Z's corners are acute and miter spikes them past the tile edge - which was
-checked by drawing it, not assumed. Three tests hold the geometry, the weight and the one-hue-each
-rule, each proven by breaking it.
+checked by drawing it, not assumed.
+
+**Square caps, not butt, and this one shipped for an hour before he caught it.** A butt cap ends
+exactly on the path's endpoint; a round join bulges half a stroke *past* the vertex. So the top bar
+reached x=33 on its capped side and x=104 on its joined side, and the bottom bar the mirror of that:
+the two horizontals were **9px out of register with each other**, which reads as a corner not lining
+up with the bar opposite it. Measured, not argued - `butt` gives `[33, 103.8]` and `[24, 94.8]`,
+`square` gives `[24, 103.8]` for both. A square cap extends by the same half stroke a join does,
+which is the whole reason it fixes it. Four tests hold the geometry, the weight, the caps and the
+one-hue-each rule, each proven by breaking it.
 
 **The SVG sources are the source of truth, and until now two of the three did not exist.** `apps/crm`
 had no `icon.svg` at all - its PNGs came from something nobody kept - and `apps/analytics/icons/icon.svg`
