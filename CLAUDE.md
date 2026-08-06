@@ -434,6 +434,21 @@ and `code` is read by its own regex rather than added to the alternation, becaus
 in a CRM error body and folding it in would have returned `INVALID_MODULE` where `api()` compares
 against `INVALID_CSRF_TOKEN`.
 
+**And everything downstream of a refusal is the same defect, one projection at a time.** Reported:
+the refused module's detail pane still drew the ER button, which opened a window with nothing in it.
+A box with no rows, a node with no edges, a count of zero - each is a *claim*, and none of them is
+one we are entitled to make, because the fields were never read. So the button is **absent** rather
+than disabled (the rule already here), `openSchemaFocus()` refuses the module even if something else
+calls it, the graph window will not make it the focus and says why, it is marked in every list it
+appears in - it stays in them, because dropping it would quietly shrink the module count - and
+`dead_suspect` is false for it: «nothing references this» is a measurement, and on that module it was
+never taken. Same rule as a workflow with no scheduled-action count until it is downloaded.
+
+Analytics has no equivalent bug: `$('dgraph').disabled = !relationsOf(srcId).length` already guards
+it. It *disables* where the CRM now *hides*, which is a drift against the rule above - left alone on
+purpose, because the two conditions differ. Analytics knows the table joins nothing and the disabled
+tooltip is where it says so; the CRM knows nothing at all, and has the banner to say that instead.
+
 One sentence, one function, five consumers: `moduleRefusal()` feeds the row, the detail banner, the
 fields table, the HTML and Markdown exports and the AI - and the assistant is told **before** the
 empty table, because a model handed a module with no fields will explain why a module has none.

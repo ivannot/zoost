@@ -97,13 +97,15 @@ function render() {
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {
       const d = document.createElement('div'); d.className = 'item'; d.setAttribute('aria-selected', n.id === sel);
-      d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.called_by.length}◂</span>`;
+      d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.unreadable ? '?' : n.called_by.length + '◂'}</span>`;
+      if (n.unreadable) { d.classList.add('unread'); d.title = 'Zoho would not describe this module - its fields and relations were never read, so it is not that it has none'; }
       d.onclick = () => select(n.id); listEl.appendChild(d);
     });
 }
 function refRow(id) {
   const n = N[id]; const d = document.createElement('div'); d.className = 'ref';
-  d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(n.namespace + "." + label(n))}</span><span class="deg">${n.called_by.length}◂</span>`;
+  d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(n.namespace + "." + label(n))}</span><span class="deg">${n.unreadable ? '?' : n.called_by.length + '◂'}</span>`;
+  if (n.unreadable) { d.classList.add('unread'); d.title = 'Zoho would not describe this module - its fields and relations were never read'; }
   d.onclick = () => select(id); return d;
 }
 function srcBlock(n) {
@@ -215,7 +217,7 @@ function select(id, nopush) {
   const upHead = schema ? `Referenced by (${n.called_by.length}) <span class="hint">- modules linking here</span>` : `Called by (${n.called_by.length}) <span class="hint">- breaks if you change it</span>`;
   const downHead = schema ? `Lookups (${n.calls.length}) <span class="hint">- modules it references</span>` : `Calls (${n.calls.length}) <span class="hint">- its dependencies</span>`;
   const badges = schema
-    ? `<span class="badge">${esc(n.namespace)}</span>${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
+    ? `<span class="badge">${esc(n.namespace)}</span>${n.unreadable ? '<span class="badge">not described by Zoho</span>' : ''}${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
     : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
   const extra = schema ? fieldsTableHtml(n) : srcBlock(n);
   const layInfo = (schema && (n.layouts || []).length) ? `<div class="assoc" style="margin-top:2px">Layouts (${n.layouts.length}): ${n.layouts.map((l) => esc(l.name || String(l.id)) + (l.visible === false ? ' (hidden)' : '')).join(' \u00b7 ')}</div>` : '';
@@ -542,6 +544,14 @@ function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
   // projections of the same context, so whoever changes the focus updates all of them.
   if (!id || !N[id] || id === curFocus) return;
+  // Except a module Zoho refused to describe. It has no fields and no lookups *that anyone read*, so
+  // all three projections would come out empty - and an empty diagram reads as "this relates to
+  // nothing", which is the opposite of what is true. Reported: the panel offered the ER button on
+  // such a module and it opened a window with nothing in it.
+  if (N[id].unreadable) {
+    $('statline').innerHTML = `<b style="color:#94a3b8">${esc(label(N[id]))}</b> \u00b7 Zoho would not describe this module, so its fields and relations were never read - there is nothing to draw for it.`;
+    return;
+  }
   const wasUnfocused = !curFocus;
   curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
   if (wasUnfocused) $('erdepth').style.display = 'inline-flex';   // first focus (e.g. from the whole-graph view): reveal the depth control

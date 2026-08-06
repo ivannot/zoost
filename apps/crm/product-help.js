@@ -96,7 +96,9 @@ IF SOMETHING LOOKS WRONG
   because the module is hidden in that org - so its fields, layouts and related lists were never read.
   The panel quotes what Zoho answered and when it was asked. Pulling again re-asks, which is worth
   doing if the module has since been unhidden, but pulling on its own changes nothing - the mark is
-  grey rather than amber for exactly that reason.
+  grey rather than amber for exactly that reason. Such a module has no ER diagram button and cannot be
+  opened in the diagram window: there are no fields and no relations to draw, and an empty diagram
+  would read as "this module relates to nothing" when the truth is that nobody read it.
 - "The working folder is no longer readable": Chrome lets folder permission lapse after a while.
   Press the ↻ Refresh button in the toolbar to grant it again. Nothing is lost and nothing has to be
   pulled again.

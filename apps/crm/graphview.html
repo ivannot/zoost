@@ -70,6 +70,11 @@
   .col.up h3{color:var(--up)} .col.down h3{color:var(--down)} .col .hint{font-size:11px;color:var(--muted);font-weight:400;text-transform:none}
   .refs{border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .ref{padding:8px 11px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
+  /* A module Zoho refused to describe. It stays in the list because it exists in the org -
+     dropping it would quietly shrink the count - but it cannot be focused and its emptiness is
+     not a measurement, so it reads as unavailable rather than as a module with no relations. */
+  .ref.unread,.item.unread{opacity:.55}
+  .ref.unread .deg,.item.unread .deg{color:#94a3b8}
   .ref:last-child{border-bottom:0} .up .ref:hover{background:var(--up-soft)} .down .ref:hover{background:var(--down-soft)}
   .ref .nm{font:12px var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .none{padding:10px 11px;color:var(--muted);font-size:12.5px}

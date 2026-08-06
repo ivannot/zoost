@@ -2497,7 +2497,9 @@ async function openModule(path, layoutId) {
       + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho - Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
     : '';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
-  const relBar = `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
+  // Absent, not disabled, and not left to open an empty window: with no fields there is no box to
+  // draw and no lookup to follow, so the depth control and the ER button have nothing to act on.
+  const relBar = refusal ? '' : `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
   const rls = m.related_lists || [];
   const rlBlock = rls.length
     ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">- API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
@@ -2573,6 +2575,10 @@ async function buildSchemaGraph(focusApi, depth) {
       called_by: [], calls: [], rest: false, dead_suspect: false, unresolved: [], ambiguous: [],
       category: m.generated_type || 'module', description: '', return_type: null, params: [],
       associated_place: null, file: m._path, source_code: '',
+      // Zoho would not describe this module, so it has no fields, no lookups and no relations *that
+      // anyone has read*. Carried into the graph because a box with nothing in it and a node with no
+      // edges are both claims, and neither is one we are entitled to make.
+      unreadable: m.unreadable || null,
       fields: (m.fields || []).map((fl) => {
         const e = (m._layMap || {})[fl.api_name];
         return e ? Object.assign({}, fl, { _lay: e.lay, _req: e.req }) : fl;
@@ -2590,7 +2596,10 @@ async function buildSchemaGraph(focusApi, depth) {
       edgeSet.add(m.api_name + '\u0000' + fld.lookup);
     }
   }));
-  Object.values(nodes).forEach((n) => { n.calls = [...new Set(n.calls)]; n.called_by = [...new Set(n.called_by)]; n.dead_suspect = n.called_by.length === 0; });
+  // "Nothing references this" is a measurement, and on a module Zoho refused it was never taken:
+  // its own fields were not read either, so both directions are unknown rather than empty. Same rule
+  // as a workflow that has not been downloaded having no scheduled-action count instead of zero.
+  Object.values(nodes).forEach((n) => { n.calls = [...new Set(n.calls)]; n.called_by = [...new Set(n.called_by)]; n.dead_suspect = !n.unreadable && n.called_by.length === 0; });
   // function bridge: a function "touches" a module if its code contains the module api_name as a string literal
   funcs.forEach((fn) => mods.forEach((m) => {
     const dq = '"' + m.api_name + '"', sq = "'" + m.api_name + "'";
@@ -2618,6 +2627,7 @@ async function openSchemaFocus(apiName, depth) {
     const g = await buildSchemaGraph();   // full graph; the ER window filters by focus + depth client-side (adjustable there)
     if (!g.counts.nodes) throw new Error('No modules pulled yet - pull in Modules mode.');
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
+    if (g.nodes[apiName].unreadable) throw new Error(`Zoho would not describe ${apiName}, so it has no fields and no relations to draw.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });

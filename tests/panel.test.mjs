@@ -568,6 +568,55 @@ test('the export buttons say they export, not just which file they write', () =>
   }
 });
 
+test('a module Zoho refused cannot be focused, and its emptiness is not a measurement', () => {
+  // Reported: a refused module has no fields, so the ER button in its detail pane opened a window
+  // with nothing in it. Everything downstream of a refusal is the same defect - a box with no rows,
+  // a node with no edges, a count of zero - and each of them is a claim nobody is entitled to make,
+  // because the fields were never read.
+  //
+  // setFocus is lifted and run: the early return is the whole behaviour, so the stubs below are
+  // never reached unless it lets an unreadable node through.
+  let focused = null;
+  const ctx = {
+    N: { Contacts: { id: 'Contacts', api_name: 'Contacts' },
+         Invoices: { id: 'Invoices', api_name: 'Invoices', unreadable: { status: 400, code: 'INVALID_MODULE' } } },
+    get curFocus() { return null; },
+    set curFocus(v) { focused = v; },
+    $: () => ({ innerHTML: '', style: {} }),
+    esc: (x) => String(x),
+    label: (n) => n.api_name,
+    computeMaxDepth() { focused = focused || 'reached'; },
+    updateDepthUI() {}, updateScopeUI() {}, updateTopTools() {}, egoStat() {}, erRender() {}, draw() {},
+    bfsEgo() {}, updateBack() {}, erShow() {},
+    get egoDepth() { return 2; }, set egoDepth(_v) {}, get maxEgoDepth() { return 6; },
+    get scopeAll() { return false; }, get curView() { return 'er'; },
+    Math,
+  };
+  const { setFocus } = load([sliceFn('apps/crm/graphview.js', 'setFocus')], ctx);
+  setFocus('Invoices');
+  assert.equal(focused, null, 'a module Zoho would not describe was made the focus');
+  setFocus('Contacts');
+  assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
+});
+
+test('a refusal travels into the graph, and is not counted as unreferenced', () => {
+  // "Nothing references this" is a measurement, and on a refused module it was never taken - its own
+  // fields were not read either, so both directions are unknown rather than empty. Asserted against
+  // the source because buildSchemaGraph walks the file system and cannot be lifted; this proves the
+  // rule is written, not that it runs, and that limit is why the check above runs its function.
+  const src = read('apps/crm/sidepanel.js');
+  const graph = src.slice(src.indexOf('async function buildSchemaGraph('), src.indexOf('async function openSchemaFocus('));
+  assert.match(graph, /unreadable: m\.unreadable \|\| null/, 'the refusal does not reach the graph');
+  assert.match(graph, /dead_suspect = !n\.unreadable && n\.called_by\.length === 0/,
+    'a module nobody was allowed to read is being counted as unreferenced');
+
+  // and the two ways in both refuse
+  const focus = src.slice(src.indexOf('async function openSchemaFocus('), src.indexOf('async function openSchemaGraph('));
+  assert.match(focus, /unreadable/, 'openSchemaFocus still opens an empty diagram');
+  const pane = src.slice(src.indexOf('async function openModule('), src.indexOf('\nasync function buildSchemaGraph('));
+  assert.match(pane, /const relBar = refusal \? '' :/, 'the ER button is still drawn with nothing to draw');
+});
+
 test('a refusal is a 4xx, and everything else stays a failure', () => {
   // The first version wrote `unreadable` on any thrown error, so a dropped connection would have
   // been dated on disk as a settled refusal and the row would have stopped looking retryable for
