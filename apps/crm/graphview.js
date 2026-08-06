@@ -346,9 +346,11 @@ function buildRelChips() {
 // session: nothing is stored, so nothing new has to be declared in the privacy policy for a
 // preference that costs one click to set again.
 //
-// It is offered in every view, not only Explorer, because the button would otherwise appear and
-// disappear as the tabs change - a control that comes and goes is the thing the conventions warn
-// about - and because it is harmless where the list is already off screen.
+// Explorer only. The first version showed it everywhere, on the argument that a control which comes
+// and goes is disorienting - which is the rule about a *navigation shape*, and this is not that: in
+// Visual and ER there is no list, so outside Explorer the button commands nothing. A control with
+// nothing to do is absent, the same way #ertab is absent on a function graph and the panel's
+// "Complete missing" is absent when nothing is missing.
 (function () {
   const btn = document.getElementById('asidebtn');
   if (!btn) return;
@@ -388,6 +390,8 @@ function showView(v) {
     else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
+  const ab = document.getElementById('asidebtn');
+  if (ab) ab.style.display = curView === 'explorer' ? '' : 'none';
 }
 
 // Explorer, Visual and ER are three projections of one context. A selection that cannot be projected

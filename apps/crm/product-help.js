@@ -58,8 +58,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
-  In that window, "Hide list" folds the left-hand list away so the drawing gets the whole width, and
-  "Show list" brings it back.
+  In that window's Explorer tab, "Hide list" folds the left-hand list away so the detail gets the
+  whole width, and "Show list" brings it back. The other tabs have no list, so they do not offer it.
 - "Health ♥": a list of things that look wrong - functions nothing calls, calls to functions that do
   not exist, automations pointing at something missing. It states what it cannot see, and it is a
   list of candidates to look at, never a verdict.

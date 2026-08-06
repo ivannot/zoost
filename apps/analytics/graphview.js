@@ -362,6 +362,8 @@ document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
     else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
+  const ab = document.getElementById('asidebtn');
+  if (ab) ab.style.display = curView === 'explorer' ? '' : 'none';
 });
 
 // ---------------- Visual (canvas force graph) ----------------

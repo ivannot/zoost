@@ -52,8 +52,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
 - "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
-  In that window, "Hide list" folds the left-hand list away so the drawing gets the whole width, and
-  "Show list" brings it back.
+  In that window's Explorer tab, "Hide list" folds the left-hand list away so the detail gets the
+  whole width, and "Show list" brings it back. The other tabs have no list, so they do not offer it.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

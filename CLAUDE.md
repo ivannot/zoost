@@ -964,6 +964,12 @@ These all failed **silently**, with no console error. They are the expensive kin
   it, confirm which thing before deleting it**, because deleting is the one direction that cannot be
   reviewed from a screenshot. What survived the round trip is the `aria-label` on each button, which
   is worth keeping either way.
+- **«A control that comes and goes» is a rule about a navigation *shape*, not about any control.** The
+  diagram window's `Hide list` shipped in all four views on that argument, and outside Explorer there
+  is no list, so it commanded nothing. Reported. It is Explorer-only now, the same way `#ertab` is
+  absent on a function graph and the panel's `Complete missing` is absent when nothing is missing -
+  which is the rule that actually applies: **a control with nothing to do is absent.** The tab strip
+  is the thing whose length must not change; a button beside it is not.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window
   stayed exactly as wide as its search box. The rule was applying - `visibility:hidden` from the same

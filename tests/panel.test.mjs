@@ -613,7 +613,13 @@ test('the list folds to zero on both sides, min-width included', () => {
     // and the control that drives it carries its name where a screen reader can reach it
     const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
-    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
+    const js = read(`apps/${app}/graphview.js`);
+    assert.match(js, /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
+    // Explorer only. Outside it there is no list, so the button commands nothing - reported, and my
+    // first version shipped it in every view on the wrong argument: "a control that comes and goes"
+    // is the rule about a navigation shape, not about a control whose target is not on screen.
+    assert.match(js, /asidebtn'\);\s*\n\s*if \(ab\) ab\.style\.display = curView === 'explorer' \? '' : 'none';/,
+      `${app}: the fold control is offered where there is no list to fold`);
   }
 });
 
