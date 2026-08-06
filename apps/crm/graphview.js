@@ -204,7 +204,7 @@ function fieldsTableHtml(n) {
 function select(id, nopush) {
   if (sel && !nopush) hist.push(sel);
   if (sel !== id) layFilter = null;   // layout filter is per-module
-  sel = id; const n = N[id]; render();
+  sel = id; const n = N[id]; render(); updateProjectableTabs();
   const schema = DATA.kind === 'schema';
   const crumb = hist.length ? `<a id="back">\u25c2 back</a>  \u00b7  ${hist.slice(-4).map((h) => `<a data-id="${escA(h)}">${esc(label(N[h]))}</a>`).join(' \u2039 ')}` : '';
   let assoc = '';
@@ -331,7 +331,16 @@ function buildRelChips() {
 // ---------------- View toggle ----------------
 let curView = 'explorer';
 document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
-  curView = t.dataset.v;
+  if (t.classList.contains('off')) return;
+  showView(t.dataset.v);
+});
+function showView(v) {
+  // Found in the collection rather than by a selector built from a string. The value is one of our
+  // own four literals, but htmlcheck cannot know that and is right not to try: its criterion is a
+  // property of the value, never a list of names we promise are safe.
+  const t = [...document.querySelectorAll('.tab')].find((x) => x.dataset.v === v);
+  if (!t) return;
+  curView = v;
   document.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', x === t));
   $('v-explorer').classList.toggle('on', curView === 'explorer');
   $('v-visual').classList.toggle('on', curView === 'visual');
@@ -344,7 +353,26 @@ document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
     else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
-});
+}
+
+// Explorer, Visual and ER are three projections of one context. A selection that cannot be projected
+// must not leave the other two showing the previous one: reported, selecting a module Zoho would not
+// describe left the ER diagram on the last valid item, so the list said one thing and the diagram
+// another - the worst possible state, because both looked right on their own.
+//
+// Disabled, not hidden: this is the textbook temporarily-unavailable case - click another module and
+// it is back - and a tab strip that changes length as you move down a list is disorienting in the
+// way the conventions already describe. It is the same decision Analytics made for its detail tabs.
+function updateProjectableTabs() {
+  const n = sel && N[sel];
+  const off = !!(n && n.unreadable);
+  document.querySelectorAll('.tab').forEach((t) => {
+    if (t.dataset.v === 'explorer') return;
+    t.classList.toggle('off', off);
+    t.title = off ? `Zoho would not describe ${label(n)}, so there is nothing to draw for it` : '';
+  });
+  if (off && curView !== 'explorer') showView('explorer');
+}
 
 // ---------------- Visual (canvas force graph) ----------------
 let cv, ctx2d, W = 0, H = 0, nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {};

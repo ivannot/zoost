@@ -599,6 +599,44 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('a selection that cannot be projected takes the projections with it', () => {
+  // Reported, and caused by the guard added the turn before: refusing to move the focus left the ER
+  // diagram showing the previous module while the list said this one. Both halves looked right on
+  // their own, which is the worst state a two-pane interface can be in.
+  //
+  // Disabled, not hidden - click another module and it is back, which is what "temporarily
+  // unavailable" means - and if the reader is already looking at one of them, it goes back to
+  // Explorer rather than leaving a stale diagram under a new title.
+  const tabs = ['explorer', 'visual', 'er', 'rel'].map((v) => ({
+    dataset: { v }, title: '', _off: false,
+    classList: { toggle(c, on) { if (c === 'off') this.owner._off = on; }, contains: (c) => false },
+  }));
+  tabs.forEach((t) => (t.classList.owner = t));
+  let shown = null;
+  const ctx = {
+    document: { querySelectorAll: () => tabs },
+    N: { Contacts: { id: 'Contacts', api_name: 'Contacts' },
+         Invoices: { id: 'Invoices', api_name: 'Invoices', unreadable: { status: 400 } } },
+    label: (n) => n.api_name,
+    showView: (v) => { shown = v; },
+    get curView() { return 'er'; },
+    get sel() { return globalThis.__sel; },
+  };
+  const { updateProjectableTabs } = load([sliceFn('apps/crm/graphview.js', 'updateProjectableTabs')], ctx);
+
+  globalThis.__sel = 'Invoices';
+  updateProjectableTabs();
+  assert.deepEqual(tabs.map((t) => t._off), [false, true, true, true], 'the projections stayed available');
+  assert.match(tabs[2].title, /nothing to draw/, 'the disabled tab does not say why');
+  assert.equal(shown, 'explorer', 'the reader was left looking at the previous item\'s diagram');
+
+  shown = null;
+  globalThis.__sel = 'Contacts';
+  updateProjectableTabs();
+  assert.deepEqual(tabs.map((t) => t._off), [false, false, false, false], 'a readable module cannot be drawn either');
+  assert.equal(shown, null, 'the view was changed for a module that projects fine');
+});
+
 test('a refusal travels into the graph, and is not counted as unreferenced', () => {
   // "Nothing references this" is a measurement, and on a refused module it was never taken - its own
   // fields were not read either, so both directions are unknown rather than empty. Asserted against

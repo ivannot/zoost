@@ -444,6 +444,17 @@ appears in - it stays in them, because dropping it would quietly shrink the modu
 `dead_suspect` is false for it: «nothing references this» is a measurement, and on that module it was
 never taken. Same rule as a workflow with no scheduled-action count until it is downloaded.
 
+**And refusing to move the focus left the other two projections showing the previous module.** The
+guard above returns early from `setFocus()`, so the ER diagram went on drawing the last valid item
+while the Explorer list said this one - reported, and caused by the fix rather than surviving it.
+Both panes looked right on their own, which is the worst state a two-pane interface can be in.
+`updateProjectableTabs()` runs on every `select()`: **Visual, ER and Relations are unavailable while
+the selection cannot be projected**, and if the reader is already looking at one of them it goes back
+to Explorer instead of leaving a stale diagram under a new title. **Disabled, not hidden** - this is
+the textbook temporarily-unavailable case, one click on another module restores it, and a tab strip
+that changes length as you move down a list is disorienting in the way already described here. It is
+the same decision Analytics took for its detail tabs, with the reason in the same words.
+
 Analytics has no equivalent bug: `$('dgraph').disabled = !relationsOf(srcId).length` already guards
 it. It *disables* where the CRM now *hides*, which is a drift against the rule above - left alone on
 purpose, because the two conditions differ. Analytics knows the table joins nothing and the disabled

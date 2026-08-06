@@ -33,6 +33,10 @@
   .tabs{margin-left:auto;display:flex;gap:4px}
   .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
   .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  /* Nothing to project from the selected module. Temporarily unavailable, so disabled rather
+     than hidden - pick another module and it comes back, and a tab strip that changes length
+     as you move down a list is worse than a greyed tab that explains itself in its tooltip. */
+  .tab.off{opacity:.4;cursor:default}
   .wrap{flex:1;min-height:0;position:relative}
   .view{position:absolute;inset:0;display:none} .view.on{display:flex}
   /* explorer */
