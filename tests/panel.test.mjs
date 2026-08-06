@@ -610,16 +610,18 @@ test('the list folds to zero on both sides, min-width included', () => {
     assert.ok(m, `${app}: the list cannot be folded away`);
     assert.match(m[1], /(^|;)width:0(;|$)/, `${app}: the folded list has no width rule`);
     assert.match(m[1], /min-width:0/, `${app}: width:0 is floored by min-width:auto and nothing happens`);
-    // and the control that drives it carries its name where a screen reader can reach it
+    // It is a mark, so the name has to live where a screen reader can reach it.
     const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
-    const js = read(`apps/${app}/graphview.js`);
-    assert.match(js, /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
-    // Explorer only. Outside it there is no list, so the button commands nothing - reported, and my
-    // first version shipped it in every view on the wrong argument: "a control that comes and goes"
-    // is the rule about a navigation shape, not about a control whose target is not on screen.
-    assert.match(js, /asidebtn'\);\s*\n\s*if \(ab\) ab\.style\.display = curView === 'explorer' \? '' : 'none';/,
-      `${app}: the fold control is offered where there is no list to fold`);
+    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
+
+    // Explorer only - and by placement, not by a guard. It is a tab on the column, so it sits inside
+    // #v-explorer and cannot appear in the three views that have no list. It shipped in all four on
+    // the wrong argument ("a control that comes and goes" is the rule about a navigation shape, not
+    // about a control whose target is off screen), then behind a check in the view switch, and the
+    // markup now makes both unnecessary.
+    const view = css.slice(css.indexOf('id="v-explorer"'), css.indexOf('id="v-visual"'));
+    assert.ok(view.includes('id="asidebtn"'), `${app}: the fold control is not inside the view it folds`);
   }
 });
 

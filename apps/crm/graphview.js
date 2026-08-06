@@ -346,20 +346,23 @@ function buildRelChips() {
 // session: nothing is stored, so nothing new has to be declared in the privacy policy for a
 // preference that costs one click to set again.
 //
-// Explorer only. The first version showed it everywhere, on the argument that a control which comes
-// and goes is disorienting - which is the rule about a *navigation shape*, and this is not that: in
-// Visual and ER there is no list, so outside Explorer the button commands nothing. A control with
-// nothing to do is absent, the same way #ertab is absent on a function graph and the panel's
-// "Complete missing" is absent when nothing is missing.
+// Explorer only, and by construction: the handle is markup inside #v-explorer, so it cannot appear
+// in the three views that have no list. It got there the long way - shipped in all four views on the
+// argument that a control which comes and goes is disorienting, which is the rule about a navigation
+// *shape* and not about a control whose target is not on screen - then guarded in the view switch,
+// and now simply placed where it belongs. A control with nothing to do is absent; a control that
+// lives inside the thing it acts on cannot be anywhere else.
 (function () {
   const btn = document.getElementById('asidebtn');
   if (!btn) return;
   btn.onclick = () => {
     const off = document.body.classList.toggle('no-aside');
-    btn.textContent = off ? 'Show list' : 'Hide list';
-    btn.setAttribute('aria-pressed', String(off));
+    // The arrow points where the column will go. `aria-expanded` rather than `aria-pressed`: this
+    // discloses a region, it does not toggle a mode.
+    btn.textContent = off ? '\u25b8' : '\u25c2';
+    btn.setAttribute('aria-expanded', String(!off));
     btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
-    btn.title = off ? 'Show the list again' : 'Hide the list and give the whole window to what is on the right';
+    btn.title = off ? 'Show the list' : 'Hide the list and give the whole window to the detail';
     // The canvas is sized from its box, so it has to be told the box changed.
     if (typeof resize === 'function' && curView === 'visual') { resize(); if (typeof fitView === 'function') fitView(); if (typeof draw === 'function') draw(); }
   };
@@ -390,8 +393,6 @@ function showView(v) {
     else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
-  const ab = document.getElementById('asidebtn');
-  if (ab) ab.style.display = curView === 'explorer' ? '' : 'none';
 }
 
 // Explorer, Visual and ER are three projections of one context. A selection that cannot be projected

@@ -965,11 +965,14 @@ These all failed **silently**, with no console error. They are the expensive kin
   reviewed from a screenshot. What survived the round trip is the `aria-label` on each button, which
   is worth keeping either way.
 - **«A control that comes and goes» is a rule about a navigation *shape*, not about any control.** The
-  diagram window's `Hide list` shipped in all four views on that argument, and outside Explorer there
-  is no list, so it commanded nothing. Reported. It is Explorer-only now, the same way `#ertab` is
-  absent on a function graph and the panel's `Complete missing` is absent when nothing is missing -
-  which is the rule that actually applies: **a control with nothing to do is absent.** The tab strip
-  is the thing whose length must not change; a button beside it is not.
+  diagram window's fold control shipped in all four views on that argument, and outside Explorer there
+  is no list, so it commanded nothing. Reported. The rule that actually applies is the other one:
+  **a control with nothing to do is absent**, the same way `#ertab` is absent on a function graph.
+  It took three versions - everywhere, then a guard in the view switch, then **placed inside
+  `#v-explorer`**, where it cannot be anywhere else. The third is the one worth remembering: *put a
+  control inside the thing it acts on and the question stops being asked.* It is a tab on the column's
+  edge now, not a button in the header, and the header carries the view tabs on their own row under
+  the title instead of opposite it.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window
   stayed exactly as wide as its search box. The rule was applying - `visibility:hidden` from the same

@@ -27,10 +27,15 @@
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-  header{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  /* Two rows: the title line, then the view tabs under it, left-aligned. They used to sit top
+     right, opposite the title, which put the thing you switch with furthest from where the
+     eye starts and left a stripe of nothing between them. */
+  header{padding:10px 20px 0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+  header .hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
   header h1{font-size:15px;margin:0}
   header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
-  .tabs{margin-left:auto;display:flex;gap:4px}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 -1px}
+  .tab{border-bottom-left-radius:0;border-bottom-right-radius:0}
   .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
   .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   /* Nothing to project from the selected module. Temporarily unavailable, so disabled rather
@@ -40,7 +45,7 @@
   .wrap{flex:1;min-height:0;position:relative}
   .view{position:absolute;inset:0;display:none} .view.on{display:flex}
   /* explorer */
-  aside{width:340px;flex:none;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
+  aside{width:340px;flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
   /* The list can be folded away so a wide reference pane gets the whole window. Width to 0
      rather than display:none, so the transition has something to animate and nothing has to
      be re-created when it comes back; `visibility` stops the contents being tabbed to while
@@ -49,12 +54,19 @@
      min-content size, which floors `width:0` at whatever the search box needs. The rule was
      applying - `visibility` from the same declaration took effect - and the panel simply did
      not move, which is the kind of nothing that is hard to diagnose by looking. */
-  body.no-aside #v-explorer aside{width:0;min-width:0;border-right:0;overflow:hidden;visibility:hidden}
-  #asidebtn{font:12px var(--sans);padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
-  #asidebtn:hover{color:var(--ink)}
-  /* .tabs already claims the free space; with two auto margins the header spread them apart
-     instead of keeping the button beside the tabs it belongs with. */
-  header #asidebtn + .tabs{margin-left:6px}
+  body.no-aside #v-explorer aside{width:0;min-width:0;overflow:hidden;visibility:hidden}
+  /* The fold control is a tab on the column itself, not a button in the header: it sits where the
+     thing it folds is, and it stays put when the column goes, which a control inside the
+     column could not. Living inside #v-explorer is also why it cannot appear in the three
+     views that have no list - by construction rather than by a guard in the view switch. */
+  /* Full height on purpose: a target you cannot miss costs nothing here, and a small pill floating
+     on the divider would be a smaller target for no gain. --surface rather than --bg, so the
+     strip stays visible against the grey detail pane once the white list beside it has gone. */
+  #asidebtn{flex:none;width:17px;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);
+            background:var(--surface);color:var(--muted);cursor:pointer;font:13px var(--sans);padding:0;
+            display:flex;align-items:center;justify-content:center;transition:background .12s ease}
+  #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
+  #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
   @media print{ #asidebtn{display:none} }
   .search{padding:12px}
   .search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
@@ -228,11 +240,11 @@
 </head>
 <body>
   <header>
-    <h1 id="gtitle">Zoost</h1>
-    <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
-    <span class="stat" id="s-ws"></span>
-    <button id="asidebtn" style="margin-left:auto" aria-pressed="false" aria-label="Hide the list"
-            title="Hide the list and give the whole window to what is on the right">Hide list</button>
+    <div class="hrow">
+      <h1 id="gtitle">Zoost</h1>
+      <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
+      <span class="stat" id="s-ws"></span>
+    </div>
     <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
   </header>
   <div class="wrap">
@@ -242,6 +254,8 @@
         <div class="chips" id="chips"></div>
         <div class="list" id="list"></div>
       </aside>
+      <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
+              title="Hide the list and give the whole window to the detail">◂</button>
       <main id="main"><div class="empty">Select a function.<br>Left = who calls it (impact if you change it). Right = what it calls.</div></main>
     </div>
     <div class="view" id="v-visual">
