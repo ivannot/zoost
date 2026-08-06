@@ -1442,8 +1442,6 @@ was killed, which is its own small lesson: a test about a suite reads the suite,
 the other**: TAP reads it as the start of a comment, so `${app}: #${id} does not say it exports`
 arrived as `analytics: ` and said nothing. Write ids as `id=exportmd`, and assert with
 `assert.ok(regex.test(x), 'why')` whenever `x` is a slice of source.
-
-**(original note)** `assert.match` on a large haystack is how.**
 `match` prints the whole `actual` string into the failure, and node 19's TAP lexer dies on a
 multi-byte character split across a socket read - `ERR_TAP_LEXER_ERROR`, "Unexpected character",
 pointing at line 1 of nothing. The suite still went red, so the guard worked; whoever tripped it
