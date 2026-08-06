@@ -250,3 +250,31 @@ test('the footer says what is in review only when it adds a fact', () => {
   assert.match(src, /review: '[^']+'/, 'the English label for what is in review is gone');
   assert.match(src, /t\('review'\)/, 'the footer no longer states what is in review');
 });
+
+// ---------- The footer badge speaks the page's language, all of it ----------
+
+test('the published badge goes through the string table', () => {
+  // The Italian home showed «sul Chrome Web Store» on one card and «on the Web Store» on the other,
+  // live. Every other string in the badge was in the table; this one was written inline, so the one
+  // that changes *after* the page loads was the one that stayed English.
+  const src = read('site/site.js');
+  assert.match(src, /el\.textContent = t\('onStore'\)/, 'the badge label is hard-coded again');
+  assert.ok(!/textContent = 'on the Web Store'/.test(src));
+  for (const lang of ['en', 'it']) {
+    const table = src.slice(src.indexOf(`    ${lang}: {`), src.indexOf('},', src.indexOf(`    ${lang}: {`)));
+    for (const key of ['store', 'release', 'dev', 'review', 'updated', 'onStore', 'none', 'unknown']) {
+      assert.ok(table.includes(key + ':'), `${lang} has no ${key}`);
+    }
+  }
+});
+
+test('nothing in the footer badge is unbreakable on a phone', () => {
+  // «Ultima release 1.8.0 inviata il 5 ago 2026, in attesa di revisione» was 457px of nowrap text in
+  // a 331px column: the footer scrolled sideways while every other block fitted. The English wording
+  // is shorter and got away with it — the usual way a translation finds a layout bug. And mobile
+  // browsers inflate text inside an overflowing block, which is why that one line also looked bigger
+  // than its neighbours on a phone and identical to them on a desktop.
+  const css = read('site/site.css');
+  assert.match(css, /@media \(max-width:640px\)\{#vers \.vitem\{white-space:normal\}\}/);
+  assert.match(css, /text-size-adjust:100%/);
+});

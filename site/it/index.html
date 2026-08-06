@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:b7d421351c8c5758 -->
+<!-- translated-from: site/index.html sha256:56e13c99a9746d5e -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost — workbench per i prodotti Zoho su cui hai costruito</title>
@@ -64,7 +64,7 @@
   .note.warn{border-color:var(--amber);color:#e2c98a}
   .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
   .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
-  .prod .ph{display:flex;align-items:center;gap:12px}
+  .prod .ph{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .prod .ph img{width:38px;height:38px;border-radius:9px}
   .prod .ph h3{margin:0}
   .prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
@@ -85,6 +85,7 @@
       <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/it/how-to.html">Come si usa</a>
+      <a href="/it/nerd.html">Nerd</a>
       <a href="/privacy.html">Privacy</a>
       <a class="ncta" href="/" hreflang="en" lang="en" title="This page in English">English</a>
     </nav>
@@ -93,12 +94,10 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>L'hai costruito tu. È tuo.<br><span>E la piattaforma non ti dà nessun modo di vederlo per intero.</span></h1>
-    <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per prodotto Zoho. Ognuna rispecchia
-      quello che <em>tu</em> hai costruito dentro quel prodotto — codice, schema, relazioni, dipendenze — in file
-      ordinari sul tuo disco, e su quel mirror costruisce navigazione, diagrammi, ricerca, audit ed export.
-      Nessuna di loro chiama un endpoint di scrittura: leggono definizioni e metadati, mai i record. Tutto gira nel
-      tuo browser.</p>
+    <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>Zoho semplicemente non te lo fa mai vedere tutto insieme.</span></h1>
+    <p class="lead">Il tuo codice Deluge, lo schema dei tuoi moduli, i tuoi workspace e la SQL che ci sta dietro —
+      un oggetto per volta, in una scheda del browser. Zoost copia tutto in file ordinari sul tuo disco, e poi ti
+      disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
@@ -160,70 +159,40 @@
     <h2>Cosa hanno in comune tutti gli Zoost</h2>
     <div class="why">
       <div>
-        <h3>In sola lettura, per scelta</h3>
-        <p>Nessuno Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho — né una funzione, né una
-          vista, né un'impostazione. È una proprietà di quali endpoint chiamiamo, non qualcosa che il browser
-          impone, e ogni chiamata che l'uno o l'altro può fare sta in una ventina di file leggibili. Zoho compila e
-          valida lato server, e possedere un percorso di scrittura vorrebbe dire possedere deployment, conflitti e
-          rollback — un altro prodotto. Tu continui a lavorare dove già lavori.</p>
+        <h3>Legge soltanto</h3>
+        <p>Nessuno Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho. Tu continui a lavorare
+          dove già lavori; questa è la finestra da cui lo guardi.</p>
       </div>
       <div>
         <h3>File ordinari, il tuo Git</h3>
-        <p>Il mirror è fatto di file normali in una cartella che scegli tu: sorgente, JSON, SQL. Mettilo sotto
-          controllo di versione e <code>git diff</code> risponde a «cosa è cambiato il mese scorso» — una domanda a
-          cui nessuno dei due prodotti sa rispondere su sé stesso.</p>
+        <p>Una cartella che scegli tu, piena di file normali. Mettila sotto controllo di versione e
+          <code>git diff</code> risponde a <em>cosa è cambiato il mese scorso</em> — cosa che nessuno dei due
+          prodotti sa dire di sé stesso.</p>
       </div>
       <div>
         <h3>Tutto insieme, in una volta</h3>
-        <p>Entrambe le piattaforme ti mostrano un oggetto per volta. Entrambi gli Zoost ti mostrano la forma: cosa
-          dipende da cosa, cosa non dipende da niente, dove un nome è referenziato, e un unico documento da
-          consegnare a chi l'estensione non ce l'ha.</p>
+        <p>Cerchi dappertutto insieme, segui un nome fino a dove viene usato, e consegni il tutto a un collega come
+          un unico documento.</p>
       </div>
       <div>
         <h3>Numeri, mai verdetti</h3>
-        <p>Conteggi ed elenchi, senza soglie e senza punteggi. Una funzione lunga può essere una pulita tabella di
-          conversione; una vista che nessuno legge può alimentare un export schedulato. Ogni cifra dichiara cosa
-          <em>non</em> copre, lì accanto, e il giudizio resta tuo.</p>
+        <p>Conteggi ed elenchi, niente punteggi. Una funzione lunga può essere una pulita tabella di conversione.
+          Ogni cifra dichiara cosa non copre, e il giudizio resta tuo.</p>
       </div>
       <div>
         <h3>Niente esce dalla macchina</h3>
-        <p>Nessun server, nessun account, nessuna telemetria. Le estensioni usano la sessione Zoho con cui sei già
-          autenticato e scrivono in una cartella che scegli tu. L'unica eccezione è l'assistente AI opzionale — e solo se lo configuri: usa la tua chiave e manda soltanto al provider che hai scelto.</p>
+        <p>Nessun server, nessun account, nessuna telemetria. L'unica eccezione è l'assistente AI opzionale, e solo
+          se gli dai una chiave tua.</p>
       </div>
       <div>
-        <h3>Un'interfaccia sola, imparata una volta</h3>
-        <p>Sono gemelli. La barra dei workspace, la protezione sull'ambiente, le finestre di dialogo, i colori dei
-          pulsanti, gli export e i controlli del diagramma sono la stessa cosa in entrambi, parola per parola. Usi
-          uno e sai già usare l'altro.</p>
-      </div>
-      <div>
-        <h3>O certi, o fermi</h3>
-        <p>Nessun ciclo di tentativi contro un'ipotesi, nessun aggancio a etichette tradotte, nessun click
-          sintetico dentro una pagina che non è nostra. Dove un percorso non è certo, la funzionalità si ferma con
-          un messaggio preciso. Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento
-          noto, un solo tentativo in più su un errore davvero transitorio, e il recupero tramite un'azione che è
-          stata <em>misurata</em> — il token CSRF si legge da un elenco noto di cookie invece di essere dedotto. Quello
-          che uno Zoost non può sapere, dice che non lo può sapere.</p>
-      </div>
-      <div>
-        <h3>Verificabile, non solo dichiarato</h3>
-        <p>Le release le costruisce GitHub a partire da un commit taggato, due volte per dimostrare che i byte sono
-          riproducibili, e le firma con una dichiarazione di provenienza. L'archivio allegato alla Release è il file
-          inviato allo Store — e un comando ti dice se è vero, senza chiederti di crederci. Il registro di ogni
-          versione inviata è in
-          <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, la build è
-          <a href="https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml">breve e non fa niente di astuto</a>,
-          e <a href="/llms.txt">llms.txt</a> mappa l'intera catena per chiunque — o qualunque cosa — debba
-          valutarla.</p>
-      </div>
-      <div>
-        <h3>Aperto, e tuo da forkare</h3>
-        <p>Apache-2.0, nessuna fase di build, nessuna dipendenza, nessun framework. Il sorgente è leggibile da
-          chiunque stia per dargli accesso ai propri dati — che è poi il punto, visto che è esattamente quello che
-          ti si sta chiedendo di fare.</p>
+        <h3>Gratuito, aperto, e tuo da forkare</h3>
+        <p>Apache-2.0, nessuna fase di build, nessuna dipendenza. Leggibile da chiunque stia per dargli accesso ai
+          propri dati — che è poi quello che ti si sta chiedendo di fare.</p>
       </div>
     </div>
-    <p class="note" style="margin-top:26px">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da
+    <p class="note" style="margin-top:26px">Vuoi il dettaglio — quali endpoint, cosa lo rompe, come viene firmata
+      una release? Sta tutto sulla <a href="/it/nerd.html">pagina nerd</a>, che è dove deve stare.</p>
+    <p class="note" style="margin-top:14px">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da
       Claude — “Claudio”, per me — su design, codice e testi. Le decisioni, e la responsabilità del risultato,
       sono mie.</p>
   </div>

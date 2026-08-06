@@ -63,7 +63,9 @@
   .note.warn{border-color:var(--amber);color:#e2c98a}
   .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
   .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
-  .prod .ph{display:flex;align-items:center;gap:12px}
+  /* wrap: the status pill is nowrap by design (a pill that breaks in two is not a pill), so on a
+     narrow screen it has to drop to its own line instead of pushing the row past the card. */
+  .prod .ph{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .prod .ph img{width:38px;height:38px;border-radius:9px}
   .prod .ph h3{margin:0}
   .prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
@@ -84,6 +86,7 @@
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/how-to.html">How to</a>
+      <a href="/nerd.html">Nerd</a>
       <a href="/privacy.html">Privacy</a>
       <a class="ncta" href="/it/index.html" hreflang="it" lang="it" title="Questa pagina in italiano">Italiano</a>
     </nav>
@@ -92,11 +95,10 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>You built it. It is yours.<br><span>And the platform gives you no way to see it whole.</span></h1>
-    <p class="lead">Zoost is a small family of Chrome extensions, one per Zoho product. Each mirrors what
-      <em>you</em> have built inside that product — code, schema, relations, dependencies — into plain files on your
-      own disk, then layers navigation, diagrams, search, audit and export on top of that mirror.
-      None of them calls a write endpoint: they read definitions and metadata, never records. Everything runs in your browser.</p>
+    <h1>Everything you built inside Zoho is yours.<br><span>Zoho just never shows it to you all at once.</span></h1>
+    <p class="lead">Your Deluge code, your module schema, your workspaces and the SQL behind them — one object
+      at a time, in a browser tab. Zoost copies all of it to plain files on your own disk, then draws you the map:
+      what calls what, what depends on what, what nothing uses any more.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">The workbenches</a>
       <a class="btn" href="#in-common">What every Zoost has in common</a>
@@ -154,68 +156,42 @@
     <h2>What every Zoost has in common</h2>
     <div class="why">
       <div>
-        <h3>Read-only, on purpose</h3>
-        <p>No Zoost calls an endpoint that creates, edits or deletes anything in Zoho — not a function, not a view, not a setting. That is a property of which endpoints we call, not something the browser enforces, and every call either one can make is in about twenty readable files. Zoho compiles and validates
-          server-side, and owning a write path would mean owning deployment, conflicts and rollback — a different
-          product. You keep working where you already work.</p>
+        <h3>It only reads</h3>
+        <p>No Zoost calls an endpoint that creates, edits or deletes anything in Zoho. You keep working where you
+          already work; this is the window onto it.</p>
       </div>
       <div>
         <h3>Plain files, your Git</h3>
-        <p>The mirror is ordinary files in a folder you pick: source, JSON, SQL. Commit it and <code>git diff</code>
-          answers "what changed last month" — a question neither product can answer about itself.</p>
+        <p>A folder you choose, filled with ordinary files. Put it under version control and
+          <code>git diff</code> answers <em>what changed last month</em> — which neither product can answer about
+          itself.</p>
       </div>
       <div>
         <h3>The whole thing at once</h3>
-        <p>Both platforms show you one object at a time. Both Zoosts show you the shape: what depends on what,
-          what nothing depends on, where a name is referenced, and one document you can hand to someone who does
-          not have the extension.</p>
+        <p>Search everything together, follow a name to where it is used, and hand the lot to a colleague as one
+          document.</p>
       </div>
       <div>
         <h3>Numbers, never verdicts</h3>
-        <p>Counts and lists, with no thresholds and no score. A long function may be a clean mapping table; a view
-          nothing reads may feed a scheduled export. Every figure says what it does <em>not</em> cover, right next
-          to itself, and the judgement stays yours.</p>
+        <p>Counts and lists, no scores. A long function may be a clean mapping table. Every figure says what it does
+          not cover, and the judgement stays yours.</p>
       </div>
       <div>
         <h3>Nothing leaves the machine</h3>
-        <p>No server, no account, no telemetry. The extensions use the Zoho session you are already signed into and
-          write to a folder you choose. The one exception is the optional AI assistant — and only if you configure
-          it, with your own key, sending only to the provider you picked.</p>
+        <p>No server, no account, no telemetry. The only exception is the optional AI assistant, and only if you give
+          it your own key.</p>
       </div>
       <div>
-        <h3>One interface, learned once</h3>
-        <p>They are twins. The workspace bar, the environment guard, the dialogs, the button colours, the exports
-          and the diagram controls are the same thing in both, down to the wording. Use one and you already know
-          the other.</p>
-      </div>
-      <div>
-        <h3>Certain, or stopped</h3>
-        <p>No loops against a guess, no matching a localised button label, no synthetic clicks into a page we
-          do not own. Where a path is not certain, the feature stops with a precise message. The exceptions are
-          narrow, deliberate and written down: a bounded wait for a known element, one retry on a genuinely
-          transient failure, and recovering by an action that was <em>measured</em> to work — the CSRF token is
-          read from a known list of cookies rather than assumed. What a Zoost cannot know, it says it cannot
-          know.</p>
-      </div>
-      <div>
-        <h3>Checkable, not just claimed</h3>
-        <p>Releases are built by GitHub from a tagged commit, twice over to prove the bytes are
-          reproducible, and signed with a provenance statement. The archive on the Release is the file
-          submitted to the Store — and one command tells you whether that is true, without taking our
-          word for it. The record of every submitted version is in
-          <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, the build is
-          <a href="https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml">short and does nothing clever</a>,
-          and <a href="/llms.txt">llms.txt</a> maps the whole chain for anyone — or anything — assessing it.</p>
-      </div>
-      <div>
-        <h3>Open, and yours to fork</h3>
-        <p>Apache-2.0, no build step, no dependencies, no framework. The source is readable by anyone about to give
-          it access to their data — which is the point, since that is exactly what you are being asked to do.</p>
+        <h3>Free, open, and yours to fork</h3>
+        <p>Apache-2.0, no build step, no dependencies. Readable by anyone about to give it access to their data —
+          which is what you are being asked to do.</p>
       </div>
     </div>
-    <p class="note" style="margin-top:26px">Built and maintained by one person, with substantial help from Claude —
-      “Claudio”, to me — on design, code and wording. The judgement calls, and the responsibility for the result,
-      are mine.</p>
+    <p class="note" style="margin-top:26px">Want the detail — which endpoints, what breaks it, how a release is
+      signed? It is all on <a href="/nerd.html">the nerd page</a>, which is where it belongs.</p>
+    <p class="note" style="margin-top:14px">Built and maintained by one person, with substantial help from
+      Claude — “Claudio”, to me — on design, code and wording. The judgement calls, and the responsibility for the
+      result, are mine.</p>
   </div>
 </section>
 

@@ -75,6 +75,7 @@
       <a class="nprod ncrm" href="/crm.html" aria-current="page" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/docs-crm.html">How to</a>
+      <a href="/nerd.html">Nerd</a>
       <a href="/privacy.html">Privacy</a>
       <a class="ncta" href="/it/crm.html" hreflang="it" lang="it" title="Questa pagina in italiano">Italiano</a>
     </nav>
@@ -84,10 +85,9 @@
 <div class="hero">
   <div class="wrap">
     <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>And a map of how it fits together.</span></h1>
-    <p class="lead">Zoost is a Chrome extension that mirrors your Deluge functions, module schema, relations,
-      layouts, workflows, schedules and connections into plain files on your disk — then layers on reference graphs,
-      ER diagrams, full-text search across every function, a relation catalogue, a connections catalogue, a health audit,
-      shareable exports and an optional AI assistant that reads your actual org. Everything runs in your browser.</p>
+    <p class="lead">Every Deluge function as a file you can diff. The map of what calls what, which module
+      relates to which, and which automation fires when. Your whole Zoho CRM org on your own disk, searchable in
+      one go — and read-only towards Zoho.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Get it on the Chrome Web Store</a>
       <a class="btn" href="#whats-inside">What's inside</a>
@@ -141,210 +141,66 @@
     <div class="grid">
 
       <div class="card">
-        <h3>Local mirror, Git-friendly</h3>
+        <h3>Every function, as a file</h3>
         <ul>
-          <li>Pull every Deluge function to <code>.dg</code> source plus metadata sidecars.</li>
-          <li><span class="k">Auto-sync on save</span>: save in Zoho, the local file follows.</li>
-          <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b>, so the folder stays a faithful mirror.</li>
-          <li>One working folder, a subfolder per product, one per org inside it — production and sandbox never mix.</li>
-          <li>Give a workspace a <span class="k">name of your own</span> — an instance id is exact without being
-            memorable. Your name is shown; the instance and org are kept beside it, because a list you cannot check
-            against Zoho CRM is not worth having.</li>
+          <li>Deluge source in namespaced folders, ready for Git. Save in Zoho and the local file follows.</li>
+          <li><span class="k">Full-text search across every function at once</span> — the closest thing to
+            <code>grep</code> over your org, and something Zoho does not offer.</li>
+          <li>Each one carries its size, its outbound API calls, who last changed it, and the connections it uses.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Understand the implementation</h3>
+        <h3>The map</h3>
         <ul>
-          <li><span class="k">Reference graph</span>: who calls a function (impact) and what it calls (dependencies),
-            as a searchable explorer and a node-link diagram.</li>
-          <li><span class="k">Full-text search</span>: one query across every function's source. Switch the search
-            scope from names to code and find every reference to a field, module or hardcoded id in the org.</li>
-          <li><span class="k">Hypertext code</span>: calls to custom functions are clickable — jump to the definition and back.</li>
-          <li><span class="k">Reverse usage</span>: where each function is wired across the org — blueprint, button,
-            schedule — read from Zoho's own signal, with no expensive scans.</li>
-          <li><span class="k">Connections per function</span>: every function lists the connections it uses — click one
-            to filter the tree to every other function that uses it. Structured, not a text search.</li>
-          <li><span class="k">Authorship</span>: who last changed a function, and when, next to its code.</li>
-          <li><span class="k">Size &amp; outbound calls</span>: length in lines and KB, and how many
-            <code>invokeurl</code>, <code>zoho.crm.*</code> and other Zoho service calls a function makes —
-            counted outside comments and strings. Counts, not a score; you decide how to read them.
-            <b>Sort the list</b> by any of them to see where length and API cost concentrate.</li>
+          <li><span class="k">Call graph</span>: who calls a function, and what it calls. Click through it.</li>
+          <li><span class="k">ER diagram</span>: modules as tables, lookups as arrows. Focus one, walk out from it,
+            print it wall-size.</li>
+          <li>Calls to other functions are clickable in the code — jump to the definition and back.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Schema, layouts and relations</h3>
+        <h3>The relation names you keep losing</h3>
         <ul>
-          <li>Every field with type, lookup target and picklist values.</li>
-          <li><span class="k">Layout matrix</span>: one column per layout, a dot where a field belongs, amber where it
-            is required there — and fields in <em>no</em> layout flagged as API-only.</li>
-          <li><span class="k">Relation catalogue</span>: one row per related list, with target module, the lookup or
-            linking module behind it, and the <code>getRelatedRecords()</code> call to copy.</li>
+          <li>The API name of a related list is neither module's — and it is what
+            <code>getRelatedRecords()</code> wants.</li>
+          <li>One row per relation, with the call ready to copy.</li>
+          <li>Every field with its type, and a matrix showing which layout it appears on.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>ER diagram that stays readable</h3>
+        <h3>Automations, and which ones wait</h3>
         <ul>
-          <li>Modules as tables, foreign keys as arrows. Pan, zoom, fit, save as PDF.</li>
-          <li>Focus any module and walk the graph by clicking; adjustable depth.</li>
-          <li><span class="k">Relation-first mode</span>: modules recede, relation names take the foreground.</li>
-          <li>Click an arc to isolate one relation and push everything else back.</li>
-          <li>Spacing, spread and label size are live sliders — and an all-modules scope for wall-size prints.</li>
+          <li>Workflows with triggers, criteria and the functions they invoke; schedules with frequency and status.</li>
+          <li><span class="k">Which rules do not fire straight away</span>, how long they wait, and when each last
+            ran.</li>
+          <li>The org's connection catalogue, with how many functions use each one — so you can tell what is safe to
+            delete.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Fits the access you actually have</h3>
+        <h3>A health check without a score</h3>
         <ul>
-          <li>Not every Zoho user may read Deluge or the connections catalogue, and no API says so in
-            advance — so Zoost finds out by asking. An area your role is refused is recorded with the date,
-            nothing is written for it, and its tab is removed instead of sitting there greyed out.</li>
-          <li>The refusal is said in words, not as a status code, and Settings explains it and re-checks.
-            Roles are per org, so another workspace may well grant it.</li>
-          <li>You can hide and reorder the tabs yourself too. That changes the panel only: the mirror, the
-            exports and the assistant still see everything.</li>
+          <li>Orphan candidates, unresolved calls, broken automations, lookups pointing at nothing.</li>
+          <li>Counts and lists. No thresholds, no red flags, no grade.</li>
+          <li>Every figure states what it does <em>not</em> cover, right next to itself.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Automation map</h3>
+        <h3>Exports, and an optional assistant</h3>
         <ul>
-          <li>Workflows with triggers, criteria, instant and time-based actions, and the functions they invoke.</li>
-          <li><span class="k">Which ones do not fire straight away</span>: the count of actions that run after
-            a delay, how long that delay is, and a filter that shows only those rules. Plus the last time
-            each rule ran. Read from the rule already on your disk, not asked for again.</li>
-          <li>Schedules with frequency, status and target function.</li>
-          <li>On-demand workflow execution stats.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Connections catalogue</h3>
-        <ul>
-          <li>Every connection in the org, pulled from Zoho: its connector, who created it, and its OAuth scopes.</li>
-          <li><span class="k">Usage count</span>: how many functions use each one — open it to see exactly which.</li>
-          <li>Filter to <span class="k">Unused</span> (no function references it) or <span class="k">Disconnected</span>
-            (configured but not connected) — the two states worth acting on.</li>
-          <li>Connections a function calls but that no longer exist in the catalogue are flagged too.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Health audit</h3>
-        <ul>
-          <li>Orphan candidates, unresolved calls, ambiguous calls.</li>
-          <li><span class="k">Size &amp; calls</span>: the longest functions and the ones making the most
-            outbound calls — plain counts, no threshold and no verdict.</li>
-          <li>Broken automations and lookups pointing at modules that are not there.</li>
-          <li>Every check states what it does <em>and does not</em> analyse. Candidates to review — never
-            automatic deletions.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Exports you can hand over</h3>
-        <ul>
-          <li><span class="k">HTML</span>: the whole workspace as one self-contained, cross-linked, searchable file.</li>
-          <li><span class="k">Markdown</span>: the same material shaped as context for an external LLM.</li>
-          <li>A scope dialog decides what may leave your machine, section by section. Source code is opt-in
-            and flagged every time.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>AI assistant — bring your own key</h3>
-        <ul>
-          <li>Two providers, both tested: <span class="k">Anthropic</span> (Claude) and <span class="k">OpenAI</span> (ChatGPT).</li>
-          <li>They are not equivalent, and the chat says which is active: Claude explores the org on its own,
-            OpenAI answers in one pass from the index and the open function.</li>
-          <li>With Anthropic it runs as an agent with read-only tools, so it opens your functions, traces
-            callers, looks up connections and searches your code instead of guessing. Every tool call is shown.</li>
-          <li>Streaming answers, Markdown rendering, a tool-step limit you control.</li>
-          <li>Entirely optional. Keys stay in your browser; requests go straight to your provider — and the key
-            can be <span class="k">protected by a passphrase</span> you choose, so what sits on disk is
-            ciphertext. Off by default, because on a personal machine it buys little and on a shared one a lot.</li>
-          <li><span class="k">Clear</span> resets the thread — which also trims what is re-sent each time, so it
-            is the main lever on cost.</li>
+          <li>The whole workspace as one self-contained HTML file, or as Markdown for an AI tool.</li>
+          <li>A dialog decides what may leave your machine, section by section. Source code is opt-in.</li>
+          <li>With your own key, an assistant that reads <em>your</em> org rather than guessing — and can be
+            protected by a passphrase.</li>
         </ul>
       </div>
 
     </div>
-  </div>
-</section>
-
-<section id="what-this-rests-on">
-  <div class="wrap">
-    <h2>What this rests on, and what that means for you</h2>
-    <div class="why">
-      <div>
-        <h3>Undocumented interfaces</h3>
-        <p>Zoho CRM publishes no API for most of what Zoost reads. It uses the same internal endpoints
-          the product's own web interface uses, through the session you are already signed in to.
-          It also reads two identifiers — your org id and user id — out of the page's own HTML, because no endpoint offers them, and it takes the CSRF token from the cookies your browser already holds. Separately, it watches the Zoho CRM page for one thing only: the URL and method of the request that saves a function, so your local copy can follow. It reads no headers and no response bodies, and alters nothing the page sends or receives.</p>
-      </div>
-      <div>
-        <h3>Which means it can break</h3>
-        <p>Those interfaces carry no compatibility promise. Zoho can change one without notice and a
-          feature can stop working from one day to the next. This is not a hypothetical risk to be
-          discovered later: it is the foundation the tool stands on, and you should know it before you
-          build a process around it.</p>
-      </div>
-      <div>
-        <h3>What is promised, and what is not</h3>
-        <p>Nothing is guaranteed — the licence says so and so does this page. What is offered is
-          effort: a break will be looked at and fixed where fixing it is possible. Sometimes it will
-          not be, and then the feature will say plainly that it cannot do the thing rather than
-          guess. The mirror already on your disk keeps working either way; it is ordinary files.</p>
-      </div>
-      <div>
-        <h3>Read it before you trust it</h3>
-        <p>All of the above is visible in about twenty files of plain JavaScript. Every network call
-          the extension can make is in them, and there is no bundler or minifier between what is
-          published and what you read. If any of this is disqualifying for your organisation, it is
-          better found here than after installing.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="how-to-check">
-  <div class="wrap">
-    <h2>How to check we are telling the truth</h2>
-    <div class="why">
-      <div>
-        <h3>Read what ships</h3>
-        <p>Around twenty files of plain JavaScript and HTML. No bundler, no minifier, no dependencies —
-          what you download is what runs, and there is no build step that could put something in the
-          package that is not in the repository. You can read all of it in an afternoon.</p>
-      </div>
-      <div>
-        <h3>Built in public, not on a laptop</h3>
-        <p>Pushing a release tag makes GitHub check out that commit, build it twice to prove the
-          result is byte-identical, and sign a provenance statement for the archive. The archive
-          attached to the Release <em>is</em> the file submitted to the Store. The build log is
-          public.</p>
-      </div>
-      <div>
-        <h3>Verify it yourself</h3>
-        <p><code>gh attestation verify &lt;file&gt; --repo ivannot/zoost</code> asks GitHub whether it
-          built that exact archive. <code>tools/verify.sh</code> rebuilds it on your machine and
-          compares. Neither asks you to trust us.</p>
-      </div>
-      <div>
-        <h3>What none of it proves</h3>
-        <p>Uploading to the Store is a manual step, so no signature covers it: what is proven is how
-          the release archive was built. Google also repackages and re-signs every extension, so what
-          it serves is not byte-identical to what was uploaded. Both are settled at the far end, by
-          diffing the installed extension against the tag. And an attestation says who built a file,
-          never that the file is good — that part is still reading the code.</p>
-      </div>
-    </div>
-    <p class="note" style="margin-top:24px">The record of every submitted version — commit, tag and
-      the SHA-256 of the uploaded package — is in
-      <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, including the
-      two entries it says it <em>cannot</em> verify and why.</p>
   </div>
 </section>
 
@@ -362,6 +218,8 @@
     </ol>
     <p class="note">Full walkthrough, including API key setup and troubleshooting:
       <a href="/docs-crm.html"><b>How to use Zoost</b></a>.</p>
+    <p class="note">What it rests on, what it refuses to do, and how to check any of it:
+      <a href="/nerd.html">the nerd page</a>.</p>
     <p class="note">You need to be signed in to Zoho CRM in the same browser. Zoost uses your existing session
       and your existing permissions — it can see exactly what you can see, and nothing more.</p>
     <p class="note warn">The AI assistant is the one part that sends data outside your machine: the workspace

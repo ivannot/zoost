@@ -13,7 +13,11 @@
   --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+/* Mobile browsers inflate text they judge too small inside a block that overflows — which is
+   why the footer badge's longest line looked *bigger* than its neighbours on a phone and
+   identical to them on a desktop. Turning the inflation off is half the fix; the other half is
+   not letting that line overflow in the first place, below. */
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
 a{color:var(--teal)}
 .wrap{max-width:900px;margin:0 auto;padding:0 22px}
@@ -117,6 +121,11 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 #vers .vprod{color:var(--ink);font-weight:600}
 #vers .vfacts{display:flex;flex-wrap:wrap;gap:2px 14px}
 #vers .vitem{white-space:nowrap}
+/* …except where there is no room for it. «Ultima release 1.8.0 inviata il 5 ago 2026, in attesa
+   di revisione» is 457px of unbreakable text in a 331px column, so the footer scrolled sideways
+   while every other block fitted. The English wording is shorter and got away with it, which is
+   the usual way a translation finds a layout bug. */
+@media (max-width:640px){#vers .vitem{white-space:normal}}
 #vers .vsite{border-left-color:transparent;padding-left:11px}
 #vers a{color:var(--muted);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--border)}
 #vers a:hover{color:var(--ink);text-decoration-color:var(--ink)}

@@ -85,6 +85,19 @@ python3 tools/namecheck.py           # no shipped file may name, link to or iden
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
 ```
 
+**The product pages are for someone deciding, not for someone auditing.** They were 2000 words each
+and read as a specification — «nobody will ever read all that text; it needs highlights, not
+Wikipedia», which was right. What a reader needs first is what it does for them; what it rests on,
+which endpoints it calls, what a CSRF prefix is and how a release is signed is a different question
+asked by a different person on a different day. That material moved to **`/nerd.html`** (and
+`it/nerd.html`), which is linked from every product page and from `llms.txt`, and where being
+exhaustive is the correct register rather than a failure of nerve. The product pages are ~850 words;
+the home is ~630.
+
+**A headline needs its subject in it.** «You built it. It is yours. / And the platform gives you no
+way to see it whole» — built *what*, on *what* platform? The reader works it out from the paragraph
+below, which is one paragraph too late. It names Zoho and it names the things now.
+
 **The site may keep a technical register; it may not be incomplete.** The test it has to survive is a
 real one: hand `zoost.it` to an assistant, ask what the product does and whether it is trustworthy,
 and see whether the answer matches the software. A capability that exists in the panel and is
@@ -1064,6 +1077,16 @@ check here read the body; nothing read the head.
 What is **not** translated, on purpose: `privacy.html`, which is the most claim-dense page and has
 legal weight — English stays canonical; and `llms.txt`, whose reader is a machine and which is the
 map of the evidence, so there is one version of it and only one.
+
+**A page that does not scroll sideways can still contain a block that does — and the sweep only ever
+measured the page.** Two overflows reached the user that way: the footer badge's
+«Ultima release … in attesa di revisione», 457px of `nowrap` in a 331px column, and the home's status
+pill in a `display:flex` header. Both were *inside* an element, so `documentElement.scrollWidth`
+equalled the viewport and reported nothing. The sweep now asks every `header, footer, main, section,
+.hero, .card, table, pre` whether its own `scrollWidth` exceeds its `clientWidth`, skipping the ones
+that scroll on purpose. **And the badge only exists when `/api/versions` answers**, so a sweep run
+against a bare local server has `#vers` at `display:none` and can never see it — measure against the
+live site, or stub the endpoint.
 
 **Pages are responsive, and that is checked at a width, not eyeballed.** Wide content — tables, long
 code tokens, diagrams — scrolls inside its own box; the page body never scrolls sideways. The guides

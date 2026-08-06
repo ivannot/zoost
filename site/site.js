@@ -38,12 +38,14 @@
   var STR = {
     en: {
       store: 'On the Web Store', release: 'Latest release', dev: 'In development',
+      onStore: 'on the Web Store',
       review: 'Awaiting review', updated: 'Site updated',
       submitted: 'submitted ', awaiting: ', awaiting review', notSubmitted: 'not submitted yet',
       none: 'none yet', unknown: 'unknown',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
+      onStore: 'sul Chrome Web Store',
       review: 'In revisione', updated: 'Sito aggiornato',
       submitted: 'inviata il ', awaiting: ', in attesa di revisione', notSubmitted: 'non ancora inviata',
       none: 'nessuna', unknown: 'sconosciuta',
@@ -172,7 +174,7 @@
       document.querySelectorAll('[data-pending="' + app + '"]').forEach(function (el) { el.hidden = live; });
       document.querySelectorAll('[data-store="' + app + '"]').forEach(function (el) {
         if (!live) return;
-        el.textContent = 'on the Web Store';
+        el.textContent = t('onStore');
         el.classList.remove('wip'); el.classList.add('live');
       });
     });

@@ -25,6 +25,9 @@ the last section says which ones cannot be checked and why.
 - [How to use Zoost CRM](https://zoost.it/docs-crm.html)
 - [How to use Zoost Analytics](https://zoost.it/docs-analytics.html)
 - [Which guide you want](https://zoost.it/how-to.html)
+- [The nerd page](https://zoost.it/nerd.html) — which endpoints, what breaks it, how a release is
+  built and signed, and what none of that proves. The product pages point at it rather than
+  carrying it, so this is where the technical claims live.
 
 ## What they do not do
 

@@ -75,6 +75,7 @@
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-current="page" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/docs-analytics.html">How to</a>
+      <a href="/nerd.html">Nerd</a>
       <a href="/privacy.html">Privacy</a>
       <a class="ncta" href="/it/analytics.html" hreflang="it" lang="it" title="Questa pagina in italiano">Italiano</a>
     </nav>
@@ -85,10 +86,9 @@
   <div class="wrap">
     <h1>Hundreds of views, and no way<br>to see the shape of them.
       <span>This draws you the map.</span></h1>
-    <p class="lead">Zoost Analytics mirrors a workspace into plain files on your disk — every view with its
-      type and folder, the columns and data types of every table, the foreign keys between them, and the SQL behind
-      each query table as a file of its own. Then it shows you the ER diagram, what reads from what, and what nothing
-      reads any more. It calls no endpoint that creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in your tables.</p>
+    <p class="lead">Every view with its type and dates, the columns and foreign keys of every table, and the SQL
+      behind each query table as a file you can diff. Then the ER diagram, what reads from what — and an honest list
+      of what nothing reads any more.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
          data-install="analytics" hidden>Get it on the Chrome Web Store</a>
@@ -143,106 +143,64 @@
     <div class="grid">
 
       <div class="card">
-        <h3>Local mirror, Git-friendly</h3>
-        <ul>
-          <li>One pull writes the census, the structure, the relations and the lineage to disk.</li>
-          <li>One <code>.sql</code> file per query table, named after it — the diffable part.</li>
-          <li>One working folder, a subfolder per Zoost product, one folder per workspace inside it.</li>
-          <li>A workspace is identified by its id, not by its folder name: rename either and nothing is orphaned.</li>
-          <li>Give a workspace a <span class="k">name of your own</span> — Zoho Analytics calls the first workspace of
-            every account the same thing, so the list can be several projects with one label. Your name is shown; the
-            platform's is kept beside it, because a list you cannot check against Zoho Analytics is not worth having.</li>
-        </ul>
-      </div>
-
-      <div class="card">
         <h3>Every view, in one list</h3>
         <ul>
-          <li>All of them with type, folder, owner, column count and dates.</li>
-          <li><span class="k">Search inside columns</span>: type a column name and find the tables that carry it.</li>
-          <li><span class="k">Design and data told apart</span>: when the design last changed, and when the data last
-            refreshed. They are different facts and the list shows both.</li>
-          <li>Sort by name, type, folder, owner, when the data changed — or by how many views read from it.</li>
+          <li>Type, folder, owner, column count and dates — sortable, and searchable
+            <span class="k">inside the column names</span>, so you can find which table carries a field.</li>
+          <li>When the design last changed and when the data last refreshed, kept apart: they are different facts.</li>
+          <li>Tables Zoho put there by sync are marked, so the inventory is of <em>your</em> work.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Structure, including for reports</h3>
+        <h3>Structure, even for reports</h3>
         <ul>
-          <li>Every table and query table with its columns and Zoho data types.</li>
-          <li>A report or a pivot has no columns of its own — so Zoost follows what it is built on and shows
-            <em>that</em> structure, <span class="k">saying whose it is</span> rather than passing it off as the
-            report's.</li>
-          <li><span class="k">Foreign keys on every column</span>, in both directions: what it points at, and what
-            points at it. Each one is a link that opens the other table.</li>
+          <li>Columns and Zoho data types for every table and query table.</li>
+          <li>A report has no columns of its own, so Zoost follows what it is built on and shows that structure —
+            <span class="k">saying whose it is</span>.</li>
+          <li><span class="k">Foreign keys on every column, both ways</span>: what it points at, and what points at
+            it. Each one is a link.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>ER diagram that stays readable</h3>
+        <h3>The SQL, as files</h3>
         <ul>
-          <li>Tables as boxes, relations as arrows, the join written on the arc exactly as Zoho writes it.</li>
-          <li>Focus one table and walk the graph by clicking; adjustable depth.</li>
-          <li>Click an arc to isolate one relation and push everything else back.</li>
-          <li>Spacing, spread and label size are live sliders. Save PDF for wall-size prints.</li>
-          <li>A relations table too: one row per join, searchable, copyable.</li>
+          <li>One <code>.sql</code> per query table — the only thing here somebody actually wrote, and the part
+            <code>git diff</code> can answer about.</li>
+          <li>Search across every query at once.</li>
+          <li>Each records the tables it reads and which of their columns it touches, so
+            <em>if I drop this column, what breaks</em> has an answer.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>The SQL of your query tables</h3>
+        <h3>An ER diagram that stays readable</h3>
         <ul>
-          <li>Read it in the panel, and on disk as files you can grep.</li>
-          <li><span class="k">Search across every query</span> at once.</li>
-          <li>Each one records the source tables it reads and which of their columns it involves — so
-            "if I drop this column, what breaks" has an answer.</li>
+          <li>Tables as boxes, relations as arrows, the join written exactly as Zoho writes it.</li>
+          <li>Focus one table and walk out from it; click an arc to isolate a single relation.</li>
+          <li>Spacing and label size are live sliders. Save as PDF for a wall-size print.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>What nothing depends on</h3>
         <ul>
-          <li>Zoho Analytics' own dependency answer, asked for every view instead of one at a time.</li>
-          <li>For any view: what it reads from, what reads from it, and the dashboards it appears on.</li>
-          <li><span class="k">Candidates, never a verdict.</span> A shared link, a scheduled export, an embedded
-            report or an API consumer is invisible to that graph, and the number says so.</li>
+          <li>Zoho Analytics' own dependency answer, asked once for everything instead of one view at a time.</li>
+          <li>For any view: what it reads, what reads it, and the dashboards it appears on.</li>
+          <li><span class="k">Candidates, never a verdict</span> — a shared link or a scheduled export is invisible
+            to that graph, and the number says so.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Health, without a score</h3>
+        <h3>Exports, and an optional assistant</h3>
         <ul>
-          <li>Views nothing depends on, tables in no relation, views with no description, items that could not be
-            read.</li>
-          <li>Counts and lists. No thresholds, no red flags, no grade.</li>
-          <li>Every figure states what it does <em>not</em> cover, next to itself.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Exports you can hand over</h3>
-        <ul>
-          <li>The whole workspace as one self-contained HTML file, or as Markdown.</li>
-          <li>A dialog decides section by section what the file may contain; the SQL is opt-in and flagged.</li>
-          <li>The Markdown carries the <span class="k">constraints of Zoho Analytics' SQL dialect</span> too, so an
-            assistant that has never seen Zoho Analytics does not write queries that cannot run.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h3>Optional AI, your own key</h3>
-        <ul>
-          <li>Anthropic (Claude) or OpenAI (ChatGPT) — the two that are tested, and the only two the extension can
-            reach.</li>
-          <li>With Claude it explores the local mirror itself: reads a structure, follows a foreign key, opens a
-            query's SQL, searches columns, says what depends on what. Every tool call is shown.</li>
-          <li>It is told what Zoho documents about query-table SQL — SELECT only, quoted identifiers, no correlated
-            sub-queries, non-recursive CTEs — so what it writes is a draft to paste, not plausible SQL that fails.</li>
-          <li>It is also told what it cannot know: Zoost never reads your rows, so the assistant has structure and
-            never values.</li>
-          <li>Your key stays in your browser and goes only to your provider — and it can be
-            <span class="k">protected by a passphrase</span> you choose, so what sits on disk is ciphertext. Off by
-            default, because on a personal machine it buys little and on a shared one a lot.</li>
+          <li>The whole workspace as one HTML file, or as Markdown — which carries the constraints of Zoho
+            Analytics' SQL dialect, so an assistant does not write queries that cannot run.</li>
+          <li>A dialog decides what may leave your machine, section by section.</li>
+          <li>With your own key, an assistant that explores <em>your</em> workspace — and never your rows, because
+            Zoost does not read them.</li>
         </ul>
       </div>
 
@@ -285,80 +243,6 @@
   </div>
 </section>
 
-<section id="what-this-rests-on">
-  <div class="wrap">
-    <h2>What this rests on, and what that means for you</h2>
-    <div class="why">
-      <div>
-        <h3>Undocumented interfaces</h3>
-        <p>Zoho Analytics publishes no API for most of what Zoost reads. It uses the same internal endpoints
-          the product's own web interface uses, through the session you are already signed in to.
-          One of them is named <code>CREATE</code> in Zoho's own URL scheme and is a POST — it is the call that returns the workspace's ER model, and it computes rather than creates. It is named here rather than left for a reader to find, because a reader will find it.</p>
-      </div>
-      <div>
-        <h3>Which means it can break</h3>
-        <p>Those interfaces carry no compatibility promise. Zoho can change one without notice and a
-          feature can stop working from one day to the next. This is not a hypothetical risk to be
-          discovered later: it is the foundation the tool stands on, and you should know it before you
-          build a process around it.</p>
-      </div>
-      <div>
-        <h3>What is promised, and what is not</h3>
-        <p>Nothing is guaranteed — the licence says so and so does this page. What is offered is
-          effort: a break will be looked at and fixed where fixing it is possible. Sometimes it will
-          not be, and then the feature will say plainly that it cannot do the thing rather than
-          guess. The mirror already on your disk keeps working either way; it is ordinary files.</p>
-      </div>
-      <div>
-        <h3>Read it before you trust it</h3>
-        <p>All of the above is visible in about twenty files of plain JavaScript. Every network call
-          the extension can make is in them, and there is no bundler or minifier between what is
-          published and what you read. If any of this is disqualifying for your organisation, it is
-          better found here than after installing.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="how-to-check">
-  <div class="wrap">
-    <h2>How to check we are telling the truth</h2>
-    <div class="why">
-      <div>
-        <h3>Read what ships</h3>
-        <p>Around twenty files of plain JavaScript and HTML. No bundler, no minifier, no dependencies —
-          what you download is what runs, and there is no build step that could put something in the
-          package that is not in the repository. You can read all of it in an afternoon.</p>
-      </div>
-      <div>
-        <h3>Built in public, not on a laptop</h3>
-        <p>Pushing a release tag makes GitHub check out that commit, build it twice to prove the
-          result is byte-identical, and sign a provenance statement for the archive. The archive
-          attached to the Release <em>is</em> the file submitted to the Store. The build log is
-          public.</p>
-      </div>
-      <div>
-        <h3>Verify it yourself</h3>
-        <p><code>gh attestation verify &lt;file&gt; --repo ivannot/zoost</code> asks GitHub whether it
-          built that exact archive. <code>tools/verify.sh</code> rebuilds it on your machine and
-          compares. Neither asks you to trust us.</p>
-      </div>
-      <div>
-        <h3>What none of it proves</h3>
-        <p>Uploading to the Store is a manual step, so no signature covers it: what is proven is how
-          the release archive was built. Google also repackages and re-signs every extension, so what
-          it serves is not byte-identical to what was uploaded. Both are settled at the far end, by
-          diffing the installed extension against the tag. And an attestation says who built a file,
-          never that the file is good — that part is still reading the code.</p>
-      </div>
-    </div>
-    <p class="note" style="margin-top:24px">The record of every submitted version — commit, tag and
-      the SHA-256 of the uploaded package — is in
-      <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a>, including the
-      two entries it says it <em>cannot</em> verify and why.</p>
-  </div>
-</section>
-
 <section id="get-started">
   <div class="wrap">
     <h2>Get started</h2>
@@ -375,6 +259,8 @@
       <li><b>Optional:</b> <code>git init</code> in the workspace folder, and from today you have a history.
         Everything else works without it.</li>
     </ol>
+    <p class="note" style="margin-top:24px">What it rests on, the two endpoints it deliberately never calls, and
+      how to check any of it: <a href="/nerd.html">the nerd page</a>.</p>
     <p class="note" style="margin-top:8px">Everything runs in your browser, using the Zoho session you are already
       signed into. No server, no account, no telemetry. The only thing that ever leaves your machine is what you
       choose to send to an AI provider, and never the rows in your tables.</p>
