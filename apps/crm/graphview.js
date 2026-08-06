@@ -418,6 +418,25 @@ function wireAsideFold() {
 }
 wireAsideFold();
 
+// Work that blocks the main thread, with something on screen while it does.
+//
+// The trap is that the message has to be *painted* first, and a repaint does not happen inside the
+// task that schedules it. One requestAnimationFrame is not enough either: that callback runs before
+// the frame it belongs to is painted, so blocking inside it blocks that very frame and nothing is
+// ever shown. Two gets one full paint in between.
+const SPIN_NODES = 150;   // below this the layout is under ~350ms and a spinner would only flicker
+function runHeavy(host, label, work) {
+  let ov = host.querySelector('.busy');
+  if (!ov) { ov = document.createElement('div'); ov.className = 'busy'; host.appendChild(ov); }
+  ov.innerHTML = '<i></i><span></span>';
+  ov.querySelector('span').textContent = label;
+  ov.setAttribute('role', 'status');
+  ov.classList.add('on');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { work(); } finally { ov.classList.remove('on'); }
+  }));
+}
+
 // ---------------- View toggle ----------------
 let curView = 'explorer';
 document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
@@ -440,7 +459,16 @@ function showView(v) {
   if (curView === 'rel') relRender();
   if (curView === 'visual') {
     if (!forceFeasible()) { showVisualTooBig(); }
-    else { hideVisualTooBig(); requestAnimationFrame(() => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); }); }
+    else {
+      hideVisualTooBig();
+      // The first switch to Visual has to run the force layout, and that blocks. Measured on this
+      // machine: 53ms at 50 nodes, 359ms at 150, 1.4s at 300, 5.9s at 600 - which is the cap. Under
+      // SPIN_NODES it is quick enough that a spinner would only flicker, so it stays out of the way.
+      const heavy = !laidOut && nodesA.length >= SPIN_NODES;
+      const work = () => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); };
+      if (heavy) runHeavy($('visual'), `Laying out ${nodesA.length} nodes\u2026`, work);
+      else requestAnimationFrame(work);
+    }
   }
   if (curView === 'er') requestAnimationFrame(erShow);
 }

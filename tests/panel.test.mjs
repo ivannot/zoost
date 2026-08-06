@@ -599,6 +599,39 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('the force layout paints its spinner before it blocks, not after', () => {
+  // Switching to Visual runs an O(n^2) layout on the main thread - measured at 53ms for 50 nodes,
+  // 359ms for 150, 1.4s for 300 and 5.9s at the 600-node cap - and the window simply froze with the
+  // previous view still on screen.
+  //
+  // The trap is that a repaint does not happen inside the task that schedules it, and one
+  // requestAnimationFrame is not enough either: that callback runs *before* its frame is painted, so
+  // blocking inside it blocks that very frame and the message is never seen. Two rAFs put a full
+  // paint in between, and this asserts the order rather than the nesting: the overlay must be marked
+  // visible strictly before the work runs.
+  for (const app of ['crm', 'analytics']) {
+    const order = [];
+    const ov = { className: '', innerHTML: '', attributes: {},
+      classList: { add: (c) => order.push('show:' + c), remove: (c) => order.push('hide:' + c) },
+      querySelector: () => ({ set textContent(_v) {} }), setAttribute() {} };
+    const host = { querySelector: () => ov, appendChild() {} };
+    const frames = [];
+    const ctx = {
+      document: { createElement: () => ov },
+      requestAnimationFrame: (f) => frames.push(f),
+      SPIN_NODES: 150,
+    };
+    const { runHeavy } = load([sliceFn(`apps/${app}/graphview.js`, 'runHeavy')], ctx);
+    runHeavy(host, 'Laying out 300 nodes…', () => order.push('work'));
+
+    assert.deepEqual(order, ['show:on'], `${app}: the work ran before anything was shown`);
+    frames.shift()();                       // first frame: still nothing painted
+    assert.deepEqual(order, ['show:on'], `${app}: one rAF is not a painted frame`);
+    frames.shift()();                       // second frame: a paint has happened
+    assert.deepEqual(order, ['show:on', 'work', 'hide:on'], `${app}: the spinner never came down`);
+  }
+});
+
 test('one click folds the list, and one click brings it back', () => {
   // Reported: after the drag landed, the tab dragged and no longer clicked. `pointerup` folded and
   // the `click` that follows it read the class it had just changed and unfolded again - the two

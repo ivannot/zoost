@@ -108,6 +108,16 @@
   .file{margin-top:14px;font:11.5px var(--mono);color:var(--muted)}
   /* visual */
   #visual{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 40%,#ffffff, #eef1f6)}
+  /* Shown while the force layout runs. It has to be *painted* before the work starts, which is
+     what the double requestAnimationFrame in runHeavy() is for - the layout blocks the main
+     thread, so anything drawn in the same task never reaches the screen. */
+  .busy{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        background:rgba(255,255,255,.86);color:var(--muted);font:13px var(--sans);z-index:7}
+  .busy.on{display:flex}
+  .busy i{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--sel);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .busy i{animation-duration:2.4s} }
+  @media print{ .busy{display:none !important} }
   #cv{width:100%;height:100%;display:block;cursor:grab} #cv:active{cursor:grabbing}
   .legend{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:11px var(--sans);color:var(--muted)}
   .legend b{color:var(--ink)} .legend .li{display:flex;align-items:center;gap:6px;margin-top:3px}

@@ -985,6 +985,17 @@ These all failed **silently**, with no console error. They are the expensive kin
   could only read. Giving the tabs square bottom corners to
   sit flush against the pane below was tried and reverted - it makes the header and the content argue
   about where the line is, and he said so.
+- **A repaint does not happen inside the task that schedules it, and one `requestAnimationFrame` is
+  not a painted frame.** The diagram window's Visual tab runs an O(n²) force layout on the main
+  thread - measured at 53ms for 50 nodes, 359ms for 150, 1.4s for 300 and 5.9s at the 600-node cap -
+  and the window simply froze with the previous view still on screen. A spinner drawn in the same
+  task never reaches the screen, and neither does one drawn inside a single rAF: that callback runs
+  *before* its frame is painted, so blocking in it blocks that very frame. `runHeavy()` uses two, and
+  the test asserts the **order** - shown, then work, then hidden - rather than the nesting. Below
+  `SPIN_NODES` the layout is under ~350ms and the spinner would only flicker, so it stays out of the
+  way; the threshold is a rendering decision backed by that measurement, not a claim about anyone's
+  org. The ER free-layout branch calls the same `settle()` and has the same cost, and is **not**
+  covered - its entry point cannot tell in advance whether the concentric branch will be taken.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window
   stayed exactly as wide as its search box. The rule was applying - `visibility:hidden` from the same
