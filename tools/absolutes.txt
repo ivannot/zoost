@@ -175,6 +175,7 @@ f1006491092000c3  site/docs-crm.html: Zoost takes you to it, but the last click 
 16fe75cff2a36b13  site/docs-crm.html: ↺ Whole graph clears the focus and shows every module again.
 1a5789e356591533  site/how-to.html: What it does → Read the guide → Zoost — workbench for Zoho Analytics Working folder and workspaces, pulling a workspace in one pass, a table's structure and its foreign keys, the ER diagram, query-table SQL as files, what nothing depends on any more, exports, and the AI assistant.
 3f62147687f50b45  site/how-to.html: Zoost — workbench for Zoho CRM Working folder and workspaces, pulling functions, module schema and automations, the reference graph and the ER diagram, full-text search across every function, the health audit, exports, and the AI assistant.
+594fe33f16d22f4f  site/index.html: And with Zoost you can see all of it at once.
 c03de625dbaec76b  site/index.html: Each Zoost keeps its own subfolder inside it, so a single folder serves them all and the two never meet.
 9c69ab2e90ab501a  site/index.html: Every figure says what it does not cover, and the judgement stays yours.
 57ef5089231bacb8  site/index.html: No Zoost calls an endpoint that writes to Zoho, so the worst it can do to your data is nothing — a property of which endpoints we call, and every one of them is in files you can read.
@@ -184,7 +185,6 @@ f1bb58292cbc1041  site/index.html: Nothing leaves the machine No server, no acco
 d69df15a0046eb2d  site/index.html: The workbenches What every Zoost has in common Free · Apache-2.0 · no account The workbenches Zoost — workbench for Zoho CRM on the Web Store Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
 7b8a966d5bc6b5f4  site/index.html: What every Zoost has in common It only reads No Zoost calls an endpoint that creates, edits or deletes anything in Zoho.
 42339d0e96f4d94a  site/index.html: What it does → How to use it → Install ↗ Zoost — workbench for Zoho Analytics submitted, in review Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of what nothing depends on any more.
-51bbd277500eaf6a  site/index.html: Zoho just never shows it to you all at once.
 8bb925dceb5a87f4  site/index.html: Zoost copies all of it to plain files on your own disk, then draws you the map: what calls what, what depends on what, what nothing uses any more.
 045c8c0b684a1cce  site/it/analytics.html: Candidati, mai un verdetto — un link condiviso o un export schedulato sono invisibili a quel grafo, e il numero lo dice.
 66c5c687afc857a5  site/it/analytics.html: Cerchi dentro tutte le query in una volta sola.
@@ -374,6 +374,7 @@ f087d8b7dfdf9192  site/it/how-to.html: Cosa fa → Leggi la guida → Zoost — 
 842051aed2770cba  site/it/how-to.html: Zoost — workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, l'audit di salute, gli export e l'assistente AI.
 7a870fb254e20ac5  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost — workbench for Zoho Analytics inviata, in revisione Ogni vista di un workspace con tipo, cartella e date, le colonne e le chiavi esterne di ogni tabella, la SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa non dipende più da niente.
 97b58876b94f3401  site/it/index.html: Cosa hanno in comune tutti gli Zoost Legge soltanto Nessuno Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho.
+f50ddd306d8cadb7  site/it/index.html: E da oggi con Zoost puoi vederlo tutto insieme.
 ce7a92841fbea83a  site/it/index.html: Gratuito, aperto, e tuo da forkare Apache-2.0, nessuna fase di build, nessuna dipendenza.
 9f4cded4e759afa4  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Gratuito · Apache-2.0 · nessun account Il sito è in italiano, guide comprese.
 75041461464e2cad  site/it/index.html: I workbench Zoost — workbench for Zoho CRM sul Chrome Web Store Le funzioni Deluge come file versionabili, la ricerca full-text su tutte insieme, il grafo di chi chiama cosa, lo schema dei moduli con i layout, gli API name delle related list che devi sempre andare a ricercare, i workflow, le schedulazioni e il catalogo delle connessioni.
@@ -386,7 +387,6 @@ d1d0d7f928940193  site/it/index.html: Niente esce dalla macchina Nessun server, 
 bbeb412a4821dd89  site/it/index.html: Ogni cifra dichiara cosa non copre, e il giudizio resta tuo.
 cee6466af7993ab2  site/it/index.html: Sta tutto sulla pagina nerd , che è dove deve stare.
 dbd73328d20f5692  site/it/index.html: Tutto insieme, in una volta Cerchi dappertutto insieme, segui un nome fino a dove viene usato, e consegni il tutto a un collega come un unico documento.
-9d37b2a846628113  site/it/index.html: Zoho semplicemente non te lo fa mai vedere tutto insieme.
 092cfea58b37b04d  site/it/index.html: Zoost copia tutto in file ordinari sul tuo disco, e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.
 eb0388793eb1301a  site/it/index.html: Zoost — workbench per i prodotti Zoho su cui hai costruito Zoost Zoost — workbench for Zoho CRM Zoost CRM Zoost — workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English Tutto quello che hai costruito dentro Zoho è tuo.
 8fefd1bbceaf3906  site/it/nerd.html: Come legge Zoho Analytics Prende il workspace dall'URL della scheda su cui sei — /workspace/{id} — quindi non c'è niente da estrarre e niente da sbagliare.
