@@ -1436,7 +1436,14 @@ there, one reading the source for a class below it and one comparing what the lo
 what is written. The first version of the second shelled out to the same file and recursed until it
 was killed, which is its own small lesson: a test about a suite reads the suite, it does not run it.
 
-**A test that fails unreadably is half a test, and `assert.match` on a large haystack is how.**
+**A test that fails unreadably is half a test, and there is more than one way to get there.**
+`assert.match` on a large haystack is one: it prints the whole `actual` into the failure, and node
+19's TAP lexer dies on a multi-byte character split across a socket read. **A `#` in the message is
+the other**: TAP reads it as the start of a comment, so `${app}: #${id} does not say it exports`
+arrived as `analytics: ` and said nothing. Write ids as `id=exportmd`, and assert with
+`assert.ok(regex.test(x), 'why')` whenever `x` is a slice of source.
+
+**(original note)** `assert.match` on a large haystack is how.**
 `match` prints the whole `actual` string into the failure, and node 19's TAP lexer dies on a
 multi-byte character split across a socket read - `ERR_TAP_LEXER_ERROR`, "Unexpected character",
 pointing at line 1 of nothing. The suite still went red, so the guard worked; whoever tripped it

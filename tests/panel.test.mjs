@@ -536,9 +536,12 @@ test('the export buttons carry their own name, with no box to lend them one', ()
     const html = read(`apps/${app}/sidepanel.html`);
     assert.ok(!/expgroup|explabel/.test(html), `${app}: the export box is back`);
     for (const [id, name] of [['export', 'Export HTML'], ['exportmd', 'Export Markdown']]) {
+      // No `#` in an assertion message: it opens a comment in TAP, so `#exportmd` truncated the
+      // failure to "analytics: " and said nothing. Second unreadable failure in two days, different
+      // cause - write the id without its selector sigil.
       const tag = html.match(new RegExp(`<button id="${id}"[^>]*>`));
-      assert.ok(tag, `${app}: #${id} is gone`);
-      assert.ok(tag[0].includes(`aria-label="${name}"`), `${app}: #${id} does not say it exports`);
+      assert.ok(tag, `${app}: the button id=${id} is gone`);
+      assert.ok(tag[0].includes(`aria-label="${name}"`), `${app}: id=${id} does not say it exports - aria-label must read "${name}"`);
     }
   }
 });
