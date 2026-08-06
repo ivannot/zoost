@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:b495187d1521e0f7 -->
+<!-- translated-from: site/docs-analytics.html sha256:807ce515d1de6835 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -114,7 +114,7 @@
           finché la scheda e la cartella non tornano d'accordo.</td></tr>
     </tbody>
   </table>
-  <p class="box">Zoost è in <b>sola lettura</b> su Zoho Analytics. Non crea, non modifica e non cancella
+  <p class="box">Zoost su Zoho Analytics <b>legge soltanto</b>. Non crea, non modifica e non cancella
     mai una vista, e non legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori
     delle celle esistono e deliberatamente non vengono chiamati. Il peggio che può fare al tuo workspace è
     niente. Una delle chiamate che fa è una POST il cui URL contiene <code>CREATE</code>: è il nome che Zoho
@@ -253,7 +253,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
     qualunque altro sorgente.</p>
-  <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessuna SQL. La legge e la scrive su
+  <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessun SQL. Lo legge e lo scrive su
     disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.</p>
 
   <h2 id="depends">9. Cosa non serve più a nessuno</h2>
@@ -373,7 +373,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     che serve per scrivere una query o seguire una chiave esterna, e i report vanno per primi perché
     l'assistente quelli li sa comunque trovare per nome. Quello che resta fuori viene dichiarato come tale -
     così non conclude mai che una vista non esiste solo perché non gli è stata mostrata.</p>
-  <p>All'assistente viene detto cosa Zoho documenta sulla SQL delle query table - solo SELECT, identificatori
+  <p>All'assistente viene detto cosa Zoho documenta sull'SQL delle query table - solo SELECT, identificatori
     fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>

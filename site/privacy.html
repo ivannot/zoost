@@ -39,11 +39,11 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - Chrome extensions · Last updated: 5 August 2026</p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: 6 August 2026</p>
 
   <div class="box">
     <h3>The short version</h3>
-    <p>Zoost collects nothing. It has no server, no account, no analytics and no tracking of any kind.
+    <p>The developer collects nothing. Zoost has no server, no account, no analytics and no tracking of any kind.
       Your data moves between your browser, the Zoho product you are already signed in to, and a
       folder on your own disk. The single exception is the optional AI assistant, which sends what you
       ask it about to the AI provider <em>you</em> configure with <em>your own</em> API key. Nothing is
@@ -66,9 +66,16 @@
     tables</b>, because it does not read them: the endpoints that return cell values are deliberately
     not called.</p>
 
-  <h2>1. Who is responsible</h2>
+  <h2>1. Who is behind Zoost</h2>
   <p>Zoost is developed and published by <b>Ivan Notaristefano</b>, an individual developer, as an
     independent, unofficial tool. Contact: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
+  <p><b>For the data Zoost touches, the developer carries out no processing at all</b>: receives none
+    of it, stores none of it, has no access to the folder the extension writes to, and operates no
+    service anything could reach. On that footing the developer is neither the controller nor a
+    processor of that data - the controller is your own organisation, exactly as it was before Zoost
+    was installed. This is written down so that nobody assessing the extension has to infer it; it is
+    not legal advice, and every fact it rests on is checkable in the manifest and in the source. The
+    one exception is this website, and §8 sets it out.</p>
   <p>Zoost is not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation.
     Data held inside your Zoho products remains governed by your own agreement with Zoho and by your
     organisation's policies; this document covers only what the Zoost extensions do with it.</p>
@@ -133,6 +140,13 @@
     </tbody>
   </table>
 
+  <p><b>If you are assessing this:</b> the mirror does contain some personal data about people in
+    your organisation - who last changed a Deluge function, who owns a view - and any personal data
+    somebody typed into the code itself, such as an address in a <code>sendmail</code>. It is read from
+    Zoho and written to that person's disk; none of it reaches the developer, and the controller of it
+    is your organisation, as it already was inside Zoho. Treat an export the way you would treat the
+    Zoho screens it was read from.</p>
+
   <p>None of this is transmitted anywhere. You can erase all of it at any time by removing the extension
     and deleting the working folder. Removing the extension deletes the browser-side storage; the local
     folder is yours and is left untouched.</p>
@@ -161,7 +175,9 @@
       tables</b>. It can never send the rows inside a table, because it never reads them - so the assistant
       knows your workspace's structure and never its values.</p>
     <p>That provider then processes the data under <b>its own</b> terms and privacy policy, not this one.
-      The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
+      In that exchange the controller is you, or your organisation, and the AI provider is your supplier,
+      not the developer's. The developer of Zoost is not a party to it, cannot see it and has no control
+      over it.
       If your organisation restricts sending source code, SQL or business logic to third-party AI services,
       do not enable this feature.</p>
   </div>
@@ -224,7 +240,7 @@
 
   <h2>6. Legal basis and your rights</h2>
   <p>Because the developer receives no personal data, there is no processing to consent to, object to,
-    or request access to. Data protection rights in respect of the Zoho CRM data itself are exercised against
+    or request access to. Data protection rights in respect of the Zoho data itself are exercised against
     the controller of that data - your organisation - and, where relevant, against the AI provider you
     chose, under their respective policies.</p>
 
@@ -243,7 +259,15 @@
     last changed. Those requests are made <b>by the server, not by
     your browser</b>: nothing about you is sent to Google or GitHub, no identifier of yours is involved, and
     the answer is cached for everyone alike. If a source is unreachable the badge simply reads "unknown".</p>
-  <p>Your hosting provider may keep standard server access logs; those are outside the scope of this policy.</p>
+  <p><b>The one place where the developer <em>is</em> the controller.</b> This site is served by
+    Cloudflare, which is both its network and its host. Like any web server, its edge keeps ordinary
+    request logs - IP address, time, URL, user agent - and counts requests without setting a cookie or
+    an identifier. That is a processing of personal data, however slight, and for it the controller is
+    the developer, on the legitimate interest in serving and protecting the site. Nothing is built on
+    top of it: no cookie, no tracker, no profile, no mailing list, and nothing here is joined to
+    anything the extension does. Cloudflare's own retention applies; no log export is enabled and the
+    developer keeps no copy of any of it. To exercise a right over that, or to ask anything about it:
+    <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
 
   <h2>9. Changes</h2>
   <p>If a future version of Zoost changes what data is handled or where it travels, this policy will be

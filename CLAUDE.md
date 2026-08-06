@@ -1725,6 +1725,26 @@ Two traps that this layout hides:
   committing a config without them would have silently changed the runtime. If the platform's
   defaults ever move, compare against what it generates before assuming ours is complete.
 
+**A fact stated only at runtime is a fact half the readers never get.** `site.js` used to ship the
+conservative wording in the markup - "submitted, in review", no install link - and hide it the moment
+`/api/versions` reported a version scraped from the listing, so the page would be right the instant
+the Store published without anyone editing it. It worked, in a browser. But the reader this site is
+deliberately built for - an assistant handed the URL and asked to assess the product - **does not run
+scripts**, and it read five surfaces saying Zoost Analytics was in review while three said it was on
+the Store. It reported the contradiction, which is the failure: the site disagreeing with itself
+about its own product. The promotion is gone, the markup states what is true, and
+`published_state_is_stated()` in `auditcheck.py` holds every page against `/api/versions` in both
+directions. A test asserts no page carries `data-pending` / `data-install` / `data-store` again,
+because the mechanism is a fair-looking idea and the wrong shape for a fact somebody has to be able
+to read without executing anything.
+
+**The absolutes ledger listed words, and the strongest claim on the site is a noun phrase.** It
+matched `mai`, `never`, `soltanto`, `only` - and never `read-only`, which is the one absolute this
+project has already had to walk back. Two of them were live: an Italian hero reading «in sola lettura
+su Zoho» and an Italian guide box promoting the English «only ever reads» to «è in sola lettura». Both
+patterns are in `ABSOLUTE` now. The lesson is the one already here in another form - a checker built
+from a list of *words* misses a claim made of two.
+
 **A release gate for the outside view: `python3 tools/auditcheck.py`.** Three things, all mechanical:
 **every file the site publishes** fetched from zoost.it and compared **byte for byte** against the
 repository - and it means every file, which it did not until the icons were redrawn: it globbed

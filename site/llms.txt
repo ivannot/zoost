@@ -42,7 +42,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **They never read customer records.** Zoho CRM: no contacts, no deals, no notes - only the
   definitions of what you built. Zoho Analytics: never the rows inside a table; the endpoints that
   would return cell values exist and are deliberately never called.
-- **Report definitions in Zoho Analytics are not covered.** Chart type, groupings and thresholds
+- **Report definitions in Zoho Analytics are not covered.** Chart type, groupings and axes
   would require an endpoint that returns the computed data with them, so it is not called and the
   gap is stated wherever a report is shown.
 - **Nothing leaves the machine except through the optional AI assistant**, which is off until the

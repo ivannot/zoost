@@ -157,7 +157,8 @@ def store_matches_manifest(findings: list, notes: list) -> None:
 # the sentence that fell to one POST. A page nobody's ledger reads is a page where an overstatement
 # ships unread.
 ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
-                      r'|mai|sempre|nessun[ao]?|niente|soltanto|soltanto|unic[ao]|ogni|tutt[eio])\b', re.I)
+                      r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
+                      r'|\bread-only\b|\bsola lettura\b', re.I)
 OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md']
 
 
@@ -271,6 +272,65 @@ def deploy_state(findings: list, notes: list, offline: bool) -> None:
                         'repository holds, and nothing whatever about what zoost.it serves.')
 
 
+# ---------------------------------------------------------------------------------------------------
+# N. A product's published state, as the markup states it
+# ---------------------------------------------------------------------------------------------------
+
+# Zoost Analytics went live on the Chrome Web Store while five surfaces still said "submitted, in
+# review" and three already said "on the Chrome Web Store" — the site contradicting itself about its
+# own product, and reported by a reader.
+#
+# It was not for want of a mechanism. site.js carried one that hid the "in review" wording the moment
+# /api/versions reported a real scraped version, so a *browser* was always shown the truth. But the
+# reader this site is deliberately built for — an assistant handed the URL and asked to assess the
+# product — does not run scripts, and reads the markup. A fact promoted only at runtime is a fact
+# that reader never sees. So the mechanism is gone and the markup states what is true, which is what
+# this check holds it to: /api/versions already knows whether a listing serves a version, and the
+# pages must not disagree with it in either direction.
+#
+# The wrong direction is the expensive one. Saying "in review" about something published costs
+# nothing but confusion; saying "on the Chrome Web Store" about something still in review sends a
+# reader to a listing that serves an error, which is how this got its first finding.
+UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat', re.I)
+PUBLISHED = re.compile(r'on the (Chrome )?Web Store|sul Chrome Web Store', re.I)
+PRODUCT = {'crm': re.compile(r'Zoho CRM|Zoost CRM', re.I), 'analytics': re.compile(r'Zoho Analytics|Zoost Analytics', re.I)}
+
+
+def published_state_is_stated(findings: list, notes: list) -> None:
+    """Every page must describe each product's store presence the way the Store actually has it.
+
+    Judged per sentence rather than per page: a page naming both products would otherwise let a true
+    statement about one excuse a false one about the other."""
+    # curl with the same agent the comparison above uses. urllib was tried first and 403s: this
+    # repository's own reachcheck notes that Cloudflare's managed rules refuse `Python-urllib`, and
+    # the checker walked straight into it.
+    try:
+        out = subprocess.run(['curl', '-sS', '--max-time', '20', '-A',
+                              'zoost auditcheck (+https://zoost.it)', BASE_URL + '/api/versions'],
+                             capture_output=True, text=True, timeout=30)
+        live = json.loads(out.stdout)
+    except Exception as e:                                    # noqa: BLE001 - reported, not raised
+        notes.append(f'published state not checked: /api/versions unreachable ({e})')
+        return
+
+    state = {a: bool(live.get(a, {}).get('store')) for a in PRODUCT}
+    for f in sorted(SITE.rglob('*.html')):
+        rel = f.relative_to(SITE).as_posix()
+        for line in sentences(f):
+            for app, name in PRODUCT.items():
+                if not name.search(line):
+                    continue
+                if state[app] and UNPUBLISHED.search(line):
+                    findings.append(f'site/{rel}: says Zoost {app} is in review; the listing serves '
+                                    f'{live[app]["store"]} — "{line[:96]}"')
+                if not state[app] and PUBLISHED.search(line):
+                    findings.append(f'site/{rel}: says Zoost {app} is on the Store; the listing '
+                                    f'serves nothing — "{line[:96]}"')
+    notes.append('  ' + ', '.join(f'Zoost {a} {"published" if v else "not published"}' for a, v in state.items())
+                 + ' — and every page says so')
+
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--offline', action='store_true', help='skip the comparison against the live site')
@@ -281,6 +341,7 @@ def main() -> int:
     deploy_state(findings, notes, args.offline)
     if not args.offline:
         live_matches_repo(findings, notes)
+        published_state_is_stated(findings, notes)
     store_matches_manifest(findings, notes)
     description_repeats_the_name(findings, notes)
     absolutes_reviewed(findings, notes, args.accept)

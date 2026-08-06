@@ -8,6 +8,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read } from './slice.mjs';
+import { readdirSync } from 'node:fs';
+
+// Globbed, never listed: a page added tomorrow is covered without anyone remembering it.
+const listPages = () => ['', 'it/'].flatMap((d) =>
+  readdirSync(new URL('../site/' + d, import.meta.url))
+    .filter((n) => n.endsWith('.html')).map((n) => 'site/' + d + n));
 
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
@@ -253,18 +259,37 @@ test('the footer says what is in review only when it adds a fact', () => {
 
 // ---------- The footer badge speaks the page's language, all of it ----------
 
-test('the published badge goes through the string table', () => {
+test('everything the badge writes goes through the string table', () => {
   // The Italian home showed «sul Chrome Web Store» on one card and «on the Web Store» on the other,
-  // live. Every other string in the badge was in the table; this one was written inline, so the one
-  // that changes *after* the page loads was the one that stayed English.
+  // live: every other string in the badge was in the table, and the one written inline was the one
+  // that stayed English. The offending label is gone with the promotion it belonged to (see below),
+  // but the rule it proved covers everything else the badge writes after the page loads.
   const src = read('site/site.js');
-  assert.match(src, /el\.textContent = t\('onStore'\)/, 'the badge label is hard-coded again');
-  assert.ok(!/textContent = 'on the Web Store'/.test(src));
   for (const lang of ['en', 'it']) {
     const table = src.slice(src.indexOf(`    ${lang}: {`), src.indexOf('},', src.indexOf(`    ${lang}: {`)));
-    for (const key of ['store', 'release', 'dev', 'review', 'updated', 'onStore', 'none', 'unknown']) {
+    for (const key of ['store', 'release', 'dev', 'review', 'updated', 'none', 'unknown']) {
       assert.ok(table.includes(key + ':'), `${lang} has no ${key}`);
     }
+  }
+});
+
+// ---------- A fact stated only at runtime is a fact half the readers never get ----------
+
+test('no page leaves a product\'s store presence to be filled in by script', () => {
+  // site.js used to hide the "submitted, in review" wording the moment /api/versions reported a real
+  // scraped version, so the markup could ship the conservative state and be promoted in the browser.
+  // It worked, and it was still wrong: the reader this site is built for - an assistant handed the
+  // URL and asked to assess the product - does not run scripts. It read five surfaces saying Zoost
+  // Analytics was in review and three saying it was on the Store, and reported the contradiction.
+  //
+  // So the markup states what is true and auditcheck holds it against /api/versions. This is the
+  // guard against the mechanism coming back: it is a fair-looking idea, and it is the wrong shape
+  // for a fact somebody has to be able to read without executing anything.
+  const js = read('site/site.js');
+  assert.ok(!/data-(pending|install|store)/.test(js), 'site.js promotes a published state again');
+  for (const f of listPages()) {
+    assert.ok(!/data-(pending|install|store)=/.test(read(f)),
+      `${f}: states a product's store presence only to script`);
   }
 });
 

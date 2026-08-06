@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:5d53bb7bad39c595 -->
+<!-- translated-from: site/index.html sha256:cd209b3b42b23440 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui hai costruito</title>
@@ -96,8 +96,8 @@
   <div class="wrap">
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E da oggi con Zoost puoi vederlo tutto insieme.</span></h1>
     <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per prodotto Zoho. Il tuo codice
-      Deluge, lo schema dei tuoi moduli, i tuoi workspace e l'SQL che ci sta dietro oggi li puoi guardare solo
-      un oggetto per volta, dentro una scheda del browser. Zoost li copia tutti in file leggibili sul tuo disco,
+      Deluge, lo schema dei tuoi moduli, i tuoi workspace, l'SQL che ci sta dietro: oggi li guardi un oggetto
+      per volta, dentro una scheda del browser. Zoost li copia tutti in file leggibili sul tuo disco,
       e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
@@ -115,7 +115,7 @@
 <section id="the-workbenches">
   <div class="wrap">
     <h2>I workbench</h2>
-    <p class="note" data-it-only style="margin-bottom:20px">Workbench: il banco da lavoro, non l'editor. Si guarda e si misura quello che hai costruito; a scriverlo si continua in Zoho.</p>
+    <p class="note" data-it-only style="margin-bottom:20px">Workbench: il banco da lavoro, non l'editor. Ci guardi e ci misuri quello che hai costruito; a scriverlo continui in Zoho.</p>
     <div class="prod">
 
       <div class="card">
@@ -138,7 +138,7 @@
         <div class="ph">
           <img src="/analytics-192.png" alt="">
           <h3>Zoost - workbench for Zoho Analytics</h3>
-          <span class="st wip" data-store="analytics">inviata, in revisione</span>
+          <span class="st live">sul Chrome Web Store</span>
         </div>
         <p>Ogni vista di un workspace con tipo, cartella e date, le colonne e le chiavi esterne di ogni tabella,
           l'SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa
@@ -146,14 +146,13 @@
         <div class="plinks">
           <a href="/it/analytics.html">Cosa fa →</a>
           <a href="/it/docs-analytics.html">Come si usa →</a>
-          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge" data-install="analytics" hidden>Installa ↗</a>
+          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Installa ↗</a>
         </div>
       </div>
 
     </div>
-    <p class="note" style="margin-top:22px">Gratuiti, open source, ognuno con la sua guida scritta.
-      <span data-install="analytics" hidden>Entrambi sono sul Chrome Web Store.</span>
-      <span data-pending="analytics">Zoost CRM è sul Chrome Web Store; l'estensione per Zoho Analytics è stata inviata ed è in revisione.</span></p>
+    <p class="note" style="margin-top:22px">Gratuiti, open source, ognuno con la sua guida scritta. Sono
+      tutti e due sul Chrome Web Store.</p>
   </div>
 </section>
 
@@ -191,7 +190,7 @@
       <div>
         <h3>Verificabile, non solo dichiarato</h3>
         <p>Ogni release la costruisce GitHub da un commit taggato, due volte per dimostrare che i byte sono
-          riproducibili, e la firma. L'archivio allegato alla Release è il file mandato allo Store, e un
+          riproducibili, e poi la firma. L'archivio allegato alla Release è il file mandato allo Store, e un
           comando ti dice se è vero.</p>
       </div>
       <div>
@@ -212,12 +211,12 @@
   <div class="wrap">
     <h2>Se sei tu che devi approvarlo</h2>
     <p class="lead" style="max-width:62ch">Qualcuno ti ha chiesto se può installare un'estensione del
-      browser che legge il vostro Zoho CRM. Sei righe, senza gergo.</p>
+      browser che legge il vostro Zoho CRM, o il vostro Zoho Analytics. Sei righe.</p>
     <table style="max-width:62ch">
       <tbody>
-        <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni. <b>Mai un record di un cliente</b>: né contatti, né trattative, né note.</td></tr>
+        <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni, la struttura di un workspace. <b>Mai i dati veri e propri</b>: in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.</td></tr>
         <tr><td class="k">Cosa scrive</td><td>Su Zoho, niente. Non chiama nessun endpoint che crea, modifica o cancella.</td></tr>
-        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di quella persona. Nessun nostro server, nessun account, nessuna telemetria.</td></tr>
+        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di quella persona. Nessun server, nessun account, nessuna telemetria.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI opzionale, spento finché qualcuno non inserisce una chiave API sua. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona già vede in Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Come verificarlo</td><td>Il sorgente è una ventina di file leggibili. Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.</td></tr>

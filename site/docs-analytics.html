@@ -106,7 +106,7 @@
           the tab and the folder agree again.</td></tr>
     </tbody>
   </table>
-  <p class="box">Zoost is <b>read-only</b> towards Zoho Analytics. It never creates, edits or deletes a view,
+  <p class="box">Zoost only ever <b>reads</b> from Zoho Analytics. It never creates, edits or deletes a view,
     and it never reads the rows inside your tables - the endpoints that return cell values exist and are
     deliberately not called. The worst it can do to your workspace is nothing. One of the calls it makes is a POST whose URL contains <code>CREATE</code> - that is Zoho's own name for the request that returns the ER model, and it computes rather than creates. Said here so that finding it does not look like a discovery.</p>
 
@@ -266,7 +266,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     an assistant reading that file does not write queries that cannot run.</p>
 
   <h2 id="ai">12. AI assistant &amp; API keys</h2>
-  <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho Analytics?" and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
+  <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho Analytics?" and it answers from the panel, without sending you anywhere. Write to it in whatever language you like and it answers in that one. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional, and off until you configure it. <b class="ui">⚙ Settings</b> → pick a provider, paste a
     model name and your own API key.</p>
   <h3>Anthropic (Claude) - full agent</h3>

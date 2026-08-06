@@ -75,7 +75,6 @@ f55c98cb55cee18c  site/crm.html: Everything else the pull captures - module sche
 ae5ac05569b3b2c5  site/crm.html: Grep your whole org Full-text search across every Deluge function at once - the thing Zoho has never had.
 b5dd5ce4a1587ec5  site/crm.html: The health check Orphan candidates, unresolved calls, broken automations, lookups pointing at nothing.
 f9b098c6a5e4c44a  site/crm.html: What's inside Every function, as a file Deluge source in namespaced folders, ready for Git.
-1cad8cf0ea477c64  site/crm.html: Your whole Zoho CRM org on your own disk, searchable in one go - and read-only towards Zoho.
 d25714f7b43b08a1  site/crm.html: Zoost catalogues every relation with the call ready to copy.
 a543ff6e432689fe  site/crm.html: Zoost uses your existing session and your existing permissions - it can see exactly what you can see, and nothing more.
 588d936f4c3cfac9  site/docs-analytics.html: A report shows no columns Only tables and query tables have columns of their own.
@@ -123,8 +122,8 @@ f3d9bb4356cf7ee0  site/docs-analytics.html: What nothing depends on 10.
 63b37067695ba792  site/docs-analytics.html: When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary: tables and query tables are never dropped, because they are the vocabulary needed to write a query or follow a foreign key, and reports go first because the assistant can still find those by name.
 d7ec42cad6a53999  site/docs-analytics.html: Workspace index is how much of the workspace is described to the assistant with every message - bigger means it knows more names, and it is billed each time.
 45ec1e855ad024e5  site/docs-analytics.html: Zoho Analytics only knows what its own views read from each other.
-795ad459c95a6f20  site/docs-analytics.html: Zoost is read-only towards Zoho Analytics.
 1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
+13c896893d2759e0  site/docs-analytics.html: Zoost only ever reads from Zoho Analytics.
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
 687f4dbbe3ee516c  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
@@ -181,14 +180,14 @@ f855fea0bf8991b7  site/index.html: A function that runs to four hundred lines ma
 c03de625dbaec76b  site/index.html: Each Zoost keeps its own subfolder inside it, so a single folder serves them all and the two never meet.
 fa7c3c02eeb3c83e  site/index.html: Every figure says what it does not cover, right beside itself.
 9363d78429d0bd6f  site/index.html: It uses their session and their permissions, and can do nothing they could not do.
-b7aa05f5d9fcda99  site/index.html: Never a customer record - no contacts, no deals, no notes.
+3f119e77b69090c8  site/index.html: Never the data itself - in Zoho CRM no contacts, no deals, no notes; in Zoho Analytics never the rows inside a table.
 f1bb58292cbc1041  site/index.html: Nothing leaves the machine No server, no account, no telemetry.
 776fde2eb11a94cb  site/index.html: The only exception is the optional AI assistant, and only if you give it your own key.
 b194c2527f6df28a  site/index.html: The workbenches What every Zoost has in common Free · Apache-2.0 · no account The workbenches Zoost - workbench for Zoho CRM on the Web Store Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
 468ad9a55a40758b  site/index.html: Then, and only then, the parts it needs go to Anthropic or OpenAI.
 7b8a966d5bc6b5f4  site/index.html: What every Zoost has in common It only reads No Zoost calls an endpoint that creates, edits or deletes anything in Zoho.
-5dc075096190c4ec  site/index.html: What it does → How to use it → Install ↗ Zoost - workbench for Zoho Analytics submitted, in review Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of what nothing depends on any more.
-9889a5afe52be1a6  site/index.html: What it reads Configuration only: code, field definitions, automations.
+5599d3e1481a63cd  site/index.html: What it does → How to use it → Install ↗ Zoost - workbench for Zoho Analytics on the Web Store Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of what nothing depends on any more.
+482b466bb7f7447b  site/index.html: What it reads Configuration only: code, field definitions, automations, the structure of a workspace.
 454b40a487034f93  site/index.html: What it writes To Zoho, nothing.
 8bb925dceb5a87f4  site/index.html: Zoost copies all of it to plain files on your own disk, then draws you the map: what calls what, what depends on what, what nothing uses any more.
 d147951a6b256523  site/it/analytics.html: Candidati, mai un verdetto - un link condiviso o un export schedulato sono invisibili a quel grafo, e il numero lo dice.
@@ -200,15 +199,13 @@ d52fc79b9dc37e6b  site/it/analytics.html: Cosa non fa Non chiama nessun endpoint
 1d8172c11bfc5f5b  site/it/analytics.html: Cosa non serve più a nessuno La risposta di Zoho Analytics stessa sulle dipendenze, chiesta una volta per tutto invece che una vista per volta.
 aa33547088a0b526  site/it/analytics.html: Export, e un assistente opzionale Tutto il workspace come un unico file HTML, o in Markdown - che si porta dietro i vincoli del dialetto SQL di Zoho Analytics, così un assistente non scrive query che non possono girare.
 3a45b6ce4ce08a5d  site/it/analytics.html: Gli endpoint che restituiscono i valori delle celle esistono, e deliberatamente non vengono chiamati - che è anche il motivo per cui l'assistente AI non potrà mai dirti cosa c'è dentro i dati.
-3ce5b91daf803721  site/it/analytics.html: Il mirror è fatto di file leggibili - JSON e SQL - quindi con Git git diff risponde a cosa è cambiato in questo workspace il mese scorso - la domanda che conta di più il giorno in cui un numero si muove e nessuno sa perché.
+af678279002407fc  site/it/analytics.html: Il mirror è fatto di file che si leggono con un editor qualsiasi (JSON e SQL), quindi con Git git diff risponde a cosa è cambiato in questo workspace il mese scorso - la domanda che conta di più il giorno in cui un numero si muove e nessuno sa perché.
 964b088e438e7e58  site/it/analytics.html: Il modello ER di Zoho Analytics sa quali, e l'elenco delle viste le marca - così l'inventario è del tuo lavoro, non di tutto.
 3318977f6451c9e8  site/it/analytics.html: Il pannello prende il workspace dalla scheda su cui sei: non c'è niente da configurare e niente da sbagliare.
-55d3a1458c1dd2d5  site/it/analytics.html: Installa dal Chrome Web Store Leggi la guida Cosa c'è dentro Gratuito · Apache-2.0 · nessun account Questa pagina è in italiano, e così la guida e la privacy policy.
 dccb86ccec2921d2  site/it/analytics.html: L'SQL, come file Un .sql per query table - l'unica cosa qui dentro che qualcuno ha scritto davvero, e la parte su cui git diff ha qualcosa da dire.
 88a73b5f031c57bd  site/it/analytics.html: L'unica cosa che esce dalla tua macchina è quello che scegli di mandare a un provider AI, e mai le righe delle tue tabelle.
 65860ad4428d52f7  site/it/analytics.html: La struttura, anche dei report Colonne e tipi di dato Zoho per ogni tabella e query table.
 3f7a9f5c19921282  site/it/analytics.html: Le chiavi esterne su ogni colonna, nelle due direzioni : verso cosa punta, e cosa punta a essa.
-758b14f7abd8da70  site/it/analytics.html: Nessun server, nessun account, nessuna telemetria.
 d928e81e1ecdc427  site/it/analytics.html: Non legge mai le tue righe Solo struttura, relazioni, SQL e metadati.
 b1d4f838c0f076e7  site/it/analytics.html: Non valida l'SQL Zoost non esegue, non controlla e non fa il deploy di nessuna query.
 33d958c4fff6f046  site/it/analytics.html: Ogni prodotto ci tiene la propria sottocartella.
@@ -222,10 +219,11 @@ dbba75d94d757891  site/it/analytics.html: Per ogni vista: cosa legge, chi la leg
 1c1a09589f236158  site/it/analytics.html: Una storia per tutto quello che hai scaricato Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una relazione e lo stato precedente non esiste più.
 67f220af507b1c3e  site/it/analytics.html: Zoost Analytics - guarda la forma di un workspace Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English Centinaia di viste, e nessun modo di vederne la forma.
 2c57a6f2d6f4661e  site/it/analytics.html: Zoost la fa una volta sola per tutto - e chiama la risposta un candidato , perché un link condiviso o un export schedulato quel grafo non li vede.
+63bf25908c9373f3  site/it/crm.html: Con Git una storia ce l'ha anche quella parte, e un unico diff risponde a cosa è cambiato in quest'org il mese scorso su tutti i tipi insieme, invece che una funzione per volta.
 2ec33570b08d760b  site/it/crm.html: Cosa c'è dentro Ogni funzione, come file Sorgente Deluge in cartelle per namespace, pronto per Git.
 c511c199d05419bb  site/it/crm.html: Esplora: segui una chiamata, apri il grafo, lancia l'audit di salute, oppure esporta tutto.
 8bb0245de7502ce2  site/it/crm.html: Export, e un assistente opzionale Tutto il workspace come un unico file HTML autoconsistente, o in Markdown per uno strumento AI.
-c8cc6cb52f3733e3  site/it/crm.html: I nomi delle relazioni che continui a perdere L'API name di una related list non è l'api name di nessuno dei due moduli - ed è quello che getRelatedRecords() pretende.
+f286dcf3f380d3ef  site/it/crm.html: I nomi delle relazioni che continui a perdere L'API name di una related list non è l'API name di nessuno dei due moduli - ed è quello che getRelatedRecords() pretende.
 baa0384375278779  site/it/crm.html: Installa dal Chrome Web Store Cosa c'è dentro Gratuito · Apache-2.0 · nessun account Questa pagina è in italiano, e così la guida e la privacy policy.
 8eac5e35d88af80f  site/it/crm.html: L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del workspace che gli serve, sorgente Deluge compreso, va al provider che configuri.
 5f5bcce742d9f829  site/it/crm.html: Nessuna soglia, nessun allarme rosso, nessun punteggio.
@@ -236,15 +234,17 @@ c5b6fdd668497d91  site/it/crm.html: Perché esiste Una storia per tutto quello c
 be3feb0f650da51c  site/it/crm.html: Ricerca full-text su tutte le funzioni insieme - la cosa più vicina a un grep sulla tua org, e qualcosa che Zoho non offre.
 1839fa09cec2ba2c  site/it/crm.html: Trova ogni punto in cui un campo, un modulo, un endpoint o un id scritto a mano è referenziato, prima di cambiarlo.
 570942241a4f1f8c  site/it/crm.html: Tutta l'org in un colpo solo Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto navigabile, e in un unico documento da condividere con chi l'estensione non ce l'ha.
-6a9a33d4b1918986  site/it/crm.html: Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow, schedulazioni, connessioni - arriva sul tuo disco come file leggibili - sorgente, JSON - quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a cosa è cambiato in quest'org il mese scorso su tutti i tipi insieme invece che una funzione per volta.
+ffacf191628b58d2  site/it/crm.html: Tutta la tua org Zoho CRM sul tuo disco, cercabile in un colpo solo - e non chiama nessun endpoint che ci crea, modifica o cancella qualcosa.
+fe249d2b146f23b7  site/it/crm.html: Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow, schedulazioni, connessioni - arriva sul tuo disco come file che si leggono con un editor qualsiasi (sorgente, JSON).
 6b2b7097c13c1272  site/it/crm.html: Tutto il resto funziona anche senza.
 13af61e78311823a  site/it/crm.html: Tutto il resto resta locale.
 f6a3869a048414d6  site/it/crm.html: Un grep su tutta l'org Ricerca full-text su tutte le funzioni Deluge insieme - la cosa che Zoho non ha mai avuto.
 37db9d46660af650  site/it/crm.html: Zoost cataloga ogni relazione con la chiamata pronta da copiare.
 3dcd697de3e09088  site/it/crm.html: Zoost usa la tua sessione e i tuoi permessi esistenti - vede esattamente quello che vedi tu, e niente di più.
-7ab92fc16c57ecae  site/it/docs-analytics.html: All'assistente viene detto cosa Zoho documenta sulla SQL delle query table - solo SELECT, identificatori fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query sopra query.
+e3de29805fdbe7d2  site/it/docs-analytics.html: All'assistente viene detto cosa Zoho documenta sull'SQL delle query table - solo SELECT, identificatori fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query sopra query.
 5969be0f4af36010  site/it/docs-analytics.html: Allo sviluppatore non va niente.
 a6984aa1990f784e  site/it/docs-analytics.html: Ambra con una fila di azioni vuol dire che non lo sono, e tutto quello che parla con Zoho resta disattivato finché non scegli una delle due vie d'uscita che ti offre.
+8a1aaa31f108856a  site/it/docs-analytics.html: Anthropic (Claude) - agente completo Gira con strumenti in sola lettura sul mirror locale: legge una struttura, segue una chiave esterna, apre l'SQL di una query, cerca fra le colonne e dice cosa dipende da cosa, scegliendo da sé quali usare.
 b4a67f06699ae600  site/it/docs-analytics.html: Anthropic (Claude) OpenAI (ChatGPT) Modalità Agente con strumenti in sola lettura Passaggio singolo Cosa vede Quello che decide di aprire: struttura, chiavi esterne, SQL e lineage di qualsiasi vista, più la ricerca su colonne e SQL L'indice del workspace e la vista aperta in quel momento Avanzamento Ogni chiamata a uno strumento compare nella chat mentre avviene Un indicatore «thinking…» finché non arriva la risposta Va bene per «Cosa legge da questa tabella?», «esiste già una query che unisce queste due?» Domande circoscritte sulla vista che hai davanti Quale scegliere Claude per tutto quello che richiede di guardarsi intorno - «cosa legge da questa tabella», «esiste già una query che unisce queste due» - perché sono domande che costano più letture.
 9cf0c290f8be0c1f  site/it/docs-analytics.html: Candidati, mai un verdetto.
 b661b3fd9789d19a  site/it/docs-analytics.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho Analytics?» e risponde dal pannello, senza mandarti da nessuna parte.
@@ -261,9 +261,9 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 8ee19b1593b9cd1a  site/it/docs-analytics.html: Il pull Pull all legge tutto il workspace in un passaggio: l'elenco delle viste, le colonne e i tipi di ogni tabella e query table, le relazioni fra loro, l'SQL di ogni query table e il grafo delle dipendenze.
 63783a6966eb8c5a  site/it/docs-analytics.html: L'opzione SQL sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.
 0ed5a31bb52ce3b8  site/it/docs-analytics.html: La finestra ha anche una scheda Relations : una riga per join, cercabile per tabella, colonna o join, e ogni join si può copiare.
-75d30b268b323c6d  site/it/docs-analytics.html: La legge e la scrive su disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
+82d595fa2cd12539  site/it/docs-analytics.html: Lo legge e lo scrive su disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.
 99c03c40c16faca3  site/it/docs-analytics.html: Markdown (il pulsante si legge MD ) produce la stessa cosa nella forma adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.
 5ab8f22c06c9b887  site/it/docs-analytics.html: Metterlo sotto Git Nella cartella del workspace: cd <cartella di lavoro>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" Quello che ti ritrovi su disco: views.json il censimento: ogni vista con tipo, cartella, proprietario, date, tag schema.json colonne e tipi di dato per tabella, più le relazioni lineage.json chi legge da cosa, nelle due direzioni sql/*.sql un file per query table - la parte su cui il diff ha qualcosa da dire sql/index.json la mappa id-file, e quali colonne sorgente coinvolge ogni query export/ i report che generi I file .sql sono il punto.
 ae0ed2b91841f946  site/it/docs-analytics.html: Non c'è niente da scegliere e niente da sbagliare.
@@ -293,11 +293,13 @@ b8b4619cdced3dc9  site/it/docs-analytics.html: Tutto quello che Zoost scrive sta
 c6da6316ff3b9710  site/it/docs-analytics.html: Workspace Una cartella per ogni workspace di Zoho Analytics, dentro analytics/ .
 c7df48eecd6e70bb  site/it/docs-analytics.html: Workspace index è quanta parte del workspace viene descritta all'assistente a ogni messaggio - più grande vuol dire che conosce più nomi, ed è fatturata ogni volta.
 d9c9a775e83d9c75  site/it/docs-analytics.html: Zoho Analytics sa soltanto cosa leggono le sue viste l'una dall'altra.
-6bb11a5c04d65b92  site/it/docs-analytics.html: Zoost non esegue, non valida e non fa il deploy di nessuna SQL.
+cbdf2ba58ab43188  site/it/docs-analytics.html: Zoost non esegue, non valida e non fa il deploy di nessun SQL.
+08519e4ba10d3f2e  site/it/docs-analytics.html: Zoost su Zoho Analytics legge soltanto .
 cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da nessuna parte.
 885f1eba51027648  site/it/docs-crm.html: Cifrarla con un segreto tenuto lì accanto sembrerebbe protezione e non ne offrirebbe nessuna.
 508eeb9f3218d23a  site/it/docs-crm.html: Clicca Refresh outdated nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.
 84b20be5c8cc2e97  site/it/docs-crm.html: Clicca un arco per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce, e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.
+6de4ac28e60a23ed  site/it/docs-crm.html: Con Anthropic l'assistente gira come agente con strumenti in sola lettura: apre funzioni, risale i chiamanti, legge schemi, cerca una connessione e chi la usa, e fa ricerche nel codice da sé.
 cdfaa0d9c12ccf03  site/it/docs-crm.html: Conosce anche la dimensione di ogni funzione e i conteggi delle chiamate in uscita, e può usarli per filtrare - così «quante funzioni sono più lunghe di 150 righe?» oppure «quali fanno più di cinque chiamate API?» hanno una risposta presa dai numeri, non stimata.
 09c765b9aca336f8  site/it/docs-crm.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono arrivare su disco identici, e l'id di un'istanza Zoho CRM è esatto senza essere memorabile.
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
@@ -356,7 +358,7 @@ e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consent
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
 d295701fb2f2f160  site/it/docs-crm.html: Spegnere una scheda spegne anche quello, perché quasi sempre una scheda si spegne per un'area che l'account non può leggere e chiederla produrrebbe solo un errore - riaccendilo se rispecchi un tipo per Git senza volerlo sfogliare.
 4a3206eb467b140e  site/it/docs-crm.html: Togliere una chiave, e cambiare motore Ogni blocco provider ha un pulsante Forget : svuota il modello e la chiave, e la rimozione ha effetto quando premi Save AI settings .
-d1feb30503f6387f  site/it/docs-crm.html: Trovare il nome di una relazione L'API name di una related list non è l'api name di nessuno dei due moduli.
+f9361537f89b4ce0  site/it/docs-crm.html: Trovare il nome di una relazione L'API name di una related list non è l'API name di nessuno dei due moduli.
 de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata a ogni messaggio, quindi un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
 11bf4ce1dde20ab4  site/it/docs-crm.html: Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.
 103ff924d2b7fcdd  site/it/docs-crm.html: Tutto ciò che dipende da questa connessione è già rotto.
@@ -378,7 +380,7 @@ c8edf3ee22bc1e8a  site/it/docs-crm.html: È tutto disattivato O non c'è nessuna
 0bb03a33cbbdce12  site/it/how-to.html: Cosa fa → Leggi la guida → Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un passaggio, la struttura di una tabella e le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, cosa non dipende più da niente, gli export e l'assistente AI.
 2ff11052a7cf15b8  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, l'audit di salute, gli export e l'assistente AI.
 cbfeaa6ed6a7a299  site/it/index.html: Ci sono tutte e due.
-f5007686c03afb75  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost - workbench for Zoho Analytics inviata, in revisione Ogni vista di un workspace con tipo, cartella e date, le colonne e le chiavi esterne di ogni tabella, l'SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa non dipende più da niente.
+5704061a9abc8c69  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost - workbench for Zoho Analytics sul Chrome Web Store Ogni vista di un workspace con tipo, cartella e date, le colonne e le chiavi esterne di ogni tabella, l'SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa non dipende più da niente.
 9721ebacec96fda2  site/it/index.html: Cosa hanno in comune tutti gli Zoost Legge soltanto Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa in Zoho.
 9d00ef1953415caf  site/it/index.html: Cosa scrive Su Zoho, niente.
 f50ddd306d8cadb7  site/it/index.html: E da oggi con Zoost puoi vederlo tutto insieme.
@@ -386,19 +388,20 @@ f50ddd306d8cadb7  site/it/index.html: E da oggi con Zoost puoi vederlo tutto ins
 c9159d65751daaab  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese perché la legge una macchina.
 a13d7d8212afa7c9  site/it/index.html: L'unica eccezione Un assistente AI opzionale, spento finché qualcuno non inserisce una chiave API sua.
 e090dcc1fedf1a97  site/it/index.html: L'unica eccezione è l'assistente AI opzionale, e solo se gli dai una chiave tua.
-e93c7be55c76975f  site/it/index.html: Mai un record di un cliente : né contatti, né trattative, né note.
+a1ee46619266380e  site/it/index.html: Mai i dati veri e propri : in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.
 e45064aa656e5cea  site/it/index.html: Mettila sotto controllo di versione e git diff risponde a cosa è cambiato il mese scorso - cosa che nessuno dei due prodotti sa dire di sé stesso.
-ddf0e4d18dafa99f  site/it/index.html: Nessun nostro server, nessun account, nessuna telemetria.
+758b14f7abd8da70  site/it/index.html: Nessun server, nessun account, nessuna telemetria.
 d1d0d7f928940193  site/it/index.html: Niente esce dalla macchina Nessun server, nessun account, nessuna telemetria.
 3d831a1c842ab246  site/it/index.html: Non chiama nessun endpoint che crea, modifica o cancella.
 2c6ccd302ae0a535  site/it/index.html: Ogni Zoost ci tiene la propria sottocartella, così una cartella sola li serve tutti senza che si pestino i piedi.
 e2a55efe25db828c  site/it/index.html: Ogni cifra dichiara cosa non copre, lì accanto.
 856e00a7fe3f4b41  site/it/index.html: Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.
+77625100f619ed61  site/it/index.html: Sono tutti e due sul Chrome Web Store.
 cee6466af7993ab2  site/it/index.html: Sta tutto sulla pagina nerd , che è dove deve stare.
 09b89d8f8a1aceb5  site/it/index.html: Tutto insieme, in una volta Cerchi dappertutto insieme, segui un nome fino a dove viene usato, e condividi il tutto con un collega come un unico documento.
 eb7cc75416b533ca  site/it/index.html: Una funzione che arriva a quattrocento righe può essere una tabella di conversione scritta benissimo, e quali sono le tue lo sai solo tu: per questo qui niente viene valutato o segnalato in rosso.
 d00bf0d5eae23f16  site/it/index.html: Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.
-2572f0c78f89d1b1  site/it/index.html: Verificabile, non solo dichiarato Ogni release la costruisce GitHub da un commit taggato, due volte per dimostrare che i byte sono riproducibili, e la firma.
+7b61881ff805c608  site/it/index.html: Verificabile, non solo dichiarato Ogni release la costruisce GitHub da un commit taggato, due volte per dimostrare che i byte sono riproducibili, e poi la firma.
 6b873e335fb84fe1  site/it/index.html: Zoost - workbench for Zoho CRM sul Chrome Web Store Le funzioni Deluge come file versionabili, la ricerca full-text su tutte insieme, il grafo di chi chiama cosa, lo schema dei moduli con i layout, gli API name delle related list che devi sempre andare a ricercare, i workflow, le schedulazioni e il catalogo delle connessioni.
 b8ee6d09ea4ab225  site/it/index.html: Zoost - workbench per i prodotti Zoho su cui hai costruito Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English Tutto quello che hai costruito dentro Zoho è tuo.
 f1a2d62870399099  site/it/index.html: Zoost li copia tutti in file leggibili sul tuo disco, e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.
@@ -413,11 +416,11 @@ ccebd1b707d02b66  site/it/nerd.html: Cosa è promesso, e cosa no Quelle interfac
 8f8ee752d82c5346  site/it/nerd.html: Il suo URL contiene CREATE e non crea niente: calcola e restituisce il modello.
 49856fac75cd479a  site/it/nerd.html: In questa pagina Interfacce non documentate O certi, o fermi Cosa non viene mai chiamato Cosa è promesso, e cosa no Come viene costruita una release Verificalo tu Cosa non dimostra niente di tutto questo Interfacce non documentate Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge.
 dbe3c715ed89cdc9  site/it/nerd.html: L'archivio allegato alla Release è il file inviato al Chrome Web Store - mai una build fatta su un portatile.
-bbc5d5a06f236da5  site/it/nerd.html: La pagina nerd - come funziona davvero Zoost Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English La pagina nerd Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita una release, e come verificare ognuna di queste cose senza doverci credere sulla parola.
-1541962d54f5613d  site/it/nerd.html: La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le nostre lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
+5cdbc13944301893  site/it/nerd.html: La pagina nerd - come funziona davvero Zoost Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English La pagina nerd Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita una release, e come verificare ognuna di queste cose senza doverti fidare della mia parola.
+bf1b349c86f1f0c2  site/it/nerd.html: La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
 7a4c9e4f92fe3c3a  site/it/nerd.html: Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un 4xx deterministico), e il recupero tramite un'azione che è stata misurata - la prima chiamata /deluge/ dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema, e questo è stato riprodotto apposta invece che ipotizzato.
 4c7c3b7b057ce3c9  site/it/nerd.html: Nessun aggancio a un'etichetta che cambia con la lingua dell'interfaccia.
-333b56868ec3fea7  site/it/nerd.html: Nessun click sintetico dentro una pagina che non è nostra.
+3deeaaf9c667c437  site/it/nerd.html: Nessun click sintetico dentro una pagina che non è mia.
 028ce7323fee6ba5  site/it/nerd.html: Niente è garantito - lo dice la licenza e lo dice questa pagina.
 af6695a6b2109ec4  site/it/nerd.html: Non legge nessun header e nessun corpo di risposta, e non altera niente di quello che la pagina invia o riceve.
 e3154aa353fd4b89  site/it/nerd.html: O certi, o fermi Nessun ciclo di tentativi contro un'ipotesi.
@@ -425,8 +428,10 @@ e3154aa353fd4b89  site/it/nerd.html: O certi, o fermi Nessun ciclo di tentativi 
 e29f01092166be20  site/it/nerd.html: Ora la build marca ogni file con la data del commit, ordina l'elenco dei file e passa -X .
 200ce27aec50985a  site/it/nerd.html: Quindi le definizioni dei report restano non coperte , e ogni superficie lo dice invece di lasciar credere che il mirror sia completo.
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
+8b65eed0c207c257  site/it/nerd.html: Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
 0615b2c5d8138bb4  site/it/nerd.html: Verificalo tu gh attestation verify <file> --repo ivannot/zoost chiede a GitHub se ha costruito esattamente quell'archivio tools/verify.sh lo ricostruisce sulla tua macchina e confronta gli hash RELEASES.md commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di non poter verificare, e perché llms.txt la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto invece di riassumere la pagina Nessuno dei due comandi ti chiede di fidarti di me.
 5a96417e721b15e9  site/it/nerd.html: Zoost dichiara di non leggere mai le tue righe, quindi non lo chiama.
+7c20b76e0b5a4528  site/it/nerd.html: È nominata qui perché chiunque voglia verificare alla lettera l'affermazione «in sola lettura» la troverà, e trovarla senza preavviso si leggerebbe come una bugia colta sul fatto invece che per quello che è.
 2097a55846824c2f  site/it/privacy.html: 4.3 Gli export I file di export vengono scritti nella tua cartella di lavoro e non vanno da nessuna parte da soli.
 d327e0062c0df5fb  site/it/privacy.html: Accesso agli host api.anthropic.com e api.openai.com - le uniche due destinazioni AI che l'estensione può raggiungere, usate soltanto dall'assistente AI opzionale e soltanto dopo che l'hai configurato.
 662dd08c528c4279  site/it/privacy.html: Accesso agli host dei domini Zoho che ogni estensione legge.
@@ -437,16 +442,18 @@ b5896d1e9b1c9dcf  site/it/privacy.html: Cartella locale (File System Access) Zoh
 22c96fb783aaedf2  site/it/privacy.html: Cosa viene conservato, e dove Tutto quello che Zoost conserva sta sul computer che stai usando.
 c04e424280b6f242  site/it/privacy.html: Così la passphrase si digita una volta per sessione del browser invece che a ogni domanda.
 1b33b152d4287674  site/it/privacy.html: Di conseguenza lo sviluppatore non vende, non condivide, non trasferisce e non tratta in nessun altro modo i tuoi dati personali, perché non ne riceve nessuno.
-4663a64e7e8cd176  site/it/privacy.html: Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data centre di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data centre di Zoho Analytics.
+94a62cbf85d52025  site/it/privacy.html: Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data center di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data center di Zoho Analytics.
 8edf18f7c26c16ff  site/it/privacy.html: Disattivare la protezione richiede la passphrase in uso, perché rimettere la chiave in chiaro vuol dire prima decifrarla; se è sbagliata o assente non viene cambiato niente e la chiave cifrata viene conservata invece che buttata.
 18b7d9bc3c35a33a  site/it/privacy.html: Dove Cosa Perché Cartella locale (File System Access) Zoho CRM Il sorgente delle funzioni Deluge e i suoi metadati (comprese le connessioni che ogni funzione usa e chi l'ha modificata per ultimo), i metadati di moduli e layout, le related list, i workflow, le schedulazioni, il catalogo delle connessioni dell'org (nomi, connettori e scope OAuth - mai i segreti o i token delle connessioni), gli export, e un piccolo .zoost.json per workspace che contiene l'id dell'org Zoho, l'host e il nome dell'istanza, più quali tipi Zoho ha concesso e quali ha rifiutato, con la data in cui è stato chiesto e la data dell'ultima lettura di ciascun tipo, più un nome per il workspace se gliene hai dato uno.
-4af6e1c8daf009b3  site/it/privacy.html: Entrambe elencano tutti i data centre perché un account può trovarsi su uno qualsiasi di essi.
+00f716b68e83035a  site/it/privacy.html: Entrambe elencano tutti i data center perché un account può trovarsi su uno qualsiasi di essi.
 92c414e7501a9235  site/it/privacy.html: Gli ultimi due sono più stretti del default e non costano niente, perché niente di quello che viene distribuito usa un form o un elemento <base> .
 b182ee366a7f5cbb  site/it/privacy.html: I dati che stanno dentro i tuoi prodotti Zoho restano regolati dal tuo contratto con Zoho e dalle policy della tua organizzazione; questo documento copre soltanto quello che le estensioni Zoost ci fanno.
 ef97fc0afb6c4687  site/it/privacy.html: I primi due sono quello che il Manifest V3 impone già - niente script inline, niente codice caricato da altrove - messo per iscritto invece che dato per scontato in silenzio.
 27dbd892d6915dae  site/it/privacy.html: Il workbench per Zoho CRM elenca crm.zoho.* e crmsandbox.zoho.* - e le loro controparti crm.zohocloud.ca e crmsandbox.zohocloud.ca - che legge, e one.zoho.* con one.zohocloud.ca , che non legge: quello c'è soltanto perché il pannello possa capire che la scheda su cui sei appartiene a Zoho One e di quale org si tratta.
-e05ce97ca55cc12d  site/it/privacy.html: In breve Zoost non raccoglie niente.
+cfdea7a04c0e565e  site/it/privacy.html: In breve Lo sviluppatore non raccoglie niente.
 7e0e9b1a29b896e7  site/it/privacy.html: L'unica eccezione è l'assistente AI opzionale, che manda quello di cui gli chiedi al provider AI che configuri tu con una chiave API tua .
+99d205dce056cd4c  site/it/privacy.html: L'unica eccezione è questo sito, e la spiega il §8.
+824e85a3fb785b4c  site/it/privacy.html: L'unico punto in cui lo sviluppatore è titolare del trattamento.
 e1262328ef0af057  site/it/privacy.html: La passphrase in sé non viene mai conservata, mai mandata da nessuna parte, e non può essere recuperata: se la dimentichi, reinserisci la chiave API e ne scegli una nuova.
 961ca755a1d50feb  site/it/privacy.html: La tua chiave API è conservata sulla tua macchina in chrome.storage.local , che è dove un'estensione Chrome tiene le proprie impostazioni, ed è mandata soltanto al provider a cui appartiene.
 da3db7ced96e2ff2  site/it/privacy.html: Le pagine sono file statici; l'unico script è un piccolo file servito da questo stesso dominio, che compila l'anno del copyright e il badge delle versioni nel footer.
@@ -454,7 +461,6 @@ a1cc2c2686281fac  site/it/privacy.html: Mai le righe dentro le tue tabelle : l'e
 fb5a99d82ea847ce  site/it/privacy.html: Nessun'altra destinazione è possibile: all'estensione è concesso l'accesso di rete a quelle due origini e al tuo prodotto Zoho, e a nient'altro.
 98b974ad98c7a3df  site/it/privacy.html: Niente di tutto questo viene trasmesso da nessuna parte.
 76a2665de4c20875  site/it/privacy.html: Non esiste nessun servizio di backend gestito dallo sviluppatore, quindi non c'è nessun posto in cui i tuoi dati possano arrivare.
-701c4b3176b25ed8  site/it/privacy.html: Non ha server, non ha account, non ha analytics e non ha nessuna forma di tracciamento.
 2e1ab5c1f5a1628b  site/it/privacy.html: Non può mai mandare le righe dentro una tabella, perché non le legge mai: quindi l'assistente conosce la struttura del tuo workspace e mai i suoi valori.
 4db961616b857031  site/it/privacy.html: Opera rigorosamente dentro i permessi Zoho che hai già: può leggere esattamente quello che può leggere il tuo utente Zoho, e niente di più.
 5258dd171057f1db  site/it/privacy.html: Per Zoost CRM quel contenuto è codice sorgente Deluge , schemi dei moduli, definizioni dei workflow, nomi delle connessioni e loro connettori (mai i segreti o i token, che Zoost non legge mai), e le tue domande.
@@ -465,10 +471,16 @@ a0294b8c08526d36  site/it/privacy.html: Puoi cancellare tutto in qualsiasi momen
 c865f2d8a26e2388  site/it/privacy.html: Quali estensioni copre Questa policy copre tutte le estensioni della famiglia Zoost.
 0dec05961f823bce  site/it/privacy.html: Quelle richieste le fa il server, non il tuo browser: a Google e a GitHub non viene mandato niente di tuo, non è coinvolto nessun tuo identificatore, e la risposta è messa in cache uguale per tutti.
 aeab5a95a0348542  site/it/privacy.html: Sono estensioni separate con permessi separati, ma si comportano in modo identico sotto ogni aspetto descritto in questo documento: nessun server, nessun account, nessuna telemetria, un mirror locale in una cartella che scegli tu, e un assistente AI opzionale che parla soltanto con un provider che configuri tu.
+9b4ae3d3fc5bcec2  site/it/privacy.html: Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna profilazione, nessuna mailing list, e niente di qui viene collegato a quello che fa l'estensione.
 ad8e501106468a03  site/it/privacy.html: Su una macchina personale digitare una passphrase a ogni sessione serve a poco; su una condivisa o gestita serve molto.
+3afa2d7492a82182  site/it/privacy.html: Sui dati che Zoost tocca lo sviluppatore non effettua nessun trattamento : non ne riceve, non ne conserva, non ha accesso alla cartella in cui l'estensione scrive, e non gestisce nessun servizio a cui qualcosa possa arrivare.
 932741f128240d87  site/it/privacy.html: Tenuta in memoria, mai scritta su disco.
+b01b3fa98774bfea  site/it/privacy.html: Tutte e due elencano api.anthropic.com e api.openai.com , usati soltanto dall'assistente facoltativo e soltanto se lo configuri.
+b0490bfe50e8df24  site/it/privacy.html: Vale la conservazione di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non ne tiene copia.
+97aa3860c4db89b5  site/it/privacy.html: Vengono letti da Zoho e scritti sul disco di quella persona; allo sviluppatore non ne arriva niente, e il titolare del trattamento resta la tua organizzazione, come lo era già dentro Zoho.
 a22a430091243655  site/it/privacy.html: Zoost Analytics può mandare nomi di viste, nomi di colonne, relazioni e l'SQL delle tue query table - e mai le righe dentro le tue tabelle , perché non le legge: gli endpoint che restituiscono i valori delle celle deliberatamente non vengono chiamati.
 de52838845b160c7  site/it/privacy.html: Zoost non chiede nessun accesso alla cronologia di navigazione, ai segnalibri, ai download, alle password salvate o a qualsiasi sito diverso da quelli elencati sopra.
+d8f6f183e44acc78  site/it/privacy.html: Zoost non ha server, non ha account, non ha analytics e non ha nessuna forma di tracciamento.
 d4df21cfb34db8fb  site/it/privacy.html: chrome.storage.session Soltanto la chiave API, e solo mentre è sbloccata: cioè solo se hai attivato la protezione con passphrase.
 07add6ba9b51ad4d  site/it/privacy.html: tabs - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics, appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato per sbaglio contro una sandbox.
 dfdd70b3074c396d  site/llms.txt: ## What none of that proves - Google repackages and re-signs every extension, so what the Chrome Web Store serves is not byte-identical to what was uploaded.
@@ -530,11 +542,12 @@ f0ee5fa70b395734  site/privacy.html: Local folder (File System Access) Zoho Anal
 437cdc62836fc4d5  site/privacy.html: Losing the passphrase costs you the stored key, never anything else.
 b046c2519faf18d5  site/privacy.html: Never the rows inside your tables - the extension does not read them, and the endpoints that return cell values are deliberately not called.
 76f310d8d11e0bfb  site/privacy.html: No other destination is possible: the extension is granted network access to those two origins and to your Zoho product, and to nothing else.
+5089aff5572856f1  site/privacy.html: Nothing is built on top of it: no cookie, no tracker, no profile, no mailing list, and nothing here is joined to anything the extension does.
 4c424647d30b07f5  site/privacy.html: Nothing is ever sent to the developer.
-b905c1f9da849021  site/privacy.html: Privacy policy - Zoost Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics How to Nerd Privacy Italiano Privacy policy Zoost - Chrome extensions · Last updated: 5 August 2026 The short version Zoost collects nothing.
+63d3b7d143195376  site/privacy.html: Privacy policy - Zoost Zoost Zoost - workbench for Zoho CRM Zoost CRM Zoost - workbench for Zoho Analytics Zoost Analytics How to Nerd Privacy Italiano Privacy policy Zoost - Chrome extensions · Last updated: 6 August 2026 The short version The developer collects nothing.
 eb6722150f64170a  site/privacy.html: So you do not have to re-pick the folder every time.
 1f93edc139412a5b  site/privacy.html: The Zoho CRM workbench lists crm.zoho.* and crmsandbox.zoho.* - and their crm.zohocloud.ca and crmsandbox.zohocloud.ca counterparts - which it reads, and one.zoho.* with one.zohocloud.ca , which it does not read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is.
-80d953033aeec226  site/privacy.html: The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
+427b328b75d91df1  site/privacy.html: The developer of Zoost is not a party to it, cannot see it and has no control over it.
 f7c2debacbfc9fdb  site/privacy.html: The developer therefore does not sell, share, transfer or otherwise process your personal data, because it never receives any.
 ba1d5b7b41adda10  site/privacy.html: The key is then encrypted with a passphrase only you know - PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own Web Crypto - and what sits on disk is ciphertext.
 607cfde6b6e65a7b  site/privacy.html: The last two are stricter than the default and cost nothing, because nothing shipped uses a form or a <base> element.
@@ -542,6 +555,7 @@ ba1d5b7b41adda10  site/privacy.html: The key is then encrypted with a passphrase
 e4923f391597023b  site/privacy.html: The passphrase itself is never stored, never sent anywhere, and cannot be recovered: if you forget it, you enter your API key again and choose a new one.
 3178bb82167c1561  site/privacy.html: They are separate extensions with separate permissions, but they behave identically in every respect this document describes: no server, no account, no telemetry, a local mirror in a folder you choose, and one optional AI assistant that only ever talks to a provider you configure yourself.
 a1ea490335e10a52  site/privacy.html: They differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data centres and the Zoho One data centres, the Zoho Analytics one lists the Zoho Analytics data centres.
+d97442414c5fc144  site/privacy.html: This is written down so that nobody assessing the extension has to infer it; it is not legal advice, and every fact it rests on is checkable in the manifest and in the source.
 c6bebbc6db81a705  site/privacy.html: Those requests are made by the server, not by your browser : nothing about you is sent to Google or GitHub, no identifier of yours is involved, and the answer is cached for everyone alike.
 098eb1610f74c1b9  site/privacy.html: Turning the protection off asks for the current passphrase, because clear text means decrypting the key first; if it is wrong or missing, nothing is changed and the encrypted key is kept rather than discarded.
 6da816de4b2d1c01  site/privacy.html: What the developer collects Nothing.

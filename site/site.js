@@ -38,14 +38,12 @@
   var STR = {
     en: {
       store: 'On the Web Store', release: 'Latest release', dev: 'In development',
-      onStore: 'on the Web Store',
       review: 'Awaiting review', updated: 'Site updated',
       submitted: 'submitted ', awaiting: ', awaiting review', notSubmitted: 'not submitted yet',
       none: 'none yet', unknown: 'unknown',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
-      onStore: 'sul Chrome Web Store',
       review: 'In revisione', updated: 'Sito aggiornato',
       submitted: 'inviata il ', awaiting: ', in attesa di revisione', notSubmitted: 'non ancora inviata',
       none: 'nessuna', unknown: 'sconosciuta',
@@ -77,7 +75,6 @@
     .then(function (d) {
       if (!d) return;
       fillDocsStamp(d);
-      publishedState(d);
       if (!box) return;
       // One row per product, four aligned columns. Every number here belongs to exactly one
       // extension, so every number is inside a row that names it: with two products published, an
@@ -161,24 +158,6 @@
     })
     .catch(function () { /* the badge simply does not appear */ });
 
-  // The published state is *proven*, never asserted. The markup ships the conservative truth - "in
-  // review", no install link - and this promotes it only when /api/versions reports a real version
-  // scraped from the listing. So the page is right the moment the Store publishes, without anyone
-  // remembering to edit it, and a scrape that fails leaves the understatement standing rather than
-  // inventing a link to a listing that serves nothing. Understating is recoverable; the homepage
-  // said "on the Web Store" for a day while the listing was empty, and that was found by a reader.
-  function publishedState(d) {
-    ['crm', 'analytics'].forEach(function (app) {
-      var live = !!(d[app] && d[app].store);
-      document.querySelectorAll('[data-install="' + app + '"]').forEach(function (el) { el.hidden = !live; });
-      document.querySelectorAll('[data-pending="' + app + '"]').forEach(function (el) { el.hidden = live; });
-      document.querySelectorAll('[data-store="' + app + '"]').forEach(function (el) {
-        if (!live) return;
-        el.textContent = t('onStore');
-        el.classList.remove('wip'); el.classList.add('live');
-      });
-    });
-  }
 
   // Linked only when there is a version, which is the same thing as the listing serving content:
   // the number comes from scraping that page. So the link cannot lead somewhere empty - while

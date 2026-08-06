@@ -132,7 +132,7 @@
         <div class="ph">
           <img src="/analytics-192.png" alt="">
           <h3>Zoost - workbench for Zoho Analytics</h3>
-          <span class="st wip" data-store="analytics">submitted, in review</span>
+          <span class="st live">on the Web Store</span>
         </div>
         <p>Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table,
           the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of
@@ -140,14 +140,13 @@
         <div class="plinks">
           <a href="/analytics.html">What it does →</a>
           <a href="/docs-analytics.html">How to use it →</a>
-          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge" data-install="analytics" hidden>Install ↗</a>
+          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Install ↗</a>
         </div>
       </div>
 
     </div>
-    <p class="note" style="margin-top:22px">Free, open source, and each with a written guide.
-      <span data-install="analytics" hidden>Both are on the Chrome Web Store.</span>
-      <span data-pending="analytics">Zoost CRM is on the Chrome Web Store; Zoost Analytics is submitted and in review.</span></p>
+    <p class="note" style="margin-top:22px">Free, open source, and each with a written guide. Both are on the
+      Chrome Web Store.</p>
   </div>
 </section>
 
@@ -206,12 +205,12 @@
   <div class="wrap">
     <h2>If you have to approve it</h2>
     <p class="lead" style="max-width:62ch">Somebody has asked you whether they can install a browser
-      extension that reads the company Zoho CRM. Six lines, no jargon.</p>
+      extension that reads the company's Zoho CRM, or its Zoho Analytics. Six lines.</p>
     <table style="max-width:62ch">
       <tbody>
-        <tr><td class="k">What it reads</td><td>Configuration only: code, field definitions, automations. <b>Never a customer record</b> - no contacts, no deals, no notes.</td></tr>
+        <tr><td class="k">What it reads</td><td>Configuration only: code, field definitions, automations, the structure of a workspace. <b>Never the data itself</b> - in Zoho CRM no contacts, no deals, no notes; in Zoho Analytics never the rows inside a table.</td></tr>
         <tr><td class="k">What it writes</td><td>To Zoho, nothing. It calls no endpoint that creates, edits or deletes.</td></tr>
-        <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No server of ours, no account, no telemetry.</td></tr>
+        <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No server, no account, no telemetry.</td></tr>
         <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
         <tr><td class="k">How you can check</td><td>The source is about twenty readable files. Each release is built by GitHub twice over and signed, and one command verifies the file that was published.</td></tr>

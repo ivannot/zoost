@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:aa8f384b39b240a7 -->
+<!-- translated-from: site/privacy.html sha256:db42621080ab3bab -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -40,7 +40,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: 5 agosto 2026</p>
+  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: 6 agosto 2026</p>
 
   <p class="note" data-it-only><b>La versione inglese è quella che fa fede.</b> Questa è una
     traduzione fedele, offerta perché il documento sia leggibile da chi deve approvarne l'uso in
@@ -49,8 +49,8 @@
 
   <div class="box">
     <h3>In breve</h3>
-    <p>Zoost non raccoglie niente. Non ha server, non ha account, non ha analytics e non ha nessuna
-      forma di tracciamento. I tuoi dati si muovono fra il tuo browser, il prodotto Zoho a cui sei già
+    <p>Lo sviluppatore non raccoglie niente. Zoost non ha server, non ha account, non ha analytics e non
+      ha nessuna forma di tracciamento. I tuoi dati si muovono fra il tuo browser, il prodotto Zoho a cui sei già
       autenticato e una cartella sul tuo disco. L'unica eccezione è l'assistente AI opzionale, che manda
       quello di cui gli chiedi al provider AI che configuri <em>tu</em> con una chiave API
       <em>tua</em>. Allo sviluppatore non arriva mai niente.</p>
@@ -71,9 +71,16 @@
     relazioni e l'SQL delle tue query table - e <b>mai le righe dentro le tue tabelle</b>, perché non le
     legge: gli endpoint che restituiscono i valori delle celle deliberatamente non vengono chiamati.</p>
 
-  <h2>1. Chi è il responsabile</h2>
-  <p>Zoost è sviluppato e pubblicato da Ivan Notaristefano, sviluppatore individuale, come strumento
-    indipendente e non ufficiale. Contatto: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
+  <h2>1. Chi c'è dietro Zoost</h2>
+  <p>Zoost è sviluppato e pubblicato da <b>Ivan Notaristefano</b>, sviluppatore individuale, come
+    strumento indipendente e non ufficiale. Contatto: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
+  <p><b>Sui dati che Zoost tocca lo sviluppatore non effettua nessun trattamento</b>: non ne riceve,
+    non ne conserva, non ha accesso alla cartella in cui l'estensione scrive, e non gestisce nessun
+    servizio a cui qualcosa possa arrivare. Su questo presupposto non è né titolare né responsabile del
+    trattamento di quei dati: il titolare è la tua organizzazione, esattamente come lo era prima che
+    Zoost venisse installato. È scritto qui perché chi deve valutare l'estensione non debba dedurlo;
+    non è un parere legale, e ognuno dei fatti su cui si regge è verificabile nel manifest e nel
+    sorgente. L'unica eccezione è questo sito, e la spiega il §8.</p>
   <p>Zoost non è affiliato, approvato, sponsorizzato né supportato da Zoho Corporation. I dati che
     stanno dentro i tuoi prodotti Zoho restano regolati dal tuo contratto con Zoho e dalle policy della
     tua organizzazione; questo documento copre soltanto quello che le estensioni Zoost ci fanno.</p>
@@ -141,6 +148,14 @@
       </tr>
     </tbody>
   </table>
+  <p><b>Se sei tu a doverlo valutare:</b> il mirror contiene alcuni dati personali di persone della
+    tua organizzazione - chi ha modificato per ultimo una funzione Deluge, chi è proprietario di una
+    vista - e qualunque dato personale che qualcuno abbia scritto a mano dentro il codice, per esempio
+    un indirizzo dentro un <code>sendmail</code>. Vengono letti da Zoho e scritti sul disco di quella
+    persona; allo sviluppatore non ne arriva niente, e il titolare del trattamento resta la tua
+    organizzazione, come lo era già dentro Zoho. Un export va trattato come andrebbero trattate le
+    schermate Zoho da cui è stato letto.</p>
+
   <p>Niente di tutto questo viene trasmesso da nessuna parte. Puoi cancellare tutto in qualsiasi
     momento rimuovendo l'estensione e cancellando la cartella di lavoro. Rimuovere l'estensione cancella
     quello che sta dalla parte del browser; la cartella locale è tua e resta intatta.</p>
@@ -148,7 +163,7 @@
   <h2>4. Dove viaggiano i dati</h2>
 
   <h3>4.1 Il tuo prodotto Zoho</h3>
-  <p>Zoost chiama l'API del prodotto Zoho aperto nella tua scheda - l'API di Zoho CRM per una
+  <p>Zoost chiama l'API del prodotto Zoho aperto nella tua scheda - l'API di Zoho CRM per un'
     estensione, quella di Zoho Analytics per l'altra - usando la sessione con cui sei già autenticato.
     Non manda credenziali proprie e non ne crea. Opera rigorosamente dentro i permessi Zoho che hai già:
     può leggere esattamente quello che può leggere il tuo utente Zoho, e niente di più.</p>
@@ -170,8 +185,9 @@
       Non può mai mandare le righe dentro una tabella, perché non le legge mai: quindi l'assistente
       conosce la struttura del tuo workspace e mai i suoi valori.</p>
     <p>Quel provider tratta poi i dati secondo i propri termini e la propria privacy policy, non secondo
-      questa. Lo sviluppatore di Zoost non è parte di quello scambio, non lo può vedere e non ha modo di
-      controllarlo. Se la tua organizzazione limita l'invio di codice sorgente, SQL o logica di business
+      questa. In quello scambio il titolare del trattamento sei tu, o la tua organizzazione, e il provider
+      AI è un tuo fornitore, non un fornitore dello sviluppatore. Lo sviluppatore di Zoost non è parte di
+      quello scambio, non lo può vedere e non ha modo di controllarlo. Se la tua organizzazione limita l'invio di codice sorgente, SQL o logica di business
       a servizi AI di terze parti, non attivare questa funzionalità.</p>
   </div>
   <p>La tua chiave API è conservata sulla tua macchina in <code>chrome.storage.local</code>, che è dove
@@ -206,9 +222,10 @@
   <h2>5. I permessi, e perché ognuno esiste</h2>
   <p>Le due estensioni chiedono gli stessi quattro permessi API - <code>sidePanel</code>,
     <code>storage</code>, <code>scripting</code> e <code>tabs</code> - per le stesse ragioni.
-    Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data centre
-    di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data centre di
-    Zoho Analytics.</p>
+    Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data center
+    di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data center di
+    Zoho Analytics. Tutte e due elencano <code>api.anthropic.com</code> e <code>api.openai.com</code>,
+    usati soltanto dall'assistente facoltativo e soltanto se lo configuri.</p>
   <ul>
     <li><code>sidePanel</code> - l'interfaccia dell'estensione è un pannello laterale di Chrome.</li>
     <li><code>storage</code> - per tenere le tue impostazioni, come descritto sopra.</li>
@@ -224,7 +241,7 @@
       <code>one.zoho.*</code> con <code>one.zohocloud.ca</code>, che non legge: quello c'è soltanto
       perché il pannello possa capire che la scheda su cui sei appartiene a Zoho One e di quale org si
       tratta. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
-      <code>analytics.zohocloud.ca</code>. Entrambe elencano tutti i data centre perché un account può
+      <code>analytics.zohocloud.ca</code>. Entrambe elencano tutti i data center perché un account può
       trovarsi su uno qualsiasi di essi.</li>
     <li>Accesso agli host <code>api.anthropic.com</code> e <code>api.openai.com</code> - le uniche due
       destinazioni AI che l'estensione può raggiungere, usate soltanto dall'assistente AI opzionale e
@@ -243,7 +260,7 @@
   <h2>6. Base giuridica e i tuoi diritti</h2>
   <p>Poiché lo sviluppatore non riceve nessun dato personale, non c'è nessun trattamento a cui
     acconsentire, a cui opporsi o di cui chiedere l'accesso. I diritti in materia di protezione dei dati
-    rispetto ai dati Zoho CRM in sé si esercitano nei confronti del titolare di quei dati - la tua
+    rispetto ai dati dentro Zoho si esercitano nei confronti del titolare di quei dati - la tua
     organizzazione - e, dove rilevante, nei confronti del provider AI che hai scelto, secondo le
     rispettive policy.</p>
 
@@ -264,8 +281,16 @@
     le fa il server, non il tuo browser: a Google e a GitHub non viene mandato niente di tuo, non è
     coinvolto nessun tuo identificatore, e la risposta è messa in cache uguale per tutti. Se una fonte
     non risponde, il badge dice semplicemente «sconosciuta».</p>
-  <p>Il tuo hosting provider potrebbe tenere normali log di accesso al server; quelli sono fuori
-    dall'ambito di questa policy.</p>
+  <p><b>L'unico punto in cui lo sviluppatore <em>è</em> titolare del trattamento.</b> Questo sito è
+    servito da Cloudflare, che ne è insieme la rete e l'hosting. Come qualunque server web, il suo edge
+    tiene normali log delle richieste - indirizzo IP, ora, URL, user agent - e ne conta il numero senza
+    impostare cookie né identificatori. Quello è un trattamento di dati personali, per quanto minimo, e
+    per quel trattamento il titolare è lo sviluppatore, sulla base del legittimo interesse a servire e
+    proteggere il sito. Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna
+    profilazione, nessuna mailing list, e niente di qui viene collegato a quello che fa l'estensione.
+    Vale la conservazione di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non ne
+    tiene copia. Per esercitare un diritto su questo, o anche solo per chiedere:
+    <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
 
   <h2>9. Modifiche</h2>
   <p>Se una versione futura di Zoost cambia quali dati vengono trattati o dove viaggiano, questa policy
