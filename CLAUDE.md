@@ -1060,7 +1060,10 @@ adjective postposed to a feminine noun, which is what the user reported); «La c
 determiner with no verb to negate; «un assistente che Zoho Analytics non **l'**ha mai vista», a
 relative with a resumptive clitic; «per la domanda separata **di se**»; «rispondibile», «rimostra»;
 «Zoost compresa» on a page that says «Zoost è gratuito» four paragraphs later; and a dozen
-inanimate `lei`/`lui`. **A mechanical sweep was written for the classes above and then not kept**:
+inanimate `lei`/`lui`. «file ordinari» for "plain files", where Italian «ordinario» says
+*unremarkable* rather than *not a proprietary format* — they are «file di testo»; and «consegnare»
+for "hand over", which is what you do with an assignment, where a document you give a colleague is
+«condividere». **A mechanical sweep was written for the classes above and then not kept**:
 outside the handful of real hits it was almost all noise — every `un elenco`, `un arco`, `un
 assistente` flagged as a missing elision — and the rule here is the one already written down, that a
 checker with that ratio is one nobody reads. Reading remains the only method for this class.

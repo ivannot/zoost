@@ -195,7 +195,7 @@ d52fc79b9dc37e6b  site/it/analytics.html: Cosa non fa Non chiama nessun endpoint
 1d8172c11bfc5f5b  site/it/analytics.html: Cosa non serve più a nessuno La risposta di Zoho Analytics stessa sulle dipendenze, chiesta una volta per tutto invece che una vista per volta.
 72b67a0fd1c3e908  site/it/analytics.html: Export, e un assistente opzionale Tutto il workspace come un unico file HTML, o in Markdown — che si porta dietro i vincoli del dialetto SQL di Zoho Analytics, così un assistente non scrive query che non possono girare.
 74ceae8f6552b166  site/it/analytics.html: Gli endpoint che restituiscono i valori delle celle esistono, e deliberatamente non vengono chiamati — che è anche il motivo per cui l'assistente AI non potrà mai dirti cosa c'è dentro i dati.
-d58fd885c3c55547  site/it/analytics.html: Il mirror è fatto di file ordinari, quindi con Git git diff risponde a cosa è cambiato in questo workspace il mese scorso — la domanda che conta di più il giorno in cui un numero si muove e nessuno sa perché.
+e3ea3d4c79c7dd3f  site/it/analytics.html: Il mirror è fatto di file di testo, quindi con Git git diff risponde a cosa è cambiato in questo workspace il mese scorso — la domanda che conta di più il giorno in cui un numero si muove e nessuno sa perché.
 edd53ca7e69845e3  site/it/analytics.html: Il modello ER di Zoho Analytics sa quali, e l'elenco delle viste le marca — così l'inventario è del tuo lavoro, non di tutto.
 3318977f6451c9e8  site/it/analytics.html: Il pannello prende il workspace dalla scheda su cui sei: non c'è niente da configurare e niente da sbagliare.
 01b0997f701669c0  site/it/analytics.html: Installa dal Chrome Web Store Leggi la guida Cosa c'è dentro Gratuito · Apache-2.0 · nessun account Questa pagina è in italiano, e così la guida.
@@ -231,8 +231,8 @@ e2831f233696fe9f  site/it/crm.html: Ogni workspace vivrà lì dentro.
 c5b6fdd668497d91  site/it/crm.html: Perché esiste Una storia per tutto quello che scarichi Lo storico delle versioni di Zoho CRM copre una funzione , una per volta, dentro Zoho.
 854f4a26a33d110b  site/it/crm.html: Ricerca full-text su tutte le funzioni insieme — la cosa più vicina a un grep sulla tua org, e qualcosa che Zoho non offre.
 1839fa09cec2ba2c  site/it/crm.html: Trova ogni punto in cui un campo, un modulo, un endpoint o un id scritto a mano è referenziato, prima di cambiarlo.
-90c577a19daa3158  site/it/crm.html: Tutta l'org in un colpo solo Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto navigabile, e in un unico documento da consegnare a chi l'estensione non ce l'ha.
-4b88063d2a068471  site/it/crm.html: Tutto il resto che il pull cattura — schema dei moduli, layout, related list, workflow, schedulazioni, connessioni — arriva sul tuo disco come file ordinari, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a cosa è cambiato in quest'org il mese scorso su tutti i tipi insieme invece che una funzione per volta.
+570942241a4f1f8c  site/it/crm.html: Tutta l'org in un colpo solo Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto navigabile, e in un unico documento da condividere con chi l'estensione non ce l'ha.
+9b427609d92193a6  site/it/crm.html: Tutto il resto che il pull cattura — schema dei moduli, layout, related list, workflow, schedulazioni, connessioni — arriva sul tuo disco come file di testo, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a cosa è cambiato in quest'org il mese scorso su tutti i tipi insieme invece che una funzione per volta.
 6b2b7097c13c1272  site/it/crm.html: Tutto il resto funziona anche senza.
 13af61e78311823a  site/it/crm.html: Tutto il resto resta locale.
 bffe8ff5f6985657  site/it/crm.html: Un grep su tutta l'org Ricerca full-text su tutte le funzioni Deluge insieme — la cosa che Zoho non ha mai avuto.
@@ -386,8 +386,8 @@ d1d0d7f928940193  site/it/index.html: Niente esce dalla macchina Nessun server, 
 5f18d0251dbca6be  site/it/index.html: Ogni Zoost ci tiene la propria sottocartella, così una cartella sola li serve tutti e i due non si incontrano mai.
 bbeb412a4821dd89  site/it/index.html: Ogni cifra dichiara cosa non copre, e il giudizio resta tuo.
 cee6466af7993ab2  site/it/index.html: Sta tutto sulla pagina nerd , che è dove deve stare.
-dbd73328d20f5692  site/it/index.html: Tutto insieme, in una volta Cerchi dappertutto insieme, segui un nome fino a dove viene usato, e consegni il tutto a un collega come un unico documento.
-092cfea58b37b04d  site/it/index.html: Zoost copia tutto in file ordinari sul tuo disco, e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.
+09b89d8f8a1aceb5  site/it/index.html: Tutto insieme, in una volta Cerchi dappertutto insieme, segui un nome fino a dove viene usato, e condividi il tutto con un collega come un unico documento.
+d392d2230aab24d1  site/it/index.html: Zoost copia tutto in file di testo sul tuo disco, e poi ti disegna la mappa: cosa chiama cosa, cosa dipende da cosa, cosa non serve più a nessuno.
 eb0388793eb1301a  site/it/index.html: Zoost — workbench per i prodotti Zoho su cui hai costruito Zoost Zoost — workbench for Zoho CRM Zoost CRM Zoost — workbench for Zoho Analytics Zoost Analytics Come si usa Nerd Privacy English Tutto quello che hai costruito dentro Zoho è tuo.
 8fefd1bbceaf3906  site/it/nerd.html: Come legge Zoho Analytics Prende il workspace dall'URL della scheda su cui sei — /workspace/{id} — quindi non c'è niente da estrarre e niente da sbagliare.
 653c92719db1590a  site/it/nerd.html: Come legge Zoho CRM Legge due identificativi — l'id della tua org e quello dell'utente — dall'HTML della pagina, perché nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già.
