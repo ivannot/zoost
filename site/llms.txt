@@ -64,7 +64,9 @@ Stated here rather than buried, because it is the part an assessment needs.
   developer is the controller; §8 of the privacy policy states it, names the basis and gives an
   address to exercise a right against it. For everything the extensions touch the developer is
   neither controller nor processor, because no processing happens: nothing is received, nothing is
-  stored, and there is no service anything could reach.
+  stored, and there is no service anything could reach. §1 of the policy states that in the
+  regulation's own terms, says it is not legal advice, and names the facts it rests on - each of them
+  checkable in the manifest and in the source rather than taken on trust.
 - **Counts are exposed, never graded.** Size and call counts come with what they do not capture, and
   there is no score, threshold or "worst offenders" list anywhere.
 
