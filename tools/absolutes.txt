@@ -96,7 +96,7 @@ e4977826910cf340  site/docs-analytics.html: If Zoost cannot reach a data-bearing
 e1bc1ae51dfcd1e7  site/docs-analytics.html: It never talks to Zoho.
 669d75f463f570fb  site/docs-analytics.html: It reads it and writes it to disk; Zoho Analytics remains the only thing that can tell you a query compiles.
 1c595ed2a6ecff73  site/docs-analytics.html: Its identity is the workspace id written in .zoost.json , never the folder name - rename either and nothing is orphaned.
-d8783ff2244d4db4  site/docs-analytics.html: Markdown (the button reads MD ) produces the same shaped as context for an AI tool that has never seen your workspace.
+c97ddcf4e88db2b5  site/docs-analytics.html: MD ( Export Markdown ) produces the same shaped as context for an AI tool that has never seen your workspace.
 2b49a27cdee9b978  site/docs-analytics.html: Move to another workspace and every Zoho-bound action is disabled until the tab and the folder agree again.
 38ebd58849240f29  site/docs-analytics.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: Zoho Analytics names the first workspace of every account the same way, so two projects can arrive on disk looking identical.
 503f2e7127394d7c  site/docs-analytics.html: Nothing goes to the developer.
@@ -257,7 +257,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 12c8d1eed86f4989  site/it/docs-analytics.html: Cosa non serve più a nessuno 10.
 41c67ef7c1ce43dd  site/it/docs-analytics.html: Cosa non serve più a nessuno Il pull fa a Zoho Analytics la sua stessa domanda sulle dipendenze, per ogni vista.
 72cb73fa0f15f925  site/it/docs-analytics.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono arrivare su disco identici.
-571b8a3b301f5174  site/it/docs-analytics.html: Gli export HTML produce un unico file autoconsistente con tutto quello che mostra il pannello.
+22971d7bf7185e3c  site/it/docs-analytics.html: Gli export HTML ( Export HTML ) produce un unico file autoconsistente con tutto quello che mostra il pannello.
 285233dc658d9179  site/it/docs-analytics.html: Il browser chiede il permesso: è l'unico modo in cui un'estensione può scrivere file, e vale solo per quella cartella.
 36771197b4dc8de0  site/it/docs-analytics.html: Il diagramma ER ER diagram apre tutto il workspace in una finestra a sé; lo stesso pulsante nel dettaglio di una tabella apre la stessa finestra centrata su quella tabella, a profondità 2.
 96a5db1aa90ca114  site/it/docs-analytics.html: Il peggio che può fare al tuo workspace è niente.
@@ -267,7 +267,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
 82d595fa2cd12539  site/it/docs-analytics.html: Lo legge e lo scrive su disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.
-99c03c40c16faca3  site/it/docs-analytics.html: Markdown (il pulsante si legge MD ) produce la stessa cosa nella forma adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.
+448dc709768c5cea  site/it/docs-analytics.html: MD ( Export Markdown ) produce la stessa cosa nella forma adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.
 5ab8f22c06c9b887  site/it/docs-analytics.html: Metterlo sotto Git Nella cartella del workspace: cd <cartella di lavoro>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" Quello che ti ritrovi su disco: views.json il censimento: ogni vista con tipo, cartella, proprietario, date, tag schema.json colonne e tipi di dato per tabella, più le relazioni lineage.json chi legge da cosa, nelle due direzioni sql/*.sql un file per query table - la parte su cui il diff ha qualcosa da dire sql/index.json la mappa id-file, e quali colonne sorgente coinvolge ogni query export/ i report che generi I file .sql sono il punto.
 ae0ed2b91841f946  site/it/docs-analytics.html: Non c'è niente da scegliere e niente da sbagliare.
 fa5053e06e462ef4  site/it/docs-analytics.html: Non crea, non modifica e non cancella mai una vista, e non legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori delle celle esistono e deliberatamente non vengono chiamati.
@@ -310,8 +310,8 @@ cc9faf92979cf93a  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima d
 927f6f6ee792f348  site/it/docs-crm.html: Elenca anche le connessioni che la funzione usa e chi l'ha modificata per ultimo - clicca una connessione per filtrare l'albero su tutte le funzioni che la usano (basta con il «cerca nel file» per il nome di una connessione).
 1a58c0151528ff5c  site/it/docs-crm.html: Entrambi i report dichiarano comunque le date per area: il fatto sta a te pesarlo, e nasconderlo sarebbe l'unica cosa peggiore di un capitolo vecchio.
 1e018b7bb98f49ce  site/it/docs-crm.html: Entrambi portano tutto quello che mostra il pannello, compresi la dimensione di ogni funzione e i conteggi delle chiamate in uscita (una tabella Size and outbound calls nel Markdown, delle colonne nell'indice HTML): un report non deve mai essere una copia ridotta di quello che hai visto a schermo.
-59e51eba6f39482c  site/it/docs-crm.html: Export → HTML - tutto il workspace come un unico file autoconsistente e navigabile.
 17665e1b260d9afd  site/it/docs-crm.html: Find ha accanto un selettore di ambito: in: names cerca nei nomi dei file, in: code fa una ricerca full-text su tutti i sorgenti delle funzioni dell'org - la cosa più vicina a un grep sul tuo Deluge, e qualcosa che Zoho non offre.
+16668d9173bc4b4c  site/it/docs-crm.html: HTML ( Export HTML ) - tutto il workspace come un unico file autoconsistente e navigabile.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
 a7ab635a5ebd3058  site/it/docs-crm.html: Il modello mentale Tre cose, e tutto il resto discende da queste.
