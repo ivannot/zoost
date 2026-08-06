@@ -110,8 +110,19 @@
   .expgroup button{flex:none;white-space:nowrap}
   .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
   .genbar button:disabled{opacity:.5}
-  body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep, body.health-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
+  body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep{opacity:.32;pointer-events:none}
   body.health-open .wsgroup{border-color:#7c5cff}
+  /* The export box dims from the inside, and every other faded control dims with `opacity`.
+     `opacity` on this one made its own top border show through the label whose whole job is to
+     hide it - a line straight across EXPORT the moment Health or the assistant opened. Measured:
+     the label is 8px tall and the border crosses it 6.5px down, so it runs through the letters.
+     Shrinking the label does not help - at 7px the border still crosses at 5 of 7 - because the
+     cause is the compositing, not the size. So the box keeps a fully opaque label, which goes on
+     masking, and the border and the buttons are dimmed by hand. The two colours are the .32 blend
+     over --surface computed, not eyeballed: #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
+  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
+  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button{opacity:.32}
+  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel{color:#3c5d62}
 
   #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
   #pfoot .pfsp{flex:1}
@@ -242,7 +253,7 @@
   .aiinrow #aisend{background:#d97706;border-color:#d97706;color:#fff;font-weight:600;align-self:stretch;padding:0 14px}
   .aiinrow #aisend:hover:not(:disabled){background:#ea8c11;border-color:#ea8c11}
   .aiinrow #aisend:disabled{opacity:.5}
-  body.ai-open .wsgroup > button:not(#askai), body.ai-open .wsgroup .gsep, body.ai-open .wsgroup .expgroup{opacity:.32;pointer-events:none}
+  body.ai-open .wsgroup > button:not(#askai), body.ai-open .wsgroup .gsep{opacity:.32;pointer-events:none}
   body.ai-open .wsgroup{border-color:#b06a1c}
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
   #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}

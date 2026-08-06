@@ -526,6 +526,28 @@ test('no list still tells the reader to pull without asking first', () => {
   }
 });
 
+test('the export box is never faded with opacity, on either side', () => {
+  // .explabel sits over .expgroup's top border with an opaque background, which is what gives it the
+  // fieldset-legend look. `opacity` on .expgroup composites the whole subtree, so that background
+  // stops hiding anything and the border draws straight through EXPORT - measured at 6.5px down an
+  // 8px label, i.e. through the letters. It appeared the moment Health or the assistant opened, and
+  // he reported it. Shrinking the label does not help: at 7px the border still crosses at 5 of 7,
+  // because the cause is the compositing and not the size.
+  for (const app of ['crm', 'analytics']) {
+    const css = read(`apps/${app}/sidepanel.html`);
+    for (const m of css.matchAll(/^ *([^\n{]*\.expgroup[^\n{]*)\{([^}]*)\}/gm)) {
+      // The *subject* of the selector, not any mention of it: `... .expgroup button{opacity:.32}`
+      // is exactly how the box is meant to dim, and the first version of this test flagged it.
+      const targetsTheBox = m[1].split(',').some((sel) => /\.expgroup$/.test(sel.trim()));
+      if (!targetsTheBox) continue;
+      assert.ok(!/(^|;)\s*opacity\s*:/.test(m[2]),
+        `${app}: opacity on .expgroup makes its own border show through EXPORT - "${m[1].trim().slice(0, 60)}"`);
+    }
+    // and the label has to stay opaque, or it masks nothing
+    assert.ok(/\.explabel\{[^}]*background:var\(--surface\)/.test(css), `${app}: .explabel lost the background that masks the border`);
+  }
+});
+
 test('a refusal is a 4xx, and everything else stays a failure', () => {
   // The first version wrote `unreadable` on any thrown error, so a dropped connection would have
   // been dated on disk as a settled refusal and the row would have stopped looking retryable for
