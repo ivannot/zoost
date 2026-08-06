@@ -195,12 +195,12 @@
   .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
   .wsgroup::-webkit-scrollbar-track{background:transparent}
   .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls (contained) if it truly cannot fit */
-  /* Export box: a plain inline-flex box (not a fieldset), so its buttons align with the neighbours.
-     The label is absolutely positioned over the top border - same look as a legend, but it adds no
-     vertical offset, which is what threw "Pull all" out of line. */
-  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:4px 6px;display:inline-flex;gap:5px;align-items:center;flex:none}
-  .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
-  .expgroup button{flex:none;white-space:nowrap}
+  /* There was a bordered box with an "export" legend around these two. The legend masked the box's
+     own top border to look like a fieldset, `opacity` on the group un-masked it, and the border drew
+     through the word - twice reported. The box was decoration: the `.gsep` on either side already
+     does the grouping, exactly as it does for Health and AI. Removing it removed the defect, three
+     rules, two classes and a special case in the fade. The name that was in the legend lives in each
+     button's aria-label, where a name belongs. */
   .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
   .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
   .scrim.on{display:block}
@@ -261,17 +261,6 @@
   body.ai-open .wsgroup{border-color:#b06a1c}
   body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep{opacity:.32;pointer-events:none}
   body.health-open .wsgroup{border-color:#7c5cff}
-  /* The export box dims from the inside, and every other faded control dims with `opacity`.
-     `opacity` on this one made its own top border show through the label whose whole job is to
-     hide it - a line straight across EXPORT the moment Health or the assistant opened. Measured:
-     the label is 8px tall and the border crosses it 6.5px down, so it runs through the letters.
-     Shrinking the label does not help - at 7px the border still crosses at 5 of 7 - because the
-     cause is the compositing, not the size. So the box keeps a fully opaque label, which goes on
-     masking, and the border and the buttons are dimmed by hand. The two colours are the .32 blend
-     over --surface computed, not eyeballed: #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
-  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
-  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button{opacity:.32}
-  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel{color:#3c5d62}
   .genbar button:disabled{opacity:.5}
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
   .smode:hover{background:#1e2a3d;color:var(--ink)}
@@ -427,10 +416,8 @@
     <fieldset class="wsgroup">
       <button id="pull" class="zbtn icon" disabled title="Pull all - functions, modules, workflows and schedules" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
       <span class="gsep"></span>
-      <span class="expgroup"><span class="explabel">export</span>
-        <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
-        <button id="exportmd" class="lbtn" disabled aria-label="Markdown" title="Markdown export - context for an external AI tool">MD</button>
-      </span>
+      <button id="export" class="lbtn" disabled aria-label="Export HTML" title="Export - self-contained HTML report of this workspace">HTML</button>
+      <button id="exportmd" class="lbtn" disabled aria-label="Export Markdown" title="Export - Markdown, as context for an external AI tool">MD</button>
       <span class="gsep"></span>
       <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
       <button id="askai" class="abtn" disabled title="Ask AI about this org">AI</button>

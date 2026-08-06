@@ -912,18 +912,18 @@ These all failed **silently**, with no console error. They are the expensive kin
 - **`esc()` is not attribute-safe (original note).** It escapes `& < >` only. A double quote inside an attribute
   closes it early and truncates the value — this is what cut the `getRelatedRecords` snippet in
   half. Use `escA()` in attribute contexts.
-- **`opacity` composites the subtree, so it un-masks whatever a child was hiding.** `.explabel` sits
-  over `.expgroup`'s top border with an opaque `background:var(--surface)`: that is what gives the
-  export box its fieldset-legend look. Fading the box with `opacity:.32` when Health or the assistant
-  opens made that background translucent too, and the border drew straight through the word EXPORT -
-  measured at 6.5px down an 8px label, so through the letters. The reported instinct was to shrink the
-  label; measured, that does not help, because at 7px the border still crosses at 5 of 7 and the cause
-  is the compositing, not the size. The box now dims **from the inside** - the label stays fully
-  opaque and goes on masking, while the border colour and the buttons are dimmed by hand, with the two
-  replacement colours computed as the .32 blend over `--surface` rather than picked by eye. A test
-  refuses `opacity` on any rule whose *subject* is `.expgroup`, and refuses an `.explabel` with no
-  background; its first version flagged the correct `.expgroup button{opacity:.32}` too, because it
-  matched any mention of the class rather than the selector's subject.
+- **`opacity` composites the subtree, so it un-masks whatever a child was hiding.** The export
+  buttons used to sit in a bordered box with an "export" legend, and the legend hid the box's own top
+  border with an opaque background - that is what made it look like a fieldset. Fading the box with
+  `opacity:.32` when Health or the assistant opened made that background translucent too, and the
+  border drew straight through the word: measured at 6.5px down an 8px label, so through the letters.
+  Shrinking the label does not fix it - at 7px the border still crosses at 5 of 7, because the cause
+  is the compositing and not the size - and dimming the box from the inside instead did work but left
+  a special case nothing else in the bar needed. **The box is gone.** It was decoration: the `.gsep`
+  on either side already groups, exactly as it does for Health and AI, and removing it took the
+  defect, three rules, two classes and the special case with it. The name that was in the legend
+  lives in each button's `aria-label`, which is where a name belongs. Two versions of the fix shipped
+  before the right question got asked, and it was not mine: *is that rectangle doing anything?*
 - **CSS specificity and source order.** `.erbox.dim .erhdr` placed before `.erbox.custom .erhdr`
   loses at equal specificity. Muting rules must come after the rules they override.
 - **Sticky headers need a z-index.** Without one, later siblings paint over them and rows appear

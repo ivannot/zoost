@@ -526,25 +526,20 @@ test('no list still tells the reader to pull without asking first', () => {
   }
 });
 
-test('the export box is never faded with opacity, on either side', () => {
-  // .explabel sits over .expgroup's top border with an opaque background, which is what gives it the
-  // fieldset-legend look. `opacity` on .expgroup composites the whole subtree, so that background
-  // stops hiding anything and the border draws straight through EXPORT - measured at 6.5px down an
-  // 8px label, i.e. through the letters. It appeared the moment Health or the assistant opened, and
-  // he reported it. Shrinking the label does not help: at 7px the border still crosses at 5 of 7,
-  // because the cause is the compositing and not the size.
+test('the export buttons carry their own name, with no box to lend them one', () => {
+  // The bordered "export" legend is gone - it was decoration whose masking label kept being drawn
+  // through by the fade, twice reported - so the two buttons sit in the bar like every other one and
+  // the .gsep on either side does the grouping. The word that was in the legend has to live
+  // somewhere a reader and a screen reader can still find it, which is the aria-label. Same rule as
+  // the marked toolbar buttons: a mark may replace the visible word, never the name.
   for (const app of ['crm', 'analytics']) {
-    const css = read(`apps/${app}/sidepanel.html`);
-    for (const m of css.matchAll(/^ *([^\n{]*\.expgroup[^\n{]*)\{([^}]*)\}/gm)) {
-      // The *subject* of the selector, not any mention of it: `... .expgroup button{opacity:.32}`
-      // is exactly how the box is meant to dim, and the first version of this test flagged it.
-      const targetsTheBox = m[1].split(',').some((sel) => /\.expgroup$/.test(sel.trim()));
-      if (!targetsTheBox) continue;
-      assert.ok(!/(^|;)\s*opacity\s*:/.test(m[2]),
-        `${app}: opacity on .expgroup makes its own border show through EXPORT - "${m[1].trim().slice(0, 60)}"`);
+    const html = read(`apps/${app}/sidepanel.html`);
+    assert.ok(!/expgroup|explabel/.test(html), `${app}: the export box is back`);
+    for (const [id, name] of [['export', 'Export HTML'], ['exportmd', 'Export Markdown']]) {
+      const tag = html.match(new RegExp(`<button id="${id}"[^>]*>`));
+      assert.ok(tag, `${app}: #${id} is gone`);
+      assert.ok(tag[0].includes(`aria-label="${name}"`), `${app}: #${id} does not say it exports`);
     }
-    // and the label has to stay opaque, or it masks nothing
-    assert.ok(/\.explabel\{[^}]*background:var\(--surface\)/.test(css), `${app}: .explabel lost the background that masks the border`);
   }
 });
 

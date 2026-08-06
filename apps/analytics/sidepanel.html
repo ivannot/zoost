@@ -105,24 +105,16 @@
   .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
   .wsgroup::-webkit-scrollbar-track{background:transparent}
   .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls if it truly cannot fit */
-  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:4px 6px;display:inline-flex;gap:5px;align-items:center;flex:none}
-  .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
-  .expgroup button{flex:none;white-space:nowrap}
+  /* There was a bordered box with an "export" legend around these two. The legend masked the box's
+     own top border to look like a fieldset, `opacity` on the group un-masked it, and the border drew
+     through the word - twice reported. The box was decoration: the `.gsep` on either side already
+     does the grouping, exactly as it does for Health and AI. Removing it removed the defect, three
+     rules, two classes and a special case in the fade. The name that was in the legend lives in each
+     button's aria-label, where a name belongs. */
   .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
   .genbar button:disabled{opacity:.5}
   body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep{opacity:.32;pointer-events:none}
   body.health-open .wsgroup{border-color:#7c5cff}
-  /* The export box dims from the inside, and every other faded control dims with `opacity`.
-     `opacity` on this one made its own top border show through the label whose whole job is to
-     hide it - a line straight across EXPORT the moment Health or the assistant opened. Measured:
-     the label is 8px tall and the border crosses it 6.5px down, so it runs through the letters.
-     Shrinking the label does not help - at 7px the border still crosses at 5 of 7 - because the
-     cause is the compositing, not the size. So the box keeps a fully opaque label, which goes on
-     masking, and the border and the buttons are dimmed by hand. The two colours are the .32 blend
-     over --surface computed, not eyeballed: #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
-  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
-  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button{opacity:.32}
-  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel{color:#3c5d62}
 
   #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
   #pfoot .pfsp{flex:1}
@@ -328,10 +320,8 @@
     <button id="retry" style="display:none" title="Re-read only the items that failed in the last pull"></button>
     <button id="refresh" disabled title="Refresh - reload from disk / re-grant folder access" aria-label="Refresh" class="glyph">↻</button>
     <span class="gsep"></span>
-    <span class="expgroup"><span class="explabel">export</span>
-      <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
-      <button id="exportmd" class="lbtn" disabled aria-label="Markdown" title="Markdown export - context for an external AI tool">MD</button>
-    </span>
+    <button id="export" class="lbtn" disabled aria-label="Export HTML" title="Export - self-contained HTML report of this workspace">HTML</button>
+    <button id="exportmd" class="lbtn" disabled aria-label="Export Markdown" title="Export - Markdown, as context for an external AI tool">MD</button>
     <span class="gsep"></span>
     <button id="graph" class="lbtn icon" disabled title="ER diagram - tables, columns and the relations between them, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
     <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
