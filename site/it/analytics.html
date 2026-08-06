@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost Analytics - guarda la forma di un workspace</title>
-<meta name="description" content="Rispecchia un workspace di Zoho Analytics in file locali: ogni vista con il suo tipo e le sue date, colonne e chiavi esterne di ogni tabella, la SQL di ogni query table, un diagramma ER e cosa non serve più a nessuno. In sola lettura, in locale, senza account.">
+<meta name="description" content="Rispecchia un workspace di Zoho Analytics in file locali: ogni vista con il suo tipo e le sue date, colonne e chiavi esterne di ogni tabella, l'SQL di ogni query table, un diagramma ER e cosa non serve più a nessuno. In sola lettura, in locale, senza account.">
 <link rel="canonical" href="https://zoost.it/it/analytics.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/analytics.html">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/analytics.html">
@@ -77,7 +77,7 @@
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost - workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/it/how-to.html">Come si usa</a>
       <a href="/it/nerd.html">Nerd</a>
-      <a href="/privacy.html">Privacy</a>
+      <a href="/it/privacy.html">Privacy</a>
       <a class="ncta" href="/analytics.html" hreflang="en" lang="en" title="This page in English">English</a>
     </nav>
   </div>
@@ -87,8 +87,8 @@
   <div class="wrap">
     <h1>Centinaia di viste, e nessun modo<br>di vederne la forma.<br>
       <span>Questa ti disegna la mappa.</span></h1>
-    <p class="lead">Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella, e la
-      SQL dietro ogni query table come file su cui puoi fare un diff. Poi il diagramma ER, cosa legge da cosa - e un
+    <p class="lead">Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella, e
+      l'SQL dietro ogni query table come file su cui puoi fare un diff. Poi il diagramma ER, cosa legge da cosa - e un
       elenco onesto di cosa non legge più nessuno.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
@@ -97,8 +97,8 @@
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
       <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" style="margin-top:22px">Questa pagina è in italiano, e così la guida. Restano in inglese la
-      privacy policy e la mappa per gli assistenti, e <b>l'estensione stessa è in inglese</b>: i nomi dei comandi che
+    <p class="note" style="margin-top:22px">Questa pagina è in italiano, e così la guida e la privacy policy.
+      <b>L'estensione, invece, è in inglese</b>: i nomi dei comandi che
       leggi qui (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli che troverai nel pannello, non
       traduzioni. La versione inglese di questa pagina è <a href="/analytics.html" hreflang="en">qui</a>.</p>
   </div>
@@ -116,15 +116,15 @@
       </div>
       <div>
         <h3>Una storia per tutto quello che hai scaricato</h3>
-        <p>Zoho Analytics non tiene lo storico di niente: cambi la SQL di una query table, una colonna o una
+        <p>Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una
           relazione e lo stato precedente non esiste più. Il mirror è fatto di file leggibili - JSON e SQL - quindi con Git
           <code>git diff</code> risponde a <em>cosa è cambiato in questo workspace il mese scorso</em> - la domanda
           che conta di più il giorno in cui un numero si muove e nessuno sa perché. <b>Git è facoltativo</b>: senza,
           il mirror resta comunque un insieme di file di testo che puoi cercare e condividere.</p>
       </div>
       <div>
-        <h3>La SQL è il sorgente</h3>
-        <p>Le tabelle sono schema e i report sono configurazione, ma la SQL di una query table è codice che qualcuno
+        <h3>L'SQL è il sorgente</h3>
+        <p>Le tabelle sono schema e i report sono configurazione, ma l'SQL di una query table è codice che qualcuno
           ha scritto. Finisce su disco come un file <code>.sql</code> per ciascuna, così si può diffare, rivedere e
           cercare come il codice che è.</p>
       </div>
@@ -173,7 +173,7 @@
       </div>
 
       <div class="card">
-        <h3>La SQL, come file</h3>
+        <h3>L'SQL, come file</h3>
         <ul>
           <li>Un <code>.sql</code> per query table - l'unica cosa qui dentro che qualcuno ha scritto davvero, e la
             parte su cui <code>git diff</code> ha qualcosa da dire.</li>
@@ -242,7 +242,7 @@
           calcolata - i tuoi dati. Quindi quell'endpoint resta inutilizzato e questa lacuna resta dichiarata.</p>
       </div>
       <div>
-        <h3>Non valida la SQL</h3>
+        <h3>Non valida l'SQL</h3>
         <p>Zoost non esegue, non controlla e non fa il deploy di nessuna query. Quello che scrive l'assistente è una
           bozza; l'unica cosa che può dirti se compila è Zoho Analytics.</p>
       </div>
@@ -289,7 +289,7 @@
       <a href="/it/analytics.html">Zoost - workbench for Zoho Analytics</a><span class="sep">·</span>
       <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
       <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
-      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="/it/privacy.html">Privacy policy</a><span class="sep">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
       <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
       <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>

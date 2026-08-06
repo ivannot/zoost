@@ -1028,11 +1028,18 @@ The **version badge is the one thing on a page written by script**, so a transla
 translate it by itself: `site.js` carries a small string table keyed on `<html lang>`, with English as
 the fallback for anything unlisted — a missing key shows English, never a key.
 
-**Six pages are translated and two deliberately are not.** `index`, `crm`, `analytics`, `how-to` and
-both guides have Italian versions; `privacy.html` stays English because it carries legal weight and a
-second wording is a second thing that can be argued about, and `llms.txt` stays English because it is
-read by a machine and one version cannot disagree with itself. Both are stated on the page rather
-than left to be noticed. **The control names inside a guide stay in English**, because the panel is —
+**Everything is translated except `llms.txt`.** `index`, `crm`, `analytics`, `how-to`, `nerd`, both
+guides and `privacy.html` have Italian versions; `llms.txt` stays English because it is read by a
+machine and one version cannot disagree with itself. That is stated on the page rather than left to
+be noticed.
+
+**The privacy policy is translated, and the English one governs.** It was kept English-only on the
+argument that a second wording is a second thing that can be argued about - which is real, and is
+answered by saying which one wins rather than by leaving Italian readers without it. The `.it` domain,
+the Italian site and an Italian reader who has to *approve* the extension inside a company all point
+the same way: `it/privacy.html` opens with a `data-it-only` note naming the English page as
+authoritative. Translate it literally; the register is dry on purpose and the numbering is the same on
+both, so the two can be read side by side. **The control names inside a guide stay in English**, because the panel is —
 a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
 under each guide's title says so.
 
@@ -1097,9 +1104,10 @@ the engine to pick the language a reader lands on. `canonical_and_alternates()` 
 criteria from the file's own path, so a page added tomorrow is checked without being listed. Every
 check here read the body; nothing read the head.
 
-What is **not** translated, on purpose: `privacy.html`, which is the most claim-dense page and has
-legal weight — English stays canonical; and `llms.txt`, whose reader is a machine and which is the
-map of the evidence, so there is one version of it and only one.
+What is **not** translated, on purpose: `llms.txt` alone, whose reader is a machine and which is the
+map of the evidence, so there is one version of it and only one. `privacy.html` *is* translated, and
+the English one governs - said on the page itself, because a legal document that exists twice needs
+one of the two to win before a difference becomes an argument.
 
 **A page that does not scroll sideways can still contain a block that does — and the sweep only ever
 measured the page.** Two overflows reached the user that way: the footer badge's

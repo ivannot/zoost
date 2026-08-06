@@ -104,7 +104,16 @@
   </url>
   <url>
     <loc>https://zoost.it/privacy.html</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
     <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/privacy.html</loc>
+    <lastmod>2026-08-06</lastmod>
+    <priority>0.4</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/privacy.html"/>
   </url>
 </urlset>

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
-<meta name="description" content="Come si usa Zoost Analytics: cartella di lavoro, workspace, il pull, leggere la struttura di una tabella e le sue chiavi esterne, il diagramma ER, la SQL delle query table, cosa non serve più a nessuno, gli export e l'assistente AI.">
+<meta name="description" content="Come si usa Zoost Analytics: cartella di lavoro, workspace, il pull, leggere la struttura di una tabella e le sue chiavi esterne, il diagramma ER, l'SQL delle query table, cosa non serve più a nessuno, gli export e l'assistente AI.">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics.html">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics.html">
@@ -42,7 +42,7 @@
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost - workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/it/docs-analytics.html" aria-current="page">Come si usa</a>
       <a href="/it/nerd.html">Nerd</a>
-      <a href="/privacy.html">Privacy</a>
+      <a href="/it/privacy.html">Privacy</a>
       <a class="ncta" href="/docs-analytics.html" hreflang="en" lang="en" title="This page in English">English</a>
     </nav>
   </div>
@@ -77,7 +77,7 @@
       <li><a href="#read">5. Leggere il workspace</a></li>
       <li><a href="#structure">6. Struttura e chiavi esterne</a></li>
       <li><a href="#diagram">7. Il diagramma ER</a></li>
-      <li><a href="#sql">8. La SQL delle query table</a></li>
+      <li><a href="#sql">8. L'SQL delle query table</a></li>
       <li><a href="#depends">9. Cosa non serve più a nessuno</a></li>
       <li><a href="#health">10. Salute</a></li>
       <li><a href="#export">11. Gli export</a></li>
@@ -94,7 +94,7 @@
     attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che
     hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
     lascialo spento: tutto il resto funziona esattamente allo stesso modo. La
-    <a href="/privacy.html">privacy policy</a> (in inglese) elenca cosa viene conservato, dove e perché.</p>
+    <a href="/it/privacy.html">privacy policy</a> elenca cosa viene conservato, dove e perché.</p>
 
   <h2 id="model">1. Il modello mentale</h2>
   <p>Tre cose, e il resto viene da sé.</p>
@@ -151,7 +151,7 @@
 
   <h2 id="pull">3. Il pull</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> legge tutto il workspace in un passaggio: l'elenco delle viste, le
-    colonne e i tipi di ogni tabella e query table, le relazioni fra loro, la SQL di ogni query table e il
+    colonne e i tipi di ogni tabella e query table, le relazioni fra loro, l'SQL di ogni query table e il
     grafo delle dipendenze. Qualche centinaio di viste ci mette meno di un minuto.</p>
   <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole -
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> e
@@ -162,7 +162,7 @@
     <li>Una <b>fase</b> - l'elenco delle viste, la struttura, il modello ER - è una chiamata sola. Se non
       risponde non c'è nessun risultato parziale che valga la pena tenere, quindi il pull si ferma e
       <b>non viene scritto niente</b>. Quello che era su disco resta com'era.</li>
-    <li>Un <b>elemento</b> - la SQL o la lineage di una vista - è una chiamata per ciascuno. Una vista
+    <li>Un <b>elemento</b> - l'SQL o la lineage di una vista - è una chiamata per ciascuno. Una vista
       illeggibile non deve costare le altre quattrocento, quindi gli errori vengono raccolti, il pull
       arriva in fondo e la riga di stato dice quanti ne sono stati saltati. Compare
       <b class="ui">Retry N failed</b>, che rilegge esattamente quelli.</li>
@@ -248,7 +248,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>La finestra ha anche una scheda <b>Relations</b>: una riga per join, cercabile per tabella, colonna o
     join, e ogni join si può copiare.</p>
 
-  <h2 id="sql">8. La SQL delle query table</h2>
+  <h2 id="sql">8. L'SQL delle query table</h2>
   <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
     le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
@@ -291,7 +291,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     il nome di un modello e la tua chiave API.</p>
   <h3>Anthropic (Claude) - agente completo</h3>
   <p>Gira con strumenti in sola lettura sul mirror locale: legge una struttura, segue una chiave esterna,
-    apre la SQL di una query, cerca fra le colonne e dice cosa dipende da cosa, scegliendo da sé quali usare.
+    apre l'SQL di una query, cerca fra le colonne e dice cosa dipende da cosa, scegliendo da sé quali usare.
     Ogni chiamata a uno strumento compare nella chat, così vedi cosa ha guardato prima di rispondere.</p>
   <h3>OpenAI (ChatGPT) - passaggio singolo</h3>
   <p>Risponde in un colpo solo a partire dall'indice del workspace e dalla vista che hai aperto. Non può
@@ -378,7 +378,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>
   <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono - nomi di viste e
-    colonne, relazioni, e la SQL delle tue query table - dal tuo browser direttamente al provider che hai
+    colonne, relazioni, e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
@@ -429,7 +429,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <a href="/it/analytics.html">Zoost - workbench for Zoho Analytics</a><span class="sep">·</span>
       <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
       <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
-      <a href="/privacy.html">Privacy policy</a><span class="sep">·</span>
+      <a href="/it/privacy.html">Privacy policy</a><span class="sep">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
       <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
       <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
