@@ -526,6 +526,25 @@ test('no list still tells the reader to pull without asking first', () => {
   }
 });
 
+test('a module refusal is explained once in the pane, not once per empty section', () => {
+  // Reported with a screenshot: the same sixty-word sentence three times in a 300px pane - the
+  // banner, the fields area and the related lists area. A reason repeated under the reason stops
+  // reading as an explanation. The banner explains; the sections state their own fact and stop.
+  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  // Whole function bodies, found by name and closed on the first `}` in column 1 - the same way the
+  // rest of this file slices, and it does not depend on a comment surviving the strip above.
+  const body = (name) => {
+    const a = src.indexOf(name);
+    assert.ok(a >= 0, `${name} is gone - this test has drifted off its target`);
+    return src.slice(a, src.indexOf('\n}', a));
+  };
+  // The detail pane only: the exports and the AI carry it once each, and that is right - a reader
+  // of an export cannot come back and ask the panel.
+  const pane = body('async function openModule(') + body('function renderFieldsTable(');
+  const uses = [...pane.matchAll(/refusal\.text|ref\.text/g)].length;
+  assert.equal(uses, 1, `the full refusal is printed ${uses} times in the detail pane`);
+});
+
 test('a lapsed permission is reported in words, on both sides', () => {
   // The same sentence, word for word: the remedy is one click and both panels say so rather than
   // leaving the reader to work out that «access not granted» in a dropdown is actionable.

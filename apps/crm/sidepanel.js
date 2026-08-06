@@ -2424,8 +2424,9 @@ function renderFieldsTable(m) {
     <td>${f.picklist && f.picklist.length ? escHtml(f.picklist.slice(0, 8).join(', ')) + (f.picklist.length > 8 ? ` \u2026(+${f.picklist.length - 8})` : '') : ''}</td>
   </tr>`).join('');
   if (!rows) {
-    const ref = moduleRefusal(m.unreadable);
-    return `<div class="empty" style="padding:12px 10px">${ref ? '<b>No fields, and they were not missed.</b> ' + escHtml(ref.text)
+    // The refusal is stated once, in the banner directly above this. Repeating it here and again
+    // under Related lists put the same sixty words on screen three times.
+    return `<div class="empty" style="padding:12px 10px">${m.unreadable ? '<b>No fields were read.</b>'
       : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
   }
   return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -2491,7 +2492,7 @@ async function openModule(path, layoutId) {
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`
     : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">${
-        refusal ? escHtml(refusal.text) : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
+        refusal ? 'Not read either - Zoho would not describe this module.' : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
   const refBanner = refusal
     ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
     : '';

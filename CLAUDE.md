@@ -438,6 +438,14 @@ One sentence, one function, five consumers: `moduleRefusal()` feeds the row, the
 fields table, the HTML and Markdown exports and the AI - and the assistant is told **before** the
 empty table, because a model handed a module with no fields will explain why a module has none.
 
+**One sentence per surface, though, not per empty section.** Having one function meant every place
+that had something to say could say the whole thing, so the first version put the same sixty words on
+screen **three times** in a 300px pane - the banner, the fields area, the related lists area - and he
+sent a screenshot. A reason repeated underneath the reason stops being read as an explanation. The
+banner explains; each section below states its own fact in one line and stops. A test counts the uses
+of the full text inside the detail pane and holds it at one, while leaving the exports and the AI
+their own copy - a reader of an export cannot come back and ask the panel.
+
 **The preview header names the file, and it named it in one place badly.** Selecting a function put
 `functions/<namespace>/<name>.dg` into a 400px header, so the ellipsis ate the file name and left the
 folder - and no other tab named a file at all, which reads as five products rather than five tabs.
