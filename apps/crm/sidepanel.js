@@ -1,5 +1,5 @@
 /*
- * sidepanel.js — IDE orchestrator (multi-workspace).
+ * sidepanel.js - IDE orchestrator (multi-workspace).
  */
 const ZOHO_MATCHES = [
   'https://crm.zoho.eu/*', 'https://crm.zoho.com/*', 'https://crm.zoho.in/*',
@@ -21,7 +21,7 @@ const zohoReady = () => !!(lastCtx && guardOk());
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
-let treeSortDir = 'asc';      // 'asc' | 'desc' — defaults per sort: A→Z for names, biggest-first for numbers
+let treeSortDir = 'asc';      // 'asc' | 'desc' - defaults per sort: A→Z for names, biggest-first for numbers
 let currentPath = null, pvHist = [];
 let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
@@ -35,9 +35,9 @@ const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; };
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // escHtml is NOT attribute-safe (it leaves " alone). Use escA inside an attribute value, or a
-// double quote in the data closes it early and truncates — the trap that halved the getRelated snippet.
+// double quote in the data closes it early and truncates - the trap that halved the getRelated snippet.
 // Attribute-safe: `&`, `<`, `>`, and **both** quote characters. escHtml() does not escape quotes, and
-// a quote inside an attribute closes it early — that is what cut the getRelatedRecords snippet in
+// a quote inside an attribute closes it early - that is what cut the getRelatedRecords snippet in
 // half. Escaping both quote styles means a reader never has to work out which one the attribute
 // used, and the two graph windows already did it this way.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -52,7 +52,7 @@ const PRODUCT_URL = 'https://zoost.it';
 //
 // chrome.tabs.create *activates* the new tab, so the panel suddenly finds itself looking at a
 // non-Zoho page: the environment guard fires, the interface empties and the mismatch overlay
-// appears. That behaviour is right when it means what it says, and here it meant nothing at all —
+// appears. That behaviour is right when it means what it says, and here it meant nothing at all -
 // the user clicked Help and the workbench looked like it had lost its place.
 //
 // Derived rather than listed: every link in the panel goes through here, and the only ones let
@@ -84,7 +84,7 @@ document.addEventListener('click', (e) => {
 
 // Settings live in one window, and only ever one.
 //
-// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window —
+// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window -
 // while the side panel is per window. Two browser windows, two settings tabs; over a working day,
 // ten. That is not a tidiness problem: every one of them is a form holding a snapshot of the
 // settings from the moment it opened, and saving an old one silently overwrites a newer one with
@@ -92,7 +92,7 @@ document.addEventListener('click', (e) => {
 // invited to "save your work" by the older of them.
 //
 // So: find any existing settings tab across all windows, focus it, and open a dedicated popup
-// window only if there is none. Existing duplicates are focused, never closed — one of them may
+// window only if there is none. Existing duplicates are focused, never closed - one of them may
 // hold edits, and discarding those to enforce uniqueness would be committing the very mistake this
 // prevents. They disappear as they are closed.
 //
@@ -115,7 +115,7 @@ async function openSettings() {
 }
 
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
-// guide, which is the kind of thing that only ever gets found by a user — so both are named here,
+// guide, which is the kind of thing that only ever gets found by a user - so both are named here,
 // once, and every surface derives from them instead of writing a path inline.
 const PAGE_URL = PRODUCT_URL + '/crm.html';
 const DOCS_URL = PRODUCT_URL + '/docs-crm.html';
@@ -133,7 +133,7 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
   + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
   + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
   + 'Deciding what may be extracted from the CRM, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
-const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b7 Independent, unofficial tool \u2014 not affiliated with Zoho Corporation.`;
+const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b7 Independent, unofficial tool - not affiliated with Zoho Corporation.`;
 
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
@@ -144,7 +144,7 @@ const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true,
 let expScope = Object.assign({}, SCOPE_FULL);
 // What the dialog is editing right now, and which of its boxes were cleared *for* the user because
 // the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
-// what you leave it with, so mutating the defaults to warn about staleness rewrote them — one
+// what you leave it with, so mutating the defaults to warn about staleness rewrote them - one
 // export and the settings had silently lost Functions and Workflows. A transient warning must never
 // become a stored preference. Same lost-update shape as two copies of the settings page.
 let dlgScope = Object.assign({}, SCOPE_FULL);
@@ -154,7 +154,7 @@ async function loadScope() {
 }
 // The tab preference, and the access verdicts recorded for the workspace that is open. Two sources
 // because they are two different kinds of fact: what you chose (per install) and what Zoho allows
-// (per org). Reading either must never throw the panel — a missing or malformed value just means
+// (per org). Reading either must never throw the panel - a missing or malformed value just means
 // "show everything", which is the state a first run is in anyway.
 async function loadTabPrefs() {
   try {
@@ -180,8 +180,8 @@ async function loadAccess() {
   } catch (_) {}
   publishAccess();
 }
-// The settings page cannot read the workspace's `.zoost.json` — it has no folder handle and no
-// business acquiring one — but it has to be able to say *why* a tab is off, or "hidden" becomes the
+// The settings page cannot read the workspace's `.zoost.json` - it has no folder handle and no
+// business acquiring one - but it has to be able to say *why* a tab is off, or "hidden" becomes the
 // silent state this whole change exists to avoid. So the panel publishes a copy for display.
 //
 // `.zoost.json` stays the authority: this is never read back into a decision, only into a sentence.
@@ -209,7 +209,7 @@ function bridgeError(r, fallback) {
 // role is a property of an org: the same person can be an administrator in one and read-only in
 // another, and a verdict carried between them would be a guess.
 //
-// The date is stored with it and shown, because "forbidden" is not a permanent truth — roles change,
+// The date is stored with it and shown, because "forbidden" is not a permanent truth - roles change,
 // and a verdict from three months ago is a record of what was asked, not a fact about today. That is
 // also why nothing here ever hides an area *without* an answer: no measurement means visible.
 async function noteAccess(area, err) {
@@ -235,17 +235,17 @@ async function noteAccess(area, err) {
 function pullFailMessage(area, e) {
   if (e && e.forbidden) {
     return `${tabLabel(area)}: your Zoho role does not grant access${e.status ? ` (Zoho answered ${e.status})` : ''}. `
-      + 'Nothing was pulled for it, and the tab is hidden — Settings says why, and lets you check again.';
+      + 'Nothing was pulled for it, and the tab is hidden - Settings says why, and lets you check again.';
   }
   return `${tabLabel(area)} pull error: ${(e && e.message) || 'unknown'}`;
 }
 
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than
-// five separate alarms — and it has to be said, because the tabs have just silently gone away.
+// five separate alarms - and it has to be said, because the tabs have just silently gone away.
 function forbiddenNote() {
   const off = TABS.map((t) => t.id).filter(isForbidden);
   if (!off.length) return '';
-  return ` · ${off.length} area${off.length > 1 ? 's' : ''} not granted to your Zoho role (${off.map(tabLabel).join(', ')}) — hidden`;
+  return ` · ${off.length} area${off.length > 1 ? 's' : ''} not granted to your Zoho role (${off.map(tabLabel).join(', ')}) - hidden`;
 }
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!dlgScope[k]; });
@@ -272,7 +272,7 @@ const AREA_SCOPE = {
 
 // Sections whose data is behind are cleared when the dialog opens, and why is written next to them.
 // Cleared rather than removed: an old chapter is sometimes exactly what you want, so the choice
-// stays yours — but it has to be a choice, and the default has to be the safe one. If you tick it
+// stays yours - but it has to be a choice, and the default has to be the safe one. If you tick it
 // back on, the report carries that section's own date, so the reader is told too.
 //
 // This makes the export follow the pull settings without a second set of switches to keep in step.
@@ -284,7 +284,7 @@ function scopeStaleNote() {
   if (!behind.length) { box.textContent = ''; box.style.display = 'none'; return; }
   box.style.display = '';
   box.innerHTML = behind.map((id) =>
-    `<div><b>${escHtml(tabLabel(id))}</b> — ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
+    `<div><b>${escHtml(tabLabel(id))}</b> - ${escHtml(areaAsOf(id))}, because ${escHtml(staleReason(id))}. `
     + 'Unticked; tick it to include it anyway and the report will carry that date.</div>').join('');
 }
 let _scopeResolve = null;
@@ -313,7 +313,7 @@ function showAbout() {
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${escHtml(PRODUCT_LICENSE)}</a> \u00b7 \u00a9 2026 ${escHtml(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${escHtml(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">Everything stays between your browser, your Zoho session and the local folder you picked. `
-    + `The extension has no server of its own and sends nothing anywhere. Exports are written to your workspace folder \u2014 what happens to them afterwards is up to you.</div>`;
+    + `The extension has no server of its own and sends nothing anywhere. Exports are written to your workspace folder - what happens to them afterwards is up to you.</div>`;
   $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
 }
 function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
@@ -341,15 +341,15 @@ async function* walk(d, prefix = '') {
 }
 const readCfg = async () => { try { return JSON.parse(await readFile(CFG)); } catch { return null; } };
 const writeCfg = async (o) => writeFile(CFG, JSON.stringify(o, null, 2));
-// Merge rather than replace. `.zoost.json` now holds more than the binding — the access verdicts
-// below live there too — and a whole-object write from any one writer silently drops what the others
+// Merge rather than replace. `.zoost.json` now holds more than the binding - the access verdicts
+// below live there too - and a whole-object write from any one writer silently drops what the others
 // put in it. This is the `cacheBinding` trap in CLAUDE.md, arriving a second time with a new field.
 const patchCfg = async (o) => writeCfg(Object.assign({}, (await readCfg()) || {}, o));
 
 // ---------- tabs ----------
 //
 // One registry. The five tabs used to be spelled out in the markup, in five `.active` toggles, in
-// five click handlers and in two label maps — which is why they could never be reordered and why a
+// five click handlers and in two label maps - which is why they could never be reordered and why a
 // sixth would have to be remembered in eight places. Everything that varies per tab is here; the
 // segment row is built from it.
 //
@@ -367,7 +367,7 @@ const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
 const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
 
 // What the user chose: which tabs to show and in what order. A preference, stored per install and
-// not per workspace — unlike the access verdicts, which are a property of one org's roles.
+// not per workspace - unlike the access verdicts, which are a property of one org's roles.
 let tabPrefs = { order: TABS.map((t) => t.id), hidden: [], nopull: [] };
 // What Zoho answered, for the workspace currently open: area -> { state, status, at }.
 // 'ok' | 'forbidden' | 'failed'. Empty until a pull has actually asked.
@@ -377,7 +377,7 @@ const accessOf = (id) => (tabAccess[id] && tabAccess[id].state) || null;
 // When an area was last read. Falls back to the workspace's own `lastPull` for anything mirrored
 // before per-area dates existed: those folders hold real, current data and simply carry no record.
 // Reading "no measurement" as "behind" is the inversion this project forbids everywhere else, and
-// here it had teeth — it silently unticked Functions and Workflows in the export dialog, so a report
+// here it had teeth - it silently unticked Functions and Workflows in the export dialog, so a report
 // quietly came out smaller than the user asked for.
 //
 // Where it must err, it errs towards *not* flagging: an over-stated freshness is visible, because
@@ -387,7 +387,7 @@ let wsLastPull = null;
 const pulledAt = (id) => (tabAccess[id] && tabAccess[id].pulledAt) || wsLastPull || null;
 
 // Staleness is derived, never declared. An area is behind if the mirror holds newer data for
-// something else — which is true whether it was excluded from the pull, refused by Zoho, or simply
+// something else - which is true whether it was excluded from the pull, refused by Zoho, or simply
 // failed, and stays true without anyone having to remember to set a flag. The margin exists because
 // a full pull writes its areas seconds apart and that is not a difference worth reporting.
 const STALE_MARGIN_MS = 6 * 60 * 60 * 1000;
@@ -400,7 +400,7 @@ function areaStale(id) {
   if (!mine) return true;                                       // never pulled, while others have been
   return Date.parse(newest) - Date.parse(mine) > STALE_MARGIN_MS;
 }
-// The words a user reads. Never "stale" on its own — a date they can act on, and the reason.
+// The words a user reads. Never "stale" on its own - a date they can act on, and the reason.
 function areaAsOf(id) {
   const mine = pulledAt(id);
   if (!mine) return 'never pulled';
@@ -417,11 +417,11 @@ const isHiddenByUser = (id) => tabPrefs.hidden.includes(id);
 // Hiding a tab and skipping its pull are separate on purpose, but they are not equally likely: most
 // people who turn a tab off do it because they cannot read that area anyway, and leaving it in the
 // pull chain then buys nothing but an error per pull. So the flag exists and it defaults to
-// following the tab — hide one and its pull goes with it unless you say otherwise, because the
+// following the tab - hide one and its pull goes with it unless you say otherwise, because the
 // alternative is a setting that is right for the ninth user out of ten and silently wrong for the
 // other nine.
 const isPulled = (id) => !tabPrefs.nopull.includes(id);
-// The order is the preference's, with anything the preference has never heard of appended — so a
+// The order is the preference's, with anything the preference has never heard of appended - so a
 // tab added in a later version appears instead of vanishing for everyone who has saved a setting.
 function tabOrder() {
   const known = tabPrefs.order.filter((id) => TAB[id]);
@@ -429,7 +429,7 @@ function tabOrder() {
 }
 // A tab is shown unless the user hid it or Zoho refused the area. Both make it *absent*, not
 // disabled: a control that can never do anything is noise, and a greyed one claims there is
-// something here you cannot have. The reason is never lost — it is stated after a pull and again in
+// something here you cannot have. The reason is never lost - it is stated after a pull and again in
 // Settings, which is where hiding stops being silent.
 const visibleTabs = () => tabOrder().filter((id) => !isHiddenByUser(id) && !isForbidden(id));
 
@@ -549,9 +549,9 @@ function fnRowEl(e) {
   el.setAttribute('aria-selected', e.path === currentPath);
   const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
   const stCh = e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
-  const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' — click to retry') : e.stale ? 'Older data (no connections / author) — click to refresh' : e.downloaded ? 'In workspace — click to re-download from Zoho' : 'Not in workspace — click to download';
+  const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? 'In workspace - click to re-download from Zoho' : 'Not in workspace - click to download';
   // Every trailing slot is always emitted, empty when it has nothing to say. A slot that disappears
-  // lets the next one slide into its place, and then the numbers stop lining up down the list —
+  // lets the next one slide into its place, and then the numbers stop lining up down the list -
   // which is the whole point of having them there.
   const st = e.stats;
   const restSlot = `<span class="rest rr">${e.rest ? 'REST' : ''}</span>`;
@@ -588,8 +588,8 @@ function renderTree() {
     b.querySelector('.connclear').onclick = clearConnectionFilter;
     tree.appendChild(b);
   }
-  // "No matches." is right only when there was something to match. With nothing pulled — or with the
-  // folder access lapsed — it is the least useful sentence available.
+  // "No matches." is right only when there was something to match. With nothing pulled - or with the
+  // folder access lapsed - it is the least useful sentence available.
   if (!shown.length) {
     const m = document.createElement('div'); m.className = 'empty';
     m.innerHTML = treeData.length ? '<b>No matches.</b>'
@@ -629,7 +629,7 @@ function renderTree() {
 }
 async function rebuildTree() {
   if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
+  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
   setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; aiConnCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   // scan disk: which functions are already downloaded (have a .meta.json), keyed by id
   const downloadedById = new Map(); const metaPaths = [];
@@ -662,7 +662,7 @@ async function rebuildTree() {
 }
 
 // The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first
-// render instead of blocking it — the graph gets built anyway the moment a function is opened.
+// render instead of blocking it - the graph gets built anyway the moment a function is opened.
 async function attachFnStats() {
   try {
     const g = await ensureGraph();
@@ -679,7 +679,7 @@ async function attachFnStats() {
 // for a number that is free to recompute.
 //
 // These are counts, not a score. Length measures verbosity, not complexity, and the call counts say
-// how much a function talks to the outside — how to read that is the reader's call, not ours.
+// how much a function talks to the outside - how to read that is the reader's call, not ours.
 // Zoho's own list of Deluge integration namespaces: zoho.com/deluge/help/integration-tasks.html
 const ZOHO_SERVICES = 'crm|creator|books|invoice|inventory|billing|subscriptions|desk|projects|people|recruit|mail|calendar|sheet|writer|cliq|connect|sign|analytics|bookings|salesiq|workdrive|map|notebook';
 const RE_ZOHO_ANY = new RegExp('\\bzoho\\.(?:' + ZOHO_SERVICES + ')\\.\\w+', 'gi');
@@ -751,11 +751,11 @@ function makeCallResolver(g) {
 function updateBack() { $('pvback').classList.toggle('show', pvHist.length > 0); }
 function openFromTree(path) { pvHist = []; openFile(path); }
 async function openFile(path, push = false, line = null) {
-  if (!(await ensurePerm(dir))) { setStatus('File access denied — click Refresh to grant.', 'bad'); return; }
+  if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
   if (push && currentPath && currentPath !== path) pvHist.push(currentPath);
   currentPath = path; updateBack(); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
-  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function \u2014 then open it from Zoho\u2019s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
+  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   $('pvname').textContent = path; $('pvcallers').className = ''; $('pvcallers').textContent = '';
   let code; try { code = await readFile(path); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
@@ -778,7 +778,7 @@ async function showCallers(path) {
     const nm = (id) => nameMode === 'display' ? (g.nodes[id].display_name || g.nodes[id].name) : (g.nodes[id].api_name || g.nodes[id].name);
     let html = callers.length
       ? `<b>Called by (${callers.length}):</b> ` + callers.map((id) => `<a data-file="${escA(g.nodes[id].file)}" title="${escA(g.nodes[id].display_name || g.nodes[id].name || '')}">${escHtml(nm(id))}</a>`).join(', ')
-      : '<b>Called by</b> \u2014 none';
+      : '<b>Called by</b> - none';
     const ap = node.associated_place || [];
     if (ap.length) {
       const byType = {};
@@ -790,7 +790,7 @@ async function showCallers(path) {
     const conns = node.connections || [];
     if (conns.length) {
       html += '<div class="connwrap"><b>Connections (' + conns.length + '):</b> '
-        + conns.map((c) => `<span class="conn" data-conn="${escA(c.name)}" title="${escA((c.label || c.name) + (c.service ? ' \u00b7 ' + c.service : '') + ' \u2014 click to list every function that uses it')}">${escHtml(c.name)}</span>`).join(' ')
+        + conns.map((c) => `<span class="conn" data-conn="${escA(c.name)}" title="${escA((c.label || c.name) + (c.service ? ' \u00b7 ' + c.service : '') + ' - click to list every function that uses it')}">${escHtml(c.name)}</span>`).join(' ')
         + '</div>';
     }
     const st = node.stats;
@@ -843,7 +843,7 @@ async function openZohoHome() {
 async function openModulePage(genName, navigable, label) {
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !genName) { setStatus('Unknown module target — pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !genName) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = `${base}/crm/${inst}/tab/${genName}`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -851,7 +851,7 @@ async function openModulePage(genName, navigable, label) {
 }
 async function openModuleLayouts(gen) {
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus('Unknown module target — pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -859,7 +859,7 @@ async function openModuleLayouts(gen) {
 }
 async function openModuleLayout(gen, layoutId) {
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus('Unknown module target — pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -874,7 +874,7 @@ function moduleNavigable(m) {
   return true;
 }
 async function switchTab() {
-  if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target \u2014 pull that workspace once from its own tab.', 'warn'); return; }
+  if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
   const targetHome = `${bound.base}/crm/${bound.instance}/`;
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
   const id = await activeZohoTabId();
@@ -895,7 +895,7 @@ async function switchTab() {
 }
 async function openTargetZoho(newTab) {
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
-  if (!url) { setStatus('Unknown target — pull this workspace once, or open Zoho manually.', 'warn'); return null; }
+  if (!url) { setStatus('Unknown target - pull this workspace once, or open Zoho manually.', 'warn'); return null; }
   if (newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else { const t = await chrome.tabs.create({ url }); id = t.id; }
@@ -910,16 +910,16 @@ async function listReady(id) {
 let _revealListener = null;
 async function listReadyWait(id, tries = 24) { for (let k = 0; k < tries && !(await listReady(id)); k++) await sleep(250); }
 // Find = fill the Zoho functions-list search box with this function's name. We wait (bounded, in
-// reveal) for the search box to exist \u2014 a known, language-independent element \u2014 then fill it ONCE.
+// reveal) for the search box to exist - a known, language-independent element - then fill it ONCE.
 // If it is not there, we STOP and say exactly that, instead of retrying an action we are not sure of.
 async function doFilter(id, fn, nice) {
   await ensureBridge(id);
-  if (!(await listReady(id))) { setStatus('Couldn\u2019t find the Zoho functions search box \u2014 is the Functions list open?', 'warn'); return; }
+  if (!(await listReady(id))) { setStatus('Couldn\'t find the Zoho functions search box - is the Functions list open?', 'warn'); return; }
   try {
     const r = await chrome.tabs.sendMessage(id, { cmd: 'fillSearch', name: fn.name || fn.apiName });
-    if (r && r.ok) { setStatus(`Filtered \u201c${r.term}\u2026\u201d \u2014 open \u201c${nice}\u201d from Zoho\u2019s \u22ef menu.`, 'ok'); return; }
-    setStatus('Couldn\u2019t fill the Zoho search box.', 'warn');
-  } catch (e) { setStatus('Couldn\u2019t reach the Zoho functions list: ' + e.message, 'warn'); }
+    if (r && r.ok) { setStatus(`Filtered "${r.term}\u2026" - open "${nice}" from Zoho\'s \u22ef menu.`, 'ok'); return; }
+    setStatus('Couldn\'t fill the Zoho search box.', 'warn');
+  } catch (e) { setStatus('Couldn\'t reach the Zoho functions list: ' + e.message, 'warn'); }
 }
 // Navigate to the Zoho Functions list (deterministic URL) and pre-filter it to `fn` (Find). The
 // only DOM touch left is filling the class-selected search box; there is no click-and-hope here.
@@ -1012,8 +1012,8 @@ function buildTypeChips() {
       const asc = treeSortDir === 'asc';
       dirBtn.textContent = asc ? '↑' : '↓';
       dirBtn.title = treeSort === 'name'
-        ? (asc ? 'A to Z — click for Z to A' : 'Z to A — click for A to Z')
-        : (asc ? 'Lowest first — click for highest first' : 'Highest first — click for lowest first');
+        ? (asc ? 'A to Z - click for Z to A' : 'Z to A - click for A to Z')
+        : (asc ? 'Lowest first - click for highest first' : 'Highest first - click for lowest first');
       dirBtn.setAttribute('aria-label', dirBtn.title);
     };
     // Changing what you sort by resets the direction to the one that is almost always wanted:
@@ -1077,7 +1077,7 @@ async function contentSearch() {
   }
   results.sort((a, b) => b.count - a.count || labelOf(a.e).localeCompare(labelOf(b.e)));
   tree.innerHTML = '';
-  if (!results.length) { tree.innerHTML = `<div class="treemsg">No matches for \u201c${escHtml(term)}\u201d.</div>`; return; }
+  if (!results.length) { tree.innerHTML = `<div class="treemsg">No matches for "${escHtml(term)}".</div>`; return; }
   const total = results.reduce((n, r) => n + r.count, 0);
   const hdr = document.createElement('div'); hdr.className = 'srhdr'; hdr.textContent = `${total} match(es) in ${results.length} file(s)`; tree.appendChild(hdr);
   const reTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1154,16 +1154,16 @@ async function buildHealth() {
   for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
-  const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> \u2014 never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
   // Size and outbound-call counts, shown as plain rankings with no threshold and no verdict: a long
   // function is worth a look, not automatically wrong, and the reader decides what the numbers mean.
   const withStats = nodes.filter((n) => n.stats && n.stats.lines);
   const biggest = withStats.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15)
     .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.lines} lines · ${n.stats.codeLines} code · ${(n.stats.chars / 1024).toFixed(1)} KB</span>` }));
   const chattiest = withStats.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15)
-    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls — ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
+    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
   const groups = [
-    { id: 'biggest', tab: 'size', title: 'Largest functions', desc: 'By line count, longest first. Length is verbosity, not complexity — a long function is worth a look, not necessarily a problem.', bad: false, items: biggest },
+    { id: 'biggest', tab: 'size', title: 'Largest functions', desc: 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.', bad: false, items: biggest },
     { id: 'chattiest', tab: 'size', title: 'Most outbound calls', desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
     { id: 'orphan', tab: 'functions', title: 'Orphan candidates', desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: 'Unresolved calls', desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
@@ -1181,8 +1181,8 @@ async function openHealth() {
   // Health reads the workspace files directly. Chrome lets the folder's File System Access
   // permission lapse after inactivity; without re-requesting it first (like every other file
   // operation does) the reads throw a generic "not allowed" DOMException. This click is a user
-  // gesture, so requesting here re-grants it \u2014 and if the user declines, we say so plainly.
-  if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted \u2014 click Refresh, then open Health again.</div>'; return; }
+  // gesture, so requesting here re-grants it - and if the user declines, we say so plainly.
+  if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted - click Refresh, then open Health again.</div>'; return; }
   try { healthData = await buildHealth(); } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
   renderHealthView();
 }
@@ -1234,7 +1234,7 @@ function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKe
 // ---------- unlocking a protected API key ----------
 // The passphrase is never stored and never leaves this function: it decrypts once, the plaintext goes
 // to chrome.storage.session, and the field is cleared. Forgetting it is recoverable only by entering
-// the API key again — stated in Settings, and not softened here.
+// the API key again - stated in Settings, and not softened here.
 function aiShowLock(on) {
   const row = $('ailockrow'); if (!row) return;
   // Idempotent on purpose: this runs on every window focus and every settings change, and re-showing
@@ -1248,15 +1248,15 @@ function aiShowLock(on) {
  *
  * "The request is not allowed by the user agent or the platform in the current context." is what a
  * lapsed folder permission looks like from anywhere that touches the disk, and it reads as a bug in
- * the extension. It has surfaced three times now — the agent loop, and renaming a workspace — so this
+ * the extension. It has surfaced three times now - the agent loop, and renaming a workspace - so this
  * is deliberately not AI-specific. Translated where it surfaces, so a user who meets it once more is told which button to
- * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
+ * press. Nothing branches on the class name - it is matched, not parsed, and anything unrecognised is
  * passed through untouched rather than dressed up.
  */
 function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
-    return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
+    return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
   }
   return 'Error: ' + m;
@@ -1266,13 +1266,13 @@ function friendlyError(e) {
  *
  * Chrome lets a File System Access permission lapse after inactivity, and every read then throws
  * `NotAllowedError: The request is not allowed by the user agent or the platform in the current
- * context.` — a message that names neither the folder nor the remedy. The AI path reads the mirror
+ * context.` - a message that names neither the folder nor the remedy. The AI path reads the mirror
  * directly (the seed index, the tools, the graph) and was the one path that never asked first, so it
  * surfaced as "the chat is broken until I click an item and come back": clicking an item runs
  * ensurePerm() under a real gesture and fixes it as a side effect.
  *
  * It has to happen *here*, at the click. requestPermission() needs transient user activation, so the
- * same call made inside the agent loop — after a network round trip to the model — is refused for want
+ * same call made inside the agent loop - after a network round trip to the model - is refused for want
  * of a gesture, which is the very error being reported. Same fix the Health view already carries.
  */
 async function aiEnsureFiles() {
@@ -1280,7 +1280,7 @@ async function aiEnsureFiles() {
   try { return await ensurePerm(dir); } catch (_) { return false; }
 }
 
-/** The verdict on a passphrase goes beside the field, because that is where the eye is — and because
+/** The verdict on a passphrase goes beside the field, because that is where the eye is - and because
  *  in the CRM panel the AI view covers the status bar completely, so a warning sent there while the
  *  chat is open is written to an element nobody can see. Same code on both sides regardless. */
 function aiLockMsg(text) {
@@ -1297,7 +1297,7 @@ async function aiUnlock() {
   // AES-GCM authenticates, so failure means the passphrase is wrong or the stored value is damaged.
   // Which of the two cannot be told apart, and the message says so rather than picking one.
   if (!key) {
-    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
+    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged - the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
     setStatus('Wrong passphrase.', 'warn');
     $('ailockpass').select(); return;
   }
@@ -1337,7 +1337,7 @@ function aiModuleText(m) {
 // dropped". Cutting the tail is the wrong answer: it removes an arbitrary half and the model cannot
 // tell it is missing, which is how an assistant ends up asserting a function does not exist.
 //
-// Functions are the vocabulary here — nothing can be answered without knowing what exists — so they
+// Functions are the vocabulary here - nothing can be answered without knowing what exists - so they
 // are never dropped. Modules and connections are short and go last. Whatever is left out is named as
 // left out, with the tool that finds it, so a partial index is honest rather than silently short.
 const AI_SEED_CAP_DEFAULT = 72000;
@@ -1364,13 +1364,13 @@ async function aiBuildSeed(cap) {
   if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(`the ${conns.length} connections`);
   aiSeedOmitted = omitted;
   if (out.length > cap) {                 // even the function list alone overflows
-    aiSeedOmitted = ['part of the function index — this org is larger than the index can hold'];
+    aiSeedOmitted = ['part of the function index - this org is larger than the index can hold'];
     out = aiTrunc(out, cap);
   }
   aiSeedTruncated = omitted.length > 0 || out.length >= cap;
   if (omitted.length) {
     out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and can be fetched by name`
-      + ` (list_functions, get_module, get_connection) \u2014 do not assume something is absent because`
+      + ` (list_functions, get_module, get_connection) - do not assume something is absent because`
       + ` it is not in this index.\n`;
   }
   aiSeedSize = out.length;
@@ -1380,14 +1380,14 @@ async function aiBuildSeed(cap) {
 // What the user is looking at, whatever kind of thing it is.
 //
 // This existed for Deluge functions only. Select a workflow, open the assistant, ask "what does this
-// do?" and it answered that it had no reference and asked for details — while the same question
+// do?" and it answered that it had no reference and asked for details - while the same question
 // about a function worked. `currentPath` was already being set by every tab; only this read it for
 // one of them. Adding a tab and not extending the focus is the "one of a set" miss the conventions
 // warn about, and it is invisible until someone asks the obvious question.
 //
 // The non-function kinds are serialised from the data actually captured rather than described field
 // by field. Naming fields here would be a second description of each shape, free to drift from the
-// pull that produces it — and inventing one that does not exist is how an assistant ends up
+// pull that produces it - and inventing one that does not exist is how an assistant ends up
 // confidently discussing something that was never there.
 async function aiFocus() {
   const p = currentPath;
@@ -1404,7 +1404,7 @@ async function aiFocus() {
     }
     if (p.startsWith('workflows/')) {
       const e = workflowData.find((x) => x.path === p);
-      // The list entry is the index — name, module, type. What the workflow *does* is its conditions
+      // The list entry is the index - name, module, type. What the workflow *does* is its conditions
       // and actions, and those live in the file, which is exactly what "what does this do?" asks for.
       let detail = null;
       try { detail = JSON.parse(await readFile(p)); } catch (_) {}
@@ -1431,7 +1431,7 @@ async function aiFocus() {
 }
 
 // The extension's own help, so "how do I export this?" is answered where the user already is
-// rather than by sending them to a website — which would move the question rather than answer it.
+// rather than by sending them to a website - which would move the question rather than answer it.
 // Guarded: a missing script must cost the product primer, never the whole assistant.
 function productHelp() {
   try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
@@ -1441,12 +1441,12 @@ async function aiSystemPromptB(withTools, cap) {
   const seed = await aiBuildSeed(cap);
   const focus = await aiFocus();
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists \u2014 call tools for the details you need.'
+    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
-  return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\u2019s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
+  return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\'s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
 const AI_TOOLS = [
-  { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) — use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
+  { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) - use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
   { name: 'get_function', description: 'Full Deluge source and metadata of a function identified by "namespace.name" (or just its name).', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'who_calls', description: 'List functions that call the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_callees', description: 'List functions called by the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
@@ -1454,10 +1454,10 @@ const AI_TOOLS = [
   { name: 'get_module', description: 'Field schema of a module by api_name.', input_schema: { type: 'object', properties: { api_name: { type: 'string' } }, required: ['api_name'] } },
   { name: 'get_connection', description: 'A connection by name (the string used in invokeurl [...connection:"..."]): its connector, status, scopes, and every function that uses it.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_workflow', description: 'A workflow by id or name: trigger, status, last execution, how many instant and scheduled actions it has and after how long, and the functions it calls.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
-  { name: 'list_workflows', description: 'List workflow rules with their instant/scheduled action counts and last execution. Filter by module, by active, and by has_scheduled_actions \u2014 use that last one to answer "which and how many workflows have actions that do not run immediately" exactly, instead of opening them one by one.', input_schema: { type: 'object', properties: { module: { type: 'string' }, active: { type: 'boolean' }, has_scheduled_actions: { type: 'boolean' } } } },
+  { name: 'list_workflows', description: 'List workflow rules with their instant/scheduled action counts and last execution. Filter by module, by active, and by has_scheduled_actions - use that last one to answer "which and how many workflows have actions that do not run immediately" exactly, instead of opening them one by one.', input_schema: { type: 'object', properties: { module: { type: 'string' }, active: { type: 'boolean' }, has_scheduled_actions: { type: 'boolean' } } } },
 ];
 // A tool that answers with nine hundred lines has not answered. Cap the list, say how many there
-// were, and say how to narrow — the model can then ask a better question instead of drowning in the
+// were, and say how to narrow - the model can then ask a better question instead of drowning in the
 // first one.
 function aiCap(lines, total, how, limit = 120) {
   if (lines.length <= limit) return lines.join('\n');
@@ -1478,7 +1478,7 @@ async function aiExecTool(name, input) {
     const crit = [flt ? `name contains "${input.filter}"` : '', minL ? `>= ${minL} lines` : '', minC ? `>= ${minC} outbound calls` : ''].filter(Boolean).join(', ') || 'all';
     if (!rows.length) return `0 functions match (${crit}). Total in workspace: ${Object.keys(nodes).length}.`;
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
-      + rows.map((r) => `${r.id} — ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
+      + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
   }
   if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
@@ -1489,18 +1489,18 @@ async function aiExecTool(name, input) {
     const list = await aiLoadConnections();
     const q = String(input.name || '').toLowerCase();
     const c = list.find((x) => (x.name || '').toLowerCase() === q) || list.find((x) => (x.label || '').toLowerCase() === q);
-    if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled — run Pull all)');
+    if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled - run Pull all)');
     return `connection: ${c.name}\nlabel: ${c.label || ''}\nconnector: ${c.connector || '(unknown)'}\n`
       + `status: ${c.missing ? 'referenced by functions but NOT in the catalogue' : c.connected === false ? 'configured but NOT connected' : 'connected'}\n`
       + `created_by: ${c.createdBy || ''}\nscopes: ${(c.scopes || []).join(', ') || '(none)'}\n`
-      + `used_by (${c.uses.length}): ${c.uses.join(', ') || '(none — unused by the functions in this workspace; Flow, widgets and client scripts are not visible to Zoost)'}`;
+      + `used_by (${c.uses.length}): ${c.uses.join(', ') || '(none - unused by the functions in this workspace; Flow, widgets and client scripts are not visible to Zoost)'}`;
   }
   if (name === 'list_workflows' || name === 'get_workflow') {
     // Both read the rules on disk rather than the index alone: the list endpoint returns neither the
     // scheduled actions nor the last execution, so an answer built from `workflows/index.json` would have been
     // confidently wrong about exactly the question this exists to answer.
     let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
-    if (!idx.length) return '(no workflows in this workspace — run Pull all)';
+    if (!idx.length) return '(no workflows in this workspace - run Pull all)';
     const rows = [];
     let unread = 0;
     for (const w of idx) {
@@ -1526,7 +1526,7 @@ async function aiExecTool(name, input) {
         + `status: ${r.w.active ? 'active' : 'inactive'}\n`
         + `last_executed: ${r.last || '(never, or not reported by Zoho)'}\n`
         + `instant_actions: ${r.instant}\n`
-        + `scheduled_actions: ${r.sched}${r.sched && r.delays.length ? ' — after ' + r.delays.join(', ') : ''}\n`
+        + `scheduled_actions: ${r.sched}${r.sched && r.delays.length ? ' - after ' + r.delays.join(', ') : ''}\n`
         + `functions: ${r.fns.join(', ') || '(none)'}`
         + (r.read ? '' : '\nNOTE: this rule has not been downloaded, so the action and execution figures above are absent, not zero.');
     }
@@ -1543,11 +1543,11 @@ async function aiExecTool(name, input) {
                   act === true ? 'active' : act === false ? 'inactive' : '',
                   mod ? `module ${input.module}` : ''].filter(Boolean).join(', ') || 'all';
     const head = `${sel.length} workflow(s) match (${crit}); ${idx.length} in the workspace.`
-      + (unread ? ` ${unread} rule(s) have not been downloaded, so they are counted as unknown rather than as zero — press «Complete missing» in the panel.` : '');
+      + (unread ? ` ${unread} rule(s) have not been downloaded, so they are counted as unknown rather than as zero - press «Complete missing» in the panel.` : '');
     if (!sel.length) return head;
     const lines = sel.map((r) =>
       `${r.w.name}${r.w.module ? ' [' + r.w.module + ']' : ''}${r.w.active ? '' : ' (inactive)'}`
-      + ` — ${r.sched} scheduled${r.sched && r.delays.length ? ' (' + r.delays.join(', ') + ')' : ''}`
+      + ` - ${r.sched} scheduled${r.sched && r.delays.length ? ' (' + r.delays.join(', ') + ')' : ''}`
       + `, ${r.instant} instant${r.last ? ', last run ' + String(r.last).slice(0, 16) : ''}`);
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
   }
@@ -1637,13 +1637,13 @@ async function aiCall(cfg, messages, system) {
   const d = await res.json();
   const c = d.choices && d.choices[0];
   const txt = (c && c.message && c.message.content) || '';
-  if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything \u2014 this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
+  if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything - this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
   return txt;
 }
 let aiBusy = false;
 function aiRenderMessages() {
   const box = $('aimsgs');
-  if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this org\u2019s Deluge \u2014 I can open functions, trace callers, read module schemas, and search the code.</div></div>'; return; }
+  if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this org\'s Deluge - I can open functions, trace callers, read module schemas, and search the code.</div></div>'; return; }
   box.innerHTML = aiMessages.map((m) => m.role === 'tool' ? `<div class="aitool">${escHtml(m.content)}</div>` : `<div class="aimsg ${m.role}"><div class="airole">${m.role === 'user' ? 'You' : 'AI'}</div><div class="aitext">${m.role === 'assistant' ? aiMarkdown(m.content) : escHtml(m.content).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (aiBusy ? '<div class="aiwait"><i></i><i></i><i></i> thinking\u2026</div>' : '');
   box.scrollTop = box.scrollHeight;
@@ -1652,7 +1652,7 @@ async function aiSend() {
   const cfg = await aiGetCfg();
   aiEngineChrome();
   if (aiLocked(cfg)) { aiShowLock(true); return; }
-  if (!(await aiEnsureFiles())) { setStatus('Folder access needs re-granting \u2014 press \u21bb Refresh, then ask again.', 'warn'); return; }
+  if (!(await aiEnsureFiles())) { setStatus('Folder access needs re-granting - press \u21bb Refresh, then ask again.', 'warn'); return; }
   if (!aiActiveReady(cfg)) { aiOpenSettings(); setStatus('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -1661,13 +1661,13 @@ async function aiSend() {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
     const system = await aiSystemPromptB(withTools, cfg.seedCap);
-    // The org index sent to the model is capped. If it was cut, say so once — don't let the user
+    // The org index sent to the model is capped. If it was cut, say so once - don't let the user
     // assume the model saw everything. Claude can still look things up; OpenAI (single-shot) cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
       aiSeedWarned = true;
       const what = aiSeedOmitted.length ? aiSeedOmitted.join(' and ') : 'part of the index';
       aiMessages.push({ role: 'tool', content: `ℹ️ Large org: ${what} could not fit in the index sent with each message. `
-        + (withTools ? 'Claude can still find them by name with its tools — the function list is always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific functions by name.') });
+        + (withTools ? 'Claude can still find them by name with its tools - the function list is always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific functions by name.') });
       aiRenderMessages();
     }
     if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20); }
@@ -1688,7 +1688,7 @@ async function aiEngineChrome() {
   } else {
     b.textContent = 'OpenAI \u00b7 single-shot'; b.className = 'single';
     $('ainotetxt').innerHTML = 'OpenAI answers in <b>one pass</b>: it sees the org index plus the function you have open, '
-      + 'and cannot go and read other files by itself \u2014 so it will ask you for what it is missing. '
+      + 'and cannot go and read other files by itself - so it will ask you for what it is missing. '
       + 'Switch to Claude in Settings for an agent that explores the whole workspace on its own.';
     note.className = 'ainote show';
   }
@@ -1700,7 +1700,7 @@ async function aiContextLabel() {
   const el = $('aictx'); if (!el) return;
   const focus = (currentPath && currentPath.endsWith('.dg'))
     ? 'Focus: ' + currentPath.split('/').pop()
-    : 'No function focused \u2014 open one to give code-level context';
+    : 'No function focused - open one to give code-level context';
   let cost = '';
   try {
     const cfg = await aiGetCfg();
@@ -1718,7 +1718,7 @@ function toggleAI() {
   aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
-function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching workspace does it too, because the old thread was about another org.')) return; dropWorkspaceState(); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it - switching workspace does it too, because the old thread was about another org.')) return; dropWorkspaceState(); }
 // AI configuration lives in the options page now: the side panel is 400px wide and these are
 // set-once fields. openSettings() focuses the one settings window; the panel picks the change up via
 // chrome.storage.onChanged.
@@ -1760,23 +1760,23 @@ async function syncOne(id) {
 // says what it holds at a glance. The folder NAME is only a label: identity is the org id inside
 // each `.zoost.json`, so renaming a Zoho portal (or the folder) never orphans a workspace.
 const APP_DIR = 'crm';                       // this app's subfolder
-const APP_DIRS = ['crm', 'analytics'];       // known product folders — not "foreign" content
+const APP_DIRS = ['crm', 'analytics'];       // known product folders - not "foreign" content
 let root = null, rootGranted = false;
-// True when the workspace on screen still has the pre-1.13 folders. Nothing reads them — it is
+// True when the workspace on screen still has the pre-1.13 folders. Nothing reads them - it is
 // there so the empty state can name the real reason instead of saying «nothing pulled yet» about
 // a folder that is visibly full.
 let oldLayout = false;
 /** Why a list is empty, in the order the states actually block each other.
  *
  * An empty state is never silent here: it says what is missing and what to do. Saying the *wrong*
- * missing thing is worse than silence, because the reader goes and does it and nothing changes — and
+ * missing thing is worse than silence, because the reader goes and does it and nothing changes - and
  * it is usually the step they have already done that gets repeated at them. Returns null when the
  * blocker really is that nothing has been pulled, so each tab can name its own thing.
  *
  * Word for word the Analytics panel's, because the first three states are the same product.
  */
 /** Put the blocker on screen. Called from every early return in loadWorkspaces, because that is
- *  exactly where the panel used to leave whatever the previous state had drawn — and with a lapsed
+ *  exactly where the panel used to leave whatever the previous state had drawn - and with a lapsed
  *  permission it drew nothing at all, so the CRM said in the status line what Analytics said in the
  *  list and the two looked like different products. */
 function renderBlocked() {
@@ -1791,7 +1791,7 @@ function emptyReason() {
       + 'dedicated, empty folder. Every workspace lives inside it.';
   }
   if (!rootGranted) {
-    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 or simply '
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above - or simply '
       + 'click anywhere in this panel, which does the same. One click, no folder picker.';
   }
   if (!wsList.length) {
@@ -1801,11 +1801,11 @@ function emptyReason() {
   if (oldLayout) {
     // Not a migration and not a fallback: nothing here reads the old paths. It is an empty state
     // telling the truth, the same way the older flat working-folder layout is reported rather than
-    // adopted — «nothing pulled yet» would be a lie about a folder that is plainly full.
+    // adopted - «nothing pulled yet» would be a lie about a folder that is plainly full.
     return '<b>This workspace uses the old folder layout.</b> Functions now live under '
       + '<b>functions/</b> and the other folders lost their leading underscore. Press <b>Pull all</b> '
-      + 'to write it again in the new shape — nothing is fetched twice that you already have '
-      + '— then delete the old <b>_index</b>, <b>_modules</b>, <b>_layouts</b>, <b>_workflows</b>, '
+      + 'to write it again in the new shape - nothing is fetched twice that you already have '
+      + '- then delete the old <b>_index</b>, <b>_modules</b>, <b>_layouts</b>, <b>_workflows</b>, '
       + '<b>_schedules</b> and <b>_connections</b> folders, and the namespace folders sitting beside '
       + 'them. Zoost never deletes files it did not just write.';
   }
@@ -1814,8 +1814,8 @@ function emptyReason() {
 /** Does this workspace still carry the folders from before the layout was regularised?
  *
  * Only the names are looked at, and only at the top level: a workspace written by 1.13 or later has
- * none of them, and one written before has several. It is deliberately not a fallback — no reader
- * anywhere knows the old paths — and there is no automatic migration: a re-pull writes the new shape
+ * none of them, and one written before has several. It is deliberately not a fallback - no reader
+ * anywhere knows the old paths - and there is no automatic migration: a re-pull writes the new shape
  * and the old folders are the user's to delete, because Zoost does not remove files it did not write.
  */
 const OLD_DIRS = ['_index', '_modules', '_layouts', '_workflows', '_schedules', '_connections'];
@@ -1842,7 +1842,7 @@ function setEnabled(on) { ['pull', 'pullone', 'graph', 'refresh', 'export', 'exp
 async function grantRoot() {
   if (!root) { await pickRoot(); return; }
   try {
-    if (!(await ensurePerm(root))) { setStatus('Access denied \u2014 Zoost cannot read the working folder.', 'bad'); return; }
+    if (!(await ensurePerm(root))) { setStatus('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
     rootGranted = true;
     setStatus(`Access granted to ${root.name}.`, 'ok');
     await loadWorkspaces();
@@ -1857,7 +1857,7 @@ async function pickRoot() {
     for await (const e of h.values()) {
       if (++seen > 80) break;
       if (e.kind !== 'directory') { foreign++; continue; }
-      if (APP_DIRS.includes(e.name)) continue;              // a product folder — this is our own layout
+      if (APP_DIRS.includes(e.name)) continue;              // a product folder - this is our own layout
       try { await e.getFileHandle(CFG); } catch (_) { foreign++; }   // a workspace from the older flat layout
     }
     if (foreign > 6 && !confirm(`\u00ab${h.name}\u00bb already contains ${foreign} items that are not Zoost workspaces.\n\n`
@@ -1872,7 +1872,7 @@ async function addWorkspaceForTab() {
   if (!root) { await pickRoot(); return; }
   if (!(await ensurePerm(root))) return;
   const ctx = lastCtx && lastCtx.org ? lastCtx : await getContext();
-  if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first \u2014 the workspace is created for the org you are signed in to.', 'warn'); return; }
+  if (!ctx || !ctx.org) { setStatus('Open a Zoho CRM tab first - the workspace is created for the org you are signed in to.', 'warn'); return; }
   try {
     const name = wsFolderName(ctx);
     const base = await appRoot(true);
@@ -1883,7 +1883,7 @@ async function addWorkspaceForTab() {
     await w.write(JSON.stringify({ org: ctx.org, base: ctx.origin, instance: ctx.instance }, null, 2));
     await w.close();
     await window.idbHandle.set('activeWs', 'org:' + ctx.org);
-    setStatus(`Workspace ready: ${name} \u2014 Pull to fill it.`, 'ok');
+    setStatus(`Workspace ready: ${name} - Pull to fill it.`, 'ok');
     await loadWorkspaces();
   } catch (e) { setStatus('Add failed: ' + e.message, 'warn'); }
 }
@@ -1894,11 +1894,11 @@ async function addWorkspaceForTab() {
  *
  * The **conversation** stayed on screen: the assistant's own replies name functions, modules and
  * connections from the org you have just left, sitting above a question about the new one, and the
- * whole thread is re-sent with every message — so the model is asked to reason about two orgs at
+ * whole thread is re-sent with every message - so the model is asked to reason about two orgs at
  * once and told nothing about the boundary.
  *
  * The **caches** stayed too, which is not confusing but wrong. `graphCache`, `aiModCache` and
- * `aiConnCache` were cleared in `rebuildTree()` — which only runs if you happen to be on the
+ * `aiConnCache` were cleared in `rebuildTree()` - which only runs if you happen to be on the
  * Functions tab. Switch workspace while looking at Workflows and the assistant answered from the
  * previous org's functions and schema, with no sign of it anywhere.
  *
@@ -1917,17 +1917,17 @@ async function activate(w, viaGesture) {
   const sameWs = activeWsId === w.id;
   dir = w.handle; activeWsId = w.id; await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   oldLayout = await hasOldLayout(w.handle);
-  // Not on a re-activation of the workspace already open — regranting a folder must not throw
+  // Not on a re-activation of the workspace already open - regranting a folder must not throw
   // away a conversation about the org you are still in.
-  if (!sameWs) { const n = dropWorkspaceState(); if (n) setStatus(`Workspace changed \u2014 the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn'); }
+  if (!sameWs) { const n = dropWorkspaceState(); if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn'); }
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   bound = w.binding || null;                         // read from the workspace's own .zoost.json
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
-  // Carrying the previous org's answers over would hide a tab in an org that grants it — the same
+  // Carrying the previous org's answers over would hide a tab in an org that grants it - the same
   // class of mistake the environment guard exists to prevent, one field further in.
   await loadAccess(); renderTabs();
   const ok = viaGesture ? await ensurePerm(dir) : await hasPerm(dir);
-  if (ok) await rebuildActive(); else { setStatus('Workspace found \u2014 click Refresh to grant access.', 'warn'); await refreshContext(); }
+  if (ok) await rebuildActive(); else { setStatus('Workspace found - click Refresh to grant access.', 'warn'); await refreshContext(); }
 }
 
 // In-memory only. `.zoost.json` is written when a workspace is created and on pull; rewriting
@@ -1951,12 +1951,12 @@ function updateWsButtons() {
     : needsGrant ? `\u{1F513} Grant access to ${root.name}`
     : `\u{1F4C1} ${root.name}`;
   rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
-    : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it \u2014 no folder picker.'
-    : `Working folder: ${root.name} \u2014 click to choose a different one`;
+    : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it - no folder picker.'
+    : `Working folder: ${root.name} - click to choose a different one`;
   // Absent when there is nothing to do, disabled only while it is *temporarily* unavailable.
   // A workspace already exists for this org and never will not: that is not a wait, it is a
-  // permanent no, and a greyed button there reads as something broken. The other three reasons —
-  // no working folder, no Zoho tab, no org on the tab — all clear on their own, so the button
+  // permanent no, and a greyed button there reads as something broken. The other three reasons -
+  // no working folder, no Zoho tab, no org on the tab - all clear on their own, so the button
   // stays visible and says what is missing.
   const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
   add.hidden = known;
@@ -1974,18 +1974,18 @@ async function loadWorkspaces() {
   if (!root) {
     sel.innerHTML = '<option value="">No working folder</option>';
     dir = null; setEnabled(false); updateWsButtons();
-    setStatus('Pick a working folder to start \u2014 every workspace lives inside it.', 'warn');
+    setStatus('Pick a working folder to start - every workspace lives inside it.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
   rootGranted = await hasPerm(root);
   if (!rootGranted) {
-    sel.innerHTML = `<option value="">${root.name} \u2014 access not granted</option>`;
+    sel.innerHTML = `<option value="">${root.name} - access not granted</option>`;
     dir = null; setEnabled(false); updateWsButtons();
-    setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel \u2014 one click, no folder picker.', 'warn');
+    setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
   const base = await appRoot(false);
-  // The enumeration itself can fail — a handle whose permission lapsed, a folder moved or removed
+  // The enumeration itself can fail - a handle whose permission lapsed, a folder moved or removed
   // since the browser stored it. Unguarded, that threw out of here and left the panel with no
   // workspace list and no explanation. A folder we cannot read is a state to report, not a crash.
   if (base) {
@@ -2013,10 +2013,10 @@ async function loadWorkspaces() {
         try { await e.getFileHandle(CFG); stray++; } catch (_) {}
       }
     } catch (_) {}
-    sel.innerHTML = `<option value="">${root.name}/${APP_DIR} \u2014 no workspaces yet</option>`;
+    sel.innerHTML = `<option value="">${root.name}/${APP_DIR} - no workspaces yet</option>`;
     dir = null; setEnabled(false); updateWsButtons();
     setStatus(stray
-      ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own \u2014 move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
+      ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
@@ -2033,7 +2033,7 @@ async function loadWorkspaces() {
 
 $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
 // A stored folder handle loses its permission between sessions and can only be re-granted from a
-// user gesture. Any click in the panel counts, so the first thing the user does restores access —
+// user gesture. Any click in the panel counts, so the first thing the user does restores access -
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
 // chat. The two panels excluded different subsets of those and neither list was wrong, which is how
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
@@ -2046,14 +2046,14 @@ document.addEventListener('click', async (e) => {
 /** What the workspace list shows, and what it must never stop showing.
  *
  * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
- * the derived name is kept — in the option's tooltip, always, whether or not a label is set. A list
+ * the derived name is kept - in the option's tooltip, always, whether or not a label is set. A list
  * that showed only the user's name for something would be a list you cannot check against the
  * platform.
  */
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || w.name; }
 function wsOptionTitle(w) {
   const label = ((w.cfg && w.cfg.label) || '').trim();
-  return label ? `${label} \u2014 folder ${w.name}` : w.name;
+  return label ? `${label} - folder ${w.name}` : w.name;
 }
 
 /** A name of the user's own for a workspace.
@@ -2063,7 +2063,7 @@ function wsOptionTitle(w) {
  * disk with the same label and nothing to tell them apart. Zoho CRM has the instance and the org id,
  * which are unambiguous and still not memorable.
  *
- * So the label is *displayed instead of* the derived name, and the derived name never disappears —
+ * So the label is *displayed instead of* the derived name, and the derived name never disappears -
  * it stays in the option's tooltip and in the bar beneath, because the label is a convenience and the
  * identity is the org or workspace id. Storing it in `.zoost.json` (through `patchCfg`, never
  * `writeCfg`) keeps it with the workspace: it survives a re-pull, and it travels with the folder if
@@ -2082,11 +2082,11 @@ async function renameWorkspace() {
   try {
     // Chrome lets the folder permission lapse, and this writes to disk. Asked for here because here
     // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
-    // DOMException the AI path used to. Third time this shape has surfaced — a write reached from a
+    // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — press ↻ Refresh, then try again.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - press ↻ Refresh, then try again.', 'warn'); return; }
     await patchCfg({ label });
-    setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
+    setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await loadWorkspaces();
   } catch (e) { setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
@@ -2095,7 +2095,7 @@ $('wsadd').onclick = () => addWorkspaceForTab();
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
 $('wsdel').onclick = async () => {
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;
-  if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only \u2014 nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
+  if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only - nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
   try {
     if (!(await ensurePerm(root))) return;
       const base = await appRoot(false);
@@ -2116,24 +2116,24 @@ function setMode(mode) {
   $('smode').style.display = mode === 'functions' ? '' : 'none';
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   const _typeLabel = tabLabel(mode).toLowerCase();
-  // The label is in the markup and stays there — writing textContent here replaced the mark with
+  // The label is in the markup and stays there - writing textContent here replaced the mark with
   // the word on every mode change, so the button reverted the moment anyone touched a segment.
   // Only the title varies, because only the type does.
-  $('pullone').title = `Pull only ${_typeLabel} into the local mirror — “Pull all” pulls every type`;
+  $('pullone').title = `Pull only ${_typeLabel} into the local mirror - "Pull all" pulls every type`;
   buildTypeChips();
   $('funcs').style.display = mode === 'functions' ? '' : 'none';
   $('graph').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
   $('nameToggle').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
   // The mark stays; only what it opens changes. Writing textContent here wiped it on the first
-  // mode switch — the same defect as #pullone, and the general shape: a control whose label lives
+  // mode switch - the same defect as #pullone, and the general shape: a control whose label lives
   // in the markup must not have that label rebuilt by whatever updates its state.
   // Two names, because two different drawings: functions are a call graph, modules are an ER model.
-  // Everything else that opens this window uses one of these two and no third word — «Schema»,
+  // Everything else that opens this window uses one of these two and no third word - «Schema»,
   // «Graph ↗» and «Open ER» were four names for one thing and the author could not keep them apart.
   $('graph').setAttribute('aria-label', mode === 'functions' ? 'Call graph' : 'ER diagram');
   $('graph').title = mode === 'functions'
-    ? 'Call graph \u2014 which function calls which, in its own window'
-    : 'ER diagram \u2014 modules and the relations between them, in its own window';
+    ? 'Call graph - which function calls which, in its own window'
+    : 'ER diagram - modules and the relations between them, in its own window';
   $('nameToggle').textContent = 'Name: ' + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
@@ -2141,8 +2141,8 @@ function setMode(mode) {
 // Rebuild the segment row from the registry. Called whenever the set can have changed: at start-up,
 // when the settings page saves, and after a pull has learned what the org's roles allow.
 //
-// If the active tab is no longer among the visible ones — the user just hid it, or a pull discovered
-// it is refused — the panel moves to the first that is left, rather than showing an empty view whose
+// If the active tab is no longer among the visible ones - the user just hid it, or a pull discovered
+// it is refused - the panel moves to the first that is left, rather than showing an empty view whose
 // segment is gone. With every tab hidden it says so instead of rendering a bare strip.
 function renderTabs() {
   const bar = $('modebar');
@@ -2155,14 +2155,14 @@ function renderTabs() {
   }
   bar.innerHTML = vis.map((id) =>
     `<button class="seg${id === viewMode ? ' active' : ''}" data-tab="${escA(id)}">${escHtml(tabLabel(id))}</button>`).join('')
-    || '<span class="segnone">Every tab is hidden — turn one back on in Settings.</span>';
+    || '<span class="segnone">Every tab is hidden - turn one back on in Settings.</span>';
   bar.querySelectorAll('.seg').forEach((b) => (b.onclick = () => setMode(b.dataset.tab)));
   if (vis.length && !vis.includes(viewMode)) setMode(vis[0]);
 }
 /** Is this path one module's file?
  *
  * Eight walks used to spell this out, each re-stating «a .json under modules/ that is not the index»
- * — which is why nesting anything else under modules/ looked dangerous, and why the first attempt at
+ * - which is why nesting anything else under modules/ looked dangerous, and why the first attempt at
  * the layout rename broke three of them at once. The shape of the folders should answer to what a
  * layout *is* (a property of a module), not to how many places repeat a condition. One predicate, and
  * the objection goes away.
@@ -2175,7 +2175,7 @@ const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.jso
 async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
-// when the current pull has finished \u2014 success or error.
+// when the current pull has finished - success or error.
 function setPullBusy(b) {
   pullBusy = b;
   $('pullone').disabled = b;
@@ -2197,7 +2197,7 @@ async function pullCurrent() {
 }
 // "Pull all" means every area this user can actually reach. An area Zoho refused last time is
 // skipped rather than re-tried on every pull: re-asking a question already answered turns each pull
-// into a list of failures nobody can act on. It is not written off either — Settings has "Check
+// into a list of failures nobody can act on. It is not written off either - Settings has "Check
 // again" for exactly that, because a role can change and this verdict carries the date it was given.
 //
 // A hidden-by-choice area is still pulled. Hiding is about the panel being crowded, not about the
@@ -2265,7 +2265,7 @@ async function pullModules() {
 // ---------- modules: tree ----------
 async function rebuildModules() {
   if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
+  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
   setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   const names = [];
   for await (const p of walk(dir)) if (isModuleFile(p)) names.push(p);
@@ -2278,7 +2278,7 @@ async function rebuildModules() {
     } catch (_) {}
   }
   renderModules();
-  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet — click Pull.'), moduleData.length ? 'ok' : 'warn');
+  setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
 }
 function renderModules() {
@@ -2286,7 +2286,7 @@ function renderModules() {
   const term = $('find').value.trim().toLowerCase();
   const relsHtmlFor = (m) => {
     const rl = scope.relations ? (m.related_lists || []) : []; if (!rl.length) return '';
-    return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">\u2014 API name for zoho.crm.getRelatedRecords()</span></div>`
+    return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">- API name for zoho.crm.getRelatedRecords()</span></div>`
       + `<table class="ftbl"><thead><tr><th>Relation API</th><th>Label</th><th>Returns</th><th>Type</th></tr></thead><tbody>`
       + rl.map((r) => `<tr><td class="mono"><b>${esc(r.api_name)}</b></td><td>${esc(r.label || '')}</td><td class="mono">${r.module ? modLink(r.module) : esc(r.connected_module || '')}${r.linking_module ? ` <span class="none">via ${esc(r.linking_module)}</span>` : ''}</td><td>${esc(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`;
@@ -2315,7 +2315,7 @@ function renderModules() {
       // The layouts chevron lives on the RIGHT (next to the layout count), not between dot and name,
       // so module names line up with the other tabs' dot\u2192name spacing.
       const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
-      const stTitle = m.error ? 'Failed \u2014 click to retry' : 'In workspace \u2014 click to resync fields from Zoho';
+      const stTitle = m.error ? 'Failed - click to retry' : 'In workspace - click to resync fields from Zoho';
       el.innerHTML = `<span class="st ${m.error ? 'st-err' : 'st-ok'}" title="${escA(stTitle)}">${m.error ? '\u27f3' : '\u25cf'}</span><span class="fname">${escHtml(nm(m))}</span>`
         + `<span class="rest rf" title="${m.fieldCount} field(s)">${m.fieldCount ? m.fieldCount + 'f' : ''}</span>`
         + `<span class="rest rl" title="${m.layoutCount} layout(s)">${m.layoutCount ? m.layoutCount + 'L' : ''}</span>${chev}`;
@@ -2335,7 +2335,7 @@ function renderModules() {
   }
 }
 async function resyncModule(m) {
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied — click Refresh.', 'bad'); return; }
+  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return; }
   if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
   setStatus(`Resyncing ${m.api_name}…`, 'busy');
   const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
@@ -2384,14 +2384,14 @@ function renderLayoutView(layout) {
   }).join('');
 }
 async function openModule(path, layoutId) {
-  if (!(await ensurePerm(dir))) { setStatus('File access denied — click Refresh.', 'bad'); return; }
+  if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh.', 'bad'); return; }
   currentPath = path; pvHist = []; updateBack(); if ($('status').className) setStatus('', '');
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
   const nav = moduleNavigable(m);
   $('pvname').textContent = `${m.plural_label || m.singular_label || m.module_name || m.api_name} \u00b7 ${m.api_name} \u00b7 ${(m.fields || []).length} fields${nav ? '' : ' \u00b7 no records tab'}`;
-  $('pvreveal').style.display = nav ? '' : 'none'; $('pvreveal').textContent = 'Records \u2197'; $('pvreveal').title = 'Open the module\u2019s records list in Zoho';
-  $('pvfind').style.display = nav ? '' : 'none'; $('pvfind').textContent = 'Layouts \u2197'; $('pvfind').title = 'Open the module\u2019s layouts (add/edit fields & layout) in Zoho';
+  $('pvreveal').style.display = nav ? '' : 'none'; $('pvreveal').textContent = 'Records \u2197'; $('pvreveal').title = 'Open the module\'s records list in Zoho';
+  $('pvfind').style.display = nav ? '' : 'none'; $('pvfind').textContent = 'Layouts \u2197'; $('pvfind').title = 'Open the module\'s layouts (add/edit fields & layout) in Zoho';
   $('pvcallers').className = ''; $('pvcallers').textContent = '';
   const gen = m.module_name || m.api_name;
   const namesBlock = `<div style="padding:8px 10px;font:11px var(--mono);border-bottom:1px solid var(--border);background:#141b29;line-height:1.7">`
@@ -2404,20 +2404,20 @@ async function openModule(path, layoutId) {
   const selector = lays.length
     ? `<div class="laybar">Layout: <select id="laysel"><option value="__all__">All fields (flat, ${(m.fields || []).length})</option>`
       + lays.map((l) => `<option value="${escA(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
-      + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho \u2014 Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
+      + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho - Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
     : '';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
-  const relBar = `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram \u2014 opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
+  const relBar = `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
   const rls = m.related_lists || [];
   const rlBlock = rls.length
-    ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">\u2014 API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
+    ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">- API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
       + `<table class="ftbl"><thead><tr><th>API name</th><th>Label</th><th>Target module</th><th>Type</th></tr></thead><tbody>`
       + rls.map((r) => `<tr><td class="mono rlcopy" data-c="${escA(r.api_name)}" title="Click to copy">${escHtml(r.api_name)}</td>`
         + `<td>${escHtml(r.label || '')}</td>`
         + `<td class="mono">${escHtml(r.module || r.connected_module || '')}${r.linking_module ? ` <span style="color:var(--muted)">via ${escHtml(r.linking_module)}</span>` : ''}</td>`
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`
-    : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">None recorded \u2014 re-run <b>Pull Modules</b> to fetch them.</div>`;
+    : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">None recorded - re-run <b>Pull Modules</b> to fetch them.</div>`;
   $('pvtable').innerHTML = namesBlock + relBar + selector + `<div id="laybody">${renderFieldsTable(m)}</div>` + rlBlock;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {
     navigator.clipboard.writeText(c.dataset.c).then(() => setStatus(`Copied \u00ab${c.dataset.c}\u00bb`, 'ok')).catch(() => {});
@@ -2431,7 +2431,7 @@ async function openModule(path, layoutId) {
     body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
     let full = []; try { full = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     const L = (full || []).find((x) => String(x.id) === String(v));
-    body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found \u2014 re-pull modules.</div>';
+    body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
   };
   const mod = document.getElementById('laymod');
   if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayout(m.module_name || m.api_name, v === '__all__' ? null : v); };
@@ -2522,7 +2522,7 @@ async function openSchemaFocus(apiName, depth) {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus(`Building relations graph for ${apiName}\u2026`, 'busy');
     const g = await buildSchemaGraph();   // full graph; the ER window filters by focus + depth client-side (adjustable there)
-    if (!g.counts.nodes) throw new Error('No modules pulled yet \u2014 pull in Modules mode.');
+    if (!g.counts.nodes) throw new Error('No modules pulled yet - pull in Modules mode.');
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
     await chrome.storage.local.set({ graphData: g });
@@ -2535,7 +2535,7 @@ async function openSchemaGraph() {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus('Building schema graph…', 'busy'); await refreshContext();
     const g = await buildSchemaGraph();
-    if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet — click Pull in Modules mode.'));
+    if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet - click Pull in Modules mode.'));
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Schema: ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
@@ -2555,7 +2555,7 @@ function isTransient(msg) {
 const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied — click Refresh.', 'bad'); return false; }
+  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return false; }
   const info = index.get(entry.id) || {};
   try {
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source });
@@ -2585,7 +2585,7 @@ async function downloadMissing() {
     await sleep(140);
   }
   updateMissingButton();
-  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing \u2014 use \u201cComplete missing\u201d.` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
+  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
   $('pull').disabled = false; $('missing').disabled = false;
 }
 function updateRow(e) {
@@ -2595,7 +2595,7 @@ function updateRow(e) {
   const ok = e.downloaded || e.scanned;
   st.className = 'st ' + (e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
   st.textContent = e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
-  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : ok ? 'In workspace \u2014 click to refresh' : 'Not in workspace \u2014 click to download';
+  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : ok ? 'In workspace - click to refresh' : 'Not in workspace - click to download';
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
@@ -2668,7 +2668,7 @@ tr.relrow.sys td{color:#9aa4b2;background:#fbfbfc}
 footer .legal{margin-top:6px;font-size:11px;line-height:1.5;opacity:.75;max-width:70ch}
 `;
 // The per-area dates, for the reports. A report that says "generated today" while a third of it is
-// four months old is the misleading half-truth this whole thread is about — so every report states
+// four months old is the misleading half-truth this whole thread is about - so every report states
 // when each part was last read, whether or not anything is behind. The reader gets the fact; nobody
 // here decides for them what it means.
 function freshnessLine() {
@@ -2756,7 +2756,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   const modLink = (api) => (api && modApiSet.has(api)) ? `<a href="#${modAnchor(api)}">${esc(api)}</a>` : esc(api || '');
   const relsHtmlFor = (m) => {
     const rl = scope.relations ? (m.related_lists || []) : []; if (!rl.length) return '';
-    return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">\u2014 API name for zoho.crm.getRelatedRecords()</span></div>`
+    return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">- API name for zoho.crm.getRelatedRecords()</span></div>`
       + `<table class="ftbl"><thead><tr><th>Relation API</th><th>Label</th><th>Returns</th><th>Type</th></tr></thead><tbody>`
       + rl.map((r) => `<tr><td class="mono"><b>${esc(r.api_name)}</b></td><td>${esc(r.label || '')}</td><td class="mono">${r.module ? modLink(r.module) : esc(r.connected_module || '')}${r.linking_module ? ` <span class="none">via ${esc(r.linking_module)}</span>` : ''}</td><td>${esc(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`;
@@ -2778,7 +2778,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
           return `<div style="font-weight:600;margin:8px 0 3px;font-size:12px">${esc(sec.display_label || sec.name || 'Section')} <span class="none">(${(sec.fields || []).length})</span></div><table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th></tr></thead><tbody>${frows}</tbody></table>`;
         }).join('');
         const secCount = secArr.length || (typeof L.sections === 'number' ? L.sections : 0);
-        return `<details open style="margin-top:6px"><summary style="cursor:pointer"><b>${esc(L.name || String(L.id))}</b>${L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''} <span class=\"none\">\u00b7 ${secCount} sections</span></summary>${secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail not in this export \u2014 re-pull modules for full layout fields.</div>'}</details>`;
+        return `<details open style="margin-top:6px"><summary style="cursor:pointer"><b>${esc(L.name || String(L.id))}</b>${L.visible === false ? ' <span class=\"none\">(hidden)</span>' : ''} <span class=\"none\">\u00b7 ${secCount} sections</span></summary>${secs || '<div class=\"none\" style=\"padding:4px 0\">Section detail not in this export - re-pull modules for full layout fields.</div>'}</details>`;
       }).join('') : '';
       modHtml += `<section class="item" id="${escA(modAnchor(m.api_name))}" data-name="${escA(((m.api_name || '') + ' ' + (m.plural_label || m.module_name || '')).toLowerCase())}">`
         + `<div class="ih"><b>${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</b> <code>${esc(m.api_name)}</code> <span class="gen">${esc(m.module_name || '')}</span>${laySrc.length ? ` <span class="none">\u00b7 ${laySrc.length} layout(s)</span>` : ''}</div>`
@@ -2806,9 +2806,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `<td class="mono">${esc(r.via || '')}</td><td class="ct">${esc(r.type)}${r.visible ? '' : ' \u00b7 hidden'}</td>`
     + `<td class="mono">zoho.crm.getRelatedRecords("${esc(r.api)}", "${esc(r.parent)}", recordId)</td></tr>`;
   const relHtml = allRels.length
-    ? `<p class="hxd">One row per relation. To read a related list in Deluge you need the <b>relation API name</b> \u2014 it is not the api_name of either module.</p>`
+    ? `<p class="hxd">One row per relation. To read a related list in Deluge you need the <b>relation API name</b> - it is not the api_name of either module.</p>`
       + `<table class="ftbl"><thead><tr><th>Relation API name</th><th>Label</th><th>On module</th><th>Returns</th><th>Via</th><th>Type</th><th>Deluge</th></tr></thead><tbody>${allRels.map(relRowHtml).join('')}</tbody></table>`
-    : '<p class="empty">No related lists in this export \u2014 re-run Pull Modules.</p>';
+    : '<p class="empty">No related lists in this export - re-run Pull Modules.</p>';
 
   // workflows grouped by trigger module
   const wfByMod = {}; wfs.forEach((w) => (wfByMod[w.module || '(no module)'] ||= []).push(w));
@@ -2901,8 +2901,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + hSec('Ambiguous calls', hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
     + hSec('Broken automations', hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
     + hSec('Missing module references', hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
-    + hSec('Largest functions', hBig.length, 'By line count, longest first. Length is verbosity, not complexity \u2014 a long function is worth a look, not necessarily a problem.', hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
-    + hSec('Most outbound calls', hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls \u2014 ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
+    + hSec('Largest functions', hBig.length, 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.', hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
+    + hSec('Most outbound calls', hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
     ;
   const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
 
@@ -2932,7 +2932,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     return `<tr id="${escA(connAnchor(c.name))}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
   });
   const connHtml = conns.length
-    ? `<p class="hxd">The org's connections and the functions that use each — the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
+    ? `<p class="hxd">The org's connections and the functions that use each - the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
     : '<p class="empty">No connections in this export.</p>';
   const toc = `<nav class="toc"><h2>Contents</h2>`
     + `<h3 class="toch">Functions (${fns.length})</h3>`
@@ -2941,16 +2941,16 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `<table class="toctbl"><thead><tr><th>Module</th><th>API name</th><th>Generated</th><th>Kind</th><th>Fields</th><th>Ref by</th></tr></thead><tbody>${modRows.join('') || '<tr><td colspan="6" class="none">none</td></tr>'}</tbody></table>`
     + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th><th title="Actions that do not run immediately">Scheduled</th><th>Last run</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
     + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
-    + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue \u2014 related-list API names for Deluge</a></div>` : '')
-    + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue — connectors, status, and which functions use each</a></div>` : '')
+    + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue - related-list API names for Deluge</a></div>` : '')
+    + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue - connectors, status, and which functions use each</a></div>` : '')
     + (scope.health ? `<h3 class="toch">Health <span class="cnt">${healthTotal}</span></h3><div class="tochx"><a href="#health">Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}</a></div>` : '')
     + `</nav>`;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<title>${esc(PRODUCT_NAME)} — ${esc(ws.label || ws.instance || 'Export')}</title>`
+    + `<title>${esc(PRODUCT_NAME)} - ${esc(ws.label || ws.instance || 'Export')}</title>`
     + `<meta name="author" content="${escA(PRODUCT_AUTHOR)}"><meta name="generator" content="${escA(PRODUCT_NAME)}"><meta name="description" content="Export of Zoho CRM Deluge functions and module schema.">${PRODUCT_URL ? `<link rel="canonical" href="${escA(PRODUCT_URL)}">` : ''}`
     + `<style>${EXPORT_CSS}</style></head><body>`
-    + `<header><h1>${esc(PRODUCT_NAME)} — Export</h1>`
+    + `<header><h1>${esc(PRODUCT_NAME)} - Export</h1>`
     + `<div class="meta">${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
@@ -3006,16 +3006,16 @@ function buildExportMarkdown(d, scope) {
   const first = (t) => (t || '').split('\n')[0].slice(0, 120);
   const params = (n) => '(' + ((n.params || []).map((p) => (p && (p.name || p.param_name)) || p).filter(Boolean).join(', ')) + ')';
   const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
-  let md = '# Zoho CRM Deluge \u2014 Workspace export (AI context)\n\n';
+  let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
   md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
-  md += '> Self-contained, read-only snapshot of this Zoho CRM org\u2019s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
+  md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' \u2014 ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
-  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` \u2014 ${(m.fields || []).length} fields\n`; });
+  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` - ${(m.fields || []).length} fields\n`; });
   if (wfs.length) {
     md += '\n### Workflows\n';
     wfs.forEach((w) => {
@@ -3027,7 +3027,7 @@ function buildExportMarkdown(d, scope) {
     });
   }
   if (scheds.length) { md += '\n### Schedules\n'; scheds.forEach((sc) => { md += `- ${sc.name} \u2192 ${sc.function_name || '?'}${sc.frequency ? ' (' + sc.frequency + ')' : ''}\n`; }); }
-  if (fnList.length) md += `\n---\n\n## Functions${scope.code ? ' (full source)' : ' (signatures only \u2014 source code excluded from this export)'}\n\n`;
+  if (fnList.length) md += `\n---\n\n## Functions${scope.code ? ' (full source)' : ' (signatures only - source code excluded from this export)'}\n\n`;
   fnList.forEach((n) => {
     md += `### ${n.namespace}.${n.name}\n\n`;
     md += `- api_name: \`${n.api_name || ''}\`${n.return_type ? ` \u00b7 returns ${n.return_type}` : ''}${n.rest ? ' \u00b7 REST-enabled' : ''}\n`;
@@ -3078,7 +3078,7 @@ function buildExportMarkdown(d, scope) {
       md += '\n';
     }
     (scope.layouts ? (m._layouts || []) : []).forEach((L) => {
-      md += `#### Layout: ${_mdCell(L.name || String(L.id))}${L.visible === false ? ' (hidden)' : ''} \u2014 ${(L.sections || []).length} sections\n\n`;
+      md += `#### Layout: ${_mdCell(L.name || String(L.id))}${L.visible === false ? ' (hidden)' : ''} - ${(L.sections || []).length} sections\n\n`;
       (L.sections || []).forEach((sec) => {
         md += `**${_mdCell(sec.display_label || sec.name || 'Section')}** (${(sec.fields || []).length})\n\n| Field | API name | Type | Req |\n|---|---|---|---|\n`;
         (sec.fields || []).forEach((fl) => { md += `| ${_mdCell(fl.field_label || fl.display_label || fl.api_name)} | \`${_mdCell(fl.api_name || '')}\` | ${_mdCell(fl.data_type || '')} | ${fl.required ? '\u25cf' : ''} |\n`; });
@@ -3088,7 +3088,7 @@ function buildExportMarkdown(d, scope) {
   });
   const mdStat = fnList.filter((n) => n.stats && n.stats.lines);
   if (mdStat.length) {
-    md += '---\n\n## Size and outbound calls\n\nPlain counts, no threshold and no verdict: length is verbosity, not complexity, and each outbound call is work Zoho meters. Calls are counted outside comments and string literals. Interpretation is the reader’s.\n\n';
+    md += '---\n\n## Size and outbound calls\n\nPlain counts, no threshold and no verdict: length is verbosity, not complexity, and each outbound call is work Zoho meters. Calls are counted outside comments and string literals. Interpretation is the reader\'s.\n\n';
     md += '| Function | Lines | Code lines | KB | invokeurl | zoho.crm | Other Zoho | sendmail | Total calls |\n|---|---|---|---|---|---|---|---|---|\n';
     mdStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).forEach((n) => {
       const s = n.stats;
@@ -3097,7 +3097,7 @@ function buildExportMarkdown(d, scope) {
     md += '\n';
   }
   if (conns.length) {
-    md += '---\n\n## Connections\n\nThe org’s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
+    md += '---\n\n## Connections\n\nThe org\'s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
     md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';
     conns.slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).forEach((c) => {
       const status = c.missing ? 'not in catalogue' : c.connected === false ? 'not connected' : 'connected';
@@ -3145,12 +3145,12 @@ async function loadScheduleIndex() {
 async function rebuildSchedules() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting \u2014 click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
     setStatus('Reading schedules\u2026', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadScheduleIndex();
     renderSchedules();
-    setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet \u2014 use Pull all.', 'ok');
+    setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet - use Pull all.', 'ok');
   } catch (e) { setStatus('Refresh error: ' + e.message, 'bad'); }
   await refreshContext();
 }
@@ -3176,7 +3176,7 @@ function renderSchedules() {
     list.forEach((e) => {
       const el = document.createElement('div'); el.className = 'f'; el.dataset.path = e.path;
       el.setAttribute('aria-selected', e.path === currentPath);
-      el.innerHTML = `<span class="st st-ok" title="In workspace \u2014 click to refresh schedules from Zoho">\u25cf</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.frequency || '')}</span>${e.status === 'active' ? '' : '<span class="wfoff">off</span>'}`;
+      el.innerHTML = `<span class="st st-ok" title="In workspace - click to refresh schedules from Zoho">\u25cf</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.frequency || '')}</span>${e.status === 'active' ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshSchedules(); };
       el.onclick = () => openSchedule(e);
       tree.appendChild(el);
@@ -3214,7 +3214,7 @@ async function openSchedule(e) {
  *
  * "How many workflows have actions that do not run immediately" had no answer anywhere: the list
  * endpoint does not carry it, so `workflows/index.json` does not either, and the fact was sitting unread in
- * every `workflows/<id>.json` — one level down, inside `conditions[].scheduled_actions[]`.
+ * every `workflows/<id>.json` - one level down, inside `conditions[].scheduled_actions[]`.
  *
  * Derived rather than captured, deliberately. Adding it to the index would mean a field that older
  * workspaces lack and a re-pull to acquire, for something already on the disk: this reads what the
@@ -3239,7 +3239,7 @@ async function loadWorkflowIndex() {
   for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
   workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
-  // downloaded yet has neither, and says so as absence rather than as a zero — «0 scheduled» about a
+  // downloaded yet has neither, and says so as absence rather than as a zero - «0 scheduled» about a
   // workflow nobody has read is a measurement that was never taken.
   for (const e of workflowData) {
     if (!e.downloaded) continue;
@@ -3255,7 +3255,7 @@ async function loadWorkflowIndex() {
 async function rebuildWorkflows() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting \u2014 click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
     setStatus('Reading workflows\u2026', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadWorkflowIndex();
@@ -3278,7 +3278,7 @@ function renderWorkflows() {
   const keys = Object.keys(byMod).sort();
   if (!keys.length) { tree.innerHTML = '<div class="empty">' + (workflowData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No workflows yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   // The scheduled-action count comes from the rule on disk, so a rule not downloaded yet has no
-  // count — it is not a zero. Filtering on it therefore answers about part of the org, and the
+  // count - it is not a zero. Filtering on it therefore answers about part of the org, and the
   // figure states its own gap rather than letting the list look complete.
   if (workflowFilter === 'scheduled') {
     const unread = workflowData.filter((e) => !e.downloaded).length;
@@ -3302,12 +3302,12 @@ function renderWorkflows() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' \u2014 click to retry') : e.downloaded ? 'In workspace \u2014 click to re-download from Zoho' : 'Not in workspace \u2014 click to download';
+      const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : e.downloaded ? 'In workspace - click to re-download from Zoho' : 'Not in workspace - click to download';
       // The delay is part of the fact: "2 scheduled" and "2 scheduled, 30 minutes later" are
       // different things to know before touching a rule, and the second costs a tooltip.
       const schedBadge = e.sched > 0
         ? `<span class="wfsched" title="${escA(e.sched + ' action(s) that do not run immediately'
-            + (e.schedDelays && e.schedDelays.length ? ' — after ' + e.schedDelays.join(', ') : ''))}">⏱ ${e.sched}</span>`
+            + (e.schedDelays && e.schedDelays.length ? ' - after ' + e.schedDelays.join(', ') : ''))}">⏱ ${e.sched}</span>`
         : '';
       el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${schedBadge}${e.active ? '' : '<span class="wfoff">off</span>'}`;
       el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
@@ -3318,7 +3318,7 @@ function renderWorkflows() {
 }
 async function downloadOneWf(entry) {
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied \u2014 click Refresh.', 'bad'); return false; }
+  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return false; }
   try {
     const r = await toBridge({ cmd: 'fetchWorkflow', id: entry.id });
     if (!r?.ok || !r.rule) throw new Error(r?.error || 'not found');
@@ -3342,7 +3342,7 @@ async function downloadMissingWf() {
     await sleep(120);
   }
   updateMissingButton();
-  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing \u2014 use \u201cComplete missing\u201d.` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
+  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
   $('pull').disabled = false; $('missing').disabled = false;
 }
 async function pullSchedules() {
@@ -3350,12 +3350,12 @@ async function pullSchedules() {
     if (!(await ensurePerm(dir))) { setStatus('Folder access not granted.', 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus('No Zoho CRM tab open.', 'warn'); return; }
     const cfg = await readCfg();
-    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch \u2014 refusing.', 'warn'); return; }
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); return; }
     await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
-    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 — some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
+    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null);
   } catch (e) { await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); }
 }
@@ -3365,7 +3365,7 @@ async function pullConnections() {
     if (!(await ensurePerm(dir))) return;
     const ctx = await getContext(); if (!ctx) { setStatus('No Zoho CRM tab open.', 'warn'); return; }
     const cfg = await readCfg();
-    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch — refusing.', 'warn'); return; }
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
@@ -3385,7 +3385,7 @@ async function loadConnectionsIndex() {
 async function rebuildConnections() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting — click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
     setStatus('Reading connections…', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     const cat = await loadConnectionsIndex();
@@ -3398,7 +3398,7 @@ async function rebuildConnections() {
     const catNames = new Set(cat.map((c) => c.name));
     Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: 'connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
-    setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet — click Pull all.'), connectionData.length ? 'ok' : 'warn');
+    setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
   } catch (e) { setStatus('Connections error: ' + e.message, 'bad'); }
   await refreshContext();
 }
@@ -3419,7 +3419,7 @@ function renderConnections() {
     el.setAttribute('aria-selected', c.path === currentPath);
     const dc = c.missing ? 'st-err' : c.connected === false ? 'st-stale' : 'st-ok';
     const dch = c.missing ? '⟳' : c.connected === false ? '◐' : '●';
-    const dt = (c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected') + ' — click to refresh connections from Zoho';
+    const dt = (c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected') + ' - click to refresh connections from Zoho';
     el.innerHTML = `<span class="st ${dc}" title="${escA(dt)}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
       + `<span class="rest rf" title="functions using it">${c.uses.length}×</span>`
       + (c.connector ? `<span class="rest rl" style="color:#a78bfa" title="connector">${escHtml(c.connector)}</span>` : '');
@@ -3474,13 +3474,13 @@ async function pullWorkflows() {
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
-    if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 \u2014 some workflows may be missing', 'warn');
+    if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 - some workflows may be missing', 'warn');
     await noteAccess('workflows', null);
   } catch (e) { await noteAccess('workflows', e); setStatus(pullFailMessage('workflows', e), 'bad'); } finally { pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
   const ws = bound || {};
-  if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding \u2014 pull first.', 'warn'); return; }
+  if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
   const url = `${ws.base}/crm/${ws.instance}/settings/workflow-rules/${id}`;
   let tid = await zohoTabId();
   try { if (tid) await chrome.tabs.update(tid, { url, active: true }); else await chrome.tabs.create({ url }); setStatus('Opened workflow in Zoho.', 'ok'); }
@@ -3600,7 +3600,7 @@ function renderUsage(u) {
 function openFunctionFromWorkflow(id, name) {
   const nid = String(id || ''); const nm = (name || '').toLowerCase();
   let ent = treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
-  if (!ent) { setStatus(`Function \u201c${name}\u201d not in workspace \u2014 pull functions first.`, 'warn'); return; }
+  if (!ent) { setStatus(`Function "${name}" not in workspace - pull functions first.`, 'warn'); return; }
   setMode('functions'); openFromTree(ent.path);
 }
 

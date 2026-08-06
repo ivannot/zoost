@@ -1,5 +1,5 @@
 /*
- * content-bridge.js — ISOLATED world on the Zoho Analytics page.
+ * content-bridge.js - ISOLATED world on the Zoho Analytics page.
  * Wrapped in a guard so it is safe to (re)inject via chrome.scripting.
  *
  * Read-only, like its CRM sibling. It never creates, edits or deletes a view.
@@ -7,13 +7,13 @@
  * Three differences from the CRM bridge worth knowing:
  *
  *  - **CSRF follows the HTTP method, not the path.** Measured across a 104-request capture with no
- *    exceptions: **every POST carries `X-ZCSRF-TOKEN: ZDB_CSRF_TOKEN=<value>`, and no GET does** —
+ *    exceptions: **every POST carries `X-ZCSRF-TOKEN: ZDB_CSRF_TOKEN=<value>`, and no GET does** -
  *    including `POST /reportsapi/DashAnalysisViewsJSON`, which is why "the /reportsapi/ family needs
  *    no token" was the wrong generalisation from a capture that happened to contain only its GETs.
  *    So `api()` (GET) sends none and `post()` sends it, and that split is the rule itself rather
  *    than a list of paths to keep updated.
  *
- *    Note the token's own name is **not** the cookie's name — the CRM bridge in this same repository
+ *    Note the token's own name is **not** the cookie's name - the CRM bridge in this same repository
  *    proves it: header prefix `crmcsrfparam=`, cookie `CT_CSRF_TOKEN`. Assuming otherwise here is
  *    what made the first ER pull fail.
  *
@@ -51,12 +51,12 @@
   // distinction at the same place, and the panels must not diverge on what a refusal looks like.
   //
   // Only the HTTP form is classified. Analytics also answers 200 with `{"status":"failure"}` and
-  // whether it ever refuses a permission *that* way has not been measured — so that path stays an
+  // whether it ever refuses a permission *that* way has not been measured - so that path stays an
   // ordinary failure rather than being labelled a refusal on a guess. Understating is recoverable;
   // telling someone their role is the problem when it is not sends them to an administrator for
   // nothing.
   function apiError(status, path, detail) {
-    const e = new Error(status + ' on ' + path.split('?')[0] + (detail ? ' — ' + detail : ''));
+    const e = new Error(status + ' on ' + path.split('?')[0] + (detail ? ' - ' + detail : ''));
     e.status = status;
     e.forbidden = status === 401 || status === 403;
     return e;
@@ -87,7 +87,7 @@
     return w;
   };
 
-  // Every POST wants a CSRF token; no GET does. It goes in as `ZDB_CSRF_TOKEN=<value>` — the same
+  // Every POST wants a CSRF token; no GET does. It goes in as `ZDB_CSRF_TOKEN=<value>` - the same
   // shape as the CRM bridge's prefixed token, a different name. Deterministic places are checked in
   // order; if none has it the caller stops with a message naming exactly what was looked for, rather
   // than sending a request that would come back as an unexplained failure.
@@ -95,7 +95,7 @@
   function zdbCsrf() {
     // Verified by intercepting what the Analytics app itself sends: the value is the 128-character
     // `CSRF_TOKEN` cookie, and `CT_CSRF_TOKEN` on this host holds the identical value. Reading
-    // either is therefore correct — the pair is tolerance for one being absent on another data
+    // either is therefore correct - the pair is tolerance for one being absent on another data
     // centre, not a guess between two candidates, and there is no request to retry if the first is
     // missing. The token was also confirmed **not** to be anywhere in the page source, so the
     // scrape that used to sit here was dead code and is gone.
@@ -103,7 +103,7 @@
   }
   async function post(path, params) {
     const token = zdbCsrf();
-    if (!token) throw new Error('CSRF token not found (no CSRF_TOKEN or CT_CSRF_TOKEN cookie on this page — are you signed in?)');
+    if (!token) throw new Error('CSRF token not found (no CSRF_TOKEN or CT_CSRF_TOKEN cookie on this page - are you signed in?)');
     const res = await fetch(BASE + path, {
       method: 'POST',
       headers: {
@@ -121,7 +121,7 @@
   const progress = (stage, done, total) =>
     chrome.runtime.sendMessage({ type: 'pullProgress', stage, done, total }).catch(() => {});
 
-  // VIEWLIST answers columnar — a key array plus a row array per record — so it is zipped back into
+  // VIEWLIST answers columnar - a key array plus a row array per record - so it is zipped back into
   // objects here rather than leaving index arithmetic scattered through the panel.
   const zip = (keys, rows) => (rows || []).map((r) => {
     const o = {}; (keys || []).forEach((k, i) => { o[k] = r[i]; }); return o;
@@ -161,7 +161,7 @@
         folderName: folderName.get(String(v.FOLD_ID)) || '',
         // PARENT_ID is the view this one is built on. Every presentation view carries it and it
         // always resolves to another view in the same list, so the whole report-to-source graph
-        // comes out of this one call — no per-view request needed for it.
+        // comes out of this one call - no per-view request needed for it.
         parent: v.PARENT_ID ? String(v.PARENT_ID) : null,
         createdText: text(v.VIEW_CREATE_TIME), createdBy: v.CREATED_BY || '',
         owner: v.OWNER_NAME || '',
@@ -181,7 +181,7 @@
 
   // ---- structure ----------------------------------------------------------------------------
   // One call describes every data-bearing object at once: the base Tables and the QueryTables.
-  // The payload is terse — tableValues is [name, kind] and each colValues entry is [name, type] —
+  // The payload is terse - tableValues is [name, kind] and each colValues entry is [name, type] -
   // so it is expanded here into something the panel and the reports can use without decoding
   // positional arrays. `kind` is Zoho's own discriminator: "0" for a Table, "6" for a QueryTable.
   const KIND = { 0: 'Table', 6: 'QueryTable' };
@@ -195,16 +195,16 @@
   }
   // The ER endpoint is what Analytics itself calls to draw the workspace diagram, and it is a strict
   // superset of GETALLTABLECOLDETAILS: the same 135 objects with the same columns and types
-  // (verified against a capture — identical sets, only ordered differently), plus four things that
+  // (verified against a capture - identical sets, only ordered differently), plus four things that
   // endpoint does not have:
   //
-  //   - **the relations** — 119 of them in the workspace this was measured on, each with the join
+  //   - **the relations** - 119 of them in the workspace this was measured on, each with the join
   //     written out as "(A.col)=(B.col)". This is the foreign-key graph, and nothing else we can
   //     read exposes it.
   //   - **`lastModTime`**, epoch milliseconds, which matched LAST_DESIGN_MODIFY on 135/135. It is
   //     the machine-readable design date the view list only gives as localized text, so the Design
   //     column can finally sort for these objects.
-  //   - **`isSystemTable`** — 37 of 135 here, while VIEWLIST flagged none. Telling what Zoho put
+  //   - **`isSystemTable`** - 37 of 135 here, while VIEWLIST flagged none. Telling what Zoho put
   //     there apart from what you built is close to the point of the product.
   //   - **`colid`**, a stable id per column, which survives a rename.
   //
@@ -271,7 +271,7 @@
       id: String(id),
       sql: d.SQLQUERY,
       parents: (Array.isArray(d.PAROBJID) ? d.PAROBJID : []).map(String),
-      sources,        // { sourceTableId: { name, kind, columns[] } } — column-level lineage
+      sources,        // { sourceTableId: { name, kind, columns[] } } - column-level lineage
     };
   }
   async function pullSql(ids) {
@@ -287,12 +287,12 @@
 
   // ---- lineage ------------------------------------------------------------------------------
   // Analytics' own dependency answer for one view, both directions. `level` is the distance in the
-  // graph, so this is already transitive — not just the immediate neighbours.
+  // graph, so this is already transitive - not just the immediate neighbours.
   async function viewDependencies(id) {
     const j = await api(`/clientapi/dependencyview/workspace/${ws()}/view/${id}`);
     const d = (j && j.data) || {};
     // Validate at the boundary. `{objId, level}` is the shape every captured response used, but an
-    // element that does not carry one must be dropped, not turned into the string "undefined" — which
+    // element that does not carry one must be dropped, not turned into the string "undefined" - which
     // is exactly what String(x.objId) did, and it travelled all the way to the diagram as a node name.
     // A bare id is accepted too, because dashboardViewIds already arrives that way.
     const one = (x) => {

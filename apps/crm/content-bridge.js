@@ -1,5 +1,5 @@
 /*
- * content-bridge.js — ISOLATED world on the Zoho page.
+ * content-bridge.js - ISOLATED world on the Zoho page.
  * Wrapped in a guard so it is safe to (re)inject via chrome.scripting.
  */
 (function () {
@@ -26,7 +26,7 @@
     } catch (_) {}
     return null;
   }
-  // The Zoho user id (zuid) is on every CRM page — a #dreZuId field (deluge runtime) and a `zuid`
+  // The Zoho user id (zuid) is on every CRM page - a #dreZuId field (deluge runtime) and a `zuid`
   // JS global. The connections catalogue endpoint needs it. Scraped like orgId (same fragility).
   function zuid() {
     try { const el = document.getElementById('dreZuId'); const v = el && String(el.value || el.textContent || '').trim(); if (v && /^\d{6,}$/.test(v)) return v; } catch (_) {}
@@ -40,7 +40,7 @@
   // "Same value, different prefix" was wrong, and wrong in the way that hides itself: the two are
   // *usually* equal, so reading CT_CSRF_TOKEN for both worked right up until the day they diverged
   // and the connections pull started answering 400 INVALID_CSRF_TOKEN. Hooking setRequestHeader on
-  // the page and comparing what Zoho's own UI sends against the cookie jar settled it — the deluge
+  // the page and comparing what Zoho's own UI sends against the cookie jar settled it - the deluge
   // runtime's token is the **`drecn`** cookie, and in the capture where it had rotated it was the
   // only cookie holding the value Zoho accepted.
   //
@@ -68,13 +68,13 @@
   // A refused request is a different fact from a failed one, and the panel has to be able to tell
   // them apart: "your Zoho role does not cover this" is something the user can act on, while
   // "500 on /crm/v2/…" is not. Zoho answers 401 when the session is not entitled and 403 when the
-  // profile is not — both mean *asked and refused*, neither means Zoost is broken.
+  // profile is not - both mean *asked and refused*, neither means Zoost is broken.
   //
   // Not verified: whether Zoho ever signals a permission refusal as 200 with an error body. If it
-  // does, that case will read as a normal failure here rather than being mislabelled — which is the
+  // does, that case will read as a normal failure here rather than being mislabelled - which is the
   // right way round for a guess we have not tested.
   function apiError(status, path, detail) {
-    const e = new Error(status + ' on ' + path + (detail ? ' — ' + detail : ''));
+    const e = new Error(status + ' on ' + path + (detail ? ' - ' + detail : ''));
     e.status = status;
     e.forbidden = status === 401 || status === 403;
     return e;
@@ -82,7 +82,7 @@
   // Zoho explains itself in the body and we were throwing it away. A connections pull failing with
   // `{"errorMessage":"INVALID_CSRF_TOKEN"}` reached the user as the bare string "400 on
   // /deluge/api/…", which names the symptom and hides the one word that says what to do. Read at
-  // most a short body, and only to quote it — nothing here branches on its contents.
+  // most a short body, and only to quote it - nothing here branches on its contents.
   async function errorDetail(res) {
     try {
       const t = (await res.text()).slice(0, 400);
@@ -91,17 +91,17 @@
     } catch (_) { return null; }
   }
   // Right after a fresh login the deluge runtime rejects the very first `/deluge/` call with
-  // 400 INVALID_CSRF_TOKEN, and any `/crm/` call in between makes the next attempt succeed —
+  // 400 INVALID_CSRF_TOKEN, and any `/crm/` call in between makes the next attempt succeed -
   // reproduced deliberately: log out, log in, pull connections (fails), pull schedules, pull
   // connections (works). It is also why "Pull all" never showed this: functions run first.
   //
-  // Which of the two explanations is true — `drecn` not yet set/refreshed, or the deluge session not
-  // yet initialised server-side — is **not** established. It does not need to be: the remedy is the
+  // Which of the two explanations is true - `drecn` not yet set/refreshed, or the deluge session not
+  // yet initialised server-side - is **not** established. It does not need to be: the remedy is the
   // same under both, and it is the one that was measured rather than reasoned about. So on exactly
   // that error, make one ordinary CRM call and try again, once.
   //
   // This is the "recovering by a known action" exception, not a retry loop: one attempt, only on a
-  // specific error string, only for the deluge family, and the primer's own result is ignored —
+  // specific error string, only for the deluge family, and the primer's own result is ignored -
   // we are after the side effect, and a user whose role refuses that endpoint is no worse off than
   // before. If the second attempt fails the original error is what the user sees.
   async function warmDeluge() {
@@ -130,10 +130,10 @@
       description: fn.description || '', updatedTime: fn.updatedTime, modified_by: fn.modified_by || null,
       associated_place: fn.associated_place ?? null, workflow: fn.workflow || '',
       rest_api: (fn.rest_api || []).map((r) => ({ type: r.type, active: r.active })),
-      // Connections the function uses. connectionLinkName is the join key — the exact name that
+      // Connections the function uses. connectionLinkName is the join key - the exact name that
       // appears in invokeurl [...connection:"..."], and the `name` in the org's connections catalogue.
       connections: (fn.connections || []).map((c) => ({ name: c.connectionLinkName, label: c.connectionName || c.connectionLinkName, service: c.serviceName || null, scopes: c.scopes || [] })).filter((c) => c.name),
-      sv: 2,   // meta schema version — bump when new fields are captured, so old copies re-fetch (backfill)
+      sv: 2,   // meta schema version - bump when new fields are captured, so old copies re-fetch (backfill)
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
@@ -155,7 +155,7 @@
     }
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, files };
   }
-  // Metadata-only list (fast, no code) — used to show all functions immediately, then download each on demand.
+  // Metadata-only list (fast, no code) - used to show all functions immediately, then download each on demand.
   async function listFunctions() {
     let start = 1, raw = [];
     while (true) {
@@ -171,7 +171,7 @@
     }));
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries };
   }
-  // Workflow rules — list (metadata) and per-rule detail (conditions + actions).
+  // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {
     let page = 1, raw = [], capped = false;
     while (true) {
@@ -196,7 +196,7 @@
     const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}/actions/usage?executed_from=${fromD}&executed_till=${tillD}&include_inner_details=related_details.sent_percentage`);
     return { usage: (resp.workflow_rules || [])[0] || null };
   }
-  // Scheduled functions — the list already carries the called function {id, name}.
+  // Scheduled functions - the list already carries the called function {id, name}.
   async function fetchModuleFields(apiName) {
     const fr = await api(`/crm/v2/settings/fields?module=${encodeURIComponent(apiName)}&type=all`);
     return { fields: fr.fields || [] };
@@ -291,7 +291,7 @@
   // Functions-list search box (Lyte input.searchBar, maxlength=20). ONLY the stable, language-
   // independent class selector. We do not fall back to matching the placeholder text: that is
   // localized, and guessing from it is exactly the "try and hope" this tool refuses. If Zoho
-  // renames this class, Find stops and says so — it does not improvise.
+  // renames this class, Find stops and says so - it does not improvise.
   function findSearchInput() {
     return document.querySelector('input.searchBar');
   }
@@ -312,7 +312,7 @@
   // ancestors hoping a framework handler would catch, waited for a popup, then clicked a link
   // matched by its localized label ("Modifica funzione" / "Edit function"). Even with a stable
   // selector (data-zcqa="cf_editFunction") the final step is a synthetic click that triggers a Lyte
-  // binding we cannot invoke ourselves — "click and hope" through a private DOM contract. It was
+  // binding we cannot invoke ourselves - "click and hope" through a private DOM contract. It was
   // removed on principle: the panel offers Find (a deterministic filter, above) and the user opens
   // the function from Zoho's own menu, reading the label in their own language.
 
@@ -344,13 +344,13 @@
     // null-origin iframes (location.origin === 'null'), where fetch(BASE + path) becomes a relative,
     // malformed URL (…/null/crm/v2/…) → 400. Those frames must stay silent so the real CRM frame answers.
     if (!/^https:\/\/crm(sandbox)?\.zoho/.test(location.origin)) return false;
-  // An Error does not survive chrome.runtime messaging — it arrives as a plain object, and
+  // An Error does not survive chrome.runtime messaging - it arrives as a plain object, and
   // `String(e)` throws away everything except the text. That is the boundary trap CLAUDE.md is about:
   // `forbidden` would be lost exactly here, and the panel would go back to guessing from a string.
   // So every handler replies through this, and the two facts travel as their own fields.
   const fail = (send) => (e) => send({ ok: false, error: String(e && e.message || e), status: (e && e.status) || 0, forbidden: !!(e && e.forbidden) });
 
-    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) — skips wrapper service frames
+    if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) - skips wrapper service frames
     if (msg?.cmd === 'pullAll') { pullAll().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'listFunctions') { listFunctions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'listWorkflows') { listWorkflows().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }

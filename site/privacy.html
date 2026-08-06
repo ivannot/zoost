@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Privacy policy — Zoost</title>
+<title>Privacy policy - Zoost</title>
 <meta name="description" content="Privacy policy for the Zoost Chrome extension. No data is collected by the developer.">
 <link rel="canonical" href="https://zoost.it/privacy.html">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -12,7 +12,7 @@
 <meta name="robots" content="index,follow">
 <link rel="stylesheet" href="/site.css">
 <style>
-  /* privacy-specific — shared base & content typography are in site.css */
+  /* privacy-specific - shared base & content typography are in site.css */
   td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
 </style>
 </head>
@@ -20,14 +20,14 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
       <a href="/how-to.html">How to</a>
       <a href="/nerd.html">Nerd</a>
       <a href="/privacy.html" aria-current="page">Privacy</a>
-      <a class="ncta" href="/it/index.html" hreflang="it" lang="it" title="Le pagine in italiano — questa è disponibile solo in inglese">Italiano</a>
+      <a class="ncta" href="/it/index.html" hreflang="it" lang="it" title="Le pagine in italiano - questa è disponibile solo in inglese">Italiano</a>
     </nav>
   </div>
 </header>
@@ -36,7 +36,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost — Chrome extensions · Last updated: 5 August 2026</p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: 5 August 2026</p>
 
   <div class="box">
     <h3>The short version</h3>
@@ -59,7 +59,7 @@
     yourself.</p>
   <p><b>One difference is worth stating plainly.</b> Zoost CRM can send your Deluge source
     code to an AI provider if you enable the assistant. Zoost Analytics can send view names,
-    column names, relations and the SQL of your query tables — and <b>never the rows inside your
+    column names, relations and the SQL of your query tables - and <b>never the rows inside your
     tables</b>, because it does not read them: the endpoints that return cell values are deliberately
     not called.</p>
 
@@ -87,7 +87,7 @@
         <td class="p">Local folder<br>(File System Access)<br><span class="k">Zoho CRM</span></td>
         <td>Deluge function source and its metadata (including which connections each function uses and who
           last changed it), module and layout metadata, related lists, workflows, schedules, the org's
-          connections catalogue (names, connectors and OAuth scopes — <b>never</b> connection secrets or
+          connections catalogue (names, connectors and OAuth scopes - <b>never</b> connection secrets or
           tokens), exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host
           and instance name, plus which types Zoho answered for and which it refused, with the date it was
           asked and the date each type was last read, plus a name for the workspace if you have given it
@@ -101,7 +101,7 @@
           graph; and the SQL of each query table as its own <code>.sql</code> file. Plus exports and a
           <code>.zoost.json</code> holding the workspace id, name and host, plus a name of your own if you
           have given it one.
-          <b>Never the rows inside your tables</b> — the extension does not read them, and the endpoints
+          <b>Never the rows inside your tables</b> - the extension does not read them, and the endpoints
           that return cell values are deliberately not called.</td>
         <td>Same purpose: a local, versionable mirror. The <code>.sql</code> files are the part that makes
           <code>git diff</code> able to answer what changed.</td>
@@ -111,13 +111,13 @@
         <td>Your preferences: AI engine choice, model, API key (in clear text, or encrypted if you turn on
           passphrase protection), export defaults, diagram layout settings,
           and which side-panel tabs you show, in what order, and which are included when you pull. Alongside them, a copy of the open
-          workspace's access record — the same "answered / refused" list as above — so the settings page can
+          workspace's access record - the same "answered / refused" list as above - so the settings page can
           say <i>why</i> a tab is unavailable instead of just hiding it.</td>
         <td>Settings must survive a browser restart.</td>
       </tr>
       <tr>
         <td class="p">chrome.storage.session</td>
-        <td>Only the API key, and only while it is unlocked — that is, only if you turned on passphrase
+        <td>Only the API key, and only while it is unlocked - that is, only if you turned on passphrase
           protection. Held in memory, never written to disk.</td>
         <td>So the passphrase is typed once per browser session rather than once per question. Cleared when
           the browser closes.</td>
@@ -137,25 +137,25 @@
   <h2>4. Where data travels</h2>
 
   <h3>4.1 Your Zoho product</h3>
-  <p>Zoost calls the API of the Zoho product open in your tab — the Zoho CRM API for one extension,
-    the Zoho Analytics API for the other — using the session you are already
+  <p>Zoost calls the API of the Zoho product open in your tab - the Zoho CRM API for one extension,
+    the Zoho Analytics API for the other - using the session you are already
     signed in with. It sends no credentials of its own and creates none. It operates strictly within
     your existing Zoho permissions: it can read exactly what your Zoho user can read, and nothing more.</p>
   <p>Zoost reads metadata and function source. It does not read, download or export your Zoho CRM records
-    — no contacts, no deals, no customer data.</p>
+    - no contacts, no deals, no customer data.</p>
 
-  <h3>4.2 The AI provider — only if you enable it</h3>
+  <h3>4.2 The AI provider - only if you enable it</h3>
   <div class="box warn">
     <h3>Read this before enabling the assistant</h3>
     <p>The AI assistant is off by default and requires you to enter your own API key. Once enabled, the
       content it needs to answer you. For Zoost CRM that includes <b>Deluge source code</b>, module schemas, workflow
       definitions, connection names and their connectors (never their secrets or tokens, which Zoost never
-      reads) and your questions — is sent directly from your browser to the provider you selected:
+      reads) and your questions - is sent directly from your browser to the provider you selected:
       Anthropic or OpenAI. No other destination is possible: the extension is granted network access to
       those two origins and to your Zoho product, and to nothing else.</p>
     <p>For <b>Zoost Analytics</b> the same applies to a different set: view names, column names and
       data types, the relations between tables, the dependency graph, and the <b>SQL of your query
-      tables</b>. It can never send the rows inside a table, because it never reads them — so the assistant
+      tables</b>. It can never send the rows inside a table, because it never reads them - so the assistant
       knows your workspace's structure and never its values.</p>
     <p>That provider then processes the data under <b>its own</b> terms and privacy policy, not this one.
       The developer of Zoost is not a party to that exchange, cannot see it and has no control over it.
@@ -167,8 +167,8 @@
     <b>in clear text</b>: Chrome offers extensions no encryption at rest and no credential store, so anyone
     with access to your browser profile can read it.</p>
   <p>You can turn on <b>passphrase protection</b> in Settings. The key is then encrypted with a passphrase
-    only you know — PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own
-    Web Crypto — and what sits on disk is ciphertext. You type the passphrase once per browser session, in
+    only you know - PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own
+    Web Crypto - and what sits on disk is ciphertext. You type the passphrase once per browser session, in
     the AI panel; the unlocked key is held in memory (<code>chrome.storage.session</code>) and disappears
     when the browser closes. The passphrase itself is never stored, never sent anywhere, and cannot be
     recovered: if you forget it, you enter your API key again and choose a new one.</p>
@@ -179,35 +179,35 @@
   <p>It is off by default because the trade is yours to price rather than ours. On a personal machine,
     typing a passphrase each session buys little; on a shared or managed one it buys a great deal. Note the
     honest limit of what encryption can do here: while the key is unlocked it is in the browser's memory,
-    where the browser can read it. What the passphrase protects is the key <em>at rest</em> — a copied
+    where the browser can read it. What the passphrase protects is the key <em>at rest</em> - a copied
     profile, a backup, another user of the same machine.</p>
 
   <h3>4.3 Exports</h3>
   <p>Export files are written to your working folder and go nowhere on their own. Before each export,
-    Zoost asks which sections may be included; the sensitive part is opt-in and flagged when selected —
+    Zoost asks which sections may be included; the sensitive part is opt-in and flagged when selected -
     Deluge source code in Zoost CRM, the SQL of your query tables in Zoost Analytics. What
     happens to a file after you create it is your responsibility and that of the organisation whose data
     it describes.</p>
 
   <h2>5. Permissions, and why each one exists</h2>
-  <p>Both extensions request the same four API permissions — <code>sidePanel</code>,
-    <code>storage</code>, <code>scripting</code> and <code>tabs</code> — for the same reasons. They
+  <p>Both extensions request the same four API permissions - <code>sidePanel</code>,
+    <code>storage</code>, <code>scripting</code> and <code>tabs</code> - for the same reasons. They
     differ only in which hosts they may reach: the Zoho CRM one lists the Zoho CRM and sandbox data
     centres <em>and</em> the Zoho One data centres, the Zoho Analytics one lists the Zoho Analytics data
     centres. Both list
     <code>api.anthropic.com</code> and <code>api.openai.com</code>, used only by the optional
     assistant and only if you configure it.</p>
   <ul>
-    <li><code>sidePanel</code> — the extension's interface is a Chrome side panel.</li>
-    <li><code>storage</code> — to keep your settings, as described above.</li>
-    <li><code>scripting</code> — to inject the bridge script that talks to the Zoho API using your
+    <li><code>sidePanel</code> - the extension's interface is a Chrome side panel.</li>
+    <li><code>storage</code> - to keep your settings, as described above.</li>
+    <li><code>scripting</code> - to inject the bridge script that talks to the Zoho API using your
       session, and the hook that notices when you save a function so the local copy can follow.</li>
-    <li><code>tabs</code> — to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
+    <li><code>tabs</code> - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code> — and their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts — which it reads, and <code>one.zoho.*</code> with <code>one.zohocloud.ca</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre because an account may live on any of them. Both also
+    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code> - and their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts - which it reads, and <code>one.zoho.*</code> with <code>one.zohocloud.ca</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list every data centre because an account may live on any of them. Both also
       list <code>api.anthropic.com</code> and <code>api.openai.com</code>, contacted only by the optional
       assistant and only if you configure it.</li>
-    <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> — the only two
+    <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> - the only two
       AI destinations the extension can reach, used solely by the optional AI assistant and only after you
       configure it.</li>
   </ul>
@@ -216,7 +216,7 @@
 
   <p>Both extensions also declare a <b>content security policy</b> of their own:
     <code>script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'none'</code>. The first two
-    are what Manifest V3 already enforces — no inline script, no code loaded from anywhere else — written
+    are what Manifest V3 already enforces - no inline script, no code loaded from anywhere else - written
     down rather than relied on silently. The last two are stricter than the default and cost nothing,
     because nothing shipped uses a form or a <code>&lt;base&gt;</code> element. A policy can only be
     tightened this way: Chrome refuses a manifest that tries to relax the first two.</p>
@@ -224,7 +224,7 @@
   <h2>6. Legal basis and your rights</h2>
   <p>Because the developer receives no personal data, there is no processing to consent to, object to,
     or request access to. Data protection rights in respect of the Zoho CRM data itself are exercised against
-    the controller of that data — your organisation — and, where relevant, against the AI provider you
+    the controller of that data - your organisation - and, where relevant, against the AI provider you
     chose, under their respective policies.</p>
 
   <h2>7. Children</h2>
@@ -236,8 +236,8 @@
     does not profile visitors. The pages are static files; the only script is one small file served from
     this same domain, which fills in the copyright year and the version badge in the footer.</p>
   <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's edge
-    and asks two public sources — the extension's Chrome Web Store listing page, and GitHub for the
-    repository's newest tag, the version in its manifest, and the date the site content last changed — so
+    and asks two public sources - the extension's Chrome Web Store listing page, and GitHub for the
+    repository's newest tag, the version in its manifest, and the date the site content last changed - so
     the footer can show what is published, what was released, what is in development, and when these pages
     last changed. Those requests are made <b>by the server, not by
     your browser</b>: nothing about you is sent to Google or GitHub, no identifier of yours is involved, and

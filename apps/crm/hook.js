@@ -1,9 +1,9 @@
 /*
- * hook.js — runs in the MAIN world of the Zoho page.
+ * hook.js - runs in the MAIN world of the Zoho page.
  * Detects a function save in the editor: the UI issues
  *   PUT /crm/v2/settings/functions/{id}?language=deluge
  * On a successful response it notifies the content-bridge via window.postMessage.
- * Observation only — it never mutates anything.
+ * Observation only - it never mutates anything.
  */
 (() => {
   if (window.__zoostHook) return; window.__zoostHook = true;

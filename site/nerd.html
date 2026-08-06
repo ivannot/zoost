@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The nerd page — how Zoost actually works</title>
+<title>The nerd page - how Zoost actually works</title>
 <meta name="description" content="What Zoost rests on, what it refuses to do and why, how a release is built and signed, and how to check any of it yourself. The detail the product pages leave out on purpose.">
 <link rel="canonical" href="https://zoost.it/nerd.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/nerd.html">
@@ -23,7 +23,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -62,7 +62,7 @@
   <p>That has consequences worth knowing before you build a process around either of them.</p>
   <div class="box">
     <h3>Reading Zoho CRM</h3>
-    <p>Reads two identifiers — your org id and your user id — out of the page's own HTML, because no
+    <p>Reads two identifiers - your org id and your user id - out of the page's own HTML, because no
       endpoint offers them, and takes the CSRF token from the cookies your browser already holds.
       Separately it watches the page for <b>one</b> thing: the URL and method of the request that
       saves a function, so the local copy can follow when you save. It reads no headers and no
@@ -74,12 +74,12 @@
   </div>
   <div class="box">
     <h3>Reading Zoho Analytics</h3>
-    <p>Takes the workspace from the URL of the tab you are on — <code>/workspace/{id}</code> — so there
+    <p>Takes the workspace from the URL of the tab you are on - <code>/workspace/{id}</code> - so there
       is nothing to scrape and nothing to pick wrong. CSRF follows the HTTP method rather than the
       path: every POST carries <code>X-ZCSRF-TOKEN</code>, no GET does, measured across a
       104-request capture with no exceptions.</p>
     <p>The ER model comes from one POST to <code>ZDBCreateERD.ma</code>. Its URL contains
-      <code>CREATE</code> and it creates nothing — it computes and returns the model. It is named here
+      <code>CREATE</code> and it creates nothing - it computes and returns the model. It is named here
       because anyone checking the read-only claim literally will find it, and finding it unannounced
       would read as a caught lie rather than as what it is.</p>
   </div>
@@ -89,18 +89,18 @@
     language. No synthetic clicks into a page we do not own. Where a path is not certain, the feature
     stops with a precise message instead of trying something and hoping.</p>
   <p>This is why Zoost CRM's function <b>Go to</b> was removed in 1.1.0: it drove Zoho's editor by
-    clicking a localised “Edit function” label, looped ten times, and then failed with the wrong
-    message. <b>Find in Zoho</b> replaced it — it navigates by constructed URL and filters the list
+    clicking a localised "Edit function" label, looped ten times, and then failed with the wrong
+    message. <b>Find in Zoho</b> replaced it - it navigates by constructed URL and filters the list
     deterministically, and the last, language-dependent click is yours.</p>
   <p>The exceptions are narrow, deliberate and written down: a bounded wait for a known element after
     a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a
-    deterministic 4xx), and recovery by an action that was <em>measured</em> to work — the first
+    deterministic 4xx), and recovery by an action that was <em>measured</em> to work - the first
     <code>/deluge/</code> call after a fresh login is refused, any ordinary Zoho CRM call fixes it, and that
     was reproduced deliberately rather than guessed at.</p>
 
   <h2 id="what-is-never-called">What is never called</h2>
   <p>Neither extension calls an endpoint that creates, edits or deletes anything. That is a property
-    of which endpoints are in the source, not something the browser enforces — and the source is about
+    of which endpoints are in the source, not something the browser enforces - and the source is about
     twenty files of plain JavaScript with no bundler and no minifier between what is published and
     what you read.</p>
   <p>Two Zoho Analytics endpoints are deliberately left alone, and the reason is the same in both cases:
@@ -108,8 +108,8 @@
   <ul>
     <li><code>ZDBTableDataAction.ma</code> returns the actual cell values of a table. Zoost states it
       never reads your rows, so it does not call it.</li>
-    <li><code>ZAChartView.ve</code> would give the report definition Zoost otherwise lacks — chart
-      type, groupings, axes — but it comes welded to the computed series, which is your data again.
+    <li><code>ZAChartView.ve</code> would give the report definition Zoost otherwise lacks - chart
+      type, groupings, axes - but it comes welded to the computed series, which is your data again.
       So report definitions stay <b>uncovered</b>, and every surface says so rather than implying the
       mirror is complete.</li>
   </ul>
@@ -119,7 +119,7 @@
   <h2 id="what-is-promised">What is promised, and what is not</h2>
   <p>Those internal interfaces carry no compatibility promise. Zoho can change one without notice and
     a feature can stop working from one day to the next.</p>
-  <p>Nothing is guaranteed — the licence says so and so does this page. What is offered is effort: a
+  <p>Nothing is guaranteed - the licence says so and so does this page. What is offered is effort: a
     break will be looked at and fixed where fixing it is possible. Sometimes it will not be, and then
     the feature will say plainly that it cannot do the thing rather than guess. <b>The mirror already
     on your disk keeps working either way</b>, because it is ordinary files.</p>
@@ -128,13 +128,13 @@
   <p>Pushing a release tag makes GitHub check out that commit, build it <b>twice</b> to prove the
     result is byte-identical, print the archive's contents into a public log, and sign a provenance
     attestation for it. The archive attached to the Release <em>is</em> the file submitted to the
-    Chrome Web Store — never a build from a laptop.</p>
+    Chrome Web Store - never a build from a laptop.</p>
   <p>Reproducibility is load-bearing rather than decorative: publishing a SHA-256 is worth nothing if
     two builds of the same commit differ, and ours did, because <code>zip</code> stores each file's
     mtime and walks the directory in filesystem order. The build now stamps every file with the
     commit's own date, sorts the file list, and passes <code>-X</code>.</p>
   <p>Every GitHub Action is pinned to a commit hash, never to a moving tag. A supply chain that ends
-    in “and then whatever that tag says today” is not one.</p>
+    in "and then whatever that tag says today" is not one.</p>
 
   <h2 id="check-it-yourself">Check it yourself</h2>
   <table>
@@ -144,7 +144,7 @@
       <tr><td class="k"><code>tools/verify.sh</code></td>
         <td>rebuilds it on your machine and compares the hashes</td></tr>
       <tr><td class="k"><a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a></td>
-        <td>commit, tag and SHA-256 of every submitted version — including the two entries it says it
+        <td>commit, tag and SHA-256 of every submitted version - including the two entries it says it
           <em>cannot</em> verify, and why</td></tr>
       <tr><td class="k"><a href="/llms.txt">llms.txt</a></td>
         <td>the same map written for an assistant asked to assess the product rather than summarise

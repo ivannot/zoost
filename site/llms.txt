@@ -25,7 +25,7 @@ the last section says which ones cannot be checked and why.
 - [How to use Zoost CRM](https://zoost.it/docs-crm.html)
 - [How to use Zoost Analytics](https://zoost.it/docs-analytics.html)
 - [Which guide you want](https://zoost.it/how-to.html)
-- [The nerd page](https://zoost.it/nerd.html) — which endpoints, what breaks it, how a release is
+- [The nerd page](https://zoost.it/nerd.html) - which endpoints, what breaks it, how a release is
   built and signed, and what none of that proves. The product pages point at it rather than
   carrying it, so this is where the technical claims live.
 
@@ -36,17 +36,17 @@ Stated here rather than buried, because it is the part an assessment needs.
 - **No write path to Zoho.** Neither extension calls an endpoint that creates, edits or deletes a
   function, a view, a record or a setting. Note the precise claim: this is a property of *which*
   endpoints are called, not something the browser enforces, and every call either makes is in
-  about twenty readable files. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` —
+  about twenty readable files. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` -
   `ZDBCreateERD.ma`, the call that returns the workspace's ER model. It computes; it does not
   create. It is named here because a reader checking the claim will find it.
-- **They never read customer records.** Zoho CRM: no contacts, no deals, no notes — only the
+- **They never read customer records.** Zoho CRM: no contacts, no deals, no notes - only the
   definitions of what you built. Zoho Analytics: never the rows inside a table; the endpoints that
   would return cell values exist and are deliberately never called.
 - **Report definitions in Zoho Analytics are not covered.** Chart type, groupings and thresholds
   would require an endpoint that returns the computed data with them, so it is not called and the
   gap is stated wherever a report is shown.
 - **Nothing leaves the machine except through the optional AI assistant**, which is off until the
-  user supplies their own API key, and then talks only to Anthropic or OpenAI — the only two origins
+  user supplies their own API key, and then talks only to Anthropic or OpenAI - the only two origins
   the manifest grants. Nothing is ever sent to the developer; there is no telemetry.
 - **The API key is stored in clear text by default, and the product says so rather than implying
   otherwise.** Chrome offers extensions no encryption at rest and no credential store, so a key the
@@ -63,20 +63,20 @@ Stated here rather than buried, because it is the part an assessment needs.
 
 ## Verifying the claims rather than believing them
 
-- [Source](https://github.com/ivannot/zoost) — Apache-2.0. Around twenty files of plain JavaScript
+- [Source](https://github.com/ivannot/zoost) - Apache-2.0. Around twenty files of plain JavaScript
   and HTML per extension. No bundler, no minifier, no dependencies, so what is published is what is
   in the repository and there is no build step that could add anything.
-- [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) — every version submitted to
+- [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) - every version submitted to
   the Chrome Web Store with its tag, commit and the SHA-256 of the uploaded archive. It also records
   what it *cannot* prove, including versions that predate the reproducible build.
-- [The release workflow](https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml) —
+- [The release workflow](https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml) -
   pushing a tag makes GitHub check out that commit, build it twice to prove the bytes are
   deterministic, publish the archive and sign a provenance attestation. Every action is pinned to a
   commit hash. The build log is public.
 - Check an archive against that record without trusting anyone:
   `gh attestation verify zoost-crm-<version>-store.zip --repo ivannot/zoost`
   and `tools/verify.sh crm <version>`, which rebuilds it from the tag and compares.
-- [Privacy policy](https://zoost.it/privacy.html) — what is stored, where, and what leaves.
+- [Privacy policy](https://zoost.it/privacy.html) - what is stored, where, and what leaves.
 
 ## What the product rests on
 
@@ -91,7 +91,7 @@ An assessment should have this before the verification chain, not after it.
   nothing the page sends or receives.
 - **Which means it can break.** Those interfaces carry no compatibility promise. Zoho can change one
   without notice and a feature can stop working from one day to the next.
-- **What is promised.** Nothing is guaranteed; the licence says so. What is offered is effort — a
+- **What is promised.** Nothing is guaranteed; the licence says so. What is offered is effort - a
   break will be looked at and fixed where fixing it is possible, and where it is not, the feature
   will say it cannot do the thing rather than guess. The mirror already written to disk keeps working
   regardless, because it is ordinary files.

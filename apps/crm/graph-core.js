@@ -1,4 +1,4 @@
-/* graph-core.js — build the Deluge reference graph in the browser.
+/* graph-core.js - build the Deluge reference graph in the browser.
  * window.buildGraph(input) where input = [{ namespace, name, api_name, category,
  *   source, display_name, description, rest, associated_place, dg, file }]
  * Resolution: exact (namespace,name) first; else unique name; else ambiguous/unresolved.

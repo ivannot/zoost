@@ -17,9 +17,9 @@
   /* This guide is about one product, so it wears that product's accent. The suite pages stay slate.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#2563eb;--sel-soft:#16263f}
-  /* docs-specific — shared base & content typography are in site.css */
+  /* docs-specific - shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
-  /* The same marks the toolbar draws, at the same weight — a guide that names a control the panel
+  /* The same marks the toolbar draws, at the same weight - a guide that names a control the panel
      no longer spells out is a guide the reader has to translate. */
   b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
@@ -35,7 +35,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -84,8 +84,8 @@
     What it reads from Zoho CRM is written straight to a folder on your own disk and stays there. Nothing
     is sent to the developer, and there is no analytics or tracking of any kind.</p>
   <p>The exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
-    enable it, what it needs to answer you is sent from your browser directly to the provider you chose —
-    Anthropic or OpenAI — and to nobody else. If your organisation does not allow that, leave it off:
+    enable it, what it needs to answer you is sent from your browser directly to the provider you chose -
+    Anthropic or OpenAI - and to nobody else. If your organisation does not allow that, leave it off:
     everything else works exactly the same. The <a href="/privacy.html">privacy policy</a> lists what is
     stored, where, and why.</p>
 
@@ -95,10 +95,10 @@
     <tbody>
       <tr><td class="k">Working folder</td><td>One folder on your disk that you choose once. Everything Zoost writes lives inside it.</td></tr>
       <tr><td class="k">Workspace</td><td>A subfolder, one per Zoho org, created for you. It holds that org's functions, schema, automations and connections as plain files.</td></tr>
-      <tr><td class="k">Pull</td><td>The action that fills a workspace from Zoho. Zoost only reads from Zoho — it never writes back.</td></tr>
+      <tr><td class="k">Pull</td><td>The action that fills a workspace from Zoho. Zoost only reads from Zoho - it never writes back.</td></tr>
     </tbody>
   </table>
-  <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives you the map, the audit, and — with Git — a history of the parts Zoho does not version.</p>
+  <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives you the map, the audit, and - with Git - a history of the parts Zoho does not version.</p>
 
   <h2 id="first-run">2. First run</h2>
   <ol>
@@ -115,26 +115,26 @@
       repositories inside it, and file-sync services corrupt <code>.git</code> directories by touching index
       and lock files mid-operation. On-demand (placeholder) files also break the full-text search. Use a
       local folder and push to a private Git remote if you want an off-machine copy.</p>
-<p class="note">Three toolbar controls are drawn as marks rather than words — <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
+<p class="note">Three toolbar controls are drawn as marks rather than words - <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   </div>
   <p>Chrome does not keep file-system permissions across side-panel reopens: this is how the browser's
     File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
     in the panel, so normally you will not notice. If it needs you, the folder button turns amber and reads
-    <b class="ui">🔓 Grant access</b> — one click, and no file picker opens.</p>
+    <b class="ui">🔓 Grant access</b> - one click, and no file picker opens.</p>
 
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> mirrors functions, module schema, layouts, related lists, workflows, schedules
       and the connections catalogue.</li>
-    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type — whichever of Functions,
-      Modules, Workflows, Schedules or Connections is the active tab — faster when you just changed one thing.</li>
+    <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type - whichever of Functions,
+      Modules, Workflows, Schedules or Connections is the active tab - faster when you just changed one thing.</li>
     <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
       updates by itself. No action needed.</li>
     <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b> (deletion is reconciled at pull time,
       not intercepted live like a save), so the folder stays a faithful mirror rather than an accumulating pile.</li>
   </ul>
   <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull</b> in Modules mode. If the layout matrix or the
-    relation catalogue looks empty, that workspace was pulled with an older build — pull again.</p>
+    relation catalogue looks empty, that workspace was pulled with an older build - pull again.</p>
 
   <h2 id="git">4. Putting it under Git</h2>
   <p>Nothing is automatic here, on purpose: it is your repository, with your conventions.</p>
@@ -147,8 +147,8 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>one <code>.dg</code> source and one <code>.meta.json</code> sidecar per Deluge function, in the namespace Zoho gives it</td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>the census: every function with its namespace, id and where it is wired</td></tr>
-      <tr><td class="k"><code>modules/</code></td><td>one file per module — fields, types, lookup targets, picklist values</td></tr>
-      <tr><td class="k"><code>modules/layouts/</code></td><td>one file per module, with the sections and the fields on each layout — under the modules they describe</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>one file per module - fields, types, lookup targets, picklist values</td></tr>
+      <tr><td class="k"><code>modules/layouts/</code></td><td>one file per module, with the sections and the fields on each layout - under the modules they describe</td></tr>
       <tr><td class="k"><code>workflows/</code></td><td>one file per rule: trigger, criteria, instant and scheduled actions</td></tr>
       <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>the schedule list and the org's connection catalogue</td></tr>
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
@@ -158,10 +158,10 @@ git commit -m "baseline"</code></pre>
     <code>functions/</code> so a Deluge namespace can never collide with a folder Zoost creates. Before
     Zoost CRM 1.13 the namespaces sat in the workspace root and the other folders carried a leading
     underscore to stay out of their way; a workspace in that shape says so and asks for one
-    <b class="ui">Pull all</b>. <b>Nothing is migrated and nothing is deleted for you</b> — the old
+    <b class="ui">Pull all</b>. <b>Nothing is migrated and nothing is deleted for you</b> - the old
     folders are yours to remove.</p>
 
-  <p>From then on, pull and <code>git diff</code> tells you exactly what changed in the org since last time —
+  <p>From then on, pull and <code>git diff</code> tells you exactly what changed in the org since last time -
     including schema changes, because module and layout metadata are stored as JSON.</p>
 
   <h2 id="read">5. Reading your org</h2>
@@ -169,58 +169,58 @@ git commit -m "baseline"</code></pre>
     <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>. Select an item and
     the preview opens below.</p>
   <p>Two controls in that row are easy to miss. <b class="ui">Name: display</b> toggles between the name
-    Zoho CRM shows you and the API name the code uses — the same function, told two ways, and you need
+    Zoho CRM shows you and the API name the code uses - the same function, told two ways, and you need
     the second when writing Deluge. <b class="ui">Functions page ↗</b> opens Zoho CRM's own function list
     in a tab and filters it to what you had selected, for when you want to edit rather than read.</p>
 
-  <p>Above the list, <b class="ui">Type</b> (or <b class="ui">Status</b>, or <b class="ui">Kind</b>, depending on the tab) narrows what is shown. In Modules it separates <b class="ui">Standard</b> from <b class="ui">Custom</b>; in Workflows and Schedules it is <b class="ui">Active</b> / <b class="ui">Inactive</b>, plus <b class="ui">Has scheduled actions</b> — the rules with at least one action that runs after a delay instead of immediately. Those rows carry a clock and the count, and the tooltip says how long the delay is; the workflow's own panel shows <b>Last run</b>, the same words the Schedules tab uses for the same fact. Both come from the rule already on your disk, so nothing is fetched to answer «which workflows do not fire straight away».</p>
+  <p>Above the list, <b class="ui">Type</b> (or <b class="ui">Status</b>, or <b class="ui">Kind</b>, depending on the tab) narrows what is shown. In Modules it separates <b class="ui">Standard</b> from <b class="ui">Custom</b>; in Workflows and Schedules it is <b class="ui">Active</b> / <b class="ui">Inactive</b>, plus <b class="ui">Has scheduled actions</b> - the rules with at least one action that runs after a delay instead of immediately. Those rows carry a clock and the count, and the tooltip says how long the delay is; the workflow's own panel shows <b>Last run</b>, the same words the Schedules tab uses for the same fact. Both come from the rule already on your disk, so nothing is fetched to answer «which workflows do not fire straight away».</p>
 
   <p class="box"><b>Not every Zoho user may read every one of these.</b> Access to Deluge or to the
-    connections catalogue depends on your role, and there is no way to ask in advance — so Zoost finds out
+    connections catalogue depends on your role, and there is no way to ask in advance - so Zoost finds out
     by pulling. If Zoho refuses an area, the pull says so in plain words instead of showing a status code,
     nothing is written for it, and its tab disappears rather than sitting there greyed out. The reason,
     and the date it was asked, are in <b class="ui">⚙ Settings → Tabs</b>, where <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>
     will check again. Roles are per org: a workspace that refuses an area says nothing about the next one.</p>
-  <p>The same page is where you choose <b>which tabs to show at all, and in what order</b> — the panel is
+  <p>The same page is where you choose <b>which tabs to show at all, and in what order</b> - the panel is
     narrow, and a type you never look at is only in the way. Each row has a second switch, <b>pull</b>, for
     the separate question of whether Zoost should ask Zoho for that type at all. Turning a tab off clears
     it, because most tabs are turned off for an area the account cannot read and pulling it then only
-    produces an error — turn it back on if you mirror a type for Git without browsing it. A pull that
+    produces an error - turn it back on if you mirror a type for Git without browsing it. A pull that
     skipped something says so.</p>
   <p>Excluding a type has a consequence Zoost will not let you walk into: its files stop being
     refreshed, and six months later a report would carry that chapter looking exactly as current as
     the rest. So <b>every area records when it was last read</b>. A section whose data is behind the
-    others is <b>unticked in the export dialog</b>, with the date and the reason — you can tick it back
+    others is <b>unticked in the export dialog</b>, with the date and the reason - you can tick it back
     on, and the report then carries that date. Both reports state the per-area dates in any case: the
     fact is yours to weigh, and hiding it would be the one thing worse than an old chapter.</p>
   <ul>
-    <li>In a function's code, calls to other custom functions are <b>clickable</b> — jump to the definition,
+    <li>In a function's code, calls to other custom functions are <b>clickable</b> - jump to the definition,
       then use <b class="ui">◂ back</b>.</li>
     <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
-    <li>It also lists the <b>connections</b> the function uses and who last changed it — click a connection
+    <li>It also lists the <b>connections</b> the function uses and who last changed it - click a connection
       to filter the tree to every function that uses it (no more "find in file" for a connection name).</li>
-    <li>Each function carries its <b>size</b> (lines, code lines, KB) and its <b>outbound calls</b> —
-      <code>invokeurl</code>, <code>zoho.crm.*</code> and the other Zoho service tasks — as a badge in the
+    <li>Each function carries its <b>size</b> (lines, code lines, KB) and its <b>outbound calls</b> -
+      <code>invokeurl</code>, <code>zoho.crm.*</code> and the other Zoho service tasks - as a badge in the
       list and in the preview. Calls are counted outside comments and string literals, so a task named in a
       comment does not inflate the number. These are <b>counts, not a score</b>: length measures verbosity,
-      not complexity, and every outbound call is work Zoho meters — how to weigh that is your call, not ours.
+      not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not ours.
       Nothing extra is fetched from Zoho and nothing is stored: it is computed from the sources on disk.</li>
-    <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> — the default — or by <b>lines</b>, <b>API calls</b>, <b>size</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
-      sets the direction you almost certainly want — A→Z for names, biggest first for numbers — and you can
+    <li><b class="ui">Sort</b> reorders the list by <b>Name (grouped)</b> - the default - or by <b>lines</b>, <b>API calls</b>, <b>size</b> or <b>last modified</b>; the <b class="ui">↑/↓</b> button next to it flips the direction. Picking a sort
+      sets the direction you almost certainly want - A→Z for names, biggest first for numbers - and you can
       reverse it. A numeric sort drops the namespace grouping and shows one flat list, with the namespace
       moving onto each row, because "which are the biggest" is a different question from "what is in this
       namespace". Functions not downloaded yet have no numbers, so they stay at the bottom either way.</li>
-    <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide — see
+    <li>The <b class="ui">Connections</b> tab turns that around: the whole catalogue, org-wide - see
       <a href="#connections">section 8, Connections</a>.</li>
     <li><b class="ui">Find in Zoho ↗</b> filters the Zoho functions list down to the open function; you then
-      open it from Zoho’s own <b class="ui">⋯</b> menu. Zoost takes you to it, but the last click is yours —
+      open it from Zoho's own <b class="ui">⋯</b> menu. Zoost takes you to it, but the last click is yours -
       it never drives the Zoho interface for you.</li>
     <li><b class="ui">Find</b> has a scope switch attached to it: <b class="ui">in: names</b> matches file names,
-      <b class="ui">in: code</b> runs a <b>full-text search across every function source in the org</b> — the
+      <b class="ui">in: code</b> runs a <b>full-text search across every function source in the org</b> - the
       closest thing to <code>grep</code> over your Deluge, and something Zoho does not provide. Use it before
       renaming a field or retiring an endpoint.</li>
     <li>On a module, the field table has one column per layout: a dot means the field is on that layout, an
-      amber dot means it is required there. Rows highlighted in cream are fields on <b>no</b> layout — API-only.</li>
+      amber dot means it is required there. Rows highlighted in cream are fields on <b>no</b> layout - API-only.</li>
   </ul>
 
   <h2 id="diagram">6. The diagram</h2>
@@ -229,22 +229,22 @@ git commit -m "baseline"</code></pre>
     diagram focused on that module.</p>
   <ul>
     <li>Four tabs: <b>Explorer</b> (list + detail), <b>Visual</b> (node-link), <b>ER diagram</b> (tables and keys),
-      and <b>Relations</b> — see the next section.</li>
-    <li>Selecting a module in Explorer sets the focus for all views — whether you opened the whole schema
+      and <b>Relations</b> - see the next section.</li>
+    <li>Selecting a module in Explorer sets the focus for all views - whether you opened the whole schema
       or one module's ER. <b>Depth</b> controls how many hops out from it are drawn; clicking a table
       re-centres the diagram there. <b class="ui">↺ Whole graph</b> clears the focus and shows every module again.</li>
     <li><b class="ui">Scope</b> switches between the focused neighbourhood and the whole org. Whole-org plus
-      <b class="ui">Save PDF</b> produces a single page the size of the drawing — the wall-poster case. Set
+      <b class="ui">Save PDF</b> produces a single page the size of the drawing - the wall-poster case. Set
       <b class="ui">Fields: key</b> first or it will be unreadable.</li>
     <li><b class="ui">Emphasis: relations</b> pushes the module boxes into the background and brings the
       relation names forward.</li>
     <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
       card appears with the relation's API name and the Deluge call, ready to copy.</li>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread and label size as live sliders. There is no correct
-      value — dense or airy depends on what you are looking at.</li>
+      value - dense or airy depends on what you are looking at.</li>
   </ul>
   <p><b>What it will not do:</b> above a few hundred nodes the free-form <b>Visual</b> layout is not attempted at
-    all — computing it would freeze the window — so it says so instead of hanging, and the same applies to the
+    all - computing it would freeze the window - so it says so instead of hanging, and the same applies to the
     whole-org <b class="ui">Scope</b>. The <b>Explorer</b> and the focused <b>ER diagram</b> stay fast at any org
     size; use a module focus and a small depth.</p>
 
@@ -264,43 +264,43 @@ git commit -m "baseline"</code></pre>
 
   <h2 id="connections">8. Connections</h2>
   <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists
-    them in setup, but never tells you which functions actually use one — so nobody dares delete any.</p>
+    them in setup, but never tells you which functions actually use one - so nobody dares delete any.</p>
   <p>The <b class="ui">Connections</b> tab is the org's catalogue, pulled with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>. One row
     per connection, with its connector, its status, and <b>how many functions use it</b>. Open one to see exactly
     which functions, and click through to any of them.</p>
   <ul>
-    <li><b>Unused</b> — in the catalogue, referenced by no function. The candidates for cleanup.</li>
-    <li><b>Disconnected</b> — configured but not currently connected. Anything relying on it is already broken.</li>
-    <li><b>Not in catalogue</b> — a function calls a connection name the catalogue does not have: renamed, removed,
+    <li><b>Unused</b> - in the catalogue, referenced by no function. The candidates for cleanup.</li>
+    <li><b>Disconnected</b> - configured but not currently connected. Anything relying on it is already broken.</li>
+    <li><b>Not in catalogue</b> - a function calls a connection name the catalogue does not have: renamed, removed,
       or created in another scope.</li>
   </ul>
-  <p>The join key is the connection name exactly as written in the Deluge call, so the count is structural — not a
+  <p>The join key is the connection name exactly as written in the Deluge call, so the count is structural - not a
     text search that also matches comments and strings.</p>
   <div class="box">
     <p>Usage counts only cover <b>Deluge functions in this workspace</b>. A connection can also be used by
-      Zoho Flow, Circuits, widgets or client scripts, which Zoost does not read — so treat <b>Unused</b> as
+      Zoho Flow, Circuits, widgets or client scripts, which Zoost does not read - so treat <b>Unused</b> as
       "unused by your functions", a candidate to review, not a verdict.</p>
   </div>
 
   <h2 id="health">9. Health audit</h2>
   <p><b class="ui">Health (♥)</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
     lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
-    not</b> analyse — client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
+    not</b> analyse - client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
   <p>Treat every entry as a <b>candidate to review</b>. Nothing is ever deleted for you, and an "orphan" may
     simply be called from somewhere the API does not report.</p>
   <p>A third tab, <b class="ui">Size &amp; calls</b>, ranks the longest functions and the ones making the most
     outbound calls. There is no threshold and no verdict attached: a long function is worth a look, not
     necessarily a problem, and a short one can still be the dangerous one. The counts are there so you can
-    see where length and API cost concentrate — the reading is yours.</p>
+    see where length and API cost concentrate - the reading is yours.</p>
 
   <h2 id="export">10. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
     layouts, relations, workflows, schedules, connections, health. The <b>Share-safe</b> preset excludes source
     code.</p>
   <ul>
-    <li><b class="ui">Export → HTML</b> — the whole workspace as one self-contained, cross-linked file. Good for
+    <li><b class="ui">Export → HTML</b> - the whole workspace as one self-contained, cross-linked file. Good for
       handing to a colleague or a manager.</li>
-    <li><b class="ui">Export → Markdown</b> (the button reads <b class="ui">MD</b>) — the same material, shaped as context for an external LLM.</li>
+    <li><b class="ui">Export → Markdown</b> (the button reads <b class="ui">MD</b>) - the same material, shaped as context for an external LLM.</li>
   </ul>
   <p>Both carry everything the panel shows, including each function's size and outbound-call counts (a
     <b>Size and outbound calls</b> table in the Markdown, columns in the HTML index): a report should never be
@@ -314,34 +314,34 @@ git commit -m "baseline"</code></pre>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
 
   <h2 id="ai">11. AI assistant &amp; API keys</h2>
-  <p><b>It also knows this extension.</b> Ask it “how do I export this?”, “what happens when I press Health?” or “can this change anything in Zoho CRM?” and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
+  <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho CRM?" and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
     <b>AI assistant</b>. Two providers are supported.</p>
   <p>Two settings decide what a question costs. <b class="ui">Org index</b> is how much of the org is
-    described to the assistant with <em>every</em> message — bigger means it knows more names, and it is
+    described to the assistant with <em>every</em> message - bigger means it knows more names, and it is
     billed each time. The panel prints the real figure for the workspace you have open, under the chat
     title, so the number is not a guess. <b class="ui">Max tool steps</b> caps how many times it may reach
     for a tool before answering; 20 is the default and most answers use two or three.</p>
   <p>When an org is too large to describe in full, what gets dropped is decided rather than arbitrary: the
     function list is never dropped, because it is the vocabulary everything else refers to, and module and
     connection names go first because the assistant can still fetch those by name. Whatever is left out is
-    named as left out — so it never concludes something does not exist because it was not shown it.</p>
+    named as left out - so it never concludes something does not exist because it was not shown it.</p>
 
-  <h3>Anthropic (Claude) — full agent</h3>
+  <h3>Anthropic (Claude) - full agent</h3>
   <ol>
     <li>Go to <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>
-      and create an API key. <b>A Claude.ai subscription is not an API key</b> — the developer API is billed
+      and create an API key. <b>A Claude.ai subscription is not an API key</b> - the developer API is billed
       separately.</li>
     <li>Paste the key and the exact model id from Anthropic's docs.</li>
   </ol>
   <p>With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers,
     reads schemas, looks up a connection and who uses it, and searches code by itself. Every tool it uses is
     shown in the chat.</p>
-  <p>It also knows each function's size and outbound-call counts, and can filter by them — so
+  <p>It also knows each function's size and outbound-call counts, and can filter by them - so
     "how many functions are longer than 150 lines?" or "which ones make more than five API calls?" are answered
     from the numbers, not estimated.</p>
 
-  <h3>OpenAI (ChatGPT) — single-shot</h3>
+  <h3>OpenAI (ChatGPT) - single-shot</h3>
   <ol>
     <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
       → <b>Create new secret key</b>. Copy it immediately; it is shown once.</li>
@@ -349,7 +349,7 @@ git commit -m "baseline"</code></pre>
       monthly spending limit while you are there.</li>
     <li>Paste the key and the model id.</li>
   </ol>
-  <p>OpenAI receives the org index plus the function you have open — not your whole codebase — and answers in
+  <p>OpenAI receives the org index plus the function you have open - not your whole codebase - and answers in
     <b>one pass</b>. It cannot go and read another function by itself, so it will ask you for what it is
     missing rather than invent it. That is intended, but it is a real difference in capability.</p>
 
@@ -359,8 +359,8 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
       <tr><td class="k">What it sees</td><td>Whatever it decides to open: any function, module, workflow or connection, plus code search</td><td>The org index and the function currently open</td></tr>
-      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A “thinking…” indicator until the answer arrives</td></tr>
-      <tr><td class="k">Best for</td><td>“What breaks if I change this?”, tracing behaviour across the org</td><td>Focused questions about the function in front of you</td></tr>
+      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A "thinking…" indicator until the answer arrives</td></tr>
+      <tr><td class="k">Best for</td><td>"What breaks if I change this?", tracing behaviour across the org</td><td>Focused questions about the function in front of you</td></tr>
     </tbody>
   </table>
   <p>The engine in use is shown as a badge in the chat header, so you always know which behaviour to expect.</p>
@@ -370,11 +370,11 @@ git commit -m "baseline"</code></pre>
     Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
     on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
     <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
-    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder — the local mirror only, never
+    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
     anything in Zoho, and a pull brings it back.</p>
   <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
     stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
-    the folder is bound to. That is deliberate — the name is your convenience, the identity is Zoho's,
+    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
     and a list showing only your own words would be one you could not check against Zoho. The name is
     stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
     folder. Clear the field to go back to the platform's name.</p>
@@ -382,7 +382,7 @@ git commit -m "baseline"</code></pre>
   <h3>Removing a key, and switching engine</h3>
   <p>Each provider block has a <b class="ui">Forget</b> button: it empties the model and the key, and the
     removal takes effect when you press <b class="ui">Save AI settings</b>. It is the one place where an
-    empty field means <em>erase</em> — everywhere else an empty key field means "keep what is stored",
+    empty field means <em>erase</em> - everywhere else an empty key field means "keep what is stored",
     which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
     <b class="ui">Forget</b> is also the way out if you have lost the passphrase.</p>
   <p>The <b class="ui">Engine</b> selector will not move to a provider that has no model or no API key: it
@@ -403,35 +403,35 @@ git commit -m "baseline"</code></pre>
     cryptography), and what remains on disk is ciphertext. The first time you use the chat after starting
     the browser, the panel asks for the passphrase and offers <b class="ui">Unlock</b>; the key then stays
     available in memory until the browser closes.</p>
-  <p>Once it is set the fields go away — the passphrase is not stored, so there is nothing to show in
-    them — and the section says the key is encrypted, with a <b class="ui">Change passphrase</b> button
+  <p>Once it is set the fields go away - the passphrase is not stored, so there is nothing to show in
+    them - and the section says the key is encrypted, with a <b class="ui">Change passphrase</b> button
     when you want a different one.</p>
   <p>Three things ask for the passphrase you are already using: changing it, replacing the API key, and
-    turning the protection off. They look different and are the same fact — the stored key has to be
-    decrypted before it can be written again — and Zoost checks what you type against the stored key
+    turning the protection off. They look different and are the same fact - the stored key has to be
+    decrypted before it can be written again - and Zoost checks what you type against the stored key
     <em>before</em> saving anything, so a mistyped passphrase cannot leave you locked out of a key you
     believe you know.</p>
   <p><b>If you lose the passphrase</b>, the section offers <b class="ui">Remove the protection</b>. It
     says what goes and what stays before it acts: the encrypted key is removed and the protection turned
     off, your model names and every other setting are kept, and you paste the API key in again from your
-    provider's dashboard. Nobody can decrypt that key without the passphrase, Zoost included — this is
+    provider's dashboard. Nobody can decrypt that key without the passphrase, Zoost included - this is
     the only way out, and it is a button rather than a sequence you have to work out.</p>
   <p><b>You can turn it back off at any time</b>, and the way back is symmetrical: Zoost asks for the
     current passphrase, because storing the key in clear text again means decrypting it first, and only
-    you can do that. Wrong passphrase or none, and <em>nothing is changed</em> — the encrypted key is
+    you can do that. Wrong passphrase or none, and <em>nothing is changed</em> - the encrypted key is
     left exactly as it was rather than discarded. If the passphrase is lost, the way out is to paste the
     API key in again.</p>
   <p>It is off by default because the trade is yours, not ours. On a personal machine, typing a passphrase
-    once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> — no
+    once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> - no
     hint, no reset, no back door: forget the passphrase and you paste your API key in again and pick a new
     one, which costs one visit to the provider's dashboard. And note what it does not do: while the key is
     unlocked it is in the browser's memory, where the browser can read it. What a passphrase protects is the
-    key at rest — a copied profile, a backup, someone else on the same machine.</p>
+    key at rest - a copied profile, a backup, someone else on the same machine.</p>
 
-  <h3>Keeping the conversation — and the bill — under control</h3>
+  <h3>Keeping the conversation - and the bill - under control</h3>
   <p><b class="ui">Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
     thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
-    subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever —
+    subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever -
     it caps how many explore-then-answer rounds the agent may take before it must reply.</p>
   <p><b>Max tool steps</b> caps how many explore-then-answer rounds the Anthropic agent may take. Higher means
     better answers and more spend.</p>
@@ -446,11 +446,11 @@ git commit -m "baseline"</code></pre>
     Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar
     offering to switch tab or switch workspace. This is deliberate friction: it is what stops a sandbox pull
     from overwriting a production mirror.</p>
-  <p>Renaming a folder, or renaming the portal in Zoho, does not break anything — identity lives in the org id
+  <p>Renaming a folder, or renaming the portal in Zoho, does not break anything - identity lives in the org id
     inside the file, not in the folder name.</p>
 
   <h2 id="goes-wrong">13. When something goes wrong</h2>
-  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Go to Zoho CRM ↗</b> opens the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward — it is the one guard that stops you mirroring one org into another org’s folder.</p>
+  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Go to Zoho CRM ↗</b> opens the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
 <table>
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
@@ -458,7 +458,7 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k">Everything is disabled</td><td>Either no Zoho CRM tab is active, or the tab's org does not match the selected workspace. The bar at the top says which.</td></tr>
       <tr><td class="k">No related lists / no layout matrix</td><td>That workspace was pulled before those existed. Run <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> again and reopen the diagram.</td></tr>
       <tr><td class="k">Connections tab is empty</td><td>The catalogue arrives with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (or <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
-      <tr><td class="k">Functions show an amber <b>◐</b> dot</td><td>They were pulled before connections and authorship were captured. Click <b class="ui">Refresh outdated</b> in the button bar above the list to top them up — no full re-download.</td></tr>
+      <tr><td class="k">Functions show an amber <b>◐</b> dot</td><td>They were pulled before connections and authorship were captured. Click <b class="ui">Refresh outdated</b> in the button bar above the list to top them up - no full re-download.</td></tr>
       <tr><td class="k">Visual graph says there are too many nodes</td><td>Above a few hundred nodes the free layout is not attempted, because it would freeze the window. Use <b>Explorer</b>, or focus one module and lower the depth.</td></tr>
       <tr><td class="k">AI: <code>401</code></td><td>Wrong key, or whitespace pasted with it.</td></tr>
       <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>The key is valid but the API balance is zero. API billing is separate from any chat subscription.</td></tr>
@@ -468,7 +468,7 @@ git commit -m "baseline"</code></pre>
     </tbody>
   </table>
   <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and
-    maintained in spare time — best effort, no guaranteed response time.</p>
+    maintained in spare time - best effort, no guaranteed response time.</p>
 
 </div>
 </main>

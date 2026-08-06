@@ -1,5 +1,5 @@
 /*
- * options.js — Zoost for Zoho Analytics, settings.
+ * options.js - Zoost for Zoho Analytics, settings.
  *
  * AI configuration lives here, not in the side panel: the panel is ~400px wide and these are
  * set-once fields. The panel picks changes up via chrome.storage.onChanged.
@@ -8,7 +8,7 @@
 
 const $ = (id) => document.getElementById(id);
 // Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
-// the panels and the graph windows — one behaviour under one name, so a reader never has to check
+// the panels and the graph windows - one behaviour under one name, so a reader never has to check
 // which file they are in.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -38,12 +38,12 @@ function toast(msg, bad) {
  * Lifted out of the Save handler on purpose: it is the part with a wrong answer that loses data. Two
  * rules, both learnt the hard way.
  *
- * A blank field with a key already stored means **leave it alone**, never "erase it" — the field is
+ * A blank field with a key already stored means **leave it alone**, never "erase it" - the field is
  * blank because a protected key cannot be redisplayed, and reading that as a deletion would throw the
  * key away on every unrelated save. `forget` is the one declared exception, and it says so on screen.
  *
- * And **nothing here destroys**. Every path that cannot produce a plaintext — no passphrase, wrong
- * passphrase — carries the ciphertext over untouched and lets the handler refuse. A merge that deletes
+ * And **nothing here destroys**. Every path that cannot produce a plaintext - no passphrase, wrong
+ * passphrase - carries the ciphertext over untouched and lets the handler refuse. A merge that deletes
  * what it failed to read is how "turn the protection off" became a way to lose a key.
  */
 async function mergeKeys(cfg, prev, wantLock, pass, forget, cur) {
@@ -74,7 +74,7 @@ async function mergeKeys(cfg, prev, wantLock, pass, forget, cur) {
 
 // Which providers the Forget button has emptied, pending Save. It has to be tracked rather than
 // inferred from the blank fields, because blank means "keep what is stored" everywhere else on this
-// page — that is the rule protecting a passphrase-locked key, and it would otherwise make forgetting
+// page - that is the rule protecting a passphrase-locked key, and it would otherwise make forgetting
 // impossible. Nothing is written until Save, so the way to undo is to reload the page.
 const aiForget = new Set();
 function wireForget(prov, keyId, modelId) {
@@ -94,7 +94,7 @@ function wireForget(prov, keyId, modelId) {
  *  The guard alone was not enough, and the gap was the obvious one: it stopped you *moving to* an
  *  unconfigured engine while saying nothing about *sitting on* one. A fresh install starts on
  *  Anthropic with nothing filled in, so the selector showed a chosen, working engine that could not
- *  answer a single question — the rule enforced on the user and not on the default. So the options
+ *  answer a single question - the rule enforced on the user and not on the default. So the options
  *  say which of them is ready, and a save that leaves exactly one usable engine selects it. */
 function engineIncomplete(which) {
   const model = $(which === 'anthropic' ? 'ai_a_model' : 'ai_o_model').value.trim();
@@ -131,7 +131,7 @@ function aiNeedCurrent() {
  *  an option you cannot pick and cannot see the reason for is worse than one that states its state. */
 /** The way out when the passphrase is gone.
  *
- * There was one already — Forget on each provider, then untick, then save — and it had to be *worked
+ * There was one already - Forget on each provider, then untick, then save - and it had to be *worked
  * out*, which is not a way out. Somebody who has lost a passphrase is not in the mood to deduce a
  * three-step sequence from a form, and a recovery path nobody can find is the same as none.
  *
@@ -148,7 +148,7 @@ async function loseLock() {
     `Without the passphrase the stored key cannot be decrypted by anyone, including Zoost.\n\n`
     + `This removes the encrypted ${names} key and turns the protection off.\n\n`
     + `Kept: your model names, and every other setting on this page.\n`
-    + `Lost: nothing but the stored key — paste it in again from your provider's dashboard.\n\n`
+    + `Lost: nothing but the stored key - paste it in again from your provider's dashboard.\n\n`
     + `Continue?`)) return;
   const cfg = Object.assign({}, (await chrome.storage.local.get('aicfg')).aicfg || {});
   for (const prov of which) { cfg[prov] = Object.assign({}, cfg[prov]); delete cfg[prov].apiKeyEnc; cfg[prov].apiKey = ''; }
@@ -177,7 +177,7 @@ function markEngineOptions() {
   [...sel.options].forEach((o) => {
     const base = o.dataset.label || (o.dataset.label = o.textContent);
     const missing = engineIncomplete(o.value);
-    o.textContent = missing ? `${base} — needs ${missing}` : base;
+    o.textContent = missing ? `${base} - needs ${missing}` : base;
   });
 }
 
@@ -202,7 +202,7 @@ function syncLockRow() {
     : needNew ? (aiLockStored ? 'Enter the passphrase in use, then the new one twice. The key is decrypted and re-encrypted when you save.'
                               : 'Choose a passphrase. It is never stored and cannot be recovered.')
     : want ? 'Enter the passphrase in use, so the key you have just typed can be encrypted with it.'
-           : 'Enter the current passphrase to turn the protection off — the key has to be decrypted to be stored in clear text. If you have lost it, use «Remove the protection» below.';
+           : 'Enter the current passphrase to turn the protection off - the key has to be decrypted to be stored in clear text. If you have lost it, use «Remove the protection» below.';
 }
 
 async function currentAi() {
@@ -218,7 +218,7 @@ async function loadAi() {
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
     openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}),
   };
-  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* — which is
+  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* - which is
   // the right criterion, and only if the form has already been filled in. Called before it, they judge
   // whatever the previous render left behind, which after a save is the key the user had just typed.
   $('aiengine').value = cfg.active;
@@ -229,7 +229,7 @@ async function loadAi() {
   // A key already protected shows as protected, with the field left empty: the passphrase is not
   // stored, so there is nothing to put back in it.
   [['ai_a_key', cfg.anthropic], ['ai_o_key', cfg.openai]].forEach(([id, prov]) => {
-    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
+    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted - type it again to replace it'; }
   });
   aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
   prevEngine = cfg.active;
@@ -239,7 +239,7 @@ async function loadAi() {
   $('ai_lock').checked = aiLockStored;
   syncLockRow(); markEngineOptions(); markEngine();
 }
-// A selector that changes a *mode* saves on change, not behind a Save button — the same rule as the
+// A selector that changes a *mode* saves on change, not behind a Save button - the same rule as the
 // CRM options page.
 function markEngine() {
   const e = $('aiengine').value;
@@ -264,7 +264,7 @@ async function saveAi() {
     $('ai_lockhint').textContent = msg; $('ai_lockhint').hidden = false; $('ai_lockhint').classList.add('bad');
   };
 
-  // Which stored ciphertexts this save still has to care about — a provider being forgotten is not one.
+  // Which stored ciphertexts this save still has to care about - a provider being forgotten is not one.
   const boxes = ['anthropic', 'openai']
     .filter((p) => !aiForget.has(p)).map((p) => (prev[p] || {}).apiKeyEnc).filter(Boolean);
   const typedKey = !!(cfg.anthropic.apiKey || cfg.openai.apiKey);
@@ -276,17 +276,17 @@ async function saveAi() {
   // lock them out of a key they believe they can open.
   if (needCur) {
     if (!cur) {
-      lockBad('Enter the passphrase in use — the stored key has to be decrypted before it can be re-encrypted or turned back into clear text.');
-      $('ai_passcur').focus(); toast('The current passphrase is needed — nothing saved.', true); return;
+      lockBad('Enter the passphrase in use - the stored key has to be decrypted before it can be re-encrypted or turned back into clear text.');
+      $('ai_passcur').focus(); toast('The current passphrase is needed - nothing saved.', true); return;
     }
     if ((await window.ZOOST_KEYVAULT.unlock(boxes[0], cur)) === null) {
-      lockBad('That passphrase did not open the stored key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, use \u00abRemove the protection\u00bb below.');
-      $('ai_passcur').select(); toast('Wrong passphrase — nothing saved.', true); return;
+      lockBad('That passphrase did not open the stored key. Either it is wrong, or the stored key is damaged - the two cannot be told apart. If it is lost, use \u00abRemove the protection\u00bb below.');
+      $('ai_passcur').select(); toast('Wrong passphrase - nothing saved.', true); return;
     }
   }
   if (needNew) {
-    if (pass !== $('ai_pass2').value) { lockBad('The two new passphrases do not match.'); $('ai_pass2').select(); toast('The passphrases do not match — nothing saved.', true); return; }
-    if (!pass) { lockBad('Choose a passphrase, or turn the protection off.'); $('ai_pass').focus(); toast('Choose a passphrase — nothing saved.', true); return; }
+    if (pass !== $('ai_pass2').value) { lockBad('The two new passphrases do not match.'); $('ai_pass2').select(); toast('The passphrases do not match - nothing saved.', true); return; }
+    if (!pass) { lockBad('Choose a passphrase, or turn the protection off.'); $('ai_pass').focus(); toast('Choose a passphrase - nothing saved.', true); return; }
   }
   await mergeKeys(cfg, prev, wantLock, pass, aiForget, cur);
   // Protection off but something is still encrypted: nothing was decrypted, so saving now would write
@@ -313,13 +313,13 @@ async function saveAi() {
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
   try {
     await chrome.storage.local.set({ aicfg: cfg });
-    toast(moved ? `AI settings saved \u2014 ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
+    toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
   }
   catch (e) { toast('Could not save: ' + e.message, true); }
   // Re-read from where it was just written, rather than patching the flags by hand: the form has to
   // agree with the disk, and the page has three of them to keep in step (is a key stored, is it
   // encrypted, is a passphrase set). Reconstructing that here is a second copy of loadAi() waiting to
-  // drift — which is what left two empty passphrase boxes on screen after a successful save, reading
+  // drift - which is what left two empty passphrase boxes on screen after a successful save, reading
   // as "it did not take".
   await loadAi();
 }
@@ -346,7 +346,7 @@ async function loadLay() {
 let prevEngine = 'anthropic';
 $('aiengine').onchange = async () => {
   // The mode is saved on change; the *form* is not. Running the whole save here wrote whatever was
-  // half-typed in the key fields, and once a passphrase can be required it could refuse outright —
+  // half-typed in the key fields, and once a passphrase can be required it could refuse outright -
   // leaving the selector showing an engine that was never stored. Same shape as the CRM page.
   const picked = $('aiengine').value;
   const missing = engineIncomplete(picked);
@@ -376,7 +376,7 @@ $('saveAi').onclick = () => saveAi();
 // here, the form catches up silently; changed elsewhere while you were editing, nothing is
 // overwritten in either direction and you choose. Never resolve it by guessing which side is newer.
 //
-// The same mechanism, the same wording and the same markup as the CRM workbench — this is shared
+// The same mechanism, the same wording and the same markup as the CRM workbench - this is shared
 // chrome, and the two panels must not disagree about what a settings conflict looks like.
 const SECTIONS = {
   aicfg: { label: 'AI assistant', reload: loadAi },

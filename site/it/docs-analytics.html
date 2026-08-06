@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:cd03f139b47e3242 -->
+<!-- translated-from: site/docs-analytics.html sha256:464b834aedcefc6f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -18,9 +18,9 @@
   /* This guide is about one product, so it wears that product's accent. The suite pages stay slate.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#dc2d7a;--sel-soft:#3a1226}
-  /* docs-specific — shared base & content typography are in site.css */
+  /* docs-specific - shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
-  /* The same marks the toolbar draws, at the same weight — a guide that names a control the panel
+  /* The same marks the toolbar draws, at the same weight - a guide that names a control the panel
      no longer spells out is a guide the reader has to translate. */
   b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
@@ -36,7 +36,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/it/index.html" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/it/index.html" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -92,7 +92,7 @@
     Non viene mandato niente allo sviluppatore, e non c'è nessuna forma di analytics o di tracciamento.</p>
   <p>L'eccezione è l'<b>assistente AI</b>, ed è spento finché non incolli una chiave API tua. Una volta
     attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che
-    hai scelto — Anthropic oppure OpenAI — e a nessun altro. Se la tua organizzazione non lo consente,
+    hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
     lascialo spento: tutto il resto funziona esattamente allo stesso modo. La
     <a href="/privacy.html">privacy policy</a> (in inglese) elenca cosa viene conservato, dove e perché.</p>
 
@@ -107,7 +107,7 @@
       <tr><td class="k">Workspace</td>
         <td>Una cartella per ogni workspace di Zoho Analytics, dentro <code>analytics/</code>. La sua
           identità è l'<em>id</em> del workspace scritto in <code>.zoost.json</code>, mai il nome della
-          cartella — rinomina l'uno o l'altro e non perdi niente.</td></tr>
+          cartella - rinomina l'uno o l'altro e non perdi niente.</td></tr>
       <tr><td class="k">Decide la scheda attiva</td>
         <td>Il pannello prende il workspace dall'URL della scheda su cui sei. Non c'è niente da scegliere e
           niente da sbagliare. Passa a un altro workspace e ogni azione che parla con Zoho resta disattivata
@@ -115,7 +115,7 @@
     </tbody>
   </table>
   <p class="box">Zoost è in <b>sola lettura</b> verso Zoho Analytics. Non crea, non modifica e non cancella
-    mai una vista, e non legge mai le righe dentro le tue tabelle — gli endpoint che restituiscono i valori
+    mai una vista, e non legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori
     delle celle esistono e deliberatamente non vengono chiamati. Il peggio che può fare al tuo workspace è
     niente. Una delle chiamate che fa è una POST il cui URL contiene <code>CREATE</code>: è il nome che Zoho
     dà alla richiesta che restituisce il modello ER, e calcola invece di creare. È detto qui perché trovarlo
@@ -125,11 +125,11 @@
   <ol>
     <li>Installa dal Chrome Web Store e apri una scheda di Zoho Analytics.</li>
     <li>Clicca l'icona di Zoost per aprire il pannello laterale.</li>
-    <li><b class="ui">📁 Set working folder…</b> — scegli una cartella. Il browser chiede il permesso: è
+    <li><b class="ui">📁 Set working folder…</b> - scegli una cartella. Il browser chiede il permesso: è
       l'unico modo in cui un'estensione può scrivere file, e vale solo per quella cartella.</li>
     <li>Apri il workspace che vuoi rispecchiare. Il suo URL ha questa forma:
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
-    <li><b class="ui">+ Workspace</b> — crea la cartella e ne legge il nome da Zoho Analytics.</li>
+    <li><b class="ui">+ Workspace</b> - crea la cartella e ne legge il nome da Zoho Analytics.</li>
   </ol>
   <p>La barra sotto la toolbar è la protezione. Verde vuol dire che la scheda e la cartella sono lo stesso
     workspace. Ambra con una fila di azioni vuol dire che non lo sono, e tutto quello che parla con Zoho
@@ -139,16 +139,16 @@
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> legge tutto il workspace in un passaggio: l'elenco delle viste, le
     colonne e i tipi di ogni tabella e query table, le relazioni fra loro, la SQL di ogni query table e il
     grafo delle dipendenze. Qualche centinaio di viste ci mette meno di un minuto.</p>
-  <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole —
+  <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole -
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> e
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b>. Il nome non è sparito: è il tooltip, ed è quello che annuncia uno
     screen reader. Questa guida mostra sempre il simbolo accanto al nome.</p>
   <p>Due tipi di errore, tenuti distinti apposta:</p>
   <ul>
-    <li>Una <b>fase</b> — l'elenco delle viste, la struttura, il modello ER — è una chiamata sola. Se non
+    <li>Una <b>fase</b> - l'elenco delle viste, la struttura, il modello ER - è una chiamata sola. Se non
       risponde non c'è nessun risultato parziale che valga la pena tenere, quindi il pull si ferma e
       <b>non viene scritto niente</b>. Quello che era su disco resta com'era.</li>
-    <li>Un <b>elemento</b> — la SQL o la lineage di una vista — è una chiamata per ciascuno. Una vista
+    <li>Un <b>elemento</b> - la SQL o la lineage di una vista - è una chiamata per ciascuno. Una vista
       illeggibile non deve costare le altre quattrocento, quindi gli errori vengono raccolti, il pull
       arriva in fondo e la riga di stato dice quanti ne sono stati saltati. Compare
       <b class="ui">Retry N failed</b>, che rilegge esattamente quelli.</li>
@@ -166,14 +166,14 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>views.json</code></td><td>il censimento: ogni vista con tipo, cartella, proprietario, date, tag</td></tr>
       <tr><td class="k"><code>schema.json</code></td><td>colonne e tipi di dato per tabella, più le relazioni</td></tr>
       <tr><td class="k"><code>lineage.json</code></td><td>chi legge da cosa, nelle due direzioni</td></tr>
-      <tr><td class="k"><code>sql/*.sql</code></td><td>un file per query table — la parte diffabile</td></tr>
+      <tr><td class="k"><code>sql/*.sql</code></td><td>un file per query table - la parte diffabile</td></tr>
       <tr><td class="k"><code>sql/index.json</code></td><td>la mappa id-file, e quali colonne sorgente coinvolge ogni query</td></tr>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
   </table>
   <p>I file <code>.sql</code> sono il punto. Sono l'unica cosa in Zoho Analytics che è davvero sorgente
     scritta da qualcuno, e un file per ciascuna è ciò che permette a <code>git diff</code> di rispondere a
-    <em>cosa è cambiato in questo workspace il mese scorso</em> — una domanda a cui Zoho Analytics non sa
+    <em>cosa è cambiato in questo workspace il mese scorso</em> - una domanda a cui Zoho Analytics non sa
     rispondere per niente.</p>
 
   <h2 id="read">5. Leggere il workspace</h2>
@@ -181,7 +181,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     il conteggio, <b class="ui">Sort</b> ordina per nome, tipo, cartella, data dei dati, quante viste ci
     leggono dentro, oppure proprietario.</p>
   <p>La casella di ricerca guarda i nomi, le cartelle <em>e i nomi delle colonne</em>. Scrivi il nome di una
-    colonna per trovare quali tabelle ce l'hanno — comodo prima di mettersi a cercare dove sta un dato.</p>
+    colonna per trovare quali tabelle ce l'hanno - comodo prima di mettersi a cercare dove sta un dato.</p>
   <p>La colonna <b>Cols</b> conta le colonne, e un numero <b>fra parentesi</b> vuol dire che la vista non ne
     ha di proprie: solo tabelle e query table hanno colonne, quindi un report o un grafico mostra il
     conteggio della vista su cui è costruito, e il tooltip la nomina. Le parentesi ci sono perché un
@@ -189,15 +189,15 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     dicono.</p>
   <p>Due colonne di date, e sono due fatti diversi:</p>
   <ul>
-    <li><b>Data</b> — quando i dati si sono aggiornati l'ultima volta. Sempre un timestamp vero, sempre
+    <li><b>Data</b> - quando i dati si sono aggiornati l'ultima volta. Sempre un timestamp vero, sempre
       ordinabile.</li>
-    <li><b>Design</b> — quando è cambiato il design l'ultima volta. Una data vera per tabelle e query table.
+    <li><b>Design</b> - quando è cambiato il design l'ultima volta. Una data vera per tabelle e query table.
       Per report e dashboard Zoho Analytics restituisce solo testo nella lingua della tua interfaccia,
       quindi viene mostrato <em>esattamente come lo manda</em>, in corsivo, mai interpretato, e ordinato per
       ultimo. Leggere una data tradotta è lo stesso errore che leggere l'etichetta tradotta di un
       pulsante.</li>
   </ul>
-  <p>Le righe marcate <span class="k">system</span> ce le ha messe Zoho — sincronizzate da una sorgente
+  <p>Le righe marcate <span class="k">system</span> ce le ha messe Zoho - sincronizzate da una sorgente
     collegata invece che costruite da te. Il modello ER di Zoho Analytics sa quali sono; l'elenco delle
     viste no.</p>
 
@@ -206,7 +206,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     ridimensionarlo; l'altezza viene ricordata.</p>
   <p><b class="ui">Columns</b> mostra ogni colonna con il suo tipo di dato Zoho. Tabelle e query table hanno
     le proprie; un report o una pivot non ne ha nessuna, quindi Zoost segue ciò su cui è costruito e mostra
-    <em>quella</em> struttura — dicendo di chi è, invece di spacciarla per quella del report.</p>
+    <em>quella</em> struttura - dicendo di chi è, invece di spacciarla per quella del report.</p>
   <p>La colonna <b>References</b> riporta le chiavi esterne, nelle due direzioni, perché un lookup non è
     simmetrico:</p>
   <ul>
@@ -223,7 +223,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li>Le tabelle come riquadri, le relazioni come frecce, il join scritto sull'arco.</li>
     <li>Clicca un riquadro per ricentrare il diagramma su di esso; <b class="ui">±</b> allarga o stringe la profondità
       intorno al fuoco.</li>
-    <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto — il modo più economico
+    <li>Clicca un arco per isolare una relazione e mandare indietro tutto il resto - il modo più economico
       di leggere un diagramma affollato.</li>
     <li><b class="ui">Layout ⚙</b> espone spaziatura, apertura, raggio dell'anello, distanza e dimensione
       delle etichette come slider dal vivo. Non esiste un valore giusto per tutti i grafi, quindi il
@@ -236,7 +236,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="sql">8. La SQL delle query table</h2>
   <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
-    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero — che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
+    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
     qualunque altro sorgente.</p>
   <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessuna SQL. La legge e la scrive su
@@ -244,7 +244,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="depends">9. Cosa non serve più a nessuno</h2>
   <p>Il pull fa a Zoho Analytics la sua stessa domanda sulle dipendenze, per ogni vista. La colonna
-    <b>Read by</b> è quante viste ci leggono dentro più le dashboard su cui compare — clicca il numero per
+    <b>Read by</b> è quante viste ci leggono dentro più le dashboard su cui compare - clicca il numero per
     aprire il dettaglio. Scegli <b>Nothing depends on</b> nel filtro Type per vedere solo i candidati.</p>
   <p class="box warn"><b>Candidati, mai un verdetto.</b> Zoho Analytics sa soltanto cosa leggono le sue viste
     l'una dall'altra. Un link condiviso che qualcuno si è salvato, un export schedulato, un report
@@ -254,15 +254,15 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h2 id="health">10. Salute</h2>
   <p><b class="ui">♥</b> apre l'audit nel pannello: viste da cui non dipende niente, tabelle che non compaiono in nessuna relazione, tabelle che ci ha messo Zoho invece di te, viste senza descrizione, e tutto quello che non è
     stato possibile leggere nell'ultimo pull.</p>
-  <p>Conteggi ed elenchi — nessuna soglia, nessun allarme rosso, nessun punteggio. Una tabella che non compare in nessuna relazione può essere una tabella di appoggio voluta; una vista che nessuno legge può alimentare un export
+  <p>Conteggi ed elenchi - nessuna soglia, nessun allarme rosso, nessun punteggio. Una tabella che non compare in nessuna relazione può essere una tabella di appoggio voluta; una vista che nessuno legge può alimentare un export
     schedulato. Ogni cifra dichiara, lì accanto, cosa <em>non</em> copre.</p>
 
   <h2 id="export">11. Gli export</h2>
   <p><b class="ui">HTML</b> produce un unico file autoconsistente con tutto quello che mostra il pannello.
     <b class="ui">Markdown</b> (il pulsante si legge <b class="ui">MD</b>) produce la stessa cosa nella forma
     adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.</p>
-  <p>Una finestra decide sezione per sezione cosa ci può entrare — viste, struttura, relazioni, SQL, lineage,
-    salute — con i preset <b>Everything</b> e <b>Share-safe</b>. L'opzione <b>SQL</b> sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.</p>
+  <p>Una finestra decide sezione per sezione cosa ci può entrare - viste, struttura, relazioni, SQL, lineage,
+    salute - con i preset <b>Everything</b> e <b>Share-safe</b>. L'opzione <b>SQL</b> sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.</p>
   <p>Entrambi finiscono in <code>export/</code> dentro la cartella del workspace, con nome
     <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, così una cartella piena di export si ordina da sé nell'ordine in cui li hai presi.</p>
   <p>Il Markdown si porta dietro una cosa che l'HTML non ha: <b>i vincoli del dialetto SQL di Zoho
@@ -275,11 +275,11 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     e ti indica questa pagina invece di inventarsi un passaggio.</p>
   <p>Opzionale, e spento finché non lo configuri. <b class="ui">⚙ Settings</b> → scegli un provider, incolla
     il nome di un modello e la tua chiave API.</p>
-  <h3>Anthropic (Claude) — agente completo</h3>
+  <h3>Anthropic (Claude) - agente completo</h3>
   <p>Gira con strumenti in sola lettura sul mirror locale: legge una struttura, segue una chiave esterna,
     apre la SQL di una query, cerca fra le colonne e dice cosa dipende da cosa, scegliendo da sé quali usare.
     Ogni chiamata a uno strumento compare nella chat, così vedi cosa ha guardato prima di rispondere.</p>
-  <h3>OpenAI (ChatGPT) — passaggio singolo</h3>
+  <h3>OpenAI (ChatGPT) - passaggio singolo</h3>
   <p>Risponde in un colpo solo a partire dall'indice del workspace e dalla vista che hai aperto. Non può
     andare a leggere niente da sé, quindi ti dirà cosa gli manca invece di andarselo a prendere.</p>
   <table>
@@ -293,8 +293,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </table>
 
   <h3>Quale scegliere</h3>
-  <p>Claude per tutto quello che richiede di guardarsi intorno — «cosa legge da questa tabella», «esiste già
-    una query che unisce queste due» — perché sono domande che costano più letture. OpenAI va benissimo per
+  <p>Claude per tutto quello che richiede di guardarsi intorno - «cosa legge da questa tabella», «esiste già
+    una query che unisce queste due» - perché sono domande che costano più letture. OpenAI va benissimo per
     domande su qualcosa che hai già aperto. Questi due sono gli unici provider supportati, perché sono i due
     che sono stati provati e gli unici due che l'estensione può raggiungere.</p>
   <h3>Dare un nome a un workspace</h3>
@@ -302,11 +302,11 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
     arrivare su disco identici, e l'id di un'istanza Zoho CRM è esatto senza essere memorabile. Il pulsante
     <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
-    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella — solo il mirror locale, mai
+    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
     niente dentro Zoho, e un pull la riporta indietro.</p>
   <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
     mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
-    legata davvero la cartella. È voluto — il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
+    legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
     solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
     <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
     Svuota il campo per tornare al nome della piattaforma.</p>
@@ -314,7 +314,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h3>Togliere una chiave, e cambiare motore</h3>
   <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
     rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
-    vuoto vuol dire <em>cancella</em> — dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
+    vuoto vuol dire <em>cancella</em> - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
     c'è», che è ciò che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
     perché è cifrata. <b class="ui">Forget</b> è anche la via d'uscita se hai perso la passphrase.</p>
   <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha chiave
@@ -336,34 +336,34 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     del browser), e quello che resta su disco è testo cifrato. La prima volta che usi la chat dopo aver
     avviato il browser, il pannello chiede la passphrase e offre <b class="ui">Unlock</b>; da lì in poi la
     chiave resta disponibile in memoria finché il browser non si chiude.</p>
-  <p>Una volta impostata i campi spariscono — la passphrase non è conservata, quindi non c'è niente da
-    mostrarci dentro — e la sezione dichiara che la chiave è cifrata, con un pulsante
+  <p>Una volta impostata i campi spariscono - la passphrase non è conservata, quindi non c'è niente da
+    mostrarci dentro - e la sezione dichiara che la chiave è cifrata, con un pulsante
     <b class="ui">Change passphrase</b> per quando ne vuoi un'altra.</p>
   <p>Tre cose chiedono la passphrase che stai già usando: cambiarla, sostituire la chiave API e togliere la
-    protezione. Sembrano diverse e sono lo stesso fatto — la chiave conservata va decifrata prima di poter
-    essere riscritta — e Zoost verifica quello che digiti contro la chiave conservata <em>prima</em> di
+    protezione. Sembrano diverse e sono lo stesso fatto - la chiave conservata va decifrata prima di poter
+    essere riscritta - e Zoost verifica quello che digiti contro la chiave conservata <em>prima</em> di
     salvare qualsiasi cosa, così una passphrase sbagliata non può lasciarti fuori da una chiave che credi di
     saper aprire.</p>
   <p><b>Se perdi la passphrase</b>, la sezione offre <b class="ui">Remove the protection</b>. Dice cosa se ne
     va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei
     modelli e ogni altra impostazione restano, e la chiave API la incolli di nuovo dalla dashboard del tuo
-    provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compreso — questa è
+    provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compreso - questa è
     l'unica via d'uscita, ed è un pulsante invece di una sequenza da ricostruire.</p>
   <p><b>Puoi tornare indietro quando vuoi</b>, e la strada è simmetrica: Zoost chiede la passphrase in uso,
     perché rimettere la chiave in chiaro vuol dire prima decifrarla, e questo lo puoi fare solo tu. Passphrase
-    sbagliata o assente, e <em>non viene cambiato niente</em> — la chiave cifrata resta esattamente com'era
+    sbagliata o assente, e <em>non viene cambiato niente</em> - la chiave cifrata resta esattamente com'era
     invece di essere buttata. Se la passphrase è persa, la via d'uscita è reincollare la chiave API.</p>
   <p>È disattivata di default perché il compromesso è tuo, non nostro. Su una macchina personale, digitare una
     passphrase una volta a sessione serve a poco. Su una condivisa o gestita serve a molto. <b>Non c'è nessun
-    recupero</b> — nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e
+    recupero</b> - nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e
     reincolli la chiave API scegliendone una nuova, il che costa una visita alla dashboard del provider. E
     nota cosa <em>non</em> fa: mentre la chiave è sbloccata sta nella memoria del browser, dove il browser la
-    può leggere. Quello che una passphrase protegge è la chiave a riposo — un profilo copiato, un backup,
+    può leggere. Quello che una passphrase protegge è la chiave a riposo - un profilo copiato, un backup,
     qualcun altro sulla stessa macchina.</p>
 
-  <h3>Tenere sotto controllo la conversazione — e il conto</h3>
+  <h3>Tenere sotto controllo la conversazione - e il conto</h3>
   <p>Due impostazioni decidono quanto costa una domanda. <b class="ui">Workspace index</b> è quanta parte del
-    workspace viene descritta all'assistente a <em>ogni</em> messaggio — più grande vuol dire che conosce più
+    workspace viene descritta all'assistente a <em>ogni</em> messaggio - più grande vuol dire che conosce più
     nomi, ed è fatturata ogni volta. Il pannello stampa la cifra reale per il workspace che hai aperto, sotto
     il titolo della chat, così il numero non è una stima. <b class="ui">Max tool steps</b> limita quante volte
     può ricorrere a uno strumento prima di rispondere; 20 è il default e la maggior parte delle risposte ne
@@ -371,14 +371,14 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>Quando un workspace è troppo grande per essere descritto per intero, cosa viene lasciato fuori è deciso
     invece che arbitrario: tabelle e query table non vengono mai lasciate fuori, perché sono il vocabolario
     che serve per scrivere una query o seguire una chiave esterna, e i report vanno per primi perché
-    l'assistente quelli li sa comunque trovare per nome. Quello che resta fuori viene dichiarato come tale —
+    l'assistente quelli li sa comunque trovare per nome. Quello che resta fuori viene dichiarato come tale -
     così non conclude mai che una vista non esiste solo perché non gli è stata mostrata.</p>
-  <p>All'assistente viene detto cosa Zoho documenta sulla SQL delle query table — solo SELECT, identificatori
+  <p>All'assistente viene detto cosa Zoho documenta sulla SQL delle query table - solo SELECT, identificatori
     fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>
-  <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono — nomi di viste e
-    colonne, relazioni, e la SQL delle tue query table — dal tuo browser direttamente al provider che hai
+  <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono - nomi di viste e
+    colonne, relazioni, e la SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
@@ -398,7 +398,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
         <td>Il pannello agisce sulla scheda attiva. Passa alla scheda di Zoho Analytics, o usa il pulsante
           sull'overlay.</td></tr>
       <tr><td class="k">«No workspace open»</td>
-        <td>Sei su Zoho Analytics ma non dentro un workspace. Aprine uno — l'URL deve contenere
+        <td>Sei su Zoho Analytics ma non dentro un workspace. Aprine uno - l'URL deve contenere
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
       <tr><td class="k">Il pulsante della cartella è ambra</td>
         <td>Il browser ha lasciato scadere il permesso, cosa che fa fra una sessione e l'altra. Clicca in un
@@ -415,7 +415,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è
-    gratuito e mantenuto nel tempo libero — al meglio delle possibilità, senza tempi di risposta
+    gratuito e mantenuto nel tempo libero - al meglio delle possibilità, senza tempi di risposta
     garantiti.</p>
 
 </div>
@@ -444,7 +444,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     </p>
     <p class="legal">
       Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
-      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      supportato da Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" e "Deluge" sono marchi di Zoho
       Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
     </p>
   </div>

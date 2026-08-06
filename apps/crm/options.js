@@ -1,4 +1,4 @@
-/* options.js — Zoost settings.
+/* options.js - Zoost settings.
  * Everything here writes to storage the side panel and the graph window already read:
  *   IndexedDB 'zoost'/kv  → rootDir (FileSystemDirectoryHandle)
  *   chrome.storage.local  → aicfg, exportScope, erParams
@@ -6,7 +6,7 @@
  */
 const $ = (id) => document.getElementById(id);
 // Attribute-safe escaping: `&`, `<`, `>` and both quote characters. Identical to the definition in
-// the panels and the graph windows — one behaviour under one name, so a reader never has to check
+// the panels and the graph windows - one behaviour under one name, so a reader never has to check
 // which file they are in.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -61,7 +61,7 @@ $('pickRoot').onclick = async () => {
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 };
 $('clearRoot').onclick = async () => {
-  if (!confirm('Forget the working folder?\n\nNothing on disk is deleted — Zoost simply stops using it until you pick one again.')) return;
+  if (!confirm('Forget the working folder?\n\nNothing on disk is deleted - Zoost simply stops using it until you pick one again.')) return;
   await window.idbHandle.set('rootDir', null);
   await window.idbHandle.set('activeWs', null);
   await stamp(); await showRoot();
@@ -74,12 +74,12 @@ $('clearRoot').onclick = async () => {
  * Lifted out of the Save handler on purpose: it is the part with a wrong answer that loses data. Two
  * rules, both learnt the hard way.
  *
- * A blank field with a key already stored means **leave it alone**, never "erase it" — the field is
+ * A blank field with a key already stored means **leave it alone**, never "erase it" - the field is
  * blank because a protected key cannot be redisplayed, and reading that as a deletion would throw the
  * key away on every unrelated save. `forget` is the one declared exception, and it says so on screen.
  *
- * And **nothing here destroys**. Every path that cannot produce a plaintext — no passphrase, wrong
- * passphrase — carries the ciphertext over untouched and lets the handler refuse. A merge that deletes
+ * And **nothing here destroys**. Every path that cannot produce a plaintext - no passphrase, wrong
+ * passphrase - carries the ciphertext over untouched and lets the handler refuse. A merge that deletes
  * what it failed to read is how "turn the protection off" became a way to lose a key.
  */
 async function mergeKeys(cfg, prev, wantLock, pass, forget, cur) {
@@ -110,7 +110,7 @@ async function mergeKeys(cfg, prev, wantLock, pass, forget, cur) {
 
 // Which providers the Forget button has emptied, pending Save. It has to be tracked rather than
 // inferred from the blank fields, because blank means "keep what is stored" everywhere else on this
-// page — that is the rule protecting a passphrase-locked key, and it would otherwise make forgetting
+// page - that is the rule protecting a passphrase-locked key, and it would otherwise make forgetting
 // impossible. Nothing is written until Save, so the way to undo is to reload the page.
 const aiForget = new Set();
 function wireForget(prov, keyId, modelId) {
@@ -130,7 +130,7 @@ function wireForget(prov, keyId, modelId) {
  *  The guard alone was not enough, and the gap was the obvious one: it stopped you *moving to* an
  *  unconfigured engine while saying nothing about *sitting on* one. A fresh install starts on
  *  Anthropic with nothing filled in, so the selector showed a chosen, working engine that could not
- *  answer a single question — the rule enforced on the user and not on the default. So the options
+ *  answer a single question - the rule enforced on the user and not on the default. So the options
  *  say which of them is ready, and a save that leaves exactly one usable engine selects it. */
 function engineIncomplete(which) {
   const model = $(which === 'anthropic' ? 'ai_a_model' : 'ai_o_model').value.trim();
@@ -167,7 +167,7 @@ function aiNeedCurrent() {
  *  an option you cannot pick and cannot see the reason for is worse than one that states its state. */
 /** The way out when the passphrase is gone.
  *
- * There was one already — Forget on each provider, then untick, then save — and it had to be *worked
+ * There was one already - Forget on each provider, then untick, then save - and it had to be *worked
  * out*, which is not a way out. Somebody who has lost a passphrase is not in the mood to deduce a
  * three-step sequence from a form, and a recovery path nobody can find is the same as none.
  *
@@ -184,7 +184,7 @@ async function loseLock() {
     `Without the passphrase the stored key cannot be decrypted by anyone, including Zoost.\n\n`
     + `This removes the encrypted ${names} key and turns the protection off.\n\n`
     + `Kept: your model names, and every other setting on this page.\n`
-    + `Lost: nothing but the stored key — paste it in again from your provider's dashboard.\n\n`
+    + `Lost: nothing but the stored key - paste it in again from your provider's dashboard.\n\n`
     + `Continue?`)) return;
   const cfg = Object.assign({}, (await chrome.storage.local.get('aicfg')).aicfg || {});
   for (const prov of which) { cfg[prov] = Object.assign({}, cfg[prov]); delete cfg[prov].apiKeyEnc; cfg[prov].apiKey = ''; }
@@ -213,7 +213,7 @@ function markEngineOptions() {
   [...sel.options].forEach((o) => {
     const base = o.dataset.label || (o.dataset.label = o.textContent);
     const missing = engineIncomplete(o.value);
-    o.textContent = missing ? `${base} — needs ${missing}` : base;
+    o.textContent = missing ? `${base} - needs ${missing}` : base;
   });
 }
 
@@ -238,7 +238,7 @@ function syncLockRow() {
     : needNew ? (aiLockStored ? 'Enter the passphrase in use, then the new one twice. The key is decrypted and re-encrypted when you save.'
                               : 'Choose a passphrase. It is never stored and cannot be recovered.')
     : want ? 'Enter the passphrase in use, so the key you have just typed can be encrypted with it.'
-           : 'Enter the current passphrase to turn the protection off — the key has to be decrypted to be stored in clear text. If you have lost it, use «Remove the protection» below.';
+           : 'Enter the current passphrase to turn the protection off - the key has to be decrypted to be stored in clear text. If you have lost it, use «Remove the protection» below.';
 }
 
 async function currentAi() {
@@ -255,7 +255,7 @@ async function loadAi() {
     maxIter: c.maxIter || 20,
     seedCap: c.seedCap || 72000,
   };
-  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* — which is
+  // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* - which is
   // the right criterion, and only if the form has already been filled in. Called before it, they judge
   // whatever the previous render left behind, which after a save is the key the user had just typed.
   $('aiengine').value = cfg.active;
@@ -266,7 +266,7 @@ async function loadAi() {
   // A key already protected shows as protected, with the field left empty: the passphrase is not
   // stored, so there is nothing to put back in it.
   [['ai_a_key', cfg.anthropic], ['ai_o_key', cfg.openai]].forEach(([id, prov]) => {
-    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted — type it again to replace it'; }
+    if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted - type it again to replace it'; }
   });
   aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
   prevEngine = cfg.active;
@@ -319,7 +319,7 @@ $('saveAi').onclick = async () => {
     $('ai_lockhint').textContent = msg; $('ai_lockhint').hidden = false; $('ai_lockhint').classList.add('bad');
   };
 
-  // Which stored ciphertexts this save still has to care about — a provider being forgotten is not one.
+  // Which stored ciphertexts this save still has to care about - a provider being forgotten is not one.
   const boxes = ['anthropic', 'openai']
     .filter((p) => !aiForget.has(p)).map((p) => (prev[p] || {}).apiKeyEnc).filter(Boolean);
   const typedKey = !!(cfg.anthropic.apiKey || cfg.openai.apiKey);
@@ -331,17 +331,17 @@ $('saveAi').onclick = async () => {
   // lock them out of a key they believe they can open.
   if (needCur) {
     if (!cur) {
-      lockBad('Enter the passphrase in use — the stored key has to be decrypted before it can be re-encrypted or turned back into clear text.');
-      $('ai_passcur').focus(); toast('The current passphrase is needed — nothing saved.', true); return;
+      lockBad('Enter the passphrase in use - the stored key has to be decrypted before it can be re-encrypted or turned back into clear text.');
+      $('ai_passcur').focus(); toast('The current passphrase is needed - nothing saved.', true); return;
     }
     if ((await window.ZOOST_KEYVAULT.unlock(boxes[0], cur)) === null) {
-      lockBad('That passphrase did not open the stored key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, use \u00abRemove the protection\u00bb below.');
-      $('ai_passcur').select(); toast('Wrong passphrase — nothing saved.', true); return;
+      lockBad('That passphrase did not open the stored key. Either it is wrong, or the stored key is damaged - the two cannot be told apart. If it is lost, use \u00abRemove the protection\u00bb below.');
+      $('ai_passcur').select(); toast('Wrong passphrase - nothing saved.', true); return;
     }
   }
   if (needNew) {
-    if (pass !== $('ai_pass2').value) { lockBad('The two new passphrases do not match.'); $('ai_pass2').select(); toast('The passphrases do not match — nothing saved.', true); return; }
-    if (!pass) { lockBad('Choose a passphrase, or turn the protection off.'); $('ai_pass').focus(); toast('Choose a passphrase — nothing saved.', true); return; }
+    if (pass !== $('ai_pass2').value) { lockBad('The two new passphrases do not match.'); $('ai_pass2').select(); toast('The passphrases do not match - nothing saved.', true); return; }
+    if (!pass) { lockBad('Choose a passphrase, or turn the protection off.'); $('ai_pass').focus(); toast('Choose a passphrase - nothing saved.', true); return; }
   }
   await mergeKeys(cfg, prev, wantLock, pass, aiForget, cur);
   // Protection off but something is still encrypted: nothing was decrypted, so saving now would write
@@ -367,13 +367,13 @@ $('saveAi').onclick = async () => {
   const p = cfg[cfg.active] || {};
   const ready = !!((p.apiKey || p.apiKeyEnc) && p.model);
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: cfg }); await stamp();
-  toast(moved ? `AI settings saved \u2014 ${moved} is now the selected engine, being the only one configured.`
+  toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.`
     : ready ? 'AI settings saved.'
-    : 'Saved \u2014 but the selected engine still needs a model and an API key.', !ready);
+    : 'Saved - but the selected engine still needs a model and an API key.', !ready);
   // Re-read from where it was just written, rather than patching the flags by hand: the form has to
   // agree with the disk, and the page has three of them to keep in step (is a key stored, is it
   // encrypted, is a passphrase set). Reconstructing that here is a second copy of loadAi() waiting to
-  // drift — which is what left two empty passphrase boxes on screen after a successful save, reading
+  // drift - which is what left two empty passphrase boxes on screen after a successful save, reading
   // as "it did not take".
   await loadAi();
 };
@@ -423,7 +423,7 @@ async function loadLay() {
 //
 // The list is the registry's, kept in one place: adding a type to the panel must not mean
 // remembering to add a row here. It is duplicated as a literal rather than imported because the
-// options page and the side panel do not share a module — if they ever do, this is the first thing
+// options page and the side panel do not share a module - if they ever do, this is the first thing
 // that should move.
 const TAB_DEFS = [
   { id: 'functions',   label: 'Functions',   note: 'Deluge functions, namespaces, cross-references' },
@@ -441,7 +441,7 @@ let tabAccessCur = { ws: null, access: {} };
 const dayOf = (iso) => {
   const d = new Date(iso);
   // Formatted from local parts. Going through toISOString() shifts the day for anyone east of
-  // Greenwich — the trap is written up in CLAUDE.md and this is a date the user reads.
+  // Greenwich - the trap is written up in CLAUDE.md and this is a date the user reads.
   return isNaN(d) ? null : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
@@ -456,13 +456,13 @@ function renderTabs() {
     const row = document.createElement('div');
     row.className = 'tabrow' + (denied ? ' denied' : '');
     // A refused tab is not a checkbox. Offering to "show" something Zoho will not answer for would be
-    // a control that cannot do what it says — the same reason a refused tab is absent from the panel
+    // a control that cannot do what it says - the same reason a refused tab is absent from the panel
     // rather than greyed out there.
     const why = denied
-      ? `Not granted to your Zoho role${a.status ? ` — Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
+      ? `Not granted to your Zoho role${a.status ? ` - Zoho answered ${a.status}` : ''}${a.at ? `, asked ${dayOf(a.at)}` : ''}. Pull again to re-check.`
       : def.note;
     // Two independent switches, because they answer different questions: "do I want to look at this"
-    // and "should Zoost even ask Zoho for it". A refused area has neither offered — it is skipped
+    // and "should Zoost even ask Zoho for it". A refused area has neither offered - it is skipped
     // whatever these say, and a control that cannot do what it says is worse than no control.
     row.innerHTML = `<input type="checkbox" ${denied ? 'disabled' : ''} ${tabHiddenCur.includes(id) ? '' : 'checked'} data-id="${escA(id)}" title="Show this tab in the side panel">
       <span class="tn"><b>${def.label}</b><span class="why">${why}</span></span>
@@ -480,7 +480,7 @@ function renderTabs() {
       // Turning a tab off also stops pulling it, and shows that it has: nine times in ten a tab is
       // turned off because that area is not readable anyway, and leaving it in the chain buys one
       // error per pull and nothing else. Shown rather than done invisibly, and you can turn the pull
-      // back on for the tenth case — someone who mirrors a type for Git and never browses it.
+      // back on for the tenth case - someone who mirrors a type for Git and never browses it.
       if (!tabNoPullCur.includes(id)) tabNoPullCur = tabNoPullCur.concat([id]);
     }
     renderTabs();
@@ -497,11 +497,11 @@ function renderTabs() {
   if (denied.length) {
     note.style.display = '';
     note.textContent = `${denied.length} of these is not available in the workspace `
-      + `${tabAccessCur.ws ? '“' + tabAccessCur.ws + '”' : 'currently open'}: Zoho refused it for your role. `
+      + `${tabAccessCur.ws ? '"' + tabAccessCur.ws + '"' : 'currently open'}: Zoho refused it for your role. `
       + 'Roles are per org, so another workspace may well grant it.';
   } else if (!tabAccessCur.ws) {
     note.style.display = '';
-    note.textContent = 'What your Zoho role allows is discovered by pulling — there is no way to ask in '
+    note.textContent = 'What your Zoho role allows is discovered by pulling - there is no way to ask in '
       + 'advance. Until a workspace has been pulled, every tab is offered.';
   } else { note.style.display = 'none'; }
 }
@@ -537,13 +537,13 @@ $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []
 // ---------- guarding against the stale save ----------
 //
 // One window stops you *having* two copies of this form. It does not stop this copy being out of
-// date: it can sit open for hours while the side panel writes some of the same keys — exportScope
-// is rewritten every time you export with a different scope, aicfg when the engine changes — and
+// date: it can sit open for hours while the side panel writes some of the same keys - exportScope
+// is rewritten every time you export with a different scope, aicfg when the engine changes - and
 // then Save writes back what was true when the page loaded. That is the lost update, and it is the
 // bug being described: the older copy wins because it saved last.
 //
 // So each section watches its own key. If it changes elsewhere and you have not touched that
-// section, the form re-reads it — silently, because there is nothing to decide. If you *have*
+// section, the form re-reads it - silently, because there is nothing to decide. If you *have*
 // touched it, nothing is overwritten in either direction: the section says so and offers both ways
 // out. Never resolve this by guessing which side is newer; the user is the only one who knows which
 // they meant.
@@ -581,7 +581,7 @@ function conflictBox(key, on) {
   el.querySelector('[data-keep]').onclick = () => conflictBox(key, false);
 }
 // Any edit inside a section marks it. Attached to the section rather than to each control, so a
-// field added later is covered without anyone remembering — the reorder arrows are clicks and not
+// field added later is covered without anyone remembering - the reorder arrows are clicks and not
 // input events, hence the third listener.
 document.querySelectorAll('[data-section]').forEach((sec) => {
   const k = sec.dataset.section;

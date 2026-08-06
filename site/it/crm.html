@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/crm.html sha256:6a082fc5d3b71471 -->
+<!-- translated-from: site/crm.html sha256:68d1b36673f2a4d1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost CRM — il Deluge sotto Git, e la mappa della tua org</title>
-<meta name="description" content="Rispecchia funzioni Deluge, schema dei moduli, relazioni, layout, workflow, schedulazioni e connessioni del tuo Zoho CRM in file locali da mettere sotto Git — poi esplorali con grafo delle chiamate, diagramma ER, catalogo delle relazioni e delle connessioni, audit ed export.">
+<title>Zoost CRM - il Deluge sotto Git, e la mappa della tua org</title>
+<meta name="description" content="Rispecchia funzioni Deluge, schema dei moduli, relazioni, layout, workflow, schedulazioni e connessioni del tuo Zoho CRM in file locali da mettere sotto Git - poi esplorali con grafo delle chiamate, diagramma ER, catalogo delle relazioni e delle connessioni, audit ed export.">
 <link rel="canonical" href="https://zoost.it/it/crm.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/crm.html">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/crm.html">
@@ -25,7 +25,7 @@
   /* This page wears its product's accent; the home stays neutral because it is the suite.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#2563eb;--sel-soft:#16263f}
-  /* landing-page specific — shared base is in site.css */
+  /* landing-page specific - shared base is in site.css */
   .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
   .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
   .hero h1 span{color:var(--muted)}
@@ -71,7 +71,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/it/index.html" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/it/index.html" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -88,7 +88,7 @@
     <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
     <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama cosa, di
       quale modulo è in relazione con quale, e di quale automazione scatta quando. Tutta la tua org Zoho CRM sul tuo
-      disco, cercabile in un colpo solo — e in sola lettura verso Zoho.</p>
+      disco, cercabile in un colpo solo - e in sola lettura verso Zoho.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
@@ -108,8 +108,8 @@
       <div>
         <h3>Una storia per tutto quello che scarichi</h3>
         <p>Lo storico delle versioni di Zoho CRM copre una <em>funzione</em>, una per volta, dentro Zoho.
-          Tutto il resto che il pull cattura — schema dei moduli, layout, related list, workflow,
-          schedulazioni, connessioni — arriva sul tuo disco come file di testo, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
+          Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow,
+          schedulazioni, connessioni - arriva sul tuo disco come file di testo, quindi con Git una storia ce l'ha anche quella parte, e un unico diff risponde a <em>cosa è cambiato in quest'org il mese scorso</em> su
           tutti i tipi insieme invece che una funzione per volta. <b>Git è facoltativo</b>: senza, il mirror
           resta comunque un insieme di file di testo che puoi cercare e condividere.</p>
       </div>
@@ -121,21 +121,21 @@
       <div>
         <h3>Non è un editor, per scelta</h3>
         <p>Zoost non sostituisce l'editor di Zoho. Continui a scrivere dove Zoho compila e valida.
-          Zoost è l'altra metà: navigazione, riferimenti incrociati, la mappa e l'audit per cui l'editor non ha spazio — e, con Git, una storia delle parti che Zoho non versiona.</p>
+          Zoost è l'altra metà: navigazione, riferimenti incrociati, la mappa e l'audit per cui l'editor non ha spazio - e, con Git, una storia delle parti che Zoho non versiona.</p>
       </div>
       <div>
         <h3>Un grep su tutta l'org</h3>
-        <p>Ricerca full-text su <b>tutte</b> le funzioni Deluge insieme — la cosa che Zoho non ha mai avuto. Trova
+        <p>Ricerca full-text su <b>tutte</b> le funzioni Deluge insieme - la cosa che Zoho non ha mai avuto. Trova
           ogni punto in cui un campo, un modulo, un endpoint o un id scritto a mano è referenziato, prima di
           cambiarlo.</p>
       </div>
       <div>
         <h3>I nomi delle relazioni che continui a perdere</h3>
-        <p>L'API name di una related list non è l'api&nbsp;name di nessuno dei due moduli — ed è quello che
+        <p>L'API name di una related list non è l'api&nbsp;name di nessuno dei due moduli - ed è quello che
           <code>getRelatedRecords()</code> pretende. Zoost cataloga ogni relazione con la chiamata pronta da copiare.</p>
       </div>
     </div>
-    <p class="note">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da Claude — “Claudio”, per me —
+    <p class="note">Costruito e mantenuto da una persona sola, con un aiuto sostanziale da Claude - "Claudio", per me -
       su design, codice e testi. Le decisioni, e la responsabilità, sono mie.</p>
   </div>
 </section>
@@ -149,7 +149,7 @@
         <h3>Ogni funzione, come file</h3>
         <ul>
           <li>Sorgente Deluge in cartelle per namespace, pronto per Git. Salvi in Zoho e il file locale segue.</li>
-          <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> — la cosa più vicina a un
+          <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> - la cosa più vicina a un
             <code>grep</code> sulla tua org, e qualcosa che Zoho non offre.</li>
           <li>Ognuna porta la sua dimensione, le sue chiamate API in uscita, chi l'ha modificata per ultimo e le
             connessioni che usa.</li>
@@ -170,7 +170,7 @@
       <div class="card">
         <h3>I nomi delle relazioni che continui a perdere</h3>
         <ul>
-          <li>L'API name di una related list non è quello di nessuno dei due moduli — ed è quello che serve a
+          <li>L'API name di una related list non è quello di nessuno dei due moduli - ed è quello che serve a
             <code>getRelatedRecords()</code>.</li>
           <li>Una riga per relazione, con la chiamata pronta da copiare.</li>
           <li>Ogni campo con il suo tipo, e una matrice che mostra su quale layout compare.</li>
@@ -183,7 +183,7 @@
           <li>Workflow con trigger, criteri e le funzioni che invocano; schedulazioni con frequenza e stato.</li>
           <li><span class="k">Quali regole non scattano subito</span>, quanto aspettano, e quando ognuna è stata
             eseguita l'ultima volta.</li>
-          <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna — così sai cosa è sicuro
+          <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna - così sai cosa è sicuro
             cancellare.</li>
         </ul>
       </div>
@@ -203,7 +203,7 @@
           <li>Tutto il workspace come un unico file HTML autoconsistente, o in Markdown per uno strumento AI.</li>
           <li>Una finestra decide cosa può lasciare la tua macchina, sezione per sezione. Il codice sorgente va
             incluso apposta.</li>
-          <li>Con una chiave tua, un assistente che legge <em>la tua</em> org invece di tirare a indovinare — e che
+          <li>Con una chiave tua, un assistente che legge <em>la tua</em> org invece di tirare a indovinare - e che
             può essere protetto da una passphrase.</li>
         </ul>
       </div>
@@ -217,7 +217,7 @@
     <h2>Come si comincia</h2>
     <ol class="steps">
       <li>Installa dal <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a> e apri il pannello laterale.</li>
-      <li>In <b>Settings</b>, scegli una <b>cartella di lavoro</b> — dedicata e vuota. Ogni workspace vivrà lì dentro.</li>
+      <li>In <b>Settings</b>, scegli una <b>cartella di lavoro</b> - dedicata e vuota. Ogni workspace vivrà lì dentro.</li>
       <li>Apri una scheda Zoho CRM e premi <b>+</b>. Zoost crea il workspace per quell'org.</li>
       <li>Premi <b>Pull all</b> per rispecchiare funzioni, moduli, layout, relazioni, workflow, schedulazioni e connessioni.</li>
       <li><b>Facoltativo:</b> <code>git init</code> nella cartella, e da qui in poi hai la storia di tutta
@@ -229,7 +229,7 @@
     <p class="note">Su cosa si regge, cosa si rifiuta di fare, e come verificarlo:
       <a href="/it/nerd.html">la pagina nerd</a>.</p>
     <p class="note">Devi essere autenticato a Zoho CRM nello stesso browser. Zoost usa la tua sessione e i tuoi
-      permessi esistenti — vede esattamente quello che vedi tu, e niente di più.</p>
+      permessi esistenti - vede esattamente quello che vedi tu, e niente di più.</p>
     <p class="note warn">L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del
       workspace che gli serve, sorgente Deluge compreso, va al provider che configuri. Verifica che sia accettabile
       nella tua organizzazione prima di attivarlo. Tutto il resto resta locale.</p>
@@ -259,7 +259,7 @@
     </p>
     <p class="legal">
       Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
-      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      supportato da Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" e "Deluge" sono marchi di Zoho
       Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
     </p>
   </div>

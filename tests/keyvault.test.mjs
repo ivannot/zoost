@@ -581,7 +581,7 @@ test('an engine that cannot answer says so in the dropdown', () => {
   for (const app of ['crm', 'analytics']) {
     const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
     assert.match(src, /function markEngineOptions\(\)/, `${app}: the options never state their state`);
-    assert.match(src, /o\.textContent = missing \? `\$\{base\} — needs \$\{missing\}` : base;/,
+    assert.match(src, /o\.textContent = missing \? `\$\{base\} - needs \$\{missing\}` : base;/,
       `${app}: an incomplete engine reads as a working one`);
   }
 });

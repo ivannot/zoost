@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>How to use Zoost Analytics</title>
-<meta name="description" content="How to use Zoost Analytics: working folder, workspaces, pulling, reading a table’s structure and foreign keys, the ER diagram, query-table SQL, what nothing depends on, exports, and the AI assistant.">
+<meta name="description" content="How to use Zoost Analytics: working folder, workspaces, pulling, reading a table's structure and foreign keys, the ER diagram, query-table SQL, what nothing depends on, exports, and the AI assistant.">
 <link rel="canonical" href="https://zoost.it/docs-analytics.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics.html">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics.html">
@@ -17,9 +17,9 @@
   /* This guide is about one product, so it wears that product's accent. The suite pages stay slate.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#dc2d7a;--sel-soft:#3a1226}
-  /* docs-specific — shared base & content typography are in site.css */
+  /* docs-specific - shared base & content typography are in site.css */
   b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
-  /* The same marks the toolbar draws, at the same weight — a guide that names a control the panel
+  /* The same marks the toolbar draws, at the same weight - a guide that names a control the panel
      no longer spells out is a guide the reader has to translate. */
   b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
@@ -35,7 +35,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -84,8 +84,8 @@
     What it reads from Zoho Analytics is written straight to a folder on your own disk and stays there. Nothing
     is sent to the developer, and there is no analytics or tracking of any kind.</p>
   <p>The exception is the <b>AI assistant</b>, and it is off until you paste in your own API key. Once you
-    enable it, what it needs to answer you is sent from your browser directly to the provider you chose —
-    Anthropic or OpenAI — and to nobody else. If your organisation does not allow that, leave it off:
+    enable it, what it needs to answer you is sent from your browser directly to the provider you chose -
+    Anthropic or OpenAI - and to nobody else. If your organisation does not allow that, leave it off:
     everything else works exactly the same. The <a href="/privacy.html">privacy policy</a> lists what is
     stored, where, and why.</p>
 
@@ -98,7 +98,7 @@
           each Zoost product keeps its own subfolder, so one folder can serve them all.</td></tr>
       <tr><td class="k">Workspace</td>
         <td>One folder per Zoho Analytics workspace, inside <code>analytics/</code>. Its identity is the
-          workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name — rename either
+          workspace <em>id</em> written in <code>.zoost.json</code>, never the folder name - rename either
           and nothing is orphaned.</td></tr>
       <tr><td class="k">The active tab decides</td>
         <td>The panel takes the workspace from the URL of the tab you are on. There is nothing to pick and
@@ -107,18 +107,18 @@
     </tbody>
   </table>
   <p class="box">Zoost is <b>read-only</b> towards Zoho Analytics. It never creates, edits or deletes a view,
-    and it never reads the rows inside your tables — the endpoints that return cell values exist and are
-    deliberately not called. The worst it can do to your workspace is nothing. One of the calls it makes is a POST whose URL contains <code>CREATE</code> — that is Zoho's own name for the request that returns the ER model, and it computes rather than creates. Said here so that finding it does not look like a discovery.</p>
+    and it never reads the rows inside your tables - the endpoints that return cell values exist and are
+    deliberately not called. The worst it can do to your workspace is nothing. One of the calls it makes is a POST whose URL contains <code>CREATE</code> - that is Zoho's own name for the request that returns the ER model, and it computes rather than creates. Said here so that finding it does not look like a discovery.</p>
 
   <h2 id="first-run">2. First run</h2>
   <ol>
     <li>Install from the Chrome Web Store and open a Zoho Analytics tab.</li>
     <li>Click the Zoost icon to open the side panel.</li>
-    <li><b class="ui">📁 Set working folder…</b> — pick one folder. The browser asks for permission; it is
+    <li><b class="ui">📁 Set working folder…</b> - pick one folder. The browser asks for permission; it is
       the only way an extension may write files, and it applies to that folder alone.</li>
     <li>Open the workspace you want to mirror. Its URL looks like
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
-    <li><b class="ui">+ Workspace</b> — creates the folder for it and reads its name from Zoho Analytics.</li>
+    <li><b class="ui">+ Workspace</b> - creates the folder for it and reads its name from Zoho Analytics.</li>
   </ol>
   <p>The bar under the toolbar is the guard. Green means the tab and the folder are the same workspace.
     Amber with a bar of actions means they are not, and everything Zoho-bound stays disabled until you
@@ -128,13 +128,13 @@
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> reads the whole workspace in one pass: the list of views, the columns and
     types of every table and query table, the relations between them, the SQL of each query table, and the
     dependency graph. A few hundred views take under a minute.</p>
-<p class="note">Three toolbar controls are drawn as marks rather than words — <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b>. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
+<p class="note">Three toolbar controls are drawn as marks rather than words - <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b>. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   <p>Two kinds of failure, told apart on purpose:</p>
   <ul>
-    <li>A <b>stage</b> — the view list, the structure, the ER model — is one call. If it does not answer
+    <li>A <b>stage</b> - the view list, the structure, the ER model - is one call. If it does not answer
       there is no partial result worth keeping, so the pull stops and <b>nothing is written</b>. What was
       on disk stays as it was.</li>
-    <li>An <b>item</b> — one view's SQL or lineage — is one call each. One unreadable view must not cost
+    <li>An <b>item</b> - one view's SQL or lineage - is one call each. One unreadable view must not cost
       the other four hundred, so failures are collected, the pull finishes, and the status line says how
       many were missed. <b class="ui">Retry N failed</b> appears and re-reads exactly those.</li>
   </ul>
@@ -152,41 +152,41 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>views.json</code></td><td>the census: every view with type, folder, owner, dates, tags</td></tr>
       <tr><td class="k"><code>schema.json</code></td><td>columns and data types per table, plus the relations</td></tr>
       <tr><td class="k"><code>lineage.json</code></td><td>what reads from what, both directions</td></tr>
-      <tr><td class="k"><code>sql/*.sql</code></td><td>one file per query table — the diffable part</td></tr>
+      <tr><td class="k"><code>sql/*.sql</code></td><td>one file per query table - the diffable part</td></tr>
       <tr><td class="k"><code>sql/index.json</code></td><td>id-to-file map, and which source columns each query involves</td></tr>
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>
     </tbody>
   </table>
   <p>The <code>.sql</code> files are the point. They are the only thing in Zoho Analytics that is genuinely
     source somebody wrote, and one file each is what lets <code>git diff</code> answer <em>what changed in
-    this workspace last month</em> — a question Zoho Analytics cannot answer at all.</p>
+    this workspace last month</em> - a question Zoho Analytics cannot answer at all.</p>
 
   <h2 id="read">5. Reading the workspace</h2>
   <p>The list is every view. Above it, two picklists: <b class="ui">Type</b> filters by kind and carries the
     count of each, <b class="ui">Sort</b> orders by name, type, folder, when the data changed, how many views
     read from it, or owner.</p>
   <p>The search box looks at names, folders <em>and column names</em>. Type a column name to find which
-    tables carry it — useful before going looking for where some data lives.</p>
+    tables carry it - useful before going looking for where some data lives.</p>
   <p>The <b>Cols</b> column counts columns, and a number <b>in brackets</b> means the view has none of
     its own: only tables and query tables carry columns, so a report or a chart shows the count of the
     view it is built on, and the tooltip names it. The brackets exist because a count is read as a
-    figure — anything fused to the digits would change what they say.</p>
+    figure - anything fused to the digits would change what they say.</p>
   <p>Two date columns, and they are different facts:</p>
   <ul>
-    <li><b>Data</b> — when the data last refreshed. Always a real timestamp, always sortable.</li>
-    <li><b>Design</b> — when the design last changed. A real date for tables and query tables. For reports
+    <li><b>Data</b> - when the data last refreshed. Always a real timestamp, always sortable.</li>
+    <li><b>Design</b> - when the design last changed. A real date for tables and query tables. For reports
       and dashboards Zoho Analytics only gives text in your interface language, so it is shown <em>exactly as it
       sends it</em>, in italics, never parsed, and sorted last. Reading a localized date is the same mistake
       as reading a localized button label.</li>
   </ul>
-  <p>Rows marked <span class="k">system</span> were put there by Zoho — synced from a connected source
+  <p>Rows marked <span class="k">system</span> were put there by Zoho - synced from a connected source
     rather than built by you. Zoho Analytics' own ER model knows which; the view list does not.</p>
 
   <h2 id="structure">6. Structure and foreign keys</h2>
   <p>Click any row to open the detail pane. Drag the bar above it to resize; the height is remembered.</p>
   <p><b class="ui">Columns</b> shows every column with its Zoho data type. Tables and query tables carry
     their own; a report or a pivot carries none, so Zoost follows what it is built on and shows
-    <em>that</em> structure — saying whose it is, rather than passing it off as the report's.</p>
+    <em>that</em> structure - saying whose it is, rather than passing it off as the report's.</p>
   <p>The <b>References</b> column is the foreign keys, in both directions, because a lookup is not
     symmetric:</p>
   <ul>
@@ -202,7 +202,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <ul>
     <li>Tables as boxes, relations as arrows, the join written on the arc.</li>
     <li>Click a box to re-centre on it; <b class="ui">±</b> widens or narrows the depth around the focus.</li>
-    <li>Click an arc to isolate one relation and push everything else back — the cheapest way to read a
+    <li>Click an arc to isolate one relation and push everything else back - the cheapest way to read a
       crowded diagram.</li>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread, ring radius, label gap and label size as live
       sliders. There is no single right value across graphs, so the trade-off is yours to make. The
@@ -215,7 +215,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="sql">8. Query-table SQL</h2>
   <p>The <b class="ui">SQL</b> tab shows the source of a query table. The <b>Lineage</b> tab lists the
-    source tables it reads and how many of their columns it actually involves — which is what makes
+    source tables it reads and how many of their columns it actually involves - which is what makes
     <em>if I drop this column, what breaks</em> answerable.</p>
   <p>On disk every query is its own file, so <code>grep</code> and <code>git log -p</code> work on them
     like any other source.</p>
@@ -224,7 +224,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="depends">9. What nothing depends on</h2>
   <p>The pull asks Zoho Analytics its own dependency question for every view. The <b>Read by</b> column is how
-    many views read from it plus the dashboards it appears on — click the number to open the breakdown.
+    many views read from it plus the dashboards it appears on - click the number to open the breakdown.
     Pick <b>Nothing depends on</b> in the Type filter to see only the candidates.</p>
   <p class="box warn"><b>Candidates, never a verdict.</b> Zoho Analytics only knows what its own views read from
     each other. A shared link somebody bookmarked, a scheduled export, an embedded report or an API
@@ -234,7 +234,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p><b class="ui">♥</b> opens the audit in the panel: views nothing depends on, tables in no relation at
     all, tables Zoho put there rather than you, views with no description, and anything that could not be
     read in the last pull.</p>
-  <p>Counts and lists — no thresholds, no red flags, no score. A table in no relation may be a deliberate
+  <p>Counts and lists - no thresholds, no red flags, no score. A table in no relation may be a deliberate
     lookup list; a view nothing reads may feed a scheduled export. Every figure states what it does
     <em>not</em> cover, next to itself.</p>
 
@@ -242,8 +242,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p><b class="ui">HTML</b> produces one self-contained file with everything the panel shows.
     <b class="ui">Markdown</b> (the button reads <b class="ui">MD</b>) produces the same shaped as context for an AI tool that has never seen your
     workspace.</p>
-  <p>A dialog decides section by section what may go in — views, structure, relations, SQL, lineage,
-    health — with <b>Everything</b> and <b>Share-safe</b> presets. The <b>SQL</b> option sits indented under
+  <p>A dialog decides section by section what may go in - views, structure, relations, SQL, lineage,
+    health - with <b>Everything</b> and <b>Share-safe</b> presets. The <b>SQL</b> option sits indented under
     Structure because it depends on it, and it is flagged every time: it is the part somebody wrote.</p>
   <p>Both land in <code>export/</code> inside the workspace folder, named
     <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, so a folder of them sorts into the order they
@@ -252,14 +252,14 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     an assistant reading that file does not write queries that cannot run.</p>
 
   <h2 id="ai">12. AI assistant &amp; API keys</h2>
-  <p><b>It also knows this extension.</b> Ask it “how do I export this?”, “what happens when I press Health?” or “can this change anything in Zoho Analytics?” and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
+  <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho Analytics?" and it answers from the panel, without sending you anywhere. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional, and off until you configure it. <b class="ui">⚙ Settings</b> → pick a provider, paste a
     model name and your own API key.</p>
-  <h3>Anthropic (Claude) — full agent</h3>
+  <h3>Anthropic (Claude) - full agent</h3>
   <p>Runs with read-only tools over your local mirror: it reads a structure, follows a foreign key, opens a
     query's SQL, searches columns and says what depends on what, choosing for itself which to use. Every
     tool call is shown in the chat, so you can see what it looked at before answering.</p>
-  <h3>OpenAI (ChatGPT) — single-shot</h3>
+  <h3>OpenAI (ChatGPT) - single-shot</h3>
   <p>Answers in one pass from the workspace index and the view you have open. It cannot go and read
     anything itself, so it will tell you what it is missing rather than fetch it.</p>
   <table>
@@ -267,14 +267,14 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <tbody>
       <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
       <tr><td class="k">What it sees</td><td>Whatever it decides to open: any view's structure, foreign keys, SQL and lineage, plus column and SQL search</td><td>The workspace index and the view currently open</td></tr>
-      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A “thinking…” indicator until the answer arrives</td></tr>
-      <tr><td class="k">Best for</td><td>“What reads from this table?”, “is there already a query joining these two?”</td><td>Focused questions about the view in front of you</td></tr>
+      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A "thinking…" indicator until the answer arrives</td></tr>
+      <tr><td class="k">Best for</td><td>"What reads from this table?", "is there already a query joining these two?"</td><td>Focused questions about the view in front of you</td></tr>
     </tbody>
   </table>
 
   <h3>Which one to choose</h3>
-  <p>Claude for anything that needs looking around — "what reads from this table", "is there already a
-    query joining these two" — because those take several lookups. OpenAI is fine for questions about
+  <p>Claude for anything that needs looking around - "what reads from this table", "is there already a
+    query joining these two" - because those take several lookups. OpenAI is fine for questions about
     something you already have open. These two are the only providers supported, because they are the two
     that are tested and the only two the extension may reach.</p>
   <h3>Naming a workspace</h3>
@@ -282,11 +282,11 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Zoho Analytics names the first workspace of every account the same way, so two projects can arrive
     on disk looking identical, and a Zoho CRM instance id is exact without being memorable. The
     <b class="ui">✎ Name this workspace</b> button next to the list gives it a name of your own, and
-    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder — the local mirror only, never
+    <b class="ui">🗑 Remove workspace</b> beside it deletes that folder - the local mirror only, never
     anything in Zoho, and a pull brings it back.</p>
   <p>It is shown <em>instead of</em> the platform's name, and the platform's name never goes away: it
     stays in the list's tooltip and in the bar underneath, which always states the real workspace or org
-    the folder is bound to. That is deliberate — the name is your convenience, the identity is Zoho's,
+    the folder is bound to. That is deliberate - the name is your convenience, the identity is Zoho's,
     and a list showing only your own words would be one you could not check against Zoho. The name is
     stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
     folder. Clear the field to go back to the platform's name.</p>
@@ -294,7 +294,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h3>Removing a key, and switching engine</h3>
   <p>Each provider block has a <b class="ui">Forget</b> button: it empties the model and the key, and the
     removal takes effect when you press <b class="ui">Save AI settings</b>. It is the one place where an
-    empty field means <em>erase</em> — everywhere else an empty key field means "keep what is stored",
+    empty field means <em>erase</em> - everywhere else an empty key field means "keep what is stored",
     which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
     <b class="ui">Forget</b> is also the way out if you have lost the passphrase.</p>
   <p>The <b class="ui">Engine</b> selector will not move to a provider that has no model or no API key: it
@@ -315,48 +315,48 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     cryptography), and what remains on disk is ciphertext. The first time you use the chat after starting
     the browser, the panel asks for the passphrase and offers <b class="ui">Unlock</b>; the key then stays
     available in memory until the browser closes.</p>
-  <p>Once it is set the fields go away — the passphrase is not stored, so there is nothing to show in
-    them — and the section says the key is encrypted, with a <b class="ui">Change passphrase</b> button
+  <p>Once it is set the fields go away - the passphrase is not stored, so there is nothing to show in
+    them - and the section says the key is encrypted, with a <b class="ui">Change passphrase</b> button
     when you want a different one.</p>
   <p>Three things ask for the passphrase you are already using: changing it, replacing the API key, and
-    turning the protection off. They look different and are the same fact — the stored key has to be
-    decrypted before it can be written again — and Zoost checks what you type against the stored key
+    turning the protection off. They look different and are the same fact - the stored key has to be
+    decrypted before it can be written again - and Zoost checks what you type against the stored key
     <em>before</em> saving anything, so a mistyped passphrase cannot leave you locked out of a key you
     believe you know.</p>
   <p><b>If you lose the passphrase</b>, the section offers <b class="ui">Remove the protection</b>. It
     says what goes and what stays before it acts: the encrypted key is removed and the protection turned
     off, your model names and every other setting are kept, and you paste the API key in again from your
-    provider's dashboard. Nobody can decrypt that key without the passphrase, Zoost included — this is
+    provider's dashboard. Nobody can decrypt that key without the passphrase, Zoost included - this is
     the only way out, and it is a button rather than a sequence you have to work out.</p>
   <p><b>You can turn it back off at any time</b>, and the way back is symmetrical: Zoost asks for the
     current passphrase, because storing the key in clear text again means decrypting it first, and only
-    you can do that. Wrong passphrase or none, and <em>nothing is changed</em> — the encrypted key is
+    you can do that. Wrong passphrase or none, and <em>nothing is changed</em> - the encrypted key is
     left exactly as it was rather than discarded. If the passphrase is lost, the way out is to paste the
     API key in again.</p>
   <p>It is off by default because the trade is yours, not ours. On a personal machine, typing a passphrase
-    once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> — no
+    once per session buys little. On a shared or managed one it buys a lot. <b>There is no recovery</b> - no
     hint, no reset, no back door: forget the passphrase and you paste your API key in again and pick a new
     one, which costs one visit to the provider's dashboard. And note what it does not do: while the key is
     unlocked it is in the browser's memory, where the browser can read it. What a passphrase protects is the
-    key at rest — a copied profile, a backup, someone else on the same machine.</p>
+    key at rest - a copied profile, a backup, someone else on the same machine.</p>
 
-  <h3>Keeping the conversation — and the bill — under control</h3>
+  <h3>Keeping the conversation - and the bill - under control</h3>
   <p>Two settings decide what a question costs. <b class="ui">Workspace index</b> is how much of the
-    workspace is described to the assistant with <em>every</em> message — bigger means it knows more names,
+    workspace is described to the assistant with <em>every</em> message - bigger means it knows more names,
     and it is billed each time. The panel prints the real figure for the workspace you have open, under the
     chat title, so the number is not a guess. <b class="ui">Max tool steps</b> caps how many times it may
     reach for a tool before answering; 20 is the default and most answers use two or three.</p>
   <p>When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary:
     tables and query tables are never dropped, because they are the vocabulary needed to write a query or
     follow a foreign key, and reports go first because the assistant can still find those by name. Whatever
-    is left out is named as left out — so it never concludes a view does not exist because it was not
+    is left out is named as left out - so it never concludes a view does not exist because it was not
     shown one.</p>
-  <p>The assistant is told what Zoho documents about query-table SQL — SELECT only, double-quoted
+  <p>The assistant is told what Zoho documents about query-table SQL - SELECT only, double-quoted
     identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of
     query-over-query. You can read exactly what it is told in <b class="ui">⚙ Settings</b>. What it writes
     is a draft for you to paste, never something Zoost has checked.</p>
-  <p class="box warn">Using the assistant sends the parts of your workspace it needs — view and column
-    names, relations, and the SQL of your query tables — from your browser straight to the provider you
+  <p class="box warn">Using the assistant sends the parts of your workspace it needs - view and column
+    names, relations, and the SQL of your query tables - from your browser straight to the provider you
     chose. It never sends the rows inside your tables, because Zoost does not read them. Nothing goes to
     the developer. Check this is acceptable for your organisation before enabling it.</p>
 
@@ -368,16 +368,16 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k">Everything is disabled</td>
         <td>The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
-      <tr><td class="k">“Not on a Zoho Analytics tab”</td>
+      <tr><td class="k">"Not on a Zoho Analytics tab"</td>
         <td>The panel acts on the active tab. Switch to the Zoho Analytics tab, or use the button on the
           overlay.</td></tr>
-      <tr><td class="k">“No workspace open”</td>
-        <td>You are on Zoho Analytics but not inside a workspace. Open one — the URL must contain
+      <tr><td class="k">"No workspace open"</td>
+        <td>You are on Zoho Analytics but not inside a workspace. Open one - the URL must contain
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
       <tr><td class="k">The folder button is amber</td>
         <td>The browser dropped the permission, which it does between sessions. Click anywhere in the panel
           to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
-      <tr><td class="k">“CSRF token not found”</td>
+      <tr><td class="k">"CSRF token not found"</td>
         <td>The session is not signed in on that tab. Reload the Zoho Analytics page and try again.</td></tr>
       <tr><td class="k">N items could not be read</td>
         <td>Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
@@ -388,7 +388,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     </tbody>
   </table>
   <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and
-    maintained in spare time — best effort, no guaranteed response time.</p>
+    maintained in spare time - best effort, no guaranteed response time.</p>
 
 </div>
 </main>

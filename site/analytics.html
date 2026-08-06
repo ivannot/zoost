@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost Analytics — see the shape of a workspace</title>
+<title>Zoost Analytics - see the shape of a workspace</title>
 <meta name="description" content="Mirror a Zoho Analytics workspace into local files: every view with its type and dates, the columns and foreign keys of every table, the SQL of each query table, an ER diagram, and what nothing depends on any more. Read-only, local, no account.">
 <link rel="canonical" href="https://zoost.it/analytics.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/analytics.html">
@@ -24,7 +24,7 @@
   /* This page wears its product's accent; the home stays neutral because it is the suite.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#dc2d7a;--sel-soft:#3a1226}
-  /* landing-page specific — shared base is in site.css */
+  /* landing-page specific - shared base is in site.css */
   .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
   .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
   .hero h1 span{color:var(--muted)}
@@ -70,7 +70,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-current="page" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -87,7 +87,7 @@
     <h1>Hundreds of views, and no way<br>to see the shape of them.
       <span>This draws you the map.</span></h1>
     <p class="lead">Every view with its type and dates, the columns and foreign keys of every table, and the SQL
-      behind each query table as a file you can diff. Then the ER diagram, what reads from what — and an honest list
+      behind each query table as a file you can diff. Then the ER diagram, what reads from what - and an honest list
       of what nothing reads any more.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge"
@@ -113,7 +113,7 @@
         <h3>A history for everything you pulled</h3>
         <p>Zoho Analytics keeps no history of anything: change a query table's SQL, a column or a
           relation and the previous state is gone. The mirror is ordinary files, so with Git
-          <code>git diff</code> answers <em>what changed in this workspace last month</em> — the question
+          <code>git diff</code> answers <em>what changed in this workspace last month</em> - the question
           that matters most the day a number moves and nobody knows why. <b>Git is optional</b>: without
           it the mirror is still ordinary files you can search and hand over.</p>
       </div>
@@ -125,13 +125,13 @@
       <div>
         <h3>Before you delete anything</h3>
         <p>Asking Zoho Analytics what depends on a view, three hundred times by hand, is how the question never gets
-          asked. Zoost asks it once for everything — and calls the answer a candidate, because a shared link or a
+          asked. Zoost asks it once for everything - and calls the answer a candidate, because a shared link or a
           scheduled export is invisible to that graph.</p>
       </div>
       <div>
         <h3>What you built, and what Zoho put there</h3>
         <p>Half the tables in a connected workspace arrived by sync and were never yours. Zoho Analytics' own ER model
-          knows which, and the view list marks them — so the inventory is of your work, not of everything.</p>
+          knows which, and the view list marks them - so the inventory is of your work, not of everything.</p>
       </div>
     </div>
   </div>
@@ -145,7 +145,7 @@
       <div class="card">
         <h3>Every view, in one list</h3>
         <ul>
-          <li>Type, folder, owner, column count and dates — sortable, and searchable
+          <li>Type, folder, owner, column count and dates - sortable, and searchable
             <span class="k">inside the column names</span>, so you can find which table carries a field.</li>
           <li>When the design last changed and when the data last refreshed, kept apart: they are different facts.</li>
           <li>Tables Zoho put there by sync are marked, so the inventory is of <em>your</em> work.</li>
@@ -156,7 +156,7 @@
         <h3>Structure, even for reports</h3>
         <ul>
           <li>Columns and Zoho data types for every table and query table.</li>
-          <li>A report has no columns of its own, so Zoost follows what it is built on and shows that structure —
+          <li>A report has no columns of its own, so Zoost follows what it is built on and shows that structure -
             <span class="k">saying whose it is</span>.</li>
           <li><span class="k">Foreign keys on every column, both ways</span>: what it points at, and what points at
             it. Each one is a link.</li>
@@ -166,7 +166,7 @@
       <div class="card">
         <h3>The SQL, as files</h3>
         <ul>
-          <li>One <code>.sql</code> per query table — the only thing here somebody actually wrote, and the part
+          <li>One <code>.sql</code> per query table - the only thing here somebody actually wrote, and the part
             <code>git diff</code> can answer about.</li>
           <li>Search across every query at once.</li>
           <li>Each records the tables it reads and which of their columns it touches, so
@@ -188,7 +188,7 @@
         <ul>
           <li>Zoho Analytics' own dependency answer, asked once for everything instead of one view at a time.</li>
           <li>For any view: what it reads, what reads it, and the dashboards it appears on.</li>
-          <li><span class="k">Candidates, never a verdict</span> — a shared link or a scheduled export is invisible
+          <li><span class="k">Candidates, never a verdict</span> - a shared link or a scheduled export is invisible
             to that graph, and the number says so.</li>
         </ul>
       </div>
@@ -196,10 +196,10 @@
       <div class="card">
         <h3>Exports, and an optional assistant</h3>
         <ul>
-          <li>The whole workspace as one HTML file, or as Markdown — which carries the constraints of Zoho
+          <li>The whole workspace as one HTML file, or as Markdown - which carries the constraints of Zoho
             Analytics' SQL dialect, so an assistant does not write queries that cannot run.</li>
           <li>A dialog decides what may leave your machine, section by section.</li>
-          <li>With your own key, an assistant that explores <em>your</em> workspace — and never your rows, because
+          <li>With your own key, an assistant that explores <em>your</em> workspace - and never your rows, because
             Zoost does not read them.</li>
         </ul>
       </div>
@@ -214,19 +214,19 @@
     <div class="why">
       <div>
         <h3>It calls no write endpoint</h3>
-        <p>No creating, editing or deleting a view. One endpoint it calls is a POST whose URL contains <code>CREATE</code> — <code>ZDBCreateERD.ma</code>, the call that returns the workspace's ER model. It computes; it does not create. It is named here because anyone checking the claim will find it. Zoho Analytics is where you build; this is where you look at
+        <p>No creating, editing or deleting a view. One endpoint it calls is a POST whose URL contains <code>CREATE</code> - <code>ZDBCreateERD.ma</code>, the call that returns the workspace's ER model. It computes; it does not create. It is named here because anyone checking the claim will find it. Zoho Analytics is where you build; this is where you look at
           what you built.</p>
       </div>
       <div>
         <h3>It never reads your rows</h3>
         <p>Structure, relations, SQL and metadata only. The endpoints that return cell values exist, and are
-          deliberately not called — which is also why the AI assistant can never tell you what is <em>in</em> the
+          deliberately not called - which is also why the AI assistant can never tell you what is <em>in</em> the
           data.</p>
       </div>
       <div>
         <h3>Report definitions are not covered</h3>
         <p>Which columns a chart puts on which axis, and how it aggregates them, would come welded to the computed
-          series — your data. So that endpoint stays unused and this gap stays stated.</p>
+          series - your data. So that endpoint stays unused and this gap stays stated.</p>
       </div>
       <div>
         <h3>It does not validate SQL</h3>
@@ -236,7 +236,7 @@
       <div>
         <h3>Relations are Zoho Analytics' own</h3>
         <p>The foreign keys come from the ER model Zoho Analytics itself draws. What that model does not draw, Zoost
-          does not know — and does not invent.</p>
+          does not know - and does not invent.</p>
       </div>
 
     </div>
@@ -251,7 +251,7 @@
         <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Chrome Web Store</a>.</span>
         <span data-pending="analytics">Submitted to the Chrome Web Store and in review. Until it is published,
         clone the repository and load <code>apps/analytics</code> unpacked from <code>chrome://extensions</code>.</span></li>
-      <li><b>Set a working folder</b> — the same one your other Zoost uses, if you have one. Each product keeps its
+      <li><b>Set a working folder</b> - the same one your other Zoost uses, if you have one. Each product keeps its
         own subfolder inside it.</li>
       <li><b>Open a workspace</b> in Zoho Analytics. The panel takes the workspace from the tab you are on; there is
         nothing to configure and nothing to pick wrong.</li>

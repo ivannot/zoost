@@ -1,4 +1,4 @@
-# Zoost — Chrome Web Store submission copy
+# Zoost - Chrome Web Store submission copy
 
 Last verified against `apps/crm/manifest.json` at version **1.7.1** · 3 August 2026
 
@@ -24,44 +24,44 @@ Independent, unofficial: mirror your Zoho CRM Deluge to local files for Git, plu
 ## 3. Detailed description (store listing)
 
 ```
-Zoost turns your Zoho CRM org into a local, version-controllable, searchable codebase — and then draws you a map of it.
+Zoost turns your Zoho CRM org into a local, version-controllable, searchable codebase - and then draws you a map of it.
 
-If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?", and no way to tell which functions still use a given connection. Zoost fills them, with no server and no account: everything it reads lands on your own disk. The single exception is the optional AI assistant, which stays off until you enter your own API key — described in full below.
+If you administer or develop on Zoho CRM you know the gaps: no external editor, no Git, no way to search across all your functions at once, no way to see what calls what before you change something, and no quick answer to "what is the API name of that related list?", and no way to tell which functions still use a given connection. Zoost fills them, with no server and no account: everything it reads lands on your own disk. The single exception is the optional AI assistant, which stays off until you enter your own API key - described in full below.
 
 WHAT IT DOES
 
-- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures — module schema, layouts, related lists, workflows, schedules, connections — arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once — optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
-- Search across every function at once. Full-text search over all your Deluge sources — the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
+- Search across every function at once. Full-text search over all your Deluge sources - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
 
 - Auto-sync on save. Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
 
-- Reference graph. For any function: which functions call it (the impact if you change it) and which it calls (its dependencies) — as a searchable explorer and as a visual node-link diagram. Calls to custom functions are clickable in the code preview: jump to the definition and back.
+- Reference graph. For any function: which functions call it (the impact if you change it) and which it calls (its dependencies) - as a searchable explorer and as a visual node-link diagram. Calls to custom functions are clickable in the code preview: jump to the definition and back.
 
-- Reverse usage. Where each function is actually wired across the org — blueprint, button, schedule and so on — read from Zoho's own signal, with no expensive scans.
+- Reverse usage. Where each function is actually wired across the org - blueprint, button, schedule and so on - read from Zoho's own signal, with no expensive scans.
 
-- Module schema, fields and layouts. Every field with type, lookup target, picklist values and mandatory flag. A layout matrix shows, per field, which layouts it belongs to and where it is required — and flags fields that are on no layout at all.
+- Module schema, fields and layouts. Every field with type, lookup target, picklist values and mandatory flag. A layout matrix shows, per field, which layouts it belongs to and where it is required - and flags fields that are on no layout at all.
 
 - Relations, with the names you actually need. The API name of a related list is not the api name of either module, and it is what zoho.crm.getRelatedRecords() requires. Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
 
 - ER diagram that stays readable. Modules as tables, foreign keys as arrows. Focus a module, adjust depth, walk the graph by clicking. A relation-first mode pushes modules into the background and brings relation names forward. Click an arc to isolate one relation and fade everything else. Live sliders for spacing and label size, an all-modules scope, and Save PDF for wall-size prints.
 
-- Fits the access you actually have. Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance — so Zoost finds out by asking, once, and records the answer with the date. An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change. You can hide and reorder the tabs yourself too, and choose which types Pull all should ask for at all.
+- Fits the access you actually have. Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance - so Zoost finds out by asking, once, and records the answer with the date. An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change. You can hide and reorder the tabs yourself too, and choose which types Pull all should ask for at all.
 
-- Every part knows when it was last read. Because a type can be excluded from a pull, the mirror states per area when it last came from Zoho. A report section whose data is behind is unticked in the export dialog, with the date and the reason — you can include it anyway, and the report then says so. Both reports carry the per-area dates whether or not anything is behind.
+- Every part knows when it was last read. Because a type can be excluded from a pull, the mirror states per area when it last came from Zoho. A report section whose data is behind is unticked in the export dialog, with the date and the reason - you can include it anyway, and the report then says so. Both reports carry the per-area dates whether or not anything is behind.
 
 - Automation map. Workflows with triggers, criteria, instant and time-based actions and the functions they invoke; schedules with frequency, status and target function. Rules with actions that run after a delay carry the count and the delay, a filter shows only those, and each rule shows when it last ran.
 
-- Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes — and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
+- Connections, cross-referenced. The org's connection catalogue with its connector, status and scopes - and, for each one, how many of your functions use it and exactly which. Filter to the ones no function uses, or the ones configured but not connected. Every function also lists the connections it uses, and who last changed it.
 
-- Size and outbound calls. Every function shows its length and how many outbound calls it makes — invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals — so you can see at a glance where length and API cost concentrate. These are plain counts with no threshold and no verdict: length is verbosity, not complexity, and the interpretation is yours. Computed from the local mirror, with no extra calls to Zoho.
+- Size and outbound calls. Every function shows its length and how many outbound calls it makes - invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals - so you can see at a glance where length and API cost concentrate. These are plain counts with no threshold and no verdict: length is verbosity, not complexity, and the interpretation is yours. Computed from the local mirror, with no extra calls to Zoho.
 
-- Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review — never automatic deletions.
+- Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review - never automatic deletions.
 
 - Exports you can hand over. The whole workspace as one self-contained cross-linked HTML file, or as Markdown shaped as context for an external LLM. A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.
 
 - Optional AI assistant, bring your own key. Anthropic (Claude) or OpenAI (ChatGPT). With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open. The chat states which engine is active and what it can do.
-- Your key, your machine, your choice. The API key is stored locally and sent only to the provider you pick. You can protect it with a passphrase you choose — it is then stored encrypted and asked for once per browser session. Off by default, because on a personal machine it buys little and on a shared one a lot, and the trade-off is explained where the choice is made.
+- Your key, your machine, your choice. The API key is stored locally and sent only to the provider you pick. You can protect it with a passphrase you choose - it is then stored encrypted and asked for once per browser session. Off by default, because on a personal machine it buys little and on a shared one a lot, and the trade-off is explained where the choice is made.
 
 - Built for multi-org reality. One working folder holds a subfolder per Zoho org, created on demand. Each workspace is bound to its org, host and instance, so a production workspace can never be synced against a sandbox by mistake.
 
@@ -69,9 +69,9 @@ SAFE BY DESIGN
 
 Zoost reads from the Zoho CRM instance you are already signed in to and writes to a local folder you choose. It has no server of its own: no analytics, no telemetry, no tracking, no remotely hosted code, and nothing is ever sent to the developer.
 
-The one exception is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you — including Deluge source code — is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
+The one exception is the optional AI assistant, which is off until you enter your own API key. Once enabled, the content it needs to answer you - including Deluge source code - is sent directly from your browser to the provider you configured (Anthropic or OpenAI) and is processed under their terms. If your organisation restricts sending source code to third-party AI services, leave that feature off; everything else stays local.
 
-Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses — those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing. It does not read, download or export your Zoho CRM records — no contacts, no deals, no customer data.
+Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It reads metadata and function source only, through the session you are already signed in to, using the same internal interfaces the Zoho CRM web app uses - those are not documented by Zoho and can change, in which case a feature stops and says so rather than guessing. It does not read, download or export your Zoho CRM records - no contacts, no deals, no customer data.
 
 WHO IT'S FOR
 
@@ -125,7 +125,7 @@ No content is injected into the page for UI purposes. The sidePanel permission i
 ```
 storage persists the user's own settings between sessions, in chrome.storage.local only. Nothing is stored remotely or synced.
 
-What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept — AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
+What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept - AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
 
 chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
 
@@ -150,7 +150,7 @@ Both scripts are packaged with the extension; no remote code is fetched or execu
 tabs is used to identify the Zoho CRM tab the user is currently working in, and to navigate to Zoho pages on request.
 
 Specifically:
-- To read the URL of the active tab and determine which Zoho CRM instance, data centre and organisation it belongs to. This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org — production versus sandbox in particular — every Zoho-bound action is disabled until they match. Without this, a sandbox pull could silently overwrite a production mirror.
+- To read the URL of the active tab and determine which Zoho CRM instance, data centre and organisation it belongs to. This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org - production versus sandbox in particular - every Zoho-bound action is disabled until they match. Without this, a sandbox pull could silently overwrite a production mirror.
 - To open or focus a Zoho CRM page when the user clicks an explicit link in the extension, such as the functions list filtered to a function, a module's records tab, or its layout settings. The extension navigates to these pages by URL; it does not drive the Zoho interface or click on the user's behalf.
 
 The extension does not read browsing history, does not enumerate tabs unrelated to Zoho CRM, and takes no action on any other site.
@@ -161,7 +161,7 @@ The extension does not read browsing history, does not enumerate tabs unrelated 
 ```
 Two groups of hosts, both strictly necessary.
 
-1. Zoho CRM domains — crm.zoho.com, .eu, .in, .com.au, .jp, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* — cover every Zoho data centre and their sandboxes. The extension calls the Zoho CRM API on these origins, using the user's existing session, to read their own Deluge functions and configuration metadata. The multiple domains are not a widening of scope: they are the same product, and a user's org lives on exactly one of them. The extension is inert on every other site.
+1. Zoho CRM domains - crm.zoho.com, .eu, .in, .com.au, .jp, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* - cover every Zoho data centre and their sandboxes. The extension calls the Zoho CRM API on these origins, using the user's existing session, to read their own Deluge functions and configuration metadata. The multiple domains are not a widening of scope: they are the same product, and a user's org lives on exactly one of them. The extension is inert on every other site.
 
 2. api.anthropic.com and api.openai.com are needed only by the optional AI assistant, and only after the user enters their own API key for one of them. The request goes directly from the browser to that provider. These two origins are the only AI destinations the extension can reach; no other endpoint is configurable.
 

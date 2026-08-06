@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost CRM — version Deluge locally, map your org</title>
-<meta name="description" content="Mirror your Zoho CRM Deluge functions, module schema, relations, layouts, workflows, schedules and connections into local files you can put under Git — then explore them with reference graphs, ER diagrams, a relation catalogue, a connections catalogue, health audits and exports.">
+<title>Zoost CRM - version Deluge locally, map your org</title>
+<meta name="description" content="Mirror your Zoho CRM Deluge functions, module schema, relations, layouts, workflows, schedules and connections into local files you can put under Git - then explore them with reference graphs, ER diagrams, a relation catalogue, a connections catalogue, health audits and exports.">
 <link rel="canonical" href="https://zoost.it/crm.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/crm.html">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/crm.html">
@@ -24,7 +24,7 @@
   /* This page wears its product's accent; the home stays neutral because it is the suite.
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#2563eb;--sel-soft:#16263f}
-  /* landing-page specific — shared base is in site.css */
+  /* landing-page specific - shared base is in site.css */
   .hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
   .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
   .hero h1 span{color:var(--muted)}
@@ -70,7 +70,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/crm.html" aria-current="page" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -87,7 +87,7 @@
     <h1>Your Zoho CRM org as a local,<br>versionable, navigable codebase. <span>And a map of how it fits together.</span></h1>
     <p class="lead">Every Deluge function as a file you can diff. The map of what calls what, which module
       relates to which, and which automation fires when. Your whole Zoho CRM org on your own disk, searchable in
-      one go — and read-only towards Zoho.</p>
+      one go - and read-only towards Zoho.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Get it on the Chrome Web Store</a>
       <a class="btn" href="#whats-inside">What's inside</a>
@@ -103,7 +103,7 @@
       <div>
         <h3>A history for everything you pulled</h3>
         <p>Zoho CRM's own version history covers a <em>function</em>, one at a time, inside Zoho. Everything
-          else the pull captures — module schema, layouts, related lists, workflows, schedules, connections —
+          else the pull captures - module schema, layouts, related lists, workflows, schedules, connections -
           arrives on your disk as plain files, so with Git it gets a history too, and one diff answers
           <em>what changed in this org last month</em> across every kind at once rather than one function at
           a time. <b>Git is optional</b>: without it the mirror is still ordinary files you can search and
@@ -117,20 +117,20 @@
       <div>
         <h3>Not an editor, on purpose</h3>
         <p>Zoost does not replace Zoho's editor. You keep writing where Zoho compiles and validates.
-          Zoost is the other half: navigation, cross-references, the map and the audit the editor has no room for — and, with Git, a history of the parts Zoho does not version.</p>
+          Zoost is the other half: navigation, cross-references, the map and the audit the editor has no room for - and, with Git, a history of the parts Zoho does not version.</p>
       </div>
       <div>
         <h3>Grep your whole org</h3>
-        <p>Full-text search across <b>every</b> Deluge function at once — the thing Zoho has never had. Find every
+        <p>Full-text search across <b>every</b> Deluge function at once - the thing Zoho has never had. Find every
           place a field, a module, an endpoint or a hardcoded id is referenced, before you change it.</p>
       </div>
       <div>
         <h3>The relation names you keep losing</h3>
-        <p>The API name of a related list is neither module's api&nbsp;name — and it is what
+        <p>The API name of a related list is neither module's api&nbsp;name - and it is what
           <code>getRelatedRecords()</code> demands. Zoost catalogues every relation with the call ready to copy.</p>
       </div>
     </div>
-    <p class="note">Built and maintained by one person, with substantial help from Claude — “Claudio”, to me —
+    <p class="note">Built and maintained by one person, with substantial help from Claude - "Claudio", to me -
       on design, code and wording. The judgement calls, and the responsibility, are mine.</p>
   </div>
 </section>
@@ -144,7 +144,7 @@
         <h3>Every function, as a file</h3>
         <ul>
           <li>Deluge source in namespaced folders, ready for Git. Save in Zoho and the local file follows.</li>
-          <li><span class="k">Full-text search across every function at once</span> — the closest thing to
+          <li><span class="k">Full-text search across every function at once</span> - the closest thing to
             <code>grep</code> over your org, and something Zoho does not offer.</li>
           <li>Each one carries its size, its outbound API calls, who last changed it, and the connections it uses.</li>
         </ul>
@@ -156,14 +156,14 @@
           <li><span class="k">Call graph</span>: who calls a function, and what it calls. Click through it.</li>
           <li><span class="k">ER diagram</span>: modules as tables, lookups as arrows. Focus one, walk out from it,
             print it wall-size.</li>
-          <li>Calls to other functions are clickable in the code — jump to the definition and back.</li>
+          <li>Calls to other functions are clickable in the code - jump to the definition and back.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>The relation names you keep losing</h3>
         <ul>
-          <li>The API name of a related list is neither module's — and it is what
+          <li>The API name of a related list is neither module's - and it is what
             <code>getRelatedRecords()</code> wants.</li>
           <li>One row per relation, with the call ready to copy.</li>
           <li>Every field with its type, and a matrix showing which layout it appears on.</li>
@@ -176,7 +176,7 @@
           <li>Workflows with triggers, criteria and the functions they invoke; schedules with frequency and status.</li>
           <li><span class="k">Which rules do not fire straight away</span>, how long they wait, and when each last
             ran.</li>
-          <li>The org's connection catalogue, with how many functions use each one — so you can tell what is safe to
+          <li>The org's connection catalogue, with how many functions use each one - so you can tell what is safe to
             delete.</li>
         </ul>
       </div>
@@ -195,7 +195,7 @@
         <ul>
           <li>The whole workspace as one self-contained HTML file, or as Markdown for an AI tool.</li>
           <li>A dialog decides what may leave your machine, section by section. Source code is opt-in.</li>
-          <li>With your own key, an assistant that reads <em>your</em> org rather than guessing — and can be
+          <li>With your own key, an assistant that reads <em>your</em> org rather than guessing - and can be
             protected by a passphrase.</li>
         </ul>
       </div>
@@ -209,7 +209,7 @@
     <h2>Get started</h2>
     <ol class="steps">
       <li>Install from the <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a> and open the side panel.</li>
-      <li>In <b>Settings</b>, pick a <b>working folder</b> — a dedicated, empty folder. Every workspace will live inside it.</li>
+      <li>In <b>Settings</b>, pick a <b>working folder</b> - a dedicated, empty folder. Every workspace will live inside it.</li>
       <li>Open a Zoho CRM tab and click <b>+</b>. Zoost creates the workspace for that org.</li>
       <li>Click <b>Pull all</b> to mirror functions, modules, layouts, relations, workflows, schedules and connections.</li>
       <li><b>Optional:</b> <code>git init</code> in the folder, and you have the whole org's history from here
@@ -221,7 +221,7 @@
     <p class="note">What it rests on, what it refuses to do, and how to check any of it:
       <a href="/nerd.html">the nerd page</a>.</p>
     <p class="note">You need to be signed in to Zoho CRM in the same browser. Zoost uses your existing session
-      and your existing permissions — it can see exactly what you can see, and nothing more.</p>
+      and your existing permissions - it can see exactly what you can see, and nothing more.</p>
     <p class="note warn">The AI assistant is the one part that sends data outside your machine: the workspace
       content it needs, including Deluge source, goes to the provider you configure. Check that this is
       acceptable in your organisation before enabling it. Everything else stays local.</p>

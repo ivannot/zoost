@@ -511,7 +511,7 @@ test('a lapsed permission is reported in words, on both sides', () => {
   // leaving the reader to work out that «access not granted» in a dropdown is actionable.
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`);
-    assert.ok(src.includes('Grant access\\u00bb above, or anywhere in this panel \\u2014 one click, no folder picker'),
+    assert.ok(src.includes('Grant access\\u00bb above, or anywhere in this panel - one click, no folder picker'),
       `${app}: the status line no longer offers the remedy, or the two sides have drifted`);
   }
 });

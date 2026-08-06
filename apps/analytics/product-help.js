@@ -1,9 +1,9 @@
 /*
- * product-help.js — what this extension can do, in the words of someone who does not build software.
+ * product-help.js - what this extension can do, in the words of someone who does not build software.
  *
  * The twin of apps/crm/product-help.js, and it exists for the same reason. Zoost is used by people
  * who know their reports intimately and are not developers. The assistant and the Markdown export
- * exist so their questions stop having to travel to whoever administers the system — and that only
+ * exist so their questions stop having to travel to whoever administers the system - and that only
  * works if the questions do not simply change shape. Replacing "what does this report do?" with
  * "how do I use Zoost?" solves nothing: the same person is still being asked, about a different
  * thing.
@@ -26,37 +26,37 @@ a step.
 
 WHAT IT IS FOR
 A Zoho Analytics workspace grows into hundreds of views and no way to see the shape of them. Zoost
-copies the whole structure — every view with its type and folder, the columns of every table, the
-links between them, the SQL behind each query table, and what reads from what — into ordinary files
+copies the whole structure - every view with its type and folder, the columns of every table, the
+links between them, the SQL behind each query table, and what reads from what - into ordinary files
 in a folder on the user's own computer, then lets them search it, draw it and ask questions about it.
 
 IT NEVER CHANGES ANYTHING IN ZOHO ANALYTICS. It only reads. It cannot create, edit or delete a view,
-and IT NEVER READS THE ROWS INSIDE TABLES — no patient data, no customer data, nothing from inside a
+and IT NEVER READS THE ROWS INSIDE TABLES - no patient data, no customer data, nothing from inside a
 report. The endpoints that would return cell values exist and are deliberately never called. The
 worst it can do to a workspace is nothing at all. Say this plainly if the user sounds worried.
 
 THE THREE THINGS TO UNDERSTAND
 - Working folder: one folder on the computer, chosen once. Everything Zoost writes goes inside it.
 - Workspace: a subfolder for one Zoho Analytics workspace, created by the "+ Workspace" button. Which
-  workspace is decided by the tab the user is on — there is nothing to pick and nothing to pick wrong.
+  workspace is decided by the tab the user is on - there is nothing to pick and nothing to pick wrong.
 - Pull: the action that copies from Zoho Analytics into that folder. Nothing appears until a pull is
   done, and nothing updates by itself.
 
 THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
-- "Pull all": reads the whole workspace in one pass — the view list, every table's columns, the
+- "Pull all": reads the whole workspace in one pass - the view list, every table's columns, the
   relations, the SQL of each query table, and the dependency graph. A few hundred views take under a
   minute. Safe to repeat.
 - The type filter above the list: narrows it to tables, query tables, reports or dashboards.
 - "Pull" in the detail pane: re-reads that one view from Zoho Analytics.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho Analytics.
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
-- "Schema ↗": opens the ER diagram in its own window — tables as boxes, the links between them as
+- "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.
 - "HTML" and "Markdown" (Export): write a single file into the export folder inside the workspace.
-  HTML is for reading and sharing — one page containing the whole workspace, openable in any browser
+  HTML is for reading and sharing - one page containing the whole workspace, openable in any browser
   by someone who has neither Zoost nor Zoho Analytics. Markdown is for giving to another AI
   assistant, and it carries the rules of Zoho Analytics' own SQL dialect so that assistant does not write
   queries that cannot run.
@@ -68,7 +68,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   encrypted and asked for once per browser session, in this chat. It can be switched back off there
   too, which asks for the current passphrase, since clear text means decrypting it first. There is no
   recovery: if the passphrase is lost, Settings offers "Remove the protection", which removes the
-  encrypted key, turns the protection off and keeps everything else — then the API key is pasted in
+  encrypted key, turns the protection off and keeps everything else - then the API key is pasted in
   again. The engine selector refuses a provider that has no model or no key, says which is missing,
   and each option in the list states whether it is ready.
 
@@ -76,7 +76,7 @@ WHAT THE ASSISTANT CAN AND CANNOT DO
 It reads what has been pulled into the folder, so anything not pulled yet is invisible to it, and it
 answers about the workspace as it was at the last pull. It never changes anything in Zoho Analytics.
 Zoost never runs, validates or deploys SQL: what the assistant writes is a draft for a person to
-check. Report definitions for dashboards and charts — which chart type, which groupings — are NOT
+check. Report definitions for dashboards and charts - which chart type, which groupings - are NOT
 available, because the only way to fetch them also returns the data inside, which this extension
 does not touch. Say so rather than guessing what a report shows.
 
@@ -91,7 +91,7 @@ IF SOMETHING LOOKS WRONG
   pulled again.
 - The chat asks for a passphrase: the API key was protected in Settings, and this is the first
   question since the browser started. If the passphrase is lost, enter the API key again in
-  Settings and choose a new one — nothing else is affected.
+  Settings and choose a new one - nothing else is affected.
 `.trim();
 
   window.ZOOST_PRODUCT_HELP = { text: () => HELP };

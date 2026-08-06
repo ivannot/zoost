@@ -1482,6 +1482,19 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   independently of its author's day job, and a real portal name in a comment quietly contradicts
   that. Anything pasted in during a session — HAR files, exported JSON, function sources — is
   reference material for the conversation and must never reach the repository.
+- **ASCII punctuation in everything a reader might copy.** The long dash `—`, curly quotes and the
+  curly apostrophe were used throughout and are gone: `-`, `"`, `'`. Not a matter of taste — the
+  reader cannot tell the difference, which was the argument for using them and turns out to be the
+  argument against. What a reader *can* tell is `â€”`, which is what a mangled `—` looks like the
+  moment the text lands somewhere that guesses the encoding. **It has already happened here**:
+  `llms.txt` served as `text/plain` with no charset did exactly that to every dash on the page. Store
+  fields, release notes and a chat window are all places our prose gets pasted and none of them are
+  ours. Two things are deliberately kept: the panel's **glyph vocabulary** (`↻ ↗ → ♥ ⚙ ⏱ ◐`), which
+  carries meaning a hyphen cannot, and a lone `—` standing for "no value" in a table cell, which is a
+  placeholder rather than punctuation and has whitespace on neither side — which is how the
+  replacement told them apart, rather than by a list.
+  **The product name keeps its long dash**, because `name` in `manifest.json` is the authority and
+  changing it is a change to the product's identity, not to its typography.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
 - **An absolute claim invites a literal check, and a literal check is what this project asks for.**
   `llms.txt` moves an assistant from summarising the page to verifying it sentence by sentence, and in

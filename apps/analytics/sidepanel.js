@@ -1,5 +1,5 @@
 /*
- * sidepanel.js — Zoost for Zoho Analytics.
+ * sidepanel.js - Zoost for Zoho Analytics.
  *
  * Mirrors a Zoho Analytics workspace into plain local files, then lets you navigate what came back:
  * every view with its type and folder, the columns of every table and query table, the SQL that
@@ -20,25 +20,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // Attribute-safe: `&`, `<`, `>`, and **both** quote characters. esc() does not escape quotes, and a
 // quote inside an attribute closes it early. Escaping both styles means a reader never has to work
-// out which one an attribute used — the same definition as the CRM panel and both graph windows.
+// out which one an attribute used - the same definition as the CRM panel and both graph windows.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const HOST_RE = /^https:\/\/analytics\.(zoho\.(eu|com|in|com\.au|jp)|zohocloud\.ca)\//;
-const PULL_TITLE = 'Pull all \u2014 views, structure, relations, SQL and lineage';
+const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
-const APP_DIRS = ['crm', 'analytics'];        // known product folders — not "foreign" content
+const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
 const CFG = '.zoost.json';
 const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
 
-// Identity and legal text, worded as in the CRM panel — the two are one product to the reader.
+// Identity and legal text, worded as in the CRM panel - the two are one product to the reader.
 const PRODUCT_URL = 'https://zoost.it';
 
 // Anything that is not Zoho opens in its own window, never a tab.
 //
 // chrome.tabs.create *activates* the new tab, so the panel suddenly finds itself looking at a
 // non-Zoho page: the environment guard fires, the interface empties and the mismatch overlay
-// appears. That behaviour is right when it means what it says, and here it meant nothing at all —
+// appears. That behaviour is right when it means what it says, and here it meant nothing at all -
 // the user clicked Help and the workbench looked like it had lost its place.
 //
 // Derived rather than listed: every link in the panel goes through here, and the only ones let
@@ -70,7 +70,7 @@ document.addEventListener('click', (e) => {
 
 // Settings live in one window, and only ever one.
 //
-// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window —
+// `openOptionsPage()` opens a tab, and only de-duplicates within the *current* browser window -
 // while the side panel is per window. Two browser windows, two settings tabs; over a working day,
 // ten. That is not a tidiness problem: every one of them is a form holding a snapshot of the
 // settings from the moment it opened, and saving an old one silently overwrites a newer one with
@@ -78,7 +78,7 @@ document.addEventListener('click', (e) => {
 // invited to "save your work" by the older of them.
 //
 // So: find any existing settings tab across all windows, focus it, and open a dedicated popup
-// window only if there is none. Existing duplicates are focused, never closed — one of them may
+// window only if there is none. Existing duplicates are focused, never closed - one of them may
 // hold edits, and discarding those to enforce uniqueness would be committing the very mistake this
 // prevents. They disappear as they are closed.
 //
@@ -101,7 +101,7 @@ async function openSettings() {
 }
 
 // Each app points at *its own* pages. Analytics shipped with the Help link hard-coded to the CRM
-// guide, which is the kind of thing that only ever gets found by a user — so both are named here,
+// guide, which is the kind of thing that only ever gets found by a user - so both are named here,
 // once, and every surface derives from them instead of writing a path inline.
 const PAGE_URL = PRODUCT_URL + '/analytics.html';
 const DOCS_URL = PRODUCT_URL + '/docs-analytics.html';
@@ -152,8 +152,8 @@ async function readFile(rel) {
 }
 const readJson = async (rel, fallback) => { try { return JSON.parse(await readFile(rel)); } catch { return fallback; } };
 const writeJson = (rel, o) => writeFile(rel, JSON.stringify(o, null, 2));
-// Merge rather than replace. `.zoost.json` holds more than the binding — the workspace's own name
-// lives there too — and a whole-object write from any one writer silently drops what the others put
+// Merge rather than replace. `.zoost.json` holds more than the binding - the workspace's own name
+// lives there too - and a whole-object write from any one writer silently drops what the others put
 // in it. The CRM learnt this twice; this side inherits the lesson rather than the bug.
 const patchCfg = async (o) => writeJson(CFG, Object.assign({}, await readJson(CFG, {}), o));
 // Filenames are derived from Zoho's names, so anything a filesystem dislikes has to go. The id is
@@ -175,7 +175,7 @@ async function pickRoot() {
     await refreshWorkspaces();
     status(`Working folder: ${h.name}`, 'ok');
   } catch (e) {
-    if (e && e.name === 'AbortError') return;         // the user closed the picker — not an error
+    if (e && e.name === 'AbortError') return;         // the user closed the picker - not an error
     status('Could not open that folder: ' + (e.message || e), 'bad');
   }
 }
@@ -185,7 +185,7 @@ async function pickRoot() {
 async function grantRoot() {
   if (!root) { await pickRoot(); return; }
   try {
-    if (!(await ensurePerm(root))) { status('Access denied — Zoost cannot read the working folder.', 'bad'); return; }
+    if (!(await ensurePerm(root))) { status('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
     rootGranted = true;
     status(`Access granted to ${root.name}.`, 'ok');
     await refreshWorkspaces();
@@ -198,13 +198,13 @@ async function restoreRoot() {
   await refreshWorkspaces();
 }
 
-// Workspaces are found by reading each folder's .zoost.json, never by parsing folder names — that is
+// Workspaces are found by reading each folder's .zoost.json, never by parsing folder names - that is
 // what lets a folder be renamed without orphaning it.
 async function listWorkspaces() {
   const base = await appRoot(false);
   if (!base) return [];
   const out = [];
-  // The enumeration itself can fail — a handle whose permission lapsed, a folder moved or removed
+  // The enumeration itself can fail - a handle whose permission lapsed, a folder moved or removed
   // since the browser stored it. Unguarded, that threw out of here and left the panel with no
   // workspace list and no explanation. A folder we cannot read is a state to report, not a crash.
   try {
@@ -236,14 +236,14 @@ async function refreshWorkspaces() {
     : needsGrant ? `\u{1F513} Grant access to ${root.name}`
     : `\u{1F4C1} ${root.name}`;
   rt.title = !root ? 'Pick the folder that will contain all Zoost workspaces'
-    : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it \u2014 no folder picker.'
-    : `Working folder: ${root.name} \u2014 click to choose a different one`;
+    : needsGrant ? 'Chrome dropped the file-system permission for this folder. One click restores it - no folder picker.'
+    : `Working folder: ${root.name} - click to choose a different one`;
   if (root && !rootGranted) {
     sel.innerHTML = '<option value="">access not granted</option>';
     dir = null; bound = null;
     // Word for word the CRM's. The blocker is one click, and saying nothing here left the status line
     // reading "Ready." while nothing could be read at all.
-    status('Click \u00abGrant access\u00bb above, or anywhere in this panel \u2014 one click, no folder picker.', 'warn');
+    status('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
     render(); return updateButtons();
   }
   if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; render(); return updateButtons(); }
@@ -251,7 +251,7 @@ async function refreshWorkspaces() {
   const list = await listWorkspaces();
   wsList = list;
   // Folders sitting directly in the working folder are the older flat layout. This is not a
-  // compatibility fallback — nothing keeps working the old way — it is an empty state that says
+  // compatibility fallback - nothing keeps working the old way - it is an empty state that says
   // what it sees instead of reporting "no workspaces" while the folders are plainly there.
   let stray = 0;
   try {
@@ -262,8 +262,8 @@ async function refreshWorkspaces() {
   } catch (_) {}
 
   if (!list.length) {
-    sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} — no workspaces yet</option>`;
-    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own — move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
+    sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} - no workspaces yet</option>`;
+    if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own - move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
     dir = null; bound = null; render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
@@ -277,7 +277,7 @@ async function refreshWorkspaces() {
  *
  * The conversation stayed on screen across a workspace switch: the assistant's own replies name
  * views, columns and query tables from the workspace you have just left, sitting above a question
- * about the new one, and the whole thread is re-sent with every message — so the model is asked to
+ * about the new one, and the whole thread is re-sent with every message - so the model is asked to
  * reason about two workspaces at once and told nothing about the boundary.
  *
  * Byte for byte the CRM panel's, minus the caches it has and this one does not: here `loadFromDisk()`
@@ -295,9 +295,9 @@ async function selectWorkspace(w) {
   dir = w.handle;
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '' };
   await window.idbHandle.set('activeWsAnalytics', w.id);
-  // Not on a re-selection of the workspace already open — regranting a folder must not throw
+  // Not on a re-selection of the workspace already open - regranting a folder must not throw
   // away a conversation about the workspace you are still in.
-  if (!sameWs) { const n = dropWorkspaceState(); if (n) status(`Workspace changed \u2014 the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn'); }
+  if (!sameWs) { const n = dropWorkspaceState(); if (n) status(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn'); }
   await loadFromDisk();
   await refreshContext();
 }
@@ -328,7 +328,7 @@ async function addWorkspace() {
 async function delWorkspace() {
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !root) return;
-  if (!confirm(`Delete the folder «${w.folder}» and everything in it?\n\nThis removes the local mirror only — nothing in Zoho Analytics is touched. You can pull it again at any time.`)) return;
+  if (!confirm(`Delete the folder «${w.folder}» and everything in it?\n\nThis removes the local mirror only - nothing in Zoho Analytics is touched. You can pull it again at any time.`)) return;
   try {
     if (!(await ensurePerm(root))) return;
     const base = await appRoot(false);
@@ -364,7 +364,7 @@ async function toBridge(msg) {
   const r = await chrome.tabs.sendMessage(id, msg);
   if (!r) throw new Error('No answer from the Zoho Analytics page.');
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
-  // bridge is thrown away one line after crossing the boundary — which is how "your role does not
+  // bridge is thrown away one line after crossing the boundary - which is how "your role does not
   // allow this" would end up displayed as a bare status code again.
   if (r.ok === false) {
     const e = new Error(r.error || 'unknown error');
@@ -395,7 +395,7 @@ async function refreshContext() {
   await ensureBridge(id);
   try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); ctx = r && r.ok ? r : null; } catch { ctx = null; }
 
-  if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready — reload it)'; bnd.innerHTML = localLbl; }
+  if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready - reload it)'; bnd.innerHTML = localLbl; }
   else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Zoho Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
   else {
     who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
@@ -413,7 +413,7 @@ async function refreshContext() {
     $('detail').classList.remove('show'); $('resizer').classList.remove('show');
     $('mmtext').textContent = `The tab is workspace ${ctx.workspace}; this folder mirrors «${bound.name || bound.workspace}» (${bound.workspace}). Everything is disabled until they match.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
-    // the workspace the tab is already in — switching to it if it exists locally, creating it if not.
+    // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
     $('mmgo').textContent = `Switch tab → «${bound.name || bound.workspace}» ↗`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
@@ -424,7 +424,7 @@ async function refreshContext() {
   updateButtons();
 }
 
-// Both are a plain navigation to a URL we construct ourselves — no clicking through Zoho's UI, and
+// Both are a plain navigation to a URL we construct ourselves - no clicking through Zoho's UI, and
 // nothing that depends on what the page happens to look like.
 const homeUrl = () => (bound && bound.origin ? `${bound.origin}/workspace/${bound.workspace}` : 'https://analytics.zoho.eu/');
 async function switchTab() {
@@ -449,7 +449,7 @@ function updateButtons() {
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('wsrename').disabled = busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
   $('pull').disabled = busy || !dir || !guardOk();
-  // Absent, not disabled, when there is nothing to retry — the CRM's equivalent does the same.
+  // Absent, not disabled, when there is nothing to retry - the CRM's equivalent does the same.
   // A greyed button still says "there is something here you cannot have", which is misleading
   // when there is no something. The label carries the count, so the button is self-explaining.
   const rb = $('retry');
@@ -513,7 +513,7 @@ async function pullAll() {
     // A refusal is not a fault, and saying "Pull failed: 403" for one sends the user looking for a
     // bug in Zoost instead of to whoever administers their Analytics roles.
     setBusy(false, e && e.forbidden
-      ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written — what is on disk is unchanged.`
+      ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written - what is on disk is unchanged.`
       : 'Pull failed: ' + (e.message || e));
     $('status').className = 'bad';
   } finally {
@@ -601,7 +601,7 @@ async function writeToDisk(info) {
   await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views });
   await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations });
   await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed });
-  // One .sql per query table, so the workspace is diffable in git — that is the whole point of the
+  // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
   // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
   const index = {};
   for (const [id, q] of Object.entries(sqls)) {
@@ -636,16 +636,16 @@ async function loadFromDisk() {
 }
 
 // "Empty" and "unreadable" are different facts and were the same message: every surface wrote
-// `body || 'could not be read'`, and an empty string is falsy. So a query Analytics returned empty —
-// or one whose file was written empty by the bug above — was reported as never having been read,
+// `body || 'could not be read'`, and an empty string is falsy. So a query Analytics returned empty -
+// or one whose file was written empty by the bug above - was reported as never having been read,
 // which sent the assistant off reconstructing SQL it could simply have been told was absent.
 //   null  → the file is not there or could not be opened
 //   ''    → Analytics answered with an empty query
-const SQL_UNREADABLE = '(the .sql file could not be read — use Pull on this view to fetch it again)';
+const SQL_UNREADABLE = '(the .sql file could not be read - use Pull on this view to fetch it again)';
 const SQL_EMPTY = '(Zoho Analytics returned this query table with no SQL text at all)';
 const sqlText = (body) => (body == null ? SQL_UNREADABLE : (body.trim() ? body : SQL_EMPTY));
 
-// SQL bodies are not held in memory after a reload — they are read from their file on demand, which
+// SQL bodies are not held in memory after a reload - they are read from their file on demand, which
 // is also what keeps a large workspace from sitting in the panel's heap.
 async function sqlBodyOf(id) {
   const q = sqls[id];
@@ -668,7 +668,7 @@ function isOrphanCandidate(v) {
 }
 // The ER endpoint carries `lastModTime`, epoch milliseconds, which matched LAST_DESIGN_MODIFY on
 // every one of the 135 objects it describes. It is copied onto the views so the Design column can
-// sort — but only Tables and QueryTables have it. Presentation views still only have Zoho's
+// sort - but only Tables and QueryTables have it. Presentation views still only have Zoho's
 // localized text, which is shown verbatim and never parsed, so they sort last and the note says so.
 function mergeSchemaIntoViews() {
   for (const v of views) {
@@ -682,8 +682,8 @@ function mergeSchemaIntoViews() {
 // each link's column indices to names, and rebuilding "(A.col)=(B.col)" from the pair reproduces
 // Zoho's own `relationstring` exactly, on every link in the workspace this was measured on.
 //
-//   out — this column points at another table  (the classic foreign key)
-//   in  — another table's column points at this one
+//   out - this column points at another table  (the classic foreign key)
+//   in  - another table's column points at this one
 //
 // Returned keyed by column name so the columns table can annotate a row without searching.
 function foreignKeys(viewId) {
@@ -709,14 +709,14 @@ function foreignKeys(viewId) {
 const relationsOf = (id) => relations.filter((r) => r.source === id || r.target === id);
 
 const viewById = () => { const m = new Map(); for (const v of views) m.set(v.id, v); return m; };
-// A view we cannot resolve is shown by its id — which is at least true. Returning the raw
+// A view we cannot resolve is shown by its id - which is at least true. Returning the raw
 // `.name` was how `undefined` reached the diagram as if it were a table's name.
 const nameOf = (id, m) => (m.get(id) && m.get(id).name) || String(id == null ? '?' : id);
 
 // Walk PARENT_ID up to the first view that actually has columns. Only Tables and QueryTables carry
 // structure; a Pivot or a Report is a presentation of one of them, sometimes several steps removed.
 // Following the chain is what lets the panel answer "what is the structure of this report" instead
-// of shrugging — and it costs nothing, because PARENT_ID is already in the view list.
+// of shrugging - and it costs nothing, because PARENT_ID is already in the view list.
 // Returns the chain from the view down to the data-bearing root, or null if it dangles.
 function structureChain(v, m) {
   const chain = []; const seen = new Set();
@@ -726,7 +726,7 @@ function structureChain(v, m) {
     if (schema[cur.id]) return chain;
     cur = cur.parent ? m.get(cur.parent) : null;
   }
-  return null;               // no data source reachable — say so rather than showing an empty table
+  return null;               // no data source reachable - say so rather than showing an empty table
 }
 
 // ---------- render ----------
@@ -741,7 +741,7 @@ function shortDate(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// One line, not two rows of chips: the CRM made this call already and wrote down why — seven
+// One line, not two rows of chips: the CRM made this call already and wrote down why - seven
 // filters wrapped, and the list below needs the vertical space more than the filter does. The counts
 // move into the option labels so nothing is lost by dropping the chips.
 function renderTypeFilter() {
@@ -783,7 +783,7 @@ function visibleViews() {
       return (x - y) * sortDir;
     }
     if (sortKey === 'dataModifiedAt' || sortKey === 'designModifiedAt') {
-      // Views with no timestamp sort last in both directions — an absent value is not "oldest".
+      // Views with no timestamp sort last in both directions - an absent value is not "oldest".
       const x = a[sortKey], y = b[sortKey];
       if (!x && !y) return 0;
       if (!x) return 1;
@@ -799,7 +799,7 @@ function visibleViews() {
  *
  * An empty state is never silent here: it says what is missing and what to do about it. Saying the
  * *wrong* missing thing is worse than silence, because the reader goes and does it and nothing
- * changes — which is what happened when a folder whose permission had lapsed was told to pick a
+ * changes - which is what happened when a folder whose permission had lapsed was told to pick a
  * folder, create a workspace and pull.
  */
 function emptyReason() {
@@ -810,12 +810,12 @@ function emptyReason() {
   if (!rootGranted) {
     // Deliberately no explanation of *why* the access is missing: on a first install nothing expired,
     // it was never given, and a stated cause that may not apply is one the reader has to discount.
-    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above \u2014 or simply '
+    return '<b>Folder access is not granted.</b> Press <b>\u{1F513} Grant access</b> above - or simply '
       + 'click anywhere in this panel, which does the same. One click, no folder picker.';
   }
   if (!wsList.length) {
-    return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab \u2014 its URL '
-      + 'looks like <code>/workspace/&lt;id&gt;</code> \u2014 then press <b>+ Workspace</b>.';
+    return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab - its URL '
+      + 'looks like <code>/workspace/&lt;id&gt;</code> - then press <b>+ Workspace</b>.';
   }
   return '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to read this workspace into the folder: the '
     + 'view list, the columns of every table, the relations and the SQL of each query table.';
@@ -827,7 +827,7 @@ function render() {
   if (!views.length) {
     // "Nothing here" plus **the** reason, not a reason. Reciting the whole sequence while the only
     // thing in the way is a lapsed folder permission sends the reader to do four things when one
-    // click would do — and it is the step they have already done that gets repeated at them.
+    // click would do - and it is the step they have already done that gets repeated at them.
     list.innerHTML = `<div class="empty">${emptyReason()}</div>`;
     return;
   }
@@ -840,7 +840,7 @@ function render() {
   }
   // The number is the answer's headline; clicking it opens the breakdown. Naming the same fact
   // "Used by" in the list and "Read by" in the detail is how a reader ends up unsure they are
-  // looking at the same thing — so it is one name now, and one click away from its detail.
+  // looking at the same thing - so it is one name now, and one click away from its detail.
   const usedBy = (v) => {
     if (!deps) return '';
     const d = deps[v.id];
@@ -859,24 +859,24 @@ function render() {
     if (!chain) return '—';
     const src = chain[chain.length - 1];
     // In brackets, never with a glyph in front. `↳19` sat flush against the digits in a column of
-    // numbers and read as «419» — a mark that changes how a number reads is worse than no mark, and
+    // numbers and read as «419» - a mark that changes how a number reads is worse than no mark, and
     // this one is in the one column where the reader is scanning figures. Brackets cannot be mistaken
     // for a digit, the muted colour still separates it from an own count, and the tooltip still names
     // the view the structure comes from.
-    return `<span title="${escA('columns inherited from ' + src.name + ' — this view has none of its own')}" style="color:var(--muted)">(${schema[src.id].columns.length})</span>`;
+    return `<span title="${escA('columns inherited from ' + src.name + ' - this view has none of its own')}" style="color:var(--muted)">(${schema[src.id].columns.length})</span>`;
   };
   list.innerHTML = `<table class="vtbl">
     <thead><tr>
       <th>View</th><th>Type</th><th class="num" title="Columns. A number in brackets is inherited: the view has none of its own, and the count is the view it is built on.">Cols</th>
-      <th class="num" title="As Zoho words it, in your interface language — not sortable, see the note below">Design</th>
-      <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on \u2014 the Lineage tab breaks the same figure down">Read by</th>' : ''}
+      <th class="num" title="As Zoho words it, in your interface language - not sortable, see the note below">Design</th>
+      <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on - the Lineage tab breaks the same figure down">Read by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
-      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Zoho Analytics flags this as a system table — it came from a connected source, you did not build it">system</span>' : ''}</div></td>
+      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Zoho Analytics flags this as a system table - it came from a connected source, you did not build it">system</span>' : ''}</div></td>
       <td><span class="vtype">${esc(v.type)}</span></td>
       <td class="num">${colCount(v)}</td>
       ${v.designModifiedAt
         ? `<td class="num" title="${escA(v.designModifiedBy ? 'by ' + v.designModifiedBy : '')}">${esc(shortDate(v.designModifiedAt))}</td>`
-        : `<td class="num verbatim" title="${escA('Zoho gives no machine-readable value for this one — shown as it sends it' + (v.designModifiedBy ? ', by ' + v.designModifiedBy : ''))}">${esc(v.designModifiedText || '—')}</td>`}
+        : `<td class="num verbatim" title="${escA('Zoho gives no machine-readable value for this one - shown as it sends it' + (v.designModifiedBy ? ', by ' + v.designModifiedBy : ''))}">${esc(v.designModifiedText || '—')}</td>`}
       <td class="num">${esc(shortDate(v.dataModifiedAt))}</td>
       ${deps ? `<td class="num">${usedBy(v)}</td>` : ''}
     </tr>`).join('')}</tbody></table>`;
@@ -889,7 +889,7 @@ function render() {
 // ---------- detail ----------
 // Every time the pane shows something else, it shows it from the top. Without this the scrollbar
 // stays where the previous item left it and the reader is looking at row 40 of a table they have
-// never seen. Run twice — once now, once after layout — because content rendered on the next frame
+// never seen. Run twice - once now, once after layout - because content rendered on the next frame
 // would otherwise restore the old offset. Straight from the CRM panel, which has always done it.
 function resetDetailScroll() {
   const doIt = () => {
@@ -908,11 +908,11 @@ async function openDetail(id) {
   $('dtitle').textContent = v.name;
   // A Zoho read, so it is worded and coloured like every other Zoho read: "Pull", .zbtn. The ↻ glyph
   // means "reload from disk / re-grant folder access" in the CRM panel and must keep meaning only
-  // that here — a symbol that fetches from Zoho in one app and reads the disk in the other is worse
+  // that here - a symbol that fetches from Zoho in one app and reads the disk in the other is worse
   // than no symbol.
   $('dpull').disabled = busy || !guardOk();
   $('dpull').title = guardOk()
-    ? 'Pull — this view only, its SQL and its lineage; «Pull all» does every view'
+    ? 'Pull - this view only, its SQL and its lineage; «Pull all» does every view'
     : 'The active tab is a different workspace, so nothing can be pulled';
   $('dpull').onclick = () => pullOne(v.id);
   // Focused ER, exactly as the CRM opens a module's relations: the window takes it from here and
@@ -921,8 +921,8 @@ async function openDetail(id) {
   const srcId = chain ? chain[chain.length - 1].id : null;
   $('dgraph').disabled = !srcId || !relationsOf(srcId).length;
   $('dgraph').title = srcId && relationsOf(srcId).length
-    ? 'ER diagram — opened on this table, in its own window'
-    : 'ER diagram — this table takes part in no relation, so there is nothing to draw';
+    ? 'ER diagram - opened on this table, in its own window'
+    : 'ER diagram - this table takes part in no relation, so there is nothing to draw';
   $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
@@ -946,12 +946,12 @@ async function renderDetail(v) {
     if (!chain) {
       body.innerHTML = `<div class="dpad"><div class="empty" style="padding:0"><b>No structure to show.</b>
         A ${esc(v.type)} has no columns of its own, and Zoho Analytics does not tell us which view it is
-        built on — so there is nothing here that would be true.</div></div>`;
+        built on - so there is nothing here that would be true.</div></div>`;
       return;
     }
     const src = chain[chain.length - 1];
     const t = schema[src.id];
-    // When the structure is inherited, say whose it is and through what — a column list attributed
+    // When the structure is inherited, say whose it is and through what - a column list attributed
     // to the wrong object is worse than no column list.
     const via = chain.length > 1
       ? `<div class="vsub" style="margin:0">Structure of <b>${esc(src.name)}</b> (${esc(t.kind)}), inherited through ${chain.slice(0, -1).map((c) => esc(c.name)).join(' → ')} → <b>${esc(src.name)}</b></div>`
@@ -975,7 +975,7 @@ async function renderDetail(v) {
   }
   if (detailTab === 'rel') {
     const rs = relationsOf(v.id);
-    // Zoho's own `relationstring` is shown as it writes it — "(A.col)=(B.col)". Re-rendering the
+    // Zoho's own `relationstring` is shown as it writes it - "(A.col)=(B.col)". Re-rendering the
     // join in our own words would be an interpretation, and the point here is the fact, not our
     // phrasing of it. The direction is stated because a lookup is not symmetric.
     body.innerHTML = '<div class="dpad">' + rs.map((r) => {
@@ -1006,14 +1006,14 @@ async function renderDetail(v) {
     : '';
   body.innerHTML = '<div class="dpad">'
     + `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
-    + `<div class="lin"><h5>Read by <span class="lv">\u2014 the same count the list shows</span></h5>${li(d.children)}</div>`
+    + `<div class="lin"><h5>Read by <span class="lv">- the same count the list shows</span></h5>${li(d.children)}</div>`
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
     + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
     + '</div>';
 }
 
 // Local only. Re-reads the mirror from disk, or takes the chance to re-grant a lapsed folder
-// permission — it never talks to Zoho. Same meaning, same glyph and same title as the CRM panel's.
+// permission - it never talks to Zoho. Same meaning, same glyph and same title as the CRM panel's.
 async function refreshLocal() {
   if (root && !rootGranted) { await grantRoot(); return; }
   if (!dir) return;
@@ -1026,7 +1026,7 @@ async function refreshLocal() {
 // The graph window is the CRM one, unchanged in its engine: same ER layout with the concentric and
 // force branches, the same depth control and the same layout sliders. It consumes a generic
 // node/edge shape, so the job here is to express the Analytics workspace in that shape rather than
-// to write a second diagram — which is also why the two windows behave identically for anyone who
+// to write a second diagram - which is also why the two windows behave identically for anyone who
 // uses both.
 //
 //   node   = a table or query table          (the only things with columns)
@@ -1079,7 +1079,7 @@ function buildSchemaGraph() {
 
 async function openSchemaGraph(focusId, depth) {
   try {
-    if (!Object.keys(schema).length) throw new Error('nothing pulled yet — run Pull all first');
+    if (!Object.keys(schema).length) throw new Error('nothing pulled yet - run Pull all first');
     const g = buildSchemaGraph();
     if (!g.counts.nodes) throw new Error('no tables in this workspace');
     if (focusId && g.nodes[focusId]) { g.focus = focusId; g.depth = Math.max(1, depth || 2); }
@@ -1092,7 +1092,7 @@ async function openSchemaGraph(focusId, depth) {
 // ---------- AI ----------
 // Ported from the CRM panel: same config shape, same storage key, same streaming agent loop, same
 // single-shot OpenAI path with the max_tokens/max_completion_tokens retry. What differs is what the
-// tools read — views, columns, relations, SQL and lineage instead of functions and modules — and the
+// tools read - views, columns, relations, SQL and lineage instead of functions and modules - and the
 // SQL guardrail, which is the one thing here not derived from the user's own workspace.
 let aiMessages = [];
 let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false, aiSeedOmitted = [];
@@ -1116,7 +1116,7 @@ function aiActiveReady(cfg) { const p = cfg[cfg.active] || {}; return !!(p.apiKe
 // ---------- unlocking a protected API key ----------
 // The passphrase is never stored and never leaves this function: it decrypts once, the plaintext goes
 // to chrome.storage.session, and the field is cleared. Forgetting it is recoverable only by entering
-// the API key again — stated in Settings, and not softened here.
+// the API key again - stated in Settings, and not softened here.
 function aiShowLock(on) {
   const row = $('ailockrow'); if (!row) return;
   // Idempotent on purpose: this runs on every window focus and every settings change, and re-showing
@@ -1130,15 +1130,15 @@ function aiShowLock(on) {
  *
  * "The request is not allowed by the user agent or the platform in the current context." is what a
  * lapsed folder permission looks like from anywhere that touches the disk, and it reads as a bug in
- * the extension. It has surfaced three times now — the agent loop, and renaming a workspace — so this
+ * the extension. It has surfaced three times now - the agent loop, and renaming a workspace - so this
  * is deliberately not AI-specific. Translated where it surfaces, so a user who meets it once more is told which button to
- * press. Nothing branches on the class name — it is matched, not parsed, and anything unrecognised is
+ * press. Nothing branches on the class name - it is matched, not parsed, and anything unrecognised is
  * passed through untouched rather than dressed up.
  */
 function friendlyError(e) {
   const m = (e && e.message) || String(e);
   if (/not allowed by the user agent|NotAllowedError/i.test(m)) {
-    return 'The working folder is no longer readable — Chrome lets that permission lapse after a while. '
+    return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
   }
   return 'Error: ' + m;
@@ -1148,13 +1148,13 @@ function friendlyError(e) {
  *
  * Chrome lets a File System Access permission lapse after inactivity, and every read then throws
  * `NotAllowedError: The request is not allowed by the user agent or the platform in the current
- * context.` — a message that names neither the folder nor the remedy. The AI path reads the mirror
+ * context.` - a message that names neither the folder nor the remedy. The AI path reads the mirror
  * directly (the seed index, the tools, the graph) and was the one path that never asked first, so it
  * surfaced as "the chat is broken until I click an item and come back": clicking an item runs
  * ensurePerm() under a real gesture and fixes it as a side effect.
  *
  * It has to happen *here*, at the click. requestPermission() needs transient user activation, so the
- * same call made inside the agent loop — after a network round trip to the model — is refused for want
+ * same call made inside the agent loop - after a network round trip to the model - is refused for want
  * of a gesture, which is the very error being reported. Same fix the Health view already carries.
  */
 async function aiEnsureFiles() {
@@ -1162,7 +1162,7 @@ async function aiEnsureFiles() {
   try { return await ensurePerm(dir); } catch (_) { return false; }
 }
 
-/** The verdict on a passphrase goes beside the field, because that is where the eye is — and because
+/** The verdict on a passphrase goes beside the field, because that is where the eye is - and because
  *  in the CRM panel the AI view covers the status bar completely, so a warning sent there while the
  *  chat is open is written to an element nobody can see. Same code on both sides regardless. */
 function aiLockMsg(text) {
@@ -1179,7 +1179,7 @@ async function aiUnlock() {
   // AES-GCM authenticates, so failure means the passphrase is wrong or the stored value is damaged.
   // Which of the two cannot be told apart, and the message says so rather than picking one.
   if (!key) {
-    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged — the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
+    aiLockMsg('That passphrase did not open the key. Either it is wrong, or the stored key is damaged - the two cannot be told apart. If it is lost, open Settings and use «Remove the protection», then enter the API key again.');
     status('Wrong passphrase.', 'warn');
     $('ailockpass').select(); return;
   }
@@ -1200,7 +1200,7 @@ function aiStructureText(v) {
   if (!chain) return `${v.name} (${v.type}) has no columns and no reachable source.`;
   const src = chain[chain.length - 1], t = schema[src.id];
   const { out, inc } = foreignKeys(src.id);
-  let s2 = `${src.name} (${t.kind}${t.system ? ', system table — synced by Zoho, not built by the user' : ''})`;
+  let s2 = `${src.name} (${t.kind}${t.system ? ', system table - synced by Zoho, not built by the user' : ''})`;
   if (chain.length > 1) s2 += `\n(structure inherited by ${v.name} through ${chain.slice(0, -1).map((c) => c.name).join(' → ')})`;
   s2 += '\n| Column | Type | References |\n';
   t.columns.forEach((c) => {
@@ -1216,11 +1216,11 @@ function aiStructureText(v) {
 // question is not "how big a cap" but "what gets dropped when it does not fit". Dropping the tail is
 // the wrong answer: it cuts an arbitrary half and the model cannot tell it is missing.
 //
-// The order below is the answer. Data objects are the vocabulary — you cannot write a query, follow
+// The order below is the answer. Data objects are the vocabulary - you cannot write a query, follow
 // a foreign key or judge whether something already exists without knowing the tables, so they are
 // never dropped. Reports and dashboards are findable by name through list_views, so they go first if
 // something must. Whatever is left out is *named as left out*, in the prompt itself, with what to
-// call instead — an index that is silently short is worse than one that is honestly partial.
+// call instead - an index that is silently short is worse than one that is honestly partial.
 const AI_SEED_CAP_DEFAULT = 72000;
 let aiSeedSize = 0;                     // what the last index actually came to, shown in the chat
 
@@ -1232,7 +1232,7 @@ async function aiBuildSeed(cap) {
   const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
 
   const header = `Workspace: ${bound ? (bound.name || bound.workspace) : '?'} (id ${bound ? bound.workspace : '?'})\n`
-    + `${views.length} views — ` + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
+    + `${views.length} views - ` + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
     + `${Object.keys(schema).length} data objects, ${cols} columns, ${relations.length} relations`
     + (deps ? `, ${views.filter(isOrphanCandidate).length} nothing depends on` : ', lineage not pulled') + '\n'
     + '\nKey: [T] table, [Q] query table, sys = put there by Zoho not by the user, Nc = columns.\n'
@@ -1268,13 +1268,13 @@ async function aiBuildSeed(cap) {
 
   aiSeedOmitted = omitted;
   if (out.length > cap) {          // even the tables alone overflow: an enormous workspace
-    aiSeedOmitted = [`part of the table list — this workspace is larger than the index can hold`];
+    aiSeedOmitted = [`part of the table list - this workspace is larger than the index can hold`];
     out = aiTrunc(out, cap);
   }
   aiSeedTruncated = omitted.length > 0 || out.length >= cap;
   if (omitted.length) {
     out += `\nNOT LISTED ABOVE: ${omitted.join(' and ')}. They exist and you can find them by name`
-      + ` with list_views (it takes a name substring and a type) — do not assume a view is absent`
+      + ` with list_views (it takes a name substring and a type) - do not assume a view is absent`
       + ` because it is not in this index.\n`;
   }
   aiSeedSize = out.length;
@@ -1282,7 +1282,7 @@ async function aiBuildSeed(cap) {
 }
 
 // The extension's own help, so "how do I export this?" is answered where the user already is
-// rather than by sending them to a website — which would move the question rather than answer it.
+// rather than by sending them to a website - which would move the question rather than answer it.
 // Guarded: a missing script must cost the product primer, never the whole assistant.
 function productHelp() {
   try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
@@ -1298,10 +1298,10 @@ async function aiSystemPrompt(withTools, cap) {
     if (q) { const body = await sqlBodyOf(cur.id); if (body) focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(body, 4000)}\n\u0060\u0060\u0060\n`; }
   }
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view — structure, foreign keys, SQL and lineage — so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
+    ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view - structure, foreign keys, SQL and lineage - so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
     : 'Answer from the WORKSPACE INDEX and CURRENT FOCUS below. If you need a structure or a query that is not shown, say which view you would need rather than inventing it.';
-  return `You are an expert assistant for Zoho Analytics, working on the user\u2019s real workspace.\n${toolsLine}\n`
-    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in a table \u2014 so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic \u2014 a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
+  return `You are an expert assistant for Zoho Analytics, working on the user\'s real workspace.\n${toolsLine}\n`
+    + `Reference real view and column names. Zoost is read-only: it never creates, edits or deletes anything in Zoho Analytics, and it never reads the rows in a table - so you know structure, relations and SQL, never data values. Never claim to know what is in the data.\n`+ `If a query table's SQL comes back as unreadable or empty, say so and stop there. Do not reconstruct what a query probably does from column names and lineage and present it as its logic - a plausible reconstruction of code the user cannot check is worse than \"I could not read it\".\n\n`
     + `${window.ZOHO_ANALYTICS_SQL.text()}\n`
     + `${productHelp()}${focus}\n# WORKSPACE INDEX\n${seed}`;
 }
@@ -1309,9 +1309,9 @@ async function aiSystemPrompt(withTools, cap) {
 const AI_TOOLS = [
   { name: 'list_views', description: 'List views in the workspace. Optionally filter by a substring of the name, by type (Table, QueryTable, Pivot, AnalysisView, SummaryView, Report, Dashboard), and/or by a minimum column count.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, type: { type: 'string' }, min_columns: { type: 'number' } } } },
   { name: 'get_view', description: 'THE DOSSIER for one view, in a single call: type, folder, owner, dates, what it is built on, its full column list with data types and foreign keys, its SQL if it is a query table, its relations, and what reads from it. Prefer this over calling get_structure, get_sql and who_uses separately.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
-  { name: 'get_structure', description: 'Columns and Zoho data types of a table or query table, with each column\u2019s foreign keys in both directions. For a report or pivot, returns the structure it inherits and says so.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'get_structure', description: 'Columns and Zoho data types of a table or query table, with each column\'s foreign keys in both directions. For a report or pivot, returns the structure it inherits and says so.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_sql', description: 'The SQL source of a query table, with the source tables and the columns it involves.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
-  { name: 'search_sql', description: 'Full-text search across every query table\u2019s SQL. Returns the view names that match.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'search_sql', description: 'Full-text search across every query table\'s SQL. Returns the view names that match.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'search_columns', description: 'Find which tables have a column whose name matches. Use this to answer "where is this data" before writing a query.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'get_relations', description: 'Relations (joins) a table takes part in, in both directions, as Zoho writes them. Omit the name for the whole workspace.', input_schema: { type: 'object', properties: { name: { type: 'string' } } } },
   { name: 'who_uses', description: 'What reads from a view, transitively, plus the dashboards it appears on.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
@@ -1319,7 +1319,7 @@ const AI_TOOLS = [
 ];
 
 // A tool that answers with nine hundred lines has not answered. Cap the list, say how many there
-// were, and say how to narrow — the model can then ask a better question instead of drowning in the
+// were, and say how to narrow - the model can then ask a better question instead of drowning in the
 // first one.
 function aiCap(lines, total, how, limit = 120) {
   if (lines.length <= limit) return lines.join('\n');
@@ -1343,13 +1343,13 @@ async function aiExecTool(name, input) {
   if (!v && name !== 'orphans' && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
   if (name === 'get_view') {
     // Everything about one view in one step. It used to answer the metadata alone, so any real
-    // question cost three or four calls — which is how a limit of eight ran out on a single
+    // question cost three or four calls - which is how a limit of eight ran out on a single
     // question. The tools are the expensive part of an agent loop; making each one answer more is
     // worth more than adding steps.
     const d = deps && deps[v.id];
     let out = `${v.name}\ntype: ${v.type}\nfolder: ${v.folderName || '(none)'}\nowner: ${v.owner || ''}\n`
-      + `built_on: ${v.parent && m.get(v.parent) ? m.get(v.parent).name : '(nothing — it is a data object)'}\n`
-      + `design_changed: ${v.designModifiedAt ? shortDate(v.designModifiedAt) : v.designModifiedText + ' (Zoho\u2019s own text, not machine-readable)'}\n`
+      + `built_on: ${v.parent && m.get(v.parent) ? m.get(v.parent).name : '(nothing - it is a data object)'}\n`
+      + `design_changed: ${v.designModifiedAt ? shortDate(v.designModifiedAt) : v.designModifiedText + ' (Zoho\'s own text, not machine-readable)'}\n`
       + `data_changed: ${shortDate(v.dataModifiedAt)}\n`
       + `system_table: ${!!v.system}\ndescription: ${v.description || '(none)'}\n`;
     out += '\n' + aiStructureText(v) + '\n';
@@ -1363,21 +1363,21 @@ async function aiExecTool(name, input) {
     }
     out += d
       ? `\nreads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}\n`
-        + 'Note: Zoho Analytics only knows what its own views read from each other — a shared link, a scheduled export or an API consumer is invisible to it.'
+        + 'Note: Zoho Analytics only knows what its own views read from each other - a shared link, a scheduled export or an API consumer is invisible to it.'
       : '\nlineage: not pulled';
     return out;
   }
   if (name === 'get_structure') return aiStructureText(v);
   if (name === 'get_sql') {
     const q = sqls[v.id];
-    if (!q) return `${v.name} is a ${v.type}, not a query table — it has no SQL.`;
+    if (!q) return `${v.name} is a ${v.type}, not a query table - it has no SQL.`;
     const body = await sqlBodyOf(v.id);
     const src = Object.entries(q.sources || {}).map(([, sdef]) => `${sdef.name} (${sdef.columns.length} columns involved)`).join(', ');
     return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${sqlText(body)}`;
   }
   if (name === 'search_sql') {
     // With the matching line beside each name the model can usually answer without opening the
-    // query at all — a bare list of names made every hit cost another call.
+    // query at all - a bare list of names made every hit cost another call.
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
     const hits = [];
     for (const vv of views.filter((x) => x.type === 'QueryTable')) {
@@ -1404,7 +1404,7 @@ async function aiExecTool(name, input) {
   }
   if (name === 'who_uses') {
     const d = deps && deps[v.id];
-    if (!d) return `No lineage for ${v.name} — it was not pulled.`;
+    if (!d) return `No lineage for ${v.name} - it was not pulled.`;
     return `${v.name} is read by ${d.children.length} view(s) and appears on ${d.dashboards.length} dashboard(s).\n`
       + (d.children.map((x) => `- ${nameOf(x.id, m)} (level ${x.level})`).join('\n') || '(nothing reads from it)')
       + `\nNote: Zoho Analytics only knows what its own views read from each other. A shared link, a scheduled export, an embedded report or an API consumer is invisible to it.`;
@@ -1414,7 +1414,7 @@ async function aiExecTool(name, input) {
     const o = views.filter(isOrphanCandidate);
     const byType = new Map();
     for (const x of o) byType.set(x.type, (byType.get(x.type) || 0) + 1);
-    return `${o.length} candidate(s) that nothing in this workspace depends on — candidates, not a verdict.\n`
+    return `${o.length} candidate(s) that nothing in this workspace depends on - candidates, not a verdict.\n`
       + 'By type: ' + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(', ') + '\n'
       + aiCap(o.map((x) => `- ${x.name} [${x.type}]`), o.length, 'Use list_views with a type to see the rest.')
       + '\nAnalytics only knows what its own views read from each other: a shared link, a scheduled export, an embedded report or an API consumer is invisible to it.';
@@ -1510,13 +1510,13 @@ async function aiCall(cfg, messages, system) {
   const d = await res.json();
   const c = d.choices && d.choices[0];
   const txt = (c && c.message && c.message.content) || '';
-  if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything — this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
+  if (!txt && c && c.finish_reason === 'length') return '(The model hit the output limit before writing anything - this usually means the workspace context is too large for it. Try a model with a bigger context window.)';
   return txt;
 }
 
 function aiRenderMessages() {
   const box = $('aimsgs');
-  if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this workspace — I can read structures, follow foreign keys, open the SQL of a query table, search columns, and say what depends on what.</div></div>'; return; }
+  if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this workspace - I can read structures, follow foreign keys, open the SQL of a query table, search columns, and say what depends on what.</div></div>'; return; }
   box.innerHTML = aiMessages.map((m) => m.role === 'tool' ? `<div class="aitool">${esc(m.content)}</div>` : `<div class="aimsg ${m.role}"><div class="airole">${m.role === 'user' ? 'You' : 'AI'}</div><div class="aitext">${m.role === 'assistant' ? aiMarkdown(m.content) : esc(m.content).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (aiBusy ? '<div class="aiwait"><i></i><i></i><i></i> thinking…</div>' : '');
   box.scrollTop = box.scrollHeight;
@@ -1526,7 +1526,7 @@ async function aiSend() {
   const cfg = await aiGetCfg();
   aiEngineChrome();
   if (aiLocked(cfg)) { aiShowLock(true); return; }
-  if (!(await aiEnsureFiles())) { status('Folder access needs re-granting \u2014 press \u21bb Refresh, then ask again.', 'warn'); return; }
+  if (!(await aiEnsureFiles())) { status('Folder access needs re-granting - press \u21bb Refresh, then ask again.', 'warn'); return; }
   if (!aiActiveReady(cfg)) { openSettings(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -1535,13 +1535,13 @@ async function aiSend() {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
     const system = await aiSystemPrompt(withTools, cfg.seedCap);
-    // The workspace index sent to the model is capped. If it was cut, say so once — do not let the
+    // The workspace index sent to the model is capped. If it was cut, say so once - do not let the
     // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
       aiSeedWarned = true;
       const what = aiSeedOmitted.length ? aiSeedOmitted.join(' and ') : 'part of the index';
       aiMessages.push({ role: 'tool', content: `ℹ️ Large workspace: ${what} could not fit in the index sent with each message. `
-        + (withTools ? 'Claude can still find them by name with its tools — the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
+        + (withTools ? 'Claude can still find them by name with its tools - the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
       aiRenderMessages();
     }
     if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
@@ -1561,7 +1561,7 @@ async function aiEngineChrome() {
   else {
     b.textContent = 'OpenAI · single-shot'; b.className = 'single';
     $('ainotetxt').innerHTML = 'OpenAI answers in <b>one pass</b>: it sees the workspace index plus the view you have open, '
-      + 'and cannot go and read other structures by itself — so it will ask you for what it is missing. '
+      + 'and cannot go and read other structures by itself - so it will ask you for what it is missing. '
       + 'Switch to Claude in Settings for an agent that explores the whole workspace on its own.';
     note.className = 'ainote show';
   }
@@ -1572,7 +1572,7 @@ async function aiEngineChrome() {
 async function aiContextLabel() {
   const el = $('aictx'); if (!el) return;
   const v = selectedId ? viewById().get(selectedId) : null;
-  const focus = v ? `Focus: ${v.name}` : 'No view focused — open one to give structure-level context';
+  const focus = v ? `Focus: ${v.name}` : 'No view focused - open one to give structure-level context';
   let cost = '';
   try {
     const cfg = await aiGetCfg();
@@ -1596,11 +1596,11 @@ function toggleAI() {
   aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
-function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it \u2014 switching workspace does it too, because the old thread was about another workspace.')) return; dropWorkspaceState(); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it - switching workspace does it too, because the old thread was about another workspace.')) return; dropWorkspaceState(); }
 
 // ---------- export ----------
 // Coarse scope on purpose: sections, never single views. Kept in IndexedDB beside the folder handle
-// rather than chrome.storage, so this build still needs no `storage` permission — the same choice,
+// rather than chrome.storage, so this build still needs no `storage` permission - the same choice,
 // one fewer thing to justify.
 const SCOPE_KEYS = ['views', 'structure', 'relations', 'sql', 'lineage', 'health'];
 const SCOPE_FULL = { views: true, structure: true, relations: true, sql: true, lineage: true, health: true };
@@ -1678,14 +1678,14 @@ async function buildExportHtml(sc) {
       const H = x.h;
       body += `<p><b>${H.counts.views}</b> views · <b>${H.counts.tables}</b> tables · <b>${H.counts.columns}</b> columns · <b>${H.counts.relations}</b> relations · <b>${H.counts.sql}</b> SQL</p>`
         + `<p class="gap">Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.</p>`
-        + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
+        + `<h3>Nothing depends on them (${H.orphans ? H.orphans.length : '—'})</h3><p class="gap">Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.</p>`
         + (H.orphans ? `<ul>${H.orphans.map((v) => `<li>${esc2(v.name)} <i>${esc2(v.type)}</i></li>`).join('')}</ul>` : '')
         + `<h3>Tables in no relation (${H.islands.length})</h3><ul>${H.islands.map((t) => `<li>${esc2(t.name)} <i>${esc2(t.kind)}</i></li>`).join('')}</ul>`
         + `<h3>Put there by Zoho, not by you (${H.system.length})</h3><ul>${H.system.map((v) => `<li>${esc2(v.name)}</li>`).join('')}</ul>`
-        + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} — ${esc2(f.error)}</li>`).join('')}</ul>` : '');
+        + (H.unread.length ? `<h3>Could not be read (${H.unread.length})</h3><ul>${H.unread.map((f) => `<li>${esc2((viewById().get(f.id) || {}).name || f.id)} - ${esc2(f.error)}</li>`).join('')}</ul>` : '');
     }
   }
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost — ${esc2(bound.label || bound.name || bound.workspace)}</title><style>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Zoost - ${esc2(bound.label || bound.name || bound.workspace)}</title><style>
 body{font:14px/1.6 system-ui,sans-serif;color:#1b2431;background:#fff;margin:0;padding:28px;max-width:1100px}
 h1{margin:0 0 4px} h2{margin:30px 0 8px;padding-top:8px;border-top:2px solid #e6ebf2} h3{margin:18px 0 6px;font-size:15px}
 small,i{color:#6b7a90;font-weight:400;font-style:normal}
@@ -1710,7 +1710,7 @@ async function buildExportMarkdown(sc) {
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
   let out = `# ${bound.label || bound.name || bound.workspace}\n\nZoho Analytics workspace ${bound.label && bound.name ? `${bound.name} ` : ''}\`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
   out += '> Read-only mirror. Zoost never writes to Zoho Analytics and never reads record data.\n\n';
-  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n- Zoho Analytics SQL — what query tables allow\n\n';
+  out += '## Contents\n\n' + secs.map((x) => `- ${x.title}`).join('\n') + '\n- Zoho Analytics SQL - what query tables allow\n\n';
   // The dialect reference travels with the export on purpose: this file exists to be handed to an
   // agent that has never seen Analytics, and a workspace description without the tool's constraints
   // would get it writing SQL that cannot run.
@@ -1729,11 +1729,11 @@ async function buildExportMarkdown(sc) {
       const H = x.h;
       out += `${H.counts.views} views · ${H.counts.tables} tables · ${H.counts.columns} columns · ${H.counts.relations} relations · ${H.counts.sql} SQL\n\n`;
       out += '> Report definitions are not covered: the endpoint carrying them also carries the computed series, which is your data, so Zoost does not call it.\n\n';
-      out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict — a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.\n\n`;
+      out += `### Nothing depends on them (${H.orphans ? H.orphans.length : '—'})\n\n> Candidates, not a verdict - a shared link, a scheduled export, an embedded report or an API consumer is invisible to Zoho Analytics' own dependency graph.\n\n`;
       if (H.orphans) out += H.orphans.map((v) => `- ${v.name} (${v.type})`).join('\n') + '\n\n';
       out += `### Tables in no relation (${H.islands.length})\n\n` + H.islands.map((t) => `- ${t.name} (${t.kind})`).join('\n') + '\n\n';
       out += `### Put there by Zoho, not by you (${H.system.length})\n\n` + H.system.map((v) => `- ${v.name}`).join('\n') + '\n\n';
-      if (H.unread.length) out += `### Could not be read (${H.unread.length})\n\n` + H.unread.map((f) => `- ${(viewById().get(f.id) || {}).name || f.id} — ${f.error}`).join('\n') + '\n\n';
+      if (H.unread.length) out += `### Could not be read (${H.unread.length})\n\n` + H.unread.map((f) => `- ${(viewById().get(f.id) || {}).name || f.id} - ${f.error}`).join('\n') + '\n\n';
     }
   }
   return out;
@@ -1792,7 +1792,7 @@ function renderHealth() {
   const nm = (v) => `<li>${esc(v.name)} <span style="color:var(--muted)">${esc(v.type || v.kind || '')}</span></li>`;
   $('healthbody').innerHTML =
     `<h4>What was pulled</h4><div class="hnum">${h.counts.views} views · ${h.counts.folders} folders · ${h.counts.tables} tables · ${h.counts.columns} columns · ${h.counts.relations} relations · ${h.counts.sql} SQL</div>`
-    + `<div class="gap">Report definitions — which columns a chart puts on which axis, and how it aggregates them — are <b>not</b> covered. The endpoint that carries them also carries the computed series, which is your data, so Zoost does not call it.</div>`
+    + `<div class="gap">Report definitions - which columns a chart puts on which axis, and how it aggregates them - are <b>not</b> covered. The endpoint that carries them also carries the computed series, which is your data, so Zoost does not call it.</div>`
 
     + `<h4>Nothing depends on them <span class="hnum">${h.orphans ? h.orphans.length : '—'}</span></h4>`
     + (h.orphans ? list(h.orphans, nm) : '<div class="gap">Lineage was not pulled.</div>')
@@ -1800,11 +1800,11 @@ function renderHealth() {
 
     + `<h4>Tables in no relation <span class="hnum">${h.islands.length}</span></h4>`
     + list(h.islands, nm)
-    + `<div class="gap">They take part in no join in the ER model. That can be deliberate — a lookup list, a staging table — so this is a list to read, not a problem to fix.</div>`
+    + `<div class="gap">They take part in no join in the ER model. That can be deliberate - a lookup list, a staging table - so this is a list to read, not a problem to fix.</div>`
 
     + `<h4>Put there by Zoho, not by you <span class="hnum">${h.system.length}</span></h4>`
     + list(h.system, nm)
-    + `<div class="gap">Flagged <code>isSystemTable</code> by Zoho Analytics itself — typically synced from a connected source. The view list does not flag any of them, so this comes from the ER model alone.</div>`
+    + `<div class="gap">Flagged <code>isSystemTable</code> by Zoho Analytics itself - typically synced from a connected source. The view list does not flag any of them, so this comes from the ER model alone.</div>`
 
     + `<h4>No description <span class="hnum">${h.undescribed.length}</span> of ${h.counts.views}</h4>`
     + `<div class="gap">A count, not a judgement. Plenty of views need no description.</div>`
@@ -1813,10 +1813,10 @@ function renderHealth() {
        + '<div class="gap">Neither their own columns nor a parent chain leading to any. Dashboards are excluded, since having none is correct for them.</div>' : '')
 
     + (h.unread.length ? `<h4 style="color:var(--warn)">Could not be read <span class="hnum">${h.unread.length}</span></h4>`
-       + list(h.unread, (f) => `<li>${esc((viewById().get(f.id) || {}).name || f.id)} — <span style="color:var(--muted)">${esc(f.error)}</span></li>`)
+       + list(h.unread, (f) => `<li>${esc((viewById().get(f.id) || {}).name || f.id)} - <span style="color:var(--muted)">${esc(f.error)}</span></li>`)
        + '<div class="gap">Use <b>Retry failed</b>, or ↻ on a single view. Until then this mirror is short by exactly these.</div>' : '')
 
-    + `<h4>Design and data dates</h4><div class="gap">Design is a real timestamp for tables and query tables, and Zoho\u2019s own text for everything else — shown exactly as it sends it, in your interface language, never parsed, and sorted last. Data is always a real timestamp.</div>`;
+    + `<h4>Design and data dates</h4><div class="gap">Design is a real timestamp for tables and query tables, and Zoho\'s own text for everything else - shown exactly as it sends it, in your interface language, never parsed, and sorted last. Data is always a real timestamp.</div>`;
 }
 function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); }
 function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); }
@@ -1834,7 +1834,7 @@ function showAbout() {
     + `<h4>Licence</h4><div><a href="${escA(LICENSE_URL)}" target="_blank" rel="noopener">${esc(PRODUCT_LICENSE)}</a> · © 2026 ${esc(PRODUCT_AUTHOR)}</div>`
     + `<h4>Legal</h4><div class="legal">${esc(LEGAL_DISCLAIMER)}</div>`
     + `<h4>Your data</h4><div class="legal">The mirror stays between your browser, your Zoho session and the local folder you picked. `
-    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs — view and column names, relations, and the SQL of your query tables — are sent directly from your browser to the provider you configured, and to no one else. `
+    + `Zoost has no server of its own. <b>The one exception is the AI assistant</b>: when you use it, the parts of the workspace it needs - view and column names, relations, and the SQL of your query tables - are sent directly from your browser to the provider you configured, and to no one else. `
     + `Rows are never sent, because Zoost never reads them. Leave the assistant unconfigured and nothing leaves this machine.</div>`;
   $('scrim').classList.add('on'); $('aboutdlg').classList.add('on');
 }
@@ -1845,14 +1845,14 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
 /** What the workspace list shows, and what it must never stop showing.
  *
  * The label is a convenience; the identity is the org or workspace id. So the label is displayed and
- * the derived name is kept — in the option's tooltip, always, whether or not a label is set. A list
+ * the derived name is kept - in the option's tooltip, always, whether or not a label is set. A list
  * that showed only the user's name for something would be a list you cannot check against the
  * platform.
  */
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || `${w.name || w.folder} \u00b7 ${w.id}`; }
 function wsOptionTitle(w) {
   const label = ((w.cfg && w.cfg.label) || '').trim();
-  return label ? `${label} \u2014 folder ${`${w.name || w.folder} \u00b7 ${w.id}`}` : `${w.name || w.folder} \u00b7 ${w.id}`;
+  return label ? `${label} - folder ${`${w.name || w.folder} \u00b7 ${w.id}`}` : `${w.name || w.folder} \u00b7 ${w.id}`;
 }
 
 /** A name of the user's own for a workspace.
@@ -1862,7 +1862,7 @@ function wsOptionTitle(w) {
  * disk with the same label and nothing to tell them apart. Zoho CRM has the instance and the org id,
  * which are unambiguous and still not memorable.
  *
- * So the label is *displayed instead of* the derived name, and the derived name never disappears —
+ * So the label is *displayed instead of* the derived name, and the derived name never disappears -
  * it stays in the option's tooltip and in the bar beneath, because the label is a convenience and the
  * identity is the org or workspace id. Storing it in `.zoost.json` (through `patchCfg`, never
  * `writeCfg`) keeps it with the workspace: it survives a re-pull, and it travels with the folder if
@@ -1881,11 +1881,11 @@ async function renameWorkspace() {
   try {
     // Chrome lets the folder permission lapse, and this writes to disk. Asked for here because here
     // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
-    // DOMException the AI path used to. Third time this shape has surfaced — a write reached from a
+    // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
-    if (!(await ensurePerm(dir))) { status('Folder access needs re-granting — press ↻ Refresh, then try again.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { status('Folder access needs re-granting - press ↻ Refresh, then try again.', 'warn'); return; }
     await patchCfg({ label });
-    status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared \u2014 back to the folder name.', 'ok');
+    status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await refreshWorkspaces();
   } catch (e) { status('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
@@ -1939,7 +1939,7 @@ document.querySelectorAll('.dtab').forEach((b) => {
   };
 });
 // A stored folder handle loses its permission between sessions and can only be re-granted from a
-// user gesture. Any click in the panel counts, so the first thing the user does restores access —
+// user gesture. Any click in the panel counts, so the first thing the user does restores access -
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
 // chat. The two panels excluded different subsets of those and neither list was wrong, which is how
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
@@ -1950,7 +1950,7 @@ document.addEventListener('click', async (e) => {
   try { if (await ensurePerm(root)) { rootGranted = true; await refreshWorkspaces(); } } catch (_) {}
 }, true);
 
-// resizable split — the CRM's, down to the stored height
+// resizable split - the CRM's, down to the stored height
 let dragY = false;
 $('resizer').addEventListener('mousedown', () => { dragY = true; document.body.style.userSelect = 'none'; });
 window.addEventListener('mousemove', (e) => {
@@ -1973,4 +1973,4 @@ window.addEventListener('focus', () => refreshContext());
   try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
   await loadScope(); await restoreRoot(); await refreshContext();
 })();
-$('help').href = DOCS_URL;   // set here, not in the markup — same as the CRM panel
+$('help').href = DOCS_URL;   // set here, not in the markup - same as the CRM panel

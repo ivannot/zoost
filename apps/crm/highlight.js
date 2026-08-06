@@ -1,4 +1,4 @@
-/* highlight.js — minimal Deluge syntax highlighter.
+/* highlight.js - minimal Deluge syntax highlighter.
  * Tokenizes the RAW source and HTML-escapes each piece, so it is injection-safe.
  * window.highlightDeluge(code, resolve?) -> HTML string.
  *   resolve(namespace, name) -> { file, label } | null

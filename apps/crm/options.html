@@ -6,7 +6,7 @@
 <title>Settings · Zoost — workbench for Zoho CRM</title>
 <style>
   /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
-     visible — silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
   [hidden]{display:none!important}
@@ -94,7 +94,7 @@
   <section>
     <h2>Working folder</h2>
     <p class="sub">One folder holds every workspace. Zoost creates a subfolder per Zoho org, named
-      <code>instance[-sandbox]-orgid</code>. The folder name is only a label — a workspace is identified
+      <code>instance[-sandbox]-orgid</code>. The folder name is only a label - a workspace is identified
       by the org id inside its <code>.zoost.json</code>, so renaming is safe.</p>
     <div class="row">
       <span class="path none" id="rootPath">Not set</span>
@@ -110,12 +110,12 @@
   <section data-section="aicfg">
     <h2>AI assistant</h2>
     <p class="sub">Bring your own key. Two providers are supported: <b>Anthropic</b> and <b>OpenAI</b>.
-      Requests go straight from your browser to the one you choose — never through any server of ours.
+      Requests go straight from your browser to the one you choose - never through any server of ours.
       Keys are stored in <code>chrome.storage.local</code> on this machine.</p>
     <label><span class="lt">Engine</span>
       <select id="aiengine">
-        <option value="anthropic">Anthropic (Claude) — full agent, tool use</option>
-        <option value="openai">OpenAI (ChatGPT) — single-shot</option>
+        <option value="anthropic">Anthropic (Claude) - full agent, tool use</option>
+        <option value="openai">OpenAI (ChatGPT) - single-shot</option>
       </select>
     </label>
     <div class="prov" id="provAnthropic">
@@ -134,18 +134,18 @@
     </div>
     <label><span class="lt">Org index sent with each message</span><input type="number" id="ai_seedcap" min="4000" max="400000" step="1000"></label>
     <p class="note" style="margin-top:0">Characters. The assistant is given an index of the org with
-      <em>every</em> message, so this is what a question costs before you have asked anything — roughly one
+      <em>every</em> message, so this is what a question costs before you have asked anything - roughly one
       token per four characters. The panel shows the real figure for the workspace you have open, under the
       chat title.</p>
     <p class="note" style="margin-top:6px">When an org does not fit, the order is decided rather than
-      arbitrary: <b>the function list is never dropped</b> — it is the vocabulary everything else refers to —
+      arbitrary: <b>the function list is never dropped</b> - it is the vocabulary everything else refers to -
       and module and connection names go first, because the assistant can still fetch those by name with its
       tools. Whatever is left out is named as left out, so it never assumes something is absent because it
       was not shown one.</p>
 
     <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
     <div class="keyprot">
-      <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> —
+      <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> -
         it is stored encrypted, and you type the passphrase once per browser session</span></label>
       <div id="ai_lockrow" class="lockrow" hidden>
         <label id="ai_currow"><span class="lt">Current passphrase</span><input type="password" id="ai_passcur" placeholder="the one in use now"></label>
@@ -157,29 +157,29 @@
       </div>
       <p class="sub keynote">Off by default, and that is a real choice rather than a lapse. Chrome gives extensions
         no encryption at rest and no credential store, so anything the extension can unlock on its own, anyone with
-        your browser profile can unlock too — encrypting with a key kept beside it would be theatre. The only real
+        your browser profile can unlock too - encrypting with a key kept beside it would be theatre. The only real
         protection is a secret we do not hold. On your own laptop that buys little and costs a passphrase every time
         the browser restarts; on a shared or managed machine it buys a lot. Nobody but you can price that.
-        <b>There is no recovery.</b> Forget it and you paste the API key again and choose again — which costs one
+        <b>There is no recovery.</b> Forget it and you paste the API key again and choose again - which costs one
         visit to your provider's dashboard, and is the honest shape for a secret that cheap to replace.
         And what it does <b>not</b> do: while the key is unlocked it sits in the browser's memory, where the browser
-        can read it. A passphrase protects the key at rest — a copied profile, a backup, someone else on this
-        machine — not a key already unlocked in a running browser.</p>
+        can read it. A passphrase protects the key at rest - a copied profile, a backup, someone else on this
+        machine - not a key already unlocked in a running browser.</p>
     </div>
     <p class="note" style="margin-top:0">How many times the assistant may reach for a tool before it has to
       answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
-      single question can cost. It is a ceiling, not a target — most answers use two or three.</p>
-    <div class="warnbox">The assistant sends the parts of your workspace it needs — including <b>Deluge source
-      code</b> — to the provider you configure. Check that this is acceptable for your organisation before use.</div>
+      single question can cost. It is a ceiling, not a target - most answers use two or three.</p>
+    <div class="warnbox">The assistant sends the parts of your workspace it needs - including <b>Deluge source
+      code</b> - to the provider you configure. Check that this is acceptable for your organisation before use.</div>
     <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
   </section>
 
   <section data-section="tabPrefs">
     <h2>Tabs</h2>
     <p class="sub">Which types the side panel offers, and in what order. A tab you turn off is
-      <i>absent</i>, not greyed out — the panel is 400px wide and a control that does nothing is just
+      <i>absent</i>, not greyed out - the panel is 400px wide and a control that does nothing is just
       noise. Nothing is deleted by hiding a tab: <b>Pull all</b> still mirrors that type, and it still
-      appears in exports and in what the AI can see — unless you also clear its <b>pull</b> box, which is
+      appears in exports and in what the AI can see - unless you also clear its <b>pull</b> box, which is
       the separate question of whether Zoost should ask Zoho for that type at all. Turning a tab off
       clears it for you, because most tabs are turned off for an area the account cannot read and
       pulling it then only produces an error. Turn it back on if you mirror a type for Git without
@@ -195,15 +195,15 @@
   <section data-section="exportScope">
     <h2>Export defaults</h2>
     <p class="sub">What the export dialog starts with. You can still change it per export.</p>
-    <label class="ck"><input type="checkbox" id="sc_functions"><span><b>Functions</b> — inventory, namespaces, cross-references</span></label>
-    <label class="ck ind"><input type="checkbox" id="sc_code"><span><b>Deluge source code</b> — the full body of every function <em>the most sensitive part</em></span></label>
-    <label class="ck"><input type="checkbox" id="sc_modules"><span><b>Module schema</b> — fields, types, lookups, picklists</span></label>
-    <label class="ck ind"><input type="checkbox" id="sc_layouts"><span><b>Layout detail</b> — sections and per-layout fields</span></label>
-    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> — related-list API names and Deluge calls</span></label>
-    <label class="ck"><input type="checkbox" id="sc_workflows"><span><b>Workflows</b> — triggers, criteria, actions</span></label>
+    <label class="ck"><input type="checkbox" id="sc_functions"><span><b>Functions</b> - inventory, namespaces, cross-references</span></label>
+    <label class="ck ind"><input type="checkbox" id="sc_code"><span><b>Deluge source code</b> - the full body of every function <em>the most sensitive part</em></span></label>
+    <label class="ck"><input type="checkbox" id="sc_modules"><span><b>Module schema</b> - fields, types, lookups, picklists</span></label>
+    <label class="ck ind"><input type="checkbox" id="sc_layouts"><span><b>Layout detail</b> - sections and per-layout fields</span></label>
+    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> - related-list API names and Deluge calls</span></label>
+    <label class="ck"><input type="checkbox" id="sc_workflows"><span><b>Workflows</b> - triggers, criteria, actions</span></label>
     <label class="ck"><input type="checkbox" id="sc_schedules"><span><b>Schedules</b></span></label>
-    <label class="ck"><input type="checkbox" id="sc_connections"><span><b>Connections</b> — the org's connection catalogue and which functions use each</span></label>
-    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> — orphans, unresolved calls, broken automations</span></label>
+    <label class="ck"><input type="checkbox" id="sc_connections"><span><b>Connections</b> - the org's connection catalogue and which functions use each</span></label>
+    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> - orphans, unresolved calls, broken automations</span></label>
     <div class="row" style="margin-top:12px">
       <button id="scFull">Everything</button><button id="scSafe">Share-safe</button>
       <button id="saveScope" class="primary">Save defaults</button>
@@ -213,7 +213,7 @@
   <section data-section="erParams">
     <h2>Diagram layout</h2>
     <p class="sub">The ER diagram reads these values when it opens. They are the <i>same</i> setting the
-      graph window's <b>Layout ⚙</b> panel edits, so adjusting a slider there updates what you see here —
+      graph window's <b>Layout ⚙</b> panel edits, so adjusting a slider there updates what you see here -
       there is no separate default to fall out of sync. <b>Reset to preset</b> in the graph returns to the
       built-in values for the current emphasis mode, not to these.</p>
     <div class="slid"><span class="lt">Box spacing</span><input type="range" id="pMargin" min="10" max="320" step="5"><span class="val" id="vMargin"></span></div>
@@ -230,7 +230,7 @@
     <p class="sub">Created by <b>Ivan Notaristefano</b> (with the support of Claudio) · <a id="licenceLink" href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>
     <div class="legal" id="legal"></div>
     <p class="note">Zoost reads from the Zoho CRM instance you are already signed in to and writes to the
-      working folder above. It has no server of its own. Exports are files you create deliberately —
+      working folder above. It has no server of its own. Exports are files you create deliberately -
       where they go afterwards is your responsibility.</p>
   </section>
 </div>

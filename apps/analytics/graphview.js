@@ -2,12 +2,12 @@
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
-/* graphview.js — Explorer + Visual graph. Reads graph from chrome.storage.local. */
+/* graphview.js - Explorer + Visual graph. Reads graph from chrome.storage.local. */
 let DATA = null, N = {}, ids = [], filter = 'all', sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
-// the value — that is what cut a snippet in half right after the opening bracket.
+// the value - that is what cut a snippet in half right after the opening bracket.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph
 // is filtered. Returning '' lets them fall back to the id rather than printing "undefined".
@@ -15,7 +15,7 @@ const label = (n) => (!n ? '' : nameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
 // The one dimension the list and the chips share. In functions mode the chips select a function's
-// *category* — standalone, automation, button, schedule, validation rule — and the dot was coloured
+// *category* - standalone, automation, button, schedule, validation rule - and the dot was coloured
 // by its Deluge *namespace*, which is a different fact and usually has no colour defined, so every
 // dot came out the fallback grey. `pass()` had the same confusion and compared the chip against
 // `namespace` too, which means those five filters only ever worked in an org where Zoho returns no
@@ -151,7 +151,7 @@ function layoutZoneHtml(n) {
     const cells = detail ? lays.map((l, i) => {
       if (!Array.isArray(f._lay) || !f._lay.includes(i)) return '<td class="lcol"></td>';
       const req = Array.isArray(f._req) && f._req.includes(i);
-      return `<td class="lcol"><span class="d${req ? ' req' : ''}" title="${escA(l.name || String(l.id))}${req ? ' \u2014 required here' : ''}"></span></td>`;
+      return `<td class="lcol"><span class="d${req ? ' req' : ''}" title="${escA(l.name || String(l.id))}${req ? ' - required here' : ''}"></span></td>`;
     }).join('') : '';
     return `<tr class="${orphan ? 'nolay' : ''}">
     <td>${esc(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}${orphan ? '<span class="nolaytag">no layout</span>' : ''}</td>
@@ -168,7 +168,7 @@ function layoutZoneHtml(n) {
 
   const legend = detail
     ? `<div class="laylegend"><span class="d"></span> in layout \u00b7 <span class="d req"></span> required in that layout \u00b7 highlighted rows are fields in <b>no</b> layout (API-only)</div>`
-    : (lays.length ? `<div class="laylegend">Layout detail not in this graph \u2014 re-run <b>Pull Modules</b>, then reopen the diagram.</div>` : '');
+    : (lays.length ? `<div class="laylegend">Layout detail not in this graph - re-run <b>Pull Modules</b>, then reopen the diagram.</div>` : '');
 
   return `<div class="srcwrap"><div class="srchead">${head}</div>${chips}`
     + `<div style="display:block;padding:0;max-height:340px;overflow:auto;background:#fff"><table class="ftbl"><thead><tr><th>Field</th><th>API</th><th>Type</th><th>Req</th><th>Lookup</th>${lhead}</tr></thead><tbody>${rows}</tbody></table></div>${legend}</div>`;
@@ -186,7 +186,7 @@ function joinsHtml(n) {
   const js = n.joins || [];
   if (!js.length) {
     return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Relations \u00b7 0</div>`
-      + `<div style="padding:9px 10px;color:#94a3b8;font:11.5px var(--sans)">This table takes part in no join in the ER model. That can be deliberate \u2014 a lookup list, a staging table \u2014 so it is a fact, not a problem.</div></div>`;
+      + `<div style="padding:9px 10px;color:#94a3b8;font:11.5px var(--sans)">This table takes part in no join in the ER model. That can be deliberate - a lookup list, a staging table - so it is a fact, not a problem.</div></div>`;
   }
   const rows = js.map((r) => `<tr>
     <td>${r.direction === 'out' ? '\u2192' : '\u2190'}</td>
@@ -195,15 +195,15 @@ function joinsHtml(n) {
     <td class="mono">${esc(r.otherColumn || '')}</td>
     <td class="mono" style="color:#64748b">${esc(r.relation || '')}</td>
   </tr>`).join('');
-  return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Relations \u00b7 ${js.length} <span style="font-weight:400;color:#94a3b8">\u2014 \u2192 this table points out, \u2190 something points here</span></div>`
+  return `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Relations \u00b7 ${js.length} <span style="font-weight:400;color:#94a3b8">- \u2192 this table points out, \u2190 something points here</span></div>`
     + `<div style="display:block;padding:0;max-height:260px;overflow:auto;background:#fff"><table class="ftbl"><thead><tr><th></th><th>Other table</th><th>This column</th><th>Their column</th><th>Join</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function fieldsTableHtml(n) {
   const tbl = `<div id="layzone">${layoutZoneHtml(n)}</div>` + joinsHtml(n);
   const rd = n.reads || [];
   const who = rd.length
-    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) \u2014 from Zoho Analytics\u2019 own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => esc(t)).join('<br>')}</div></div>`
-    : '<div class="none" style="margin-top:12px">Nothing in this workspace reads from it. A shared link, a scheduled export or an API consumer would be invisible here \u2014 a candidate, not a verdict.</div>';
+    ? `<div class="srcwrap" style="margin-top:12px"><div class="srchead">Read by ${rd.length} view(s) - from Zoho Analytics\' own lineage</div><div style="padding:8px 10px;font:11.5px var(--mono);color:#33415a;line-height:1.7">${rd.map((t) => esc(t)).join('<br>')}</div></div>`
+    : '<div class="none" style="margin-top:12px">Nothing in this workspace reads from it. A shared link, a scheduled export or an API consumer would be invisible here - a candidate, not a verdict.</div>';
   return tbl + who;
 }
 function select(id, nopush) {
@@ -219,8 +219,8 @@ function select(id, nopush) {
   const sig = schema
     ? `${(n.fields || []).length} columns \u00b7 ${(n.joins || []).length} relations \u00b7 ${esc(n.category || 'table')}`
     : `${n.return_type || 'void'} ${n.namespace}.${n.name}(` + (n.params || []).map((p) => `${p.type} ${p.name}`).join(', ') + ')';
-  const upHead = schema ? `Referenced by (${n.called_by.length}) <span class="hint">\u2014 tables pointing here</span>` : `Called by (${n.called_by.length}) <span class="hint">\u2014 breaks if you change it</span>`;
-  const downHead = schema ? `References (${n.calls.length}) <span class="hint">\u2014 tables it points at</span>` : `Calls (${n.calls.length}) <span class="hint">\u2014 its dependencies</span>`;
+  const upHead = schema ? `Referenced by (${n.called_by.length}) <span class="hint">- tables pointing here</span>` : `Called by (${n.called_by.length}) <span class="hint">- breaks if you change it</span>`;
+  const downHead = schema ? `References (${n.calls.length}) <span class="hint">- tables it points at</span>` : `Calls (${n.calls.length}) <span class="hint">- its dependencies</span>`;
   const badges = schema
     ? `<span class="badge">${esc(n.namespace)}</span>${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
     : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
@@ -287,7 +287,7 @@ function relRender() {
   const rows = RELS.filter(relPass);
   $('relcount').textContent = `${rows.length} of ${RELS.length} relations`;
   if (!RELS.length) {
-    $('relwrap').innerHTML = '<div class="empty">No relations in this workspace. They come from the ER model \u2014 run <b>Pull all</b> and reopen this window.</div>';
+    $('relwrap').innerHTML = '<div class="empty">No relations in this workspace. They come from the ER model - run <b>Pull all</b> and reopen this window.</div>';
     return;
   }
   // The join string is Zoho's own, copyable as-is. Re-rendering it in our words would be an
@@ -349,9 +349,9 @@ let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-
 let dragging = false, lastX = 0, lastY = 0;
 
 // Deterministic robustness guard. The force layout (settle) is O(n²) per iteration × ~420 and runs
-// on the main thread, so above this many nodes we do NOT attempt it — it would freeze the window.
+// on the main thread, so above this many nodes we do NOT attempt it - it would freeze the window.
 // We know n before we start, so we refuse up front and point to the views that stay fast (Explorer,
-// and — for schema — focus + depth). Conservative and NOT calibrated against a very large org; tune
+// and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
 // this single number if you ever profile one.
 const FORCE_MAX_NODES = 600;
 function forceFeasible() { return nodesA.length <= FORCE_MAX_NODES; }
@@ -363,16 +363,16 @@ function showVisualTooBig() {
     $('visual').appendChild(ov);
   }
   const focusHint = (DATA && DATA.kind === 'schema') ? ', or open the diagram <b>focused on one module</b> with a small depth' : '';
-  ov.innerHTML = `<div style="max-width:560px"><div style="font-size:16px;margin-bottom:8px"><b>${nodesA.length} nodes</b> — too many to lay out interactively.</div>`
+  ov.innerHTML = `<div style="max-width:560px"><div style="font-size:16px;margin-bottom:8px"><b>${nodesA.length} nodes</b> - too many to lay out interactively.</div>`
     + `The force-directed graph is not drawn above ${FORCE_MAX_NODES}: it would block this window while it computes.<br><br>`
-    + `Use the <b>Explorer</b> tab — search and filter, always fast${focusHint}.</div>`;
+    + `Use the <b>Explorer</b> tab - search and filter, always fast${focusHint}.</div>`;
   ov.style.display = 'flex';
 }
 function hideVisualTooBig() { const ov = document.getElementById('vistoobig'); if (ov) ov.style.display = 'none'; }
 
 function buildLegend() {
   // The same dimension as the list and the chips, or the window would carry two colour keys that
-  // disagree — which is how it read before: dots by namespace, chips by category.
+  // disagree - which is how it read before: dots by namespace, chips by category.
   const seen = {}; Object.values(N).forEach((n) => (seen[KINDOF(n)] = 1));
   const leg = $('legend');
   Object.keys(seen).sort().forEach((ns) => {
@@ -457,7 +457,7 @@ function settle() {
 }
 
 function updateTopTools() {
-  // Graph controls live inside #vistools (in the Visual view) — nothing to show/hide in the header.
+  // Graph controls live inside #vistools (in the Visual view) - nothing to show/hide in the header.
   // In schema focus mode the ego-set already drives what is drawn, so the Visual "Focus" button
   // (a second, competing filter) would only be confusing: hide it.
   const fb = $('focusBtn');
@@ -509,10 +509,10 @@ function updateScopeUI() {
 }
 function setScope(all) {
   if (!curFocus) return;
-  // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it — we
+  // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it - we
   // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
   if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} tables</b> — too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; widen with depth instead.`;
+    $('statline').innerHTML = `<b>${nodesA.length} tables</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; widen with depth instead.`;
     return;
   }
   scopeAll = !!all;
@@ -523,7 +523,7 @@ function setScope(all) {
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>All tables</b> \u00b7 <b>${DATA.counts.nodes}</b> tables \u00b7 <b>${DATA.counts.edges}</b> relations \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused \u2014 Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `<b>All tables</b> \u00b7 <b>${DATA.counts.nodes}</b> tables \u00b7 <b>${DATA.counts.edges}</b> relations \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
     return;
   }
   const nn = egoSet ? egoSet.size : DATA.counts.nodes;
@@ -554,7 +554,7 @@ function setFocus(id) {
   else if (curView === 'visual') { fitView(); draw(); }
 }
 function clearFocus() {
-  // Back to the pristine whole-graph view — the state you get opening via "Schema".
+  // Back to the pristine whole-graph view - the state you get opening via "Schema".
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
   $('erdepth').style.display = 'none';
   updateScopeUI(); updateTopTools(); erLaidOut = false;
@@ -682,7 +682,7 @@ function erPickCard() {
   const [a, b] = erSelEdge.split('\u0000');
   if (!N[a] || !N[b]) { card.classList.remove('on'); return; }
   // a points at b: find the joins on a that target b. Zoho's own relation string is shown and
-  // copied verbatim — it is the thing you paste into a query.
+  // copied verbatim - it is the thing you paste into a query.
   const js = (N[a].joins || []).filter((r) => r.direction === 'out' && r.other === b);
   if (!js.length) { card.classList.remove('on'); return; }
   const snip = js.map((r) => r.relation).filter(Boolean).join('  AND  ');
@@ -731,7 +731,7 @@ function erLayout() {
     });
   } else {
     // Free layout needs the force positions. Concentric focus mode above does NOT (it uses rings),
-    // so settle() is skipped there — that is the common case and it stays cheap at any org size.
+    // so settle() is skipped there - that is the common case and it stays cheap at any org size.
     // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their initial
     // circular positions (from initCanvas) and the diagram still renders instead of freezing.
     if (!laidOut && forceFeasible()) { settle(); laidOut = true; }
@@ -912,7 +912,7 @@ function erRender() {
         t2.textContent = L.sub; g.appendChild(t2);
       }
       const ttl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      ttl.textContent = L.title + (L.sub ? ' \u2014 via ' + L.sub : '');
+      ttl.textContent = L.title + (L.sub ? ' - via ' + L.sub : '');
       g.appendChild(ttl);
       if (dimmed) g.setAttribute('opacity', '0.14');
       g.addEventListener('click', (ev) => { if (erDragged) return; ev.stopPropagation(); erPick(L.a, L.b); });
@@ -1065,5 +1065,5 @@ window.addEventListener('afterprint', () => { if (_prevDocTitle != null) { docum
 (function () {
   const el = document.getElementById('credit'); if (!el) return;
   const url = PRODUCT_URL ? ` \u00b7 <a href="${escA(PRODUCT_URL)}">${PRODUCT_URL}</a>` : '';
-  el.innerHTML = `${PRODUCT_NAME}${url} \u00b7 Created by ${PRODUCT_AUTHOR} \u00b7 Apache-2.0 \u00b7 Independent, unofficial tool \u2014 not affiliated with Zoho Corporation \u00b7 provided AS IS, no warranty`;
+  el.innerHTML = `${PRODUCT_NAME}${url} \u00b7 Created by ${PRODUCT_AUTHOR} \u00b7 Apache-2.0 \u00b7 Independent, unofficial tool - not affiliated with Zoho Corporation \u00b7 provided AS IS, no warranty`;
 })();

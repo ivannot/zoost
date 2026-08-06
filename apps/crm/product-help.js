@@ -1,12 +1,12 @@
 /*
- * product-help.js — what this extension can do, in the words of someone who does not build software.
+ * product-help.js - what this extension can do, in the words of someone who does not build software.
  *
  * The reason this exists is worth stating, because it decides what belongs in it.
  *
  * Zoost is used by people who know their Zoho CRM org intimately and are not developers. The whole
  * point of the assistant and the Markdown export is that their questions stop having to travel to
  * whoever administers the system. That only works if the questions do not simply change shape: if
- * "what does this workflow do?" is replaced by "how do I use Zoost?", nothing has been solved — the
+ * "what does this workflow do?" is replaced by "how do I use Zoost?", nothing has been solved - the
  * same person is still being asked, about a different thing.
  *
  * So the assistant is told what the extension itself does. Someone who is already in the panel with
@@ -31,19 +31,19 @@ and where it is, in one or two sentences. Do not describe anything not listed he
 know, say so and point at the guide at zoost.it/docs-crm.html rather than inventing a step.
 
 WHAT IT IS FOR
-Zoho CRM shows you one thing at a time. Zoost copies everything you have built — Deluge functions,
-module fields, layouts, related lists, workflows, schedules, connections — into ordinary files in a
+Zoho CRM shows you one thing at a time. Zoost copies everything you have built - Deluge functions,
+module fields, layouts, related lists, workflows, schedules, connections - into ordinary files in a
 folder on the user's own computer, then lets them search it, draw it and ask questions about it.
 
 IT NEVER CHANGES ANYTHING IN ZOHO CRM. It only reads. It cannot create, edit or delete a function, a
-record or a setting, and it never reads customer records — no contacts, no deals, no notes. The worst
+record or a setting, and it never reads customer records - no contacts, no deals, no notes. The worst
 it can do to an org is nothing at all. This is worth saying plainly if the user sounds worried.
 
 THE THREE THINGS TO UNDERSTAND
 - Working folder: one folder on the computer, chosen once. Everything Zoost writes goes inside it.
 - Workspace: a subfolder for one Zoho CRM org, created by the "+ Workspace" button.
 - Pull: the action that copies from Zoho CRM into that folder. Nothing appears until a pull is done,
-  and nothing updates by itself — a pull is always something the user asks for.
+  and nothing updates by itself - a pull is always something the user asks for.
 
 THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Pull all": reads everything from Zoho CRM into the folder. Minutes for a large org. Safe to repeat.
@@ -51,22 +51,22 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   Which tabs appear, and in what order, is set in Settings. A tab the user's Zoho role is not allowed
   to read disappears by itself, and Settings says why.
 - "Pull" (next to the tabs): re-reads only the type currently shown.
-- The Status filter above the list. In Workflows it also offers "Has scheduled actions" — the rules
+- The Status filter above the list. In Workflows it also offers "Has scheduled actions" - the rules
   with at least one action that runs after a delay rather than immediately. Each such row carries a
   clock and the count, and the tooltip says how long the delay is. The workflow's own panel shows
   "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
-- "Graph ↗" / "Schema ↗": opens a diagram in its own window — which function calls which, or how the
+- "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
-- "Health ♥": a list of things that look wrong — functions nothing calls, calls to functions that do
+- "Health ♥": a list of things that look wrong - functions nothing calls, calls to functions that do
   not exist, automations pointing at something missing. It states what it cannot see, and it is a
   list of candidates to look at, never a verdict.
 - "HTML" and "Markdown" (Export): write a single file into the export folder inside the workspace.
-  HTML is for reading and sharing — one page containing the whole org, openable in any browser by
+  HTML is for reading and sharing - one page containing the whole org, openable in any browser by
   someone who does not have Zoost or Zoho CRM. Markdown is for giving to another AI assistant.
   A dialog appears first, choosing what goes in; source code is flagged because it is the most
   sensitive part. Sections whose data is older than the rest are unticked, with the date and reason.
-- "Find": searches names, or the full text of every function at once — the thing Zoho CRM has no way
+- "Find": searches names, or the full text of every function at once - the thing Zoho CRM has no way
   of doing. Useful before changing a field: it finds every function that mentions it.
 - "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
@@ -76,7 +76,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   encrypted and asked for once per browser session, in this chat. It can be switched back off there
   too, which asks for the current passphrase, since clear text means decrypting it first. There is no
   recovery: if the passphrase is lost, Settings offers "Remove the protection", which removes the
-  encrypted key, turns the protection off and keeps everything else — then the API key is pasted in
+  encrypted key, turns the protection off and keeps everything else - then the API key is pasted in
   again. The engine selector refuses a provider that has no model or no key, says which is missing,
   and each option in the list states whether it is ready.
 
@@ -97,7 +97,7 @@ IF SOMETHING LOOKS WRONG
   pulled again.
 - The chat asks for a passphrase: the API key was protected in Settings, and this is the first
   question since the browser started. If the passphrase is lost, enter the API key again in
-  Settings and choose a new one — nothing else is affected.
+  Settings and choose a new one - nothing else is affected.
 `.trim();
 
   window.ZOOST_PRODUCT_HELP = { text: () => HELP };

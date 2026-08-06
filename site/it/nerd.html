@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:b70b76ca7828f540 -->
+<!-- translated-from: site/nerd.html sha256:bf9f91b479ccf025 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>La pagina nerd — come funziona davvero Zoost</title>
+<title>La pagina nerd - come funziona davvero Zoost</title>
 <meta name="description" content="Su cosa si regge Zoost, cosa si rifiuta di fare e perché, come viene costruita e firmata una release, e come verificare ognuna di queste cose. Il dettaglio che le pagine di prodotto lasciano fuori di proposito.">
 <link rel="canonical" href="https://zoost.it/it/nerd.html">
 <link rel="alternate" hreflang="en" href="https://zoost.it/nerd.html">
@@ -24,7 +24,7 @@
 
 <header>
   <div class="wrap">
-    <a class="brand" href="/it/index.html" aria-label="Zoost — home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <a class="brand" href="/it/index.html" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
     <nav>
       <a class="nprod ncrm" href="/it/crm.html" aria-label="Zoost — workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/it/analytics.html" aria-label="Zoost — workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost — workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
@@ -64,7 +64,7 @@
   <p>Questo ha conseguenze che vale la pena conoscere prima di costruirci intorno un processo.</p>
   <div class="box">
     <h3>Come legge Zoho CRM</h3>
-    <p>Legge due identificativi — l'id della tua org e quello dell'utente — dall'HTML della pagina,
+    <p>Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina,
       perché nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già.
       Separatamente osserva la pagina per <b>una</b> cosa sola: URL e metodo della richiesta che salva
       una funzione, così la copia locale può seguire quando salvi. Non legge nessun header e nessun
@@ -77,7 +77,7 @@
   </div>
   <div class="box">
     <h3>Come legge Zoho Analytics</h3>
-    <p>Prende il workspace dall'URL della scheda su cui sei — <code>/workspace/{id}</code> — quindi non
+    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non
       c'è niente da estrarre e niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
       ogni POST porta <code>X-ZCSRF-TOKEN</code>, nessuna GET lo fa, misurato su una cattura di 104
       richieste senza eccezioni.</p>
@@ -95,17 +95,17 @@
   <p>È il motivo per cui il <b>Go to</b> sulle funzioni di Zoost CRM è stato rimosso nella 1.1.0: guidava l'editor
     di Zoho cliccando un'etichetta tradotta «Modifica funzione», ci riprovava dieci volte e poi
     falliva con il messaggio sbagliato. Al suo posto c'è <b>Find in Zoho</b>, che naviga per URL
-    costruito e filtra l'elenco in modo deterministico — e l'ultimo click, quello che dipende dalla
+    costruito e filtra l'elenco in modo deterministico - e l'ultimo click, quello che dipende dalla
     lingua, lo fai tu.</p>
   <p>Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una
     navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un
-    4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> — la prima
+    4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> - la prima
     chiamata <code>/deluge/</code> dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la
     sistema, e questo è stato riprodotto apposta invece che ipotizzato.</p>
 
   <h2 id="what-is-never-called">Cosa non viene mai chiamato</h2>
   <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una
-    proprietà di quali endpoint stanno nel sorgente, non qualcosa che il browser impone — e il
+    proprietà di quali endpoint stanno nel sorgente, non qualcosa che il browser impone - e il
     sorgente è una ventina di file di JavaScript in chiaro, senza bundler né minificatore fra quello
     che è pubblicato e quello che leggi.</p>
   <p>Due endpoint di Zoho Analytics sono lasciati stare di proposito, e il motivo è lo stesso in
@@ -113,8 +113,8 @@
   <ul>
     <li><code>ZDBTableDataAction.ma</code> restituisce i valori veri delle celle di una tabella. Zoost
       dichiara di non leggere mai le tue righe, quindi non lo chiama.</li>
-    <li><code>ZAChartView.ve</code> darebbe la definizione dei report che altrimenti manca — tipo di
-      grafico, raggruppamenti, assi — ma arriva saldata alla serie calcolata, che sono di nuovo i tuoi
+    <li><code>ZAChartView.ve</code> darebbe la definizione dei report che altrimenti manca - tipo di
+      grafico, raggruppamenti, assi - ma arriva saldata alla serie calcolata, che sono di nuovo i tuoi
       dati. Quindi le definizioni dei report restano <b>non coperte</b>, e ogni superficie lo dice
       invece di lasciar credere che il mirror sia completo.</li>
   </ul>
@@ -124,7 +124,7 @@
   <h2 id="what-is-promised">Cosa è promesso, e cosa no</h2>
   <p>Quelle interfacce interne non portano nessuna promessa di compatibilità. Zoho può cambiarne una
     senza preavviso e una funzionalità può smettere di funzionare da un giorno all'altro.</p>
-  <p>Niente è garantito — lo dice la licenza e lo dice questa pagina. Quello che viene offerto è
+  <p>Niente è garantito - lo dice la licenza e lo dice questa pagina. Quello che viene offerto è
     impegno: se qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non
     lo sarà, e allora la funzionalità dirà chiaramente che quella cosa non la può fare, invece di
     tirare a indovinare. <b>Il mirror che hai già sul disco continua a funzionare comunque</b>, perché
@@ -134,7 +134,7 @@
   <p>Pubblicare un tag di release fa sì che GitHub faccia il checkout di quel commit, lo costruisca
     <b>due volte</b> per dimostrare che il risultato è identico byte per byte, stampi il contenuto
     dell'archivio in un log pubblico, e firmi un'attestazione di provenienza. L'archivio allegato alla
-    Release <em>è</em> il file inviato al Chrome Web Store — mai una build fatta su un portatile.</p>
+    Release <em>è</em> il file inviato al Chrome Web Store - mai una build fatta su un portatile.</p>
   <p>La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non
     vale niente se due build dello stesso commit sono diverse, e le nostre lo erano, perché
     <code>zip</code> memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del
@@ -151,7 +151,7 @@
       <tr><td class="k"><code>tools/verify.sh</code></td>
         <td>lo ricostruisce sulla tua macchina e confronta gli hash</td></tr>
       <tr><td class="k"><a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">RELEASES.md</a></td>
-        <td>commit, tag e SHA-256 di ogni versione inviata — comprese le due righe che dichiara di
+        <td>commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di
           <em>non</em> poter verificare, e perché</td></tr>
       <tr><td class="k"><a href="/llms.txt">llms.txt</a></td>
         <td>la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto
@@ -201,7 +201,7 @@
     </p>
     <p class="legal">
       Zoost è uno strumento indipendente e non ufficiale. <b>Non</b> è affiliato, approvato, sponsorizzato né
-      supportato da Zoho Corporation. “Zoho”, “Zoho CRM”, “Zoho Analytics” e “Deluge” sono marchi di Zoho
+      supportato da Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" e "Deluge" sono marchi di Zoho
       Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
     </p>
   </div>

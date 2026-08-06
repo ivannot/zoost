@@ -1,5 +1,5 @@
 /*
- * site.js — progressive enhancement for zoost.it. The pages are complete without it: this only
+ * site.js - progressive enhancement for zoost.it. The pages are complete without it: this only
  * fills in things that cannot be known when the HTML is written. If it does not run, or the API is
  * unreachable, nothing breaks and nothing misleading is left on screen.
  */
@@ -7,7 +7,7 @@
   'use strict';
 
   // Copyright year. A notice reads as the year of publication, so the first year stays fixed and a
-  // range appears only once the current year is actually later — "Copyright 2027" alone on work
+  // range appears only once the current year is actually later - "Copyright 2027" alone on work
   // published in 2026 would be less accurate, not more.
   var FIRST_YEAR = 2026;
   var now = new Date().getFullYear();
@@ -55,10 +55,10 @@
 
   // "Covers Zoost X · updated Y" on the guide. Kept in step with the repo automatically: the rule is
   // that documentation ships with the code that changed it, so the version the docs describe is the
-  // version in the manifest. The date is the last change to that guide specifically — using the whole
+  // version in the manifest. The date is the last change to that guide specifically - using the whole
   // site would claim the guide was updated when only the homepage moved.
   // "Covers Zoost X · updated Y" on a guide. Which product's version, and which file's date, come
-  // from the .upd element itself — a guide that borrowed the other product's number would be stating
+  // from the .upd element itself - a guide that borrowed the other product's number would be stating
   // something false about the thing it documents.
   function fillDocsStamp(d) {
     var el = document.querySelector('.upd');
@@ -89,10 +89,10 @@
       // being built right now. "In development" is spelled out so it cannot be read as available.
       var bits = [];
       // Our products, named as ours. "Zoho CRM · Web Store 1.0.0" does not read as "the Zoost for
-      // Zoho CRM you can install is 1.0.0" — it reads as a statement about Zoho's product, and it
+      // Zoho CRM you can install is 1.0.0" - it reads as a statement about Zoho's product, and it
       // is false: 1.0.0 is our version. A label that attributes a property has to name the thing
-      // the property belongs to. (A label that merely *selects* a platform — the nav buttons, the
-      // guide switcher — may say "Zoho CRM", because there you are choosing a platform.)
+      // the property belongs to. (A label that merely *selects* a platform - the nav buttons, the
+      // guide switcher - may say "Zoho CRM", because there you are choosing a platform.)
       var prods = [
         ['crm', 'Zoost CRM', d.crm || { store: d.store, repo: d.repo, tag: d.tag }],
         ['analytics', 'Zoost Analytics', d.analytics],
@@ -100,7 +100,7 @@
       prods.forEach(function (pr) {
         var app = pr[0], name = pr[1], v = pr[2];
         if (!v || (!v.store && !v.repo)) return;
-        // "none yet" rather than "unknown": for a product with no tag those are opposite claims —
+        // "none yet" rather than "unknown": for a product with no tag those are opposite claims -
         // one says we failed to look, the other is a fact, and it is the fact RELEASES.md states.
         //
         // The tag is a link to its Release, where the archive, its SHA-256 and the two verification
@@ -109,22 +109,22 @@
         // the badge stops being a claim and becomes something the reader can check.
         // Three answers to three different questions, in the order a version travels: what you can
         // install today, what has been built and signed and can be downloaded now, what is being
-        // worked on. When the release is ahead of the Store — built, attested, waiting for review —
+        // worked on. When the release is ahead of the Store - built, attested, waiting for review -
         // that gap is stated rather than left to be worked out from two numbers. Someone curious can
         // take the archive from the Release and try it before Google gets to it.
         // The number, not the tag name. Every other figure in this badge is a version, and
-        // "crm-v1.9.0" beside "1.0.0" reads as two different kinds of thing — the reader has to
+        // "crm-v1.9.0" beside "1.0.0" reads as two different kinds of thing - the reader has to
         // work out that one of them contains the other. The tag is still where the link goes,
         // because that is what identifies the release; it just is not what needs saying.
         var rel = verOf(v.tag) || v.tag;
         var tag = v.tag
           ? '<a href="' + REPO_URL + '/releases/tag/' + encodeURIComponent(v.tag) + '">' + esc(rel) + '</a>'
           : '<i>' + t('none') + '</i>';
-        // Said only when it is known. "Submitted on 4 Aug — awaiting review" is a fact with a
+        // Said only when it is known. "Submitted on 4 Aug - awaiting review" is a fact with a
         // source: RELEASES.md records the date, and the reader can go and check the row. A tag that
         // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
         // tell, and saying "submission pending" there would be asserting something we never
-        // measured — the same shape as every claim this project has had to walk back.
+        // measured - the same shape as every claim this project has had to walk back.
         var ahead = '';
         if (newer(verOf(v.tag), v.store)) {
           ahead = v.submitted
@@ -132,7 +132,7 @@
             : ' <i>' + t('notSubmitted') + '</i>';
         }
         // What is actually in review, when that is not the newest tag. Without this the page said
-        // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review — every
+        // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review - every
         // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
         // not already the release line above.
         var review = '';
@@ -161,8 +161,8 @@
     })
     .catch(function () { /* the badge simply does not appear */ });
 
-  // The published state is *proven*, never asserted. The markup ships the conservative truth — "in
-  // review", no install link — and this promotes it only when /api/versions reports a real version
+  // The published state is *proven*, never asserted. The markup ships the conservative truth - "in
+  // review", no install link - and this promotes it only when /api/versions reports a real version
   // scraped from the listing. So the page is right the moment the Store publishes, without anyone
   // remembering to edit it, and a scrape that fails leaves the understatement standing rather than
   // inventing a link to a listing that serves nothing. Understating is recoverable; the homepage
@@ -181,7 +181,7 @@
   }
 
   // Linked only when there is a version, which is the same thing as the listing serving content:
-  // the number comes from scraping that page. So the link cannot lead somewhere empty — while
+  // the number comes from scraping that page. So the link cannot lead somewhere empty - while
   // Zoost Analytics is in review the figure reads "unknown" and stays plain text.
   function store(v) {
     if (!v.store) return '<i>' + t('unknown') + '</i>';
@@ -189,8 +189,8 @@
   }
 
   // The in-development number links to what is *in* it. A compare view against the latest release
-  // answers the question someone actually has — "what would I get that the download does not have"
-  // — rather than merely showing where the number is stored. Without a release to compare against
+  // answers the question someone actually has - "what would I get that the download does not have"
+  // - rather than merely showing where the number is stored. Without a release to compare against
   // there is nothing to diff, so it falls back to that app's commits, which is the same question
   // asked the only way still available.
   function dev(app, v) {

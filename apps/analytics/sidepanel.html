@@ -6,16 +6,16 @@
 <title>Zoost — workbench for Zoho Analytics</title>
 <style>
   /* An author `display` beats the UA rule behind the `hidden` attribute, so an element with both is
-     visible — silently, with nothing in the console. It shipped twice in one change: the passphrase row
+     visible - silently, with nothing in the console. It shipped twice in one change: the passphrase row
      in Settings, and the unlock row in the panel, both permanently on screen. One rule, once, rather
      than remembering it at every element that grows a display later. */
   [hidden]{display:none!important}
-  /* The two Zoost extensions are twins. Anything they have in common — the workspace bar, the
-     environment guard, the dialogs, the button semantics, the empty states — is the *same* thing
+  /* The two Zoost extensions are twins. Anything they have in common - the workspace bar, the
+     environment guard, the dialogs, the button semantics, the empty states - is the *same* thing
      here as in apps/crm, down to the element ids, so that someone who uses both never has to learn
      it twice and so that a fix on one side can be carried to the other mechanically.
      Only the accent differs: magenta instead of blue. It matches this product's icon, and it also
-     restores a separation that was lost — with a teal accent, .lbtn (a local artefact) and the accent
+     restores a separation that was lost - with a teal accent, .lbtn (a local artefact) and the accent
      itself shared a hue, so the five-role button grammar had four distinguishable colours here and
      five in the CRM. */
   :root{
@@ -31,13 +31,13 @@
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
   button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
 
-  /* button semantics — identical meaning to the CRM panel:
-     .zbtn  solid accent  — reads from / talks to Zoho (pull)
-     .znav  light blue    — opens a page in Zoho
-     .lbtn  teal outline  — produces a local artefact (file or window)
-     .pbtn  violet outline— in-panel view, no output, no Zoho call
-     .abtn  amber outline — AI                                                */
-  /* Toolbar marks. Same weight as the ↻ glyph beside them — 1.6px stroke at 13px — and
+  /* button semantics - identical meaning to the CRM panel:
+     .zbtn  solid accent  - reads from / talks to Zoho (pull)
+     .znav  light blue    - opens a page in Zoho
+     .lbtn  teal outline  - produces a local artefact (file or window)
+     .pbtn  violet outline- in-panel view, no output, no Zoho call
+     .abtn  amber outline - AI                                                */
+  /* Toolbar marks. Same weight as the ↻ glyph beside them - 1.6px stroke at 13px - and
      currentColor, so each inherits its button's role colour instead of introducing a new one.
      A mark replaces the *visible* word only: the name lives in aria-label and title, which is
      where a name has to be anyway for anyone not looking at pixels. */
@@ -48,7 +48,7 @@
   button.icon{padding:6px 8px}
   button.glyph{font-size:15px;line-height:14px;padding:6px 8px}
   /* 14px, not 13: the line box a word makes here is 14px, so a 13px block left the marked
-     buttons one pixel shorter than their neighbours. The drawing is unchanged — only its box. */
+     buttons one pixel shorter than their neighbours. The drawing is unchanged - only its box. */
   button.icon .mk{display:block;width:14px;height:14px}
   .dhead button .mk{display:block;width:12px;height:12px}
   .zbtn{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
@@ -62,7 +62,7 @@
   .abtn{background:transparent;border:1px solid #b06a1c;color:#f0a44a}
   .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
 
-  /* ---- workspace bar — same two rows, same ids, same affordances as the CRM panel ---- */
+  /* ---- workspace bar - same two rows, same ids, same affordances as the CRM panel ---- */
   .wsbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
   .wsbar2{padding-top:0;border-bottom:1px solid var(--line)}
   .wsroot{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:1px dashed var(--border);color:var(--muted)}
@@ -97,7 +97,7 @@
   #status.busy .spin{display:inline-block}
   @keyframes sp{to{transform:rotate(360deg)}}
 
-  /* toolbar — same grouping, classes and uniform button height as the CRM panel */
+  /* toolbar - same grouping, classes and uniform button height as the CRM panel */
   .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0}
   .wsgroup{border:1px solid var(--border);border-radius:9px;padding:5px 7px 7px;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
   .wsgroup button{height:28px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}
@@ -147,7 +147,7 @@
   .vtbl th.num{text-align:right}
   .vtbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top}
   .vtbl td.num{text-align:right;font:11px var(--mono);color:var(--muted)}
-  .vtbl td.verbatim{font-style:italic}   /* Zoho's own wording, passed through — not a value we computed */
+  .vtbl td.verbatim{font-style:italic}   /* Zoho's own wording, passed through - not a value we computed */
   .vtbl tr{cursor:pointer} .vtbl tr:hover{background:#15242e} .vtbl tr.sel{background:var(--sel-soft)}
   .vname{color:var(--ink);font-weight:500;word-break:break-word}
   .vsub{color:var(--muted);font-size:10px;margin-top:1px}
@@ -160,7 +160,7 @@
   #resizer{height:8px;flex:none;background:#0a0f18;border-top:1px solid var(--border);border-bottom:1px solid var(--border);cursor:row-resize;display:none;position:relative}
   #resizer.show{display:block}
   #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
-  /* detail pane — the structure of the selected table or view */
+  /* detail pane - the structure of the selected table or view */
   #detail{display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
   #detail.show{display:flex}
   #list{flex:1 1 auto;overflow:auto;padding:0 0 4px;min-height:60px;background:var(--tree)}
@@ -173,7 +173,7 @@
   .dtab.active{background:#28405c;border-color:#3d5a7e;color:#fff}
   .dtab:disabled{opacity:.35;cursor:default}
   /* No padding on the scrolling box itself. With padding-top here the sticky header sits below it
-     and rows scroll up into the gap above — visible, and exactly what was reported. Padding lives
+     and rows scroll up into the gap above - visible, and exactly what was reported. Padding lives
      on .dpad for the tabs that are not a table; the columns table is full-bleed and its own cells
      carry the spacing. */
   .dbody{flex:1;overflow:auto;padding:0}
@@ -184,7 +184,7 @@
   .ctbl td.t{font:10px var(--mono);color:#8fd8c8;white-space:nowrap}
   a.fk{color:#9fc4f5;cursor:pointer;font-size:10.5px;white-space:nowrap;text-decoration:none}
   a.fk:hover{color:#cfe1fb;text-decoration:underline}
-  a.fk.in{color:#b9a9f0}      /* incoming: someone else points here — a different fact, a different colour */
+  a.fk.in{color:#b9a9f0}      /* incoming: someone else points here - a different fact, a different colour */
   a.fk .fkc{color:var(--muted)}
   pre.sql{margin:0;font:11px var(--mono);color:#cbd5e1;white-space:pre-wrap;word-break:break-word;line-height:1.5}
   .lin{margin:0 0 10px}
@@ -204,8 +204,8 @@
   #aiengbadge{font:10px var(--mono);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px;white-space:nowrap}
   #aiengbadge.agent{color:#83d8c6;border-color:#2f6f62}
   #aiengbadge.single{color:#f0a44a;border-color:#6b4a1c}
-  /* Chrome, not content: the context line sits on the panel background so the message bubbles —
-     which are --surface — read as raised above it. It used to share both the background and the
+  /* Chrome, not content: the context line sits on the panel background so the message bubbles -
+     which are --surface - read as raised above it. It used to share both the background and the
      border tone with the assistant's bubble, so the two ran together and the first line of an
      answer looked like a continuation of the status bar. */
   .aictx{padding:6px 12px;font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg)}
@@ -258,14 +258,14 @@
   #healthbody .gap{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:5px}
 
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}
-  /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline —
-     «Press <b>Grant access</b> above» — became its own line and the sentence arrived in four
+  /* Only the *first* b is the heading. The rule used to hit every one, so a control named inline -
+     «Press <b>Grant access</b> above» - became its own line and the sentence arrived in four
      fragments that read as four separate statements. */
   .empty > b:first-child{color:var(--ink);display:block;margin-bottom:5px;font-size:13px}
   .empty b{color:var(--ink)}
   .empty code{font:11px var(--mono);color:#f0a8c8}
 
-  /* ---- dialogs and overlays — same structure and ids as the CRM panel ---- */
+  /* ---- dialogs and overlays - same structure and ids as the CRM panel ---- */
   .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
   .scrim.on{display:block}
   .dlg{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
@@ -302,7 +302,7 @@
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
   <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button>
-  <button id="wsrename" title="Name this workspace — a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove — delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
+  <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
 </div>
 
 <div id="ctx" class="unbound">
@@ -313,17 +313,17 @@
 
 <div class="genbar">
   <fieldset class="wsgroup">
-    <button id="pull" class="zbtn icon" disabled title="Pull all — views, structure, relations, SQL and lineage" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
+    <button id="pull" class="zbtn icon" disabled title="Pull all - views, structure, relations, SQL and lineage" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
     <button id="retry" style="display:none" title="Re-read only the items that failed in the last pull"></button>
-    <button id="refresh" disabled title="Refresh — reload from disk / re-grant folder access" aria-label="Refresh" class="glyph">↻</button>
+    <button id="refresh" disabled title="Refresh - reload from disk / re-grant folder access" aria-label="Refresh" class="glyph">↻</button>
     <span class="gsep"></span>
     <span class="expgroup"><span class="explabel">export</span>
       <button id="export" class="lbtn" disabled title="Self-contained HTML report of this workspace">HTML</button>
-      <button id="exportmd" class="lbtn" disabled aria-label="Markdown" title="Markdown export — context for an external AI tool">MD</button>
+      <button id="exportmd" class="lbtn" disabled aria-label="Markdown" title="Markdown export - context for an external AI tool">MD</button>
     </span>
     <span class="gsep"></span>
-    <button id="graph" class="lbtn icon" disabled title="ER diagram — tables, columns and the relations between them, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
-    <button id="health" class="pbtn glyph" disabled title="Health — workspace audit, shown in this panel" aria-label="Health">♥</button>
+    <button id="graph" class="lbtn icon" disabled title="ER diagram - tables, columns and the relations between them, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
+    <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
     <button id="askai" class="abtn" disabled title="Ask AI about this workspace">AI</button>
   </fieldset>
 </div>
@@ -351,15 +351,15 @@
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
 </div>
 
-  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them — align them using the action above.</div></div></div>
+  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them - align them using the action above.</div></div></div>
 
   <!-- Deliberately empty: the CRM's tree is too. An empty state has to say *why* it is empty, which
-       only the code knows — a copy of that sentence in the markup is a second source of truth, and it
+       only the code knows - a copy of that sentence in the markup is a second source of truth, and it
        is the one on screen at startup, so fixing the other one changed nothing. -->
   <div id="list"></div>
 
   <div id="aiview">
-    <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation — also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
+    <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
     <div id="aictx" class="aictx"></div>
     <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
     <div id="aimsgs" class="aimsgs"></div>
@@ -374,7 +374,7 @@
 
   <div id="resizer"></div>
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram \u2014 opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror — &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram - opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror - &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>
@@ -400,14 +400,14 @@
 <div id="expscope" class="dlg">
   <div class="dh"><span>What goes into the export</span><span class="dx" id="expx">✕</span></div>
   <div class="db">
-    <p class="dnote">An export is a file that leaves this machine. Pick what it may contain — the choice is remembered.</p>
+    <p class="dnote">An export is a file that leaves this machine. Pick what it may contain - the choice is remembered.</p>
     <div class="preset"><button id="pspFull">Everything</button><button id="pspSafe">Share-safe</button></div>
-    <label class="ck"><input type="checkbox" id="sc_views"><span><b>Views</b> — the census: name, type, folder, owner, dates</span></label>
-    <label class="ck"><input type="checkbox" id="sc_structure"><span><b>Structure</b> — every table and query table with its columns and types</span></label>
-    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> — the joins from the ER model</span></label>
-    <label class="ck ind"><input type="checkbox" id="sc_sql"><span><b>Query table SQL</b> — the full source of every query table <em>the most sensitive part</em></span></label>
-    <label class="ck"><input type="checkbox" id="sc_lineage"><span><b>Lineage</b> — what reads from what, and what nothing depends on</span></label>
-    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> — the audit and its coverage gaps</span></label>
+    <label class="ck"><input type="checkbox" id="sc_views"><span><b>Views</b> - the census: name, type, folder, owner, dates</span></label>
+    <label class="ck"><input type="checkbox" id="sc_structure"><span><b>Structure</b> - every table and query table with its columns and types</span></label>
+    <label class="ck"><input type="checkbox" id="sc_relations"><span><b>Relations</b> - the joins from the ER model</span></label>
+    <label class="ck ind"><input type="checkbox" id="sc_sql"><span><b>Query table SQL</b> - the full source of every query table <em>the most sensitive part</em></span></label>
+    <label class="ck"><input type="checkbox" id="sc_lineage"><span><b>Lineage</b> - what reads from what, and what nothing depends on</span></label>
+    <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> - the audit and its coverage gaps</span></label>
   </div>
   <div class="df"><span id="scwarn" class="scwarn"></span><button id="expcancel">Cancel</button><button id="expgo" class="zbtn">Export</button></div>
 </div>
