@@ -53,8 +53,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
-  gets the whole width; the same tab brings it back. The other tabs have no list, so they do not
-  have it.
+  gets the whole width; the same tab brings it back, and dragging that edge resizes the list
+  instead. The other tabs have no list, so they do not have it.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

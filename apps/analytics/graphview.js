@@ -338,17 +338,63 @@ function buildRelChips() {
 (function () {
   const btn = document.getElementById('asidebtn');
   if (!btn) return;
-  btn.onclick = () => {
-    const off = document.body.classList.toggle('no-aside');
+  const MIN = 220;    // the list is never dragged narrower than this
+  const KEEP = 260;   // ...nor so wide that the detail beside it has less than this
+  const DRAG = 4;     // ...and under this many pixels of movement it was a click, not a drag
+  let down = null;
+
+// The clamp, named and out of the drag so it can be tested without a DOM: never below MIN, and
+// never so wide that the detail beside it has less than KEEP. A container reporting no width is not
+// a reason to snap the column to its minimum - that is a measurement, not a constraint - so the
+// upper bound is only applied when there is a width to apply it from.
+function asideWidth(want, wrapW) {
+  const w = Math.max(MIN, Math.round(want));
+  const max = wrapW - KEEP;
+  return max > MIN ? Math.min(max, w) : w;
+}
+
+  function setFolded(off) {
+    document.body.classList.toggle('no-aside', off);
     // The arrow points where the column will go. `aria-expanded` rather than `aria-pressed`: this
     // discloses a region, it does not toggle a mode.
     btn.textContent = off ? '\u25b8' : '\u25c2';
     btn.setAttribute('aria-expanded', String(!off));
     btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
-    btn.title = off ? 'Show the list' : 'Hide the list and give the whole window to the detail';
+    btn.title = off ? 'Show the list' : 'Drag to resize the list, click to hide it';
     // The canvas is sized from its box, so it has to be told the box changed.
     if (typeof resize === 'function' && curView === 'visual') { resize(); if (typeof fitView === 'function') fitView(); if (typeof draw === 'function') draw(); }
-  };
+  }
+
+  // The same edge resizes and folds, which is what a divider does everywhere else. They are told
+  // apart by movement, not by a second control: under DRAG pixels it was a click. The ER boxes
+  // already separate a click from a drag this way.
+  btn.addEventListener('pointerdown', (e) => {
+    if (document.body.classList.contains('no-aside')) return;   // nothing to resize while folded
+    const aside = document.querySelector('#v-explorer aside');
+    down = { x: e.clientX, w: aside.getBoundingClientRect().width, moved: false };
+    btn.setPointerCapture(e.pointerId);
+    document.body.classList.add('aside-drag');
+    e.preventDefault();
+  });
+  btn.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    const dx = e.clientX - down.x;
+    if (!down.moved && Math.abs(dx) < DRAG) return;
+    down.moved = true;
+    document.documentElement.style.setProperty('--aside-w',
+      asideWidth(down.w + dx, document.querySelector('.wrap').getBoundingClientRect().width) + 'px');
+  });
+  btn.addEventListener('pointerup', (e) => {
+    const wasDrag = down && down.moved;
+    down = null;
+    document.body.classList.remove('aside-drag');
+    try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (!wasDrag) setFolded(!document.body.classList.contains('no-aside'));
+  });
+  // Keyboard and the folded state, where pointerdown returns early and never arms a click.
+  btn.addEventListener('click', (e) => {
+    if (e.detail === 0 || document.body.classList.contains('no-aside')) setFolded(!document.body.classList.contains('no-aside'));
+  });
 })();
 
 // ---------------- View toggle ----------------

@@ -28,18 +28,21 @@
   /* Two rows: the title line, then the view tabs under it, left-aligned. They used to sit top
      right, opposite the title, which put the thing you switch with furthest from where the
      eye starts and left a stripe of nothing between them. */
-  header{padding:10px 20px 0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+  header{padding:11px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:11px}
   header .hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
   header h1{font-size:15px;margin:0}
   header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
-  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 -1px}
-  .tab{border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap}
   .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
   .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   .wrap{flex:1;min-height:0;position:relative}
   .view{position:absolute;inset:0;display:none} .view.on{display:flex}
   /* explorer */
-  aside{width:340px;flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
+  /* Width lives in a custom property, not in an inline style: dragging the divider sets the
+     property, and `body.no-aside` still wins on specificity when the column is folded. An
+     inline width would have beaten the fold rule and broken it the first time anyone dragged. */
+  aside{width:var(--aside-w,340px);flex:none;background:var(--surface);display:flex;flex-direction:column;min-height:0;transition:width .12s ease}
+  body.aside-drag aside{transition:none}
   /* The list can be folded away so a wide reference pane gets the whole window. Width to 0
      rather than display:none, so the transition has something to animate and nothing has to
      be re-created when it comes back; `visibility` stops the contents being tabbed to while
@@ -57,8 +60,9 @@
      on the divider would be a smaller target for no gain. --surface rather than --bg, so the
      strip stays visible against the grey detail pane once the white list beside it has gone. */
   #asidebtn{flex:none;width:17px;border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);
-            background:var(--surface);color:var(--muted);cursor:pointer;font:13px var(--sans);padding:0;
-            display:flex;align-items:center;justify-content:center;transition:background .12s ease}
+            background:var(--surface);color:var(--muted);cursor:col-resize;font:13px var(--sans);padding:0;
+            display:flex;align-items:center;justify-content:center;transition:background .12s ease;touch-action:none}
+  body.no-aside #asidebtn{cursor:pointer}
   #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
   #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
   @media print{ #asidebtn{display:none} }
@@ -244,7 +248,7 @@
         <div class="list" id="list"></div>
       </aside>
       <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
-              title="Hide the list and give the whole window to the detail">◂</button>
+              title="Drag to resize the list, click to hide it">◂</button>
       <main id="main"><div class="empty">Select a table.<br>Left = what points at it (impact if you change it). Right = what it points at.</div></main>
     </div>
     <div class="view" id="v-visual">

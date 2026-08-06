@@ -599,6 +599,23 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('the list resizes within bounds, and a container with no width is not a bound', () => {
+  // The same edge resizes and folds; the clamp is lifted out of the drag so it can be run without a
+  // DOM. A container reporting zero width - a hidden or detached pane - would otherwise snap the
+  // column to its minimum, which is a measurement being read as a constraint. Found in a preview
+  // whose JS context reported innerWidth 0 while the page rendered fine.
+  for (const app of ['crm', 'analytics']) {
+    const { asideWidth } = load([sliceConst(`apps/${app}/graphview.js`, 'MIN'),
+                                 sliceConst(`apps/${app}/graphview.js`, 'KEEP'),
+                                 sliceFn(`apps/${app}/graphview.js`, 'asideWidth')], { Math });
+    assert.equal(asideWidth(500, 1240), 500, `${app}: a width that fits is not honoured`);
+    assert.equal(asideWidth(100, 1240), 220, `${app}: the column can be dragged below its minimum`);
+    assert.equal(asideWidth(1200, 1240), 980, `${app}: the detail can be squeezed to nothing`);
+    assert.equal(asideWidth(500, 0), 500, `${app}: a container with no width is treated as a constraint`);
+    assert.equal(asideWidth(500, 300), 500, `${app}: an impossible bound is applied anyway`);
+  }
+});
+
 test('the list folds to zero on both sides, min-width included', () => {
   // The rule applied and the panel did not move: `visibility:hidden` from the same declaration took
   // effect while `width:0` was ignored, because a flex item's default `min-width:auto` resolves to
@@ -613,7 +630,7 @@ test('the list folds to zero on both sides, min-width included', () => {
     // It is a mark, so the name has to live where a screen reader can reach it.
     const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
-    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'\)/, `${app}: nothing toggles it`);
+    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'/, `${app}: nothing toggles it`);
 
     // Explorer only - and by placement, not by a guard. It is a tab on the column, so it sits inside
     // #v-explorer and cannot appear in the three views that have no list. It shipped in all four on

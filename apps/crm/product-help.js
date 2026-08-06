@@ -59,8 +59,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
-  gets the whole width; the same tab brings it back. The other tabs have no list, so they do not
-  have it.
+  gets the whole width; the same tab brings it back, and dragging that edge resizes the list
+  instead. The other tabs have no list, so they do not have it.
 - "Health ♥": a list of things that look wrong - functions nothing calls, calls to functions that do
   not exist, automations pointing at something missing. It states what it cannot see, and it is a
   list of candidates to look at, never a verdict.
