@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Zoost \u2014 workbench for Zoho Analytics",
-  "version": "1.10.0",
+  "name": "Zoost - workbench for Zoho Analytics",
+  "version": "1.10.1",
   "short_name": "Zoost Analytics",
   "homepage_url": "https://zoost.it",
   "description": "Independent, unofficial: mirror a Zoho Analytics workspace to local files - views, columns, foreign keys, query-table SQL.",
@@ -35,7 +35,7 @@
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Zoost \u2014 workbench for Zoho Analytics",
+    "default_title": "Zoost - workbench for Zoho Analytics",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png",

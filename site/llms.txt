@@ -11,11 +11,11 @@ the last section says which ones cannot be checked and why.
 
 ## The two products
 
-- [Zoost — workbench for Zoho CRM](https://zoost.it/crm.html): mirrors Deluge functions, module
+- [Zoost - workbench for Zoho CRM](https://zoost.it/crm.html): mirrors Deluge functions, module
   schema, layouts, related lists, workflows, schedules and the connections catalogue. Adds a
   reference graph, an ER diagram, full-text search across every function, a health audit, HTML and
   Markdown exports, and an optional AI assistant.
-- [Zoost — workbench for Zoho Analytics](https://zoost.it/analytics.html): mirrors every view with
+- [Zoost - workbench for Zoho Analytics](https://zoost.it/analytics.html): mirrors every view with
   its type and folder, the columns of every table and query table, the foreign keys between them, the
   SQL of each query table as its own file, and the dependency graph. Adds an ER diagram, a list of
   what nothing depends on any more, exports, and the same assistant.

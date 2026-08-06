@@ -971,7 +971,7 @@ the places to look first when something "does nothing".
 
 ## Naming and positioning
 
-The products are **Zoost — workbench for Zoho CRM** and **Zoost — workbench for Zoho Analytics**.
+The products are **Zoost - workbench for Zoho CRM** and **Zoost - workbench for Zoho Analytics**.
 Not "IDE": you do not edit code in them, and the audience is wider than developers. "Zoho",
 "Zoho CRM", "Zoho Analytics" and "Deluge" appear only in a descriptive position, never as the
 leading element of the name, and never in the icon. Every user-facing surface carries the
@@ -1145,8 +1145,15 @@ read — the site, the Chrome Web Store copy, `README.md`, every string an exten
 titles — uses exactly the forms below, always. In conversation, shorthand is fine and nothing needs
 correcting; the rule is about what leaves the building, not about how we talk while working.
 
+**The name uses an ordinary hyphen, and that was a deliberate change.** It carried a long dash
+until the rule above reached it, and the name is where the rule bites hardest: it is the string that
+gets pasted into the Store dashboard, into a release title, into a chat window. «Renaming is not a
+find-and-replace» further down still holds — that is about *Zoost*, the word. The punctuation inside
+the name is typography, and changing it costs one edit to each `manifest.json` plus the item name in
+both Store listings at the next submission.
+
 **Three legitimate forms, and nothing else.** `Zoho CRM` / `Zoho Analytics` name **Zoho's** products
-and are used only when we mean theirs. **`Zoost — workbench for Zoho CRM`** is ours in full, and it is
+and are used only when we mean theirs. **`Zoost - workbench for Zoho CRM`** is ours in full, and it is
 the `name` in `manifest.json` — the authority, never a copy. `Zoost CRM` / `Zoost Analytics` name ours
 in short — always carrying *Zoost*, which is why they
 are safe. **A bare `CRM` or `Analytics` is never used**, in any position: it is the one form that

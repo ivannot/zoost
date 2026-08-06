@@ -10,7 +10,7 @@ so changing them does not touch anything below.
 ## 1. Item name (manifest `name`)
 
 ```
-Zoost — workbench for Zoho CRM
+Zoost - workbench for Zoho CRM
 ```
 
 ## 2. Short description (manifest `description`, max 132)

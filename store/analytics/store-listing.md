@@ -1,4 +1,4 @@
-# Zoost — workbench for Zoho Analytics - Chrome Web Store submission copy
+# Zoost - workbench for Zoho Analytics - Chrome Web Store submission copy
 
 Last verified against `apps/analytics/manifest.json` at version **1.0.0** · 3 August 2026
 
@@ -17,7 +17,7 @@ listing gets.
 ## 1. Item name (manifest `name`)
 
 ```
-Zoost — workbench for Zoho Analytics
+Zoost - workbench for Zoho Analytics
 ```
 
 ## 2. Short description (manifest `description`, max 132)

@@ -18,7 +18,7 @@
   const HELP = `
 # ABOUT THIS EXTENSION
 
-You are running inside Zoost — workbench for Zoho Analytics, a Chrome side panel. The user may ask
+You are running inside Zoost - workbench for Zoho Analytics, a Chrome side panel. The user may ask
 how to use it as well as about their workspace. Answer both. When they ask how to do something, name
 the button and where it is, in one or two sentences. Do not describe anything not listed here, and if
 you do not know, say so and point at the guide at zoost.it/docs-analytics.html rather than inventing

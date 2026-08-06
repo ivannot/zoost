@@ -45,7 +45,7 @@ class BareNames(unittest.TestCase):
         self.assertFalse(sitecheck.bare_platform('<p>Zoost Analytics collects nothing.</p>'))
 
     def test_our_full_name_is_fine(self):
-        self.assertFalse(sitecheck.bare_platform('<p>Zoost — workbench for Zoho CRM does this.</p>'))
+        self.assertFalse(sitecheck.bare_platform('<p>Zoost - workbench for Zoho CRM does this.</p>'))
 
     def test_code_and_paths_are_exempt(self):
         # `analytics/` is a folder, not a sentence.
@@ -60,7 +60,7 @@ class UndeclaredForm(unittest.TestCase):
                       sitecheck.undeclared_form('<p>We call it Zoost for Zoho CRM.</p>'))
 
     def test_the_manifest_name_and_short_name_pass(self):
-        html = '<h3>Zoost — workbench for Zoho Analytics</h3><b>Zoost CRM</b>'
+        html = '<h3>Zoost - workbench for Zoho Analytics</h3><b>Zoost CRM</b>'
         self.assertEqual(sitecheck.undeclared_form(html), [])
 
     def test_a_wrong_name_hidden_in_an_aria_label_is_reported(self):
@@ -153,7 +153,7 @@ class BareNamesInTheApps(unittest.TestCase):
     def test_our_own_names_are_silent(self):
         self.assertFalse(self.bare('Zoost CRM mirrors what you built'))
         self.assertFalse(self.bare('Zoost Analytics mirrors what you built'))
-        self.assertFalse(self.bare('Zoost — workbench for Zoho Analytics'))
+        self.assertFalse(self.bare('Zoost - workbench for Zoho Analytics'))
 
     def test_paths_and_identifiers_are_exempt(self):
         # `analytics/` is a folder and `CRM_HOSTS` is an identifier; neither is a sentence.
