@@ -554,6 +554,20 @@ were rewritten in its copy — the edge card (a join, not a related-list snippet
 the filter chips and the wording. If you find yourself changing the layout maths on one side, it
 almost certainly belongs on both.
 
+**The boxed diagram draws functions too, and it is the same tab under the drawing's own name.**
+Functions already had Explorer and Visual - Visual *is* the who-calls-whom graph, and it was there
+long before anyone asked for one. What they did not have is the boxed, focusable, printable view the
+modules get. They do now: a function's box lists **what it calls**, the way a module's lists its
+fields, expressed as the same `{api_name, data_type}` rows so the renderer learns nothing new. The
+tab reads **Call graph** on a function graph and **ER diagram** on a schema - two names, never a
+third, exactly as the window itself is named.
+
+Two things this uncovered. The Explorer selection moved the focus only `if (schema)`, so on a call
+graph the diagram stayed where it opened while the list said otherwise - the same "one of a set" miss
+this file already names. And four status lines spelt out «modules» and «lookups» as literals; `NOUN()`
+derives them from the kind now, and a test refuses any `statline` that names one directly. It found a
+fifth the sweep had missed.
+
 **The ER diagram has two layout branches**, and they are mutually exclusive:
 concentric (focus + ego set) driven by `ring`, and force-directed driven by `spread`.
 A control that does nothing in the active branch must be hidden, not shown and ignored.

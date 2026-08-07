@@ -599,6 +599,48 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
   assert.equal(focused, 'Contacts', 'a readable module can no longer be focused either');
 });
 
+test('a function box lists what it calls, the way a module box lists its fields', () => {
+  // The window is one engine fed by two shapes, so a call graph expresses itself in the shape the
+  // engine already draws - rows of {api_name, data_type} - rather than the renderer learning a
+  // second one. Each row is a callee: its name, and its namespace where a field would put its type.
+  const N = {
+    'billing.createInvoice': { id: 'billing.createInvoice', name: 'createInvoice', namespace: 'billing', calls: ['shared.log', 'billing.calcTax'], called_by: [] },
+    'shared.log': { id: 'shared.log', name: 'log', namespace: 'shared', calls: [], called_by: ['billing.createInvoice'] },
+    'billing.calcTax': { id: 'billing.calcTax', name: 'calcTax', namespace: 'billing', calls: [], called_by: ['billing.createInvoice'] },
+  };
+  const { erCallRows } = load([sliceFn('apps/crm/graphview.js', 'erCallRows')],
+    { N, label: (n) => n.name, DATA: { kind: 'calls' } });
+  const rows = erCallRows(N['billing.createInvoice']);
+  assert.deepEqual(rows.map((r) => r.api_name), ['calcTax', 'log'], 'the callees are not listed, or not in order');
+  assert.deepEqual(rows.map((r) => r.data_type), ['billing', 'shared'], 'the second column is not the callee namespace');
+  assert.deepEqual(erCallRows(N['shared.log']), [], 'a function that calls nothing has rows');
+
+  // ...and erFieldsFor has to route to it. Testing erCallRows alone left the wiring uncovered:
+  // deleting the line that reaches it passed, which is the mutation that found this gap.
+  const rowsOf = (kind, n, node) => {
+    const ctx = { N, label: (x) => x.name, DATA: { kind }, erEmph: 'modules', erAll: true };
+    const { erFieldsFor } = load([sliceFn('apps/crm/graphview.js', 'erCallRows'),
+                                  sliceFn('apps/crm/graphview.js', 'erFieldsFor')], ctx);
+    return erFieldsFor(node);
+  };
+  assert.deepEqual(rowsOf('calls', 0, N['billing.createInvoice']).map((r) => r.api_name), ['calcTax', 'log'],
+    'erFieldsFor does not reach the call rows on a call graph');
+  assert.deepEqual(rowsOf('schema', 0, { fields: [{ api_name: 'Email', data_type: 'email' }] }).map((r) => r.api_name),
+    ['Email'], 'erFieldsFor stopped returning a module\'s fields');
+});
+
+test('a call graph is never described in the nouns of a schema', () => {
+  // Four status lines wrote "modules" and "lookups" literally, so the call graph reported the wrong
+  // nouns in three of them. One accessor decides, and nothing else may spell them out.
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const stat = [...src.matchAll(/\$\('statline'\)\.innerHTML = ([^;]*);/g)].map((m) => m[1]);
+  assert.ok(stat.length >= 3, 'the status lines moved - this test has drifted off its target');
+  for (const line of stat) {
+    assert.ok(!/\bmodules\b|\blookups\b|\bunreferenced\b/.test(line),
+      `a status line spells out a schema noun instead of asking NOUN(): ${line.slice(0, 70)}`);
+  }
+});
+
 test('the force layout paints its spinner before it blocks, not after', () => {
   // Switching to Visual runs an O(n^2) layout on the main thread - measured at 53ms for 50 nodes,
   // 359ms for 150, 1.4s for 300 and 5.9s at the 600-node cap - and the window simply froze with the

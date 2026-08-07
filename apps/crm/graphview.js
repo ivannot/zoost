@@ -18,6 +18,11 @@ const label = (n) => (nameMode === 'internal'
 // dot came out the fallback grey. `pass()` had the same confusion and compared the chip against
 // `namespace` too, which means those five filters only ever worked in an org where Zoho returns no
 // namespace at all. One accessor now decides both, so they cannot drift apart again.
+// What this window is drawing, in words. Four status lines were writing «modules» and «lookups»
+// literally, so a call graph reported the wrong nouns in three of them. Derived once, from the kind.
+const NOUN = () => (DATA.kind === 'schema'
+  ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
+  : { n: 'functions', e: 'calls', dead: 'no-caller', all: 'All functions', box: 'function' });
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
 const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
@@ -34,11 +39,18 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   const _schema = DATA.kind === 'schema';
   document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
-  if (_schema) {
-    $('ertab').style.display = ''; $('reltab').style.display = ''; buildRelChips();
+  // The boxed diagram is the same drawing in both cases, so it is the same tab - under the name the
+  // project already gives each one: "ER diagram" for modules and tables, "Call graph" for functions.
+  // Two names, never a third. `Relations` stays schema-only: the relation-first catalogue is about
+  // related-list API names, and a function graph has no equivalent to put in it.
+  {
+    $('ertab').style.display = '';
+    $('ertab').textContent = _schema ? 'ER diagram' : 'Call graph';
+    if (_schema) { $('reltab').style.display = ''; buildRelChips(); }
+    erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
       const st = await chrome.storage.local.get('erParams');
-      if (st && st.erParams && st.erParams.current) erP = Object.assign({}, ER_PRESET.modules, st.erParams.current);
+      if (st && st.erParams && st.erParams.current && st.erParams.kind === DATA.kind) erP = Object.assign({}, erP, st.erParams.current);
     } catch (_) {}
     erInitControls();
     // Depth buttons wired once: they work whether the focus comes from the open ("Open ER") or is
@@ -47,12 +59,12 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   $('statline').innerHTML = _schema
-    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> modules · <b>${DATA.counts.edges}</b> lookups · <b>${DATA.counts.dead_suspects}</b> unreferenced`
+    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
     : `<b>${DATA.counts.nodes}</b> functions · <b>${DATA.counts.edges}</b> calls · <b>${DATA.counts.dead_suspects}</b> no-caller · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
   buildChips(); render(); buildLegend(); initCanvas(); updateTopTools();
-  if (DATA.kind === 'schema' && DATA.focus) {
+  if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
     $('erdepth').style.display = 'inline-flex'; updateDepthUI();
@@ -258,9 +270,12 @@ function select(id, nopush) {
   if (schema) wireLayoutZone(n);
   $('main').scrollTop = 0;
   focusNode = id;
-  // Focus mode: the Explorer selection IS the context. Set it here so that switching to
-  // Visual or ER afterwards already shows this module (it used to update only via ER).
-  if (schema && id !== curFocus) setFocus(id);   // selecting a module ALWAYS establishes/moves the focus, even from the whole-graph view
+  // Focus mode: the Explorer selection IS the context. Set it here so that switching to Visual or
+  // the boxed diagram afterwards already shows this item. It was gated on `schema`, so on a call
+  // graph selecting a function left the diagram centred on whatever it opened with - the same
+  // "one of a set" miss as everywhere else: the rule is about the three projections agreeing, and
+  // it has nothing to do with which kind of thing is being projected.
+  if (id !== curFocus) setFocus(id);
   else if (curView === 'visual') draw();
 }
 $('q').addEventListener('input', render);
@@ -513,7 +528,8 @@ function showVisualTooBig() {
     ov.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;background:#fff;color:#475569;font:14px/1.7 system-ui,-apple-system,Segoe UI,sans-serif;z-index:6';
     $('visual').appendChild(ov);
   }
-  const focusHint = (DATA && DATA.kind === 'schema') ? ', or open the diagram <b>focused on one module</b> with a small depth' : '';
+  const focusHint = ', or open the diagram <b>focused on one '
+    + (DATA && DATA.kind === 'schema' ? 'module' : 'function') + '</b> with a small depth';
   ov.innerHTML = `<div style="max-width:560px"><div style="font-size:16px;margin-bottom:8px"><b>${nodesA.length} nodes</b> - too many to lay out interactively.</div>`
     + `The force-directed graph is not drawn above ${FORCE_MAX_NODES}: it would block this window while it computes.<br><br>`
     + `Use the <b>Explorer</b> tab - search and filter, always fast${focusHint}.</div>`;
@@ -612,7 +628,7 @@ function updateTopTools() {
   // In schema focus mode the ego-set already drives what is drawn, so the Visual "Focus" button
   // (a second, competing filter) would only be confusing: hide it.
   const fb = $('focusBtn');
-  if (fb) fb.style.display = (DATA && DATA.kind === 'schema' && curFocus) ? 'none' : '';
+  if (fb) fb.style.display = curFocus ? 'none' : '';
 }
 function bfsEgo() {
   egoLevel = {};
@@ -646,7 +662,7 @@ function updateDepthUI() {
   const dp = $('erdepth'); if (dp) dp.style.opacity = scopeAll ? '.45' : '';
 }
 function updateScopeUI() {
-  const lbl = scopeAll ? 'Scope: all modules' : `Scope: ${curFocus || 'focus'}`;
+  const lbl = scopeAll ? `Scope: ${NOUN().all.toLowerCase()}` : `Scope: ${curFocus || 'focus'}`;
   const ttl = scopeAll
     ? 'Showing every module. Click to go back to the focused neighbourhood.'
     : 'Showing the focus neighbourhood. Click to show every module (full diagram for A0 printing).';
@@ -663,7 +679,7 @@ function setScope(all) {
   // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it - we
   // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
   if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} modules</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(curFocus)}</b>; widen with depth instead.`;
+    $('statline').innerHTML = `<b>${nodesA.length} ${NOUN().n}</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(curFocus)}</b>; widen with depth instead.`;
     return;
   }
   scopeAll = !!all;
@@ -674,12 +690,12 @@ function setScope(all) {
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>All modules</b> \u00b7 <b>${DATA.counts.nodes}</b> modules \u00b7 <b>${DATA.counts.edges}</b> lookups \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 <b>${DATA.counts.nodes}</b> ${NOUN().n} \u00b7 <b>${DATA.counts.edges}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
     return;
   }
   const nn = egoSet ? egoSet.size : DATA.counts.nodes;
   const ne = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> modules \u00b7 <b>${ne}</b> lookups \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> ${NOUN().n} \u00b7 <b>${ne}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -717,7 +733,7 @@ function clearFocus() {
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
   $('erdepth').style.display = 'none';
   updateScopeUI(); updateTopTools(); erLaidOut = false;
-  $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> modules · <b>${DATA.counts.edges}</b> lookups · <b>${DATA.counts.dead_suspects}</b> unreferenced`;
+  $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`;
   if (curView === 'er') erShow();
   else if (curView === 'visual') { fitView(); draw(); }
 }
@@ -826,7 +842,12 @@ let erMaxX = 0, erMaxY = 0;
 const ER_PRESET = {
   modules:   { margin: 36,  spread: 42, ring: 420, gap: 8,  fs: 10, sub: true },
   relations: { margin: 120, spread: 72, ring: 640, gap: 10, fs: 13, sub: true },
+  // A call box carries a handful of rows where a module box carries dozens, so the same spacing
+  // leaves the diagram mostly empty. Tighter rings, less spread, and the boxes come out closer.
+  calls:     { margin: 28,  spread: 34, ring: 320, gap: 8,  fs: 10, sub: true },
 };
+// The boxed mode's preset depends on what is being drawn; `relations` is the same idea either way.
+const erBoxPreset = () => (DATA && DATA.kind === 'schema' ? 'modules' : 'calls');
 let erP = Object.assign({}, ER_PRESET.modules);
 // Selecting one arc is the cheapest fix for a crowded diagram: instead of untangling everything,
 // the reader isolates the single relation they care about and the rest recedes.
@@ -854,8 +875,18 @@ function erPickCard() {
     const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
   }).catch(() => {});
 }
+// A function's box lists what it calls, the way a module's box lists its fields. The engine draws
+// rows of {api_name, data_type, lookup}, so the calls are expressed in that shape rather than the
+// renderer learning a second one - the same move the Analytics side makes to reuse this window.
+function erCallRows(n) {
+  return (n.calls || []).map((id) => {
+    const c = N[id];
+    return { api_name: c ? label(c) : id, data_type: c ? (c.namespace || '') : '', lookup: null, mandatory: false, _to: id };
+  }).sort((x, y) => x.api_name.localeCompare(y.api_name));
+}
 function erFieldsFor(n) {
   if (erEmph === 'relations') return [];   // the box is only a label; the edges carry the information
+  if (DATA.kind !== 'schema') return erCallRows(n);
   const all = n.fields || [];
   const base = erAll ? all.slice() : all.filter((f) => f.lookup || f.mandatory || /^(Name|Owner|id)$/i.test(f.api_name));
   const rank = (f) => (f.lookup ? 0 : (f.mandatory ? 1 : 2));
@@ -863,6 +894,13 @@ function erFieldsFor(n) {
 }
 function erVisibleIds() {
   if (erEmph === 'relations') {
+    const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
+    return nodesA.filter((id) => (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+  }
+  // On a call graph a function with no outgoing call is still a box - it is where a chain ends, and
+  // dropping it would break every arrow that points at it. On a schema, a module with no field to
+  // show has nothing to draw and stays out, which is the behaviour that was already here.
+  if (DATA.kind !== 'schema') {
     const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
     return nodesA.filter((id) => (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
   }
@@ -943,7 +981,11 @@ function erRender() {
       return `<div class="errow${lk}"><span class="fn">${esc(fld.api_name)}${req}</span><span class="ft">${t}</span></div>`;
     }).join('');
     const more = s.more ? `<div class="ermore">+${s.rows.length - s.shown} more\u2026</div>` : '';
-    div.innerHTML = `<div class="erhdr"><span>${esc(n.display_name || n.api_name)}</span><small>${esc(n.api_name)}</small></div>${rows}${more}`;
+    // The small right-hand label is the second identity of the thing. A module has an api_name that
+    // differs from its label; a function's does not, and printing the same word twice says nothing -
+    // its namespace is the fact worth having there.
+    const sub = DATA.kind === 'schema' ? (n.api_name || '') : (n.namespace || '');
+    div.innerHTML = `<div class="erhdr"><span>${esc(label(n))}</span><small>${esc(sub)}</small></div>${rows}${more}`;
     div.onclick = () => { if (erDragged) return; const wasFocus = curFocus; select(id); if (!wasFocus) erRender(); };
     boxes.appendChild(div);
   });
@@ -1087,7 +1129,12 @@ function erFit() {
   erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
 }
-function erShow() { if (!erLaidOut) { erLayout(); erLaidOut = true; } erRender(); erFit(); erUpdateControlVis(); }
+function erShow() {
+  if (!erLaidOut) { erLayout(); erLaidOut = true; }
+  erRender(); erFit(); erUpdateControlVis();
+  const h = document.querySelector('#v-er .hint2');
+  if (h) h.textContent = `scroll to zoom \u00b7 drag to pan \u00b7 click a ${NOUN().box} to inspect`;
+}
 let erDown = false, erDragged = false, erSx = 0, erSy = 0, erT0x = 0, erT0y = 0;
 document.addEventListener('mousedown', (e) => {
   if (curView !== 'er' || e.target.closest('#ertools')) return;
@@ -1119,8 +1166,12 @@ let _erT = null;
 // concentric (focus + ego set) is driven by `ring`, the force branch by `spread`.
 function erConcentric() { return !!(curFocus && egoSet); }   // concentric follows the CURRENT focus, not just the one it was opened with
 function erUpdateControlVis() {
-  const rel = erEmph === 'relations', conc = erConcentric();
+  const rel = erEmph === 'relations', conc = erConcentric(), _schema = DATA.kind === 'schema';
   const set = (id, on) => { const e = $(id); if (e) e.classList.toggle('off', !on); };
+  // "Fields: key / all" chooses which of a module's fields are worth a row. A call box has no such
+  // choice - every call it makes is one - so the control has nothing to do and is absent.
+  const fa = $('erAll'); if (fa) fa.style.display = _schema ? '' : 'none';
+  const em = $('erEmph'); if (em) em.textContent = 'Emphasis: ' + erEmphLabel();
   set('rowMargin', true);
   set('rowSpread', !conc);
   set('rowRing', conc);
@@ -1128,8 +1179,9 @@ function erUpdateControlVis() {
   set('rowFs', rel);
   set('rowSub', rel);
   const h = $('erlayHead');
-  if (h) h.textContent = (conc ? 'Concentric layout (focus + depth)' : 'Free layout (all modules)')
-    + ' \u00b7 ' + (rel ? 'relation labels' : 'module boxes');
+  const all = NOUN().all.toLowerCase();
+  if (h) h.textContent = (conc ? 'Concentric layout (focus + depth)' : `Free layout (${all})`)
+    + ' \u00b7 ' + (rel ? (_schema ? 'relation labels' : 'call labels') : (_schema ? 'module boxes' : 'function boxes'));
 }
 function erParamsToUI() {
   ER_CTL.forEach(([sl, lb, k]) => { const e = $(sl); if (e) { e.value = erP[k]; $(lb).textContent = k === 'spread' ? (erP[k] / 10).toFixed(1) : erP[k]; } });
@@ -1153,7 +1205,7 @@ function erInitControls() {
   const cb = $('pSub');
   if (cb) cb.addEventListener('change', () => { erP.sub = cb.checked; erSaveParams(); erApplyParams(false); });
   $('erlayReset').onclick = () => {
-    erP = Object.assign({}, ER_PRESET[erEmph] || ER_PRESET.modules);
+    erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);
     erParamsToUI(); erSaveParams(); erApplyParams(true);
   };
   $('erLayBtn').onclick = () => {
@@ -1163,13 +1215,20 @@ function erInitControls() {
   };
   erParamsToUI(); erUpdateControlVis();
 }
-function erSaveParams() { try { chrome.storage.local.set({ erParams: { modules: erEmph === 'modules' ? erP : null, current: erP, mode: erEmph } }); } catch (_) {} }
+// Keyed by kind: a spread tuned on an ER diagram of 87 modules is the wrong starting point for a
+// call graph, and restoring it there was how the boxes came out a screen apart.
+function erSaveParams() { try { chrome.storage.local.set({ erParams: { current: erP, mode: erEmph, kind: DATA.kind } }); } catch (_) {} }
+// «Emphasis» switches between boxes-with-contents and labels-with-arcs. The internal values stay
+// `modules` / `relations` because the presets and the layout branch are keyed on them; only the word
+// on the button follows what is being drawn.
+const erEmphLabel = () => (erEmph === 'relations' ? (DATA.kind === 'schema' ? 'relations' : 'edges')
+                                                 : (DATA.kind === 'schema' ? 'modules' : 'calls'));
 $('erEmph').onclick = () => {
   erEmph = erEmph === 'relations' ? 'modules' : 'relations';
-  $('erEmph').textContent = 'Emphasis: ' + erEmph;
+  $('erEmph').textContent = 'Emphasis: ' + erEmphLabel();
   $('erEmph').classList.toggle('on', erEmph === 'relations');
   $('erAll').disabled = erEmph === 'relations';
-  erP = Object.assign({}, ER_PRESET[erEmph]);   // each mode has its own sensible starting point
+  erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);   // each mode has its own sensible starting point
   erParamsToUI(); erUpdateControlVis(); erSaveParams();
   erLaidOut = false; erShow();
 };
@@ -1210,7 +1269,7 @@ window.addEventListener('afterprint', () => {
 // Descriptive PDF filename (browsers use document.title as the print filename)
 function pdfTitle() {
   const ws = DATA.workspace || {};
-  const kind = DATA.kind === 'schema' ? (curView === 'er' ? 'schema-ER' : 'schema') : 'functions';
+  const kind = DATA.kind === 'schema' ? (curView === 'er' ? 'schema-ER' : 'schema') : (curView === 'er' ? 'call-graph' : 'functions');
   const d = new Date().toISOString().slice(0, 10);
   return `Zoost-${kind}-${ws.instance || 'unknown'}-org${ws.org || 'x'}-${d}`;
 }

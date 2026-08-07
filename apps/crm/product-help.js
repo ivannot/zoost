@@ -58,6 +58,12 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
+  That window has three views of the same thing: Explorer (a list and a detail pane), Visual (dots
+  and lines, good for the shape of it) and a boxed diagram - "Call graph" for functions, where each
+  box lists what that function calls, and "ER diagram" for modules, where each box lists its fields.
+  Selecting anything in Explorer re-centres all three on it.
+- The references bar under a function also carries a depth and a "Call graph" button, which opens
+  that window centred on this function. The Modules preview has the same pair for the ER diagram.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
   gets the whole width; the same tab brings it back, and dragging that edge resizes the list
   instead. The other tabs have no list, so they do not have it.
