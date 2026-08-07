@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:0f789cbe9e378c51 -->
+<!-- translated-from: site/docs-analytics.html sha256:cefb93484b647a51 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -59,7 +59,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv">1.15.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv">1.16.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -246,13 +246,23 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li>In <b>Explorer</b>, la linguetta sul bordo dell'elenco - <b class="ui">◂ Hide the list</b> - lo
       ripiega, così il dettaglio prende tutta la finestra; <b class="ui">▸ Show the list</b> lo riporta
       indietro. <b>Trascina lo stesso bordo</b> per allargarlo o stringerlo invece che ripiegarlo. Valgono
-      per quella finestra, non vengono ricordati, ed esistono solo lì: le altre tre viste l'elenco non
+      per quella finestra, non vengono ricordati, ed esistono solo lì: le altre due viste l'elenco non
       ce l'hanno.</li>
-    <li>Il primo passaggio a <b>Visual</b> calcola il layout, che su un workspace grande ci mette un
-      momento e lo dice con uno spinner e il numero di nodi. Viene calcolato una volta per insieme di
+    <li>Il primo passaggio all'<b>ER diagram</b> calcola il layout, che su un workspace grande ci mette
+      un momento e lo dice con uno spinner e il numero di nodi. Viene calcolato una volta per insieme di
       viste, quindi tornarci è immediato, e restringere quello che viene disegnato lo ricalcola su ciò
       che resta, invece di lasciare i riquadri dove li aveva messi un disegno più grande. Lo stesso
       insieme viene disposto allo stesso modo ogni volta.</li>
+    <li>Le chip sopra le schede sono insieme il filtro e la legenda dei colori, raggruppate per la
+      domanda che pongono: <b>Views</b> è quali tipi sono a schermo e partono tutti accesi, quindi
+      spegnerne uno lo toglie; <b>Only</b> restringe alle tabelle che sono anche hub, orfane o di
+      sistema, e parte vuoto. <b class="ui">↺ All</b> rimette tutto e <b class="ui">None</b> spegne
+      tutto, così basta un clic per riaccendere il tipo che ti serve. Ognuno dei due è assente quando
+      non farebbe niente.</li>
+    <li>Spegnere un tipo porta via anche quello che resta isolato: una tabella le cui uniche relazioni
+      andavano lì non ha più niente che la leghi, quindi non viene disegnata, e la riga di stato dice
+      quante sono. Restano nell'elenco di <b>Explorer</b>: il diagramma risponde a una domanda più
+      stretta di quella dell'elenco.</li>
     <li><b class="ui">Save PDF</b> lo stampa a dimensione da parete.</li>
   </ul>
   <p>La finestra ha anche una scheda <b>Relations</b>: una riga per join, cercabile per tabella, colonna o

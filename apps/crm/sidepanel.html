@@ -381,7 +381,10 @@
   .laylocal:hover{background:rgba(47,111,98,.16)}
   .secttl{padding:6px 10px;font-weight:600;color:#cdd7e6;background:#141b29;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
   .rlcopy{cursor:pointer} .rlcopy:hover{text-decoration:underline}
-  .laychev{width:12px;display:inline-block;text-align:center;color:#8ea0bb;cursor:pointer;font-size:9px} .laychev:hover{color:#fff}
+  .laychev{flex:0 0 12px;display:inline-block;text-align:center;color:#8ea0bb;cursor:pointer;font-size:9px} .laychev:hover{color:#fff}
+  /* The empty slot on a module with one layout. It holds the column, so the counts to its left do
+     not move when a neighbouring row grows an arrow. */
+  .laychev.none{cursor:default;pointer-events:none}
   .fsub{padding-left:26px;opacity:.9} .fsub .laysub{color:#a78bfa;margin-right:4px}
 </style>
 </head>

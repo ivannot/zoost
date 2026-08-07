@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.15.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.16.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -225,12 +225,20 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li>In <b>Explorer</b>, the tab on the edge of the list - <b class="ui">◂ Hide the list</b> - folds it
       away so the detail gets the whole window; <b class="ui">▸ Show the list</b> brings it back.
       <b>Drag the same edge</b> to make the list wider or narrower instead. Per window, not remembered,
-      and only there: the other three views have no list.</li>
-    <li>The first switch to <b>Visual</b> computes the layout, which takes a moment on a large workspace
-      and says so with a spinner and the node count. It is computed once per set of views, so coming
-      back is instant, and narrowing what is drawn computes it again for what is left rather than
+      and only there: the other two views have no list.</li>
+    <li>The first switch to the <b>ER diagram</b> computes the layout, which takes a moment on a large
+      workspace and says so with a spinner and the node count. It is computed once per set of views, so
+      coming back is instant, and narrowing what is drawn computes it again for what is left rather than
       leaving the boxes where a bigger drawing had put them. The same set is laid out the same way each
       time.</li>
+    <li>The chips above the tabs are the filter and the colour key at once, grouped by what they ask:
+      <b>Views</b> is which kinds are on screen and every one of them starts on, so switching one off
+      removes it; <b>Only</b> narrows to tables that are also a hub, an orphan or a system table, and
+      starts empty. <b class="ui">↺ All</b> puts everything back and <b class="ui">None</b> empties it so
+      one click brings back the kind you want. Each is absent when it would do nothing.</li>
+    <li>Switching a kind off removes what it strands as well: a table whose only relations went into it
+      has nothing left to link it, so it is not drawn, and the status line says how many. They stay in
+      the <b>Explorer</b> list - the diagram is answering a narrower question than the list is.</li>
     <li><b class="ui">Save PDF</b> prints it at wall size.</li>
   </ul>
   <p>The window also has a <b>Relations</b> tab: one row per join, searchable by table, column or join,

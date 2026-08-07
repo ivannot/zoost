@@ -768,6 +768,7 @@ function showView(v) {
   $('v-er').classList.toggle('on', curView === 'er');
   $('v-rel').classList.toggle('on', curView === 'rel');
  
+  statRefresh();
   if (curView === 'rel') relRender();
   // The boxed layout is the one that leaves a blank pane: the concentric branch is cheap, but the
   // free one runs an O(n^2) force settle and then several collision passes on top.
@@ -815,12 +816,28 @@ let nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {}, laidOutKey
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
 let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-poster mode)
 
-// Deterministic robustness guard. The force layout (settle) is O(n²) per iteration × ~420 and runs
-// on the main thread, so above this many nodes we do NOT attempt it - it would freeze the window.
-// We know n before we start, so we refuse up front and point to the views that stay fast (Explorer,
-// and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
-// this single number if you ever profile one.
-const FORCE_MAX_NODES = 600;
+// Deterministic robustness guard. The force layout (settle) is O(n²) per iteration and runs on the
+// main thread, so above this many nodes we do NOT attempt it - the boxes keep their ring positions
+// and the diagram still draws instead of freezing.
+//
+// 600 was a guess made when settle cost 5.9 seconds there. It has now been profiled end to end -
+// the force layout, the collision passes and building the DOM - on a synthetic 2055-node graph:
+//
+//     nodes    settle   collision+rest   DOM     total
+//       600     313ms         204ms      28ms    ~0.5s
+//      1200    1166ms         885ms      43ms    ~2.1s
+//      2055    3364ms        3715ms      83ms    ~7.1s
+//
+// The layout does not get worse with size - the structure ratio is 0.13 at 600 and 0.116 at 1200 -
+// so the only question is how long a deliberate «draw the whole org» may take behind a spinner.
+// Two seconds is a wait; seven is a hang. Hence 1200.
+//
+// Two things this cap does **not** cover, and neither is an oversight. The DOM is not the cost at
+// any size - 83ms for two thousand boxes. And the **collision passes are the other O(n²)** and run
+// whether or not the force layout does, so an org past this cap still pays them: at 2055 that is
+// 3.7 seconds to draw a ring, with a spinner over it. If a real org ever lands there, that pass -
+// not this number - is what to attack.
+const FORCE_MAX_NODES = 1200;
 // The count that matters is what is about to be laid out, never how big the org is: switching a
 // category off can bring a graph that was refused under the budget, and refusing it anyway would
 // mean the filters cannot buy what they exist to buy.
@@ -1038,11 +1055,22 @@ function statOf(set, allN, allE) {
 // underneath a summary of the unfiltered graph.
 function graphStat() {
   $('statline').innerHTML = DATA.kind === 'schema'
-    ? `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
-    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved`;
+    ? `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${orphanNote()}`
+    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
 }
 // Whichever of the two is the right one for the state we are in.
 function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
+// Said in the diagram, where it is the difference between what the Explorer lists and what is
+// drawn. It is not only about the filter: a node with no link of its own is not drawn either, and
+// the first wording («with nothing left to link them») blamed the chips for both. The number is
+// what the reader needs; why is one click away in the list beside it.
+// The Explorer beside it still lists those items, so the two panes are not disagreeing; they answer
+// different questions, and without this the reader is left counting boxes to find out which.
+function orphanNote() {
+  if (curView !== 'er') return '';
+  const k = orphanedByFilter();
+  return k ? ` \u00b7 <span style="color:#94a3b8">${k} not drawn - nothing links them</span>` : '';
+}
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
@@ -1051,7 +1079,7 @@ function egoStat() {
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -1169,20 +1197,41 @@ function erFieldsFor(n) {
   const rank = (f) => (f.lookup ? 0 : (f.mandatory ? 1 : 2));
   return base.sort((a, b) => rank(a) - rank(b));
 }
+// Which nodes still have a link to another node the chips have left standing.
+//
+// It used to be computed from the whole edge list, so switching a category off left behind every
+// node whose only links went into it: boxes with no arrow at all, sitting in a diagram whose whole
+// subject is what connects to what. Reported - «rimangono gli elementi che sarebbero collegati a
+// quelle automation, rendendo monco il grafico».
+//
+// One pass is the whole cascade, not an approximation of it: dropping nodes that have no surviving
+// edge cannot remove an edge between two nodes that do, so the second pass would find nothing. If
+// A links to B and both pass the chips, both are linked - including when one of them links to
+// nothing else.
+function linkedUnderFilter() {
+  const ok = (id) => N[id] && passKind(N[id]);
+  const linked = new Set();
+  edgesA.forEach(([a, b]) => { if (ok(a) && ok(b)) { linked.add(a); linked.add(b); } });
+  return linked;
+}
 function erVisibleIds() {
   const ok = (id) => N[id] && passKind(N[id]);
-  if (erEmph === 'relations') {
-    const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
-    return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+  // On a schema a module with no field to show has nothing to draw and stays out - the behaviour
+  // that was already here, and a different question from having no link left.
+  if (DATA.kind === 'schema' && erEmph !== 'relations') {
+    return nodesA.filter((id) => ok(id) && erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
   }
-  // On a call graph a function with no outgoing call is still a box - it is where a chain ends, and
-  // dropping it would break every arrow that points at it. On a schema, a module with no field to
-  // show has nothing to draw and stays out, which is the behaviour that was already here.
-  if (DATA.kind !== 'schema') {
-    const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
-    return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
-  }
-  return nodesA.filter((id) => ok(id) && erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
+  const linked = linkedUnderFilter();
+  return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+}
+// What the chips leave standing but the diagram will not draw, because nothing links it any more.
+// A number the reader has to be given: the Explorer beside it lists those items, and two panes
+// disagreeing about how many there are with no explanation is the state this window keeps ending in.
+function orphanedByFilter() {
+  if (DATA.kind === 'schema' && erEmph !== 'relations') return 0;
+  const linked = linkedUnderFilter();
+  return nodesA.filter((id) => N[id] && passKind(N[id]) && !linked.has(id) && id !== curFocus
+    && (!egoSet || egoSet.has(id))).length;
 }
 // Text measured, not guessed. The box was a fixed 250px and a long name simply ran past its own
 // edge - reported. There is no canvas in this window any more, so one is made here for its 2D

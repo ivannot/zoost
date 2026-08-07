@@ -52,6 +52,16 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
 - "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
+  That window has three views of one thing: Explorer (a list and a detail pane), the ER diagram, and
+  Relations, which puts the join first instead of the table. Selecting anything in Explorer re-centres
+  all three on it, Relations included: it then lists the joins around that table, and "show all"
+  beside the count widens it back to everything.
+  The chips in that window's header show what is on screen, grouped by what they ask: all lit means
+  everything, and one click switches a kind off. The dashed "Only" group narrows instead - hub, orphan,
+  system table - and starts empty. "↺ All" puts it all back and "None" switches everything off so one
+  click brings back the one kind you want. Switching a kind off does not merely hide it: the diagram is
+  laid out again for what is left, and a table whose only relations went into it is not drawn either -
+  the status line says how many, and they stay in the Explorer list.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
   gets the whole width; the same tab brings it back, and dragging that edge resizes the list
   instead. The other tabs have no list, so they do not have it.

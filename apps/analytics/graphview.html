@@ -66,12 +66,39 @@
   #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
   #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
   @media print{ #asidebtn{display:none} }
-  .search{padding:12px}
-  .search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  .search{padding:12px;position:relative}
+  .search input{width:100%;padding:9px 30px 9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  /* Absent while the box is empty: with nothing typed there is nothing to clear. */
+  .search .qx{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:13px var(--sans);line-height:1;
+              color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none}
+  .search .qx.on{display:block} .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
   .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
+  /* Window-wide, so it lives in the header and not inside the Explorer column. It was in the
+     column, which exists in one of the four views - so the filter that chooses what the diagram
+     draws was invisible from the diagram, and reported as missing. */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0;align-items:center}
+  @media print{ .chips{display:none} }
   .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
   .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  /* One box per dimension, with its name on it. Square corners and a shared border say «these belong
+     together» far better than a gap did - reported twice: first that nine identical pills read as one
+     list of nine kinds, then that the level of each dimension had to be visible rather than inferred.
+     A dimension with a single kind in it is its own chip: a label plus one chip saying the same word
+     twice is a box drawn for symmetry's sake. */
+  .dim{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;padding:3px 6px}
+  .dimt{font:10px var(--sans);text-transform:uppercase;letter-spacing:.4px;color:#8b98ab;padding:0 3px}
+  .dim .chip{border-radius:5px}
+  .chip.solo{border-radius:5px;border-width:1px;padding:4px 10px}
+  /* The conditions are the other question - «narrow to nodes that are also...» - and they start off,
+     which is the honest state when none is chosen. No hue: they are facts about a node, not kinds. */
+  .dim.only{border-style:dashed}
+  /* It read as a stray character: no border, no shape, and nothing under the cursor said it could
+     be pressed. It is a chip like its neighbours now, with the word beside the mark - reported as
+     «you have to find it by trial». */
+  .chipx{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;
+         background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+         margin-left:6px}
+  .chipx:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-soft)}
   /* A chip carries the colour of what it selects: pressed fills, released outlines. Without this the
      dots in the list were a code with no key anywhere on the screen. */
   .chip[data-hue]{border-color:var(--hue);color:var(--hue)}
@@ -106,8 +133,6 @@
   .warn h4{margin:0 0 4px;font-size:12px;color:var(--warn)} .warn code{font:12px var(--mono)}
   .assoc{margin-top:12px;font:11.5px var(--mono);color:var(--muted)} .assoc b{color:#3a4760}
   .file{margin-top:14px;font:11.5px var(--mono);color:var(--muted)}
-  /* visual */
-  #visual{width:100%;height:100%;position:relative;background:radial-gradient(circle at 50% 40%,#ffffff, #eef1f6)}
   /* Shown while the force layout runs. It has to be *painted* before the work starts, which is
      what the double requestAnimationFrame in runHeavy() is for - the layout blocks the main
      thread, so anything drawn in the same task never reaches the screen. */
@@ -118,11 +143,7 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){ .busy i{animation-duration:2.4s} }
   @media print{ .busy{display:none !important} }
-  #cv{width:100%;height:100%;display:block;cursor:grab} #cv:active{cursor:grabbing}
-  .legend{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:11px var(--sans);color:var(--muted)}
-  .legend b{color:var(--ink)} .legend .li{display:flex;align-items:center;gap:6px;margin-top:3px}
   .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
-  #tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font:11px var(--mono);padding:3px 7px;border-radius:6px;display:none;transform:translate(-50%,-140%)}
   #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
   .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
@@ -155,6 +176,7 @@
   #relq{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font:12.5px var(--sans);outline:none}
   #relq:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
   #relcount{font:11.5px var(--sans);color:var(--muted);white-space:nowrap}
+  #relall{color:var(--sel);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   #relwrap{flex:1;overflow:auto;min-height:0}
   .rtbl{width:100%;border-collapse:collapse;font:12px var(--sans)}
   .rtbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
@@ -171,10 +193,10 @@
   .rtbl tr.sys td{background:#fcfcfd;color:#94a3b8}
   .rtbl tr.sys .rname{color:#94a3b8;font-weight:600}
   #relhint{padding:9px 14px;font:11px var(--sans);color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
-  #ertools,#vistools{position:absolute;top:10px;left:10px;z-index:6;display:flex;gap:6px;flex-wrap:wrap}
-  #ertools button,#vistools button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--muted)}
-  #ertools button:hover,#vistools button:hover{border-color:var(--sel);color:var(--ink)}
-  #vistools button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  #ertools{position:absolute;top:10px;left:10px;z-index:6;display:flex;gap:6px;flex-wrap:wrap}
+  #ertools button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--muted)}
+  #ertools button:hover{border-color:var(--sel);color:var(--ink)}
+  #ertools button.on{background:var(--ink);border-color:var(--ink);color:#fff}
   #ertools button.on{background:#92400e;border-color:#92400e;color:#fff}
   #ertools button:disabled{opacity:.4;cursor:default}
   #erlay{position:absolute;top:48px;left:10px;z-index:7;display:none;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:10px 12px;width:262px}
@@ -230,12 +252,6 @@
   .erbox .errow .pk{color:#d97706;font-weight:700;margin-left:2px}
   .erbox .ermore{padding:3px 9px;color:#94a3b8;border-top:1px solid #eef1f6;font-style:italic}
   @media print{ #v-er.on{position:static;overflow:visible} #ervp{transform:none !important} #ertools,.hint2{display:none !important} }
-  @media print{
-    header .tabs, #vistools, #v-explorer, .legend, .hint2, #tip{display:none !important}
-    header{border:0} body{height:auto;overflow:visible}
-    .wrap{position:static} .view{position:static}
-    #v-visual{display:flex !important} #visual{background:#fff}
-  }
   #credit{position:fixed;bottom:6px;left:10px;font:10px system-ui,-apple-system,sans-serif;color:#9aa4b2;z-index:3;pointer-events:none}
   #credit a{color:#9aa4b2;text-decoration:none}
   @media print{ #credit{color:#556;position:fixed;bottom:6px;left:10px} }
@@ -248,35 +264,18 @@
       <span class="stat" id="statline"><b id="s-nodes">0</b> tables · <b id="s-edges">0</b> relations · <b id="s-dead">0</b> in no relation · <b id="s-unres">0</b> unresolved</span>
       <span class="stat" id="s-ws"></span>
     </div>
-    <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+    <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
+    <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
   </header>
   <div class="wrap">
     <div class="view on" id="v-explorer">
       <aside>
-        <div class="search"><input id="q" placeholder="Search table…  (/ to focus)" autocomplete="off"></div>
-        <div class="chips" id="chips"></div>
+        <div class="search"><input id="q" placeholder="Search table…  (/ to focus)" autocomplete="off"><span class="qx" id="qx" role="button" aria-label="Clear the search" title="Clear the search">✕</span></div>
         <div class="list" id="list"></div>
       </aside>
       <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
               title="Drag to resize the list, click to hide it">◂</button>
       <main id="main"><div class="empty">Select a table.<br>Left = what points at it (impact if you change it). Right = what it points at.</div></main>
-    </div>
-    <div class="view" id="v-visual">
-      <div id="visual">
-        <div id="vistools">
-          <button id="visScope" title="Switch between the focused neighbourhood and the whole org" style="display:none">Scope: focus</button>
-        <button id="visReset" title="Clear the focus and show the whole graph again" style="display:none">↺ Whole graph</button>
-          <button id="fitBtn" title="Fit graph to view">Fit</button>
-          <button id="focusBtn" title="Show only the selected node's neighbourhood">Focus</button>
-          <button id="labelBtn" title="Cycle labels: hubs / all / off">Labels: hubs</button>
-          <button id="nameToggle" title="Node labels: internal api_name or display label">Name: display</button>
-          <button id="pdfBtn" title="Save the graph as PDF">Save PDF</button>
-        </div>
-        <canvas id="cv"></canvas>
-        <div class="legend" id="legend"><b>Colour key</b></div>
-        <div class="hint2">scroll to zoom · drag to pan · click a node to inspect</div>
-        <div id="tip"></div>
-      </div>
     </div>
     <div class="view" id="v-rel">
       <div id="relbar">

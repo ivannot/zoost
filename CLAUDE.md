@@ -569,6 +569,14 @@ were rewritten in its copy — the edge card (a join, not a related-list snippet
 the filter chips and the wording. If you find yourself changing the layout maths on one side, it
 almost certainly belongs on both.
 
+**The Visual view is gone from both apps**, and removing it from Analytics cost a lesson the CRM's
+removal had not. `$('visScope').onclick = …` survived at the **top level** of the script: `$()`
+returned null, assigning to `.onclick` threw, and **the whole file stopped evaluating there** — so
+every `const` below it stayed in its temporal dead zone and the window came up with no chips, no
+list, and a status line still holding the text authored in the markup. Nothing in the console,
+because the page had already finished loading. A test now compares every `$('x')` in each panel
+against the ids its own markup carries, with the runtime-built ones named rather than pattern-matched.
+
 **The Visual view is gone, and the tab is called `Graph`.** It was a second, weaker drawing of what
 the boxed diagram already shows - dots and lines against boxes with their contents - and «poco
 visibile» was the report. Deleting a *view* rather than a file is the risky kind: `settle()`, the
@@ -764,6 +772,33 @@ could not lay that many out, and a table costs nothing to widen. The limit belon
 the setter refuses only while the diagram is the view on screen, and the diagram re-asserts it for
 itself when it is opened, putting the scope back and **saying so** rather than drawing a ring nobody
 can read. One sentence, one function (`tooWideToDraw`), two callers.
+
+**A filter that removes a kind must remove what it strands.** Reported: switching `automation` off
+left every node whose only links went into it — boxes with no arrow at all, in a window whose whole
+subject is what connects to what. `linkedUnderFilter()` keeps only nodes with an edge to another node
+the chips left standing, and **one pass is the whole cascade, not an approximation of it**: dropping
+nodes with no surviving edge cannot remove an edge between two that have one, so a second pass finds
+nothing. The Explorer still lists them — the diagram is answering a narrower question — so the status
+line states how many are not drawn rather than leaving the reader to count boxes. Its first wording
+(«with nothing left to link them») blamed the chips for a node that simply has no link of its own,
+which is true with no filter applied at all.
+
+**The budget was a guess and is now a measurement.** `FORCE_MAX_NODES` was 600, chosen when the force
+layout cost 5.9 seconds there. Profiled end to end on a synthetic 2055-node graph — force layout,
+collision passes and DOM:
+
+| nodes | settle | collision + rest | DOM | total |
+|---|---|---|---|---|
+| 600 | 313ms | 204ms | 28ms | ~0.5s |
+| 1200 | 1166ms | 885ms | 43ms | ~2.1s |
+| 2055 | 3364ms | 3715ms | 83ms | ~7.1s |
+
+Quality does not decay with size (the structure ratio is 0.13 at 600 and 0.116 at 1200), so the only
+question is how long a deliberate «draw everything» may take behind a spinner: two seconds is a wait,
+seven is a hang. Hence **1200**, on both sides. Two things the cap does *not* cover and neither is an
+oversight: **the DOM is never the cost** (83ms for two thousand boxes), and the **collision passes are
+the other O(n²)** and run whether or not the force layout does — past the cap an org still pays them.
+If a real org lands there, that pass is what to attack, not this number.
 
 **Explorer, the diagram and Relations are three projections of one context — Relations was the one
 that never joined.** Selecting an item and switching to Relations showed the whole catalogue, so the

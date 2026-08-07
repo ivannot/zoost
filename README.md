@@ -400,8 +400,9 @@ like to support development:
   may grant what this one refuses. Pull again to re-check - a verdict is a record of what was asked,
   not a permanent fact. Only an outright HTTP refusal counts: an area that fails for another reason
   is reported as a failure and stays visible.
-- The **force-directed Visual graph is not attempted above a few hundred nodes** (it would block the
-  window); the Explorer and a focused ER diagram stay fast at any size.
+- The **force-directed layout is not attempted above 1200 nodes** (it would block the window - the
+  whole path is about 2.1s at that number and about 7s at two thousand); the Explorer and a focused
+  ER diagram stay fast at any size.
 
 ---
 

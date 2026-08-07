@@ -3,7 +3,7 @@ const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 /* graphview.js - Explorer + Visual graph. Reads graph from chrome.storage.local. */
-let DATA = null, N = {}, ids = [], filter = 'all', sel = null, hist = [], nameMode = 'display';
+let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
@@ -48,54 +48,174 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdMinus').onclick = () => setDepth(egoDepth - 1);
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
-  $('statline').innerHTML = _schema
-    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(label(N[DATA.focus]) || DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> tables · <b>${DATA.counts.edges}</b> relations · <b>${DATA.counts.dead_suspects}</b> in no relation`
-    : `<b>${DATA.counts.nodes}</b> functions · <b>${DATA.counts.edges}</b> calls · <b>${DATA.counts.dead_suspects}</b> no-caller · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
-  buildChips(); render(); buildLegend(); initCanvas(); updateTopTools();
+  buildChips(); render(); initPositions(); graphStat();
   if (DATA.kind === 'schema' && DATA.focus) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
     $('erdepth').style.display = 'inline-flex'; updateDepthUI();
-    bfsEgo(); egoStat(); updateTopTools(); updateScopeUI();
+    bfsEgo(); egoStat(); updateScopeUI();
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
 })();
 
 // ---------------- Explorer ----------------
-const FILTERS = [['all', 'All'], ['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
-  ['schedule', 'schedule'], ['validation_rule', 'validation'], ['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']];
-const FILTERS_SCHEMA = [['all', 'All'], ['table', 'tables'], ['query', 'query tables'], ['system', 'system'], ['hub', 'hub (3+)'], ['orphan', 'no relation']];
+// What the window is drawing, in two questions.
+//
+// KINDS is «which kinds are on screen», and every one of them starts **on**: the chips show what you
+// are looking at, and turning one off removes it. The first model was the other way round - nothing
+// selected meant everything, and excluding the connections meant selecting the other eight - which
+// he reported as having to work backwards. Showing the state and letting it be switched off is the
+// same information with the work in the right direction.
+//
+// ONLY is «narrow to nodes that are also...». Those are conditions - facts *about* a node, not kinds
+// of node - so they carry no hue and they start off, because «no condition applied» is the truth
+// when none is chosen. Two behaviours, which is why they are two labelled groups and not one row:
+// the level of a dimension has to be visible, not inferred.
+// Derived from the graph, never listed here.
+//
+// The list used to be written out, and it was written out **wrong**: those five words -
+// standalone, automation, button, schedule, validation_rule - are `NS` from graph-core, the Deluge
+// *namespaces* the call regex matches. `KINDOF` reads `category`, which is a different field with
+// different values (`scheduler`, `crmfundamentals`, …). So a node whose category was not one of the
+// five namespaces matched no chip, got no hue, and could never be switched off - which is how
+// «None» left items on screen. It is the same mismatch this repository already recorded once:
+// variables named after categories and consumed as namespaces. Fixed on one side then, and the
+// list left holding the other side's values.
+//
+// So the kinds come from the nodes. A category Zoho invents tomorrow gets a chip without anyone
+// remembering, and nothing can be switched off that the filter does not know about.
+// Zoho Analytics has one vocabulary here - what kind of view a node is - so there is no second
+// dimension of entity chips the way the CRM has workflows, schedules and connections.
+const ENTITY_KINDS = [];
+function kindGroups() {
+  // The empty string is a kind too. A function Zoho gave no category for is a fact about the org,
+  // and filtering it out of this set left it with no chip - so it could not be switched off, and
+  // «None» left it on screen, which is exactly the defect one layer down.
+  const seen = new Set(Object.values(N).map((n) => KINDOF(n)));
+  const entity = ENTITY_KINDS.filter(([k]) => seen.has(k));
+  entity.forEach(([k]) => seen.delete(k));
+  const rest = [...seen].sort();
+  const title = 'Views';
+  return (rest.length ? [[title, rest.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])]] : [])
+    .concat(entity.map(([k, l]) => [l, [[k, null]]]));
+}
+// «System» belongs here and not among the kinds: it is something true *about* a table, the way
+// «hub» is, not a kind of thing - so it gets no hue and it starts off. Zoho Analytics flags it
+// itself (isSystemTable), which is why it can be stated rather than inferred.
+const ONLY = [['hub', 'hub (3+)'], ['orphan', 'orphan'], ['system', 'system table']];
+const onlyList = () => ONLY;
+const allKinds = () => kindGroups().flatMap(([, ks]) => ks.map(([k]) => k));
+
+let hiddenKinds = new Set();   // switched off, so absent from every view
+let onlyConds = new Set();     // narrow to nodes that are also these
+
+function chipEl(k, label, hue) {
+  const c = document.createElement('span');
+  c.className = 'chip'; c.dataset.k = k;
+  if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
+  c.appendChild(document.createTextNode(label));
+  return c;
+}
 function buildChips() {
-  const chips = $('chips'); const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
-  F.forEach(([k, l]) => {
-    const c = document.createElement('span'); c.className = 'chip'; c.setAttribute('aria-pressed', k === 'all');
-    const hue = KINDCOL(k);
-    if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
-    c.appendChild(document.createTextNode(l));
-    c.onclick = () => { filter = k;[...chips.children].forEach((x) => x.setAttribute('aria-pressed', x === c)); render(); };
-    chips.appendChild(c);
+  const box = $('chips'); box.innerHTML = '';
+  kindGroups().forEach(([title, ks]) => {
+    const g = document.createElement('span'); g.className = 'dim';
+    // A dimension with one kind in it is its own chip: a label plus a single chip saying the same
+    // word twice is a box drawn for the sake of symmetry.
+    if (ks.length === 1) {
+      const [k] = ks[0];
+      const c = chipEl(k, title, KINDCOL(k));
+      c.classList.add('solo');
+      g.appendChild(c);
+    } else {
+      const t = document.createElement('span'); t.className = 'dimt'; t.textContent = title;
+      g.appendChild(t);
+      ks.forEach(([k, l]) => g.appendChild(chipEl(k, l, KINDCOL(k))));
+    }
+    box.appendChild(g);
   });
+  const only = document.createElement('span'); only.className = 'dim only';
+  const ot = document.createElement('span'); ot.className = 'dimt'; ot.textContent = 'Only';
+  only.appendChild(ot);
+  onlyList().forEach(([k, l]) => only.appendChild(chipEl(k, l, null)));
+  box.appendChild(only);
+
+  // Both directions, because either one alone is the other's problem. Starting from everything is
+  // right while you are reading a result and wrong while you are hunting for one kind: isolating
+  // «standalone» meant switching eight things off, which is the same eight clicks the first model
+  // charged for the opposite job. «None» empties it so one click brings back what you want.
+  const btn = (id, label, title, fn) => {
+    const e = document.createElement('span');
+    e.className = 'chipx'; e.id = id; e.textContent = label; e.title = title;
+    e.setAttribute('role', 'button'); e.setAttribute('aria-label', title);
+    e.onclick = fn; box.appendChild(e);
+  };
+  btn('chipall', '\u21ba All', 'Show everything again',
+    () => { hiddenKinds.clear(); onlyConds.clear(); syncChips(); applyFilter(); });
+  btn('chipnone', 'None', 'Switch everything off, then turn on the one you want',
+    () => { hiddenKinds = new Set(allKinds()); syncChips(); applyFilter(); });
+
+  box.onclick = (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    const k = c.dataset.k;
+    if (CONDITION_KEYS.has(k)) { onlyConds.has(k) ? onlyConds.delete(k) : onlyConds.add(k); }
+    else { hiddenKinds.has(k) ? hiddenKinds.delete(k) : hiddenKinds.add(k); }
+    syncChips(); applyFilter();
+  };
+  syncChips();
+}
+const CONDITION_KEYS = new Set(['hub', 'orphan', 'system']);
+function syncChips() {
+  document.querySelectorAll('#chips .chip').forEach((c) => {
+    const k = c.dataset.k;
+    c.setAttribute('aria-pressed', CONDITION_KEYS.has(k) ? onlyConds.has(k) : !hiddenKinds.has(k));
+  });
+  // Each is absent when it would do nothing: no «everything» to go back to while nothing is off, and
+  // no «none» to reach while nothing is on.
+  const a = $('chipall'), n = $('chipnone');
+  if (a) a.style.display = (hiddenKinds.size || onlyConds.size) ? '' : 'none';
+  if (n) n.style.display = hiddenKinds.size < allKinds().length ? '' : 'none';
+}
+function passKind(n) {
+  if (hiddenKinds.has(KINDOF(n))) return false;
+  for (const c of onlyConds) {
+    if (c === 'system' && !n.system) return false;
+    if (c === 'hub' && n.called_by.length < 3) return false;
+    if (c === 'orphan' && !(n.called_by.length === 0 && n.calls.length === 0)) return false;
+  }
+  return true;
 }
 function pass(n, q) {
-  const matchQ = !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
-  if (DATA.kind === 'schema') {
-    if (filter === 'table' && KINDOF(n) !== 'table') return false;
-    if (filter === 'query' && KINDOF(n) !== 'query') return false;
-    if (filter === 'system' && !n.system) return false;
-    if (filter === 'hub' && n.called_by.length < 3) return false;
-    if (filter === 'orphan' && !(n.called_by.length === 0 && n.calls.length === 0)) return false;
-    return matchQ;
-  }
-  if (filter === 'rest' && !n.rest) return false;
-  if (filter === 'dead' && !n.dead_suspect) return false;
-  if (filter === 'unres' && !n.unresolved.length) return false;
-  if (['standalone', 'automation', 'button', 'schedule', 'validation_rule'].includes(filter) && KINDOF(n) !== filter) return false;
-  return matchQ;
+  if (!passKind(n)) return false;
+  return !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
+}
+// The chips choose what the window is looking at, so all four views follow them. The search box
+// narrows the *list* only: hiding the diagram down to one node as you type would be a different
+// feature wearing the same control.
+function applyFilter() {
+  render();
+  statRefresh();
+  if (curView === 'rel') relRender();
+  // Not just a repaint: erLayout re-runs the force settle for the set that is left, so the diagram
+  // closes up around what survives instead of keeping the extent of the graph it no longer is.
+  erLaidOut = false;
+  if (curView === 'er') erShowMaybeHeavy();
 }
 function render() {
   const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
+  // An empty list has three reasons and they are not the same advice. Nothing here is ever silent
+  // about which one it is - the rule this project applies to every empty state.
+  if (!ids.filter((i) => pass(N[i], q)).length) {
+    const why = hiddenKinds.size >= allKinds().length
+      ? '<b>Everything is switched off.</b> Turn a chip on above to choose what to show.'
+      : (hiddenKinds.size || onlyConds.size)
+        ? '<b>Nothing matches the filter.</b> <span>\u21ba All</span> above puts everything back.'
+        : (q ? '<b>Nothing matches that search.</b>' : '<b>Nothing in this graph.</b>');
+    listEl.innerHTML = `<div class="empty" style="padding:14px 12px">${why}</div>`;
+    return;
+  }
   ids.map((i) => N[i]).filter((n) => pass(n, q))
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {
@@ -250,13 +370,13 @@ function select(id, nopush) {
   document.querySelectorAll('.crumbs a[data-id]').forEach((a) => (a.onclick = () => select(a.dataset.id)));
   if (schema) wireLayoutZone(n);
   $('main').scrollTop = 0;
-  focusNode = id;
-  // Focus mode: the Explorer selection IS the context. Set it here so that switching to
-  // Visual or ER afterwards already shows this module (it used to update only via ER).
-  if (schema && id !== curFocus) setFocus(id);   // selecting a module ALWAYS establishes/moves the focus, even from the whole-graph view
-  else if (curView === 'visual') draw();
+  // Focus mode: the Explorer selection IS the context. Set it here so that switching to the
+  // diagram afterwards already shows this table (it used to update only via ER).
+  if (id !== curFocus) setFocus(id);
 }
-$('q').addEventListener('input', render);
+$('q').addEventListener('input', () => { render(); updateQx(); });
+function updateQx() { const x = $('qx'); if (x) x.classList.toggle('on', !!$('q').value); }
+$('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(); };
 document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.id !== 'q') { e.preventDefault(); $('q').focus(); } });
 
 // ---------------- Relations (relation-first catalogue) ----------------
@@ -275,7 +395,16 @@ function buildRels() {
   }));
   RELS.sort((a, b) => (a.fromName.localeCompare(b.fromName) || String(a.col).localeCompare(String(b.col))));
 }
+// The neighbourhood the whole window is looking at, or null when nothing is focused. Explorer sets
+// it on every selection and the diagram follows it; Relations did not, so selecting an item and
+// switching to Relations landed on the whole catalogue and the click looked like it had done
+// nothing. It is one context with three projections, not two and a table.
+const relScoped = () => (curFocus && egoSet && !scopeAll ? egoSet : null);
 function relPass(r) {
+  // The chips are window-wide, so a relation whose either end is filtered out is not a row here.
+  if (!N[r.from] || !N[r.to] || !passKind(N[r.from]) || !passKind(N[r.to])) return false;
+  const ego = relScoped();
+  if (ego && !(ego.has(r.from) && ego.has(r.to))) return false;
   if (relFilter === 'user' && r.system) return false;
   if (relFilter === 'sys' && !r.system) return false;
   if (!relQ) return true;
@@ -285,7 +414,14 @@ function relPass(r) {
 function relRender() {
   if (!RELS.length) buildRels();
   const rows = RELS.filter(relPass);
-  $('relcount').textContent = `${rows.length} of ${RELS.length} relations`;
+  // The scope is stated where it applies and carries its own way out - the same control the diagram
+  // uses, not a second one, because a state with two switches is a state that can disagree with
+  // itself. Without a focus there is nothing to say and the line stays a count.
+  const ego = relScoped();
+  $('relcount').innerHTML = ego
+    ? `${rows.length} of ${RELS.length} relations \u00b7 around <b>${esc(label(N[curFocus]) || curFocus)}</b> \u00b7 <a id="relall" role="button" tabindex="0" title="Show every row, and pause the focus in the diagram too">show all</a>`
+    : `${rows.length} of ${RELS.length} relations`;
+  { const a = $('relall'); if (a) a.onclick = () => setScope(true); }
   if (!RELS.length) {
     $('relwrap').innerHTML = '<div class="empty">No relations in this workspace. They come from the ER model - run <b>Pull all</b> and reopen this window.</div>';
     return;
@@ -362,8 +498,6 @@ function wireAsideFold() {
     btn.setAttribute('aria-expanded', String(!off));
     btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
     btn.title = off ? 'Show the list' : 'Drag to resize the list, click to hide it';
-    // The canvas is sized from its box, so it has to be told the box changed.
-    if (typeof resize === 'function' && curView === 'visual') { resize(); if (typeof fitView === 'function') fitView(); if (typeof draw === 'function') draw(); }
   }
 
   // The same edge resizes and folds, which is what a divider does everywhere else. They are told
@@ -428,121 +562,65 @@ function runHeavy(host, label, work) {
 // ---------------- View toggle ----------------
 let curView = 'explorer';
 document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
-  curView = t.dataset.v;
+  if (t.classList.contains('off')) return;
+  showView(t.dataset.v);
+});
+function showView(v) {
+  const t = [...document.querySelectorAll('.tab')].find((x) => x.dataset.v === v);
+  if (!t) return;
+  curView = v;
   document.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', x === t));
   $('v-explorer').classList.toggle('on', curView === 'explorer');
-  $('v-visual').classList.toggle('on', curView === 'visual');
   $('v-er').classList.toggle('on', curView === 'er');
   $('v-rel').classList.toggle('on', curView === 'rel');
-  updateTopTools();
+  statRefresh();
   if (curView === 'rel') relRender();
-  if (curView === 'visual') {
-    if (!forceFeasible()) { showVisualTooBig(); }
-    else {
-      hideVisualTooBig();
-      // The first switch to Visual has to run the force layout, and that blocks. Since settle()
-      // became Fruchterman-Reingold over typed arrays it is about twenty times cheaper - 4ms at 50
-      // nodes, 27 at 150, 75 at 300, 294 at the 600 cap, against 53 / 359 / 1419 / 5854 before.
-      //
-      // It keys on the set, like the boxed diagram, and for a reason that only exists on this side:
-      // the two views lay out *different* sets into the same position arrays, so a boolean latch
-      // left the ER tab's filtered layout standing under a Visual that claims to draw everything.
-      // A key cannot get that wrong.
-      const key = nodesA.join('\n');
-      const heavy = laidOutKey !== key && nodesA.length >= SPIN_NODES;
-      const work = () => {
-        resize();
-        if (laidOutKey !== key) { seedRing(nodesA); settle(nodesA, edgesAmong(nodesA)); laidOutKey = key; }
-        fitView(); draw();
-      };
-      if (heavy) runHeavy($('visual'), `Laying out ${nodesA.length} nodes\u2026`, work);
-      else requestAnimationFrame(work);
-    }
-  }
-  if (curView === 'er') requestAnimationFrame(erShow);
-});
+  if (curView === 'er') erShowMaybeHeavy();
+}
+// Whether the work about to happen is worth saying something about. erShow's cost is in erLayout,
+// and erLayout only runs when the layout is stale - so a second visit to the tab is instant and
+// must not flash anything. Counted on what is about to be laid out, not on how big the workspace is.
+function erShowMaybeHeavy() {
+  const n = erVisibleIds().length;
+  if (!erLaidOut && n >= SPIN_NODES) {
+    runHeavy($('v-er'), `Laying out ${n} tables\u2026`, erShow);
+  } else requestAnimationFrame(erShow);
+}
 
 // ---------------- Visual (canvas force graph) ----------------
-let cv, ctx2d, W = 0, H = 0, nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {};
+let nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {};
 let laidOutKey = '';   // the set the force positions belong to, never a boolean - see settle()
-let scale = 1, offX = 0, offY = 0, focusNode = null, subFocus = null, labelMode = 'hubs';
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
 let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-poster mode)
-let dragging = false, lastX = 0, lastY = 0;
 
 // Deterministic robustness guard. The force layout (settle) is O(n²) per iteration × ~420 and runs
 // on the main thread, so above this many nodes we do NOT attempt it - it would freeze the window.
 // We know n before we start, so we refuse up front and point to the views that stay fast (Explorer,
 // and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
 // this single number if you ever profile one.
-const FORCE_MAX_NODES = 600;
+const FORCE_MAX_NODES = 1200;   // profiled end to end - see the CRM copy for the table
 function forceFeasible(n) { return (n == null ? nodesA.length : n) <= FORCE_MAX_NODES; }
 const edgesAmong = (list) => { const s = new Set(list); return edgesA.filter(([a, b]) => s.has(a) && s.has(b)); };
-function showVisualTooBig() {
-  let ov = document.getElementById('vistoobig');
-  if (!ov) {
-    ov = document.createElement('div'); ov.id = 'vistoobig';
-    ov.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;background:#fff;color:#475569;font:14px/1.7 system-ui,-apple-system,Segoe UI,sans-serif;z-index:6';
-    $('visual').appendChild(ov);
-  }
-  const focusHint = (DATA && DATA.kind === 'schema') ? ', or open the diagram <b>focused on one module</b> with a small depth' : '';
-  ov.innerHTML = `<div style="max-width:560px"><div style="font-size:16px;margin-bottom:8px"><b>${nodesA.length} nodes</b> - too many to lay out interactively.</div>`
-    + `The force-directed graph is not drawn above ${FORCE_MAX_NODES}: it would block this window while it computes.<br><br>`
-    + `Use the <b>Explorer</b> tab - search and filter, always fast${focusHint}.</div>`;
-  ov.style.display = 'flex';
-}
-function hideVisualTooBig() { const ov = document.getElementById('vistoobig'); if (ov) ov.style.display = 'none'; }
-
-function buildLegend() {
-  // The same dimension as the list and the chips, or the window would carry two colour keys that
-  // disagree - which is how it read before: dots by namespace, chips by category.
-  const seen = {}; Object.values(N).forEach((n) => (seen[KINDOF(n)] = 1));
-  const leg = $('legend');
-  Object.keys(seen).sort().forEach((ns) => {
-    const li = document.createElement('div'); li.className = 'li';
-    li.innerHTML = `<span class="dot" style="width:9px;height:9px;border-radius:50%;background:${NSCOL(ns)}"></span>${ns}`;
-    leg.appendChild(li);
-  });
-}
-function initCanvas() {
-  cv = $('cv'); ctx2d = cv.getContext('2d');
-  $('visual').style.position = $('visual').style.position || 'relative';   // anchor the too-big overlay to the canvas area, not the page
+// What "everything" would cost with the chips as they stand - asked before scopeAll is applied, so
+// it cannot ask erVisibleIds().
+function visibleKindCount() { return nodesA.filter((id) => N[id] && passKind(N[id])).length; }
+// The node and edge arrays, and a ring of starting positions for the force layout. This was
+// initCanvas and it set up a canvas as well - the Visual view is gone, and what the boxed diagram
+// actually needed from it was only ever this.
+function initPositions() {
   nodesA = Object.keys(N);
   const es = new Set();
   Object.values(N).forEach((n) => n.calls.forEach((c) => es.add(n.id + '\u0000' + c)));
   edgesA = [...es].map((e) => { const [a, b] = e.split('\u0000'); return [a, b]; });
   seedRing(nodesA);
-  cv.addEventListener('wheel', (e) => { e.preventDefault(); const f = e.deltaY < 0 ? 1.1 : 0.9; scale *= f; draw(); }, { passive: false });
-  cv.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
-  window.addEventListener('mouseup', () => (dragging = false));
-  cv.addEventListener('mousemove', onMove);
-  cv.addEventListener('click', onClick);
-  window.addEventListener('resize', () => { if (curView === 'visual') resize(); });
 }
-function resize() {
-  const r = $('visual').getBoundingClientRect();
-  W = Math.round(r.width) || Math.round(window.innerWidth);
-  H = Math.round(r.height) || Math.round(window.innerHeight - 54);
-  cv.width = W; cv.height = H;
-  if (!offX && !offY) { offX = W / 2; offY = H / 2; }
-  draw();
-}
-function activeSet() { return subFocus ? neighbors(subFocus) : null; }
-function fitView() {
-  if (!nodesA.length) return;
-  const set = activeSet(); const list = set ? [...set] : (egoSet ? [...egoSet] : nodesA);
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const id of list) { minX = Math.min(minX, posX[id]); minY = Math.min(minY, posY[id]); maxX = Math.max(maxX, posX[id]); maxY = Math.max(maxY, posY[id]); }
-  const gw = (maxX - minX) || 1, gh = (maxY - minY) || 1, pad = 60;
-  scale = Math.min((W - pad * 2) / gw, (H - pad * 2) / gh);
-  scale = Math.max(0.15, Math.min(scale, 2.5));
-  offX = W / 2 - ((minX + maxX) / 2) * scale;
-  offY = H / 2 - ((minY + maxY) / 2) * scale;
-  draw();
-}
-function screenXY(id) { return [posX[id] * scale + offX, posY[id] * scale + offY]; }
-function nodeRadius(id) { return 3 + Math.min(9, N[id].called_by.length); }
 
+// The starting ring, sized for the list it is given rather than for the whole graph - which is what
+// makes a filtered layout compact instead of a sparse copy of the unfiltered one.
+//
+// The scatter is a hash of the id, not Math.random(): the same set has to come out the same way
+// every time, or switching a chip off and back on would rearrange a diagram the reader had already
+// learnt to read. It also makes the PDF reproducible, which is worth having on its own.
 function seedRing(list) {
   const R = Math.min(400, 60 + list.length * 2);
   list.forEach((id, i) => {
@@ -628,13 +706,6 @@ function settle(list, edges) {
   for (let i = 0; i < n; i++) { posX[list[i]] = X[i]; posY[list[i]] = Y[i]; vx[list[i]] = 0; vy[list[i]] = 0; }
 }
 
-function updateTopTools() {
-  // Graph controls live inside #vistools (in the Visual view) - nothing to show/hide in the header.
-  // In schema focus mode the ego-set already drives what is drawn, so the Visual "Focus" button
-  // (a second, competing filter) would only be confusing: hide it.
-  const fb = $('focusBtn');
-  if (fb) fb.style.display = (DATA && DATA.kind === 'schema' && curFocus) ? 'none' : '';
-}
 function bfsEgo() {
   egoLevel = {};
   if (scopeAll) { egoSet = null; return; }
@@ -669,43 +740,95 @@ function updateDepthUI() {
 function updateScopeUI() {
   const lbl = scopeAll ? 'Scope: all tables' : `Scope: ${(curFocus && label(N[curFocus])) || 'focus'}`;
   const ttl = scopeAll
-    ? 'Showing every module. Click to go back to the focused neighbourhood.'
-    : 'Showing the focus neighbourhood. Click to show every module (full diagram for A0 printing).';
-  ['erScope', 'visScope'].forEach((id) => {
-    const b = $(id); if (!b) return;
+    ? 'Showing every table. Click to go back to the focused neighbourhood.'
+    : 'Showing the focus neighbourhood. Click to show every table (full diagram for A0 printing).';
+  {
+    const b = $('erScope'); if (!b) return;
     b.style.display = curFocus ? '' : 'none';
     b.textContent = lbl; b.title = ttl; b.classList.toggle('on', scopeAll);
-  });
+  }
   // The reset appears only when a focus is active (whole-graph view already IS the reset target).
-  ['erReset', 'visReset'].forEach((id) => { const b = $(id); if (b) b.style.display = curFocus ? '' : 'none'; });
+  { const b = $('erReset'); if (b) b.style.display = curFocus ? '' : 'none'; }
+}
+// The counts are of what the chips leave standing, with the full figure beside them when they
+// differ. A status line reading 900 tables over a diagram drawing 200 is the same defect as a
+// diagram that does not shrink when you filter it: a number that is not about what is on screen.
+//
+// Counted from the graph, never from nodesA/edgesA - those are layout state, and this line is
+// written once before initPositions() has filled them.
+function statCounts(set) {
+  const inSet = (id) => !set || set.has(id);
+  const nodes = Object.keys(N).filter((id) => inSet(id) && passKind(N[id]));
+  const keep = new Set(nodes);
+  let e = 0;
+  Object.values(N).forEach((n) => { if (!keep.has(n.id)) return; n.calls.forEach((c) => { if (keep.has(c)) e++; }); });
+  return { n: nodes.length, e };
+}
+function statOf(set, allN, allE) {
+  const c = statCounts(set);
+  const nf = c.n !== allN ? ` <span style="color:#94a3b8">of ${allN}</span>` : '';
+  const ef = c.e !== allE ? ` <span style="color:#94a3b8">of ${allE}</span>` : '';
+  return `<b>${c.n}</b>${nf} tables · <b>${c.e}</b>${ef} relations`;
+}
+// The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it
+// back: it was written once at startup and then never again, so filtering changed the drawing
+// underneath a summary of the unfiltered graph.
+function graphStat() {
+  $('statline').innerHTML = `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(label(N[DATA.focus]) || DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
+}
+// Whichever of the two is the right one for the state we are in.
+function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
+// Said in the diagram, where it is the difference between what the Explorer lists and what is
+// drawn. It is not only about the filter: a node with no link of its own is not drawn either, and
+// the first wording («with nothing left to link them») blamed the chips for both. The number is
+// what the reader needs; why is one click away in the list beside it.
+function orphanNote() {
+  if (curView !== 'er') return '';
+  const k = orphanedByFilter();
+  return k ? ` · <span style="color:#94a3b8">${k} not drawn - nothing links them</span>` : '';
+}
+// One sentence, one function - the setter that refuses, and the diagram that puts itself back when
+// a scope widened elsewhere turns out to be more than it can draw.
+function tooWideToDraw(wide) {
+  const filtered = wide < nodesA.length;
+  $('statline').innerHTML = `<b>${wide} tables</b>${filtered ? ` of ${nodesA.length}` : ''} - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; switch a kind off above, or widen with depth instead.`;
 }
 function setScope(all) {
   if (!curFocus) return;
-  // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it - we
-  // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
-  if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} tables</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(label(N[curFocus]) || curFocus)}</b>; widen with depth instead.`;
-    return;
-  }
+  // "All tables" triggers the whole-workspace free layout. Above the budget we don't attempt it -
+  // we stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
+  // And it is the *diagram's* budget: Relations is a table, so refusing there would be borrowing
+  // one view's limit to block another.
+  const wide = visibleKindCount();
+  if (all && curView === 'er' && !forceFeasible(wide)) { tooWideToDraw(wide); return; }
   scopeAll = !!all;
-  bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow();
-  else if (curView === 'visual') { fitView(); draw(); }
+  // Widening lays the whole workspace out again, which is the most expensive thing this window
+  // does - and it did it in the click handler, so the interface sat there looking hung and then
+  // jumped to the result. The work is deferred behind a painted frame, and the old drawing is
+  // cleared first: leaving it up while a different graph is computed is the stale-projection
+  // problem in miniature.
+  const work = () => {
+    bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
+    if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
+  };
+  if (!(wide >= SPIN_NODES && curView === 'er')) return work();
+  $('erboxes').innerHTML = '';
+  runHeavy($('v-er'), all ? 'Laying out every table\u2026' : `Laying out around ${label(N[curFocus]) || curFocus}\u2026`, work);
 }
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>All tables</b> \u00b7 <b>${DATA.counts.nodes}</b> tables \u00b7 <b>${DATA.counts.edges}</b> relations \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `<b>All tables</b> \u00b7 ${statOf(null, DATA.counts.nodes, DATA.counts.edges)} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
     return;
   }
-  const nn = egoSet ? egoSet.size : DATA.counts.nodes;
-  const ne = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(label(N[curFocus]) || curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> tables \u00b7 <b>${ne}</b> relations \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  const allN = egoSet ? egoSet.size : DATA.counts.nodes;
+  const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(label(N[curFocus]) || curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
   updateDepthUI(); bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow(); if (curView === 'visual') { fitView(); draw(); }
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
@@ -714,123 +837,24 @@ function setFocus(id) {
   const wasUnfocused = !curFocus;
   curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
   if (wasUnfocused) $('erdepth').style.display = 'inline-flex';   // first focus (e.g. from the whole-graph view): reveal the depth control
-  updateDepthUI(); updateScopeUI(); updateTopTools();
+  updateDepthUI(); updateScopeUI();
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
     egoStat();
-    if (curView === 'er') erRender(); else if (curView === 'visual') draw();
+    if (curView === 'er') erRender();
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
   if (curView === 'er') erShow();
-  else if (curView === 'visual') { fitView(); draw(); }
 }
 function clearFocus() {
   // Back to the pristine whole-graph view - the state you get opening via "Schema".
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
   $('erdepth').style.display = 'none';
-  updateScopeUI(); updateTopTools(); erLaidOut = false;
-  $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> tables · <b>${DATA.counts.edges}</b> relations · <b>${DATA.counts.dead_suspects}</b> in no relation`;
+  updateScopeUI(); erLaidOut = false;
+  graphStat();
   if (curView === 'er') erShow();
-  else if (curView === 'visual') { fitView(); draw(); }
 }
-function neighbors(id) { const s = new Set([id]); N[id].calls.forEach((c) => s.add(c)); N[id].called_by.forEach((c) => s.add(c)); return s; }
-function draw() {
-  if (!ctx2d) return;
-  ctx2d.clearRect(0, 0, W, H);
-  const near = focusNode ? neighbors(focusNode) : null;
-  const set = activeSet();
-  // edges
-  ctx2d.lineWidth = 1;
-  for (const [a, b] of edgesA) {
-    if (set && !(set.has(a) && set.has(b))) continue;
-    if (egoSet && !(egoSet.has(a) && egoSet.has(b))) continue;
-    const [ax, ay] = screenXY(a), [bx, by] = screenXY(b);
-    const hot = near && (near.has(a) && near.has(b) && (a === focusNode || b === focusNode));
-    ctx2d.strokeStyle = hot ? 'rgba(47,111,237,.55)' : (near ? 'rgba(150,160,175,.10)' : 'rgba(150,160,175,.28)');
-    ctx2d.beginPath(); ctx2d.moveTo(ax, ay); ctx2d.lineTo(bx, by); ctx2d.stroke();
-  }
-  // nodes
-  for (const id of nodesA) {
-    if (set && !set.has(id)) continue;
-    if (egoSet && !egoSet.has(id)) continue;
-    const [x, y] = screenXY(id); const r = nodeRadius(id) * Math.max(0.6, Math.min(scale, 1.6));
-    const dim = !set && near && !near.has(id);
-    ctx2d.globalAlpha = dim ? 0.15 : 1;
-    // KINDOF rather than the namespace: on a schema the two are the same value, so this is not a
-    // bug here - it is the same *shape* of mistake the CRM copy had, and leaving one of the two
-    // reading a dimension by accident is how the pair drifts back apart.
-    ctx2d.fillStyle = NSCOL(KINDOF(N[id]));
-    ctx2d.beginPath(); ctx2d.arc(x, y, r, 0, Math.PI * 2); ctx2d.fill();
-    if (id === focusNode) { ctx2d.lineWidth = 2; ctx2d.strokeStyle = '#182130'; ctx2d.stroke(); }
-    if (id === curFocus) { ctx2d.lineWidth = 3.5; ctx2d.strokeStyle = '#fbbf24'; ctx2d.stroke(); }
-    // labels honor the label mode
-    const showLabel = labelMode === 'all' ? true : labelMode === 'off' ? false : (N[id].called_by.length >= 3 || scale > 1.3 || (near && near.has(id)) || (set && set.has(id)));
-    if (!dim && showLabel) {
-      ctx2d.globalAlpha = dim ? 0.15 : 0.9; ctx2d.fillStyle = '#334155';
-      ctx2d.font = '10px ui-monospace, monospace'; ctx2d.fillText(label(N[id]), x + r + 2, y + 3);
-    }
-    ctx2d.globalAlpha = 1;
-  }
-}
-function pick(mx, my) {
-  let best = null, bd = 12 * 12; const set = activeSet();
-  for (const id of nodesA) { if (set && !set.has(id)) continue; const [x, y] = screenXY(id); const dx = mx - x, dy = my - y; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = id; } }
-  return best;
-}
-function onMove(e) {
-  const rect = cv.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  if (dragging) { offX += e.clientX - lastX; offY += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; draw(); return; }
-  const id = pick(mx, my); const tip = $('tip');
-  if (id) { tip.style.display = 'block'; tip.style.left = mx + 'px'; tip.style.top = my + 'px'; tip.textContent = N[id].id; }
-  else tip.style.display = 'none';
-}
-function onClick(e) {
-  const rect = cv.getBoundingClientRect(); const id = pick(e.clientX - rect.left, e.clientY - rect.top);
-  if (id) { focusNode = id; if (subFocus) { subFocus = id; fitView(); } draw(); select(id); }
-}
-
-$('nameToggle').onclick = () => {
-  nameMode = nameMode === 'display' ? 'internal' : 'display';
-  $('nameToggle').textContent = 'Name: ' + nameMode;
-  $('nameToggle').classList.toggle('on', nameMode === 'internal');
-  render(); if (sel) select(sel, true); draw();
-};
-
-// Fit button
-$('fitBtn').onclick = () => fitView();
-$('focusBtn').onclick = () => {
-  if (subFocus) { subFocus = null; $('focusBtn').textContent = 'Focus'; }
-  else if (sel) { subFocus = sel; focusNode = sel; $('focusBtn').textContent = 'Show all'; }
-  $('focusBtn').classList.toggle('on', !!subFocus);
-  fitView(); draw();
-};
-
-// Auto-resize the canvas when its container changes
-try { new ResizeObserver(() => { if (curView === 'visual') { resize(); fitView(); } }).observe($('visual')); } catch (_) {}
-
-// Save PDF (via the browser's print-to-PDF)
-$('pdfBtn').onclick = () => window.print();
-let _pw = 0, _ph = 0;
-let _pl = 'hubs';
-window.addEventListener('beforeprint', () => {
-  if (curView !== 'visual') return;
-  _pw = W; _ph = H; _pl = labelMode; labelMode = 'all';
-  const n = nodesA.length; W = Math.min(6000, 1600 + n * 12); H = Math.min(4000, 1000 + n * 8);
-  cv.width = W; cv.height = H; fitView(); draw();
-});
-window.addEventListener('afterprint', () => {
-  if (curView !== 'visual') return;
-  labelMode = _pl; $('labelBtn').textContent = 'Labels: ' + labelMode;
-  if (_pw) { cv.width = W = _pw; cv.height = H = _ph; } resize(); fitView();
-});
-
-$('labelBtn').onclick = () => {
-  labelMode = labelMode === 'hubs' ? 'all' : labelMode === 'all' ? 'off' : 'hubs';
-  $('labelBtn').textContent = 'Labels: ' + labelMode;
-  draw();
-};
-
 // ---------------- ER diagram (entities + FK arrows) ----------------
 let erLaidOut = false, erAll = false, erScale = 1, erTx = 0, erTy = 0;
 const erPos = {};
@@ -844,8 +868,6 @@ const ER_PRESET = {
   relations: { margin: 120, spread: 72, ring: 640, gap: 10, fs: 13, sub: true },
 };
 let erP = Object.assign({}, ER_PRESET.modules);
-// Selecting one arc is the cheapest fix for a crowded diagram: instead of untangling everything,
-// the reader isolates the single relation they care about and the rest recedes.
 let erSelEdge = null;   // "a\u0000b"
 const ekey = (a, b) => a + '\u0000' + b;
 function erPick(a, b) { erSelEdge = (erSelEdge === ekey(a, b)) ? null : ekey(a, b); erRender(); }
@@ -877,12 +899,38 @@ function erFieldsFor(n) {
   const rank = (f) => (f.lookup ? 0 : (f.mandatory ? 1 : 2));
   return base.sort((a, b) => rank(a) - rank(b));
 }
+// Which nodes still have a relation to another node the chips have left standing.
+//
+// It used to be computed from the whole edge list, so switching a kind off left behind every node
+// whose only relations went into it: boxes with no arrow at all, in a diagram whose whole subject
+// is what joins to what.
+//
+// One pass is the whole cascade, not an approximation of it: dropping nodes that have no surviving
+// edge cannot remove an edge between two nodes that do, so a second pass would find nothing.
+function linkedUnderFilter() {
+  const ok = (id) => N[id] && passKind(N[id]);
+  const linked = new Set();
+  edgesA.forEach(([a, b]) => { if (ok(a) && ok(b)) { linked.add(a); linked.add(b); } });
+  return linked;
+}
 function erVisibleIds() {
-  if (erEmph === 'relations') {
-    const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
-    return nodesA.filter((id) => (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+  const ok = (id) => N[id] && passKind(N[id]);
+  // A table with no column to show has nothing to draw and stays out - the behaviour that was
+  // already here, and a different question from having no relation left.
+  if (erEmph !== 'relations') {
+    return nodesA.filter((id) => ok(id) && erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
   }
-  return nodesA.filter((id) => erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
+  const linked = linkedUnderFilter();
+  return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+}
+// What the chips leave standing but the diagram will not draw, because nothing links it any more.
+// The Explorer beside it still lists those items, so the number has to be given rather than left
+// for the reader to work out by counting boxes.
+function orphanedByFilter() {
+  if (erEmph !== 'relations') return 0;
+  const linked = linkedUnderFilter();
+  return nodesA.filter((id) => N[id] && passKind(N[id]) && !linked.has(id) && id !== curFocus
+    && (!egoSet || egoSet.has(id))).length;
 }
 function erBoxSize(n) {
   const rows = erFieldsFor(n); const w = erEmph === 'relations' ? 190 : 250, headerH = 28, rowH = 18, cap = 40;
@@ -1126,7 +1174,17 @@ function erFit() {
   erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
 }
-function erShow() { if (!erLaidOut) { erLayout(); erLaidOut = true; } erRender(); erFit(); erUpdateControlVis(); }
+function erShow() {
+  // A scope widened from Relations, where it is free, may be more than the diagram can lay out.
+  // Say so and go back to the focus rather than drawing a ring of boxes nobody can read - the
+  // fallback is stated, never silent.
+  if (scopeAll && curFocus && !forceFeasible(visibleKindCount())) {
+    scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
+    tooWideToDraw(visibleKindCount());
+  }
+  if (!erLaidOut) { erLayout(); erLaidOut = true; }
+  erRender(); erFit(); erUpdateControlVis();
+}
 let erDown = false, erDragged = false, erSx = 0, erSy = 0, erT0x = 0, erT0y = 0;
 document.addEventListener('mousedown', (e) => {
   if (curView !== 'er' || e.target.closest('#ertools')) return;
@@ -1144,9 +1202,7 @@ document.addEventListener('wheel', (e) => {
   erTx = mx - (mx - erTx) * (erScale / before); erTy = my - (my - erTy) * (erScale / before); erApply();
 }, { passive: false });
 $('erScope').onclick = () => setScope(!scopeAll);
-$('visScope').onclick = () => setScope(!scopeAll);
 $('erReset').onclick = clearFocus;
-$('visReset').onclick = clearFocus;
 // ---- runtime layout controls ----
 const ER_CTL = [
   ['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
@@ -1233,7 +1289,7 @@ window.addEventListener('beforeprint', () => {
   _erStyle = document.createElement('style');
   _erStyle.textContent = `@page{size:${W}px ${H}px;margin:0}
     @media print{
-      header,#ertools,.hint2,#v-explorer,#v-visual{display:none !important}
+      header,#ertools,.hint2,#v-explorer{display:none !important}
       html,body{width:${W}px;height:${H}px;overflow:visible !important;background:#fff}
       .wrap{position:static !important}
       #v-er{position:absolute !important;left:0;top:0;width:${W}px !important;height:${H}px !important;overflow:visible !important}

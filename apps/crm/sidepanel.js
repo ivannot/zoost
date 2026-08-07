@@ -2489,7 +2489,13 @@ function renderModules() {
       const multi = (m.layoutCount || 0) > 1; const exp = expandedMods.has(m.path);
       // The layouts chevron lives on the RIGHT (next to the layout count), not between dot and name,
       // so module names line up with the other tabs' dot\u2192name spacing.
-      const chev = multi ? `<span class="laychev" title="Show / hide layouts">${exp ? '\u25be' : '\u25b8'}</span>` : '';
+      //
+      // And its slot is **always there**, empty on a module with one layout. It used to be absent,
+      // which meant a row with several layouts was 12px wider on the right than its neighbours and
+      // pushed its own field and layout counts left - so the one column a reader scans as figures
+      // stopped being a column. Reported. A control that comes and goes may not move what is beside
+      // it: reserve the space, do not reflow around it.
+      const chev = `<span class="laychev${multi ? '' : ' none'}"${multi ? ' title="Show / hide layouts"' : ' aria-hidden="true"'}>${multi ? (exp ? '\u25be' : '\u25b8') : ''}</span>`;
       // The refusal wins over `error`: it is the more specific answer, and it is the one that says
       // whether doing anything again is worth it.
       //

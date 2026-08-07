@@ -1741,3 +1741,98 @@ test('the functions drawing has one name, and the code does not write the old on
     assert.deepEqual(named, [], `${f} still names a control Call graph`);
   }
 });
+
+test('every element the diagram window reaches for is in its own markup', () => {
+  // This is the check that would have caught it on its own. Removing the Visual view from Analytics
+  // left `$('visScope').onclick = …` at the top level of the script: $() returned null, assigning to
+  // .onclick threw, and **the whole file stopped evaluating there** - so every const below it stayed
+  // in its temporal dead zone and the window came up with no chips, no list and a status line still
+  // holding the text from the markup. Nothing in the console, because the page had already loaded.
+  //
+  // The ids listed here are the ones built at runtime rather than authored, and they are named
+  // rather than pattern-matched so that adding one is a decision.
+  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpicksnip', 'layzone', 'relall', 'up']);
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+    const used = new Set([...js.matchAll(/\$\('([^']+)'\)/g), ...js.matchAll(/getElementById\('([^']+)'\)/g)]
+      .map((m) => m[1]));
+    const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id)).sort();
+    assert.deepEqual(missing, [], `${app}: graphview.js reaches for ids that no longer exist`);
+  }
+});
+
+test('the Visual view is gone from Analytics too, and the shared machinery is not', () => {
+  // It went from the CRM when it turned out to be a weaker drawing of what the boxed diagram already
+  // shows. Leaving it on one side made the twins two different products in the window they share.
+  const js = read('apps/analytics/graphview.js'), html = read('apps/analytics/graphview.html');
+  for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
+                      'id="cv"', 'id="tip"', 'data-v="visual"']) {
+    assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
+  }
+  for (const dead of [/function draw\(/, /function fitView\(/, /function screenXY\(/, /function pick\(/,
+                      /function nodeRadius\(/, /function initCanvas\(/, /function buildLegend\(/,
+                      /function updateTopTools\(/, /labelMode/, /subFocus/]) {
+    assert.ok(!dead.test(js), `Analytics still carries ${dead}`);
+  }
+  // ...and what the boxed diagram shares with it must have survived the deletion
+  for (const kept of ['function settle(', 'function seedRing(', 'function initPositions(',
+                      'function forceFeasible(', 'const edgesAmong', 'function erLayout(']) {
+    assert.ok(js.includes(kept), `the deletion took ${kept} with it`);
+  }
+});
+
+test('the diagram never draws a box with nothing left to link it', () => {
+  // Reported: switching a kind off left behind every node whose only links went into it - boxes with
+  // no arrow at all, in a window whose whole subject is what connects to what. One pass is the whole
+  // cascade: dropping nodes with no surviving edge cannot remove an edge between two that have one.
+  for (const app of ['crm', 'analytics']) {
+    const N = {
+      a: { id: 'a', category: 'standalone', namespace: 'standalone', calls: ['b'], called_by: [], rest: false, dead_suspect: false, unresolved: [], system: false },
+      b: { id: 'b', category: 'standalone', namespace: 'standalone', calls: [], called_by: ['a'], rest: false, dead_suspect: false, unresolved: [], system: false },
+      c: { id: 'c', category: 'automation', namespace: 'query', calls: ['d'], called_by: [], rest: false, dead_suspect: false, unresolved: [], system: false },
+      d: { id: 'd', category: 'standalone', namespace: 'standalone', calls: [], called_by: ['c'], rest: false, dead_suspect: false, unresolved: [], system: false },
+    };
+    const kindOf = app === 'crm' ? 'category' : 'namespace';
+    const edgesA = [['a', 'b'], ['c', 'd']];
+    const hiddenKinds = new Set(), onlyConds = new Set();
+    // Analytics reads the namespace, and it only does so on a schema - which is the only kind it
+    // ever builds. The CRM reads the category on a call graph. Same predicate, two vocabularies.
+    const ctx = { N, edgesA, DATA: { kind: app === 'crm' ? 'calls' : 'schema' }, hiddenKinds, onlyConds, Set, Object };
+    const { linkedUnderFilter } = load([sliceConst(`apps/${app}/graphview.js`, 'KINDOF'),
+                                        sliceConst(`apps/${app}/graphview.js`, 'CONDITION_KEYS'),
+                                        sliceFn(`apps/${app}/graphview.js`, 'passKind'),
+                                        sliceFn(`apps/${app}/graphview.js`, 'linkedUnderFilter')], ctx);
+    assert.equal([...linkedUnderFilter()].sort().join(''), 'abcd', `${app}: an unfiltered graph already drops something`);
+    // switch off the kind `c` belongs to: d loses its only link and must go with it
+    hiddenKinds.add(N.c[kindOf]);
+    assert.equal([...linkedUnderFilter()].sort().join(''), 'ab', `${app}: d is drawn with nothing to link it`);
+  }
+});
+
+test('the layout budget was raised on a measurement, and both apps carry the same one', () => {
+  // 600 was a guess made when the force layout cost 5.9 seconds there. Profiled end to end since -
+  // layout, collision passes and DOM - a 1200-node diagram comes to about 2.1 seconds behind a
+  // spinner and a 2055-node one to about 7. Two seconds is a wait; seven is a hang.
+  const n = (app) => +read(`apps/${app}/graphview.js`).match(/const FORCE_MAX_NODES = (\d+)/)[1];
+  const s = (app) => +read(`apps/${app}/graphview.js`).match(/const SPIN_NODES = (\d+)/)[1];
+  assert.equal(n('crm'), 1200, 'the CRM budget moved without the measurement moving');
+  assert.equal(n('crm'), n('analytics'), 'the twins disagree about how much they can draw');
+  assert.equal(s('crm'), s('analytics'), 'the twins disagree about when to show a spinner');
+  assert.ok(s('crm') < n('crm'), 'the spinner threshold is above the layout budget, so it never fires');
+});
+
+test('a control that comes and goes may not move the numbers beside it', () => {
+  // The layouts chevron appears only on a module with more than one, and it used to be absent
+  // otherwise - so a row with several layouts was 12px wider on the right than its neighbours and
+  // pushed its own field and layout counts left. Measured at 18px of drift. Reported.
+  const js = read('apps/crm/sidepanel.js'), css = read('apps/crm/sidepanel.html');
+  // Searched *after* the start, not from the top: moduleRefusal() is defined earlier in the file,
+  // so a bare indexOf returned a slice that ran backwards and silently contained nothing.
+  const from = js.indexOf('const multi = (m.layoutCount || 0) > 1');
+  const row = js.slice(from, js.indexOf('const ref = moduleRefusal(', from));
+  assert.ok(!/const chev = multi \?/.test(row), 'the slot is present only when there is an arrow to put in it');
+  assert.ok(/class="laychev\$\{multi \? '' : ' none'\}"/.test(row), 'the empty slot does not carry the class that sizes it');
+  assert.ok(/\.laychev\{flex:0 0 12px/.test(css), 'the slot has no fixed width, so it cannot hold a column');
+  assert.ok(/\.laychev\.none\{[^}]*pointer-events:none/.test(css), 'the empty slot still takes the cursor');
+});
