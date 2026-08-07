@@ -102,6 +102,11 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
   Clearing the field goes back to it.
+- "+ Sample" in the workspace bar: writes a workspace of invented data into the working folder, so
+  somebody can open the tree, the diagrams and the exports before pointing Zoost at anything of their
+  own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
+  says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
+  otherwise, deleted like any other, and the button is absent once one exists.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there

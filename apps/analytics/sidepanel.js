@@ -293,7 +293,7 @@ function dropWorkspaceState() {
 async function selectWorkspace(w) {
   const sameWs = bound && bound.workspace === w.id;
   dir = w.handle;
-  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '' };
+  bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
   await window.idbHandle.set('activeWsAnalytics', w.id);
   // Not on a re-selection of the workspace already open - regranting a folder must not throw
   // away a conversation about the workspace you are still in.
@@ -375,7 +375,14 @@ async function toBridge(msg) {
 }
 
 // ---------- context bar + environment guard ----------
-const guardOk = () => !!(bound && ctx && ctx.workspace && String(ctx.workspace) === String(bound.workspace));
+// A workspace of invented data, written by «+ Sample» rather than pulled. It is an ordinary
+// workspace in every other respect - the same list, the same walks, the same exports - and there is
+// no demo *mode* anywhere: an `if (demo)` branch in rendering code is how invented data eventually
+// gets shown as somebody's own. This flag exists so nothing talks to Zoho Analytics about it.
+const isSample = () => !!(bound && bound.sample);
+// Everything platform-bound funnels through here, so this is the one place a sample has to be
+// refused - rather than a condition repeated at each button, where one is eventually forgotten.
+const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace && String(ctx.workspace) === String(bound.workspace));
 
 async function refreshContext() {
   const el = $('ctx'), who = $('who'), bnd = $('bound');
@@ -401,12 +408,15 @@ async function refreshContext() {
     who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
+    // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
+    // will. It says what it is instead.
+    else if (isSample()) { el.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
     else { el.className = 'mismatch'; bnd.innerHTML = localLbl + ' ✗'; }
   }
 
   // The mismatch bar offers the one action that resolves it, and the overlay makes it impossible to
   // browse one workspace's mirror while looking at another. Same guarantee as the CRM panel's.
-  const mm = !!(bound && ctx && ctx.workspace && !guardOk());
+  const mm = !!(bound && ctx && ctx.workspace && !guardOk() && !isSample());
   $('mmbar').classList.toggle('show', mm);
   $('mmoverlay').classList.toggle('show', mm);
   if (mm) {
@@ -445,6 +455,9 @@ function updateButtons() {
   // Harmless, and still a control saying it will do something it will not.
   const known = (wsList || []).some((w) => ctx && ctx.workspace && String(w.id) === String(ctx.workspace));
   $('wsadd').hidden = known;
+  // Absent once one exists - it would do nothing - and while there is nowhere to write it.
+  const sb = $('wssample');
+  if (sb) sb.hidden = (wsList || []).some((w) => w.cfg && w.cfg.sample) || !root || !rootGranted;
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('wsrename').disabled = busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
@@ -616,7 +629,7 @@ async function writeToDisk(info) {
     lastPull: new Date().toISOString(),
     counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, relations: relations.length, sql: Object.keys(sqls).length },
   });
-  bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '' };
+  bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '', sample: !!(await readJson(CFG, {})).sample };
 }
 
 async function loadFromDisk() {
@@ -815,7 +828,9 @@ function emptyReason() {
   }
   if (!wsList.length) {
     return '<b>No workspace here yet.</b> Open a Zoho Analytics workspace in the active tab - its URL '
-      + 'looks like <code>/workspace/&lt;id&gt;</code> - then press <b>+ Workspace</b>.';
+      + 'looks like <code>/workspace/&lt;id&gt;</code> - then press <b>+ Workspace</b>. Or press '
+      + '<b>+ Sample</b> to write one of invented data and look around first: it never contacts '
+      + 'Zoho Analytics, and it is deleted like any other workspace.';
   }
   return '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to read this workspace into the folder: the '
     + 'view list, the columns of every table, the relations and the SQL of each query table.';
@@ -1891,6 +1906,37 @@ async function renameWorkspace() {
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = addWorkspace;
+$('wssample').onclick = () => addSampleWorkspace();
+/** Write the sample workspace into the working folder, then open it.
+ *
+ * It goes through the same code every other workspace does - the files land on disk and the ordinary
+ * list picks them up - so nothing downstream has to know it exists. `sample: true` in .zoost.json is
+ * the whole mechanism.
+ */
+async function addSampleWorkspace() {
+  if (!root) { await pickRoot(); return; }
+  if (!(await ensurePerm(root))) return;
+  try {
+    const gen = window.SAMPLE_ORG;
+    if (!gen) { setStatus('The sample generator is not loaded.', 'bad'); return; }
+    const base = await appRoot(true);
+    if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
+    setStatus('Writing the sample workspace\u2026', 'busy');
+    const h = await base.getDirectoryHandle(gen.folderName(), { create: true });
+    const files = gen.files({});
+    for (const [rel, text] of Object.entries(files)) {
+      const parts = rel.split('/');
+      let d = h;
+      for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+      const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
+      const w = await fh.createWritable();
+      await w.write(text);
+      await w.close();
+    }
+    setStatus(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho Analytics.`, 'ok');
+    await loadWorkspaces();
+  } catch (e) { setStatus('Could not write the sample: ' + e.message, 'bad'); }
+}
 $('wsdel').onclick = delWorkspace;
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
 $('pull').onclick = pullAll;

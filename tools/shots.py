@@ -196,6 +196,18 @@ def render_panel(shot):
 
 
 PANELS = [
+    ("crm-sample", "crm", "crm/sampleorg-1234567890", """
+        // Start from nothing: clear the shim's tree, then press the button. This is the feature
+        // end to end - the files are written by the shipped generator through the shipped panel.
+        window.__fsshim.clear();
+        loadWorkspaces().then(() => setTimeout(() => {
+          document.getElementById('wssample').click();
+          setTimeout(() => {
+            const el = [...document.querySelectorAll('#tree .f')].find((e) => /buildInvoice/.test(e.textContent));
+            if (el) el.click();
+          }, 2500);
+        }, 400));
+    """),
     ("crm-panel", "crm", "crm/sampleorg-1234567890", """
         // the tree is already drawn; open one function so the preview has something in it
         const el = [...document.querySelectorAll('#tree .f')].find((e) => /buildInvoice/.test(e.textContent));

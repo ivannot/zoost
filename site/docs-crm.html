@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.34.2</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.35.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -110,6 +110,11 @@
       subfolder inside the working folder, so one folder can serve them all.</li>
     <li>Click <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>.</li>
   </ol>
+  <p><b class="ui">+ Sample</b> is the other way in, and it needs no Zoho tab: it writes a workspace of
+    invented data into the working folder so you can open the tree, the graph and the exports before
+    pointing Zoost at anything of your own. It is generated, never fetched - the workspace bar says
+    so, and everything that would talk to Zoho is disabled for it. It is an ordinary folder otherwise:
+    delete it with <b class="ui">🗑</b> like any other. The button disappears once one exists.</p>
   <div class="box warn">
     <p><b>Do not put the working folder in OneDrive, Dropbox or iCloud Drive.</b> You will be creating Git
       repositories inside it, and file-sync services corrupt <code>.git</code> directories by touching index

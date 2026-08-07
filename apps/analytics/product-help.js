@@ -70,6 +70,11 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
   gets the whole width; the same tab brings it back, and dragging that edge resizes the list
   instead. The other tabs have no list, so they do not have it.
+- "+ Sample" in the workspace bar: writes a workspace of invented data into the working folder, so
+  somebody can open the tree, the diagrams and the exports before pointing Zoost at anything of their
+  own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
+  says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
+  otherwise, deleted like any other, and the button is absent once one exists.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

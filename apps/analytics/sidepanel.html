@@ -314,7 +314,7 @@
 </div>
 <div class="wsbar wsbar2">
   <select id="ws" title="Workspaces found inside the working folder"></select>
-  <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button>
+  <button id="wsadd" title="Create a workspace for the Zoho Analytics workspace in the active tab">+ Workspace</button><button id="wssample" title="Write a sample workspace of invented data into the working folder - nothing is fetched, and it can be deleted like any other">+ Sample</button>
   <button id="wsrename" title="Name this workspace - a name of your own, shown instead of the folder's" aria-label="Name this workspace" style="font-size:14px;line-height:1">✎</button><button id="wsdel" title="Remove - delete this local workspace folder (Zoho is untouched)" aria-label="Remove workspace" class="glyph">🗑</button>
 </div>
 
@@ -437,6 +437,7 @@
   <button class="primary" id="gozoho">Go to Zoho Analytics ↗</button>
 </div>
 
+<script src="sample-org.js"></script>
 <script src="idb.js"></script>
 <script src="keyvault.js"></script>
 <script src="analytics-sql.js"></script>

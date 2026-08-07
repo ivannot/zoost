@@ -18,6 +18,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
+// A workspace of invented data, written by «+ Sample» rather than pulled. It is an ordinary
+// workspace in every other respect - the same list, the same walks, the same exports - and there is
+// no demo *mode* anywhere: an `if (demo)` branch in rendering code is how invented data eventually
+// gets shown as somebody's own. This flag exists so nothing talks to Zoho about it, and to say so.
+const isSample = () => !!(bound && bound.sample);
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
@@ -503,9 +508,10 @@ async function refreshContext() {
   who.innerHTML = `<span class="rlbl remote">Zoho tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}</span>`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
+  else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
   else { ctxEl.className = 'mismatch'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>≠ ${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✗`; }
   // mismatch action bar: offer to jump to the ACTIVE workspace's Zoho URL (explicit)
-  const mm = !!(bound && lastCtx && !guardOk());
+  const mm = !!(bound && lastCtx && !guardOk() && !isSample());
   const mmbar = $('mmbar');
   mmbar.classList.toggle('show', mm);
   $('mmoverlay').classList.toggle('show', mm);
@@ -525,6 +531,11 @@ async function refreshContext() {
   updateWsButtons();
 }
 function guardOk() {
+  // Everything Zoho-bound funnels through here, so this is the one place a sample workspace has to
+  // be refused - rather than a condition repeated at each button, where one of them is eventually
+  // forgotten. It is not a mismatch, though, and refreshContext keeps the two apart: the mismatch
+  // bar and its overlay are for two environments that could match, and this one never will.
+  if (isSample()) return false;
   if (!bound || !lastCtx) return true;
   if (bound.org !== lastCtx.org) return false;                                   // different org
   if ((bound.base || '') !== (lastCtx.origin || '')) return false;               // different host/env
@@ -1149,7 +1160,12 @@ async function pullAll() {
     // patchCfg, not writeCfg: this file also holds the access verdicts and the workspace's own
     // name, and a whole-object write here drops both. The trap arriving a third time.
     await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
-    bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: (await readCfg())?.label || '' }; await cacheBinding(bound);
+    // Every field the binding carries, or the guard that reads one of them silently stops firing.
+    // A pull cannot run on a sample - guardOk refuses it - so this can only ever be false here, and
+    // writing it out is what stops the next field added to .zoost.json being dropped in this line.
+    const _c = (await readCfg()) || {};
+    bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
+    await cacheBinding(bound);
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
@@ -1950,7 +1966,8 @@ function emptyReason() {
   }
   if (!wsList.length) {
     return '<b>No workspace here yet.</b> Open a Zoho CRM tab and press <b>+</b> to create the workspace '
-      + 'for that org.';
+      + 'for that org - or press <b>+ Sample</b> to write one of invented data and look around first. '
+      + 'The sample never contacts Zoho, and it is deleted like any other workspace.';
   }
   if (oldLayout) {
     // Not a migration and not a fallback: nothing here reads the old paths. It is an empty state
@@ -2022,6 +2039,38 @@ async function pickRoot() {
   } catch (e) { if (e?.name !== 'AbortError') setStatus('Working folder: ' + e.message, 'warn'); }
 }
 
+/** Write the sample workspace into the working folder, then open it.
+ *
+ * It goes through the same code every other workspace does - the files land on disk and the ordinary
+ * list picks them up - so nothing downstream has to know it exists. `sample: true` in .zoost.json is
+ * the whole mechanism.
+ */
+async function addSampleWorkspace() {
+  if (!root) { await pickRoot(); return; }
+  if (!(await ensurePerm(root))) return;
+  try {
+    const gen = window.SAMPLE_ORG;
+    if (!gen) { setStatus('The sample generator is not loaded.', 'bad'); return; }
+    const base = await appRoot(true);
+    if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
+    setStatus('Writing the sample workspace\u2026', 'busy');
+    const h = await base.getDirectoryHandle(gen.folderName(), { create: true });
+    const files = gen.files({});
+    for (const [rel, text] of Object.entries(files)) {
+      const parts = rel.split('/');
+      let d = h;
+      for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+      const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
+      const w = await fh.createWritable();
+      await w.write(text);
+      await w.close();
+    }
+    await window.idbHandle.set('activeWs', 'org:' + gen.org);
+    setStatus(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho.`, 'ok');
+    await loadWorkspaces();
+  } catch (e) { setStatus('Could not write the sample: ' + e.message, 'bad'); }
+}
+
 async function addWorkspaceForTab() {
   if (!root) { await pickRoot(); return; }
   if (!(await ensurePerm(root))) return;
@@ -2088,7 +2137,10 @@ async function activate(w, viaGesture) {
 // it here would clobber fields this function does not carry (lastPull).
 async function cacheBinding(b) {
   if (!b || !b.org) return;
-  bound = { org: b.org, base: b.base, instance: b.instance, label: b.label || '' };
+  // `sample` travels with the rest. This function rebuilds `bound` from a listed subset, so every
+  // field that lands in .zoost.json has to be added here too - the trap this repository already
+  // records, and one that would have quietly re-enabled every Zoho action on a sample workspace.
+  bound = { org: b.org, base: b.base, instance: b.instance, label: b.label || '', sample: !!b.sample };
   const w = (wsList || []).find((x) => x.id === activeWsId); if (w) w.binding = bound;
 }
 
@@ -2119,6 +2171,12 @@ function updateWsButtons() {
   add.title = !root ? 'Set the working folder first'
     : !lastCtx ? 'Open a Zoho CRM tab first'
     : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
+  // Absent once one exists - it would do nothing - and while there is nowhere to write it.
+  const sb = $('wssample');
+  if (sb) {
+    const have = (wsList || []).some((w) => w.binding && w.binding.sample);
+    sb.hidden = have || !root || !rootGranted;
+  }
 }
 
 async function loadWorkspaces() {
@@ -2148,7 +2206,7 @@ async function loadWorkspaces() {
         if (e.kind !== 'directory' || e.name.startsWith('.')) continue;
         let cfg = null; try { cfg = await readJsonIn(e, CFG); } catch (_) { continue; }   // not one of ours
         if (!cfg || !cfg.org) continue;
-        wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, cfg, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance } });
+        wsList.push({ id: 'org:' + cfg.org, name: e.name, handle: e, cfg, binding: { org: cfg.org, base: cfg.base, instance: cfg.instance, sample: !!cfg.sample } });
       }
     } catch (e) {
       rootGranted = false;
@@ -2246,6 +2304,7 @@ async function renameWorkspace() {
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
+$('wssample').onclick = () => addSampleWorkspace();
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
 $('wsdel').onclick = async () => {
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;

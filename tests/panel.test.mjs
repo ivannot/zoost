@@ -7,6 +7,7 @@
  * to the wrong caller.
  */
 import { test } from 'node:test';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read } from './slice.mjs';
 
@@ -2164,4 +2165,59 @@ test('the orphan cascade is computed on the set that will actually be drawn', ()
                                       sliceFn('apps/crm/graphview.js', 'linkedUnderFilter')], ctx);
   assert.equal([...linkedUnderFilter()].sort().join(''), 'fg',
     's is kept for a partner the neighbourhood excludes');
+});
+
+test('the sample workspace is written by the shipped generator, and nothing about it is a mode', () => {
+  // The design he settled: a function writes the files and then the working folder is treated as a
+  // real one. No `if (demo)` branch in rendering code - that is how invented data eventually gets
+  // shown as somebody's own - only `sample: true` in .zoost.json and the guard that already exists.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
+    assert.ok(html.includes('src="sample-org.js"'), `${app}: the panel does not load the generator`);
+    assert.ok(html.includes('id="wssample"'), `${app}: there is no way to ask for one`);
+    assert.ok(/async function addSampleWorkspace\(\)/.test(js), `${app}: nothing writes it`);
+    assert.ok(/window\.SAMPLE_ORG/.test(js), `${app}: the panel has its own copy of the data`);
+
+    // one predicate, asked in the one place every platform-bound action already funnels through
+    assert.ok(/const isSample = \(\) => !!\(bound && bound\.sample\)/.test(js),
+      `${app}: there is no single answer to «is this a sample»`);
+    // The CRM's guardOk is a function declaration and Analytics' is an arrow, so the check reads
+    // the definition rather than a fixed window after the first mention of the name.
+    const gi = js.search(/(function guardOk\(\)|const guardOk = )/);
+    assert.ok(gi >= 0 && /isSample\(\)/.test(js.slice(gi, gi + 700)),
+      `${app}: guardOk does not refuse a sample, so each button would have to remember`);
+    // ...and it must not be dressed as an environment mismatch, which is a state that can be fixed
+    assert.ok(/!guardOk\(\) && !isSample\(\)/.test(js),
+      `${app}: a sample workspace raises the mismatch bar, which offers actions that cannot help`);
+
+    // the flag has to survive every rebuild of `bound`, or the guard silently stops firing
+    // Line by line, not `\{[^}]*\}`: that stops at the first closing brace, which on one of these
+    // is inside `readJson(CFG, {})`, so a line that does carry the flag was reported as missing it.
+    for (const line of js.split('\n')) {
+      if (!/^\s*bound = \{/.test(line)) continue;
+      assert.ok(/sample/.test(line),
+        `${app}: «${line.trim().slice(0, 60)}…» rebuilds the binding without the sample flag`);
+    }
+    // and it is absent once one exists - a control with nothing to do
+    assert.ok(/wssample'\)[\s\S]{0,300}hidden = /.test(js), `${app}: the button never goes away`);
+  }
+
+  // the generator writes what the panel expects to read back
+  const files = (() => {
+    const src = read('apps/crm/sample-org.js');
+    const ctx = { window: {}, Object, JSON, Math, String, Array, Set, Number };
+    vm.createContext(ctx);
+    vm.runInContext(src, ctx);
+    return ctx.window.SAMPLE_ORG.files({});
+  })();
+  const cfg = JSON.parse(files['.zoost.json']);
+  assert.equal(cfg.sample, true, 'the workspace it writes is not marked as a sample');
+  assert.ok(cfg.org && cfg.instance && cfg.base, 'the binding fields the guard reads are missing');
+  for (const p of ['functions/index.json', 'modules/index.json', 'workflows/index.json',
+                   'schedules/index.json', 'connections/index.json', 'modules/layouts/index.json']) {
+    assert.ok(files[p], `the sample workspace has no ${p}`);
+  }
+  // ...and without the flag, none of the awkward states - a refused module on day one is a puzzle
+  assert.ok(!Object.values(files).some((t) => /INVALID_MODULE/.test(t)),
+    'the workspace a first-time reader opens contains a module Zoho refused to describe');
 });

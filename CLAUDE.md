@@ -815,6 +815,23 @@ ones exist without anyone inventing them one at a time. The generated ones are w
 already there, so the graph gains depth rather than becoming a hedge of isolated boxes: 143 nodes and
 135 edges today.
 
+**`+ Sample` writes it, and `sample: true` in `.zoost.json` is the whole mechanism.** The button is
+in the workspace bar, absent once one exists and while there is nowhere to write it. It writes the
+generator's file tree into `<working folder>/<app>/<name>/` and stops: from that point the workspace
+is read by the ordinary list, the ordinary walks and the ordinary exports.
+
+**Everything platform-bound is refused in one place** - `guardOk()`, which every such action already
+asks - rather than by a condition repeated at each button, where one is eventually forgotten. But it
+is **not dressed as a mismatch**: the mismatch bar and its overlay are for two environments that
+could match, and offer actions that would fix it; a sample never will, so the bar is suppressed and
+the workspace line says «sample - generated, never pulled» instead.
+
+**Every rebuild of `bound` carries the flag, and a test enforces it.** `cacheBinding()` reconstructs
+the binding from a listed subset - the trap this file already records - and dropping `sample` there
+would silently re-enable every Zoho action on a sample workspace. The test reads the file line by
+line rather than matching `bound = {...}`, because that regex stops at the first closing brace, which
+on one of those lines is inside `readJson(CFG, {})` - it reported a line that did carry the flag.
+
 **`sample: true` in `.zoost.json` is the whole mechanism.** Nothing about a sample workspace is
 special once the files are on disk - it is read by the ordinary code, listed by the ordinary list,
 and deleted by deleting the folder. There is no demo *mode* and there must never be one: an

@@ -100,6 +100,7 @@
   window.showDirectoryPicker = async () => dirHandle('');
   window.__fsshim = {
     load(files) { Object.assign(tree, files); },
+    clear() { for (const k of Object.keys(tree)) delete tree[k]; },
     root: () => dirHandle(''),
     dump: () => Object.keys(tree).sort(),
   };
