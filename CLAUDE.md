@@ -769,6 +769,25 @@ it - each ring just outside the previous one, plus a gap the slider controls - w
 changes what the `ring` slider *means*, which is why it has not been done in passing. `tools/shots.py`
 moves the slider and says so; the defect is still there for anyone who does not.
 
+**An arc has to attach to the side that faces the other box.** It always used the left or right
+edge, whatever the two boxes' relative positions - so on a focused diagram with one neighbour, which
+the concentric layout puts **straight above** the focus, the arc left sideways, swept out, and came
+back into the other box's side almost parallel to the edge it landed on. The head then lay against
+the box and was painted over by it, since `#erboxes` comes after `#ersvg`. Reported with a picture,
+after the size fix below had already shipped - two different causes for one symptom, and the first
+fix made the second one easier to see rather than hiding it. The side is chosen by the dominant
+direction now, and the bezier's control points are pulled along the same axis, or the curve leaves
+the box sideways again whatever edge it started from.
+
+**And the orphan cascade has to be computed on the set that will actually be drawn.** The first
+version counted an edge anywhere in the graph while the drawing is restricted to the focus
+neighbourhood, so a node was kept for a partner that was never going to be drawn: reported as
+focusing a standalone function, switching the standalone chip off, and finding five boxes still
+there with nothing attached - each held in by an edge to a connection outside the neighbourhood.
+`erCandidate()` is the one predicate now - passes the chips **and** is in the neighbourhood - and
+`erVisibleIds`, `orphanedByFilter` and the cascade all ask it rather than each testing the ego set
+by hand. One of them testing it by hand is exactly how they came apart.
+
 **An arrowhead is drawn in the diagram's coordinates, so its size on screen is the zoom.** Reported
 as «sometimes I see the arrows and sometimes not»: they were always there - every link carries a
 `marker-end` - and measured on the sample org the head came out **20.6px** across on a focused view

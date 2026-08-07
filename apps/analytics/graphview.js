@@ -958,21 +958,29 @@ function erFieldsFor(n) {
 //
 // One pass is the whole cascade, not an approximation of it: dropping nodes that have no surviving
 // edge cannot remove an edge between two nodes that do, so a second pass would find nothing.
+// The candidate set: what would be drawn if nothing else were dropped. The **ego set belongs in
+// here**, and leaving it out is what let orphans back in: the cascade counted an edge to a node the
+// focus neighbourhood excludes, so a node was kept for a partner that was never going to be drawn.
+// Reported - focus a standalone function, switch the standalone chip off, and five boxes stayed with
+// nothing attached, each of them held in by an edge to a connection outside the neighbourhood.
+const erCandidate = (id) => !!(N[id] && passKind(N[id]) && (!egoSet || egoSet.has(id)));
+// One pass is still the whole cascade: dropping nodes with no edge inside the candidate set cannot
+// remove an edge between two nodes that have one.
 function linkedUnderFilter() {
-  const ok = (id) => N[id] && passKind(N[id]);
   const linked = new Set();
-  edgesA.forEach(([a, b]) => { if (ok(a) && ok(b)) { linked.add(a); linked.add(b); } });
+  edgesA.forEach(([a, b]) => {
+    if (erCandidate(a) && erCandidate(b)) { linked.add(a); linked.add(b); }
+  });
   return linked;
 }
 function erVisibleIds() {
-  const ok = (id) => N[id] && passKind(N[id]);
   // A table with no column to show has nothing to draw and stays out - the behaviour that was
   // already here, and a different question from having no relation left.
   if (erEmph !== 'relations') {
-    return nodesA.filter((id) => ok(id) && erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
+    return nodesA.filter((id) => erCandidate(id) && erFieldsFor(N[id]).length > 0);
   }
   const linked = linkedUnderFilter();
-  return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+  return nodesA.filter((id) => erCandidate(id) && (linked.has(id) || id === curFocus));
 }
 // What the chips leave standing but the diagram will not draw, because nothing links it any more.
 // The Explorer beside it still lists those items, so the number has to be given rather than left
@@ -980,8 +988,7 @@ function erVisibleIds() {
 function orphanedByFilter() {
   if (erEmph !== 'relations') return 0;
   const linked = linkedUnderFilter();
-  return nodesA.filter((id) => N[id] && passKind(N[id]) && !linked.has(id) && id !== curFocus
-    && (!egoSet || egoSet.has(id))).length;
+  return nodesA.filter((id) => erCandidate(id) && !linked.has(id) && id !== curFocus).length;
 }
 // Text measured, not guessed. The box was a fixed 250px and a long name simply ran past its own
 // edge - reported. There is no canvas in this window any more, so one is made here for its 2D
@@ -1076,11 +1083,28 @@ function erLayout() {
   erIds.forEach((id) => { minX = Math.min(minX, erPos[id].x); minY = Math.min(minY, erPos[id].y); });
   erIds.forEach((id) => { erPos[id].x -= minX - 40; erPos[id].y -= minY - 40; });
 }
+// Where an arc leaves one box and where it arrives at the other.
+//
+// It used to attach to the left or right edge always, whatever the two boxes' relative positions.
+// On a focused diagram with one neighbour the concentric layout puts that neighbour **straight
+// above** the focus, so the arc left one box sideways, swept out, and came back into the other box's
+// side - arriving almost parallel to the edge it landed on, with the arrowhead lying against the box
+// and painted over by it, since #erboxes comes after #ersvg in the DOM. Reported, with a picture, as
+// «the arrows are hidden even on a very simple graph». Measured on that case: dx=0, dy=-320, and the
+// endpoints were the right edge of one box and the left edge of the other.
+//
+// So the side is chosen by the dominant direction. The caller needs to know which it was, because
+// the bezier's control points have to be pulled along the same axis or the curve leaves the box
+// sideways again.
 function erEdgePoints(A, B) {
-  const acx = A.x + A.w / 2, bcx = B.x + B.w / 2;
-  const ax = bcx >= acx ? A.x + A.w : A.x, ay = A.y + A.h / 2;
-  const bx = bcx >= acx ? B.x : B.x + B.w, by = B.y + B.h / 2;
-  return [ax, ay, bx, by];
+  const acx = A.x + A.w / 2, acy = A.y + A.h / 2;
+  const bcx = B.x + B.w / 2, bcy = B.y + B.h / 2;
+  if (Math.abs(bcy - acy) > Math.abs(bcx - acx)) {
+    const down = bcy >= acy;
+    return [acx, down ? A.y + A.h : A.y, bcx, down ? B.y : B.y + B.h, 'v'];
+  }
+  const right = bcx >= acx;
+  return [right ? A.x + A.w : A.x, acy, right ? B.x : B.x + B.w, bcy, 'h'];
 }
 function erApply() {
   $('ervp').style.transform = `translate(${erTx}px,${erTy}px) scale(${erScale})`;
@@ -1138,10 +1162,12 @@ function erRender() {
   const REL = erEmph === 'relations';
   edgesA.forEach(([a, b]) => {
     if (!shown.has(a) || !shown.has(b)) return;
-    const A = erPos[a], B = erPos[b]; const [x1, y1, x2, y2] = erEdgePoints(A, B); const mx = (x1 + x2) / 2;
+    const A = erPos[a], B = erPos[b]; const [x1, y1, x2, y2, axis] = erEdgePoints(A, B);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const curve = axis === 'v' ? `C${x1},${my} ${x2},${my} ${x2},${y2}` : `C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
     const hot = (a === sel || b === sel);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+    path.setAttribute('d', `M${x1},${y1} ${curve}`);
     path.setAttribute('class', 'erlink'); path.setAttribute('fill', 'none');
     const key = ekey(a, b), picked = erSelEdge === key, dimmed = erSelEdge && !picked;
     path.setAttribute('stroke', picked ? '#d97706' : (dimmed ? '#e7e2f5' : (hot ? '#7c3aed' : (REL ? '#dcd4f7' : '#c4b5fd'))));

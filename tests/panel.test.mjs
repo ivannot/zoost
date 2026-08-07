@@ -1824,10 +1824,14 @@ test('the diagram never draws a box with nothing left to link it', () => {
     const hiddenKinds = new Set(), onlyConds = new Set();
     // Analytics reads the namespace, and it only does so on a schema - which is the only kind it
     // ever builds. The CRM reads the category on a call graph. Same predicate, two vocabularies.
-    const ctx = { N, edgesA, DATA: { kind: app === 'crm' ? 'calls' : 'schema' }, hiddenKinds, onlyConds, Set, Object };
+    // egoSet null: this case is about the chips alone. The neighbourhood is exercised on its own,
+    // further down - it was the half that let orphans back in.
+    const ctx = { N, edgesA, DATA: { kind: app === 'crm' ? 'calls' : 'schema' },
+                  hiddenKinds, onlyConds, egoSet: null, Set, Object };
     const { linkedUnderFilter } = load([sliceConst(`apps/${app}/graphview.js`, 'KINDOF'),
                                         sliceConst(`apps/${app}/graphview.js`, 'CONDITION_KEYS'),
                                         sliceFn(`apps/${app}/graphview.js`, 'passKind'),
+                                        sliceConst(`apps/${app}/graphview.js`, 'erCandidate'),
                                         sliceFn(`apps/${app}/graphview.js`, 'linkedUnderFilter')], ctx);
     assert.equal([...linkedUnderFilter()].sort().join(''), 'abcd', `${app}: an unfiltered graph already drops something`);
     // switch off the kind `c` belongs to: d loses its only link and must go with it
@@ -2079,4 +2083,77 @@ test('the sample org speaks Deluge, so the reference graph can find its calls', 
   const cats = new Set(fns.map((n) => n.category));
   assert.ok(cats.has('crmfundamentals') && cats.has('scheduler') && cats.has('custombutton'),
     'the categories have become the namespaces again');
+});
+
+test('an arc leaves and arrives on the side that faces the other box', () => {
+  // Reported with a picture: «the arrows are hidden even on a very simple graph». They were drawn -
+  // the arc always attached to the left or right edge, whatever the two boxes' relative positions,
+  // so on a focused diagram with one neighbour (which the concentric layout puts **straight above**
+  // the focus) the arc left sideways, swept out, and came back into the other box's side almost
+  // parallel to the edge it landed on. The head then lay against the box and was painted over by
+  // it, because #erboxes comes after #ersvg. Measured on that case: dx=0, dy=-320.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`);
+    const fn = js.slice(js.indexOf('function erEdgePoints('), js.indexOf('\n}', js.indexOf('function erEdgePoints(')));
+    assert.ok(/Math\.abs\(bcy - acy\) > Math\.abs\(bcx - acx\)/.test(fn),
+      `${app}: the side is not chosen by the dominant direction`);
+    assert.ok(/'v'/.test(fn) && /'h'/.test(fn), `${app}: the caller is not told which axis was used`);
+    // ...and the bezier has to be pulled along the same axis, or it leaves the box sideways again
+    assert.ok(/axis === 'v' \? `C\$\{x1\},\$\{my\} \$\{x2\},\$\{my\}/.test(js),
+      `${app}: the control points still assume a horizontal attachment`);
+  }
+
+  // the geometry itself, run rather than read
+  const { erEdgePoints } = load([sliceFn('apps/crm/graphview.js', 'erEdgePoints')], { Math });
+  const A = { x: 100, y: 400, w: 200, h: 40 };
+  const above = { x: 100, y: 40, w: 200, h: 40 };     // straight above: the reported case
+  const beside = { x: 600, y: 400, w: 200, h: 40 };   // to the side: what already worked
+  const v = erEdgePoints(A, above);
+  assert.equal(v[4], 'v', 'a box straight above is still attached sideways');
+  assert.equal(v[1], A.y, 'the arc leaves the wrong horizontal edge');
+  assert.equal(v[3], above.y + above.h, 'the arc does not arrive at the bottom of the box above it');
+  const h = erEdgePoints(A, beside);
+  assert.equal(h[4], 'h', 'a box to the side is now attached vertically');
+  assert.equal(h[0], A.x + A.w, 'the arc leaves the wrong vertical edge');
+  assert.equal(h[2], beside.x, 'the arc does not arrive at the near side');
+});
+
+test('the orphan cascade is computed on the set that will actually be drawn', () => {
+  // The first version counted an edge anywhere in the graph, while the drawing is restricted to the
+  // focus neighbourhood - so a node was kept for a partner that was never going to be drawn.
+  // Reported: focus a standalone function, switch the standalone chip off, and five boxes stayed
+  // with nothing attached, each held in by an edge to a connection outside the neighbourhood.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`);
+    assert.ok(/const erCandidate = \(id\) => !!\(N\[id\] && passKind\(N\[id\]\) && \(!egoSet \|\| egoSet\.has\(id\)\)\)/.test(js),
+      `${app}: the candidate set does not include the focus neighbourhood`);
+    const lk = js.slice(js.indexOf('function linkedUnderFilter('), js.indexOf('\n}', js.indexOf('function linkedUnderFilter(')));
+    assert.ok(/erCandidate\(a\) && erCandidate\(b\)/.test(lk),
+      `${app}: an edge still counts when one end will not be drawn`);
+    // every reader of it must use the same predicate, or one of them drifts back
+    for (const f of ['erVisibleIds', 'orphanedByFilter']) {
+      const body = js.slice(js.indexOf('function ' + f + '('), js.indexOf('\n}', js.indexOf('function ' + f + '(')));
+      assert.ok(/erCandidate\(/.test(body), `${app}: ${f}() has its own idea of what is a candidate`);
+      assert.ok(!/egoSet\.has\(id\)/.test(body), `${app}: ${f}() still tests the ego set by hand`);
+    }
+  }
+
+  const N = {
+    f: { id: 'f', category: 'standalone', namespace: 'standalone', calls: ['g'], called_by: [], rest: false, dead_suspect: false, unresolved: [], system: false },
+    g: { id: 'g', category: 'standalone', namespace: 'standalone', calls: [], called_by: ['f'], rest: false, dead_suspect: false, unresolved: [], system: false },
+    s: { id: 's', category: 'schedules', namespace: 'schedule', calls: ['c'], called_by: [], rest: false, dead_suspect: false, unresolved: [], system: false },
+    c: { id: 'c', category: 'connections', namespace: 'connections', calls: [], called_by: ['s'], rest: false, dead_suspect: false, unresolved: [], system: false },
+  };
+  const edgesA = [['f', 'g'], ['s', 'c']];
+  const hiddenKinds = new Set(), onlyConds = new Set();
+  // the neighbourhood holds `s` but not the connection it links to - the reported shape
+  const ctx = { N, edgesA, DATA: { kind: 'calls' }, hiddenKinds, onlyConds,
+                egoSet: new Set(['f', 'g', 's']), Set, Object };
+  const { linkedUnderFilter } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
+                                      sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
+                                      sliceFn('apps/crm/graphview.js', 'passKind'),
+                                      sliceConst('apps/crm/graphview.js', 'erCandidate'),
+                                      sliceFn('apps/crm/graphview.js', 'linkedUnderFilter')], ctx);
+  assert.equal([...linkedUnderFilter()].sort().join(''), 'fg',
+    's is kept for a partner the neighbourhood excludes');
 });
