@@ -438,11 +438,19 @@ async function refreshContext() {
 // nothing that depends on what the page happens to look like.
 const homeUrl = () => (bound && bound.origin ? `${bound.origin}/workspace/${bound.workspace}` : 'https://analytics.zoho.eu/');
 async function switchTab() {
+  // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
+  // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
+  // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
   const id = await analyticsTabId();
   const url = homeUrl();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 async function openZohoHome() {
+  // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
+  // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
+  // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = homeUrl();
   if (a && HOST_RE.test(a.url || '')) await chrome.tabs.update(a.id, { url, active: true });

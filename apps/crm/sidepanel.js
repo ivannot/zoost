@@ -884,11 +884,19 @@ function homeUrl() {
   return base && inst ? `${base}/crm/${inst}/` : 'https://crm.zoho.com/';
 }
 async function openZohoHome() {
+  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
+  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
+  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   const url = homeUrl();
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 async function openModulePage(genName, navigable, label) {
+  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
+  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
+  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !genName) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
@@ -898,6 +906,10 @@ async function openModulePage(genName, navigable, label) {
   setStatus(`Opened ${genName} in Zoho.`, 'ok');
 }
 async function openModuleLayouts(gen) {
+  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
+  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
+  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
@@ -906,6 +918,10 @@ async function openModuleLayouts(gen) {
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
 async function openModuleLayout(gen, layoutId) {
+  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
+  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
+  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
@@ -922,6 +938,7 @@ function moduleNavigable(m) {
   return true;
 }
 async function switchTab() {
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
   const targetHome = `${bound.base}/crm/${bound.instance}/`;
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
@@ -942,6 +959,7 @@ async function switchTab() {
   else await chrome.tabs.create({ url, active: true });
 }
 async function openTargetZoho(newTab) {
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return null; }
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
   if (!url) { setStatus('Unknown target - pull this workspace once, or open Zoho manually.', 'warn'); return null; }
   if (newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
@@ -972,6 +990,7 @@ async function doFilter(id, fn, nice) {
 // Navigate to the Zoho Functions list (deterministic URL) and pre-filter it to `fn` (Find). The
 // only DOM touch left is filling the class-selected search box; there is no click-and-hope here.
 async function reveal(fn) {
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   const nice = fn.displayName || fn.name || fn.apiName;
   let id = await zohoTabId();
   if (!id) { id = await openTargetZoho(false); if (!id) return; }
@@ -3790,6 +3809,7 @@ async function pullWorkflows() {
   } catch (e) { await noteAccess('workflows', e); setStatus(pullFailMessage('workflows', e), 'bad'); } finally { pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
+  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
   const ws = bound || {};
   if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
   const url = `${ws.base}/crm/${ws.instance}/settings/workflow-rules/${id}`;

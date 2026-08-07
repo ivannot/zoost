@@ -2221,3 +2221,24 @@ test('the sample workspace is written by the shipped generator, and nothing abou
   assert.ok(!Object.values(files).some((t) => /INVALID_MODULE/.test(t)),
     'the workspace a first-time reader opens contains a module Zoho refused to describe');
 });
+
+test('nothing reaches Zoho for a sample workspace, navigations included', () => {
+  // The guide says «everything that would talk to the platform is disabled for it», and the
+  // absolutes ledger is what forced that to be checked rather than assumed. It was not true: the
+  // pull and the per-item reads go through guardOk, but the *navigations* build a URL from the
+  // workspace's own instance and would have opened one that does not exist.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`);
+    // every function that hands a URL to chrome.tabs has to refuse first
+    const names = [...js.matchAll(/async function (\w+)\([^)]*\)\s*\{/g)].map((m) => m[1]);
+    for (const fn of names) {
+      const i = js.indexOf(`async function ${fn}(`);
+      const body = js.slice(i, js.indexOf('\nasync function ', i + 1) + 1 || undefined);
+      const head = body.slice(0, body.indexOf('\n}\n') + 3);
+      if (!/chrome\.tabs\.(update|create)\(/.test(head)) continue;
+      if (!/homeUrl\(\)|functionsUrl\(\)|\/crm\/\$\{|\/workspace\//.test(head)) continue;
+      assert.ok(/isSample\(\)/.test(head),
+        `${app}: ${fn}() opens a Zoho URL without refusing a sample workspace, which has none`);
+    }
+  }
+});
