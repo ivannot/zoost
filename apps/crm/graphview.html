@@ -95,15 +95,22 @@
   /* Window-wide, so it lives in the header and not inside the Explorer column. It was in the
      column, which exists in one of the four views - so the filter that chooses what the diagram
      draws was invisible from the diagram, and reported as missing. */
-  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:0;align-items:center}
   @media print{ .chips{display:none} }
   .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
   .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
-  /* Zoho objects around the code, not kinds of function. Square corners say «different dimension»
-     without a second row or a heading, and the gap before the first one separates them. Reported:
-     dressed the same, nine chips read as one list of nine kinds. */
-  .chip.ent{border-radius:5px}
-  .chip.ent:first-of-type{margin-left:6px}
+  /* One box per dimension, with its name on it. Square corners and a shared border say «these belong
+     together» far better than a gap did - reported twice: first that nine identical pills read as one
+     list of nine kinds, then that the level of each dimension had to be visible rather than inferred.
+     A dimension with a single kind in it is its own chip: a label plus one chip saying the same word
+     twice is a box drawn for symmetry's sake. */
+  .dim{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:8px;padding:3px 6px}
+  .dimt{font:10px var(--sans);text-transform:uppercase;letter-spacing:.4px;color:#8b98ab;padding:0 3px}
+  .dim .chip{border-radius:5px}
+  .chip.solo{border-radius:5px;border-width:1px;padding:4px 10px}
+  /* The conditions are the other question - «narrow to nodes that are also...» - and they start off,
+     which is the honest state when none is chosen. No hue: they are facts about a node, not kinds. */
+  .dim.only{border-style:dashed}
   /* It read as a stray character: no border, no shape, and nothing under the cursor said it could
      be pressed. It is a chip like its neighbours now, with the word beside the mark - reported as
      «you have to find it by trial». */

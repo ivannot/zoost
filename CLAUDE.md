@@ -617,6 +617,16 @@ means everything, which is what the old `All` chip was without a chip that had t
 A `\u2715` clears them, and the search box has one of its own; both are absent while there is nothing to
 clear.
 
+**A filter that hides one thing should cost one click, not eight.** «Nothing selected means
+everything» is the tidy model and it inverts the work: to exclude the connections you had to select
+the other eight kinds. The chips now start **on** and are switched **off** - so they show what is on
+screen, which is the question «what am I looking at», and removing something is one click. `Only`
+(REST, no-caller, unresolved) is the other question and starts empty, because that is the truth when
+no condition is chosen. Two behaviours, so two labelled groups: **the level of a dimension has to be
+visible, not inferred.** `Functions` is a box holding the five Deluge categories; Workflows,
+Schedules and Connections are one chip each at the same level - a label plus a single chip saying the
+same word twice is a box drawn for symmetry's sake.
+
 **A control that governs the window belongs to the window, not to one of its views.** The chips
 steered all four views and lived inside the Explorer column - which three of the four do not have -
 so from the diagram, the control that decides what the diagram draws was off screen. It was reported
@@ -1096,7 +1106,11 @@ These all failed **silently**, with no console error. They are the expensive kin
   org. It was **150 and had to come down to 60**: tuned on the force layout alone, on an org of 87
   modules it never appeared, which was reported as the spinner having disappeared. And the boxed
   diagram - the slower of the two, and the one that leaves a pane blank - had none at all until
-  then. **A threshold measured on one path is not a threshold for the others.** The ER free-layout branch calls the same `settle()` and has the same cost, and is **not**
+  then. **A threshold measured on one path is not a threshold for the others.** The third path was
+  `setScope()`, which lays the whole org out again and did it inside the click handler: the window
+  sat there looking hung and then jumped to the finished drawing. It clears the old one first as
+  well - leaving a drawing up while a different graph is computed is the stale-projection problem
+  in miniature, which this window has already had once. The ER free-layout branch calls the same `settle()` and has the same cost, and is **not**
   covered - its entry point cannot tell in advance whether the concentric branch will be taken.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window

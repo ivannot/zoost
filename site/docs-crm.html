@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.26.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.27.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -250,10 +250,13 @@ git commit -m "baseline"</code></pre>
       lists its connections. A workflow whose file has not been pulled is a node with <b>no</b> measured
       actions rather than a node with none.</li>
     <li>The chips sit in the window's header, above the view tabs, so they are there whichever view you
-      are in - they used to live in the Explorer column, which the diagram views do not have, so the
-      control that decides what the diagram draws was off screen from the diagram. They are also the
-      colour key: each carries its own hue and its own word. They are two rows of one question and one
-      of another. The rounded ones are
+      are in, and they are also the colour key: each carries its own hue and its own word. They are
+      grouped by dimension - <b class="ui">Functions</b> holds the five Deluge categories,
+      <b class="ui">Workflows</b>, <b class="ui">Schedules</b> and <b class="ui">Connections</b> are one
+      each - and they show <b>what is on screen</b>: all lit means everything, and one click switches
+      one off. The dashed <b class="ui">Only</b> group is the other question, «narrow to nodes that are
+      also…», and it starts empty because that is the truth when nothing is chosen; those three apply to
+      functions. The rounded ones are
       what a Deluge function <b>is</b> - its category; the square ones are Zoho objects that stand around
       it, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>; the last
       two are <b>facts about</b> a node rather than kinds of it. Any number can be on at once: within a

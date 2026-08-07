@@ -59,10 +59,10 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. The call graph also shows what *starts* the code and what it reaches: a workflow or
   a schedule that fires a function is a node of its own, and so is every connection a function uses.
-  All of it from what is already on disk - nothing extra is fetched. The chips in that window's header choose
-  what is drawn: any number can be on at once, and switching "Connections" off is how you read the
-  diagram without them. The ✕ Clear beside them removes the filter, and there is one in the
-  search box too. The button that opens that window is in the workspace bar, between "MD" and
+  All of it from what is already on disk - nothing extra is fetched. The chips in that window's header show
+  what is on screen, grouped by dimension: all lit means everything, and one click switches a kind
+  off - "Connections" off is how you read the diagram without them. The dashed "Only" group narrows
+  instead, and starts empty. "↺ Show everything" puts it all back, and the search box has its own ✕. The button that opens that window is in the workspace bar, between "MD" and
   "Health ♥". Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is

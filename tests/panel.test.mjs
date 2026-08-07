@@ -662,53 +662,59 @@ test('the workspace bar carries the name the user gave it, next to the platform\
   assert.match(read('apps/crm/graphview.js'), /ws\.label \?/, 'the window ignores it');
 });
 
-test('the chips are two dimensions, multi-select, and they steer every projection', () => {
-  // Reported: Workflows, Schedules and Connections are Zoho objects, not kinds of function, and
-  // dressing them like the six category chips made nine chips read as one list of nine kinds.
+test('the chips show what is on screen and are switched off, not on', () => {
+  // Two reports, one model. First: Workflows, Schedules and Connections are Zoho objects, not kinds
+  // of function, and nine identical pills read as one list of nine kinds. Then: with «nothing picked
+  // means everything», hiding the connections meant selecting the other eight - working backwards.
+  //
+  // So every kind starts *on* - the chips are what you are looking at - and clicking one removes it.
+  // The conditions are the other question, «narrow to nodes that are also...», and they start off,
+  // which is the honest state when none is chosen.
   const css = read('apps/crm/graphview.html');
-  assert.match(css, /\.chip\.ent\{border-radius:5px\}/, 'the entity chips are not told apart by shape');
-  const src = read('apps/crm/graphview.js');
-  assert.match(src, /const ENTITY_CHIPS = new Set\(\['workflows', 'schedules', 'connections'\]\)/,
-    'the entity chips are no longer declared as their own dimension');
+  assert.match(css, /\.dim\{[^}]*border:1px solid var\(--border\)/, 'the dimensions have no container');
+  assert.match(css, /\.dimt\{/, 'the dimensions are not named');
+  assert.match(css, /\.dim\.only\{border-style:dashed\}/, 'the conditions look like a kind');
 
-  // Multi-select, empty = everything, and within a dimension the chips are ORed while the two
-  // dimensions are ANDed - «standalone or automation, and with no caller» is the real question.
   const N = {
     a: { id: 'a', name: 'a', category: 'standalone', calls: [], called_by: ['x'], rest: false, dead_suspect: false, unresolved: [] },
     b: { id: 'b', name: 'b', category: 'automation', calls: [], called_by: [], rest: false, dead_suspect: true, unresolved: [] },
     c: { id: 'c', name: 'c', category: 'connections', calls: [], called_by: [], rest: false, dead_suspect: true, unresolved: [] },
   };
-  const picked = new Set();
-  const ctx = { N, DATA: { kind: 'calls' }, picked, Set, Object };
-  const api = load([sliceConst('apps/crm/graphview.js', 'FILTERS'),
-                    sliceConst('apps/crm/graphview.js', 'FILTERS_SCHEMA'),
-                    sliceConst('apps/crm/graphview.js', 'CONDITIONS'),
-                    sliceConst('apps/crm/graphview.js', 'KIND_FILTERS'),
-                    sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                    sliceConst('apps/crm/graphview.js', 'pickedKinds'),
-                    sliceConst('apps/crm/graphview.js', 'pickedConds'),
-                    sliceFn('apps/crm/graphview.js', 'passKind')], ctx);
-  const shown = () => Object.keys(N).filter((k) => api.passKind(N[k])).join('');
+  const hiddenKinds = new Set(), onlyConds = new Set();
+  const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds, Set, Object };
+  const { passKind } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
+                             sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
+                             sliceFn('apps/crm/graphview.js', 'passKind')], ctx);
+  const shown = () => Object.keys(N).filter((k) => passKind(N[k])).join('');
 
-  assert.equal(shown(), 'abc', 'nothing picked does not mean everything');
-  picked.add('standalone');
-  assert.equal(shown(), 'a', 'one kind does not narrow to it');
-  picked.add('automation');
-  assert.equal(shown(), 'ab', 'two kinds are not ORed');
-  picked.add('dead');
-  assert.equal(shown(), 'b', 'a condition is not ANDed with the kinds');
-  picked.clear();
-  picked.add('connections');
-  assert.equal(shown(), 'c', 'an entity chip does not select its own nodes');
+  assert.equal(shown(), 'abc', 'the default is not everything');
+  hiddenKinds.add('connections');
+  assert.equal(shown(), 'ab', 'switching a kind off does not remove it - which was the whole point');
+  hiddenKinds.clear();
+  onlyConds.add('dead');
+  assert.equal(shown(), 'bc', 'a condition does not narrow');
+  hiddenKinds.add('connections');
+  assert.equal(shown(), 'b', 'the two questions are not ANDed');
+});
 
-  // and the same predicate steers the list, the canvas and the boxes - the three projections of one
-  // context, which is the rule this window already follows for the focus.
-  const noComments = src.replace(/^\s*\/\/.*$/gm, '');
-  for (const site of [/function pass\(n, q\) \{\s*if \(!passKind\(n\)\)/,
-                      /const shown = \(id\) => N\[id\] && passKind\(N\[id\]\)/,
-                      /const ok = \(id\) => N\[id\] && passKind\(N\[id\]\)/]) {
-    assert.match(noComments, site, 'a projection ignores the chips');
+test('the filter is reachable from every view, and reaches every view', () => {
+  // Reported as «why is there no filter for the connections». There was - the chips - and it lived
+  // inside the Explorer column, which exists in one of the four views. So from the diagram, the
+  // control that decides what the diagram draws was off screen.
+  const html = read('apps/crm/graphview.html');
+  const header = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
+  assert.ok(header.includes('id="chips"'), 'the filter is not in the window chrome');
+  const aside = html.slice(html.indexOf('<aside>'), html.indexOf('</aside>'));
+  assert.ok(!aside.includes('id="chips"'), 'the filter is back inside the one view that has a column');
+
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const rp = src.slice(src.indexOf('function relPass('), src.indexOf('\n}', src.indexOf('function relPass(')));
+  assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
+  const af = src.slice(src.indexOf('function applyFilter('), src.indexOf('\n}', src.indexOf('function applyFilter(')));
+  for (const v of [/render\(\)/, /relRender\(\)/, /draw\(\)/, /erShowMaybeHeavy\(\)/]) {
+    assert.match(af, v, `a view is not redrawn when the filter changes: ${v}`);
   }
+  assert.ok(!/id="legend"/.test(html), 'a second colour key is back inside the canvas');
 });
 
 test('the call graph carries what fires the code and what the code reaches', async () => {
@@ -916,6 +922,35 @@ test('a call graph is never described in the nouns of a schema', () => {
     assert.ok(!/\bmodules\b|\blookups\b|\bunreferenced\b/.test(line),
       `a status line spells out a schema noun instead of asking NOUN(): ${line.slice(0, 70)}`);
   }
+});
+
+test('widening the scope clears, says so, and only then computes', async () => {
+  // Reported: clicking «Everything» did nothing for a moment, the window looked hung, and then the
+  // finished graph appeared. It is the most expensive thing here and it ran in the click handler.
+  // The old drawing is cleared first as well - leaving it up while a different graph is computed is
+  // the stale-projection problem in miniature, which this window has already had once.
+  const order = [];
+  const frames = [];
+  const ov = { className: '', innerHTML: '', classList: { add: () => order.push('spinner'), remove: () => order.push('done') },
+    querySelector: () => ({ set textContent(_v) {} }), setAttribute() {} };
+  const ctx = {
+    curFocus: 'a', scopeAll: false, nodesA: new Array(200), SPIN_NODES: 60, curView: 'er',
+    forceFeasible: () => true, N: { a: { id: 'a', name: 'a' } }, label: (n) => n.name,
+    bfsEgo: () => order.push('work'), updateDepthUI() {}, updateScopeUI() {}, egoStat() {},
+    erLaidOut: true, erShow: () => order.push('draw'), fitView() {}, draw() {},
+    $: (id) => (id === 'erboxes' ? { set innerHTML(_v) { order.push('cleared'); } }
+                                 : { querySelector: () => ov, appendChild() {} }),
+    document: { createElement: () => ov },
+    requestAnimationFrame: (f) => frames.push(f),
+    NOUN: () => ({ all: 'Everything' }), esc: (x) => x, ctx2d: null, W: 0, H: 0,
+  };
+  const { setScope } = load([sliceConst('apps/crm/graphview.js', 'focusName'),
+                             sliceFn('apps/crm/graphview.js', 'runHeavy'),
+                             sliceFn('apps/crm/graphview.js', 'setScope')], ctx);
+  setScope(true);
+  assert.deepEqual([...order], ['cleared', 'spinner'], 'it computed before saying anything');
+  frames.shift()(); frames.shift()();
+  assert.deepEqual([...order], ['cleared', 'spinner', 'work', 'draw', 'done'], 'the order is wrong');
 });
 
 test('the force layout paints its spinner before it blocks, not after', () => {

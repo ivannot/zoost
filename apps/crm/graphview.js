@@ -93,78 +93,100 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 })();
 
 // ---------------- Explorer ----------------
-const FILTERS = [['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
-  ['schedule', 'schedule'], ['validation_rule', 'validation'],
-  // Not kinds of function - Zoho objects that stand *around* the code. They keep their own hue and
-  // their own shape, because a chip row that mixes two dimensions and dresses them the same reads as
-  // one dimension with nine values, which they are not. Plural, so «Schedules» the object and
-  // «schedule» the Deluge category of a function one runs can sit in the same row.
-  ['workflows', 'Workflows'], ['schedules', 'Schedules'], ['connections', 'Connections'],
-  // Conditions last, and without a hue: REST is a *property* of a function - a standalone one can
-  // be REST too - so colouring it claimed a seventh category that does not exist. It had one, and
-  // single-select filters hid the mistake: you could never hold it and a category at once.
-  ['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']];
-const FILTERS_SCHEMA = [['standard', 'standard'], ['custom', 'custom'], ['hub', 'hub (3+)'], ['orphan', 'orphan']];
-const ENTITY_CHIPS = new Set(['workflows', 'schedules', 'connections']);
-// Conditions are something true *about* a node, not a kind of node. They get no hue, and they are
-// ANDed with the kinds rather than ORed into them - «standalone or automation, and with no caller»
-// is the question people actually ask.
-const CONDITIONS = new Set(['rest', 'dead', 'unres', 'hub', 'orphan']);
-const KIND_FILTERS = new Set(FILTERS.concat(FILTERS_SCHEMA).map(([k]) => k).filter((k) => !CONDITIONS.has(k)));
+// What the window is drawing, in two questions.
+//
+// KINDS is «which kinds are on screen», and every one of them starts **on**: the chips show what you
+// are looking at, and turning one off removes it. The first model was the other way round - nothing
+// selected meant everything, and excluding the connections meant selecting the other eight - which
+// he reported as having to work backwards. Showing the state and letting it be switched off is the
+// same information with the work in the right direction.
+//
+// ONLY is «narrow to nodes that are also...». Those are conditions - facts *about* a node, not kinds
+// of node - so they carry no hue and they start off, because «no condition applied» is the truth
+// when none is chosen. Two behaviours, which is why they are two labelled groups and not one row:
+// the level of a dimension has to be visible, not inferred.
+const KINDS = {
+  calls: [
+    ['Functions', [['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
+                   ['schedule', 'schedule'], ['validation_rule', 'validation']]],
+    ['Workflows', [['workflows', null]]],
+    ['Schedules', [['schedules', null]]],
+    ['Connections', [['connections', null]]],
+  ],
+  schema: [['Modules', [['standard', 'standard'], ['custom', 'custom']]]],
+};
+// Function-only, all three of them, which is the other half of why they cannot sit among the kinds:
+// «REST» and «unresolved» say nothing about a workflow or a connection.
+const ONLY = {
+  calls: [['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']],
+  schema: [['hub', 'hub (3+)'], ['orphan', 'orphan']],
+};
+const kindGroups = () => KINDS[DATA.kind === 'schema' ? 'schema' : 'calls'];
+const onlyList = () => ONLY[DATA.kind === 'schema' ? 'schema' : 'calls'];
+const allKinds = () => kindGroups().flatMap(([, ks]) => ks.map(([k]) => k));
 
-// Multi-select, and empty means everything - which is what «All» used to be, without a chip that has
-// to be kept in step with the others. Within a dimension the chips are ORed; the two dimensions are
-// ANDed.
-let picked = new Set();
-const pickedKinds = () => [...picked].filter((k) => KIND_FILTERS.has(k));
-const pickedConds = () => [...picked].filter((k) => CONDITIONS.has(k));
+let hiddenKinds = new Set();   // switched off, so absent from every view
+let onlyConds = new Set();     // narrow to nodes that are also these
 
+function chipEl(k, label, hue) {
+  const c = document.createElement('span');
+  c.className = 'chip'; c.dataset.k = k;
+  if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
+  c.appendChild(document.createTextNode(label));
+  return c;
+}
 function buildChips() {
-  const chips = $('chips'); chips.innerHTML = '';
-  const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
-  F.forEach(([k, l]) => {
-    const c = document.createElement('span');
-    c.className = 'chip' + (ENTITY_CHIPS.has(k) ? ' ent' : '');
-    c.setAttribute('aria-pressed', picked.has(k));
-    c.dataset.k = k;
-    const hue = KINDCOL(k);
-    if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
-    c.appendChild(document.createTextNode(l));
-    c.onclick = () => {
-      picked.has(k) ? picked.delete(k) : picked.add(k);
-      c.setAttribute('aria-pressed', picked.has(k));
-      applyFilter();
-    };
-    chips.appendChild(c);
+  const box = $('chips'); box.innerHTML = '';
+  kindGroups().forEach(([title, ks]) => {
+    const g = document.createElement('span'); g.className = 'dim';
+    // A dimension with one kind in it is its own chip: a label plus a single chip saying the same
+    // word twice is a box drawn for the sake of symmetry.
+    if (ks.length === 1) {
+      const [k] = ks[0];
+      const c = chipEl(k, title, KINDCOL(k));
+      c.classList.add('solo');
+      g.appendChild(c);
+    } else {
+      const t = document.createElement('span'); t.className = 'dimt'; t.textContent = title;
+      g.appendChild(t);
+      ks.forEach(([k, l]) => g.appendChild(chipEl(k, l, KINDCOL(k))));
+    }
+    box.appendChild(g);
   });
+  const only = document.createElement('span'); only.className = 'dim only';
+  const ot = document.createElement('span'); ot.className = 'dimt'; ot.textContent = 'Only';
+  only.appendChild(ot);
+  onlyList().forEach(([k, l]) => only.appendChild(chipEl(k, l, null)));
+  box.appendChild(only);
+
   const x = document.createElement('span');
-  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u2715 Clear';
-  x.title = 'Clear the filter'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Clear the filter');
-  x.onclick = () => { picked.clear(); buildChips(); applyFilter(); };
-  chips.appendChild(x);
-  updateChipX();
+  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u21ba Show everything';
+  x.title = 'Show everything again'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Show everything again');
+  x.onclick = () => { hiddenKinds.clear(); onlyConds.clear(); syncChips(); applyFilter(); };
+  box.appendChild(x);
+
+  box.onclick = (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    const k = c.dataset.k;
+    if (CONDITION_KEYS.has(k)) { onlyConds.has(k) ? onlyConds.delete(k) : onlyConds.add(k); }
+    else { hiddenKinds.has(k) ? hiddenKinds.delete(k) : hiddenKinds.add(k); }
+    syncChips(); applyFilter();
+  };
+  syncChips();
 }
-function updateChipX() {
-  // Absent, not disabled: with nothing picked there is no filter to remove.
-  const x = $('chipx'); if (x) x.style.display = picked.size ? '' : 'none';
-}
-// The chips choose what the window is looking at, so all three projections follow them - the list,
-// the canvas and the boxed diagram. The search box narrows the *list* only: hiding the diagram down
-// to one node as you type would be a different feature wearing the same control.
-function applyFilter() {
-  updateChipX();
-  render();
-  if (curView === 'rel') relRender();
-  // The boxed layout is invalidated whatever view you are on: filtering from the Explorer and then
-  // switching to the diagram would otherwise arrive at a layout computed for the old set of nodes.
-  erLaidOut = false;
-  if (curView === 'visual') draw();
-  if (curView === 'er') erShowMaybeHeavy();
+const CONDITION_KEYS = new Set(['rest', 'dead', 'unres', 'hub', 'orphan']);
+function syncChips() {
+  document.querySelectorAll('#chips .chip').forEach((c) => {
+    const k = c.dataset.k;
+    c.setAttribute('aria-pressed', CONDITION_KEYS.has(k) ? onlyConds.has(k) : !hiddenKinds.has(k));
+  });
+  const x = $('chipx');
+  // Absent while nothing is switched off: there is no «everything» to go back to.
+  if (x) x.style.display = (hiddenKinds.size || onlyConds.size) ? '' : 'none';
 }
 function passKind(n) {
-  const ks = pickedKinds();
-  if (ks.length && !ks.includes(KINDOF(n))) return false;
-  for (const c of pickedConds()) {
+  if (hiddenKinds.has(KINDOF(n))) return false;
+  for (const c of onlyConds) {
     if (c === 'rest' && !n.rest) return false;
     if (c === 'dead' && !n.dead_suspect) return false;
     if (c === 'unres' && !n.unresolved.length) return false;
@@ -176,6 +198,16 @@ function passKind(n) {
 function pass(n, q) {
   if (!passKind(n)) return false;
   return !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
+}
+// The chips choose what the window is looking at, so all four views follow them. The search box
+// narrows the *list* only: hiding the diagram down to one node as you type would be a different
+// feature wearing the same control.
+function applyFilter() {
+  render();
+  if (curView === 'rel') relRender();
+  erLaidOut = false;
+  if (curView === 'visual') draw();
+  if (curView === 'er') erShowMaybeHeavy();
 }
 function render() {
   const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
@@ -867,9 +899,22 @@ function setScope(all) {
     return;
   }
   scopeAll = !!all;
-  bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow();
-  else if (curView === 'visual') { fitView(); draw(); }
+  // Widening to everything lays the whole org out again, which is the most expensive thing this
+  // window does - and it did it in the click handler, so the interface sat there looking hung and
+  // then jumped to the result. Reported. The work is deferred behind a painted frame like every
+  // other layout, and the old drawing is cleared first: leaving it up while a different graph is
+  // being computed is the stale-projection problem in miniature.
+  const work = () => {
+    bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
+    if (curView === 'er') erShow();
+    else if (curView === 'visual') { fitView(); draw(); }
+  };
+  const heavy = nodesA.length >= SPIN_NODES && (curView === 'er' || curView === 'visual');
+  if (!heavy) return work();
+  if (curView === 'er') $('erboxes').innerHTML = '';
+  else if (ctx2d) ctx2d.clearRect(0, 0, W, H);
+  runHeavy($(curView === 'er' ? 'v-er' : 'visual'),
+    all ? `Laying out ${NOUN().all.toLowerCase()}\u2026` : `Laying out around ${focusName(curFocus)}\u2026`, work);
 }
 const focusName = (id) => (id && N[id] ? label(N[id]) : (id || ''));
 function egoStat() {
