@@ -629,6 +629,55 @@ test('a function box lists what it calls, the way a module box lists its fields'
     ['Email'], 'erFieldsFor stopped returning a module\'s fields');
 });
 
+test('the call catalogue puts the link first, and its snippet is derived not invented', () => {
+  // The Relations tab for modules is one row per related list, with the API name Deluge needs made
+  // copyable. For functions it is one row per call, and the copyable thing is the call itself.
+  //
+  // The form is not guessed: graph-core's CALL_RE - the regex that finds calls in real Deluge
+  // sources - matches `namespace.name(`, so that is how one is written, and the parameter names come
+  // from the captured meta rather than from a placeholder.
+  const N = {
+    'billing.createInvoice': { id: 'billing.createInvoice', name: 'createInvoice', namespace: 'billing', calls: ['billing.calcTax', 'shared.log'], category: '' },
+    'billing.calcTax': { id: 'billing.calcTax', name: 'calcTax', namespace: 'billing', calls: [], category: '', params: [{ type: 'double', name: 'amount' }, { type: 'double', name: 'rate' }] },
+    'shared.log': { id: 'shared.log', name: 'log', namespace: 'shared', calls: [], category: 'automation', params: [{ name: 'message' }] },
+  };
+  const ctx = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], relFilter: 'all', relQ: '' };
+  const { buildCallRels, relSnippet, relPass } = load([
+    sliceFn('apps/crm/graphview.js', 'buildCallRels'),
+    sliceConst('apps/crm/graphview.js', 'relSnippet'),
+    sliceFn('apps/crm/graphview.js', 'relPass')], ctx);
+
+  buildCallRels();
+  // Joined rather than deepEqual: the rows are built inside the vm, so their array carries that
+  // realm's prototype and deepStrictEqual rejects it however equal the contents are.
+  const rels = ctx.RELS;
+  const to = rels.map((r) => r.to).join(' ');
+  assert.equal(rels.length, 2, 'one row per call');
+  assert.equal(to, 'billing.calcTax shared.log', 'the callees are wrong or unsorted');
+  assert.equal(rels.map((r) => r.cross).join(' '), 'false true', 'crossing a namespace is not recorded');
+
+  assert.equal(relSnippet(rels[0]), 'billing.calcTax(amount, rate);', 'the copyable call lost its signature');
+  assert.equal(relSnippet(rels[1]), 'shared.log(message);');
+  // and it must not have borrowed the schema's snippet
+  assert.ok(!/getRelatedRecords/.test(relSnippet(rels[0])), 'a call is being written as a related-list read');
+
+  ctx.relFilter = 'cross';
+  assert.equal(rels.filter(relPass).map((r) => r.to).join(' '), 'shared.log', 'the cross-namespace facet does not filter');
+  ctx.relFilter = 'same';
+  assert.equal(rels.filter(relPass).map((r) => r.to).join(' '), 'billing.calcTax', 'the same-namespace facet does not filter');
+  ctx.relFilter = 'all'; ctx.relQ = 'calctax';
+  assert.equal(rels.filter(relPass).length, 1, 'the search does not reach both ends of a call');
+
+  // ...and buildRels has to route to it. The same hole as with erFieldsFor: testing the builder
+  // without the line that reaches it let deleting that line pass.
+  const c2 = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], SYS_REL: /^$/ };
+  const b2 = load([sliceFn('apps/crm/graphview.js', 'buildCallRels'),
+                   sliceFn('apps/crm/graphview.js', 'buildRels')], c2);
+  b2.buildRels();
+  assert.equal(c2.RELS.length, 2, 'buildRels does not reach the call catalogue on a call graph');
+  assert.ok(c2.RELS[0].call, 'buildRels built schema rows for a call graph');
+});
+
 test('a call graph is never described in the nouns of a schema', () => {
   // Four status lines wrote "modules" and "lookups" literally, so the call graph reported the wrong
   // nouns in three of them. One accessor decides, and nothing else may spell them out.

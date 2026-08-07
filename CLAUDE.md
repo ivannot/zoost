@@ -562,6 +562,17 @@ fields, expressed as the same `{api_name, data_type}` rows so the renderer learn
 tab reads **Call graph** on a function graph and **ER diagram** on a schema - two names, never a
 third, exactly as the window itself is named.
 
+**Relations puts the link first, and it does that for calls too.** One row per related list on a
+schema; one row per call on a call graph - caller, callee, both namespaces, the callee's kind, and
+the call itself copyable **with its parameter names**. The snippet is derived rather than invented:
+`graph-core`'s `CALL_RE`, the regex that finds calls in real Deluge sources, matches
+`namespace.name(`, so that is how one is written, and the parameters come from the captured meta.
+The facets follow the catalogue - «crosses namespace / same namespace / all» where a schema has
+«module relations / many-to-many / system / all» - and the default facet moves with them, because
+`user` (hide the system related lists) is the right first view of a schema and means nothing here.
+A call to a name that resolves to nothing is **not** a row: those are measurements of absence and
+they live in the Health audit, which the hint under the table says.
+
 Two things this uncovered. The Explorer selection moved the focus only `if (schema)`, so on a call
 graph the diagram stayed where it opened while the list said otherwise - the same "one of a set" miss
 this file already names. And four status lines spelt out «modules» and «lookups» as literals; `NOUN()`

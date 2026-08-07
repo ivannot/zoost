@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:2a5dec2edcd35f73 -->
+<!-- translated-from: site/docs-crm.html sha256:f0d32d424309f1f5 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.20.0</span> · aggiornata il <span class="dd">6 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.21.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -270,8 +270,10 @@ git commit -m "baseline"</code></pre>
     <li>Le schede: <b>Explorer</b> (elenco + dettaglio) e <b>Visual</b> (nodi e archi) in entrambi i disegni,
       più quello a riquadri - <b>Call graph</b> se la finestra è stata aperta sulle funzioni, dove ogni
       riquadro elenca che cosa chiama quella funzione, e <b>ER diagram</b> se è stata aperta sui moduli,
-      dove ogni riquadro elenca i suoi campi. I moduli hanno in più <b>Relations</b> - vedi la sezione
-      successiva. Selezionare qualcosa in <b>Explorer</b> ricentra tutte le viste su quello.</li>
+      dove ogni riquadro elenca i suoi campi. Poi <b>Relations</b>, che mette al primo posto il legame
+      invece della cosa: una riga per related list su uno schema, una riga per chiamata su un grafo di
+      chiamate, cercabili e filtrabili. Selezionare qualcosa in <b>Explorer</b> ricentra tutte le viste
+      su quello.</li>
     <li>Sotto i riferimenti di una funzione ci sono una profondità e un pulsante
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b>,
       che apre quella finestra centrata su questa funzione - la stessa coppia che l'anteprima dei moduli

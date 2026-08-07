@@ -61,7 +61,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   That window has three views of the same thing: Explorer (a list and a detail pane), Visual (dots
   and lines, good for the shape of it) and a boxed diagram - "Call graph" for functions, where each
   box lists what that function calls, and "ER diagram" for modules, where each box lists its fields.
-  Selecting anything in Explorer re-centres all three on it.
+  Selecting anything in Explorer re-centres all three on it. A fourth, Relations, puts the link first
+  instead of the thing: one row per call on a call graph - who calls whom, with the call copyable
+  complete with its parameter names - and one row per related list on a schema.
 - The references bar under a function also carries a depth and a "Call graph" button, which opens
   that window centred on this function. The Modules preview has the same pair for the ER diagram.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail

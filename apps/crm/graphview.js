@@ -46,7 +46,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   {
     $('ertab').style.display = '';
     $('ertab').textContent = _schema ? 'ER diagram' : 'Call graph';
-    if (_schema) { $('reltab').style.display = ''; buildRelChips(); }
+    $('reltab').style.display = ''; buildRelChips();
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
       const st = await chrome.storage.local.get('erParams');
@@ -287,7 +287,29 @@ document.addEventListener('keydown', (e) => { if (e.key === '/' && document.acti
 // when writing Deluge is the related-list API name, not the module map.
 const SYS_REL = /^(Notes|Attachments|Emails|Tasks|Calls|Events|Tasks_History|Calls_History|Events_History|CheckLists|Activities.*|Zoho_Support|Social|Campaigns_Sent|Invited_Events|Cadences|Timeline|Approvals?)$/i;
 let RELS = [], relFilter = 'user', relQ = '';
+// One row per call, the way the schema's catalogue is one row per related list. Same reason for
+// existing: the diagram puts the *things* first and this puts the *link* first, which is the shape
+// the question has when you are about to change a function and want to know who feels it.
+//
+// The snippet is derived, not invented: graph-core's CALL_RE - the regex that finds calls in real
+// Deluge sources - matches `namespace.name(`, so that is how a call is written. The parameter names
+// come from the captured meta, so what is copied is the callee's actual signature.
+function buildCallRels() {
+  RELS = [];
+  Object.values(N).forEach((n) => (n.calls || []).forEach((id) => {
+    const c = N[id]; if (!c) return;
+    RELS.push({
+      call: true,
+      from: n.id, fromLabel: label(n), fromNs: n.namespace || '',
+      to: c.id, toLabel: label(c), toNs: c.namespace || '',
+      kind: c.category || '', params: c.params || [],
+      cross: (n.namespace || '') !== (c.namespace || ''),
+    });
+  }));
+  RELS.sort((a, b) => (a.from.localeCompare(b.from) || a.to.localeCompare(b.to)));
+}
 function buildRels() {
+  if (DATA.kind !== 'schema') return buildCallRels();
   RELS = [];
   Object.values(N).forEach((n) => (n.related_lists || []).forEach((r) => {
     const child = r.module || r.connected_module || null;
@@ -305,8 +327,17 @@ function buildRels() {
   }));
   RELS.sort((a, b) => (a.parent.localeCompare(b.parent) || a.api.localeCompare(b.api)));
 }
-const relSnippet = (r) => `zoho.crm.getRelatedRecords("${r.api}", "${r.parent}", recordId);`;
+const relSnippet = (r) => (r.call
+  ? `${r.to}(${(r.params || []).map((p) => p.name).join(', ')});`
+  : `zoho.crm.getRelatedRecords("${r.api}", "${r.parent}", recordId);`);
 function relPass(r) {
+  if (r.call) {
+    if (relFilter === 'cross' && !r.cross) return false;
+    if (relFilter === 'same' && r.cross) return false;
+    if (!relQ) return true;
+    const q = relQ.toLowerCase();
+    return [r.from, r.to, r.kind].some((x) => (x || '').toLowerCase().includes(q));
+  }
   if (relFilter === 'user' && r.sys) return false;
   if (relFilter === 'sys' && !r.sys) return false;
   if (relFilter === 'm2m' && !/linking:/.test(r.via)) return false;
@@ -316,12 +347,29 @@ function relPass(r) {
 }
 function relRender() {
   if (!RELS.length) buildRels();
+  const calls = DATA.kind !== 'schema';
   const rows = RELS.filter(relPass);
-  $('relcount').textContent = `${rows.length} of ${RELS.length} relations`;
+  $('relcount').textContent = `${rows.length} of ${RELS.length} ${calls ? 'calls' : 'relations'}`;
   if (!RELS.length) {
-    $('relwrap').innerHTML = '<div class="empty">No related lists in this graph. Run <b>Pull Modules</b> and reopen the diagram.</div>';
+    $('relwrap').innerHTML = calls
+      ? '<div class="empty">No calls between functions in this graph. A call is one Deluge function invoking another; a function that only talks to Zoho makes none.</div>'
+      : '<div class="empty">No related lists in this graph. Run <b>Pull Modules</b> and reopen the diagram.</div>';
     return;
   }
+  if (calls) {
+    // A call is the link put first, the way a related list is above. The columns differ because the
+    // facts differ - this is the product-specific half the shared engine deliberately does not own.
+    $('relwrap').innerHTML = `<table class="rtbl"><thead><tr>
+        <th>Function</th><th>Namespace</th><th>Calls</th><th>Namespace</th><th>Kind</th><th>Deluge</th>
+      </tr></thead><tbody>${rows.map((r) => `<tr class="${r.cross ? '' : 'sys'}">
+        <td><span class="mod" data-mod="${escA(r.from)}">${esc(r.fromLabel)}</span></td>
+        <td class="rlab" style="font:11px var(--mono)">${esc(r.fromNs)}</td>
+        <td><span class="mod" data-mod="${escA(r.to)}">${esc(r.toLabel)}</span></td>
+        <td class="rlab" style="font:11px var(--mono)">${esc(r.toNs)}${r.cross ? '' : ' \u00b7 same'}</td>
+        <td><span class="rtype">${esc(r.kind || 'standalone')}</span></td>
+        <td><span class="snip" data-copy="${escA(relSnippet(r))}" title="Click to copy the call with its parameter names">${esc(r.toLabel)}(\u2026)</span></td>
+      </tr>`).join('')}</tbody></table>`;
+  } else {
   $('relwrap').innerHTML = `<table class="rtbl"><thead><tr>
       <th>Relation API name</th><th>Label</th><th>On module</th><th>Returns</th><th>Via</th><th>Type</th><th>Deluge</th>
     </tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.sys ? 'sys' : ''}">
@@ -333,6 +381,7 @@ function relRender() {
       <td><span class="rtype">${esc(r.type || 'default')}${r.visible ? '' : ' \u00b7 hidden'}</span></td>
       <td><span class="snip" data-copy="${escA(relSnippet(r))}" title="Click to copy">getRelatedRecords(\u2026)</span></td>
     </tr>`).join('')}</tbody></table>`;
+  }
   $('relwrap').querySelectorAll('[data-copy]').forEach((el) => (el.onclick = () => {
     navigator.clipboard.writeText(el.dataset.copy).then(() => {
       const old = el.textContent; el.textContent = 'copied \u2713';
@@ -346,7 +395,19 @@ function relRender() {
 }
 function buildRelChips() {
   const box = $('relchips'); if (!box) return;
-  [['user', 'module relations'], ['m2m', 'many-to-many'], ['sys', 'system'], ['all', 'all']].forEach(([k, l]) => {
+  const calls = DATA.kind !== 'schema';
+  if (calls) {
+    $('relq').placeholder = 'Search function, namespace, kind\u2026';
+    $('relhint').textContent = 'Click a call to copy it with its parameter names \u00b7 click a function to open it in the Explorer'
+      + ' \u00b7 a call to a name that resolves to nothing is not a row here: those are in the Health audit';
+  }
+  const facets = calls
+    ? [['cross', 'crosses namespace'], ['same', 'same namespace'], ['all', 'all']]
+    : [['user', 'module relations'], ['m2m', 'many-to-many'], ['sys', 'system'], ['all', 'all']];
+  // The default facet belongs to the catalogue: `user` hides the system related lists, which is the
+  // right first view of a schema and means nothing here - a call graph opens on everything.
+  if (!facets.some(([k]) => k === relFilter)) relFilter = calls ? 'all' : 'user';
+  facets.forEach(([k, l]) => {
     const c = document.createElement('span'); c.className = 'chip'; c.textContent = l;
     c.setAttribute('aria-pressed', k === relFilter);
     c.onclick = () => { relFilter = k; [...box.children].forEach((x) => x.setAttribute('aria-pressed', x === c)); relRender(); };
