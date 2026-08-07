@@ -58,6 +58,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
   modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
+  Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
+  screen and switch to the other without coming back here. The panel builds it, because the panel is
+  what holds the working folder - so it has to be open and the folder granted.
   That window has three views of the same thing: Explorer (a list and a detail pane), Visual (dots
   and lines, good for the shape of it) and a boxed diagram - "Call graph" for functions, where each
   box lists what that function calls, and "ER diagram" for modules, where each box lists its fields.

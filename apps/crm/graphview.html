@@ -35,6 +35,14 @@
   header h1{font-size:15px;margin:0}
   header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
   .tabs{display:flex;gap:4px;flex-wrap:wrap}
+  /* What the window is looking at, as against which view of it - so it sits on the title row and
+     not among the view tabs, which are a different question about the same thing. */
+  .subj{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
+  .subj span{font:12px var(--sans);padding:5px 12px;cursor:pointer;color:var(--muted);background:#fff}
+  .subj span+span{border-left:1px solid var(--border)}
+  .subj span[aria-selected=true]{background:var(--sel-soft);color:var(--sel);font-weight:600;cursor:default}
+  .subj span:not([aria-selected=true]):hover{background:#f3f6fb;color:var(--ink)}
+  @media print{ .subj{display:none} }
   .tab{font:12px var(--sans);padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--muted)}
   .tab[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   /* Nothing to project from the selected module. Temporarily unavailable, so disabled rather
@@ -256,6 +264,7 @@
   <header>
     <div class="hrow">
       <h1 id="gtitle">Zoost</h1>
+      <div class="subj" id="subj" role="tablist" aria-label="What this window is drawing"><span data-k="calls" role="tab">Functions</span><span data-k="schema" role="tab">Modules</span></div>
       <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
       <span class="stat" id="s-ws"></span>
     </div>

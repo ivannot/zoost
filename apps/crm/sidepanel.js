@@ -1773,10 +1773,28 @@ function aiOpenSettings() { openSettings(); }
 
 
 // ---------- save-sync ----------
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'saved') syncOne(msg.id);
   if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
+  // The diagram window asking for the other drawing. It has no folder access of its own - by design,
+  // and it stays that way - so the graph is built here and left in storage for it to reload from.
+  if (msg?.type === 'graphSwitch') { buildGraphFor(msg.kind).then(sendResponse); return true; }
 });
+async function buildGraphFor(kind) {
+  try {
+    if (!dir) throw new Error('no working folder is open in the panel');
+    // ensurePerm only *asks* when the permission has lapsed, and asking needs a user gesture the
+    // panel does not have here. If it has lapsed the switch stops and says so, rather than throwing
+    // a DOMException whose message names neither the folder nor the remedy.
+    if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the panel');
+    const g = kind === 'schema' ? await buildSchemaGraph() : await ensureGraph();
+    if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
+    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
+    await chrome.storage.local.set({ graphData: g });
+    setStatus(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
+}
 async function syncOne(id) {
   if (!dir || !(await hasPerm(dir))) return;
   await refreshContext();

@@ -63,7 +63,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     : `<b>${DATA.counts.nodes}</b> functions · <b>${DATA.counts.edges}</b> calls · <b>${DATA.counts.dead_suspects}</b> no-caller · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
-  buildChips(); render(); buildLegend(); initCanvas(); updateTopTools();
+  buildChips(); render(); buildLegend(); initCanvas(); updateTopTools(); wireSubject();
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
@@ -414,6 +414,43 @@ function buildRelChips() {
     box.appendChild(c);
   });
   $('relq').addEventListener('input', () => { relQ = $('relq').value.trim(); relRender(); });
+}
+
+// ---------------- Which of the two drawings is on screen ----------------
+//
+// The window is opened carrying a context - a module or a function - and until now changing your
+// mind meant going back to the panel and opening it again. The switch asks the panel to build the
+// other graph, because the panel is the only thing here that holds the folder: this window has no
+// file access at all, by design, and inventing one for a convenience would be a permission nobody
+// asked for.
+//
+// It reloads rather than swapping the data in place. Every global in this file - the layout, the
+// ego set, the focus, the chips, the canvas - was computed from the graph that is being replaced,
+// and re-deriving them one by one is exactly the kind of half-migrated state this project keeps
+// getting bitten by. A reload costs one frame and cannot leave a stale half behind.
+function wireSubject() {
+  const box = document.getElementById('subj');
+  if (!box) return;
+  const here = DATA.kind === 'schema' ? 'schema' : 'calls';
+  [...box.children].forEach((el) => el.setAttribute('aria-selected', el.dataset.k === here));
+  box.onclick = async (e) => {
+    const el = e.target.closest('span[data-k]');
+    if (!el || el.dataset.k === here) return;
+    const was = $('statline').innerHTML;
+    $('statline').innerHTML = '<b>Building\u2026</b> asking the panel for the other graph';
+    try {
+      const r = await chrome.runtime.sendMessage({ type: 'graphSwitch', kind: el.dataset.k });
+      if (!r || !r.ok) throw new Error((r && r.error) || 'no answer');
+      location.reload();
+    } catch (err) {
+      // Precise, because there is exactly one thing that makes this fail: the panel is the only
+      // holder of the folder handle, and it has to be open and granted for the graph to be built.
+      $('statline').innerHTML = was;
+      alert('Could not switch: ' + (err.message || err)
+        + '\n\nThe Zoost side panel builds the graph - it holds the working folder, this window does not.'
+        + '\nOpen the panel in a Zoho CRM tab, make sure the folder is granted, then try again.');
+    }
+  };
 }
 
 // ---------------- The list, folded away ----------------

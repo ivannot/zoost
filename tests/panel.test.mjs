@@ -629,6 +629,79 @@ test('a function box lists what it calls, the way a module box lists its fields'
     ['Email'], 'erFieldsFor stopped returning a module\'s fields');
 });
 
+test('the diagram window can change subject, and says why when it cannot', async () => {
+  // The window carries a context in and could not change its mind without going back to the panel.
+  // It has no file access of its own - deliberately, and it stays that way - so the switch asks the
+  // panel, which is the only thing holding the folder.
+  const sent = [];
+  const stat = { innerHTML: '' };
+  const seg = ['calls', 'schema'].map((k) => ({ dataset: { k }, sel: null,
+    setAttribute(_a, v) { this.sel = v; }, closest() { return this; } }));
+  let reloaded = false, alerted = '';
+  const box = { children: seg, onclick: null };
+  const ctx = {
+    document: { getElementById: (id) => (id === 'subj' ? box : null) },
+    $: () => stat,
+    DATA: { kind: 'calls' },
+    chrome: { runtime: { sendMessage: async (m) => { sent.push(m); return { ok: false, error: 'no working folder is open in the panel' }; } } },
+    location: { reload: () => { reloaded = true; } },
+    alert: (m) => { alerted = m; },
+  };
+  const { wireSubject } = load([sliceFn('apps/crm/graphview.js', 'wireSubject')], ctx);
+  wireSubject();
+  assert.equal(seg.map((x) => x.sel).join(' '), 'true false', 'the segment does not mark what is on screen');
+
+  await box.onclick({ target: seg[0] });          // the one already showing
+  assert.equal(sent.length, 0, 'clicking the current subject asked the panel to rebuild it');
+
+  await box.onclick({ target: seg[1] });
+  assert.equal(sent.length, 1, 'the other subject did not ask for anything');
+  assert.equal(sent[0].kind, 'schema');
+  assert.equal(reloaded, false, 'it reloaded on a failed switch');
+  assert.match(alerted, /no working folder is open in the panel/, 'the panel\'s own reason was swallowed');
+  assert.match(alerted, /side panel/, 'the message does not name where the folder lives');
+  assert.equal(stat.innerHTML, '', 'the status line was left saying it was building');
+
+  // ...and a switch that works reloads, which is the whole mechanism: every global here was derived
+  // from the graph being replaced, and re-deriving them one by one is the half-migrated state this
+  // project keeps getting bitten by. Removing the reload passed until this was asserted.
+  ctx.chrome.runtime.sendMessage = async () => ({ ok: true });
+  const ok = load([sliceFn('apps/crm/graphview.js', 'wireSubject')], ctx);
+  ok.wireSubject();
+  await box.onclick({ target: seg[1] });
+  assert.equal(reloaded, true, 'a successful switch left the old graph on screen');
+});
+
+test('the panel refuses to build a graph it cannot read, without asking for a gesture it has not got', async () => {
+  // ensurePerm only *asks* when the permission has lapsed, and asking needs a user gesture that a
+  // message handler does not have. hasPerm answers without asking, so a lapsed folder stops the
+  // switch with a sentence naming the remedy instead of a DOMException naming neither.
+  const mk = (over) => Object.assign({
+    dir: {}, hasPerm: async () => true,
+    ensureGraph: async () => ({ counts: { nodes: 3 } }),
+    buildSchemaGraph: async () => ({ counts: { nodes: 5 } }),
+    chrome: { storage: { local: { set: async () => {} } } },
+    setStatus: () => {}, bound: null, lastCtx: null,
+  }, over);
+
+  let ctx = mk({});
+  let { buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx);
+  assert.deepEqual({ ...(await buildGraphFor('schema')) }, { ok: true });
+
+  ctx = mk({ dir: null });
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  assert.match((await buildGraphFor('calls')).error, /no working folder/, 'a missing folder is not reported');
+
+  ctx = mk({ hasPerm: async () => false });
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  const lapsed = (await buildGraphFor('calls')).error;
+  assert.match(lapsed, /re-granting/, 'a lapsed folder does not name the remedy');
+
+  ctx = mk({ ensureGraph: async () => ({ counts: { nodes: 0 } }) });
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  assert.match((await buildGraphFor('calls')).error, /no functions pulled/, 'an empty graph is handed over as if it were one');
+});
+
 test('the call catalogue puts the link first, and its snippet is derived not invented', () => {
   // The Relations tab for modules is one row per related list, with the API name Deluge needs made
   // copyable. For functions it is one row per call, and the copyable thing is the call itself.

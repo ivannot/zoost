@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.21.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.22.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -242,6 +242,10 @@ git commit -m "baseline"</code></pre>
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
   <ul>
+    <li>The <b class="ui">Functions</b> / <b class="ui">Modules</b> pair beside the title says which of the two
+      drawings is on screen, and switches to the other without going back to the panel. The panel builds
+      it - this window has no access to your folder at all - so the panel has to be open and the folder
+      granted; if it is not, the switch stops and says which.</li>
     <li>Tabs: <b>Explorer</b> (list + detail) and <b>Visual</b> (node-link) in both drawings, plus the boxed
       one - <b>Call graph</b> when the window was opened on functions, where each box lists what that
       function calls, and <b>ER diagram</b> when it was opened on modules, where each box lists its fields.

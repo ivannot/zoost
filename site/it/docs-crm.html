@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:f0d32d424309f1f5 -->
+<!-- translated-from: site/docs-crm.html sha256:d08c221c8189db09 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.21.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.22.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -267,6 +267,10 @@ git commit -m "baseline"</code></pre>
     Dall'anteprima di un modulo, lo stesso pulsante apre il diagramma entità-relazioni centrato su quel
     modulo.</p>
   <ul>
+    <li>La coppia <b class="ui">Functions</b> / <b class="ui">Modules</b> accanto al titolo dice quale dei due
+      disegni è a schermo, e passa all'altro senza tornare al pannello. È il pannello a costruirlo - questa
+      finestra alla tua cartella non ha accesso, per scelta - quindi il pannello dev'essere aperto e la
+      cartella concessa; se non lo è, il passaggio si ferma e dice quale delle due cose manca.</li>
     <li>Le schede: <b>Explorer</b> (elenco + dettaglio) e <b>Visual</b> (nodi e archi) in entrambi i disegni,
       più quello a riquadri - <b>Call graph</b> se la finestra è stata aperta sulle funzioni, dove ogni
       riquadro elenca che cosa chiama quella funzione, e <b>ER diagram</b> se è stata aperta sui moduli,
