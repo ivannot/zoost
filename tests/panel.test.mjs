@@ -521,16 +521,35 @@ test('the kinds are read off the graph, never listed in the code', () => {
 
 test('every kind gets a colour, and no condition gets one', () => {
   // A hue says «this is a kind of thing». The set of kinds is the platform's to decide, so declared
-  // hues cannot cover it: what is declared is used, and anything else gets a stable fallback, hashed
-  // rather than indexed so a kind keeps its colour when another appears beside it.
-  const js = read('apps/crm/graphview.js');
-  assert.match(js, /const FALLBACK_HUES = \[/, 'an unknown kind would have no colour');
-  assert.match(js, /getPropertyValue\('--n-' \+ k\)\.trim\(\) \|\| \(k \? hueFor\(k\) : ''\)/,
-    'the declared hue no longer wins, or the fallback is gone');
-  const { hueFor } = load([sliceConst('apps/crm/graphview.js', 'FALLBACK_HUES'),
-                           sliceFn('apps/crm/graphview.js', 'hueFor')], {});
-  assert.equal(hueFor('scheduler'), hueFor('scheduler'), 'the fallback is not stable');
-  assert.notEqual(hueFor('scheduler'), hueFor('crmfundamentals'), 'two kinds collapse to one colour');
+  // hues cannot cover it: what is declared is used, and anything else gets a fallback.
+  //
+  // The hash alone was not enough - it gave `scheduler` and `custombutton` the same violet, which is
+  // two roles in one colour. It now picks a *preferred* slot and takes the first free one from
+  // there, so the answer depends on the whole set and every kind present is distinct.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`);
+    assert.ok(/const FALLBACK_HUES = \[/.test(js), `${app}: an unknown kind would have no colour`);
+    assert.ok(/const KINDCOL = \(k\) => declaredHue\(k\) \|\| \(k \? hueFor\(k\) : ''\)/.test(js),
+      `${app}: the declared hue no longer wins, or the fallback is gone`);
+
+    let kinds = [];
+    const ctx = { allKinds: () => kinds, Set, Object,
+      // nothing is declared in this stub, so every kind falls through to the fallback
+      document: { documentElement: {} },
+      getComputedStyle: () => ({ getPropertyValue: () => '' }) };
+    const { hueFor } = load([sliceConst(`apps/${app}/graphview.js`, 'FALLBACK_HUES'),
+                             sliceConst(`apps/${app}/graphview.js`, 'declaredHue'),
+                             // the memo the function keeps, so the slice is the real one
+                             'let _hues = null, _huesKey = null;',
+                             sliceFn(`apps/${app}/graphview.js`, 'hueFor')], ctx);
+    kinds = ['scheduler', 'custombutton', 'crmfundamentals', 'standalone', 'workflow'];
+    const cols = kinds.map(hueFor);
+    assert.equal(new Set(cols).size, kinds.length, `${app}: two kinds collapse to one colour: ${cols}`);
+    assert.equal(hueFor('scheduler'), cols[0], `${app}: the answer is not stable within one set`);
+    // ...and the same set always comes out the same way, whatever order it is asked in
+    const again = [...kinds].reverse().map(hueFor).reverse();
+    assert.deepEqual(again, cols, `${app}: the colours depend on the order they are asked for`);
+  }
 
   for (const app of ['crm', 'analytics']) {
     const css = read(`apps/${app}/graphview.html`);
@@ -1882,5 +1901,25 @@ test('the status line stops repeating what the focus group already says', () => 
     // ...and the counts are still there, on both branches
     assert.equal((ego.match(/statOf\(/g) || []).length, 2, `${app}: one branch of the line lost its counts`);
     assert.equal((ego.match(/orphanNote\(\)/g) || []).length, 2, `${app}: one branch lost the orphan note`);
+  }
+});
+
+test('the focus chip wears the focused item\'s own colour, not a colour of its own', () => {
+  // It was a hardcoded amber written into the markup, which meant nothing and sat a few pixels from
+  // the Connections chip in the same amber. A colour is a claim about a dimension, so it has to be
+  // wired to that dimension - the mistake this window has already made once, with the dot that was
+  // coloured by namespace while the chips filtered on category.
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const chip = html.slice(html.indexOf('id="focusnode"') - 40, html.indexOf('id="focusnode"') + 60);
+    assert.ok(!/--hue:#/.test(chip), `${app}: the focus chip still carries an authored colour`);
+    assert.ok(!/data-hue="focus"/.test(chip), `${app}: the focus chip claims a kind called «focus»`);
+    const fn = js.slice(js.indexOf('function updateScopeUI('), js.indexOf('\n}', js.indexOf('function updateScopeUI(')));
+    assert.ok(/setProperty\('--hue', KINDCOL\(KINDOF\(N\[curFocus\]\)\)/.test(fn),
+      `${app}: the chip does not take the focused item's own hue`);
+    assert.ok(/delete nodeChip\.dataset\.hue/.test(fn),
+      `${app}: with nothing selected there is no category, so there must be no hue`);
+    // and the group sits with the tabs rather than being pushed to the far edge
+    assert.ok(!/\.focusg\{[^}]*margin-left:auto/.test(html), `${app}: the focus group is pushed away from the tabs`);
   }
 });

@@ -46,7 +46,6 @@
      `Everything` keeps the focus rather than dropping it: the name stays on screen and one click
      picks it up again, which is what the diagram's «Scope» button used to do from inside a single
      view. `✕` is the one that forgets it, and it is absent when there is nothing to forget. */
-  .focusg{margin-left:auto}
   .focusg .chip.off{opacity:.45;cursor:default}
   .fdepth{display:inline-flex;align-items:center;gap:4px;font:11px var(--sans);color:var(--muted);padding-left:2px}
   .fdepth button{border:none;background:#eef1f6;border-radius:5px;width:19px;height:19px;cursor:pointer;font-weight:700;color:var(--ink)}
@@ -325,7 +324,7 @@
            the same shape the chips use, because it answers its own question. -->
       <span class="dim focusg" id="focusg">
         <span class="dimt">Focus</span>
-        <span class="chip" id="focusnode" data-hue="focus" style="--hue:#d98e00" role="button"></span>
+        <span class="chip" id="focusnode" role="button"></span>
         <span class="chip" id="focusall" role="button">Everything</span>
         <span class="fdepth" id="erdepth" style="display:none">depth<button id="erdMinus" aria-label="One hop less">−</button><b id="erdVal">2</b><span id="erdMax">/ 6</span><button id="erdPlus" aria-label="One hop more">+</button></span>
         <span class="chipx" id="focusx" role="button" aria-label="Clear the focus" title="Clear the focus">✕</span>

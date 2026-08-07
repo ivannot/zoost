@@ -19,9 +19,11 @@
     /* namespace colors (shared with canvas) */
   /* One hue per value the chips filter on, and nothing else gets one. Conditions - hub, no relation -
      deliberately have none: they are not a kind of thing, they are something true about it. */
-  --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b;
-  --n-schedule:#8b5cf6; --n-validation_rule:#ef4444; --n-rest:#06b6d4;
-  --n-table:#3b82f6; --n-query:#a78bfa; --n-system:#64748b;
+  /* One hue per value the chips filter on, and nothing else gets one. The five Deluge categories
+     and --n-rest were copied from the CRM and named nothing here; --n-system went with them, because
+     a system table is something true *about* a table rather than a kind of one, and conditions
+     deliberately carry no colour. Anything the platform invents gets a stable hashed fallback. */
+  --n-table:#3b82f6; --n-query:#a78bfa;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -39,7 +41,6 @@
      `Everything` keeps the focus rather than dropping it: the name stays on screen and one click
      picks it up again, which is what the diagram's «Scope» button used to do from inside a single
      view. `✕` is the one that forgets it, and it is absent when there is nothing to forget. */
-  .focusg{margin-left:auto}
   .focusg .chip.off{opacity:.45;cursor:default}
   .fdepth{display:inline-flex;align-items:center;gap:4px;font:11px var(--sans);color:var(--muted);padding-left:2px}
   .fdepth button{border:none;background:#eef1f6;border-radius:5px;width:19px;height:19px;cursor:pointer;font-weight:700;color:var(--ink)}
@@ -286,7 +287,7 @@
            the same shape the chips use, because it answers its own question. -->
       <span class="dim focusg" id="focusg">
         <span class="dimt">Focus</span>
-        <span class="chip" id="focusnode" data-hue="focus" style="--hue:#d98e00" role="button"></span>
+        <span class="chip" id="focusnode" role="button"></span>
         <span class="chip" id="focusall" role="button">Everything</span>
         <span class="fdepth" id="erdepth" style="display:none">depth<button id="erdMinus" aria-label="One hop less">−</button><b id="erdVal">2</b><span id="erdMax">/ 6</span><button id="erdPlus" aria-label="One hop more">+</button></span>
         <span class="chipx" id="focusx" role="button" aria-label="Clear the focus" title="Clear the focus">✕</span>

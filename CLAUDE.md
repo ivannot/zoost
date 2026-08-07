@@ -198,6 +198,21 @@ that has drifted? Only the first kind is allowed to differ.
 says so without a label. `--sel-soft`, `.zbtn`, `.znav` and the user's chat bubble derive from it and
 are expected to differ; they are declared in `twincheck.py` with that reason. Nothing else may.
 
+**A hue is a claim about a dimension, and a hardcoded one is a claim about nothing.** The focus chip
+shipped with an authored amber, which said nothing and sat a few pixels from the Connections chip in
+the same amber. It takes the focused item's **own** category colour now, through the same accessor
+the list dots and the filter chips use — so «what am I focused on» and «what kind is it» are one
+glance — and carries no hue at all when nothing is selected, because then there is no category. Same
+mistake as the dot that was coloured by namespace while the chips filtered on category, one dimension
+over.
+
+**And the hashed fallback was not enough on its own.** It gave `scheduler` and `custombutton` the
+same violet: two roles, one colour, which is the defect the rule below is about. The hash now chooses
+a *preferred* slot and the first free one from there wins, so the answer depends on the whole set of
+kinds present and every one of them is distinct. Still deterministic — the same workspace always
+draws the same colours — and a kind only moves when a new one lands on the slot it wanted. Past eight
+kinds a repeat is unavoidable and is not hidden.
+
 **Five roles, five hues — check the accent has not eaten one.** The button grammar needs the accent
 to be distinct from `.lbtn` teal, `.pbtn` violet and `.abtn` amber. Analytics ran with a teal accent
 for a while and `.lbtn` collided with it: two roles, one colour, and one fewer distinguishable

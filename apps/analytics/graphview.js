@@ -21,7 +21,42 @@ const label = (n) => (!n ? '' : nameMode === 'internal'
 // `namespace` too, which means those five filters only ever worked in an org where Zoho returns no
 // namespace at all. One accessor now decides both, so they cannot drift apart again.
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
-const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
+// A declared hue where there is one, and a fallback where there is not - because the set of kinds is
+// the platform's to decide, not ours.
+//
+// The hash alone was not enough: it gave `scheduler` and `custombutton` the same violet, which is
+// two roles wearing one colour - the defect this project already records about an accent eating a
+// button role, one dimension over. So the hash chooses a *preferred* slot and the first free one
+// from there wins. Deterministic, and it depends only on the set of kinds present: the same
+// workspace always draws the same colours, and a kind keeps its own unless a new one lands on the
+// slot it wanted.
+//
+// More kinds than hues is possible and is not hidden: past the palette the probe wraps and a
+// repeat is unavoidable. Eight is well past what either platform has shown.
+const FALLBACK_HUES = ['#0ea5e9', '#f97316', '#14b8a6', '#a855f7', '#84cc16', '#ec4899', '#64748b', '#eab308'];
+const declaredHue = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
+let _hues = null, _huesKey = null;
+function hueFor(k) {
+  const need = allKinds().filter((x) => x && !declaredHue(x)).sort();
+  const key = need.join('\n');
+  if (_huesKey !== key) {
+    _hues = {};
+    const used = new Set();
+    for (const x of need) {
+      let h = 0; for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) >>> 0;
+      const start = h % FALLBACK_HUES.length;
+      let idx = start;
+      for (let n = 0; n < FALLBACK_HUES.length; n++) {
+        const j = (start + n) % FALLBACK_HUES.length;
+        if (!used.has(j)) { idx = j; break; }
+      }
+      used.add(idx); _hues[x] = FALLBACK_HUES[idx];
+    }
+    _huesKey = key;
+  }
+  return _hues[k] || FALLBACK_HUES[0];
+}
+const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
@@ -746,6 +781,13 @@ function updateScopeUI() {
   nodeChip.title = has
     ? `Draw only what is around ${focusName(curFocus)}`
     : 'Select a table in the Explorer to focus on it';
+  // The chip wears the focused item's **own** category colour, read from the same accessor the list
+  // dots and the filter chips use - so «what am I focused on» and «what kind is it» are one glance.
+  // It was a hardcoded amber, which meant nothing and collided with the Connections chip: a colour
+  // that is a claim about a dimension has to be wired to that dimension, which is a mistake this
+  // window has already made once. With nothing selected there is no category, so there is no hue.
+  if (has) { nodeChip.dataset.hue = KINDOF(N[curFocus]); nodeChip.style.setProperty('--hue', KINDCOL(KINDOF(N[curFocus])) || '#94a3b8'); }
+  else { delete nodeChip.dataset.hue; nodeChip.style.removeProperty('--hue'); }
   nodeChip.classList.toggle('off', !has);
   nodeChip.setAttribute('aria-pressed', String(has && !scopeAll));
   allChip.setAttribute('aria-pressed', String(!has || scopeAll));
