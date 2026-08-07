@@ -103,7 +103,15 @@
       "module": "Orders",
       "type": "default",
       "visible": true,
-      "via": "Orders_Ref"
+      "via": "Order_Ref"
+    },
+    {
+      "api_name": "Contracts_of_Quotes",
+      "label": "Contracts",
+      "module": "Contracts",
+      "type": "default",
+      "visible": true,
+      "via": "Contract_Ref"
     },
     {
       "api_name": "Attachments",
@@ -111,14 +119,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

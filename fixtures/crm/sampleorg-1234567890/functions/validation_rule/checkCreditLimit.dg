@@ -1,0 +1,7 @@
+// validation_rule.checkCreditLimit - sample function, generated for the sample org.
+map checkCreditLimit(string accountId)
+{
+    info "validation_rule.checkCreditLimit start";
+    r0 = standalone.log();
+    return r0;
+}

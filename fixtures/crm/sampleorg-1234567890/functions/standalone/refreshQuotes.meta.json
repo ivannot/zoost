@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9067",
+  "name": "refreshQuotes",
+  "namespace": "standalone",
+  "display_name": "refreshQuotes",
+  "category": "standalone",
+  "return_type": "void",
+  "params": [],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-05T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

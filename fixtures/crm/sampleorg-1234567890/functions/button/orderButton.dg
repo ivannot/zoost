@@ -1,7 +1,0 @@
-// button.orderButton - sample function, invented for the fixture org.
-map orderButton(string orderId)
-{
-    info "button.orderButton start";
-    r0 = validation_rule.validateOrder();
-    return r0;
-}

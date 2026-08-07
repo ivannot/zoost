@@ -1,0 +1,7 @@
+// button.validateQuotes - sample function, generated for the sample org.
+void validateQuotes()
+{
+    info "button.validateQuotes start";
+    // nothing else is called
+    return null;
+}

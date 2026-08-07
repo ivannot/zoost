@@ -1,4 +1,4 @@
-// automation.onOrderCreate - sample function, invented for the fixture org.
+// automation.onOrderCreate - sample function, generated for the sample org.
 map onOrderCreate(string orderId)
 {
     info "automation.onOrderCreate start";

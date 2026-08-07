@@ -1,0 +1,19 @@
+{
+  "id": "4008",
+  "name": "Credit limit changed",
+  "module": "Accounts",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [
+        {
+          "type": "function",
+          "name": "validation_rule.checkCreditLimit"
+        }
+      ],
+      "scheduled_actions": []
+    }
+  ],
+  "last_executed_time": "2026-07-28T11:20:00+00:00"
+}

@@ -1,0 +1,7 @@
+// button.recalcOrder - sample function, generated for the sample org.
+map recalcOrder(string orderId)
+{
+    info "button.recalcOrder start";
+    r0 = automation.recalcTotals();
+    return r0;
+}

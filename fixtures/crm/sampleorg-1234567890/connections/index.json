@@ -16,7 +16,8 @@
       "service": "custom",
       "status": "connected",
       "used_by": [
-        "schedule.syncPayments"
+        "schedule.syncPayments",
+        "standalone.reconcilePayments"
       ]
     },
     {
@@ -26,7 +27,7 @@
       "status": "connected",
       "used_by": [
         "schedule.weeklyDigest",
-        "standalone.escalate"
+        "standalone.escalateTicket"
       ]
     },
     {
@@ -36,6 +37,15 @@
       "status": "connected",
       "used_by": [
         "schedule.pullCatalogue"
+      ]
+    },
+    {
+      "name": "tax_service",
+      "display_name": "Tax service",
+      "service": "custom",
+      "status": "connected",
+      "used_by": [
+        "standalone.calcTax"
       ]
     },
     {

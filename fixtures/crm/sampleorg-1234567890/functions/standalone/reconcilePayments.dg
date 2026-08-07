@@ -1,0 +1,7 @@
+// standalone.reconcilePayments - sample function, generated for the sample org.
+map reconcilePayments(string since)
+{
+    info "standalone.reconcilePayments start";
+    r0 = standalone.log();
+    return r0;
+}

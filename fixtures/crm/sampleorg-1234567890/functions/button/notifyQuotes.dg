@@ -1,0 +1,7 @@
+// button.notifyQuotes - sample function, generated for the sample org.
+void notifyQuotes()
+{
+    info "button.notifyQuotes start";
+    // nothing else is called
+    return null;
+}

@@ -1,0 +1,7 @@
+// automation.onContactMerge - sample function, generated for the sample org.
+map onContactMerge(string contactId)
+{
+    info "automation.onContactMerge start";
+    r0 = standalone.log();
+    return r0;
+}

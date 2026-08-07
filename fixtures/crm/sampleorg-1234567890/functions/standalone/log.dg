@@ -1,4 +1,4 @@
-// standalone.log - sample function, invented for the fixture org.
+// standalone.log - sample function, generated for the sample org.
 map log(string message)
 {
     info "standalone.log start";

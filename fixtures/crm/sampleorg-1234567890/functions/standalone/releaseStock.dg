@@ -1,4 +1,4 @@
-// standalone.releaseStock - sample function, invented for the fixture org.
+// standalone.releaseStock - sample function, generated for the sample org.
 map releaseStock(string orderId)
 {
     info "standalone.releaseStock start";

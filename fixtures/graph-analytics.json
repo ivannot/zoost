@@ -9,38 +9,6 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [
-        {
-          "api_name": "Account_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Account_Name",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Region",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": "177856000000000040"
-        },
-        {
-          "api_name": "Segment",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Created_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [
         {
           "direction": "in",
@@ -73,6 +41,14 @@
           "otherName": "Regions",
           "otherColumn": "Region",
           "relation": "(\"Accounts\".\"Region\")=(\"Regions\".\"Region\")"
+        },
+        {
+          "direction": "in",
+          "column": "Account_Id",
+          "other": "177856000000000052",
+          "otherName": "Subscriptions",
+          "otherColumn": "Account_Id",
+          "relation": "(\"Subscriptions\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
         }
       ],
       "calls": [
@@ -81,11 +57,44 @@
       "called_by": [
         "177856000000000008",
         "177856000000000012",
-        "177856000000000036"
+        "177856000000000036",
+        "177856000000000052"
       ],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Account_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Name",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Region",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": "177856000000000040"
+        },
+        {
+          "api_name": "Segment",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Created_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
     "177856000000000008": {
       "id": "177856000000000008",
@@ -95,6 +104,33 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Account_Id",
+          "other": "177856000000000004",
+          "otherName": "Accounts",
+          "otherColumn": "Account_Id",
+          "relation": "(\"Contacts\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+        },
+        {
+          "direction": "in",
+          "column": "Contact_Id",
+          "other": "177856000000000048",
+          "otherName": "Touchpoints",
+          "otherColumn": "Contact_Id",
+          "relation": "(\"Touchpoints\".\"Contact_Id\")=(\"Contacts\".\"Contact_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000004"
+      ],
+      "called_by": [
+        "177856000000000048"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Contact_Id",
@@ -126,24 +162,7 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [
-        {
-          "direction": "out",
-          "column": "Account_Id",
-          "other": "177856000000000004",
-          "otherName": "Accounts",
-          "otherColumn": "Account_Id",
-          "relation": "(\"Contacts\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
-        }
-      ],
-      "calls": [
-        "177856000000000004"
-      ],
-      "called_by": [],
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
     "177856000000000012": {
       "id": "177856000000000012",
@@ -153,38 +172,6 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [
-        {
-          "api_name": "Order_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Account_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": "177856000000000004"
-        },
-        {
-          "api_name": "Order_Date",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Channel",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Net_Amount",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [
         {
           "direction": "out",
@@ -217,6 +204,14 @@
           "otherName": "Invoices",
           "otherColumn": "Order_Id",
           "relation": "(\"Invoices\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+        },
+        {
+          "direction": "in",
+          "column": "Order_Id",
+          "other": "177856000000000056",
+          "otherName": "Returns",
+          "otherColumn": "Order_Id",
+          "relation": "(\"Returns\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
         }
       ],
       "calls": [
@@ -225,11 +220,44 @@
       "called_by": [
         "177856000000000016",
         "177856000000000024",
-        "177856000000000028"
+        "177856000000000028",
+        "177856000000000056"
       ],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Order_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000004"
+        },
+        {
+          "api_name": "Order_Date",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Channel",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Net_Amount",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
     "177856000000000016": {
       "id": "177856000000000016",
@@ -239,6 +267,32 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Order_Id",
+          "other": "177856000000000012",
+          "otherName": "Orders",
+          "otherColumn": "Order_Id",
+          "relation": "(\"Order_Lines\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+        },
+        {
+          "direction": "out",
+          "column": "Product_Id",
+          "other": "177856000000000020",
+          "otherName": "Products",
+          "otherColumn": "Product_Id",
+          "relation": "(\"Order_Lines\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000012",
+        "177856000000000020"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Line_Id",
@@ -270,33 +324,7 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [
-        {
-          "direction": "out",
-          "column": "Order_Id",
-          "other": "177856000000000012",
-          "otherName": "Orders",
-          "otherColumn": "Order_Id",
-          "relation": "(\"Order_Lines\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
-        },
-        {
-          "direction": "out",
-          "column": "Product_Id",
-          "other": "177856000000000020",
-          "otherName": "Products",
-          "otherColumn": "Product_Id",
-          "relation": "(\"Order_Lines\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
-        }
-      ],
-      "calls": [
-        "177856000000000012",
-        "177856000000000020"
-      ],
-      "called_by": [],
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
     "177856000000000020": {
       "id": "177856000000000020",
@@ -306,6 +334,32 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
+      "joins": [
+        {
+          "direction": "in",
+          "column": "Product_Id",
+          "other": "177856000000000016",
+          "otherName": "Order_Lines",
+          "otherColumn": "Product_Id",
+          "relation": "(\"Order_Lines\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+        },
+        {
+          "direction": "in",
+          "column": "Product_Id",
+          "other": "177856000000000052",
+          "otherName": "Subscriptions",
+          "otherColumn": "Product_Id",
+          "relation": "(\"Subscriptions\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+        }
+      ],
+      "calls": [],
+      "called_by": [
+        "177856000000000016",
+        "177856000000000052"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Product_Id",
@@ -331,24 +385,7 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [
-        {
-          "direction": "in",
-          "column": "Product_Id",
-          "other": "177856000000000016",
-          "otherName": "Order_Lines",
-          "otherColumn": "Product_Id",
-          "relation": "(\"Order_Lines\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
-        }
-      ],
-      "calls": [],
-      "called_by": [
-        "177856000000000016"
-      ],
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
     "177856000000000024": {
       "id": "177856000000000024",
@@ -358,6 +395,23 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Order_Id",
+          "other": "177856000000000012",
+          "otherName": "Orders",
+          "otherColumn": "Order_Id",
+          "relation": "(\"Shipments\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000012"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Shipment_Id",
@@ -379,34 +433,17 @@
         },
         {
           "api_name": "Dispatched_On",
-          "data_type": "PLAIN",
+          "data_type": "DATE",
           "mandatory": false,
           "lookup": null
         },
         {
           "api_name": "Delivered_On",
-          "data_type": "PLAIN",
+          "data_type": "DATE",
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [
-        {
-          "direction": "out",
-          "column": "Order_Id",
-          "other": "177856000000000012",
-          "otherName": "Orders",
-          "otherColumn": "Order_Id",
-          "relation": "(\"Shipments\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
-        }
-      ],
-      "calls": [
-        "177856000000000012"
-      ],
-      "called_by": [],
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
     "177856000000000028": {
       "id": "177856000000000028",
@@ -416,38 +453,6 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [
-        {
-          "api_name": "Invoice_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Order_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": "177856000000000012"
-        },
-        {
-          "api_name": "Issued_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Due_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Gross_Amount",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [
         {
           "direction": "out",
@@ -474,7 +479,39 @@
       ],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Invoice_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Order_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000012"
+        },
+        {
+          "api_name": "Issued_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Due_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Gross_Amount",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
     "177856000000000032": {
       "id": "177856000000000032",
@@ -484,38 +521,6 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [
-        {
-          "api_name": "Payment_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Invoice_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": "177856000000000028"
-        },
-        {
-          "api_name": "Received_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Method",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Amount",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [
         {
           "direction": "out",
@@ -532,7 +537,39 @@
       "called_by": [],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Payment_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Invoice_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000028"
+        },
+        {
+          "api_name": "Received_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Method",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
     "177856000000000036": {
       "id": "177856000000000036",
@@ -542,38 +579,6 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [
-        {
-          "api_name": "Ticket_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Account_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": "177856000000000004"
-        },
-        {
-          "api_name": "Opened_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Severity",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Closed_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [
         {
           "direction": "out",
@@ -590,7 +595,39 @@
       "called_by": [],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Ticket_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000004"
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Severity",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
     "177856000000000040": {
       "id": "177856000000000040",
@@ -600,6 +637,23 @@
       "namespace": "table",
       "category": "Table",
       "system": false,
+      "joins": [
+        {
+          "direction": "in",
+          "column": "Region",
+          "other": "177856000000000004",
+          "otherName": "Accounts",
+          "otherColumn": "Region",
+          "relation": "(\"Accounts\".\"Region\")=(\"Regions\".\"Region\")"
+        }
+      ],
+      "calls": [],
+      "called_by": [
+        "177856000000000004"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Region",
@@ -619,103 +673,359 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
+      ]
+    },
+    "177856000000000044": {
+      "id": "177856000000000044",
+      "name": "Campaigns",
+      "api_name": "Campaigns",
+      "display_name": "Campaigns",
+      "namespace": "table",
+      "category": "Table",
+      "system": false,
       "joins": [
         {
           "direction": "in",
-          "column": "Region",
-          "other": "177856000000000004",
-          "otherName": "Accounts",
-          "otherColumn": "Region",
-          "relation": "(\"Accounts\".\"Region\")=(\"Regions\".\"Region\")"
+          "column": "Campaign_Id",
+          "other": "177856000000000048",
+          "otherName": "Touchpoints",
+          "otherColumn": "Campaign_Id",
+          "relation": "(\"Touchpoints\".\"Campaign_Id\")=(\"Campaigns\".\"Campaign_Id\")"
         }
       ],
       "calls": [],
       "called_by": [
-        "177856000000000004"
+        "177856000000000048"
       ],
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Campaign_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Campaign_Name",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Channel",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Budget",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
-    "177856000000000044": {
-      "id": "177856000000000044",
+    "177856000000000048": {
+      "id": "177856000000000048",
+      "name": "Touchpoints",
+      "api_name": "Touchpoints",
+      "display_name": "Touchpoints",
+      "namespace": "table",
+      "category": "Table",
+      "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Campaign_Id",
+          "other": "177856000000000044",
+          "otherName": "Campaigns",
+          "otherColumn": "Campaign_Id",
+          "relation": "(\"Touchpoints\".\"Campaign_Id\")=(\"Campaigns\".\"Campaign_Id\")"
+        },
+        {
+          "direction": "out",
+          "column": "Contact_Id",
+          "other": "177856000000000008",
+          "otherName": "Contacts",
+          "otherColumn": "Contact_Id",
+          "relation": "(\"Touchpoints\".\"Contact_Id\")=(\"Contacts\".\"Contact_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000044",
+        "177856000000000008"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Touch_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Campaign_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000044"
+        },
+        {
+          "api_name": "Contact_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000008"
+        },
+        {
+          "api_name": "Touched_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000052": {
+      "id": "177856000000000052",
+      "name": "Subscriptions",
+      "api_name": "Subscriptions",
+      "display_name": "Subscriptions",
+      "namespace": "table",
+      "category": "Table",
+      "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Account_Id",
+          "other": "177856000000000004",
+          "otherName": "Accounts",
+          "otherColumn": "Account_Id",
+          "relation": "(\"Subscriptions\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+        },
+        {
+          "direction": "out",
+          "column": "Product_Id",
+          "other": "177856000000000020",
+          "otherName": "Products",
+          "otherColumn": "Product_Id",
+          "relation": "(\"Subscriptions\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000004",
+        "177856000000000020"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Subscription_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000004"
+        },
+        {
+          "api_name": "Product_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000020"
+        },
+        {
+          "api_name": "Started_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Ends_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000056": {
+      "id": "177856000000000056",
+      "name": "Returns",
+      "api_name": "Returns",
+      "display_name": "Returns",
+      "namespace": "table",
+      "category": "Table",
+      "system": false,
+      "joins": [
+        {
+          "direction": "out",
+          "column": "Order_Id",
+          "other": "177856000000000012",
+          "otherName": "Orders",
+          "otherColumn": "Order_Id",
+          "relation": "(\"Returns\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+        }
+      ],
+      "calls": [
+        "177856000000000012"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Return_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Order_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": "177856000000000012"
+        },
+        {
+          "api_name": "Reason",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Received_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000060": {
+      "id": "177856000000000060",
       "name": "ZohoUsers",
       "api_name": "ZohoUsers",
       "display_name": "ZohoUsers",
       "namespace": "table",
       "category": "Table",
       "system": true,
-      "fields": [
-        {
-          "api_name": "User_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Email",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Role",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Id",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Logged_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Detail",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
-    "177856000000000048": {
-      "id": "177856000000000048",
+    "177856000000000064": {
+      "id": "177856000000000064",
       "name": "ZohoImportLog",
       "api_name": "ZohoImportLog",
       "display_name": "ZohoImportLog",
       "namespace": "table",
       "category": "Table",
       "system": true,
-      "fields": [
-        {
-          "api_name": "Import_Id",
-          "data_type": "BIGINT",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Started_On",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Rows",
-          "data_type": "PLAIN",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Id",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Logged_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Detail",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
-    "177856000000000052": {
-      "id": "177856000000000052",
+    "177856000000000068": {
+      "id": "177856000000000068",
+      "name": "ZohoScheduleLog",
+      "api_name": "ZohoScheduleLog",
+      "display_name": "ZohoScheduleLog",
+      "namespace": "table",
+      "category": "Table",
+      "system": true,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Id",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Logged_On",
+          "data_type": "DATE",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Detail",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000072": {
+      "id": "177856000000000072",
       "name": "Revenue_By_Region",
       "api_name": "Revenue_By_Region",
       "display_name": "Revenue_By_Region",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -735,22 +1045,22 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000056": {
-      "id": "177856000000000056",
+    "177856000000000076": {
+      "id": "177856000000000076",
       "name": "Open_Invoices",
       "api_name": "Open_Invoices",
       "display_name": "Open_Invoices",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -770,22 +1080,22 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000060": {
-      "id": "177856000000000060",
+    "177856000000000080": {
+      "id": "177856000000000080",
       "name": "Late_Shipments",
       "api_name": "Late_Shipments",
       "display_name": "Late_Shipments",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -805,22 +1115,22 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000064": {
-      "id": "177856000000000064",
+    "177856000000000084": {
+      "id": "177856000000000084",
       "name": "Basket_Size",
       "api_name": "Basket_Size",
       "display_name": "Basket_Size",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -840,22 +1150,22 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000068": {
-      "id": "177856000000000068",
+    "177856000000000088": {
+      "id": "177856000000000088",
       "name": "Ticket_Load",
       "api_name": "Ticket_Load",
       "display_name": "Ticket_Load",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -875,22 +1185,127 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
+      ]
+    },
+    "177856000000000092": {
+      "id": "177856000000000092",
+      "name": "Campaign_Reach",
+      "api_name": "Campaign_Reach",
+      "display_name": "Campaign_Reach",
+      "namespace": "query",
+      "category": "QueryTable",
+      "system": false,
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Col_1",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_2",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_3",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
     },
-    "177856000000000072": {
-      "id": "177856000000000072",
+    "177856000000000096": {
+      "id": "177856000000000096",
+      "name": "Return_Rate",
+      "api_name": "Return_Rate",
+      "display_name": "Return_Rate",
+      "namespace": "query",
+      "category": "QueryTable",
+      "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Col_1",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_2",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_3",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000100": {
+      "id": "177856000000000100",
+      "name": "Active_Subscriptions",
+      "api_name": "Active_Subscriptions",
+      "display_name": "Active_Subscriptions",
+      "namespace": "query",
+      "category": "QueryTable",
+      "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
+      "fields": [
+        {
+          "api_name": "Col_1",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_2",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_3",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ]
+    },
+    "177856000000000104": {
+      "id": "177856000000000104",
       "name": "Empty_Draft",
       "api_name": "Empty_Draft",
       "display_name": "Empty_Draft",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -910,22 +1325,22 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000076": {
-      "id": "177856000000000076",
+    "177856000000000108": {
+      "id": "177856000000000108",
       "name": "Unreadable_Query",
       "api_name": "Unreadable_Query",
       "display_name": "Unreadable_Query",
       "namespace": "query",
       "category": "QueryTable",
       "system": false,
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": [],
       "fields": [
         {
           "api_name": "Col_1",
@@ -945,70 +1360,64 @@
           "mandatory": false,
           "lookup": null
         }
-      ],
-      "joins": [],
-      "calls": [],
-      "called_by": [],
-      "dead_suspect": true,
-      "unresolved": [],
-      "ambiguous": []
+      ]
     },
-    "177856000000000088": {
-      "id": "177856000000000088",
+    "177856000000000120": {
+      "id": "177856000000000120",
       "name": "Open invoices",
       "api_name": "Open invoices",
       "display_name": "Open invoices",
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [],
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": []
     },
-    "177856000000000108": {
-      "id": "177856000000000108",
+    "177856000000000152": {
+      "id": "177856000000000152",
       "name": "Product catalogue",
       "api_name": "Product catalogue",
       "display_name": "Product catalogue",
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [],
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": []
     },
-    "177856000000000116": {
-      "id": "177856000000000116",
-      "name": "Unused view",
-      "api_name": "Unused view",
-      "display_name": "Unused view",
+    "177856000000000160": {
+      "id": "177856000000000160",
+      "name": "Region reference",
+      "api_name": "Region reference",
+      "display_name": "Region reference",
       "namespace": "table",
       "category": "Table",
       "system": false,
-      "fields": [],
       "joins": [],
       "calls": [],
       "called_by": [],
       "dead_suspect": true,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [],
+      "fields": []
     }
   },
   "edges": [],
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 22,
-    "edges": 9,
-    "dead_suspects": 12,
+    "nodes": 30,
+    "edges": 14,
+    "dead_suspects": 16,
     "unresolved": 0
   },
   "workspace": {

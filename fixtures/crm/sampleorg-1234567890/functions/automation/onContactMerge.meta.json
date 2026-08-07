@@ -1,0 +1,21 @@
+{
+  "sv": 3,
+  "id": "9018",
+  "name": "onContactMerge",
+  "namespace": "automation",
+  "display_name": "onContactMerge",
+  "category": "crmfundamentals",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "contactId",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-01T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

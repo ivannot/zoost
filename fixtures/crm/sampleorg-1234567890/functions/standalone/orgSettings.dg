@@ -1,4 +1,4 @@
-// standalone.orgSettings - sample function, invented for the fixture org.
+// standalone.orgSettings - sample function, generated for the sample org.
 void orgSettings()
 {
     info "standalone.orgSettings start";

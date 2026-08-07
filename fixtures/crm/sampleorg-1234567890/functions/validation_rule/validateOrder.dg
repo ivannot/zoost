@@ -1,4 +1,4 @@
-// validation_rule.validateOrder - sample function, invented for the fixture org.
+// validation_rule.validateOrder - sample function, generated for the sample org.
 map validateOrder(string orderId)
 {
     info "validation_rule.validateOrder start";

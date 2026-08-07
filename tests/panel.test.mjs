@@ -1935,6 +1935,14 @@ test('the sample org is in the shape a pull writes, and it never ships', () => {
   const build = read('build.sh');
   assert.ok(/cp -R "apps\/\$APP\/\." "\$STAGE"/.test(build), 'the build no longer copies only the app');
   assert.ok(!/fixtures/.test(build), 'the build has learnt about fixtures/, which would ship them');
+  // One generator, two consumers: the panel writes the sample workspace, tools/fixtures.mjs writes
+  // fixtures/ from the same code. A second description of the same shape is what this replaced.
+  for (const app of ['crm', 'analytics']) {
+    assert.ok(read(`apps/${app}/sample-org.js`).includes('window.SAMPLE_ORG'),
+      `${app}: the generator exposes nothing for either consumer to call`);
+  }
+  assert.ok(read('tools/fixtures.mjs').includes("generator('crm')"),
+    'the fixture writer no longer borrows the shipped generator');
 
   for (const p of ['fixtures/crm/sampleorg-1234567890/functions/index.json',
                    'fixtures/crm/sampleorg-1234567890/modules/index.json',
@@ -1969,9 +1977,9 @@ test('nothing in the sample org names the org this is developed against', () => 
   // Zoost is stated to be built independently of its author's day job, and a real portal, module or
   // function name in a fixture would quietly contradict that - on a surface that is about to be
   // published as a screenshot, which is worse than a comment.
-  const gen = read('fixtures/make.py');
-  assert.ok(/ORG = "1234567890"/.test(gen), 'the sample org id is no longer the neutral placeholder');
-  assert.ok(/INSTANCE = "sampleorg"/.test(gen), 'the sample instance is no longer neutral');
+  const gen = read('apps/crm/sample-org.js');
+  assert.ok(/const ORG = '1234567890'/.test(gen), 'the sample org id is no longer the neutral placeholder');
+  assert.ok(/const INSTANCE = 'sampleorg'/.test(gen), 'the sample instance is no longer neutral');
   const cfg = JSON.parse(read('fixtures/crm/sampleorg-1234567890/.zoost.json'));
   assert.equal(cfg.org, '1234567890');
   assert.equal(cfg.instance, 'sampleorg');

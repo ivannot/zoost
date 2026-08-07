@@ -1,0 +1,17 @@
+{
+  "api_name": "Vendors",
+  "layouts": [
+    {
+      "id": 3008,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    },
+    {
+      "id": 3108,
+      "name": "Compact",
+      "visible": true,
+      "sections": 2
+    }
+  ]
+}

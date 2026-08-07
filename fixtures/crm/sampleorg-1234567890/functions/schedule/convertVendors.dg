@@ -1,0 +1,8 @@
+// schedule.convertVendors - sample function, generated for the sample org.
+void convertVendors()
+{
+    info "schedule.convertVendors start";
+    r0 = standalone.assignAccounts();
+    r1 = standalone.rebuildTickets();
+    return null;
+}

@@ -9,18 +9,21 @@
       "category": "standalone",
       "calls": [],
       "called_by": [
-        "standalone.buildInvoice",
         "standalone.applyDiscount",
+        "standalone.buildInvoice",
         "standalone.reserveStock",
         "standalone.releaseStock",
         "standalone.planShipment",
-        "standalone.escalate",
-        "standalone.reconcile",
+        "standalone.trackParcel",
+        "standalone.escalateTicket",
+        "standalone.reconcilePayments",
+        "automation.onContactMerge",
         "schedule.dunningRun",
         "schedule.syncPayments",
         "schedule.pushAccounts",
         "button.openTicket",
-        "validation_rule.validateOrder"
+        "validation_rule.validateOrder",
+        "validation_rule.checkCreditLimit"
       ],
       "params": [
         {
@@ -44,7 +47,8 @@
       "called_by": [
         "standalone.buildInvoice",
         "automation.recalcTotals",
-        "schedule.weeklyDigest"
+        "schedule.weeklyDigest",
+        "standalone.rebuildTickets"
       ],
       "params": [
         {
@@ -92,6 +96,7 @@
       "category": "standalone",
       "calls": [],
       "called_by": [
+        "standalone.calcTax",
         "schedule.pushAccounts",
         "schedule.pullCatalogue",
         "validation_rule.validateOrder"
@@ -109,10 +114,15 @@
       "display_name": "calcTax",
       "namespace": "standalone",
       "category": "standalone",
-      "calls": [],
+      "calls": [
+        "standalone.orgSettings",
+        "conn:tax_service"
+      ],
       "called_by": [
         "standalone.buildInvoice",
-        "automation.recalcTotals"
+        "automation.recalcTotals",
+        "validation_rule.auditShipments",
+        "button.enrichContacts"
       ],
       "params": [
         {
@@ -121,34 +131,6 @@
         },
         {
           "name": "rate",
-          "type": "string"
-        }
-      ],
-      "return_type": "map",
-      "rest": false,
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
-    },
-    "standalone.buildInvoice": {
-      "id": "standalone.buildInvoice",
-      "name": "buildInvoice",
-      "display_name": "buildInvoice",
-      "namespace": "standalone",
-      "category": "standalone",
-      "calls": [
-        "standalone.calcTax",
-        "standalone.applyDiscount",
-        "standalone.formatMoney",
-        "standalone.log"
-      ],
-      "called_by": [
-        "automation.onDealWon",
-        "schedule.dunningRun"
-      ],
-      "params": [
-        {
-          "name": "orderId",
           "type": "string"
         }
       ],
@@ -177,6 +159,35 @@
         },
         {
           "name": "code",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.buildInvoice": {
+      "id": "standalone.buildInvoice",
+      "name": "buildInvoice",
+      "display_name": "buildInvoice",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.calcTax",
+        "standalone.applyDiscount",
+        "standalone.formatMoney",
+        "standalone.log"
+      ],
+      "called_by": [
+        "automation.onDealWon",
+        "schedule.dunningRun",
+        "standalone.rebuildVendors"
+      ],
+      "params": [
+        {
+          "name": "orderId",
           "type": "string"
         }
       ],
@@ -268,7 +279,9 @@
       "display_name": "trackParcel",
       "namespace": "standalone",
       "category": "standalone",
-      "calls": [],
+      "calls": [
+        "standalone.log"
+      ],
       "called_by": [
         "schedule.nightlyDispatch",
         "wf:4006"
@@ -285,19 +298,18 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "standalone.escalate": {
-      "id": "standalone.escalate",
-      "name": "escalate",
-      "display_name": "escalate",
+    "standalone.escalateTicket": {
+      "id": "standalone.escalateTicket",
+      "name": "escalateTicket",
+      "display_name": "escalateTicket",
       "namespace": "standalone",
       "category": "standalone",
       "calls": [
         "standalone.log",
-        "schedule.weeklyDigest",
         "conn:mail_relay"
       ],
       "called_by": [
-        "schedule.closeStale",
+        "schedule.closeStaleTickets",
         "wf:4003"
       ],
       "params": [
@@ -314,17 +326,19 @@
         "log"
       ]
     },
-    "standalone.reconcile": {
-      "id": "standalone.reconcile",
-      "name": "reconcile",
-      "display_name": "reconcile",
+    "standalone.reconcilePayments": {
+      "id": "standalone.reconcilePayments",
+      "name": "reconcilePayments",
+      "display_name": "reconcilePayments",
       "namespace": "standalone",
       "category": "standalone",
       "calls": [
-        "standalone.log"
+        "standalone.log",
+        "conn:payments_gw"
       ],
       "called_by": [
-        "schedule.syncPayments"
+        "schedule.syncPayments",
+        "standalone.fetchProducts"
       ],
       "params": [
         {
@@ -372,7 +386,9 @@
       "namespace": "standalone",
       "category": "",
       "calls": [],
-      "called_by": [],
+      "called_by": [
+        "schedule.rebuildTerritories"
+      ],
       "params": [
         {
           "name": "input",
@@ -381,7 +397,7 @@
       ],
       "return_type": "map",
       "rest": false,
-      "dead_suspect": true,
+      "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
     },
@@ -397,7 +413,8 @@
         "automation.recalcTotals"
       ],
       "called_by": [
-        "wf:4000"
+        "wf:4000",
+        "wf:4009"
       ],
       "params": [
         {
@@ -423,6 +440,7 @@
       ],
       "called_by": [
         "automation.onOrderCreate",
+        "button.recalcOrder",
         "wf:4001"
       ],
       "params": [
@@ -461,6 +479,31 @@
       "unresolved": [],
       "ambiguous": []
     },
+    "automation.onContactMerge": {
+      "id": "automation.onContactMerge",
+      "name": "onContactMerge",
+      "display_name": "onContactMerge",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "standalone.log"
+      ],
+      "called_by": [
+        "schedule.notifyVendors",
+        "wf:4004"
+      ],
+      "params": [
+        {
+          "name": "contactId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
     "schedule.dunningRun": {
       "id": "schedule.dunningRun",
       "name": "dunningRun",
@@ -489,15 +532,18 @@
       "namespace": "schedule",
       "category": "scheduler",
       "calls": [
+        "standalone.reconcilePayments",
         "standalone.log",
-        "standalone.reconcile",
         "conn:payments_gw"
       ],
-      "called_by": [],
+      "called_by": [
+        "button.refreshPricebooks",
+        "sch:5006"
+      ],
       "params": [],
       "return_type": "void",
       "rest": false,
-      "dead_suspect": true,
+      "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
     },
@@ -512,6 +558,7 @@
         "standalone.trackParcel"
       ],
       "called_by": [
+        "automation.splitProducts",
         "sch:5000"
       ],
       "params": [],
@@ -521,16 +568,17 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "schedule.closeStale": {
-      "id": "schedule.closeStale",
-      "name": "closeStale",
-      "display_name": "closeStale",
+    "schedule.closeStaleTickets": {
+      "id": "schedule.closeStaleTickets",
+      "name": "closeStaleTickets",
+      "display_name": "closeStaleTickets",
       "namespace": "schedule",
       "category": "scheduler",
       "calls": [
-        "standalone.escalate"
+        "standalone.escalateTicket"
       ],
       "called_by": [
+        "standalone.fetchAccounts",
         "sch:5002"
       ],
       "params": [],
@@ -551,6 +599,8 @@
         "standalone.log"
       ],
       "called_by": [
+        "validation_rule.rebuildPricebooks",
+        "validation_rule.syncContacts",
         "sch:5005"
       ],
       "params": [],
@@ -592,7 +642,9 @@
         "conn:mail_relay"
       ],
       "called_by": [
-        "standalone.escalate",
+        "standalone.rebuildLeads",
+        "automation.cleanAccounts",
+        "standalone.auditCampaigns",
         "sch:5003"
       ],
       "params": [],
@@ -611,7 +663,9 @@
       "calls": [
         "standalone.log"
       ],
-      "called_by": [],
+      "called_by": [
+        "schedule.archiveOrders"
+      ],
       "params": [
         {
           "name": "accountId",
@@ -624,7 +678,7 @@
       ],
       "return_type": "map",
       "rest": true,
-      "dead_suspect": true,
+      "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
     },
@@ -637,7 +691,9 @@
       "calls": [
         "standalone.buildCohort"
       ],
-      "called_by": [],
+      "called_by": [
+        "automation.dedupeQuotes"
+      ],
       "params": [
         {
           "name": "view",
@@ -646,20 +702,20 @@
       ],
       "return_type": "map",
       "rest": true,
-      "dead_suspect": true,
+      "dead_suspect": false,
       "unresolved": [
         "standalone.dump"
       ],
       "ambiguous": []
     },
-    "button.orderButton": {
-      "id": "button.orderButton",
-      "name": "orderButton",
-      "display_name": "orderButton",
+    "button.recalcOrder": {
+      "id": "button.recalcOrder",
+      "name": "recalcOrder",
+      "display_name": "recalcOrder",
       "namespace": "button",
       "category": "custombutton",
       "calls": [
-        "validation_rule.validateOrder"
+        "automation.recalcTotals"
       ],
       "called_by": [],
       "params": [
@@ -686,7 +742,8 @@
       ],
       "called_by": [
         "automation.onOrderCreate",
-        "button.orderButton"
+        "standalone.rebuildTickets",
+        "standalone.refreshSubscriptions"
       ],
       "params": [
         {
@@ -700,6 +757,1583 @@
       "unresolved": [
         "standalone.lookupBand"
       ],
+      "ambiguous": []
+    },
+    "validation_rule.checkCreditLimit": {
+      "id": "validation_rule.checkCreditLimit",
+      "name": "checkCreditLimit",
+      "display_name": "checkCreditLimit",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [
+        "standalone.log"
+      ],
+      "called_by": [
+        "wf:4008"
+      ],
+      "params": [
+        {
+          "name": "accountId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignVendors": {
+      "id": "standalone.assignVendors",
+      "name": "assignVendors",
+      "display_name": "assignVendors",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "schedule.enrichSubscriptions",
+        "standalone.convertOrders"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildLeads": {
+      "id": "standalone.rebuildLeads",
+      "name": "rebuildLeads",
+      "display_name": "rebuildLeads",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "schedule.weeklyDigest",
+        "standalone.fetchProducts"
+      ],
+      "called_by": [
+        "standalone.assignPricebooks"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.dedupeCampaigns": {
+      "id": "standalone.dedupeCampaigns",
+      "name": "dedupeCampaigns",
+      "display_name": "dedupeCampaigns",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "automation.archiveTickets"
+      ],
+      "called_by": [
+        "schedule.syncInvoices",
+        "standalone.pushDeals"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildVendors": {
+      "id": "standalone.rebuildVendors",
+      "name": "rebuildVendors",
+      "display_name": "rebuildVendors",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.buildInvoice"
+      ],
+      "called_by": [
+        "standalone.cleanAccounts",
+        "standalone.fetchAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.syncSubscriptions": {
+      "id": "automation.syncSubscriptions",
+      "name": "syncSubscriptions",
+      "display_name": "syncSubscriptions",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.refreshPricebooks": {
+      "id": "button.refreshPricebooks",
+      "name": "refreshPricebooks",
+      "display_name": "refreshPricebooks",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [
+        "schedule.syncPayments"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.convertTickets": {
+      "id": "standalone.convertTickets",
+      "name": "convertTickets",
+      "display_name": "convertTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.pushOrders"
+      ],
+      "called_by": [
+        "schedule.enrichSubscriptions"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "validation_rule.rebuildPricebooks": {
+      "id": "validation_rule.rebuildPricebooks",
+      "name": "rebuildPricebooks",
+      "display_name": "rebuildPricebooks",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [
+        "schedule.pushAccounts"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.archiveTickets": {
+      "id": "automation.archiveTickets",
+      "name": "archiveTickets",
+      "display_name": "archiveTickets",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "automation.cleanCampaigns"
+      ],
+      "called_by": [
+        "standalone.dedupeCampaigns"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.archiveOrders": {
+      "id": "schedule.archiveOrders",
+      "name": "archiveOrders",
+      "display_name": "archiveOrders",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "button.openTicket"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.cleanInvoices": {
+      "id": "schedule.cleanInvoices",
+      "name": "cleanInvoices",
+      "display_name": "cleanInvoices",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.assignOrders"
+      ],
+      "called_by": [
+        "automation.fetchLeads",
+        "standalone.syncAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.notifyVendors": {
+      "id": "schedule.notifyVendors",
+      "name": "notifyVendors",
+      "display_name": "notifyVendors",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "automation.onContactMerge",
+        "standalone.cleanDeals"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.fetchAccounts": {
+      "id": "button.fetchAccounts",
+      "name": "fetchAccounts",
+      "display_name": "fetchAccounts",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.refreshTickets": {
+      "id": "automation.refreshTickets",
+      "name": "refreshTickets",
+      "display_name": "refreshTickets",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.enrichTerritories": {
+      "id": "standalone.enrichTerritories",
+      "name": "enrichTerritories",
+      "display_name": "enrichTerritories",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.cleanAccounts": {
+      "id": "automation.cleanAccounts",
+      "name": "cleanAccounts",
+      "display_name": "cleanAccounts",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "schedule.weeklyDigest"
+      ],
+      "called_by": [
+        "button.syncProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.splitTickets": {
+      "id": "standalone.splitTickets",
+      "name": "splitTickets",
+      "display_name": "splitTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildTickets"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "validation_rule.auditShipments": {
+      "id": "validation_rule.auditShipments",
+      "name": "auditShipments",
+      "display_name": "auditShipments",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [
+        "standalone.calcTax",
+        "standalone.archiveCampaigns"
+      ],
+      "called_by": [
+        "standalone.notifyTickets"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.mergeShipments": {
+      "id": "standalone.mergeShipments",
+      "name": "mergeShipments",
+      "display_name": "mergeShipments",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildShipments": {
+      "id": "standalone.rebuildShipments",
+      "name": "rebuildShipments",
+      "display_name": "rebuildShipments",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "automation.fetchLeads"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildTickets": {
+      "id": "standalone.rebuildTickets",
+      "name": "rebuildTickets",
+      "display_name": "rebuildTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.formatMoney",
+        "validation_rule.validateOrder"
+      ],
+      "called_by": [
+        "standalone.splitTickets",
+        "schedule.convertVendors",
+        "standalone.auditDeals"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.cleanSubscriptions": {
+      "id": "automation.cleanSubscriptions",
+      "name": "cleanSubscriptions",
+      "display_name": "cleanSubscriptions",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "schedule.syncInvoices"
+      ],
+      "called_by": [
+        "schedule.refreshPricebooks"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.validateTerritories": {
+      "id": "schedule.validateTerritories",
+      "name": "validateTerritories",
+      "display_name": "validateTerritories",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.fetchVendors": {
+      "id": "automation.fetchVendors",
+      "name": "fetchVendors",
+      "display_name": "fetchVendors",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "validation_rule.dedupeQuotes"
+      ],
+      "called_by": [
+        "standalone.fetchInvoices",
+        "button.enrichContacts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.archiveProducts": {
+      "id": "standalone.archiveProducts",
+      "name": "archiveProducts",
+      "display_name": "archiveProducts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.notifyTickets"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "validation_rule.dedupeQuotes": {
+      "id": "validation_rule.dedupeQuotes",
+      "name": "dedupeQuotes",
+      "display_name": "dedupeQuotes",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [
+        "automation.fetchVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.syncVendors": {
+      "id": "standalone.syncVendors",
+      "name": "syncVendors",
+      "display_name": "syncVendors",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "automation.enrichPricebooks"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.cleanCampaigns": {
+      "id": "automation.cleanCampaigns",
+      "name": "cleanCampaigns",
+      "display_name": "cleanCampaigns",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [
+        "automation.archiveTickets"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.assignOrders": {
+      "id": "schedule.assignOrders",
+      "name": "assignOrders",
+      "display_name": "assignOrders",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.notifyQuotes": {
+      "id": "standalone.notifyQuotes",
+      "name": "notifyQuotes",
+      "display_name": "notifyQuotes",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.assignPricebooks"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.validateQuotes": {
+      "id": "button.validateQuotes",
+      "name": "validateQuotes",
+      "display_name": "validateQuotes",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.mergeTerritories": {
+      "id": "standalone.mergeTerritories",
+      "name": "mergeTerritories",
+      "display_name": "mergeTerritories",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.splitAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.convertVendors": {
+      "id": "schedule.convertVendors",
+      "name": "convertVendors",
+      "display_name": "convertVendors",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.assignAccounts",
+        "standalone.rebuildTickets"
+      ],
+      "called_by": [
+        "standalone.archiveCampaigns"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.validateAccounts": {
+      "id": "standalone.validateAccounts",
+      "name": "validateAccounts",
+      "display_name": "validateAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildCampaigns"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.enrichProducts": {
+      "id": "standalone.enrichProducts",
+      "name": "enrichProducts",
+      "display_name": "enrichProducts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "validation_rule.archiveLeads",
+        "button.syncProducts"
+      ],
+      "called_by": [
+        "standalone.assignPricebooks"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.pushOrders": {
+      "id": "standalone.pushOrders",
+      "name": "pushOrders",
+      "display_name": "pushOrders",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.convertTickets"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.refreshQuotes": {
+      "id": "standalone.refreshQuotes",
+      "name": "refreshQuotes",
+      "display_name": "refreshQuotes",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignSubscriptions": {
+      "id": "standalone.assignSubscriptions",
+      "name": "assignSubscriptions",
+      "display_name": "assignSubscriptions",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.fetchProducts": {
+      "id": "standalone.fetchProducts",
+      "name": "fetchProducts",
+      "display_name": "fetchProducts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.auditContacts",
+        "standalone.reconcilePayments"
+      ],
+      "called_by": [
+        "standalone.rebuildLeads"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.splitAccounts": {
+      "id": "standalone.splitAccounts",
+      "name": "splitAccounts",
+      "display_name": "splitAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.mergeTerritories"
+      ],
+      "called_by": [
+        "standalone.notifyTickets"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildInvoices": {
+      "id": "standalone.rebuildInvoices",
+      "name": "rebuildInvoices",
+      "display_name": "rebuildInvoices",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.cleanDeals": {
+      "id": "standalone.cleanDeals",
+      "name": "cleanDeals",
+      "display_name": "cleanDeals",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "schedule.notifyVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.cleanAccounts": {
+      "id": "standalone.cleanAccounts",
+      "name": "cleanAccounts",
+      "display_name": "cleanAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildVendors",
+        "standalone.notifyInvoices"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.fetchTickets": {
+      "id": "standalone.fetchTickets",
+      "name": "fetchTickets",
+      "display_name": "fetchTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.notifyQuotes": {
+      "id": "button.notifyQuotes",
+      "name": "notifyQuotes",
+      "display_name": "notifyQuotes",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignOrders": {
+      "id": "standalone.assignOrders",
+      "name": "assignOrders",
+      "display_name": "assignOrders",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "button.cleanTickets"
+      ],
+      "called_by": [
+        "schedule.cleanInvoices",
+        "standalone.auditDeals"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.fetchLeads": {
+      "id": "automation.fetchLeads",
+      "name": "fetchLeads",
+      "display_name": "fetchLeads",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "schedule.cleanInvoices",
+        "standalone.fetchAccounts"
+      ],
+      "called_by": [
+        "standalone.rebuildShipments"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.refreshSubscriptions": {
+      "id": "standalone.refreshSubscriptions",
+      "name": "refreshSubscriptions",
+      "display_name": "refreshSubscriptions",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "validation_rule.validateOrder",
+        "schedule.refreshPricebooks"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.syncPricebooks": {
+      "id": "schedule.syncPricebooks",
+      "name": "syncPricebooks",
+      "display_name": "syncPricebooks",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignTickets": {
+      "id": "standalone.assignTickets",
+      "name": "assignTickets",
+      "display_name": "assignTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.splitProducts": {
+      "id": "automation.splitProducts",
+      "name": "splitProducts",
+      "display_name": "splitProducts",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "standalone.auditDeals",
+        "schedule.nightlyDispatch"
+      ],
+      "called_by": [
+        "schedule.rebuildTerritories"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.rebuildTerritories": {
+      "id": "schedule.rebuildTerritories",
+      "name": "rebuildTerritories",
+      "display_name": "rebuildTerritories",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.legacyHelper",
+        "automation.splitProducts"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "validation_rule.syncContacts": {
+      "id": "validation_rule.syncContacts",
+      "name": "syncContacts",
+      "display_name": "syncContacts",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [
+        "schedule.pushAccounts"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.enrichSubscriptions": {
+      "id": "schedule.enrichSubscriptions",
+      "name": "enrichSubscriptions",
+      "display_name": "enrichSubscriptions",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.auditShipments",
+        "standalone.convertTickets"
+      ],
+      "called_by": [
+        "standalone.assignVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.auditDeals": {
+      "id": "standalone.auditDeals",
+      "name": "auditDeals",
+      "display_name": "auditDeals",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildTickets",
+        "standalone.assignOrders"
+      ],
+      "called_by": [
+        "automation.splitProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.splitVendors": {
+      "id": "schedule.splitVendors",
+      "name": "splitVendors",
+      "display_name": "splitVendors",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.auditShipments": {
+      "id": "standalone.auditShipments",
+      "name": "auditShipments",
+      "display_name": "auditShipments",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "schedule.enrichSubscriptions"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.archiveCampaigns": {
+      "id": "standalone.archiveCampaigns",
+      "name": "archiveCampaigns",
+      "display_name": "archiveCampaigns",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "schedule.convertVendors"
+      ],
+      "called_by": [
+        "validation_rule.auditShipments"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.refreshInvoices": {
+      "id": "button.refreshInvoices",
+      "name": "refreshInvoices",
+      "display_name": "refreshInvoices",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [
+        "button.refreshQuotes"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.refreshPricebooks": {
+      "id": "schedule.refreshPricebooks",
+      "name": "refreshPricebooks",
+      "display_name": "refreshPricebooks",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.fetchAccounts",
+        "automation.cleanSubscriptions"
+      ],
+      "called_by": [
+        "standalone.refreshSubscriptions"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.assignDeals": {
+      "id": "automation.assignDeals",
+      "name": "assignDeals",
+      "display_name": "assignDeals",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.syncProducts": {
+      "id": "button.syncProducts",
+      "name": "syncProducts",
+      "display_name": "syncProducts",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [
+        "automation.cleanAccounts"
+      ],
+      "called_by": [
+        "standalone.enrichProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.enrichAccounts": {
+      "id": "automation.enrichAccounts",
+      "name": "enrichAccounts",
+      "display_name": "enrichAccounts",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.dedupeQuotes": {
+      "id": "automation.dedupeQuotes",
+      "name": "dedupeQuotes",
+      "display_name": "dedupeQuotes",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [
+        "button.exportCsv"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.fetchInvoices": {
+      "id": "standalone.fetchInvoices",
+      "name": "fetchInvoices",
+      "display_name": "fetchInvoices",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "automation.fetchVendors",
+        "automation.notifyContacts"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.enrichPricebooks": {
+      "id": "automation.enrichPricebooks",
+      "name": "enrichPricebooks",
+      "display_name": "enrichPricebooks",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [
+        "standalone.syncVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.rebuildCampaigns": {
+      "id": "standalone.rebuildCampaigns",
+      "name": "rebuildCampaigns",
+      "display_name": "rebuildCampaigns",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.validateAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.fetchAccounts": {
+      "id": "standalone.fetchAccounts",
+      "name": "fetchAccounts",
+      "display_name": "fetchAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildVendors",
+        "schedule.closeStaleTickets"
+      ],
+      "called_by": [
+        "automation.fetchLeads",
+        "schedule.refreshPricebooks"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.auditPricebooks": {
+      "id": "standalone.auditPricebooks",
+      "name": "auditPricebooks",
+      "display_name": "auditPricebooks",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "automation.notifyContacts": {
+      "id": "automation.notifyContacts",
+      "name": "notifyContacts",
+      "display_name": "notifyContacts",
+      "namespace": "automation",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [
+        "standalone.fetchInvoices"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "schedule.syncInvoices": {
+      "id": "schedule.syncInvoices",
+      "name": "syncInvoices",
+      "display_name": "syncInvoices",
+      "namespace": "schedule",
+      "category": "scheduler",
+      "calls": [
+        "standalone.dedupeCampaigns"
+      ],
+      "called_by": [
+        "automation.cleanSubscriptions"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignPricebooks": {
+      "id": "standalone.assignPricebooks",
+      "name": "assignPricebooks",
+      "display_name": "assignPricebooks",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.rebuildLeads",
+        "standalone.enrichProducts"
+      ],
+      "called_by": [
+        "standalone.notifyQuotes",
+        "standalone.syncAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.mergeVendors": {
+      "id": "standalone.mergeVendors",
+      "name": "mergeVendors",
+      "display_name": "mergeVendors",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.pushDeals"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.enrichContacts": {
+      "id": "button.enrichContacts",
+      "name": "enrichContacts",
+      "display_name": "enrichContacts",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [
+        "standalone.calcTax",
+        "automation.fetchVendors"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "validation_rule.archiveLeads": {
+      "id": "validation_rule.archiveLeads",
+      "name": "archiveLeads",
+      "display_name": "archiveLeads",
+      "namespace": "validation_rule",
+      "category": "crmfundamentals",
+      "calls": [],
+      "called_by": [
+        "standalone.enrichProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.syncAccounts": {
+      "id": "standalone.syncAccounts",
+      "name": "syncAccounts",
+      "display_name": "syncAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.assignPricebooks",
+        "schedule.cleanInvoices"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.assignInvoices": {
+      "id": "button.assignInvoices",
+      "name": "assignInvoices",
+      "display_name": "assignInvoices",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.auditCampaigns": {
+      "id": "standalone.auditCampaigns",
+      "name": "auditCampaigns",
+      "display_name": "auditCampaigns",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "schedule.weeklyDigest"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.validateContacts": {
+      "id": "standalone.validateContacts",
+      "name": "validateContacts",
+      "display_name": "validateContacts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.convertOrders": {
+      "id": "standalone.convertOrders",
+      "name": "convertOrders",
+      "display_name": "convertOrders",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.assignVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.pushTickets": {
+      "id": "standalone.pushTickets",
+      "name": "pushTickets",
+      "display_name": "pushTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.notifyInvoices": {
+      "id": "standalone.notifyInvoices",
+      "name": "notifyInvoices",
+      "display_name": "notifyInvoices",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.cleanAccounts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.assignAccounts": {
+      "id": "standalone.assignAccounts",
+      "name": "assignAccounts",
+      "display_name": "assignAccounts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "schedule.convertVendors"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.auditContacts": {
+      "id": "standalone.auditContacts",
+      "name": "auditContacts",
+      "display_name": "auditContacts",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "standalone.fetchProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.pushDeals": {
+      "id": "standalone.pushDeals",
+      "name": "pushDeals",
+      "display_name": "pushDeals",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "standalone.mergeVendors",
+        "standalone.dedupeCampaigns"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "standalone.notifyTickets": {
+      "id": "standalone.notifyTickets",
+      "name": "notifyTickets",
+      "display_name": "notifyTickets",
+      "namespace": "standalone",
+      "category": "standalone",
+      "calls": [
+        "validation_rule.auditShipments",
+        "standalone.splitAccounts"
+      ],
+      "called_by": [
+        "standalone.archiveProducts"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.refreshQuotes": {
+      "id": "button.refreshQuotes",
+      "name": "refreshQuotes",
+      "display_name": "refreshQuotes",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [
+        "button.refreshInvoices"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.cleanTickets": {
+      "id": "button.cleanTickets",
+      "name": "cleanTickets",
+      "display_name": "cleanTickets",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [
+        "standalone.assignOrders"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "button.splitVendors": {
+      "id": "button.splitVendors",
+      "name": "splitVendors",
+      "display_name": "splitVendors",
+      "namespace": "button",
+      "category": "custombutton",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
       "ambiguous": []
     },
     "wf:4000": {
@@ -760,7 +2394,7 @@
       "namespace": "Tickets",
       "category": "workflows",
       "calls": [
-        "standalone.escalate"
+        "standalone.escalateTicket"
       ],
       "called_by": [],
       "params": [],
@@ -772,11 +2406,13 @@
     },
     "wf:4004": {
       "id": "wf:4004",
-      "name": "Contact created",
-      "display_name": "Contact created",
+      "name": "Contact merged",
+      "display_name": "Contact merged",
       "namespace": "Contacts",
       "category": "workflows",
-      "calls": [],
+      "calls": [
+        "automation.onContactMerge"
+      ],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -834,6 +2470,40 @@
       "unresolved": [],
       "ambiguous": []
     },
+    "wf:4008": {
+      "id": "wf:4008",
+      "name": "Credit limit changed",
+      "display_name": "Credit limit changed",
+      "namespace": "Accounts",
+      "category": "workflows",
+      "calls": [
+        "validation_rule.checkCreditLimit"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4009": {
+      "id": "wf:4009",
+      "name": "Quote accepted",
+      "display_name": "Quote accepted",
+      "namespace": "Quotes",
+      "category": "workflows",
+      "calls": [
+        "automation.onOrderCreate"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
     "sch:5000": {
       "id": "sch:5000",
       "name": "Nightly dispatch",
@@ -875,7 +2545,7 @@
       "namespace": "schedules",
       "category": "schedules",
       "calls": [
-        "schedule.closeStale"
+        "schedule.closeStaleTickets"
       ],
       "called_by": [],
       "params": [],
@@ -936,6 +2606,23 @@
       "unresolved": [],
       "ambiguous": []
     },
+    "sch:5006": {
+      "id": "sch:5006",
+      "name": "Payment sync",
+      "display_name": "Payment sync",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "schedule.syncPayments"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
     "conn:warehouse_api": {
       "id": "conn:warehouse_api",
       "name": "Warehouse API",
@@ -962,6 +2649,7 @@
       "category": "connections",
       "calls": [],
       "called_by": [
+        "standalone.reconcilePayments",
         "schedule.syncPayments"
       ],
       "params": [],
@@ -979,7 +2667,7 @@
       "category": "connections",
       "calls": [],
       "called_by": [
-        "standalone.escalate",
+        "standalone.escalateTicket",
         "schedule.weeklyDigest"
       ],
       "params": [],
@@ -998,6 +2686,23 @@
       "calls": [],
       "called_by": [
         "schedule.pullCatalogue"
+      ],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:tax_service": {
+      "id": "conn:tax_service",
+      "name": "Tax service",
+      "display_name": "Tax service",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [
+        "standalone.calcTax"
       ],
       "params": [],
       "return_type": "",
@@ -1026,10 +2731,10 @@
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 48,
-    "edges": 54,
-    "dead_suspects": 6,
-    "unresolved": 0
+    "nodes": 143,
+    "edges": 135,
+    "dead_suspects": 47,
+    "unresolved": 2
   },
   "workspace": {
     "instance": "sampleorg",

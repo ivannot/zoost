@@ -1,0 +1,8 @@
+// standalone.fetchProducts - sample function, generated for the sample org.
+void fetchProducts()
+{
+    info "standalone.fetchProducts start";
+    r0 = standalone.auditContacts();
+    r1 = standalone.reconcilePayments();
+    return null;
+}

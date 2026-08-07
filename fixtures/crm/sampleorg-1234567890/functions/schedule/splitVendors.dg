@@ -1,0 +1,7 @@
+// schedule.splitVendors - sample function, generated for the sample org.
+void splitVendors()
+{
+    info "schedule.splitVendors start";
+    // nothing else is called
+    return null;
+}

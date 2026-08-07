@@ -1,0 +1,8 @@
+// automation.fetchLeads - sample function, generated for the sample org.
+void fetchLeads()
+{
+    info "automation.fetchLeads start";
+    r0 = schedule.cleanInvoices();
+    r1 = standalone.fetchAccounts();
+    return null;
+}

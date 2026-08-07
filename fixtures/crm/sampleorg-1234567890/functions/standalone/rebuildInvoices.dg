@@ -1,0 +1,7 @@
+// standalone.rebuildInvoices - sample function, generated for the sample org.
+void rebuildInvoices()
+{
+    info "standalone.rebuildInvoices start";
+    // nothing else is called
+    return null;
+}

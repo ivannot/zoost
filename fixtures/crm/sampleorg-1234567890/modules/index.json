@@ -57,17 +57,17 @@
       "layoutCount": 1
     },
     {
-      "api_name": "Shipments",
-      "display_name": "Shipments",
-      "category": "custom",
-      "fieldCount": 9,
+      "api_name": "Vendors",
+      "display_name": "Vendors",
+      "category": "standard",
+      "fieldCount": 8,
       "layoutCount": 2
     },
     {
-      "api_name": "Tickets",
-      "display_name": "Support Tickets",
-      "category": "custom",
-      "fieldCount": 12,
+      "api_name": "Pricebooks",
+      "display_name": "Price Books",
+      "category": "standard",
+      "fieldCount": 10,
       "layoutCount": 1
     },
     {
@@ -78,8 +78,50 @@
       "layoutCount": 2
     },
     {
+      "api_name": "Cases",
+      "display_name": "Cases",
+      "category": "standard",
+      "fieldCount": 13,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Shipments",
+      "display_name": "Shipments",
+      "category": "custom",
+      "fieldCount": 7,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Tickets",
+      "display_name": "Support Tickets",
+      "category": "custom",
+      "fieldCount": 10,
+      "layoutCount": 1
+    },
+    {
       "api_name": "Subscriptions",
       "display_name": "Subscriptions",
+      "category": "custom",
+      "fieldCount": 10,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Territories",
+      "display_name": "Territories",
+      "category": "custom",
+      "fieldCount": 9,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Contracts",
+      "display_name": "Contracts",
+      "category": "custom",
+      "fieldCount": 12,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Assets",
+      "display_name": "Assets",
       "category": "custom",
       "fieldCount": 13,
       "layoutCount": 1

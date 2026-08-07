@@ -85,7 +85,7 @@
       "module": "Quotes",
       "type": "default",
       "visible": true,
-      "via": "Quotes_Ref"
+      "via": "Quote_Ref"
     },
     {
       "api_name": "Attachments",
@@ -93,14 +93,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

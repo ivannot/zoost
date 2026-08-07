@@ -1,0 +1,7 @@
+// button.cleanTickets - sample function, generated for the sample org.
+void cleanTickets()
+{
+    info "button.cleanTickets start";
+    // nothing else is called
+    return null;
+}

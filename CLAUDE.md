@@ -796,6 +796,32 @@ marker is sized against the zoom now, which needs `markerUnits="userSpaceOnUse"`
 multiplies by each link's stroke width, and there are four of those against one marker) and a
 `viewBox` (or the shape and `refX` move with the width, and the tip stops landing on the box edge).
 
+**One generator, two consumers: `apps/<app>/sample-org.js`.** It is shipped, because the panel has
+to be able to write a sample workspace into the working folder; `node tools/fixtures.mjs` runs the
+same code to write `fixtures/`. It replaced a Python script beside the fixture, which was a second
+description of the same workspace shape with nothing keeping the two honest - the pattern this
+project already uses for `product-help.js` and `analytics-sql.js`.
+
+The difference between the two outputs is a **flag, not a fork**: `edgeCases` adds the states that
+exist so the panel's own marks and filters have something to show. Those belong in a fixture the
+tests read; they do not belong in the workspace somebody opens on their first day, where a module
+Zoho refuses to describe is just a puzzle.
+
+**Names: written by hand for the core, composed for the volume.** `buildInvoice` calls `calcTax`
+which calls `formatMoney`, because that is what the screenshots show and what a first-time reader
+explores - `standalone_1`, `standalone_2` would make the product look like a test harness. Beyond the
+core, names are composed from a verb list and a noun list, deterministically, so a hundred plausible
+ones exist without anyone inventing them one at a time. The generated ones are wired into what is
+already there, so the graph gains depth rather than becoming a hedge of isolated boxes: 143 nodes and
+135 edges today.
+
+**`sample: true` in `.zoost.json` is the whole mechanism.** Nothing about a sample workspace is
+special once the files are on disk - it is read by the ordinary code, listed by the ordinary list,
+and deleted by deleting the folder. There is no demo *mode* and there must never be one: an
+`if (demo)` branch in shipped rendering code is how invented data eventually gets shown as somebody's
+own. The flag exists so the panel can refuse everything that would talk to the platform, and to say
+so.
+
 **The sample org lives in `fixtures/`, outside `apps/`, so it can never ship.** `python3
 fixtures/make.py` writes a workspace in the exact shape a pull produces, plus the `graphData`
 payloads the diagram window consumes. It exists for three reasons and the second is the one that is

@@ -1,0 +1,7 @@
+// standalone.enrichTerritories - sample function, generated for the sample org.
+void enrichTerritories()
+{
+    info "standalone.enrichTerritories start";
+    // nothing else is called
+    return null;
+}

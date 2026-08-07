@@ -1,4 +1,4 @@
-// standalone.reserveStock - sample function, invented for the fixture org.
+// standalone.reserveStock - sample function, generated for the sample org.
 map reserveStock(string orderId)
 {
     info "standalone.reserveStock start";

@@ -73,7 +73,7 @@
       "module": "Invoices",
       "type": "default",
       "visible": true,
-      "via": "Invoices_Ref"
+      "via": "Invoice_Ref"
     },
     {
       "api_name": "Shipments_of_Orders",
@@ -81,7 +81,7 @@
       "module": "Shipments",
       "type": "default",
       "visible": true,
-      "via": "Shipments_Ref"
+      "via": "Shipment_Ref"
     },
     {
       "api_name": "Attachments",
@@ -89,14 +89,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

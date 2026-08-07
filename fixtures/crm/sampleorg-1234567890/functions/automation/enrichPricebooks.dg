@@ -1,0 +1,7 @@
+// automation.enrichPricebooks - sample function, generated for the sample org.
+void enrichPricebooks()
+{
+    info "automation.enrichPricebooks start";
+    // nothing else is called
+    return null;
+}

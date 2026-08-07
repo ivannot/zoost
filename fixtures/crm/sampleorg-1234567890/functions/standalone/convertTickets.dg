@@ -1,0 +1,7 @@
+// standalone.convertTickets - sample function, generated for the sample org.
+void convertTickets()
+{
+    info "standalone.convertTickets start";
+    r0 = standalone.pushOrders();
+    return null;
+}

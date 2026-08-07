@@ -1,0 +1,17 @@
+{
+  "api_name": "Territories",
+  "layouts": [
+    {
+      "id": 3015,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    },
+    {
+      "id": 3215,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
+    }
+  ]
+}

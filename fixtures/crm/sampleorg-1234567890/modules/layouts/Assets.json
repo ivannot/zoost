@@ -1,0 +1,11 @@
+{
+  "api_name": "Assets",
+  "layouts": [
+    {
+      "id": 3017,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

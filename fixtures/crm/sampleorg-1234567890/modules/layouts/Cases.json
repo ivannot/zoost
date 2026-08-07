@@ -1,0 +1,11 @@
+{
+  "api_name": "Cases",
+  "layouts": [
+    {
+      "id": 3011,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

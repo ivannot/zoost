@@ -1,0 +1,8 @@
+// standalone.pushDeals - sample function, generated for the sample org.
+void pushDeals()
+{
+    info "standalone.pushDeals start";
+    r0 = standalone.mergeVendors();
+    r1 = standalone.dedupeCampaigns();
+    return null;
+}

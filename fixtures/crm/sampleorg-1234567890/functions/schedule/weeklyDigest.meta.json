@@ -1,6 +1,6 @@
 {
   "sv": 3,
-  "id": "9024",
+  "id": "9025",
   "name": "weeklyDigest",
   "namespace": "schedule",
   "display_name": "weeklyDigest",
@@ -11,7 +11,7 @@
     "mail_relay"
   ],
   "modified_by": "Sample User",
-  "modified_time": "2026-07-07T09:00:00+00:00",
+  "modified_time": "2026-07-08T09:00:00+00:00",
   "rest": false,
   "unresolved": [],
   "ambiguous": []

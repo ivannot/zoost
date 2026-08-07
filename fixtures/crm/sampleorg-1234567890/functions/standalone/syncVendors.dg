@@ -1,0 +1,7 @@
+// standalone.syncVendors - sample function, generated for the sample org.
+void syncVendors()
+{
+    info "standalone.syncVendors start";
+    r0 = automation.enrichPricebooks();
+    return null;
+}

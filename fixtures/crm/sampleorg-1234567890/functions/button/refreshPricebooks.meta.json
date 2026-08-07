@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9036",
+  "name": "refreshPricebooks",
+  "namespace": "button",
+  "display_name": "refreshPricebooks",
+  "category": "custombutton",
+  "return_type": "void",
+  "params": [],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-01T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

@@ -1,4 +1,4 @@
-// standalone.legacyHelper - sample function, invented for the fixture org.
+// standalone.legacyHelper - sample function, generated for the sample org.
 map legacyHelper(string input)
 {
     info "standalone.legacyHelper start";

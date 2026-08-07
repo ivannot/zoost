@@ -1,4 +1,4 @@
-// standalone.buildInvoice - sample function, invented for the fixture org.
+// standalone.buildInvoice - sample function, generated for the sample org.
 map buildInvoice(string orderId)
 {
     info "standalone.buildInvoice start";

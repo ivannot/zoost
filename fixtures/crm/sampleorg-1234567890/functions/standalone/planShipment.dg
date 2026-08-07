@@ -1,4 +1,4 @@
-// standalone.planShipment - sample function, invented for the fixture org.
+// standalone.planShipment - sample function, generated for the sample org.
 map planShipment(string orderId)
 {
     info "standalone.planShipment start";

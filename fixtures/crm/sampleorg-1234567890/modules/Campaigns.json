@@ -88,14 +88,6 @@
       "via": ""
     },
     {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
-      "via": ""
-    },
-    {
       "api_name": "Campaign_Products",
       "label": "Campaign products",
       "module": "Products",

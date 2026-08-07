@@ -52,24 +52,6 @@
       "lookup": null
     },
     {
-      "api_name": "Priority",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "External_Ref",
-      "data_type": "text",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Notes",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
       "api_name": "Account_Ref",
       "data_type": "lookup",
       "mandatory": false,
@@ -84,7 +66,7 @@
   ],
   "layouts": [
     {
-      "id": 3011,
+      "id": 3014,
       "name": "Standard",
       "visible": true,
       "sections": 3
@@ -97,14 +79,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

@@ -1,0 +1,7 @@
+// automation.assignDeals - sample function, generated for the sample org.
+void assignDeals()
+{
+    info "automation.assignDeals start";
+    // nothing else is called
+    return null;
+}

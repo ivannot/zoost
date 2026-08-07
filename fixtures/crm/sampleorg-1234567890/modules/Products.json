@@ -85,7 +85,7 @@
       "module": "Tickets",
       "type": "default",
       "visible": true,
-      "via": "Tickets_Ref"
+      "via": "Ticket_Ref"
     },
     {
       "api_name": "Subscriptions_of_Products",
@@ -93,7 +93,23 @@
       "module": "Subscriptions",
       "type": "default",
       "visible": true,
-      "via": "Subscriptions_Ref"
+      "via": "Subscription_Ref"
+    },
+    {
+      "api_name": "Assets_of_Products",
+      "label": "Assets",
+      "module": "Assets",
+      "type": "default",
+      "visible": true,
+      "via": "Asset_Ref"
+    },
+    {
+      "api_name": "Pricebooks_of_Products",
+      "label": "Pricebooks",
+      "module": "Pricebooks",
+      "type": "default",
+      "visible": true,
+      "via": "Pricebook_Ref"
     },
     {
       "api_name": "Attachments",
@@ -101,14 +117,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     },
     {

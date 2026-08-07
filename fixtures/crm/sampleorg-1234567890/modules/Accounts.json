@@ -67,7 +67,7 @@
       "module": "Contacts",
       "type": "default",
       "visible": true,
-      "via": "Contacts_Ref"
+      "via": "Contact_Ref"
     },
     {
       "api_name": "Deals_of_Accounts",
@@ -75,7 +75,7 @@
       "module": "Deals",
       "type": "default",
       "visible": true,
-      "via": "Deals_Ref"
+      "via": "Deal_Ref"
     },
     {
       "api_name": "Quotes_of_Accounts",
@@ -83,7 +83,7 @@
       "module": "Quotes",
       "type": "default",
       "visible": true,
-      "via": "Quotes_Ref"
+      "via": "Quote_Ref"
     },
     {
       "api_name": "Invoices_of_Accounts",
@@ -91,7 +91,7 @@
       "module": "Invoices",
       "type": "default",
       "visible": true,
-      "via": "Invoices_Ref"
+      "via": "Invoice_Ref"
     },
     {
       "api_name": "Orders_of_Accounts",
@@ -99,7 +99,7 @@
       "module": "Orders",
       "type": "default",
       "visible": true,
-      "via": "Orders_Ref"
+      "via": "Order_Ref"
     },
     {
       "api_name": "Tickets_of_Accounts",
@@ -107,7 +107,7 @@
       "module": "Tickets",
       "type": "default",
       "visible": true,
-      "via": "Tickets_Ref"
+      "via": "Ticket_Ref"
     },
     {
       "api_name": "Subscriptions_of_Accounts",
@@ -115,7 +115,31 @@
       "module": "Subscriptions",
       "type": "default",
       "visible": true,
-      "via": "Subscriptions_Ref"
+      "via": "Subscription_Ref"
+    },
+    {
+      "api_name": "Cases_of_Accounts",
+      "label": "Cases",
+      "module": "Cases",
+      "type": "default",
+      "visible": true,
+      "via": "Case_Ref"
+    },
+    {
+      "api_name": "Contracts_of_Accounts",
+      "label": "Contracts",
+      "module": "Contracts",
+      "type": "default",
+      "visible": true,
+      "via": "Contract_Ref"
+    },
+    {
+      "api_name": "Assets_of_Accounts",
+      "label": "Assets",
+      "module": "Assets",
+      "type": "default",
+      "visible": true,
+      "via": "Asset_Ref"
     },
     {
       "api_name": "Attachments",
@@ -123,14 +147,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

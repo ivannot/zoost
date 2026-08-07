@@ -1,0 +1,7 @@
+// standalone.notifyInvoices - sample function, generated for the sample org.
+void notifyInvoices()
+{
+    info "standalone.notifyInvoices start";
+    // nothing else is called
+    return null;
+}

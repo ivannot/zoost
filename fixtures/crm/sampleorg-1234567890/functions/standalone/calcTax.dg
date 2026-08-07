@@ -1,7 +1,7 @@
-// standalone.calcTax - sample function, invented for the fixture org.
+// standalone.calcTax - sample function, generated for the sample org.
 map calcTax(string amount, string rate)
 {
     info "standalone.calcTax start";
-    // nothing else is called
+    r0 = standalone.orgSettings();
     return r0;
 }

@@ -1,0 +1,7 @@
+// standalone.splitTickets - sample function, generated for the sample org.
+void splitTickets()
+{
+    info "standalone.splitTickets start";
+    r0 = standalone.rebuildTickets();
+    return null;
+}

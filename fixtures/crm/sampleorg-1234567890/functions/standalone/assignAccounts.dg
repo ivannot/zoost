@@ -1,0 +1,7 @@
+// standalone.assignAccounts - sample function, generated for the sample org.
+void assignAccounts()
+{
+    info "standalone.assignAccounts start";
+    // nothing else is called
+    return null;
+}

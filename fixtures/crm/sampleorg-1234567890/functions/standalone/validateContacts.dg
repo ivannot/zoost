@@ -1,0 +1,7 @@
+// standalone.validateContacts - sample function, generated for the sample org.
+void validateContacts()
+{
+    info "standalone.validateContacts start";
+    // nothing else is called
+    return null;
+}

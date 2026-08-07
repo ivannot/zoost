@@ -1,4 +1,4 @@
-// standalone.isBusinessDay - sample function, invented for the fixture org.
+// standalone.isBusinessDay - sample function, generated for the sample org.
 map isBusinessDay(string day)
 {
     info "standalone.isBusinessDay start";

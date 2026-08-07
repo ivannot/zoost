@@ -1,0 +1,17 @@
+{
+  "api_name": "Contracts",
+  "layouts": [
+    {
+      "id": 3016,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    },
+    {
+      "id": 3116,
+      "name": "Compact",
+      "visible": true,
+      "sections": 2
+    }
+  ]
+}

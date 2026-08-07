@@ -1,8 +1,0 @@
-// standalone.escalate - sample function, invented for the fixture org.
-map escalate(string ticketId)
-{
-    info "standalone.escalate start";
-    r0 = standalone.log();
-    r1 = schedule.weeklyDigest();
-    return r0;
-}

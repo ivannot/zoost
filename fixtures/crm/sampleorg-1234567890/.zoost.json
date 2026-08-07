@@ -4,6 +4,8 @@
   "base": "https://crm.zoho.eu",
   "sandbox": false,
   "label": "Sample org",
+  "sample": true,
+  "sampleAt": "2026-08-07T10:00:00.000Z",
   "lastPull": "2026-08-07T10:00:00.000Z",
   "access": {
     "functions": {

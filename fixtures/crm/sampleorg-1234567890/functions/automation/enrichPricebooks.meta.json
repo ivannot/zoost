@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9096",
+  "name": "enrichPricebooks",
+  "namespace": "automation",
+  "display_name": "enrichPricebooks",
+  "category": "crmfundamentals",
+  "return_type": "void",
+  "params": [],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-07T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

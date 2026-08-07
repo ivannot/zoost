@@ -1,0 +1,7 @@
+// standalone.auditPricebooks - sample function, generated for the sample org.
+void auditPricebooks()
+{
+    info "standalone.auditPricebooks start";
+    // nothing else is called
+    return null;
+}

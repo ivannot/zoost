@@ -1,0 +1,7 @@
+// standalone.mergeShipments - sample function, generated for the sample org.
+void mergeShipments()
+{
+    info "standalone.mergeShipments start";
+    // nothing else is called
+    return null;
+}

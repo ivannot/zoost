@@ -1,0 +1,7 @@
+// validation_rule.archiveLeads - sample function, generated for the sample org.
+void archiveLeads()
+{
+    info "validation_rule.archiveLeads start";
+    // nothing else is called
+    return null;
+}

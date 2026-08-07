@@ -1,4 +1,4 @@
-// automation.onDealWon - sample function, invented for the fixture org.
+// automation.onDealWon - sample function, generated for the sample org.
 map onDealWon(string dealId)
 {
     info "automation.onDealWon start";

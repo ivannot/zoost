@@ -1,4 +1,4 @@
-// schedule.weeklyDigest - sample function, invented for the fixture org.
+// schedule.weeklyDigest - sample function, generated for the sample org.
 void weeklyDigest()
 {
     info "schedule.weeklyDigest start";

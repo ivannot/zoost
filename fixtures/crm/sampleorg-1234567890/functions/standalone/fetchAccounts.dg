@@ -1,0 +1,8 @@
+// standalone.fetchAccounts - sample function, generated for the sample org.
+void fetchAccounts()
+{
+    info "standalone.fetchAccounts start";
+    r0 = standalone.rebuildVendors();
+    r1 = schedule.closeStaleTickets();
+    return null;
+}

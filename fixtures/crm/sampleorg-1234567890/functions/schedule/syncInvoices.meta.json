@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9101",
+  "name": "syncInvoices",
+  "namespace": "schedule",
+  "display_name": "syncInvoices",
+  "category": "scheduler",
+  "return_type": "void",
+  "params": [],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-03T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

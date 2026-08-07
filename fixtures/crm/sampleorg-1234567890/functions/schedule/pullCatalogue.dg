@@ -1,4 +1,4 @@
-// schedule.pullCatalogue - sample function, invented for the fixture org.
+// schedule.pullCatalogue - sample function, generated for the sample org.
 void pullCatalogue()
 {
     info "schedule.pullCatalogue start";

@@ -67,7 +67,7 @@
       "module": "Deals",
       "type": "default",
       "visible": true,
-      "via": "Deals_Ref"
+      "via": "Deal_Ref"
     },
     {
       "api_name": "Tickets_of_Contacts",
@@ -75,7 +75,15 @@
       "module": "Tickets",
       "type": "default",
       "visible": true,
-      "via": "Tickets_Ref"
+      "via": "Ticket_Ref"
+    },
+    {
+      "api_name": "Cases_of_Contacts",
+      "label": "Cases",
+      "module": "Cases",
+      "type": "default",
+      "visible": true,
+      "via": "Case_Ref"
     },
     {
       "api_name": "Attachments",
@@ -83,14 +91,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

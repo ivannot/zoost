@@ -16,7 +16,9 @@
       "type": "string"
     }
   ],
-  "connections": [],
+  "connections": [
+    "tax_service"
+  ],
   "modified_by": "Sample User",
   "modified_time": "2026-07-05T09:00:00+00:00",
   "rest": false,

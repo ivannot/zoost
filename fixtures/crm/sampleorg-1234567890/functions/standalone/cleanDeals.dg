@@ -1,0 +1,7 @@
+// standalone.cleanDeals - sample function, generated for the sample org.
+void cleanDeals()
+{
+    info "standalone.cleanDeals start";
+    // nothing else is called
+    return null;
+}

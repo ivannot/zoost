@@ -1,0 +1,7 @@
+// schedule.validateTerritories - sample function, generated for the sample org.
+void validateTerritories()
+{
+    info "schedule.validateTerritories start";
+    // nothing else is called
+    return null;
+}

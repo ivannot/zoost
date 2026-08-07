@@ -1,4 +1,4 @@
-// button.exportCsv - sample function, invented for the fixture org.
+// button.exportCsv - sample function, generated for the sample org.
 map exportCsv(string view)
 {
     info "button.exportCsv start";

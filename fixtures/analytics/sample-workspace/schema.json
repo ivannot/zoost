@@ -81,7 +81,7 @@
         },
         {
           "name": "Order_Date",
-          "type": "PLAIN",
+          "type": "DATE",
           "colid": "177856000000000012-2"
         },
         {
@@ -306,157 +306,188 @@
       ]
     },
     "177856000000000044": {
+      "name": "Campaigns",
+      "kind": "Table",
+      "system": false,
+      "columns": [
+        {
+          "name": "Campaign_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000044-0"
+        },
+        {
+          "name": "Campaign_Name",
+          "type": "PLAIN",
+          "colid": "177856000000000044-1"
+        },
+        {
+          "name": "Channel",
+          "type": "PLAIN",
+          "colid": "177856000000000044-2"
+        },
+        {
+          "name": "Budget",
+          "type": "PLAIN",
+          "colid": "177856000000000044-3"
+        }
+      ]
+    },
+    "177856000000000048": {
+      "name": "Touchpoints",
+      "kind": "Table",
+      "system": false,
+      "columns": [
+        {
+          "name": "Touch_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000048-0"
+        },
+        {
+          "name": "Campaign_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000048-1"
+        },
+        {
+          "name": "Contact_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000048-2"
+        },
+        {
+          "name": "Touched_On",
+          "type": "DATE",
+          "colid": "177856000000000048-3"
+        }
+      ]
+    },
+    "177856000000000052": {
+      "name": "Subscriptions",
+      "kind": "Table",
+      "system": false,
+      "columns": [
+        {
+          "name": "Subscription_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000052-0"
+        },
+        {
+          "name": "Account_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000052-1"
+        },
+        {
+          "name": "Product_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000052-2"
+        },
+        {
+          "name": "Started_On",
+          "type": "DATE",
+          "colid": "177856000000000052-3"
+        },
+        {
+          "name": "Ends_On",
+          "type": "DATE",
+          "colid": "177856000000000052-4"
+        }
+      ]
+    },
+    "177856000000000056": {
+      "name": "Returns",
+      "kind": "Table",
+      "system": false,
+      "columns": [
+        {
+          "name": "Return_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000056-0"
+        },
+        {
+          "name": "Order_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000056-1"
+        },
+        {
+          "name": "Reason",
+          "type": "PLAIN",
+          "colid": "177856000000000056-2"
+        },
+        {
+          "name": "Received_On",
+          "type": "DATE",
+          "colid": "177856000000000056-3"
+        }
+      ]
+    },
+    "177856000000000060": {
       "name": "ZohoUsers",
       "kind": "Table",
       "system": true,
       "columns": [
         {
-          "name": "User_Id",
-          "type": "BIGINT",
-          "colid": "177856000000000044-0"
-        },
-        {
-          "name": "Email",
-          "type": "PLAIN",
-          "colid": "177856000000000044-1"
-        },
-        {
-          "name": "Role",
-          "type": "PLAIN",
-          "colid": "177856000000000044-2"
-        }
-      ]
-    },
-    "177856000000000048": {
-      "name": "ZohoImportLog",
-      "kind": "Table",
-      "system": true,
-      "columns": [
-        {
-          "name": "Import_Id",
-          "type": "BIGINT",
-          "colid": "177856000000000048-0"
-        },
-        {
-          "name": "Started_On",
-          "type": "DATE",
-          "colid": "177856000000000048-1"
-        },
-        {
-          "name": "Rows",
-          "type": "PLAIN",
-          "colid": "177856000000000048-2"
-        }
-      ]
-    },
-    "177856000000000052": {
-      "name": "Revenue_By_Region",
-      "kind": "QueryTable",
-      "columns": [
-        {
-          "name": "Col_1",
-          "type": "PLAIN",
-          "colid": "177856000000000052-0"
-        },
-        {
-          "name": "Col_2",
-          "type": "PLAIN",
-          "colid": "177856000000000052-1"
-        },
-        {
-          "name": "Col_3",
-          "type": "PLAIN",
-          "colid": "177856000000000052-2"
-        }
-      ]
-    },
-    "177856000000000056": {
-      "name": "Open_Invoices",
-      "kind": "QueryTable",
-      "columns": [
-        {
-          "name": "Col_1",
-          "type": "PLAIN",
-          "colid": "177856000000000056-0"
-        },
-        {
-          "name": "Col_2",
-          "type": "PLAIN",
-          "colid": "177856000000000056-1"
-        },
-        {
-          "name": "Col_3",
-          "type": "PLAIN",
-          "colid": "177856000000000056-2"
-        }
-      ]
-    },
-    "177856000000000060": {
-      "name": "Late_Shipments",
-      "kind": "QueryTable",
-      "columns": [
-        {
-          "name": "Col_1",
+          "name": "Id",
           "type": "PLAIN",
           "colid": "177856000000000060-0"
         },
         {
-          "name": "Col_2",
-          "type": "PLAIN",
+          "name": "Logged_On",
+          "type": "DATE",
           "colid": "177856000000000060-1"
         },
         {
-          "name": "Col_3",
+          "name": "Detail",
           "type": "PLAIN",
           "colid": "177856000000000060-2"
         }
       ]
     },
     "177856000000000064": {
-      "name": "Basket_Size",
-      "kind": "QueryTable",
+      "name": "ZohoImportLog",
+      "kind": "Table",
+      "system": true,
       "columns": [
         {
-          "name": "Col_1",
+          "name": "Id",
           "type": "PLAIN",
           "colid": "177856000000000064-0"
         },
         {
-          "name": "Col_2",
-          "type": "PLAIN",
+          "name": "Logged_On",
+          "type": "DATE",
           "colid": "177856000000000064-1"
         },
         {
-          "name": "Col_3",
+          "name": "Detail",
           "type": "PLAIN",
           "colid": "177856000000000064-2"
         }
       ]
     },
     "177856000000000068": {
-      "name": "Ticket_Load",
-      "kind": "QueryTable",
+      "name": "ZohoScheduleLog",
+      "kind": "Table",
+      "system": true,
       "columns": [
         {
-          "name": "Col_1",
+          "name": "Id",
           "type": "PLAIN",
           "colid": "177856000000000068-0"
         },
         {
-          "name": "Col_2",
-          "type": "PLAIN",
+          "name": "Logged_On",
+          "type": "DATE",
           "colid": "177856000000000068-1"
         },
         {
-          "name": "Col_3",
+          "name": "Detail",
           "type": "PLAIN",
           "colid": "177856000000000068-2"
         }
       ]
     },
     "177856000000000072": {
-      "name": "Empty_Draft",
+      "name": "Revenue_By_Region",
       "kind": "QueryTable",
+      "system": false,
       "columns": [
         {
           "name": "Col_1",
@@ -476,8 +507,9 @@
       ]
     },
     "177856000000000076": {
-      "name": "Unreadable_Query",
+      "name": "Open_Invoices",
       "kind": "QueryTable",
+      "system": false,
       "columns": [
         {
           "name": "Col_1",
@@ -493,6 +525,182 @@
           "name": "Col_3",
           "type": "PLAIN",
           "colid": "177856000000000076-2"
+        }
+      ]
+    },
+    "177856000000000080": {
+      "name": "Late_Shipments",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000080-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000080-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000080-2"
+        }
+      ]
+    },
+    "177856000000000084": {
+      "name": "Basket_Size",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000084-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000084-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000084-2"
+        }
+      ]
+    },
+    "177856000000000088": {
+      "name": "Ticket_Load",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000088-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000088-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000088-2"
+        }
+      ]
+    },
+    "177856000000000092": {
+      "name": "Campaign_Reach",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000092-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000092-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000092-2"
+        }
+      ]
+    },
+    "177856000000000096": {
+      "name": "Return_Rate",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000096-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000096-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000096-2"
+        }
+      ]
+    },
+    "177856000000000100": {
+      "name": "Active_Subscriptions",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000100-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000100-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000100-2"
+        }
+      ]
+    },
+    "177856000000000104": {
+      "name": "Empty_Draft",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000104-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000104-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000104-2"
+        }
+      ]
+    },
+    "177856000000000108": {
+      "name": "Unreadable_Query",
+      "kind": "QueryTable",
+      "system": false,
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000108-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000108-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000108-2"
         }
       ]
     }
@@ -560,6 +768,41 @@
       "to": "177856000000000040",
       "toColumn": "Region",
       "relation": "(\"Accounts\".\"Region\")=(\"Regions\".\"Region\")"
+    },
+    {
+      "from": "177856000000000048",
+      "fromColumn": "Campaign_Id",
+      "to": "177856000000000044",
+      "toColumn": "Campaign_Id",
+      "relation": "(\"Touchpoints\".\"Campaign_Id\")=(\"Campaigns\".\"Campaign_Id\")"
+    },
+    {
+      "from": "177856000000000048",
+      "fromColumn": "Contact_Id",
+      "to": "177856000000000008",
+      "toColumn": "Contact_Id",
+      "relation": "(\"Touchpoints\".\"Contact_Id\")=(\"Contacts\".\"Contact_Id\")"
+    },
+    {
+      "from": "177856000000000052",
+      "fromColumn": "Account_Id",
+      "to": "177856000000000004",
+      "toColumn": "Account_Id",
+      "relation": "(\"Subscriptions\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+    },
+    {
+      "from": "177856000000000052",
+      "fromColumn": "Product_Id",
+      "to": "177856000000000020",
+      "toColumn": "Product_Id",
+      "relation": "(\"Subscriptions\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+    },
+    {
+      "from": "177856000000000056",
+      "fromColumn": "Order_Id",
+      "to": "177856000000000012",
+      "toColumn": "Order_Id",
+      "relation": "(\"Returns\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
     }
   ]
 }

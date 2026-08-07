@@ -1,0 +1,7 @@
+// standalone.assignSubscriptions - sample function, generated for the sample org.
+void assignSubscriptions()
+{
+    info "standalone.assignSubscriptions start";
+    // nothing else is called
+    return null;
+}

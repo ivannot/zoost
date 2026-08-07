@@ -1,4 +1,4 @@
-// automation.recalcTotals - sample function, invented for the fixture org.
+// automation.recalcTotals - sample function, generated for the sample org.
 map recalcTotals(string orderId)
 {
     info "automation.recalcTotals start";

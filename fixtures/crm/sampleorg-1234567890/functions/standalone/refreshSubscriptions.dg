@@ -1,0 +1,8 @@
+// standalone.refreshSubscriptions - sample function, generated for the sample org.
+void refreshSubscriptions()
+{
+    info "standalone.refreshSubscriptions start";
+    r0 = validation_rule.validateOrder();
+    r1 = schedule.refreshPricebooks();
+    return null;
+}

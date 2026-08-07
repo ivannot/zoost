@@ -1,0 +1,7 @@
+// button.refreshInvoices - sample function, generated for the sample org.
+void refreshInvoices()
+{
+    info "button.refreshInvoices start";
+    // nothing else is called
+    return null;
+}

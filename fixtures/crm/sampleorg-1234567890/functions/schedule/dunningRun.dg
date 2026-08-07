@@ -1,4 +1,4 @@
-// schedule.dunningRun - sample function, invented for the fixture org.
+// schedule.dunningRun - sample function, generated for the sample org.
 void dunningRun()
 {
     info "schedule.dunningRun start";

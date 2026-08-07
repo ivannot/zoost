@@ -1,0 +1,7 @@
+// standalone.mergeTerritories - sample function, generated for the sample org.
+void mergeTerritories()
+{
+    info "standalone.mergeTerritories start";
+    // nothing else is called
+    return null;
+}

@@ -1,0 +1,8 @@
+// button.enrichContacts - sample function, generated for the sample org.
+void enrichContacts()
+{
+    info "button.enrichContacts start";
+    r0 = standalone.calcTax();
+    r1 = automation.fetchVendors();
+    return null;
+}

@@ -1,0 +1,7 @@
+// automation.notifyContacts - sample function, generated for the sample org.
+void notifyContacts()
+{
+    info "automation.notifyContacts start";
+    // nothing else is called
+    return null;
+}

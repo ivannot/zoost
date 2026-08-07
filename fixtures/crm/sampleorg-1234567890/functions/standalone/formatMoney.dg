@@ -1,4 +1,4 @@
-// standalone.formatMoney - sample function, invented for the fixture org.
+// standalone.formatMoney - sample function, generated for the sample org.
 map formatMoney(string amount, string currency)
 {
     info "standalone.formatMoney start";

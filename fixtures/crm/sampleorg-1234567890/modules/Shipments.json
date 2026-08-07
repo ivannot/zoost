@@ -40,18 +40,6 @@
       "lookup": null
     },
     {
-      "api_name": "Opened_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Closed_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
       "api_name": "Order_Ref",
       "data_type": "lookup",
       "mandatory": false,
@@ -60,13 +48,13 @@
   ],
   "layouts": [
     {
-      "id": 3008,
+      "id": 3012,
       "name": "Standard",
       "visible": true,
       "sections": 3
     },
     {
-      "id": 3108,
+      "id": 3112,
       "name": "Compact",
       "visible": true,
       "sections": 2
@@ -79,14 +67,6 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
-    },
-    {
-      "api_name": "Notes",
-      "label": "Notes",
-      "module": "Notes",
-      "type": "system",
-      "visible": false,
       "via": ""
     }
   ]

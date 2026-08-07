@@ -2,6 +2,8 @@
   "workspace": "99000001",
   "name": "Sample workspace",
   "label": "Sample workspace",
-  "host": "analytics.zoho.eu",
+  "base": "https://analytics.zoho.eu",
+  "sample": true,
+  "sampleAt": "2026-08-07T10:00:00.000Z",
   "lastPull": "2026-08-07T10:00:00.000Z"
 }

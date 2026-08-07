@@ -1,12 +1,17 @@
 {
   "id": "4004",
-  "name": "Contact created",
+  "name": "Contact merged",
   "module": "Contacts",
   "active": true,
   "conditions": [
     {
       "criteria": "Status is not empty",
-      "actions": [],
+      "actions": [
+        {
+          "type": "function",
+          "name": "automation.onContactMerge"
+        }
+      ],
       "scheduled_actions": []
     }
   ],

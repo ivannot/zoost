@@ -1,0 +1,7 @@
+// button.syncProducts - sample function, generated for the sample org.
+void syncProducts()
+{
+    info "button.syncProducts start";
+    r0 = automation.cleanAccounts();
+    return null;
+}

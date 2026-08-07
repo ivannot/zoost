@@ -48,12 +48,114 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3000,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3100,
+          "name": "Compact",
+          "visible": true,
+          "sections": 2
+        },
+        {
+          "id": 3200,
+          "name": "Retired",
+          "visible": false,
+          "sections": 1
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Contacts_of_Accounts",
+          "label": "Contacts",
+          "module": "Contacts",
+          "type": "default",
+          "visible": true,
+          "via": "Contact_Ref"
+        },
+        {
+          "api_name": "Deals_of_Accounts",
+          "label": "Deals",
+          "module": "Deals",
+          "type": "default",
+          "visible": true,
+          "via": "Deal_Ref"
+        },
+        {
+          "api_name": "Quotes_of_Accounts",
+          "label": "Quotes",
+          "module": "Quotes",
+          "type": "default",
+          "visible": true,
+          "via": "Quote_Ref"
+        },
+        {
+          "api_name": "Invoices_of_Accounts",
+          "label": "Invoices",
+          "module": "Invoices",
+          "type": "default",
+          "visible": true,
+          "via": "Invoice_Ref"
+        },
+        {
+          "api_name": "Orders_of_Accounts",
+          "label": "Orders",
+          "module": "Orders",
+          "type": "default",
+          "visible": true,
+          "via": "Order_Ref"
+        },
+        {
+          "api_name": "Tickets_of_Accounts",
+          "label": "Tickets",
+          "module": "Tickets",
+          "type": "default",
+          "visible": true,
+          "via": "Ticket_Ref"
+        },
+        {
+          "api_name": "Subscriptions_of_Accounts",
+          "label": "Subscriptions",
+          "module": "Subscriptions",
+          "type": "default",
+          "visible": true,
+          "via": "Subscription_Ref"
+        },
+        {
+          "api_name": "Cases_of_Accounts",
+          "label": "Cases",
+          "module": "Cases",
+          "type": "default",
+          "visible": true,
+          "via": "Case_Ref"
+        },
+        {
+          "api_name": "Contracts_of_Accounts",
+          "label": "Contracts",
+          "module": "Contracts",
+          "type": "default",
+          "visible": true,
+          "via": "Contract_Ref"
+        },
+        {
+          "api_name": "Assets_of_Accounts",
+          "label": "Assets",
+          "module": "Assets",
+          "type": "default",
+          "visible": true,
+          "via": "Asset_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [],
       "called_by": [
         "Contacts",
@@ -61,8 +163,11 @@
         "Quotes",
         "Invoices",
         "Orders",
+        "Cases",
         "Tickets",
-        "Subscriptions"
+        "Subscriptions",
+        "Contracts",
+        "Assets"
       ],
       "dead_suspect": false,
       "unresolved": [],
@@ -113,6 +218,12 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Account_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -121,17 +232,52 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3001,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Deals_of_Contacts",
+          "label": "Deals",
+          "module": "Deals",
+          "type": "default",
+          "visible": true,
+          "via": "Deal_Ref"
+        },
+        {
+          "api_name": "Tickets_of_Contacts",
+          "label": "Tickets",
+          "module": "Tickets",
+          "type": "default",
+          "visible": true,
+          "via": "Ticket_Ref"
+        },
+        {
+          "api_name": "Cases_of_Contacts",
+          "label": "Cases",
+          "module": "Cases",
+          "type": "default",
+          "visible": true,
+          "via": "Case_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts"
       ],
       "called_by": [
         "Deals",
+        "Cases",
         "Tickets"
       ],
       "dead_suspect": false,
@@ -181,16 +327,38 @@
           "data_type": "picklist",
           "mandatory": false,
           "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
         }
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3002,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [],
       "called_by": [],
       "dead_suspect": false,
@@ -242,6 +410,24 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Account_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -256,12 +442,30 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3003,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Quotes_of_Deals",
+          "label": "Quotes",
+          "module": "Quotes",
+          "type": "default",
+          "visible": true,
+          "via": "Quote_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts",
         "Contacts"
@@ -316,20 +520,102 @@
           "data_type": "picklist",
           "mandatory": false,
           "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
         }
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3004,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3104,
+          "name": "Compact",
+          "visible": true,
+          "sections": 2
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Tickets_of_Products",
+          "label": "Tickets",
+          "module": "Tickets",
+          "type": "default",
+          "visible": true,
+          "via": "Ticket_Ref"
+        },
+        {
+          "api_name": "Subscriptions_of_Products",
+          "label": "Subscriptions",
+          "module": "Subscriptions",
+          "type": "default",
+          "visible": true,
+          "via": "Subscription_Ref"
+        },
+        {
+          "api_name": "Assets_of_Products",
+          "label": "Assets",
+          "module": "Assets",
+          "type": "default",
+          "visible": true,
+          "via": "Asset_Ref"
+        },
+        {
+          "api_name": "Pricebooks_of_Products",
+          "label": "Pricebooks",
+          "module": "Pricebooks",
+          "type": "default",
+          "visible": true,
+          "via": "Pricebook_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        },
+        {
+          "api_name": "Campaign_Products",
+          "label": "Campaign products",
+          "module": "Campaigns",
+          "type": "multiselect",
+          "visible": true,
+          "via": "linking: Campaign_Product_Link"
+        }
+      ],
       "calls": [],
       "called_by": [
+        "Pricebooks",
         "Tickets",
-        "Subscriptions"
+        "Subscriptions",
+        "Assets"
       ],
       "dead_suspect": false,
       "unresolved": [],
@@ -380,6 +666,36 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Notes",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Deal_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -394,18 +710,51 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3005,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3205,
+          "name": "Retired",
+          "visible": false,
+          "sections": 1
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Orders_of_Quotes",
+          "label": "Orders",
+          "module": "Orders",
+          "type": "default",
+          "visible": true,
+          "via": "Order_Ref"
+        },
+        {
+          "api_name": "Contracts_of_Quotes",
+          "label": "Contracts",
+          "module": "Contracts",
+          "type": "default",
+          "visible": true,
+          "via": "Contract_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Deals",
         "Accounts"
       ],
       "called_by": [
-        "Orders"
+        "Orders",
+        "Contracts"
       ],
       "dead_suspect": false,
       "unresolved": [],
@@ -470,12 +819,22 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3006,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts",
         "Orders"
@@ -530,6 +889,12 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Account_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -544,12 +909,38 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3007,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Invoices_of_Orders",
+          "label": "Invoices",
+          "module": "Invoices",
+          "type": "default",
+          "visible": true,
+          "via": "Invoice_Ref"
+        },
+        {
+          "api_name": "Shipments_of_Orders",
+          "label": "Shipments",
+          "module": "Shipments",
+          "type": "default",
+          "visible": true,
+          "via": "Shipment_Ref"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts",
         "Quotes"
@@ -558,6 +949,409 @@
         "Invoices",
         "Shipments"
       ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Vendors": {
+      "id": "Vendors",
+      "name": "Vendors",
+      "api_name": "Vendors",
+      "display_name": "Vendors",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3008,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3108,
+          "name": "Compact",
+          "visible": true,
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Pricebooks": {
+      "id": "Pricebooks",
+      "name": "Pricebooks",
+      "api_name": "Pricebooks",
+      "display_name": "Price Books",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Product_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Products"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3009,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Campaigns": {
+      "id": "Campaigns",
+      "name": "Campaigns",
+      "api_name": "Campaigns",
+      "display_name": "Campaigns",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3010,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3210,
+          "name": "Retired",
+          "visible": false,
+          "sections": 1
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        },
+        {
+          "api_name": "Campaign_Products",
+          "label": "Campaign products",
+          "module": "Products",
+          "type": "multiselect",
+          "visible": true,
+          "via": "linking: Campaign_Product_Link"
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Cases": {
+      "id": "Cases",
+      "name": "Cases",
+      "api_name": "Cases",
+      "display_name": "Cases",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Notes",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Contact_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Contacts"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3011,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Contacts"
+      ],
+      "called_by": [],
       "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
@@ -615,12 +1409,28 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3012,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3112,
+          "name": "Compact",
+          "visible": true,
+          "sections": 2
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Orders"
       ],
@@ -674,6 +1484,12 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Account_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -694,76 +1510,27 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3013,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts",
         "Contacts",
         "Products"
       ],
-      "called_by": [],
-      "dead_suspect": false,
-      "unresolved": [],
-      "ambiguous": []
-    },
-    "Campaigns": {
-      "id": "Campaigns",
-      "name": "Campaigns",
-      "api_name": "Campaigns",
-      "display_name": "Campaigns",
-      "namespace": "standard",
-      "category": "standard",
-      "fields": [
-        {
-          "api_name": "Name",
-          "data_type": "text",
-          "mandatory": true,
-          "lookup": null
-        },
-        {
-          "api_name": "Owner",
-          "data_type": "ownerlookup",
-          "mandatory": true,
-          "lookup": null
-        },
-        {
-          "api_name": "Description",
-          "data_type": "textarea",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Status",
-          "data_type": "picklist",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Amount",
-          "data_type": "currency",
-          "mandatory": false,
-          "lookup": null
-        },
-        {
-          "api_name": "Currency",
-          "data_type": "picklist",
-          "mandatory": false,
-          "lookup": null
-        }
-      ],
-      "layouts": [
-        {
-          "id": 1,
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "related_lists": [],
-      "calls": [],
       "called_by": [],
       "dead_suspect": false,
       "unresolved": [],
@@ -814,6 +1581,18 @@
           "lookup": null
         },
         {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
           "api_name": "Account_Ref",
           "data_type": "lookup",
           "mandatory": false,
@@ -828,12 +1607,343 @@
       ],
       "layouts": [
         {
-          "id": 1,
+          "id": 3014,
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "sections": 3
         }
       ],
-      "related_lists": [],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Territories": {
+      "id": "Territories",
+      "name": "Territories",
+      "api_name": "Territories",
+      "display_name": "Territories",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3015,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3215,
+          "name": "Retired",
+          "visible": false,
+          "sections": 1
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Contracts": {
+      "id": "Contracts",
+      "name": "Contracts",
+      "api_name": "Contracts",
+      "display_name": "Contracts",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Quote_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Quotes"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3016,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        },
+        {
+          "id": 3116,
+          "name": "Compact",
+          "visible": true,
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Quotes"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Assets": {
+      "id": "Assets",
+      "name": "Assets",
+      "api_name": "Assets",
+      "display_name": "Assets",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Opened_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Closed_On",
+          "data_type": "date",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Priority",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "External_Ref",
+          "data_type": "text",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Notes",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Product_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Products"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 3017,
+          "name": "Standard",
+          "visible": true,
+          "sections": 3
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "via": ""
+        }
+      ],
       "calls": [
         "Accounts",
         "Products"
@@ -870,8 +1980,8 @@
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 13,
-    "edges": 15,
+    "nodes": 19,
+    "edges": 22,
     "dead_suspects": 0,
     "unresolved": 0
   },

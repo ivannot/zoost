@@ -1,4 +1,4 @@
-// standalone.applyDiscount - sample function, invented for the fixture org.
+// standalone.applyDiscount - sample function, generated for the sample org.
 map applyDiscount(string amount, string code)
 {
     info "standalone.applyDiscount start";

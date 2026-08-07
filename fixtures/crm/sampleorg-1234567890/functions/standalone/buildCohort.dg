@@ -1,4 +1,4 @@
-// standalone.buildCohort - sample function, invented for the fixture org.
+// standalone.buildCohort - sample function, generated for the sample org.
 map buildCohort(string from, string to)
 {
     info "standalone.buildCohort start";

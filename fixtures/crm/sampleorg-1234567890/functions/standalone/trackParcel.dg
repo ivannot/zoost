@@ -1,7 +1,7 @@
-// standalone.trackParcel - sample function, invented for the fixture org.
+// standalone.trackParcel - sample function, generated for the sample org.
 map trackParcel(string tracking)
 {
     info "standalone.trackParcel start";
-    // nothing else is called
+    r0 = standalone.log();
     return r0;
 }

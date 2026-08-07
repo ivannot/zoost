@@ -1,0 +1,7 @@
+// automation.cleanCampaigns - sample function, generated for the sample org.
+void cleanCampaigns()
+{
+    info "automation.cleanCampaigns start";
+    // nothing else is called
+    return null;
+}

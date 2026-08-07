@@ -1,0 +1,7 @@
+// schedule.syncPricebooks - sample function, generated for the sample org.
+void syncPricebooks()
+{
+    info "schedule.syncPricebooks start";
+    // nothing else is called
+    return null;
+}

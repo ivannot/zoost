@@ -1,0 +1,8 @@
+// schedule.enrichSubscriptions - sample function, generated for the sample org.
+void enrichSubscriptions()
+{
+    info "schedule.enrichSubscriptions start";
+    r0 = standalone.auditShipments();
+    r1 = standalone.convertTickets();
+    return null;
+}

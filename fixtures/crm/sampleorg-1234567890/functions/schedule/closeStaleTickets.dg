@@ -1,0 +1,7 @@
+// schedule.closeStaleTickets - sample function, generated for the sample org.
+void closeStaleTickets()
+{
+    info "schedule.closeStaleTickets start";
+    r0 = standalone.escalateTicket();
+    return null;
+}

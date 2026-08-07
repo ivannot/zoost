@@ -1,0 +1,7 @@
+// button.assignInvoices - sample function, generated for the sample org.
+void assignInvoices()
+{
+    info "button.assignInvoices start";
+    // nothing else is called
+    return null;
+}
