@@ -137,6 +137,7 @@ f13a92a1cf15097b  site/docs-crm.html: If Zoho refuses an area, the pull says so 
 75b20437b7a7b080  site/docs-crm.html: If the Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar offering to switch tab or switch workspace.
 9a2cf914255c9dae  site/docs-crm.html: It also lists the connections the function uses and who last changed it - click a connection to filter the tree to every function that uses it (no more "find in file" for a connection name).
 1a2255f7ad8e77cc  site/docs-crm.html: It cannot go and read another function by itself, so it will ask you for what it is missing rather than invent it.
+05846579ba66e9e2  site/docs-crm.html: It is absent for a function that calls nothing and that nothing calls: one box and no arrows is not a diagram.
 e5832c2af79f3465  site/docs-crm.html: It is shown instead of the platform's name, and the platform's name never goes away: it stays in the list's tooltip and in the bar underneath, which always states the real workspace or org the folder is bound to.
 a3e9f35b4ea9f20d  site/docs-crm.html: It is the one place where an empty field means erase - everywhere else an empty key field means "keep what is stored", which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
 9564ada47e772afd  site/docs-crm.html: It says what goes and what stays before it acts: the encrypted key is removed and the protection turned off, your model names and every other setting are kept, and you paste the API key in again from your provider's dashboard.
@@ -156,6 +157,7 @@ cadf7901b8ca4d73  site/docs-crm.html: Pulling again re-asks, which is worth doin
 417d35878ad4de50  site/docs-crm.html: Putting it under Git Nothing is automatic here, on purpose: it is your repository, with your conventions.
 bc92a8be1a457ff0  site/docs-crm.html: Roles are per org: a workspace that refuses an area says nothing about the next one.
 81043876b31aa0af  site/docs-crm.html: Rows highlighted in cream are fields on no layout - API-only.
+d710bd314f03a02f  site/docs-crm.html: Selecting anything in Explorer re-centres all of them on it.
 4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
 67fd9370d9a74e3c  site/docs-crm.html: That is deliberate - the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
@@ -327,12 +329,14 @@ a162655f352adef9  site/it/docs-crm.html: L'assistente è l'unica funzionalità c
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
+c4909ad4b4e62df7  site/it/docs-crm.html: Le schede: Explorer (elenco + dettaglio) e Visual (nodi e archi) in entrambi i disegni, più quello a riquadri - Call graph se la finestra è stata aperta sulle funzioni, dove ogni riquadro elenca che cosa chiama quella funzione, e ER diagram se è stata aperta sui moduli, dove ogni riquadro elenca i suoi campi.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
 422e56827ea6d29d  site/it/docs-crm.html: Niente related list / nessuna matrice dei layout Quel workspace è stato scaricato prima che esistessero.
 bae2bb9358c7cde4  site/it/docs-crm.html: Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di un'altra.
 e2e23a434d105a25  site/it/docs-crm.html: No, con un'unica eccezione che accendi tu.
 257c9786d8d3e21c  site/it/docs-crm.html: Non c'è nessun recupero - nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e reincolli la chiave API scegliendone una nuova, il che costa una visita alla dashboard del provider.
 d23df49d9fda8717  site/it/docs-crm.html: Non c'è nessuna soglia e nessun verdetto attaccato: una funzione lunga merita un'occhiata, non è necessariamente un problema, e una corta può benissimo essere quella pericolosa.
+8fb725ca69c8028d  site/it/docs-crm.html: Non c'è per una funzione che non chiama niente e che nessuno chiama: un riquadro solo e nessuna freccia non è un diagramma.
 aebd2d67d5085241  site/it/docs-crm.html: Non devi fare niente.
 5b957648b8191690  site/it/docs-crm.html: Non tutti gli utenti Zoho possono leggere tutte queste cose.
 1793d0b84f24db04  site/it/docs-crm.html: Non viene chiesto niente in più a Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.
@@ -362,6 +366,7 @@ e323c43d02373e0a  site/it/docs-crm.html: Quello che resta fuori viene dichiarato
 1ecd822277badea3  site/it/docs-crm.html: Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge 🔓 Grant access - un click, e non si apre nessun selettore di file.
 faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho e mostra una barra che ti offre di cambiare scheda o cambiare workspace.
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
+81c8d1f78827e846  site/it/docs-crm.html: Selezionare qualcosa in Explorer ricentra tutte le viste su quello.
 55efef1d11461fb3  site/it/docs-crm.html: Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo schema intero, sia l'ER di un modulo solo.
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
 d295701fb2f2f160  site/it/docs-crm.html: Spegnere una scheda spegne anche quello, perché quasi sempre una scheda si spegne per un'area che l'account non può leggere e chiederla produrrebbe solo un errore - riaccendilo se rispecchi un tipo per Git senza volerlo sfogliare.
