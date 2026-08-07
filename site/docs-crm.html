@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.23.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.24.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -249,6 +249,13 @@ git commit -m "baseline"</code></pre>
       functions it fires, a schedule's index row names the one it runs, and a function's captured meta
       lists its connections. A workflow whose file has not been pulled is a node with <b>no</b> measured
       actions rather than a node with none.</li>
+    <li>The chips above the list are two rows of one question and one of another. The rounded ones are
+      what a Deluge function <b>is</b> - its category; the square ones are Zoho objects that stand around
+      it, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>; the last
+      two are <b>facts about</b> a node rather than kinds of it. Any number can be on at once: within a
+      row they add up, across rows they narrow. <b class="ui">✕</b> clears them, and there is one in the
+      search box too. They steer all three views, so switching <b class="ui">Connections</b> off is how
+      you read a diagram without them - the search box narrows the list only.</li>
     <li>The <b class="ui">Functions</b> / <b class="ui">Modules</b> pair beside the title says which of the two
       drawings is on screen, and switches to the other without going back to the panel. The panel builds
       it - this window has no access to your folder at all - so the panel has to be open and the folder

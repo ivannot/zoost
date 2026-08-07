@@ -22,7 +22,7 @@
      hub, orphan, no-caller, unresolved - deliberately have none: they are not a kind of thing, they
      are something true about it, and giving them a hue would say there are eleven kinds. */
   --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b;
-  --n-schedule:#8b5cf6; --n-validation_rule:#ef4444; --n-rest:#06b6d4;
+  --n-schedule:#8b5cf6; --n-validation_rule:#ef4444;
   --n-standard:#3b82f6; --n-custom:#a78bfa;
   /* What fires the code, and what it reaches. A node is a Deluge function of one category, or a
      workflow, or a schedule, or a connection - mutually exclusive answers to the same question,
@@ -85,12 +85,24 @@
   #asidebtn:hover{background:var(--sel-soft);color:var(--sel)}
   #asidebtn:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
   @media print{ #asidebtn{display:none} }
-  .search{padding:12px}
-  .search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  .search{padding:12px;position:relative}
+  .search input{width:100%;padding:9px 30px 9px 11px;border:1px solid var(--border);border-radius:8px;font:13px var(--sans);outline:none}
+  /* Absent while the box is empty: with nothing typed there is nothing to clear. */
+  .search .qx{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:13px var(--sans);line-height:1;
+              color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none}
+  .search .qx.on{display:block} .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
   .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
   .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
   .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+  /* Zoho objects around the code, not kinds of function. Square corners say «different dimension»
+     without a second row or a heading, and the gap before the first one separates them. Reported:
+     dressed the same, nine chips read as one list of nine kinds. */
+  .chip.ent{border-radius:5px}
+  .chip.ent:first-of-type{margin-left:6px}
+  .chipx{font:12px var(--sans);line-height:1;padding:4px 7px;border:1px solid transparent;border-radius:999px;
+         color:var(--muted);cursor:pointer;align-self:center}
+  .chipx:hover{background:var(--sel-soft);color:var(--sel)}
   /* A chip carries the colour of what it selects: pressed fills, released outlines. Without this the
      dots in the list were a code with no key anywhere on the screen. */
   .chip[data-hue]{border-color:var(--hue);color:var(--hue)}
@@ -283,7 +295,7 @@
   <div class="wrap">
     <div class="view on" id="v-explorer">
       <aside>
-        <div class="search"><input id="q" placeholder="Search function…  (/ to focus)" autocomplete="off"></div>
+        <div class="search"><input id="q" placeholder="Search function…  (/ to focus)" autocomplete="off"><span class="qx" id="qx" role="button" aria-label="Clear the search" title="Clear the search">✕</span></div>
         <div class="chips" id="chips"></div>
         <div class="list" id="list"></div>
       </aside>

@@ -691,7 +691,10 @@ function draw() {
     const [x, y] = screenXY(id); const r = nodeRadius(id) * Math.max(0.6, Math.min(scale, 1.6));
     const dim = !set && near && !near.has(id);
     ctx2d.globalAlpha = dim ? 0.15 : 1;
-    ctx2d.fillStyle = NSCOL(N[id].namespace);
+    // KINDOF rather than the namespace: on a schema the two are the same value, so this is not a
+    // bug here - it is the same *shape* of mistake the CRM copy had, and leaving one of the two
+    // reading a dimension by accident is how the pair drifts back apart.
+    ctx2d.fillStyle = NSCOL(KINDOF(N[id]));
     ctx2d.beginPath(); ctx2d.arc(x, y, r, 0, Math.PI * 2); ctx2d.fill();
     if (id === focusNode) { ctx2d.lineWidth = 2; ctx2d.strokeStyle = '#182130'; ctx2d.stroke(); }
     if (id === curFocus) { ctx2d.lineWidth = 3.5; ctx2d.strokeStyle = '#fbbf24'; ctx2d.stroke(); }

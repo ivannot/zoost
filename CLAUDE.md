@@ -609,6 +609,32 @@ actions**, never one with none - the rule this file already states for its sched
 And the status line stops saying «N functions»: it prints the breakdown, because «3 functions · 1
 workflow · 2 connections» is a fact and «6 nodes» is a shrug.
 
+**The chips are two dimensions, and dressing them the same said they were one.** Reported: Workflows,
+Schedules and Connections are Zoho objects, not categories a function can have, and nine identical
+pills read as one list of nine kinds. The entity chips are **square**; the categories stay rounded.
+They are **multi-select** now - within a dimension they are ORed, across dimensions ANDed, and empty
+means everything, which is what the old `All` chip was without a chip that had to be kept in step.
+A `\u2715` clears them, and the search box has one of its own; both are absent while there is nothing to
+clear.
+
+**And they steer all three projections, not just the list.** «Show me this without the connections»
+is the question, and answering it in the Explorer while the diagram beside it drew everything is two
+panes disagreeing again. One predicate - `passKind` - feeds `render()`, `draw()` and `erVisibleIds()`,
+and a callee filtered out is not listed inside a box either. The **search box narrows the list only**:
+hiding the diagram down to one node as you type would be a different feature wearing the same control.
+
+**`rest` was on the wrong side of the value/condition line, and multi-select is what exposed it.** A
+function exposed as REST is still standalone, or automation, or a button - REST is something true
+*about* it, so by the rule already in this file it may not have a hue, and it had one. Single-select
+chips made the mistake unobservable: you could never hold REST and a category at once. The test that
+was supposed to guard the rule listed `rest` among the values, so it recorded the error rather than
+catching it - **a checker built from the same misunderstanding as the code confirms it**.
+
+**And the canvas kept its own copy of the namespace/category mismatch.** `NSCOL(N[id].namespace)`
+survived the fix that removed `NSCOL(n.namespace)`, because the assertion matched `n.` and this one
+reads `N[id].`. On a call graph every dot in the Visual view was grey - `billing` has no hue and never
+will. Both forms are asserted now, on both sides.
+
 The hues are plural on purpose - `--n-workflows` against the Deluge category `schedule` - because
 «Schedules» is the Zoho object and «schedule» is what a function attached to one is called, and the
 two have to sit in the same chip row without reading as the same thing. `KIND_FILTERS` is derived

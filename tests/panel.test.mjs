@@ -477,7 +477,12 @@ test('the dot, the chips and the filter read the same fact', () => {
     assert.match(src, /const KINDOF = \(n\) => \(DATA\.kind === 'schema' \? n\.namespace : n\.category\)/,
       `${app}: the shared accessor is gone`);
     assert.ok(!/NSCOL\(n\.namespace\)/.test(src), `${app}: a dot is coloured by namespace again`);
-    const p = src.slice(src.indexOf('function pass('), src.indexOf('\n}', src.indexOf('function pass(')));
+    // The canvas kept its own copy of the mistake - NSCOL(N[id].namespace) - and it survived the
+    // first fix because that one read `n.` and this one reads `N[id].`. On a call graph every dot in
+    // the Visual view was grey, because `billing` has no hue and never will.
+    assert.ok(!/NSCOL\(N\[id\]\.namespace\)/.test(src), `${app}: the canvas is coloured by namespace again`);
+    const body = (name) => src.slice(src.indexOf(`function ${name}(`), src.indexOf('\n}', src.indexOf(`function ${name}(`)));
+    const p = body('passKind') || body('pass');
     assert.ok(!/n\.namespace !== /.test(p), `${app}: a filter compares the namespace again`);
   }
 });
@@ -485,15 +490,21 @@ test('the dot, the chips and the filter read the same fact', () => {
 test('every value the chips select has a colour, and no condition has one', () => {
   // A hue says "this is a kind of thing". hub, orphan, no-caller and unresolved are not kinds, they
   // are facts about one — giving them a colour would claim eleven categories where there are six.
+  //
+  // `rest` was on the wrong side of that line from the start and this test recorded the mistake: a
+  // function exposed as REST is still standalone or automation or a button, so REST is something
+  // true *about* it, not what it is. Single-select chips hid it - you could never hold REST and a
+  // category at once - and multi-select made it visible immediately. The CRM's is a condition now;
+  // the Analytics copy still has the old hue and is declared below rather than quietly exempted.
   const VALUES = {
-    crm: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'rest', 'standard', 'custom'],
+    crm: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'workflows', 'schedules', 'connections', 'standard', 'custom'],
     analytics: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'rest', 'table', 'query', 'system'],
   };
-  const CONDITIONS = ['all', 'hub', 'orphan', 'dead', 'unres'];
+  const CONDITIONS = { crm: ['all', 'hub', 'orphan', 'dead', 'unres', 'rest'], analytics: ['all', 'hub', 'orphan', 'dead', 'unres'] };
   for (const [app, values] of Object.entries(VALUES)) {
     const css = read(`apps/${app}/graphview.html`);
     for (const v of values) assert.match(css, new RegExp(`--n-${v}\\s*:`), `${app}: no colour for «${v}»`);
-    for (const c of CONDITIONS) assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
+    for (const c of CONDITIONS[app]) assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
   }
 });
 
@@ -609,7 +620,7 @@ test('a function box lists what it calls, the way a module box lists its fields'
     'billing.calcTax': { id: 'billing.calcTax', name: 'calcTax', namespace: 'billing', calls: [], called_by: ['billing.createInvoice'] },
   };
   const { erCallRows } = load([sliceFn('apps/crm/graphview.js', 'erCallRows')],
-    { N, label: (n) => n.name, DATA: { kind: 'calls' } });
+    { N, label: (n) => n.name, DATA: { kind: 'calls' }, passKind: () => true });
   const rows = erCallRows(N['billing.createInvoice']);
   assert.deepEqual(rows.map((r) => r.api_name), ['calcTax', 'log'], 'the callees are not listed, or not in order');
   assert.deepEqual(rows.map((r) => r.data_type), ['billing', 'shared'], 'the second column is not the callee namespace');
@@ -618,7 +629,7 @@ test('a function box lists what it calls, the way a module box lists its fields'
   // ...and erFieldsFor has to route to it. Testing erCallRows alone left the wiring uncovered:
   // deleting the line that reaches it passed, which is the mutation that found this gap.
   const rowsOf = (kind, n, node) => {
-    const ctx = { N, label: (x) => x.name, DATA: { kind }, erEmph: 'modules', erAll: true };
+    const ctx = { N, label: (x) => x.name, DATA: { kind }, erEmph: 'modules', erAll: true, passKind: () => true };
     const { erFieldsFor } = load([sliceFn('apps/crm/graphview.js', 'erCallRows'),
                                   sliceFn('apps/crm/graphview.js', 'erFieldsFor')], ctx);
     return erFieldsFor(node);
@@ -627,6 +638,55 @@ test('a function box lists what it calls, the way a module box lists its fields'
     'erFieldsFor does not reach the call rows on a call graph');
   assert.deepEqual(rowsOf('schema', 0, { fields: [{ api_name: 'Email', data_type: 'email' }] }).map((r) => r.api_name),
     ['Email'], 'erFieldsFor stopped returning a module\'s fields');
+});
+
+test('the chips are two dimensions, multi-select, and they steer every projection', () => {
+  // Reported: Workflows, Schedules and Connections are Zoho objects, not kinds of function, and
+  // dressing them like the six category chips made nine chips read as one list of nine kinds.
+  const css = read('apps/crm/graphview.html');
+  assert.match(css, /\.chip\.ent\{border-radius:5px\}/, 'the entity chips are not told apart by shape');
+  const src = read('apps/crm/graphview.js');
+  assert.match(src, /const ENTITY_CHIPS = new Set\(\['workflows', 'schedules', 'connections'\]\)/,
+    'the entity chips are no longer declared as their own dimension');
+
+  // Multi-select, empty = everything, and within a dimension the chips are ORed while the two
+  // dimensions are ANDed - «standalone or automation, and with no caller» is the real question.
+  const N = {
+    a: { id: 'a', name: 'a', category: 'standalone', calls: [], called_by: ['x'], rest: false, dead_suspect: false, unresolved: [] },
+    b: { id: 'b', name: 'b', category: 'automation', calls: [], called_by: [], rest: false, dead_suspect: true, unresolved: [] },
+    c: { id: 'c', name: 'c', category: 'connections', calls: [], called_by: [], rest: false, dead_suspect: true, unresolved: [] },
+  };
+  const picked = new Set();
+  const ctx = { N, DATA: { kind: 'calls' }, picked, Set, Object };
+  const api = load([sliceConst('apps/crm/graphview.js', 'FILTERS'),
+                    sliceConst('apps/crm/graphview.js', 'FILTERS_SCHEMA'),
+                    sliceConst('apps/crm/graphview.js', 'CONDITIONS'),
+                    sliceConst('apps/crm/graphview.js', 'KIND_FILTERS'),
+                    sliceConst('apps/crm/graphview.js', 'KINDOF'),
+                    sliceConst('apps/crm/graphview.js', 'pickedKinds'),
+                    sliceConst('apps/crm/graphview.js', 'pickedConds'),
+                    sliceFn('apps/crm/graphview.js', 'passKind')], ctx);
+  const shown = () => Object.keys(N).filter((k) => api.passKind(N[k])).join('');
+
+  assert.equal(shown(), 'abc', 'nothing picked does not mean everything');
+  picked.add('standalone');
+  assert.equal(shown(), 'a', 'one kind does not narrow to it');
+  picked.add('automation');
+  assert.equal(shown(), 'ab', 'two kinds are not ORed');
+  picked.add('dead');
+  assert.equal(shown(), 'b', 'a condition is not ANDed with the kinds');
+  picked.clear();
+  picked.add('connections');
+  assert.equal(shown(), 'c', 'an entity chip does not select its own nodes');
+
+  // and the same predicate steers the list, the canvas and the boxes - the three projections of one
+  // context, which is the rule this window already follows for the focus.
+  const noComments = src.replace(/^\s*\/\/.*$/gm, '');
+  for (const site of [/function pass\(n, q\) \{\s*if \(!passKind\(n\)\)/,
+                      /const shown = \(id\) => N\[id\] && passKind\(N\[id\]\)/,
+                      /const ok = \(id\) => N\[id\] && passKind\(N\[id\]\)/]) {
+    assert.match(noComments, site, 'a projection ignores the chips');
+  }
 });
 
 test('the call graph carries what fires the code and what the code reaches', async () => {

@@ -3,7 +3,7 @@ const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
 /* graphview.js - Explorer + Visual graph. Reads graph from chrome.storage.local. */
-let DATA = null, N = {}, ids = [], filter = 'all', sel = null, hist = [], nameMode = 'display';
+let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
@@ -85,44 +85,88 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 })();
 
 // ---------------- Explorer ----------------
-const FILTERS = [['all', 'All'], ['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
-  ['schedule', 'schedule'], ['validation_rule', 'validation'], ['rest', 'REST'],
-  // The three around the code. Capitalised and plural, because they are Zoho objects rather than a
-  // function's category - «Schedules» is the thing, «schedule» is what a function attached to one is.
+const FILTERS = [['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
+  ['schedule', 'schedule'], ['validation_rule', 'validation'],
+  // Not kinds of function - Zoho objects that stand *around* the code. They keep their own hue and
+  // their own shape, because a chip row that mixes two dimensions and dresses them the same reads as
+  // one dimension with nine values, which they are not. Plural, so «Schedules» the object and
+  // «schedule» the Deluge category of a function one runs can sit in the same row.
   ['workflows', 'Workflows'], ['schedules', 'Schedules'], ['connections', 'Connections'],
-  ['dead', 'no-caller'], ['unres', 'unresolved']];
-// Conditions, not values: they are something true *about* a node, not a kind of node, so they get
-// no hue and they are not kind filters. Same rule the schema chips already follow.
-const NOT_A_KIND = new Set(['all', 'rest', 'dead', 'unres']);
-const KIND_FILTERS = new Set(FILTERS.map(([k]) => k).filter((k) => !NOT_A_KIND.has(k)));
-const FILTERS_SCHEMA = [['all', 'All'], ['standard', 'standard'], ['custom', 'custom'], ['hub', 'hub (3+)'], ['orphan', 'orphan']];
+  // Conditions last, and without a hue: REST is a *property* of a function - a standalone one can
+  // be REST too - so colouring it claimed a seventh category that does not exist. It had one, and
+  // single-select filters hid the mistake: you could never hold it and a category at once.
+  ['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']];
+const FILTERS_SCHEMA = [['standard', 'standard'], ['custom', 'custom'], ['hub', 'hub (3+)'], ['orphan', 'orphan']];
+const ENTITY_CHIPS = new Set(['workflows', 'schedules', 'connections']);
+// Conditions are something true *about* a node, not a kind of node. They get no hue, and they are
+// ANDed with the kinds rather than ORed into them - «standalone or automation, and with no caller»
+// is the question people actually ask.
+const CONDITIONS = new Set(['rest', 'dead', 'unres', 'hub', 'orphan']);
+const KIND_FILTERS = new Set(FILTERS.concat(FILTERS_SCHEMA).map(([k]) => k).filter((k) => !CONDITIONS.has(k)));
+
+// Multi-select, and empty means everything - which is what «All» used to be, without a chip that has
+// to be kept in step with the others. Within a dimension the chips are ORed; the two dimensions are
+// ANDed.
+let picked = new Set();
+const pickedKinds = () => [...picked].filter((k) => KIND_FILTERS.has(k));
+const pickedConds = () => [...picked].filter((k) => CONDITIONS.has(k));
+
 function buildChips() {
-  const chips = $('chips'); const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
+  const chips = $('chips'); chips.innerHTML = '';
+  const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
   F.forEach(([k, l]) => {
-    const c = document.createElement('span'); c.className = 'chip'; c.setAttribute('aria-pressed', k === 'all');
+    const c = document.createElement('span');
+    c.className = 'chip' + (ENTITY_CHIPS.has(k) ? ' ent' : '');
+    c.setAttribute('aria-pressed', picked.has(k));
+    c.dataset.k = k;
     const hue = KINDCOL(k);
     if (hue) { c.dataset.hue = k; c.style.setProperty('--hue', hue); c.innerHTML = '<span class="cdot"></span>'; }
     c.appendChild(document.createTextNode(l));
-    c.onclick = () => { filter = k;[...chips.children].forEach((x) => x.setAttribute('aria-pressed', x === c)); render(); };
+    c.onclick = () => {
+      picked.has(k) ? picked.delete(k) : picked.add(k);
+      c.setAttribute('aria-pressed', picked.has(k));
+      applyFilter();
+    };
     chips.appendChild(c);
   });
+  const x = document.createElement('span');
+  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u2715';
+  x.title = 'Clear the filter'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Clear the filter');
+  x.onclick = () => { picked.clear(); buildChips(); applyFilter(); };
+  chips.appendChild(x);
+  updateChipX();
+}
+function updateChipX() {
+  // Absent, not disabled: with nothing picked there is no filter to remove.
+  const x = $('chipx'); if (x) x.style.display = picked.size ? '' : 'none';
+}
+// The chips choose what the window is looking at, so all three projections follow them - the list,
+// the canvas and the boxed diagram. The search box narrows the *list* only: hiding the diagram down
+// to one node as you type would be a different feature wearing the same control.
+function applyFilter() {
+  updateChipX();
+  render();
+  // The boxed layout is invalidated whatever view you are on: filtering from the Explorer and then
+  // switching to the diagram would otherwise arrive at a layout computed for the old set of nodes.
+  erLaidOut = false;
+  if (curView === 'visual') draw();
+  if (curView === 'er') erShow();
+}
+function passKind(n) {
+  const ks = pickedKinds();
+  if (ks.length && !ks.includes(KINDOF(n))) return false;
+  for (const c of pickedConds()) {
+    if (c === 'rest' && !n.rest) return false;
+    if (c === 'dead' && !n.dead_suspect) return false;
+    if (c === 'unres' && !n.unresolved.length) return false;
+    if (c === 'hub' && n.called_by.length < 3) return false;
+    if (c === 'orphan' && !(n.called_by.length === 0 && n.calls.length === 0)) return false;
+  }
+  return true;
 }
 function pass(n, q) {
-  const matchQ = !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
-  if (DATA.kind === 'schema') {
-    if (filter === 'standard' && KINDOF(n) !== 'standard') return false;
-    if (filter === 'custom' && KINDOF(n) !== 'custom') return false;
-    if (filter === 'hub' && n.called_by.length < 3) return false;
-    if (filter === 'orphan' && !(n.called_by.length === 0 && n.calls.length === 0)) return false;
-    return matchQ;
-  }
-  if (filter === 'rest' && !n.rest) return false;
-  if (filter === 'dead' && !n.dead_suspect) return false;
-  if (filter === 'unres' && !n.unresolved.length) return false;
-  // The list is derived from FILTERS rather than repeated here: adding a kind above and forgetting
-  // it in this line is how a chip ends up selecting nothing, silently.
-  if (KIND_FILTERS.has(filter) && KINDOF(n) !== filter) return false;
-  return matchQ;
+  if (!passKind(n)) return false;
+  return !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
 }
 function render() {
   const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
@@ -299,7 +343,9 @@ function select(id, nopush) {
   if (id !== curFocus) setFocus(id);
   else if (curView === 'visual') draw();
 }
-$('q').addEventListener('input', render);
+$('q').addEventListener('input', () => { render(); updateQx(); });
+function updateQx() { const x = $('qx'); if (x) x.classList.toggle('on', !!$('q').value); }
+$('qx').onclick = () => { $('q').value = ''; render(); updateQx(); $('q').focus(); };
 document.addEventListener('keydown', (e) => { if (e.key === '/' && document.activeElement.id !== 'q') { e.preventDefault(); $('q').focus(); } });
 
 // ---------------- Relations (relation-first catalogue) ----------------
@@ -862,9 +908,14 @@ function draw() {
   ctx2d.clearRect(0, 0, W, H);
   const near = focusNode ? neighbors(focusNode) : null;
   const set = activeSet();
+  // The chips choose what the window is looking at, so the canvas follows them too - it used to draw
+  // everything while the list beside it was filtered, which is two panes disagreeing about the same
+  // question. An edge whose other end is filtered out has nothing to point at, so it goes with it.
+  const shown = (id) => N[id] && passKind(N[id]);
   // edges
   ctx2d.lineWidth = 1;
   for (const [a, b] of edgesA) {
+    if (!shown(a) || !shown(b)) continue;
     if (set && !(set.has(a) && set.has(b))) continue;
     if (egoSet && !(egoSet.has(a) && egoSet.has(b))) continue;
     const [ax, ay] = screenXY(a), [bx, by] = screenXY(b);
@@ -874,12 +925,16 @@ function draw() {
   }
   // nodes
   for (const id of nodesA) {
+    if (!shown(id)) continue;
     if (set && !set.has(id)) continue;
     if (egoSet && !egoSet.has(id)) continue;
     const [x, y] = screenXY(id); const r = nodeRadius(id) * Math.max(0.6, Math.min(scale, 1.6));
     const dim = !set && near && !near.has(id);
     ctx2d.globalAlpha = dim ? 0.15 : 1;
-    ctx2d.fillStyle = NSCOL(N[id].namespace);
+    // KINDOF, not `namespace`: the same mismatch this repository already recorded once - the
+    // variables are named after kinds and this one was reading the namespace, so on a call graph
+    // every dot fell back to grey because `billing` has no hue and never will.
+    ctx2d.fillStyle = NSCOL(KINDOF(N[id]));
     ctx2d.beginPath(); ctx2d.arc(x, y, r, 0, Math.PI * 2); ctx2d.fill();
     if (id === focusNode) { ctx2d.lineWidth = 2; ctx2d.strokeStyle = '#182130'; ctx2d.stroke(); }
     if (id === curFocus) { ctx2d.lineWidth = 3.5; ctx2d.strokeStyle = '#fbbf24'; ctx2d.stroke(); }
@@ -998,7 +1053,9 @@ function erPickCard() {
 // rows of {api_name, data_type, lookup}, so the calls are expressed in that shape rather than the
 // renderer learning a second one - the same move the Analytics side makes to reuse this window.
 function erCallRows(n) {
-  return (n.calls || []).map((id) => {
+  // A callee the chips have filtered out is not listed either: it would name in a row the very node
+  // the reader has just chosen not to see, and the arrow to it is gone anyway.
+  return (n.calls || []).filter((id) => N[id] && passKind(N[id])).map((id) => {
     const c = N[id];
     return { api_name: c ? label(c) : id, data_type: c ? (c.namespace || '') : '', lookup: null, mandatory: false, _to: id };
   }).sort((x, y) => x.api_name.localeCompare(y.api_name));
@@ -1012,18 +1069,19 @@ function erFieldsFor(n) {
   return base.sort((a, b) => rank(a) - rank(b));
 }
 function erVisibleIds() {
+  const ok = (id) => N[id] && passKind(N[id]);
   if (erEmph === 'relations') {
     const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
-    return nodesA.filter((id) => (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+    return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
   }
   // On a call graph a function with no outgoing call is still a box - it is where a chain ends, and
   // dropping it would break every arrow that points at it. On a schema, a module with no field to
   // show has nothing to draw and stays out, which is the behaviour that was already here.
   if (DATA.kind !== 'schema') {
     const linked = new Set(); edgesA.forEach(([a, b]) => { linked.add(a); linked.add(b); });
-    return nodesA.filter((id) => (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
+    return nodesA.filter((id) => ok(id) && (linked.has(id) || id === curFocus) && (!egoSet || egoSet.has(id)));
   }
-  return nodesA.filter((id) => erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
+  return nodesA.filter((id) => ok(id) && erFieldsFor(N[id]).length > 0 && (!egoSet || egoSet.has(id)));
 }
 function erBoxSize(n) {
   const rows = erFieldsFor(n); const w = erEmph === 'relations' ? 190 : 250, headerH = 28, rowH = 18, cap = 40;
