@@ -160,6 +160,7 @@ c3be0edf6c1b7c15  site/docs-crm.html: Nothing extra is fetched from Zoho and not
 37cf83c19ebd52ff  site/docs-crm.html: Nothing is migrated and nothing is deleted for you - the old folders are yours to remove.
 a47b310009d653b8  site/docs-crm.html: Nothing is sent to the developer, and there is no analytics or tracking of any kind.
 4a0ee16a6c2fc4e1  site/docs-crm.html: Once it is set the fields go away - the passphrase is not stored, so there is nothing to show in them - and the section says the key is encrypted, with a Change passphrase button when you want a different one.
+b948e6ecc42279ad  site/docs-crm.html: Once one exists that button reads Open sample workspace and opens it; before Chrome has given the panel access to the working folder it cannot tell, so it says neither and reads just Sample workspace - clicking asks for access first and then does whichever is right - the overlay covers the workspace list, so hiding it there would leave the sample unreachable.
 6a338e9465862125  site/docs-crm.html: Org index is how much of the org is described to the assistant with every message - bigger means it knows more names, and it is billed each time.
 ce00f2abaa40258f  site/docs-crm.html: Production vs sandbox Every workspace is bound to one org, host and instance, recorded in its .zoost.json .
 612ac817209072fb  site/docs-crm.html: Pull (in the mode bar) refreshes only the current type - whichever of Functions, Modules, Workflows, Schedules or Connections is the active tab - faster when you just changed one thing.
