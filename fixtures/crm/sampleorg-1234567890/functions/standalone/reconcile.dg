@@ -1,0 +1,7 @@
+// standalone.reconcile - sample function, invented for the fixture org.
+map reconcile(string since)
+{
+    info "standalone.reconcile start";
+    r0 = standalone.log();
+    return r0;
+}

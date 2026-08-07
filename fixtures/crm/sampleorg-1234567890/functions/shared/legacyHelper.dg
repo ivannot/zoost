@@ -1,7 +1,0 @@
-// shared.legacyHelper - sample function, invented for the fixture org.
-map legacyHelper(string input)
-{
-    info "shared.legacyHelper start";
-    // nothing else is called
-    return r0;
-}

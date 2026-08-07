@@ -1,0 +1,8 @@
+// validation_rule.validateOrder - sample function, invented for the fixture org.
+map validateOrder(string orderId)
+{
+    info "validation_rule.validateOrder start";
+    r0 = standalone.orgSettings();
+    r1 = standalone.log();
+    return r0;
+}

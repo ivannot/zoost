@@ -1,0 +1,7 @@
+// automation.onDealWon - sample function, invented for the fixture org.
+map onDealWon(string dealId)
+{
+    info "automation.onDealWon start";
+    r0 = standalone.buildInvoice();
+    return r0;
+}

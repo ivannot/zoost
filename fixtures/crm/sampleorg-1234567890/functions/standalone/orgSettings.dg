@@ -1,0 +1,7 @@
+// standalone.orgSettings - sample function, invented for the fixture org.
+void orgSettings()
+{
+    info "standalone.orgSettings start";
+    // nothing else is called
+    return null;
+}

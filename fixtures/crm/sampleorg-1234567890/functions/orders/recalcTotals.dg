@@ -1,8 +1,0 @@
-// orders.recalcTotals - sample function, invented for the fixture org.
-map recalcTotals(string orderId)
-{
-    info "orders.recalcTotals start";
-    r0 = billing.calcTax();
-    r1 = shared.formatMoney();
-    return r0;
-}

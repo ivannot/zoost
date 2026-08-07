@@ -9,7 +9,7 @@
       "actions": [
         {
           "type": "function",
-          "name": "orders.onOrderCreate"
+          "name": "automation.onOrderCreate"
         }
       ],
       "scheduled_actions": []

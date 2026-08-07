@@ -1,0 +1,9 @@
+// standalone.planShipment - sample function, invented for the fixture org.
+map planShipment(string orderId)
+{
+    info "standalone.planShipment start";
+    r0 = standalone.isBusinessDay();
+    r1 = standalone.releaseStock();
+    r2 = standalone.log();
+    return r0;
+}

@@ -1,0 +1,7 @@
+// standalone.log - sample function, invented for the fixture org.
+map log(string message)
+{
+    info "standalone.log start";
+    // nothing else is called
+    return r0;
+}

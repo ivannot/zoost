@@ -1,7 +1,0 @@
-// reporting.exportCsv - sample function, invented for the fixture org.
-map exportCsv(string view)
-{
-    info "reporting.exportCsv start";
-    r0 = reporting.buildCohort();
-    return r0;
-}

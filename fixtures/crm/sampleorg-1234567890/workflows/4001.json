@@ -9,7 +9,7 @@
       "actions": [
         {
           "type": "function",
-          "name": "orders.recalcTotals"
+          "name": "automation.recalcTotals"
         }
       ],
       "scheduled_actions": []

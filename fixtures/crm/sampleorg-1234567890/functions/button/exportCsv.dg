@@ -1,0 +1,7 @@
+// button.exportCsv - sample function, invented for the fixture org.
+map exportCsv(string view)
+{
+    info "button.exportCsv start";
+    r0 = standalone.buildCohort();
+    return r0;
+}

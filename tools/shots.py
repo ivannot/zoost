@@ -43,19 +43,19 @@ SHOTS = [
     # readability defect; the slider is a shipped, documented control, so these use it. **The defect
     # itself is still open** - see the note in CLAUDE.md.
     ("crm-graph", "crm", "graph-crm-calls.json", """
-        select('billing.buildInvoice');
+        select('standalone.buildInvoice');
         document.querySelector('.tab[data-v="er"]').click();
         setTimeout(() => { setDepth(1); erP.ring = 140; erLaidOut = false; erShow(); }, 300);
     """),
     ("crm-explorer", "crm", "graph-crm-calls.json", """
-        select('orders.onOrderCreate');
+        select('automation.onOrderCreate');
     """),
     ("crm-buttons", "crm", "graph-crm-calls.json", """
         // Narrowed to one category, which is both a picture of the filter and the only way a
         // reader sees that custom buttons are in here at all.
         hiddenKinds = new Set(allKinds().filter((k) => k !== 'custombutton'));
         syncChips(); applyFilter();
-        select('support.openTicket');
+        select('button.openTicket');
     """),
     ("crm-relations", "crm", "graph-crm-calls.json", """
         $('focusx').click();
@@ -82,6 +82,15 @@ window.addEventListener('load', () => setTimeout(() => {{
   try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
 }}, 500));
 """
+
+
+def files_under(base: pathlib.Path, prefix: str):
+    """The fixture workspace as {path: text}, the way the shim wants it."""
+    out = {}
+    for f in sorted(base.rglob("*")):
+        if f.is_file():
+            out[prefix + "/" + str(f.relative_to(base))] = f.read_text(encoding="utf-8")
+    return out
 
 
 def render(shot):
@@ -111,14 +120,98 @@ def render(shot):
     return dest
 
 
+PANEL_STUB = """window.chrome = {{
+  runtime: {{ getManifest: () => ({{ name: {name} }}), sendMessage: (m, cb) => cb && cb(null),
+              onMessage: {{ addListener: () => {{}} }}, lastError: null, getURL: (p) => p,
+              onInstalled: {{ addListener: () => {{}} }} }},
+  storage: {{ local: {{ get: async () => ({{}}), set: async () => {{}},
+                        onChanged: {{ addListener: () => {{}} }} }},
+              session: {{ get: async () => ({{}}), set: async () => {{}} }},
+              onChanged: {{ addListener: () => {{}} }} }},
+  // A Zoho tab that matches the fixture workspace. Without one the environment guard fires and
+  // covers the panel with the mismatch overlay - which is correct behaviour and a photograph of
+  // nothing. The guard compares org, origin and instance, so the stub answers with the three the
+  // fixture's .zoost.json holds.
+  tabs: {{
+    query: async () => [{{ id: 1, url: 'https://crm.zoho.eu/crm/org1234567890/tab/Home', active: true }}],
+    get: async () => ({{ id: 1, status: 'complete' }}),
+    create: () => {{}},
+    sendMessage: async (id, msg) => (msg && msg.cmd === 'context'
+      ? {{ ok: true, org: '1234567890', instance: 'sampleorg', origin: 'https://crm.zoho.eu',
+           zuid: '0', user: 'Sample User' }}
+      : {{ ok: true }}),
+    onUpdated: {{ addListener: () => {{}} }}, onActivated: {{ addListener: () => {{}} }},
+  }},
+  windows: {{ getAll: async () => [], create: () => {{}} }},
+  scripting: {{ executeScript: async () => [{{ result: true }}] }},
+  permissions: {{ contains: async () => true }},
+}};
+window.__fsshim.load({files});
+window.idbHandle.set('rootDir', window.__fsshim.root());
+window.idbHandle.set('activeWs', 'org:1234567890');
+window.addEventListener('load', () => setTimeout(() => {{
+  try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
+}}, 900));
+"""
+
+
+def render_panel(shot):
+    """The side panel, rendered against the fixture through the file-system shim.
+
+    Headless Chrome cannot be handed a folder - the permission is a user gesture by design - so
+    without `tools/fsshim.js` the panel cannot be photographed at all. The page is the shipped one;
+    only the folder underneath it is in memory. See the header of that file for what the shim is and
+    what it is not.
+    """
+    key, app, ws, script = shot
+    src = ROOT / "apps" / app
+    files = files_under(ROOT / "fixtures" / ws, ("crm" if app == "crm" else "analytics")
+                        + "/" + (ROOT / "fixtures" / ws).name)
+    with tempfile.TemporaryDirectory() as tmp:
+        stage = pathlib.Path(tmp)
+        for f in src.iterdir():
+            if f.is_file():
+                shutil.copy2(f, stage / f.name)
+        shutil.copy2(ROOT / "tools" / "fsshim.js", stage / "fsshim.js")
+        (stage / "shot.js").write_text(
+            PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script),
+            encoding="utf-8")
+        page = stage / "sidepanel.html"
+        html = page.read_text(encoding="utf-8")
+        # After idb.js and before sidepanel.js. Loading it earlier put the shim in place and then
+        # let the real idb.js overwrite window.idbHandle, so the panel looked for the folder handle
+        # in IndexedDB, found nothing, and drew «No workspace» over a fixture that was right there.
+        first = '<script src="sidepanel.js"></script>'
+        assert first in html, key + ": the panel does not load sidepanel.js where this expects"
+        page.write_text(html.replace(
+            first, '<script src="fsshim.js"></script>\n  <script src="shot.js"></script>\n  ' + first, 1),
+            encoding="utf-8")
+        OUT.mkdir(parents=True, exist_ok=True)
+        dest = OUT / (key + ".png")
+        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--window-size=1280,800", "--force-device-scale-factor=1",
+                        "--virtual-time-budget=12000", "--screenshot=" + str(dest),
+                        page.as_uri()], check=True, capture_output=True)
+    return dest
+
+
+PANELS = [
+    ("crm-panel", "crm", "crm/sampleorg-1234567890", """
+        // the tree is already drawn; open one function so the preview has something in it
+        const el = [...document.querySelectorAll('#tree .f')].find((e) => /buildInvoice/.test(e.textContent));
+        if (el) el.click();
+    """),
+]
+
+
 def main():
-    want = sys.argv[1:] or [s[0] for s in SHOTS]
+    want = sys.argv[1:] or [s[0] for s in SHOTS + PANELS]
     if not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
-    for shot in SHOTS:
+    for shot in SHOTS + PANELS:
         if shot[0] not in want:
             continue
-        dest = render(shot)
+        dest = (render_panel if shot in PANELS else render)(shot)
         out = subprocess.run(["file", "-b", str(dest)], capture_output=True, text=True).stdout.strip()
         ok = "1280 x 800" in out and "RGB" in out and "RGBA" not in out
         print("{:<16} {}  {}".format(shot[0], "ok " if ok else "BAD", out))

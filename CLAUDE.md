@@ -796,6 +796,24 @@ that ships. Every name in it is generic -
 Zoho's own module names and ordinary business words - because a real portal or function name in a
 fixture contradicts the independence this project states, on a surface about to be published.
 
+**The panel is rendered too, through a shim, and that is what caught the fixture's own bug.**
+Headless Chrome cannot be handed a folder - the permission is a user gesture by design - so
+`tools/fsshim.js` is an in-memory File System Access API over a `{path: text}` map, plus enough of
+`chrome.tabs` for the environment guard to see a matching Zoho tab. The page is the shipped one; only
+the folder underneath it is invented. It is an approximation of an API and says so: it implements the
+calls the panels make and nothing else, so a panel that starts using something new fails loudly here
+rather than rendering a state the real API would not produce.
+
+Two things it found immediately, neither of which any checker could have. The fixture wrote `host` in
+`.zoost.json` where the panel writes **`base`**, so the guard compared a missing origin against a real
+one and printed «tab «sampleorg» (org 1234567890) ≠ workspace «sampleorg» (org 1234567890)» - two
+identical-looking values declared different, because the field that actually differed was not the one
+in the sentence. And the fixture invented Deluge namespaces: **`CALL_RE` matches `<namespace>.<name>(`
+for exactly the five namespaces Zoho CRM has**, so sources reading `billing.calcTax()` produced an
+empty reference graph and the panel said «no known usage (orphan candidate)» about a function that
+plainly calls four things. A test now holds every fixture function in a real namespace, and holds the
+namespace and the category apart - the mismatch this file has already recorded twice.
+
 **Screenshots are rendered, never captured: `python3 tools/shots.py`.** Headless Chrome writes
 exactly what the Store wants - 1280 x 800, `8-bit/color RGB`, no alpha - so nothing is converted
 afterwards and nothing can quietly re-introduce an alpha channel. The pages are the shipped ones byte

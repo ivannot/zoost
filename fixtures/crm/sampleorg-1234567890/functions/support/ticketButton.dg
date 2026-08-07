@@ -1,7 +1,0 @@
-// support.ticketButton - sample function, invented for the fixture org.
-map ticketButton(string ticketId)
-{
-    info "support.ticketButton start";
-    r0 = support.openTicket();
-    return r0;
-}

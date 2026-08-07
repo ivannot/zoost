@@ -1,7 +1,0 @@
-// shared.isBusinessDay - sample function, invented for the fixture org.
-map isBusinessDay(string day)
-{
-    info "shared.isBusinessDay start";
-    // nothing else is called
-    return r0;
-}

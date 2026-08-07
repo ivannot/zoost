@@ -1,7 +1,0 @@
-// billing.calcTax - sample function, invented for the fixture org.
-map calcTax(string amount, string rate)
-{
-    info "billing.calcTax start";
-    // nothing else is called
-    return r0;
-}

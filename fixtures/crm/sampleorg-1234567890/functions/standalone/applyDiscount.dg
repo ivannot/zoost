@@ -1,0 +1,7 @@
+// standalone.applyDiscount - sample function, invented for the fixture org.
+map applyDiscount(string amount, string code)
+{
+    info "standalone.applyDiscount start";
+    r0 = standalone.log();
+    return r0;
+}

@@ -1,7 +1,7 @@
 {
   "org": "1234567890",
   "instance": "sampleorg",
-  "host": "crm.zoho.eu",
+  "base": "https://crm.zoho.eu",
   "sandbox": false,
   "label": "Sample org",
   "lastPull": "2026-08-07T10:00:00.000Z",

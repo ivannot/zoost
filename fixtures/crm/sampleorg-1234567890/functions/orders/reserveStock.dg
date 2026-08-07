@@ -1,7 +1,0 @@
-// orders.reserveStock - sample function, invented for the fixture org.
-map reserveStock(string orderId)
-{
-    info "orders.reserveStock start";
-    r0 = shared.log();
-    return r0;
-}

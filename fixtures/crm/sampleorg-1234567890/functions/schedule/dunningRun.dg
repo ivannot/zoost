@@ -1,0 +1,8 @@
+// schedule.dunningRun - sample function, invented for the fixture org.
+void dunningRun()
+{
+    info "schedule.dunningRun start";
+    r0 = standalone.buildInvoice();
+    r1 = standalone.log();
+    return null;
+}

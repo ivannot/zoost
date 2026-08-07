@@ -13,7 +13,7 @@
           "actions": [
             {
               "type": "function",
-              "name": "support.escalate"
+              "name": "standalone.escalate"
             }
           ]
         }

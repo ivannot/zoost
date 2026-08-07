@@ -1,0 +1,7 @@
+// standalone.reserveStock - sample function, invented for the fixture org.
+map reserveStock(string orderId)
+{
+    info "standalone.reserveStock start";
+    r0 = standalone.log();
+    return r0;
+}

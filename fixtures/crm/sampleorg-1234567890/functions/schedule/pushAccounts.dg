@@ -1,0 +1,8 @@
+// schedule.pushAccounts - sample function, invented for the fixture org.
+void pushAccounts()
+{
+    info "schedule.pushAccounts start";
+    r0 = standalone.orgSettings();
+    r1 = standalone.log();
+    return null;
+}

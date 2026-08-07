@@ -1,8 +1,0 @@
-// billing.syncPayments - sample function, invented for the fixture org.
-void syncPayments()
-{
-    info "billing.syncPayments start";
-    r0 = shared.log();
-    r1 = sync.reconcile();
-    return null;
-}

@@ -1,0 +1,7 @@
+// schedule.pullCatalogue - sample function, invented for the fixture org.
+void pullCatalogue()
+{
+    info "schedule.pullCatalogue start";
+    r0 = standalone.orgSettings();
+    return null;
+}

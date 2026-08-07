@@ -9,7 +9,7 @@
       "actions": [
         {
           "type": "function",
-          "name": "shipping.trackParcel"
+          "name": "standalone.trackParcel"
         }
       ],
       "scheduled_actions": []

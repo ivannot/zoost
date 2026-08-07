@@ -1,0 +1,8 @@
+// schedule.weeklyDigest - sample function, invented for the fixture org.
+void weeklyDigest()
+{
+    info "schedule.weeklyDigest start";
+    r0 = standalone.buildCohort();
+    r1 = standalone.formatMoney();
+    return null;
+}

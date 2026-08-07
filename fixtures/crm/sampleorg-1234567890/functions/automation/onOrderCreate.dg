@@ -1,0 +1,9 @@
+// automation.onOrderCreate - sample function, invented for the fixture org.
+map onOrderCreate(string orderId)
+{
+    info "automation.onOrderCreate start";
+    r0 = validation_rule.validateOrder();
+    r1 = standalone.reserveStock();
+    r2 = automation.recalcTotals();
+    return r0;
+}

@@ -1,8 +1,0 @@
-// sync.pushAccounts - sample function, invented for the fixture org.
-void pushAccounts()
-{
-    info "sync.pushAccounts start";
-    r0 = shared.orgSettings();
-    r1 = shared.log();
-    return null;
-}

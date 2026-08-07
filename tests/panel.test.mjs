@@ -2006,7 +2006,7 @@ test('the sample org exercises every state the panels can draw', () => {
   const ws = 'fixtures/crm/sampleorg-1234567890/';
   const metas = JSON.parse(read(ws + 'functions/index.json')).items;
   assert.ok(metas.length > 20, 'the sample org is too small to show a list');
-  const anyMeta = (pred) => ['shared/legacyHelper', 'sync/reconcile', 'billing/calcTax']
+  const anyMeta = (pred) => ['standalone/legacyHelper', 'standalone/reconcile', 'standalone/calcTax']
     .some((f) => pred(JSON.parse(read(ws + 'functions/' + f + '.meta.json'))));
   assert.ok(anyMeta((m) => m.sv < 2), 'nothing on disk is stale, so «Refresh outdated» has nothing to do');
   const mods = ['Products', 'Campaigns', 'Accounts'].map((m) => JSON.parse(read(ws + 'modules/' + m + '.json')));
@@ -2053,4 +2053,30 @@ test('the arrowhead is the same size on screen at any zoom', () => {
     const ap = js.slice(js.indexOf('function erApply()'), js.indexOf('\n}', js.indexOf('function erApply()')));
     assert.ok(/erSizeArrows\(\)/.test(ap), `${app}: the arrows are not re-sized when the zoom changes`);
   }
+});
+
+test('the sample org speaks Deluge, so the reference graph can find its calls', () => {
+  // A Deluge namespace is not free: CALL_RE matches `<namespace>.<name>(` for exactly the five
+  // namespaces Zoho CRM has. The first fixture invented its own - billing, orders, shared - so the
+  // scanner found nothing in perfectly plausible-looking sources, and the panel said «no known
+  // usage (orphan candidate)» and listed no calls for a function that plainly makes four. It was
+  // found by rendering a screenshot, which is the argument for rendering them rather than capturing.
+  const core = read('apps/crm/graph-core.js');
+  const NS = core.match(/const NS = \[([^\]]+)\]/)[1].split(',').map((s) => s.trim().replace(/'/g, ''));
+  const calls = JSON.parse(read('fixtures/graph-crm-calls.json'));
+  const fns = Object.values(calls.nodes).filter((n) => !/^(wf|sch|conn):/.test(n.id));
+  for (const n of fns) {
+    assert.ok(NS.includes(n.namespace),
+      `${n.id} is in namespace «${n.namespace}», which CALL_RE cannot match - Zoho has only ${NS.join(', ')}`);
+  }
+  // ...and the sources on disk have to write the call in that form
+  const src = read('fixtures/crm/sampleorg-1234567890/functions/standalone/buildInvoice.dg');
+  const re = new RegExp(String.raw`\b(${NS.join('|')})\.([A-Za-z_]\w*)\s*\(`, 'g');
+  const found = [...src.matchAll(re)];
+  assert.ok(found.length >= 4, 'the sample sources do not call anything the scanner can see');
+  // the namespace and the category are different fields with different values - the mismatch this
+  // repository has recorded twice - so the fixture must not let them collapse into one
+  const cats = new Set(fns.map((n) => n.category));
+  assert.ok(cats.has('crmfundamentals') && cats.has('scheduler') && cats.has('custombutton'),
+    'the categories have become the namespaces again');
 });

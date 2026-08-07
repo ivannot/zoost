@@ -1,0 +1,8 @@
+// schedule.nightlyDispatch - sample function, invented for the fixture org.
+void nightlyDispatch()
+{
+    info "schedule.nightlyDispatch start";
+    r0 = standalone.planShipment();
+    r1 = standalone.trackParcel();
+    return null;
+}

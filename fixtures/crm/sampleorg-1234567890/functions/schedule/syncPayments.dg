@@ -1,0 +1,8 @@
+// schedule.syncPayments - sample function, invented for the fixture org.
+void syncPayments()
+{
+    info "schedule.syncPayments start";
+    r0 = standalone.log();
+    r1 = standalone.reconcile();
+    return null;
+}

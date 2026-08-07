@@ -1,8 +1,0 @@
-// orders.validateOrder - sample function, invented for the fixture org.
-map validateOrder(string orderId)
-{
-    info "orders.validateOrder start";
-    r0 = shared.orgSettings();
-    r1 = shared.log();
-    return r0;
-}

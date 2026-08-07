@@ -74,96 +74,104 @@ FIELD_POOL = [
     ("Opened_On", "date", False), ("Closed_On", "date", False), ("Priority", "picklist", False),
     ("External_Ref", "text", False), ("Notes", "textarea", False), ("Archived", "boolean", False),
 ]
-NAMESPACES = ["billing", "orders", "shipping", "support", "shared", "sync", "reporting"]
+# The Deluge namespace is NOT free: `CALL_RE` in graph-core.js matches `<namespace>.<name>(` for
+# exactly these five, because those are the namespaces Zoho CRM has. A fixture that invents others
+# produces sources in which the reference scanner finds nothing - which is what the first version
+# did, and the panel then said «no known usage (orphan candidate)» and «Outbound calls: none» about
+# a function whose source plainly calls four things. Found by rendering the screenshot, which is the
+# argument for rendering them.
+#
+# The category is a different field with different values (`scheduler`, `crmfundamentals`,
+# `custombutton`, and sometimes nothing at all) - the mismatch this repository has already recorded
+# twice. Both are here, paired the way the panel shows them: «namespace · category».
+NAMESPACES = ["standalone", "automation", "button", "schedule", "validation_rule"]
 FUNCS = [
-    ("shared", "log", "standalone", ["message"]),
-    ("shared", "formatMoney", "standalone", ["amount", "currency"]),
-    ("shared", "isBusinessDay", "standalone", ["day"]),
-    ("shared", "orgSettings", "standalone", []),
-    ("billing", "calcTax", "standalone", ["amount", "rate"]),
-    ("billing", "buildInvoice", "standalone", ["orderId"]),
-    ("billing", "applyDiscount", "standalone", ["amount", "code"]),
-    ("billing", "dunningRun", "scheduler", []),
-    ("billing", "syncPayments", "scheduler", []),
-    ("orders", "validateOrder", "crmfundamentals", ["orderId"]),
-    ("orders", "reserveStock", "standalone", ["orderId"]),
-    ("orders", "releaseStock", "standalone", ["orderId"]),
-    ("orders", "onOrderCreate", "crmfundamentals", ["orderId"]),
-    ("orders", "recalcTotals", "standalone", ["orderId"]),
-    ("shipping", "planShipment", "standalone", ["orderId"]),
-    ("shipping", "trackParcel", "standalone", ["tracking"]),
-    ("shipping", "nightlyDispatch", "scheduler", []),
-    ("support", "openTicket", "custombutton", ["accountId", "subject"]),
-    ("support", "escalate", "standalone", ["ticketId"]),
-    ("support", "closeStale", "scheduler", []),
-    ("sync", "pushAccounts", "scheduler", []),
-    ("sync", "pullCatalogue", "scheduler", []),
-    ("sync", "reconcile", "standalone", ["since"]),
-    ("reporting", "weeklyDigest", "scheduler", []),
-    ("reporting", "buildCohort", "standalone", ["from", "to"]),
-    ("reporting", "exportCsv", "custombutton", ["view"]),
-    ("support", "ticketButton", "custombutton", ["ticketId"]),
-    ("orders", "orderButton", "custombutton", ["orderId"]),
-    # Zoho does not always give a category. The empty one is a kind of its own in the chips
-    # («no category»), and an org where it never occurs cannot show that.
-    ("shared", "legacyHelper", "", ["input"]),
+    ("standalone", "log", "standalone", ["message"]),
+    ("standalone", "formatMoney", "standalone", ["amount", "currency"]),
+    ("standalone", "isBusinessDay", "standalone", ["day"]),
+    ("standalone", "orgSettings", "standalone", []),
+    ("standalone", "calcTax", "standalone", ["amount", "rate"]),
+    ("standalone", "buildInvoice", "standalone", ["orderId"]),
+    ("standalone", "applyDiscount", "standalone", ["amount", "code"]),
+    ("standalone", "reserveStock", "standalone", ["orderId"]),
+    ("standalone", "releaseStock", "standalone", ["orderId"]),
+    ("standalone", "planShipment", "standalone", ["orderId"]),
+    ("standalone", "trackParcel", "standalone", ["tracking"]),
+    ("standalone", "escalate", "standalone", ["ticketId"]),
+    ("standalone", "reconcile", "standalone", ["since"]),
+    ("standalone", "buildCohort", "standalone", ["from", "to"]),
+    ("standalone", "legacyHelper", "", ["input"]),
+    ("automation", "onOrderCreate", "crmfundamentals", ["orderId"]),
+    ("automation", "recalcTotals", "crmfundamentals", ["orderId"]),
+    ("automation", "onDealWon", "crmfundamentals", ["dealId"]),
+    ("schedule", "dunningRun", "scheduler", []),
+    ("schedule", "syncPayments", "scheduler", []),
+    ("schedule", "nightlyDispatch", "scheduler", []),
+    ("schedule", "closeStale", "scheduler", []),
+    ("schedule", "pushAccounts", "scheduler", []),
+    ("schedule", "pullCatalogue", "scheduler", []),
+    ("schedule", "weeklyDigest", "scheduler", []),
+    ("button", "openTicket", "custombutton", ["accountId", "subject"]),
+    ("button", "exportCsv", "custombutton", ["view"]),
+    ("button", "orderButton", "custombutton", ["orderId"]),
+    ("validation_rule", "validateOrder", "crmfundamentals", ["orderId"]),
 ]
 
-# Functions whose meta on disk is older than META_SV render as stale - the amber half-dot - and are
-# what «Refresh outdated» exists for. An org where nothing is stale cannot show that flow.
-STALE = {"shared.legacyHelper", "sync.reconcile"}
-# A name the call regex found that resolves to nothing, and one that resolves to more than one.
-# Both are measurements of absence and both have their own panel section and their own chip.
-UNRESOLVED = {"orders.validateOrder": ["pricing.lookupBand"], "reporting.exportCsv": ["legacy.dump"]}
-AMBIGUOUS = {"support.escalate": ["log"]}
+STALE = {"standalone.legacyHelper", "standalone.reconcile"}
+UNRESOLVED = {"validation_rule.validateOrder": ["standalone.lookupBand"],
+              "button.exportCsv": ["standalone.dump"]}
+AMBIGUOUS = {"standalone.escalate": ["log"]}
 CALLS = {
-    "billing.buildInvoice": ["billing.calcTax", "billing.applyDiscount", "shared.formatMoney", "shared.log"],
-    "billing.dunningRun": ["billing.buildInvoice", "shared.log"],
-    "billing.syncPayments": ["shared.log", "sync.reconcile"],
-    "billing.applyDiscount": ["shared.log"],
-    "orders.onOrderCreate": ["orders.validateOrder", "orders.reserveStock", "orders.recalcTotals"],
-    "orders.validateOrder": ["shared.orgSettings", "shared.log"],
-    "orders.recalcTotals": ["billing.calcTax", "shared.formatMoney"],
-    "orders.reserveStock": ["shared.log"],
-    "orders.releaseStock": ["shared.log"],
-    "shipping.planShipment": ["shared.isBusinessDay", "orders.releaseStock", "shared.log"],
-    "shipping.nightlyDispatch": ["shipping.planShipment", "shipping.trackParcel"],
-    "support.openTicket": ["shared.log"],
-    "support.escalate": ["shared.log", "reporting.weeklyDigest"],
-    "support.closeStale": ["support.escalate"],
-    "sync.pushAccounts": ["shared.orgSettings", "shared.log"],
-    "sync.pullCatalogue": ["shared.orgSettings"],
-    "sync.reconcile": ["shared.log"],
-    "reporting.weeklyDigest": ["reporting.buildCohort", "shared.formatMoney"],
-    "reporting.exportCsv": ["reporting.buildCohort"],
-    "support.ticketButton": ["support.openTicket"],
-    "orders.orderButton": ["orders.validateOrder"],
-    "shared.legacyHelper": [],
+    "standalone.buildInvoice": ["standalone.calcTax", "standalone.applyDiscount",
+                                "standalone.formatMoney", "standalone.log"],
+    "standalone.applyDiscount": ["standalone.log"],
+    "standalone.reserveStock": ["standalone.log"],
+    "standalone.releaseStock": ["standalone.log"],
+    "standalone.planShipment": ["standalone.isBusinessDay", "standalone.releaseStock", "standalone.log"],
+    "standalone.escalate": ["standalone.log", "schedule.weeklyDigest"],
+    "standalone.reconcile": ["standalone.log"],
+    "standalone.buildCohort": [],
+    "standalone.legacyHelper": [],
+    "automation.onOrderCreate": ["validation_rule.validateOrder", "standalone.reserveStock",
+                                 "automation.recalcTotals"],
+    "automation.recalcTotals": ["standalone.calcTax", "standalone.formatMoney"],
+    "automation.onDealWon": ["standalone.buildInvoice"],
+    "schedule.dunningRun": ["standalone.buildInvoice", "standalone.log"],
+    "schedule.syncPayments": ["standalone.log", "standalone.reconcile"],
+    "schedule.nightlyDispatch": ["standalone.planShipment", "standalone.trackParcel"],
+    "schedule.closeStale": ["standalone.escalate"],
+    "schedule.pushAccounts": ["standalone.orgSettings", "standalone.log"],
+    "schedule.pullCatalogue": ["standalone.orgSettings"],
+    "schedule.weeklyDigest": ["standalone.buildCohort", "standalone.formatMoney"],
+    "validation_rule.validateOrder": ["standalone.orgSettings", "standalone.log"],
+    "button.openTicket": ["standalone.log"],
+    "button.exportCsv": ["standalone.buildCohort"],
+    "button.orderButton": ["validation_rule.validateOrder"],
 }
 CONNECTIONS = [
-    ("warehouse_api", "Warehouse API", ["shipping.planShipment", "orders.reserveStock"]),
-    ("payments_gw", "Payments gateway", ["billing.syncPayments"]),
-    ("mail_relay", "Mail relay", ["reporting.weeklyDigest", "support.escalate"]),
-    ("catalogue_feed", "Catalogue feed", ["sync.pullCatalogue"]),
+    ("warehouse_api", "Warehouse API", ["standalone.planShipment", "standalone.reserveStock"]),
+    ("payments_gw", "Payments gateway", ["schedule.syncPayments"]),
+    ("mail_relay", "Mail relay", ["schedule.weeklyDigest", "standalone.escalate"]),
+    ("catalogue_feed", "Catalogue feed", ["schedule.pullCatalogue"]),
     ("archive_store", "Archive store", []),
 ]
 WORKFLOWS = [
-    ("Orders", "New order received", "orders.onOrderCreate", False),
-    ("Orders", "Order amount changed", "orders.recalcTotals", False),
-    ("Invoices", "Invoice overdue", "billing.dunningRun", True),
-    ("Tickets", "Ticket unanswered", "support.escalate", True),
+    ("Orders", "New order received", "automation.onOrderCreate", False),
+    ("Orders", "Order amount changed", "automation.recalcTotals", False),
+    ("Invoices", "Invoice overdue", "schedule.dunningRun", True),
+    ("Tickets", "Ticket unanswered", "standalone.escalate", True),
     ("Contacts", "Contact created", None, False),
-    ("Deals", "Deal won", "billing.buildInvoice", False),
-    ("Shipments", "Shipment dispatched", "shipping.trackParcel", False),
+    ("Deals", "Deal won", "automation.onDealWon", False),
+    ("Shipments", "Shipment dispatched", "standalone.trackParcel", False),
     ("Leads", "Lead untouched", None, True),
 ]
 SCHEDULES = [
-    ("Nightly dispatch", "shipping.nightlyDispatch", "Every day at 02:00"),
-    ("Dunning run", "billing.dunningRun", "Every day at 06:00"),
-    ("Close stale tickets", "support.closeStale", "Every Monday at 07:00"),
-    ("Weekly digest", "reporting.weeklyDigest", "Every Monday at 08:00"),
-    ("Catalogue pull", "sync.pullCatalogue", "Every 6 hours"),
-    ("Account push", "sync.pushAccounts", "Every day at 23:30"),
+    ("Nightly dispatch", "schedule.nightlyDispatch", "Every day at 02:00"),
+    ("Dunning run", "schedule.dunningRun", "Every day at 06:00"),
+    ("Close stale tickets", "schedule.closeStale", "Every Monday at 07:00"),
+    ("Weekly digest", "schedule.weeklyDigest", "Every Monday at 08:00"),
+    ("Catalogue pull", "schedule.pullCatalogue", "Every 6 hours"),
+    ("Account push", "schedule.pushAccounts", "Every day at 23:30"),
 ]
 
 DELUGE = """// {ns}.{name} - sample function, invented for the fixture org.
@@ -179,7 +187,9 @@ DELUGE = """// {ns}.{name} - sample function, invented for the fixture org.
 def deluge(ns, name, params, calls):
     sig = "{} {}({})".format("void" if not params else "map", name,
                              ", ".join("string " + p for p in params))
-    body = "\n".join('    {} = {}({});'.format("r" + str(i), c, "")
+    # `namespace.name(...)` - the form CALL_RE looks for, which is how Deluge actually calls a
+    # function. Writing it any other way makes the reference graph come out empty.
+    body = "\n".join('    {} = {}();'.format("r" + str(i), c)
                      for i, c in enumerate(calls)) or "    // nothing else is called"
     return DELUGE.format(ns=ns, name=name, sig=sig, body=body, ret="null" if not params else "r0")
 
@@ -302,8 +312,11 @@ def build_crm(out: pathlib.Path):
         for c, lbl, users in CONNECTIONS]})
 
     now = "2026-08-07T10:00:00.000Z"
+    # `base` and not `host`: the guard compares it against the tab's origin, so a fixture that
+    # writes the wrong key looks like a different environment to the panel - which is exactly what
+    # it did, and the message then printed two identical-looking orgs and said they differed.
     js(out / ".zoost.json", {
-        "org": ORG, "instance": INSTANCE, "host": "crm.zoho.eu", "sandbox": False,
+        "org": ORG, "instance": INSTANCE, "base": "https://crm.zoho.eu", "sandbox": False,
         "label": "Sample org", "lastPull": now,
         "access": {a: {"at": now, "pulledAt": now, "ok": True}
                    for a in ("functions", "modules", "workflows", "schedules", "connections")},

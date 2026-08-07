@@ -1,9 +1,0 @@
-// shipping.planShipment - sample function, invented for the fixture org.
-map planShipment(string orderId)
-{
-    info "shipping.planShipment start";
-    r0 = shared.isBusinessDay();
-    r1 = orders.releaseStock();
-    r2 = shared.log();
-    return r0;
-}

@@ -1,7 +1,0 @@
-// sync.pullCatalogue - sample function, invented for the fixture org.
-void pullCatalogue()
-{
-    info "sync.pullCatalogue start";
-    r0 = shared.orgSettings();
-    return null;
-}

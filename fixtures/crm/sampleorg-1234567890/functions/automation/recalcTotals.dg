@@ -1,0 +1,8 @@
+// automation.recalcTotals - sample function, invented for the fixture org.
+map recalcTotals(string orderId)
+{
+    info "automation.recalcTotals start";
+    r0 = standalone.calcTax();
+    r1 = standalone.formatMoney();
+    return r0;
+}

@@ -3,205 +3,205 @@
     {
       "id": "9000",
       "name": "log",
-      "namespace": "shared",
+      "namespace": "standalone",
       "display_name": "log",
       "category": "standalone"
     },
     {
       "id": "9001",
       "name": "formatMoney",
-      "namespace": "shared",
+      "namespace": "standalone",
       "display_name": "formatMoney",
       "category": "standalone"
     },
     {
       "id": "9002",
       "name": "isBusinessDay",
-      "namespace": "shared",
+      "namespace": "standalone",
       "display_name": "isBusinessDay",
       "category": "standalone"
     },
     {
       "id": "9003",
       "name": "orgSettings",
-      "namespace": "shared",
+      "namespace": "standalone",
       "display_name": "orgSettings",
       "category": "standalone"
     },
     {
       "id": "9004",
       "name": "calcTax",
-      "namespace": "billing",
+      "namespace": "standalone",
       "display_name": "calcTax",
       "category": "standalone"
     },
     {
       "id": "9005",
       "name": "buildInvoice",
-      "namespace": "billing",
+      "namespace": "standalone",
       "display_name": "buildInvoice",
       "category": "standalone"
     },
     {
       "id": "9006",
       "name": "applyDiscount",
-      "namespace": "billing",
+      "namespace": "standalone",
       "display_name": "applyDiscount",
       "category": "standalone"
     },
     {
       "id": "9007",
-      "name": "dunningRun",
-      "namespace": "billing",
-      "display_name": "dunningRun",
-      "category": "scheduler"
-    },
-    {
-      "id": "9008",
-      "name": "syncPayments",
-      "namespace": "billing",
-      "display_name": "syncPayments",
-      "category": "scheduler"
-    },
-    {
-      "id": "9009",
-      "name": "validateOrder",
-      "namespace": "orders",
-      "display_name": "validateOrder",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9010",
       "name": "reserveStock",
-      "namespace": "orders",
+      "namespace": "standalone",
       "display_name": "reserveStock",
       "category": "standalone"
     },
     {
-      "id": "9011",
+      "id": "9008",
       "name": "releaseStock",
-      "namespace": "orders",
+      "namespace": "standalone",
       "display_name": "releaseStock",
       "category": "standalone"
     },
     {
-      "id": "9012",
-      "name": "onOrderCreate",
-      "namespace": "orders",
-      "display_name": "onOrderCreate",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9013",
-      "name": "recalcTotals",
-      "namespace": "orders",
-      "display_name": "recalcTotals",
-      "category": "standalone"
-    },
-    {
-      "id": "9014",
+      "id": "9009",
       "name": "planShipment",
-      "namespace": "shipping",
+      "namespace": "standalone",
       "display_name": "planShipment",
       "category": "standalone"
     },
     {
-      "id": "9015",
+      "id": "9010",
       "name": "trackParcel",
-      "namespace": "shipping",
+      "namespace": "standalone",
       "display_name": "trackParcel",
       "category": "standalone"
     },
     {
-      "id": "9016",
-      "name": "nightlyDispatch",
-      "namespace": "shipping",
-      "display_name": "nightlyDispatch",
-      "category": "scheduler"
-    },
-    {
-      "id": "9017",
-      "name": "openTicket",
-      "namespace": "support",
-      "display_name": "openTicket",
-      "category": "custombutton"
-    },
-    {
-      "id": "9018",
+      "id": "9011",
       "name": "escalate",
-      "namespace": "support",
+      "namespace": "standalone",
       "display_name": "escalate",
       "category": "standalone"
     },
     {
-      "id": "9019",
-      "name": "closeStale",
-      "namespace": "support",
-      "display_name": "closeStale",
-      "category": "scheduler"
-    },
-    {
-      "id": "9020",
-      "name": "pushAccounts",
-      "namespace": "sync",
-      "display_name": "pushAccounts",
-      "category": "scheduler"
-    },
-    {
-      "id": "9021",
-      "name": "pullCatalogue",
-      "namespace": "sync",
-      "display_name": "pullCatalogue",
-      "category": "scheduler"
-    },
-    {
-      "id": "9022",
+      "id": "9012",
       "name": "reconcile",
-      "namespace": "sync",
+      "namespace": "standalone",
       "display_name": "reconcile",
       "category": "standalone"
     },
     {
-      "id": "9023",
-      "name": "weeklyDigest",
-      "namespace": "reporting",
-      "display_name": "weeklyDigest",
-      "category": "scheduler"
-    },
-    {
-      "id": "9024",
+      "id": "9013",
       "name": "buildCohort",
-      "namespace": "reporting",
+      "namespace": "standalone",
       "display_name": "buildCohort",
       "category": "standalone"
     },
     {
+      "id": "9014",
+      "name": "legacyHelper",
+      "namespace": "standalone",
+      "display_name": "legacyHelper",
+      "category": ""
+    },
+    {
+      "id": "9015",
+      "name": "onOrderCreate",
+      "namespace": "automation",
+      "display_name": "onOrderCreate",
+      "category": "crmfundamentals"
+    },
+    {
+      "id": "9016",
+      "name": "recalcTotals",
+      "namespace": "automation",
+      "display_name": "recalcTotals",
+      "category": "crmfundamentals"
+    },
+    {
+      "id": "9017",
+      "name": "onDealWon",
+      "namespace": "automation",
+      "display_name": "onDealWon",
+      "category": "crmfundamentals"
+    },
+    {
+      "id": "9018",
+      "name": "dunningRun",
+      "namespace": "schedule",
+      "display_name": "dunningRun",
+      "category": "scheduler"
+    },
+    {
+      "id": "9019",
+      "name": "syncPayments",
+      "namespace": "schedule",
+      "display_name": "syncPayments",
+      "category": "scheduler"
+    },
+    {
+      "id": "9020",
+      "name": "nightlyDispatch",
+      "namespace": "schedule",
+      "display_name": "nightlyDispatch",
+      "category": "scheduler"
+    },
+    {
+      "id": "9021",
+      "name": "closeStale",
+      "namespace": "schedule",
+      "display_name": "closeStale",
+      "category": "scheduler"
+    },
+    {
+      "id": "9022",
+      "name": "pushAccounts",
+      "namespace": "schedule",
+      "display_name": "pushAccounts",
+      "category": "scheduler"
+    },
+    {
+      "id": "9023",
+      "name": "pullCatalogue",
+      "namespace": "schedule",
+      "display_name": "pullCatalogue",
+      "category": "scheduler"
+    },
+    {
+      "id": "9024",
+      "name": "weeklyDigest",
+      "namespace": "schedule",
+      "display_name": "weeklyDigest",
+      "category": "scheduler"
+    },
+    {
       "id": "9025",
-      "name": "exportCsv",
-      "namespace": "reporting",
-      "display_name": "exportCsv",
+      "name": "openTicket",
+      "namespace": "button",
+      "display_name": "openTicket",
       "category": "custombutton"
     },
     {
       "id": "9026",
-      "name": "ticketButton",
-      "namespace": "support",
-      "display_name": "ticketButton",
+      "name": "exportCsv",
+      "namespace": "button",
+      "display_name": "exportCsv",
       "category": "custombutton"
     },
     {
       "id": "9027",
       "name": "orderButton",
-      "namespace": "orders",
+      "namespace": "button",
       "display_name": "orderButton",
       "category": "custombutton"
     },
     {
       "id": "9028",
-      "name": "legacyHelper",
-      "namespace": "shared",
-      "display_name": "legacyHelper",
-      "category": ""
+      "name": "validateOrder",
+      "namespace": "validation_rule",
+      "display_name": "validateOrder",
+      "category": "crmfundamentals"
     }
   ]
 }

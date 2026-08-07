@@ -1,0 +1,10 @@
+// standalone.buildInvoice - sample function, invented for the fixture org.
+map buildInvoice(string orderId)
+{
+    info "standalone.buildInvoice start";
+    r0 = standalone.calcTax();
+    r1 = standalone.applyDiscount();
+    r2 = standalone.formatMoney();
+    r3 = standalone.log();
+    return r0;
+}

@@ -1,9 +1,0 @@
-// orders.onOrderCreate - sample function, invented for the fixture org.
-map onOrderCreate(string orderId)
-{
-    info "orders.onOrderCreate start";
-    r0 = orders.validateOrder();
-    r1 = orders.reserveStock();
-    r2 = orders.recalcTotals();
-    return r0;
-}

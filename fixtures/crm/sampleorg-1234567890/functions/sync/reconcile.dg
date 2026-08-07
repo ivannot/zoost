@@ -1,7 +1,0 @@
-// sync.reconcile - sample function, invented for the fixture org.
-map reconcile(string since)
-{
-    info "sync.reconcile start";
-    r0 = shared.log();
-    return r0;
-}

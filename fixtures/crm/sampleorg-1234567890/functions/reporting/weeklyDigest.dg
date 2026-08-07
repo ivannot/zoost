@@ -1,8 +1,0 @@
-// reporting.weeklyDigest - sample function, invented for the fixture org.
-void weeklyDigest()
-{
-    info "reporting.weeklyDigest start";
-    r0 = reporting.buildCohort();
-    r1 = shared.formatMoney();
-    return null;
-}

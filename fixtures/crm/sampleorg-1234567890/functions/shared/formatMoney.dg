@@ -1,7 +1,0 @@
-// shared.formatMoney - sample function, invented for the fixture org.
-map formatMoney(string amount, string currency)
-{
-    info "shared.formatMoney start";
-    // nothing else is called
-    return r0;
-}

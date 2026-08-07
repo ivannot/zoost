@@ -1,0 +1,21 @@
+{
+  "sv": 3,
+  "id": "9008",
+  "name": "releaseStock",
+  "namespace": "standalone",
+  "display_name": "releaseStock",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "orderId",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-09T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}

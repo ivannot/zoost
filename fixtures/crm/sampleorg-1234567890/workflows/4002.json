@@ -13,7 +13,7 @@
           "actions": [
             {
               "type": "function",
-              "name": "billing.dunningRun"
+              "name": "schedule.dunningRun"
             }
           ]
         }

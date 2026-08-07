@@ -6,8 +6,8 @@
       "service": "custom",
       "status": "connected",
       "used_by": [
-        "shipping.planShipment",
-        "orders.reserveStock"
+        "standalone.planShipment",
+        "standalone.reserveStock"
       ]
     },
     {
@@ -16,7 +16,7 @@
       "service": "custom",
       "status": "connected",
       "used_by": [
-        "billing.syncPayments"
+        "schedule.syncPayments"
       ]
     },
     {
@@ -25,8 +25,8 @@
       "service": "custom",
       "status": "connected",
       "used_by": [
-        "reporting.weeklyDigest",
-        "support.escalate"
+        "schedule.weeklyDigest",
+        "standalone.escalate"
       ]
     },
     {
@@ -35,7 +35,7 @@
       "service": "custom",
       "status": "connected",
       "used_by": [
-        "sync.pullCatalogue"
+        "schedule.pullCatalogue"
       ]
     },
     {

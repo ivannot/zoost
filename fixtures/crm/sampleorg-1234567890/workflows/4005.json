@@ -9,7 +9,7 @@
       "actions": [
         {
           "type": "function",
-          "name": "billing.buildInvoice"
+          "name": "automation.onDealWon"
         }
       ],
       "scheduled_actions": []

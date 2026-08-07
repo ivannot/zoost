@@ -1,0 +1,7 @@
+// schedule.closeStale - sample function, invented for the fixture org.
+void closeStale()
+{
+    info "schedule.closeStale start";
+    r0 = standalone.escalate();
+    return null;
+}

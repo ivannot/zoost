@@ -1,7 +1,0 @@
-// orders.releaseStock - sample function, invented for the fixture org.
-map releaseStock(string orderId)
-{
-    info "orders.releaseStock start";
-    r0 = shared.log();
-    return r0;
-}

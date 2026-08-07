@@ -1,0 +1,7 @@
+// standalone.releaseStock - sample function, invented for the fixture org.
+map releaseStock(string orderId)
+{
+    info "standalone.releaseStock start";
+    r0 = standalone.log();
+    return r0;
+}

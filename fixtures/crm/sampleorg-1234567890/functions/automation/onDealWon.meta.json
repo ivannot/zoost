@@ -1,0 +1,21 @@
+{
+  "sv": 3,
+  "id": "9017",
+  "name": "onDealWon",
+  "namespace": "automation",
+  "display_name": "onDealWon",
+  "category": "crmfundamentals",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "dealId",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-09T09:00:00+00:00",
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
+}
