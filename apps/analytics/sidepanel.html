@@ -87,6 +87,11 @@
   #mmbar{display:none;flex-direction:column;align-items:stretch;gap:8px;padding:9px 11px;background:#2a1c14;border-bottom:1px solid #6b3a1f}
   #mmbar.show{display:flex}
   #mmbar #mmtext{font:11.5px var(--mono);color:#f0b483;line-height:1.5}
+  /* The sample's discrepancy is stated, not blocked - so the bar wears a colder colour than the one
+     that means «everything is disabled until you fix this». Same shape, different weight, because
+     they are different situations and a reader has to be able to tell without reading. */
+  #mmbar.soft{background:#141d2b;border-bottom-color:#2f4463}
+  #mmbar.soft #mmtext{color:#93a7c4}
   #mmbar .mmbtns{display:flex;gap:8px;flex-wrap:wrap}
   #mmbar .mmbtns button{white-space:nowrap;flex:1 1 auto}
   #mmbar #mmgo{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}

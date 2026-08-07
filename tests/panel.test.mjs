@@ -2378,3 +2378,30 @@ test('a workspace binding is in place before anything is enabled from it', () =>
   assert.ok(bind < enable,
     'the binding is read after setEnabled(), so a control that depends on it sees the previous workspace');
 });
+
+test('a sample workspace states the discrepancy, and only the blocking differs', () => {
+  // Reported: the sample stayed active with no warning while the tab was on a real org. One muted
+  // line in the workspace half is too quiet for that - reading invented data while looking at a
+  // real org is exactly what the mismatch bar exists to say. So it is said.
+  //
+  // What is *not* the same is the overlay. A real mismatch can be resolved and browsing until it is
+  // means reading org A's mirror while looking at org B; a sample will never match anything,
+  // everything Zoho-bound is already refused for it, and blocking it would make it unusable the
+  // whole time a Zoho tab is open. Say it, do not stop it.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const html = read(`apps/${app}/sidepanel.html`);
+    assert.ok(/const sampleMm = !!\(bound && (?:lastCtx|ctx)/.test(js),
+      `${app}: nothing detects a sample sitting beside a real tab`);
+    assert.ok(/classList\.toggle\('show', mm \|\| sampleMm\)/.test(js),
+      `${app}: the bar stays hidden for a sample`);
+    assert.ok(/mmoverlay'\)\.classList\.toggle\('show', mm\)/.test(js),
+      `${app}: the overlay blocks a sample, which makes it unusable while any tab is open`);
+    assert.ok(/classList\.toggle\('soft', sampleMm\)/.test(js),
+      `${app}: the two situations look identical, so a reader cannot tell them apart`);
+    assert.ok(/#mmbar\.soft\{/.test(html), `${app}: the softer bar has no style, so it renders as the hard one`);
+    // «Switch tab» is meaningless for a sample - there is no Zoho org to switch to
+    assert.ok(/\$\('mmgo'\)\.style\.display = sampleMm \? 'none' : ''/.test(js),
+      `${app}: the bar offers to switch to a Zoho org the sample does not have`);
+  }
+});

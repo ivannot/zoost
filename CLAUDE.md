@@ -852,6 +852,17 @@ in the workspace bar, absent once one exists and while there is nowhere to write
 generator's file tree into `<working folder>/<app>/<name>/` and stops: from that point the workspace
 is read by the ordinary list, the ordinary walks and the ordinary exports.
 
+**The discrepancy is stated for a sample too, and only the *blocking* differs.** Suppressing the
+mismatch bar for it was wrong and was reported: reading invented data while looking at a real org is
+exactly what that bar exists to say, and one muted line in the workspace half is too quiet to carry
+it. What stays different is the overlay. A real mismatch can be resolved - one of the two is wrong -
+and browsing until it is means reading org A's mirror while looking at org B; a sample will never
+match anything, everything Zoho-bound is already refused for it, and blocking it would make it
+unusable the whole time a Zoho tab is open, which is always. **Say it, do not stop it** - in a colder
+colour than the bar that means «everything is disabled until you fix this», because they are
+different situations and a reader has to tell them apart without reading. «Switch tab» is hidden:
+there is no Zoho org to switch to.
+
 **Everything platform-bound is refused in one place** - `guardOk()`, which every such action already
 asks - rather than by a condition repeated at each button, where one is eventually forgotten. But it
 is **not dressed as a mismatch**: the mismatch bar and its overlay are for two environments that

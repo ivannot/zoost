@@ -418,20 +418,31 @@ async function refreshContext() {
 
   // The mismatch bar offers the one action that resolves it, and the overlay makes it impossible to
   // browse one workspace's mirror while looking at another. Same guarantee as the CRM panel's.
+  // The discrepancy is stated in both cases, the sample included: reading invented data while
+  // looking at a real workspace is exactly what this bar is for. What differs is the **blocking**,
+  // and only that - a real mismatch can be resolved, a sample never will be, everything
+  // platform-bound is already refused for it, and blocking would make it unusable the whole time an
+  // Analytics tab is open. Say it, do not stop it.
+  const sampleMm = !!(bound && ctx && ctx.workspace && isSample());
   const mm = !!(bound && ctx && ctx.workspace && !guardOk() && !isSample());
-  $('mmbar').classList.toggle('show', mm);
+  $('mmbar').classList.toggle('show', mm || sampleMm);
+  $('mmbar').classList.toggle('soft', sampleMm);
   $('mmoverlay').classList.toggle('show', mm);
-  if (mm) {
-    $('detail').classList.remove('show'); $('resizer').classList.remove('show');
-    $('mmtext').textContent = `The tab is workspace ${ctx.workspace}; this folder mirrors «${bound.name || bound.workspace}» (${bound.workspace}). Everything is disabled until they match.`;
+  if (mm || sampleMm) {
+    if (mm) { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); }
+    $('mmtext').textContent = sampleMm
+      ? `You are looking at the sample workspace - invented data - while the tab is workspace ${ctx.workspace}. Nothing here comes from it, and nothing here can reach it.`
+      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Everything is disabled until they match.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
-    $('mmgo').textContent = `Switch tab → «${bound.name || bound.workspace}» ↗`;
+    // The first is meaningless for a sample: there is no Zoho Analytics workspace to switch to.
+    $('mmgo').style.display = sampleMm ? 'none' : '';
+    $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.name || bound.workspace}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
     const sw = $('mmsw'); sw.className = 'znav';
-    if (match) { sw.textContent = `Switch workspace → «${match.name || match.folder}»`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
-    else { sw.textContent = `Create workspace for «${ctx.workspace}»`; sw.onclick = () => addWorkspace(); }
+    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name || match.folder}\u00bb`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
+    else { sw.textContent = `Create workspace for \u00ab${ctx.workspace}\u00bb`; sw.onclick = () => addWorkspace(); }
   }
   updateButtons();
 }

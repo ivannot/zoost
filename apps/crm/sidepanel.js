@@ -514,19 +514,33 @@ async function refreshContext() {
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
   else { ctxEl.className = 'mismatch'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>≠ ${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✗`; }
-  // mismatch action bar: offer to jump to the ACTIVE workspace's Zoho URL (explicit)
+  // The discrepancy is stated in both cases, and the sample is one of them. Suppressing the bar for
+  // it was wrong: reading invented data while looking at a real org is exactly what this bar is for,
+  // and one muted line in the workspace half is too quiet to carry it. Reported.
+  //
+  // What differs is the **blocking**, and only that. A real mismatch can be resolved - one of the
+  // two is wrong - and browsing until it is would mean reading org A's mirror while looking at org
+  // B. A sample is never going to match anything, everything Zoho-bound is already refused for it,
+  // and blocking it would make it unusable the whole time a Zoho tab is open - which is always.
+  // So: say it, do not stop it.
+  const sampleMm = !!(bound && lastCtx && isSample());
   const mm = !!(bound && lastCtx && !guardOk() && !isSample());
   const mmbar = $('mmbar');
-  mmbar.classList.toggle('show', mm);
+  mmbar.classList.toggle('show', mm || sampleMm);
+  mmbar.classList.toggle('soft', sampleMm);
   $('mmoverlay').classList.toggle('show', mm);
   if (mm) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); }
-  if (mm) {
-    $('mmtext').textContent = `Zoho tab «${lastCtx.instance || '?'}» (org ${lastCtx.org}) ≠ local workspace «${bound.instance || '?'}» (org ${bound.org}). Everything is disabled until they match.`;
-    $('mmgo').textContent = `Switch tab → «${bound.instance || '?'}» ↗`;
+  if (mm || sampleMm) {
+    $('mmtext').textContent = sampleMm
+      ? `You are looking at the sample workspace - invented data - while the Zoho tab is \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}). Nothing here comes from it, and nothing here can reach it.`
+      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${bound.instance || '?'}\u00bb (org ${bound.org}). Everything is disabled until they match.`;
+    // «Switch tab» is meaningless for a sample: there is no Zoho org to switch to.
+    $('mmgo').style.display = sampleMm ? 'none' : '';
+    $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.instance || '?'}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id !== activeWsId && w.binding && w.binding.org === lastCtx.org && (!w.binding.base || !lastCtx.origin || w.binding.base === lastCtx.origin));
     const sw = $('mmsw'); sw.style.display = '';
-    if (match) { sw.textContent = `Switch workspace → «${match.name}»`; sw.onclick = () => { $('ws').value = match.id; activate(match, true); }; }
+    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name}\u00bb`; sw.onclick = () => { $('ws').value = match.id; activate(match, true); }; }
     else { sw.textContent = `Create workspace for \u00ab${lastCtx.instance || '?'}\u00bb`; sw.onclick = () => addWorkspaceForTab(); }
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
