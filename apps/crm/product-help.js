@@ -74,8 +74,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   what holds the working folder - so it has to be open and the folder granted.
   Beside the tabs in that window, the "Focus" group is the whole window's context: the focused item's
   own name, "Everything", the depth that decides how far out from it to go, and an "x" to forget it.
-  It sits with the tabs because it belongs to the window and not to one view - the diagram, the list
-  and Relations all follow it. "Everything" pauses the focus rather than dropping it, so the name
+  It sits with the tabs because it belongs to the window and not to one view: Explorer sets it, and
+  both the diagram and Relations follow it. "Everything" pauses the focus rather than dropping it, so the name
   stays on screen and one click picks it up again.
   That window has three views of one thing: Explorer (a list and a detail pane), Graph or ER diagram
   (boxes and arrows - each box lists what that function calls, or what that module holds), and
