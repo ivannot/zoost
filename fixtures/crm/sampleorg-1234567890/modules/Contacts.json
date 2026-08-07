@@ -66,14 +66,32 @@
       "label": "Deals",
       "module": "Deals",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Deals_Ref"
     },
     {
       "api_name": "Tickets_of_Contacts",
       "label": "Tickets",
       "module": "Tickets",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Tickets_Ref"
+    },
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
     }
   ]
 }

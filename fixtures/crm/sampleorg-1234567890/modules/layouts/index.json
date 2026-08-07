@@ -2,7 +2,7 @@
   "items": [
     {
       "api_name": "Accounts",
-      "layoutCount": 2
+      "layoutCount": 3
     },
     {
       "api_name": "Contacts",
@@ -22,7 +22,7 @@
     },
     {
       "api_name": "Quotes",
-      "layoutCount": 1
+      "layoutCount": 2
     },
     {
       "api_name": "Invoices",
@@ -42,11 +42,15 @@
     },
     {
       "api_name": "Campaigns",
-      "layoutCount": 1
+      "layoutCount": 2
     },
     {
       "api_name": "Subscriptions",
       "layoutCount": 1
+    },
+    {
+      "api_name": "Ledger",
+      "layoutCount": 0
     }
   ]
 }

@@ -181,6 +181,27 @@
       "namespace": "reporting",
       "display_name": "exportCsv",
       "category": "custombutton"
+    },
+    {
+      "id": "9026",
+      "name": "ticketButton",
+      "namespace": "support",
+      "display_name": "ticketButton",
+      "category": "custombutton"
+    },
+    {
+      "id": "9027",
+      "name": "orderButton",
+      "namespace": "orders",
+      "display_name": "orderButton",
+      "category": "custombutton"
+    },
+    {
+      "id": "9028",
+      "name": "legacyHelper",
+      "namespace": "shared",
+      "display_name": "legacyHelper",
+      "category": ""
     }
   ]
 }

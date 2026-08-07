@@ -3,6 +3,7 @@
     "177856000000000004": {
       "name": "Accounts",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Account_Id",
@@ -34,6 +35,7 @@
     "177856000000000008": {
       "name": "Contacts",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Contact_Id",
@@ -65,6 +67,7 @@
     "177856000000000012": {
       "name": "Orders",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Order_Id",
@@ -96,6 +99,7 @@
     "177856000000000016": {
       "name": "Order_Lines",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Line_Id",
@@ -127,6 +131,7 @@
     "177856000000000020": {
       "name": "Products",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Product_Id",
@@ -153,6 +158,7 @@
     "177856000000000024": {
       "name": "Shipments",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Shipment_Id",
@@ -184,6 +190,7 @@
     "177856000000000028": {
       "name": "Invoices",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Invoice_Id",
@@ -215,6 +222,7 @@
     "177856000000000032": {
       "name": "Payments",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Payment_Id",
@@ -246,6 +254,7 @@
     "177856000000000036": {
       "name": "Tickets",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Ticket_Id",
@@ -277,6 +286,7 @@
     "177856000000000040": {
       "name": "Regions",
       "kind": "Table",
+      "system": false,
       "columns": [
         {
           "name": "Region",
@@ -296,49 +306,51 @@
       ]
     },
     "177856000000000044": {
-      "name": "Revenue_By_Region",
-      "kind": "QueryTable",
+      "name": "ZohoUsers",
+      "kind": "Table",
+      "system": true,
       "columns": [
         {
-          "name": "Col_1",
-          "type": "PLAIN",
+          "name": "User_Id",
+          "type": "BIGINT",
           "colid": "177856000000000044-0"
         },
         {
-          "name": "Col_2",
+          "name": "Email",
           "type": "PLAIN",
           "colid": "177856000000000044-1"
         },
         {
-          "name": "Col_3",
+          "name": "Role",
           "type": "PLAIN",
           "colid": "177856000000000044-2"
         }
       ]
     },
     "177856000000000048": {
-      "name": "Open_Invoices",
-      "kind": "QueryTable",
+      "name": "ZohoImportLog",
+      "kind": "Table",
+      "system": true,
       "columns": [
         {
-          "name": "Col_1",
-          "type": "PLAIN",
+          "name": "Import_Id",
+          "type": "BIGINT",
           "colid": "177856000000000048-0"
         },
         {
-          "name": "Col_2",
-          "type": "PLAIN",
+          "name": "Started_On",
+          "type": "DATE",
           "colid": "177856000000000048-1"
         },
         {
-          "name": "Col_3",
+          "name": "Rows",
           "type": "PLAIN",
           "colid": "177856000000000048-2"
         }
       ]
     },
     "177856000000000052": {
-      "name": "Late_Shipments",
+      "name": "Revenue_By_Region",
       "kind": "QueryTable",
       "columns": [
         {
@@ -359,7 +371,7 @@
       ]
     },
     "177856000000000056": {
-      "name": "Basket_Size",
+      "name": "Open_Invoices",
       "kind": "QueryTable",
       "columns": [
         {
@@ -380,7 +392,7 @@
       ]
     },
     "177856000000000060": {
-      "name": "Ticket_Load",
+      "name": "Late_Shipments",
       "kind": "QueryTable",
       "columns": [
         {
@@ -397,6 +409,90 @@
           "name": "Col_3",
           "type": "PLAIN",
           "colid": "177856000000000060-2"
+        }
+      ]
+    },
+    "177856000000000064": {
+      "name": "Basket_Size",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000064-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000064-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000064-2"
+        }
+      ]
+    },
+    "177856000000000068": {
+      "name": "Ticket_Load",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000068-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000068-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000068-2"
+        }
+      ]
+    },
+    "177856000000000072": {
+      "name": "Empty_Draft",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000072-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000072-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000072-2"
+        }
+      ]
+    },
+    "177856000000000076": {
+      "name": "Unreadable_Query",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000076-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000076-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000076-2"
         }
       ]
     }

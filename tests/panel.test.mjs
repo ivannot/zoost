@@ -1972,3 +1972,85 @@ test('nothing in the sample org names the org this is developed against', () => 
   assert.equal(cfg.org, '1234567890');
   assert.equal(cfg.instance, 'sampleorg');
 });
+
+test('the sample org exercises every state the panels can draw', () => {
+  // «I want everything in the fake data» is a requirement that decays the moment a new state is
+  // added and nobody remembers the fixture. So it is a check rather than a habit: each row below is
+  // a state with its own mark, its own message or its own filter, and a screenshot taken against an
+  // org that has none of them shows a product simpler than the one that ships.
+  const calls = JSON.parse(read('fixtures/graph-crm-calls.json'));
+  const schema = JSON.parse(read('fixtures/graph-crm-schema.json'));
+  const an = JSON.parse(read('fixtures/graph-analytics.json'));
+  const nodes = Object.values(calls.nodes);
+
+  const cats = new Set(nodes.map((n) => n.category));
+  for (const c of ['standalone', 'scheduler', 'crmfundamentals', 'custombutton', '',
+                   'workflows', 'schedules', 'connections']) {
+    assert.ok(cats.has(c), `no function of category «${c || 'none'}» - that chip has nothing to filter`);
+  }
+  assert.ok(nodes.some((n) => n.rest), 'nothing is exposed as REST, so the REST filter is empty');
+  assert.ok(nodes.some((n) => n.unresolved.length), 'no unresolved reference, so that section never shows');
+  assert.ok(nodes.some((n) => n.ambiguous.length), 'no ambiguous reference');
+  assert.ok(calls.counts.dead_suspects > 0, 'nothing is unreferenced, so «no-caller» is empty');
+  assert.ok(nodes.some((n) => n.category === 'connections' && !n.called_by.length),
+    'every connection is used, so an unused one - the thing the audit looks for - cannot be seen');
+
+  // the module Zoho refuses to describe, with its five surfaces
+  const refused = Object.values(schema.nodes).filter((n) => n.unreadable);
+  assert.equal(refused.length, 1, 'no refused module, so the ⊘ mark and its banner never appear');
+  assert.equal(refused[0].unreadable.code, 'INVALID_MODULE');
+  assert.ok(refused[0].unreadable.at, 'the refusal carries no date, so it reads as permanent');
+  assert.equal(refused[0].fields.length, 0, 'a refused module was given fields, which is the claim it must not make');
+
+  // on disk: stale meta, hidden layouts, and both related-list facets
+  const ws = 'fixtures/crm/sampleorg-1234567890/';
+  const metas = JSON.parse(read(ws + 'functions/index.json')).items;
+  assert.ok(metas.length > 20, 'the sample org is too small to show a list');
+  const anyMeta = (pred) => ['shared/legacyHelper', 'sync/reconcile', 'billing/calcTax']
+    .some((f) => pred(JSON.parse(read(ws + 'functions/' + f + '.meta.json'))));
+  assert.ok(anyMeta((m) => m.sv < 2), 'nothing on disk is stale, so «Refresh outdated» has nothing to do');
+  const mods = ['Products', 'Campaigns', 'Accounts'].map((m) => JSON.parse(read(ws + 'modules/' + m + '.json')));
+  assert.ok(mods.some((m) => m.related_lists.some((r) => r.type === 'system')),
+    'no system related list, so that facet is empty');
+  assert.ok(mods.some((m) => m.related_lists.some((r) => /linking:/.test(r.via || ''))),
+    'no many-to-many related list, so that facet is empty');
+  assert.ok(mods.some((m) => m.layouts.some((l) => l.visible === false)),
+    'no hidden layout, so «(hidden)» never renders');
+  const wf = JSON.parse(read(ws + 'workflows/index.json')).items;
+  assert.ok(wf.length > 4, 'too few workflows');
+
+  // Analytics: system tables, orphans, and the two different ways a query has no SQL
+  assert.ok(Object.values(an.nodes).some((n) => n.system), 'no system table, so that condition is empty');
+  assert.ok(an.counts.dead_suspects > 0, 'nothing is in no relation');
+  const kinds = new Set(JSON.parse(read('fixtures/analytics/sample-workspace/views.json'))
+    .views.map((v) => v.VIEW_TYPE));
+  for (const k of ['Table', 'QueryTable', 'Chart', 'Pivot', 'Dashboard']) {
+    assert.ok(kinds.has(k), `no view of type ${k}`);
+  }
+  const sql = JSON.parse(read('fixtures/analytics/sample-workspace/sql/index.json'));
+  assert.ok(Object.values(sql).some((v) => v.failed), 'no unreadable query, so «Retry failed» has nothing to do');
+  const files = Object.values(sql).filter((v) => v.file).map((v) => v.file);
+  assert.ok(files.some((f) => read('fixtures/analytics/sample-workspace/sql/' + f) === ''),
+    'no empty query - «returned nothing» and «could not be read» must both have an instance');
+});
+
+test('the arrowhead is the same size on screen at any zoom', () => {
+  // Reported as «sometimes I see the arrows and sometimes not». They were always there - every link
+  // carries a marker-end - but the marker is drawn in the diagram's own coordinates and the whole
+  // drawing is then scaled, so its size on screen was the zoom times its size in the markup:
+  // measured on the sample org, 20.6px across on a focused view and **3.3px** on the whole org.
+  // Direction is half of what an edge says, so a three-pixel triangle is not there in any sense.
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    assert.ok(/id="erarrow"[^>]*markerUnits="userSpaceOnUse"/.test(html),
+      `${app}: the marker still scales with each link's stroke width, and one marker cannot be four sizes`);
+    assert.ok(/id="erarrow"[^>]*viewBox="0 0 7 6"/.test(html),
+      `${app}: without a viewBox the shape and refX move when the width changes`);
+    assert.ok(/function erSizeArrows\(\)/.test(js), `${app}: nothing sizes the arrowheads`);
+    assert.ok(/const k = 1 \/ Math\.max\(erScale, 0\.02\)/.test(js),
+      `${app}: the size is not the inverse of the zoom, so it cannot come out constant`);
+    // and it has to run wherever the zoom changes, which is the one place the transform is written
+    const ap = js.slice(js.indexOf('function erApply()'), js.indexOf('\n}', js.indexOf('function erApply()')));
+    assert.ok(/erSizeArrows\(\)/.test(ap), `${app}: the arrows are not re-sized when the zoom changes`);
+  }
+});

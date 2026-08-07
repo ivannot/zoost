@@ -1,5 +1,5 @@
 {
-  "sv": 3,
+  "sv": 1,
   "id": "9022",
   "name": "reconcile",
   "namespace": "sync",
@@ -15,5 +15,7 @@
   "connections": [],
   "modified_by": "Sample User",
   "modified_time": "2026-07-05T09:00:00+00:00",
-  "rest": false
+  "rest": false,
+  "unresolved": [],
+  "ambiguous": []
 }

@@ -12,6 +12,12 @@
       "name": "Compact",
       "visible": true,
       "sections": 2
+    },
+    {
+      "id": 3200,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
     }
   ]
 }

@@ -1,25 +1,21 @@
 {
   "sv": 3,
-  "id": "9017",
-  "name": "openTicket",
+  "id": "9026",
+  "name": "ticketButton",
   "namespace": "support",
-  "display_name": "openTicket",
+  "display_name": "ticketButton",
   "category": "custombutton",
   "return_type": "map",
   "params": [
     {
-      "name": "accountId",
-      "type": "string"
-    },
-    {
-      "name": "subject",
+      "name": "ticketId",
       "type": "string"
     }
   ],
   "connections": [],
   "modified_by": "Sample User",
   "modified_time": "2026-07-09T09:00:00+00:00",
-  "rest": true,
+  "rest": false,
   "unresolved": [],
   "ambiguous": []
 }

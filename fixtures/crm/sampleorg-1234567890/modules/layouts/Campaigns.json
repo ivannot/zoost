@@ -6,6 +6,12 @@
       "name": "Standard",
       "visible": true,
       "sections": 3
+    },
+    {
+      "id": 3210,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
     }
   ]
 }

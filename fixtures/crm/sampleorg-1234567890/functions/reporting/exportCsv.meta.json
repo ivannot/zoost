@@ -15,5 +15,9 @@
   "connections": [],
   "modified_by": "Sample User",
   "modified_time": "2026-07-08T09:00:00+00:00",
-  "rest": true
+  "rest": true,
+  "unresolved": [
+    "legacy.dump"
+  ],
+  "ambiguous": []
 }

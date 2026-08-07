@@ -842,13 +842,35 @@
       "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
+    },
+    "Ledger": {
+      "id": "Ledger",
+      "name": "Ledger",
+      "api_name": "Ledger",
+      "display_name": "Ledger",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [],
+      "layouts": [],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
+      "unreadable": {
+        "status": 400,
+        "code": "INVALID_MODULE",
+        "at": "2026-08-07T10:00:00.000Z",
+        "message": "operation cannot be performed for hidden module"
+      }
     }
   },
   "edges": [],
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 12,
+    "nodes": 13,
     "edges": 15,
     "dead_suspects": 0,
     "unresolved": 0

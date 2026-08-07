@@ -51,7 +51,12 @@ MODULES = [
     ("Tickets", "Support Tickets", "custom"),
     ("Campaigns", "Campaigns", "standard"),
     ("Subscriptions", "Subscriptions", "custom"),
+    # Zoho answers 400 INVALID_MODULE for a hidden module. It is written with the refusal and its
+    # date, wears the grey no-mark, and everything downstream of it is absent rather than zero -
+    # a state with five surfaces of its own that an org without one cannot show.
+    ("Ledger", "Ledger", "custom"),
 ]
+REFUSED = "Ledger"
 LOOKUPS = {
     "Contacts": ["Accounts"],
     "Deals": ["Accounts", "Contacts"],
@@ -97,7 +102,20 @@ FUNCS = [
     ("reporting", "weeklyDigest", "scheduler", []),
     ("reporting", "buildCohort", "standalone", ["from", "to"]),
     ("reporting", "exportCsv", "custombutton", ["view"]),
+    ("support", "ticketButton", "custombutton", ["ticketId"]),
+    ("orders", "orderButton", "custombutton", ["orderId"]),
+    # Zoho does not always give a category. The empty one is a kind of its own in the chips
+    # («no category»), and an org where it never occurs cannot show that.
+    ("shared", "legacyHelper", "", ["input"]),
 ]
+
+# Functions whose meta on disk is older than META_SV render as stale - the amber half-dot - and are
+# what «Refresh outdated» exists for. An org where nothing is stale cannot show that flow.
+STALE = {"shared.legacyHelper", "sync.reconcile"}
+# A name the call regex found that resolves to nothing, and one that resolves to more than one.
+# Both are measurements of absence and both have their own panel section and their own chip.
+UNRESOLVED = {"orders.validateOrder": ["pricing.lookupBand"], "reporting.exportCsv": ["legacy.dump"]}
+AMBIGUOUS = {"support.escalate": ["log"]}
 CALLS = {
     "billing.buildInvoice": ["billing.calcTax", "billing.applyDiscount", "shared.formatMoney", "shared.log"],
     "billing.dunningRun": ["billing.buildInvoice", "shared.log"],
@@ -118,6 +136,9 @@ CALLS = {
     "sync.reconcile": ["shared.log"],
     "reporting.weeklyDigest": ["reporting.buildCohort", "shared.formatMoney"],
     "reporting.exportCsv": ["reporting.buildCohort"],
+    "support.ticketButton": ["support.openTicket"],
+    "orders.orderButton": ["orders.validateOrder"],
+    "shared.legacyHelper": [],
 }
 CONNECTIONS = [
     ("warehouse_api", "Warehouse API", ["shipping.planShipment", "orders.reserveStock"]),
@@ -185,12 +206,16 @@ def build_crm(out: pathlib.Path):
         write(out / "functions" / ns / (name + ".dg"), src)
         conns = [c for c, _lbl, users in CONNECTIONS if fid in users]
         js(out / "functions" / ns / (name + ".meta.json"), {
-            "sv": 3, "id": str(9000 + len(index)), "name": name, "namespace": ns,
+            # Below META_SV on purpose for a couple of them: that is what the amber half-dot and
+            # «Refresh outdated» are for, and an org where nothing is stale cannot show either.
+            "sv": 1 if fid in STALE else 3,
+            "id": str(9000 + len(index)), "name": name, "namespace": ns,
             "display_name": name, "category": cat, "return_type": "void" if not params else "map",
             "params": [{"name": p, "type": "string"} for p in params],
             "connections": conns, "modified_by": "Sample User",
             "modified_time": "2026-07-0{}T09:00:00+00:00".format(1 + len(index) % 9),
             "rest": name in ("exportCsv", "openTicket"),
+            "unresolved": UNRESOLVED.get(fid, []), "ambiguous": AMBIGUOUS.get(fid, []),
         })
         index.append({"id": str(9000 + len(index)), "name": name, "namespace": ns,
                       "display_name": name, "category": cat})
@@ -207,9 +232,37 @@ def build_crm(out: pathlib.Path):
         layouts = [{"id": 3000 + i, "name": "Standard", "visible": True, "sections": 3}]
         if i % 4 == 0:
             layouts.append({"id": 3100 + i, "name": "Compact", "visible": True, "sections": 2})
+        if i % 5 == 0:
+            layouts.append({"id": 3200 + i, "name": "Retired", "visible": False, "sections": 1})
         related = [{"api_name": "{}_of_{}".format(child, api), "label": child,
-                    "module": child, "type": "default", "visible": True}
+                    "module": child, "type": "default", "visible": True, "via": child + "_Ref"}
                    for child, parents in LOOKUPS.items() if api in parents]
+        # Zoho's own system related lists, and a junction one. Both are facets in the Relations
+        # table («system», «many-to-many») and a fixture without them leaves two filters with
+        # nothing to filter.
+        related += [{"api_name": "Attachments", "label": "Attachments", "module": "Attachments",
+                     "type": "system", "visible": True, "via": ""},
+                    {"api_name": "Notes", "label": "Notes", "module": "Notes",
+                     "type": "system", "visible": False, "via": ""}]
+        if api in ("Products", "Campaigns"):
+            related.append({"api_name": "Campaign_Products", "label": "Campaign products",
+                            "module": "Products" if api == "Campaigns" else "Campaigns",
+                            "type": "multiselect", "visible": True,
+                            "via": "linking: Campaign_Product_Link"})
+        if api == REFUSED:
+            js(out / "modules" / (api + ".json"), {
+                "api_name": api, "display_name": label, "category": cat,
+                "fields": [], "layouts": [], "related_lists": [],
+                "unreadable": {"status": 400, "code": "INVALID_MODULE", "at": "2026-08-07T10:00:00.000Z",
+                               "message": "operation cannot be performed for hidden module"},
+            })
+            js(out / "modules" / "layouts" / (api + ".json"), {"api_name": api, "layouts": []})
+            mods.append({"api_name": api, "display_name": label, "category": cat,
+                         "fieldCount": 0, "layoutCount": 0,
+                         "unreadable": {"status": 400, "code": "INVALID_MODULE",
+                                        "at": "2026-08-07T10:00:00.000Z",
+                                        "message": "operation cannot be performed for hidden module"}})
+            continue
         js(out / "modules" / (api + ".json"), {
             "api_name": api, "display_name": label, "category": cat,
             "fields": fields, "layouts": layouts, "related_lists": related,
@@ -272,7 +325,12 @@ TABLES = [
     ("Payments", ["Payment_Id", "Invoice_Id", "Received_On", "Method", "Amount"]),
     ("Tickets", ["Ticket_Id", "Account_Id", "Opened_On", "Severity", "Closed_On"]),
     ("Regions", ["Region", "Country", "Timezone"]),
+    # Zoho Analytics flags its own system tables (isSystemTable). They are a condition in the chips,
+    # and a workspace without one leaves that filter with nothing to filter.
+    ("ZohoUsers", ["User_Id", "Email", "Role"]),
+    ("ZohoImportLog", ["Import_Id", "Started_On", "Rows"]),
 ]
+SYSTEM_TABLES = {"ZohoUsers", "ZohoImportLog"}
 FKS = [
     ("Contacts", "Account_Id", "Accounts", "Account_Id"),
     ("Orders", "Account_Id", "Accounts", "Account_Id"),
@@ -305,6 +363,11 @@ QUERIES = [
                     "FROM \"Tickets\" t\n"
                     "JOIN \"Accounts\" a ON a.\"Account_Id\" = t.\"Account_Id\"\n"
                     "GROUP BY a.\"Segment\"", ["Tickets", "Accounts"]),
+    # An empty SQL and an unreadable one are different facts and read differently on five surfaces:
+    # '' is «Zoho returned nothing», null is «we could not fetch it». An `x || fallback` that
+    # conflates them is a bug this project has already had, and it needs both to be caught.
+    ("Empty_Draft", "", []),
+    ("Unreadable_Query", None, []),
 ]
 REPORTS = [
     ("Revenue by country", "Revenue_By_Region", "Chart"),
@@ -335,10 +398,11 @@ def build_analytics(out: pathlib.Path):
     for name, cols in TABLES:
         i = newid(); vid[name] = i
         views.append({"VIEW_ID": i, "VIEW_NAME": name, "VIEW_TYPE": "Table",
-                      "FOLDER": "Data", "PARENT_ID": None, "SYSTEM": False,
+                      "FOLDER": "System" if name in SYSTEM_TABLES else "Data",
+                      "PARENT_ID": None, "SYSTEM": name in SYSTEM_TABLES,
                       "ACT_VIEW_MODTIME": 1786000000000 + n * 1000,
                       "LAST_DATA_MODIFY": "2 hours ago", "LAST_DESIGN_MODIFY": " 03 Jul 2026"})
-        schema[i] = {"name": name, "kind": "Table", "columns": [
+        schema[i] = {"name": name, "kind": "Table", "system": name in SYSTEM_TABLES, "columns": [
             {"name": c, "type": "PLAIN" if not c.endswith(("_Id", "_On")) else
              ("BIGINT" if c.endswith("_Id") else "DATE"), "colid": "{}-{}".format(i, j)}
             for j, c in enumerate(cols)]}
@@ -351,9 +415,13 @@ def build_analytics(out: pathlib.Path):
         schema[i] = {"name": name, "kind": "QueryTable", "columns": [
             {"name": c, "type": "PLAIN", "colid": "{}-{}".format(i, j)}
             for j, c in enumerate(["Col_" + str(k + 1) for k in range(3)])]}
-        write(out / "sql" / "{}-{}.sql".format(name, i), sql + "\n")
-        sqlindex[i] = {"file": "{}-{}.sql".format(name, i),
-                       "sources": [vid[s] for s in sources if s in vid]}
+        if sql is None:
+            sqlindex[i] = {"file": None, "failed": True,
+                           "sources": [vid[s] for s in sources if s in vid]}
+        else:
+            write(out / "sql" / "{}-{}.sql".format(name, i), sql + ("\n" if sql else ""))
+            sqlindex[i] = {"file": "{}-{}.sql".format(name, i),
+                           "sources": [vid[s] for s in sources if s in vid]}
         lineage[i] = {"reads": [vid[s] for s in sources if s in vid], "read_by": []}
     for name, parent, kind in REPORTS:
         i = newid(); vid[name] = i
@@ -378,7 +446,9 @@ def build_analytics(out: pathlib.Path):
     relations = [{"from": vid[a], "fromColumn": ca, "to": vid[b], "toColumn": cb,
                   "relation": '("{}"."{}")=("{}"."{}")'.format(a, ca, b, cb)}
                  for a, ca, b, cb in FKS]
-    js(out / "views.json", {"views": views, "folders": ["Data", "Queries", "Reports"]})
+    js(out / "views.json", {"views": views,
+                            "folders": ["Data", "Queries", "Reports", "System"],
+                            "pullFailed": [vid.get("Unreadable_Query")]})
     js(out / "schema.json", {"tables": schema, "relations": relations})
     js(out / "lineage.json", lineage)
     js(out / "sql" / "index.json", sqlindex)
@@ -401,7 +471,8 @@ def graph_crm(index):
                       "params": [{"name": p, "type": "string"} for p in params],
                       "return_type": "void" if not params else "map",
                       "rest": name in ("exportCsv", "openTicket"),
-                      "dead_suspect": False, "unresolved": [], "ambiguous": []}
+                      "dead_suspect": False,
+                      "unresolved": UNRESOLVED.get(fid, []), "ambiguous": AMBIGUOUS.get(fid, [])}
     for i, (mod, name, fn, sched) in enumerate(WORKFLOWS):
         wid = "wf:" + str(4000 + i)
         nodes[wid] = {"id": wid, "name": name, "display_name": name, "namespace": mod,
@@ -440,6 +511,15 @@ def graph_crm(index):
 def graph_crm_schema():
     nodes = {}
     for api, label, cat in MODULES:
+        if api == REFUSED:
+            nodes[api] = {"id": api, "name": api, "api_name": api, "display_name": label,
+                          "namespace": cat, "category": cat, "fields": [], "layouts": [],
+                          "related_lists": [], "calls": [], "called_by": [],
+                          "dead_suspect": False, "unresolved": [], "ambiguous": [],
+                          "unreadable": {"status": 400, "code": "INVALID_MODULE",
+                                         "at": "2026-08-07T10:00:00.000Z",
+                                         "message": "operation cannot be performed for hidden module"}}
+            continue
         fields = [{"api_name": a, "data_type": t, "mandatory": m, "lookup": None}
                   for a, t, m in FIELD_POOL[:6]]
         for target in LOOKUPS.get(api, []):
@@ -480,7 +560,7 @@ def graph_analytics(views, vid, relations, lineage):
         nodes[i] = {"id": i, "name": v["VIEW_NAME"], "api_name": v["VIEW_NAME"],
                     "display_name": v["VIEW_NAME"],
                     "namespace": "query" if v["VIEW_TYPE"] == "QueryTable" else "table",
-                    "category": v["VIEW_TYPE"], "system": False, "fields": fields,
+                    "category": v["VIEW_TYPE"], "system": bool(v.get("SYSTEM")), "fields": fields,
                     "joins": [], "calls": [], "called_by": [],
                     "dead_suspect": False, "unresolved": [], "ambiguous": []}
     for r in relations:

@@ -72,14 +72,32 @@
       "label": "Invoices",
       "module": "Invoices",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Invoices_Ref"
     },
     {
       "api_name": "Shipments_of_Orders",
       "label": "Shipments",
       "module": "Shipments",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Shipments_Ref"
+    },
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
     }
   ]
 }

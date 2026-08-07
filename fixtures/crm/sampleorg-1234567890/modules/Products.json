@@ -84,14 +84,40 @@
       "label": "Tickets",
       "module": "Tickets",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Tickets_Ref"
     },
     {
       "api_name": "Subscriptions_of_Products",
       "label": "Subscriptions",
       "module": "Subscriptions",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Subscriptions_Ref"
+    },
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
+    },
+    {
+      "api_name": "Campaign_Products",
+      "label": "Campaign products",
+      "module": "Campaigns",
+      "type": "multiselect",
+      "visible": true,
+      "via": "linking: Campaign_Product_Link"
     }
   ]
 }

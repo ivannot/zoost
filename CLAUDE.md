@@ -769,13 +769,30 @@ it - each ring just outside the previous one, plus a gap the slider controls - w
 changes what the `ring` slider *means*, which is why it has not been done in passing. `tools/shots.py`
 moves the slider and says so; the defect is still there for anyone who does not.
 
+**An arrowhead is drawn in the diagram's coordinates, so its size on screen is the zoom.** Reported
+as «sometimes I see the arrows and sometimes not»: they were always there - every link carries a
+`marker-end` - and measured on the sample org the head came out **20.6px** across on a focused view
+at 1.15 zoom and **3.3px** on the whole org at 0.28. Direction is half of what an edge says. The
+marker is sized against the zoom now, which needs `markerUnits="userSpaceOnUse"` (or the size also
+multiplies by each link's stroke width, and there are four of those against one marker) and a
+`viewBox` (or the shape and `refX` move with the width, and the tip stops landing on the box edge).
+
 **The sample org lives in `fixtures/`, outside `apps/`, so it can never ship.** `python3
 fixtures/make.py` writes a workspace in the exact shape a pull produces, plus the `graphData`
 payloads the diagram window consumes. It exists for three reasons and the second is the one that is
 easy to forget: screenshots that need no blurring, **data that survives the session** (fixtures built
 in a scratch directory die with the conversation that made them, so a fresh checkout starts with
 nothing to point the panel at), and tests that want a real workspace. The seed is fixed, so two runs
-are byte-identical and a diff means something changed on purpose. Every name in it is generic -
+are byte-identical and a diff means something changed on purpose.
+
+**And it has to contain everything, which is a check rather than a habit.** «Put it all in the fake
+data» decays the moment a new state is added and nobody remembers the fixture, so a test enumerates
+them: every function category including the empty one, REST, unresolved, ambiguous, unreferenced, an
+unused connection, a module Zoho refuses to describe, stale meta below `META_SV`, a hidden layout,
+system and many-to-many related lists, system tables, an orphan view, a query whose SQL came back
+**empty** and one that could not be read at all. Each of those has its own mark, message or filter,
+and a screenshot taken against an org that has none of them shows a product simpler than the one
+that ships. Every name in it is generic -
 Zoho's own module names and ordinary business words - because a real portal or function name in a
 fixture contradicts the independence this project states, on a surface about to be published.
 

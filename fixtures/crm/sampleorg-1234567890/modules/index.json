@@ -5,7 +5,7 @@
       "display_name": "Accounts",
       "category": "standard",
       "fieldCount": 6,
-      "layoutCount": 2
+      "layoutCount": 3
     },
     {
       "api_name": "Contacts",
@@ -40,7 +40,7 @@
       "display_name": "Quotes",
       "category": "standard",
       "fieldCount": 13,
-      "layoutCount": 1
+      "layoutCount": 2
     },
     {
       "api_name": "Invoices",
@@ -75,7 +75,7 @@
       "display_name": "Campaigns",
       "category": "standard",
       "fieldCount": 10,
-      "layoutCount": 1
+      "layoutCount": 2
     },
     {
       "api_name": "Subscriptions",
@@ -83,6 +83,19 @@
       "category": "custom",
       "fieldCount": 13,
       "layoutCount": 1
+    },
+    {
+      "api_name": "Ledger",
+      "display_name": "Ledger",
+      "category": "custom",
+      "fieldCount": 0,
+      "layoutCount": 0,
+      "unreadable": {
+        "status": 400,
+        "code": "INVALID_MODULE",
+        "at": "2026-08-07T10:00:00.000Z",
+        "message": "operation cannot be performed for hidden module"
+      }
     }
   ]
 }

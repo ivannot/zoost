@@ -640,6 +640,76 @@
     },
     "177856000000000044": {
       "id": "177856000000000044",
+      "name": "ZohoUsers",
+      "api_name": "ZohoUsers",
+      "display_name": "ZohoUsers",
+      "namespace": "table",
+      "category": "Table",
+      "system": true,
+      "fields": [
+        {
+          "api_name": "User_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Email",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Role",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "177856000000000048": {
+      "id": "177856000000000048",
+      "name": "ZohoImportLog",
+      "api_name": "ZohoImportLog",
+      "display_name": "ZohoImportLog",
+      "namespace": "table",
+      "category": "Table",
+      "system": true,
+      "fields": [
+        {
+          "api_name": "Import_Id",
+          "data_type": "BIGINT",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Started_On",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Rows",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "177856000000000052": {
+      "id": "177856000000000052",
       "name": "Revenue_By_Region",
       "api_name": "Revenue_By_Region",
       "display_name": "Revenue_By_Region",
@@ -673,8 +743,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000048": {
-      "id": "177856000000000048",
+    "177856000000000056": {
+      "id": "177856000000000056",
       "name": "Open_Invoices",
       "api_name": "Open_Invoices",
       "display_name": "Open_Invoices",
@@ -708,8 +778,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000052": {
-      "id": "177856000000000052",
+    "177856000000000060": {
+      "id": "177856000000000060",
       "name": "Late_Shipments",
       "api_name": "Late_Shipments",
       "display_name": "Late_Shipments",
@@ -743,8 +813,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000056": {
-      "id": "177856000000000056",
+    "177856000000000064": {
+      "id": "177856000000000064",
       "name": "Basket_Size",
       "api_name": "Basket_Size",
       "display_name": "Basket_Size",
@@ -778,8 +848,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000060": {
-      "id": "177856000000000060",
+    "177856000000000068": {
+      "id": "177856000000000068",
       "name": "Ticket_Load",
       "api_name": "Ticket_Load",
       "display_name": "Ticket_Load",
@@ -815,6 +885,76 @@
     },
     "177856000000000072": {
       "id": "177856000000000072",
+      "name": "Empty_Draft",
+      "api_name": "Empty_Draft",
+      "display_name": "Empty_Draft",
+      "namespace": "query",
+      "category": "QueryTable",
+      "system": false,
+      "fields": [
+        {
+          "api_name": "Col_1",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_2",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_3",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "177856000000000076": {
+      "id": "177856000000000076",
+      "name": "Unreadable_Query",
+      "api_name": "Unreadable_Query",
+      "display_name": "Unreadable_Query",
+      "namespace": "query",
+      "category": "QueryTable",
+      "system": false,
+      "fields": [
+        {
+          "api_name": "Col_1",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_2",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Col_3",
+          "data_type": "PLAIN",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "joins": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "177856000000000088": {
+      "id": "177856000000000088",
       "name": "Open invoices",
       "api_name": "Open invoices",
       "display_name": "Open invoices",
@@ -829,8 +969,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000092": {
-      "id": "177856000000000092",
+    "177856000000000108": {
+      "id": "177856000000000108",
       "name": "Product catalogue",
       "api_name": "Product catalogue",
       "display_name": "Product catalogue",
@@ -845,8 +985,8 @@
       "unresolved": [],
       "ambiguous": []
     },
-    "177856000000000100": {
-      "id": "177856000000000100",
+    "177856000000000116": {
+      "id": "177856000000000116",
       "name": "Unused view",
       "api_name": "Unused view",
       "display_name": "Unused view",
@@ -866,9 +1006,9 @@
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 18,
+    "nodes": 22,
     "edges": 9,
-    "dead_suspects": 8,
+    "dead_suspects": 12,
     "unresolved": 0
   },
   "workspace": {

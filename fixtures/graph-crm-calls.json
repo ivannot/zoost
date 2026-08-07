@@ -237,7 +237,8 @@
         "shared.log"
       ],
       "called_by": [
-        "orders.onOrderCreate"
+        "orders.onOrderCreate",
+        "orders.orderButton"
       ],
       "params": [
         {
@@ -248,7 +249,9 @@
       "return_type": "map",
       "rest": false,
       "dead_suspect": false,
-      "unresolved": [],
+      "unresolved": [
+        "pricing.lookupBand"
+      ],
       "ambiguous": []
     },
     "orders.reserveStock": {
@@ -431,7 +434,9 @@
       "calls": [
         "shared.log"
       ],
-      "called_by": [],
+      "called_by": [
+        "support.ticketButton"
+      ],
       "params": [
         {
           "name": "accountId",
@@ -444,7 +449,7 @@
       ],
       "return_type": "map",
       "rest": true,
-      "dead_suspect": true,
+      "dead_suspect": false,
       "unresolved": [],
       "ambiguous": []
     },
@@ -473,7 +478,9 @@
       "rest": false,
       "dead_suspect": false,
       "unresolved": [],
-      "ambiguous": []
+      "ambiguous": [
+        "log"
+      ]
     },
     "support.closeStale": {
       "id": "support.closeStale",
@@ -625,6 +632,72 @@
       ],
       "return_type": "map",
       "rest": true,
+      "dead_suspect": true,
+      "unresolved": [
+        "legacy.dump"
+      ],
+      "ambiguous": []
+    },
+    "support.ticketButton": {
+      "id": "support.ticketButton",
+      "name": "ticketButton",
+      "display_name": "ticketButton",
+      "namespace": "support",
+      "category": "custombutton",
+      "calls": [
+        "support.openTicket"
+      ],
+      "called_by": [],
+      "params": [
+        {
+          "name": "ticketId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.orderButton": {
+      "id": "orders.orderButton",
+      "name": "orderButton",
+      "display_name": "orderButton",
+      "namespace": "orders",
+      "category": "custombutton",
+      "calls": [
+        "orders.validateOrder"
+      ],
+      "called_by": [],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shared.legacyHelper": {
+      "id": "shared.legacyHelper",
+      "name": "legacyHelper",
+      "display_name": "legacyHelper",
+      "namespace": "shared",
+      "category": "",
+      "calls": [],
+      "called_by": [],
+      "params": [
+        {
+          "name": "input",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
       "dead_suspect": true,
       "unresolved": [],
       "ambiguous": []
@@ -953,9 +1026,9 @@
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 45,
-    "edges": 52,
-    "dead_suspects": 4,
+    "nodes": 48,
+    "edges": 54,
+    "dead_suspects": 6,
     "unresolved": 0
   },
   "workspace": {

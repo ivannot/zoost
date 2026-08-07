@@ -52,6 +52,12 @@
       "name": "Compact",
       "visible": true,
       "sections": 2
+    },
+    {
+      "id": 3200,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
     }
   ],
   "related_lists": [
@@ -60,49 +66,72 @@
       "label": "Contacts",
       "module": "Contacts",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Contacts_Ref"
     },
     {
       "api_name": "Deals_of_Accounts",
       "label": "Deals",
       "module": "Deals",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Deals_Ref"
     },
     {
       "api_name": "Quotes_of_Accounts",
       "label": "Quotes",
       "module": "Quotes",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Quotes_Ref"
     },
     {
       "api_name": "Invoices_of_Accounts",
       "label": "Invoices",
       "module": "Invoices",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Invoices_Ref"
     },
     {
       "api_name": "Orders_of_Accounts",
       "label": "Orders",
       "module": "Orders",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Orders_Ref"
     },
     {
       "api_name": "Tickets_of_Accounts",
       "label": "Tickets",
       "module": "Tickets",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Tickets_Ref"
     },
     {
       "api_name": "Subscriptions_of_Accounts",
       "label": "Subscriptions",
       "module": "Subscriptions",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Subscriptions_Ref"
+    },
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
     }
   ]
 }

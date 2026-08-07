@@ -1372,7 +1372,29 @@ function erEdgePoints(A, B) {
   const bx = bcx >= acx ? B.x : B.x + B.w, by = B.y + B.h / 2;
   return [ax, ay, bx, by];
 }
-function erApply() { $('ervp').style.transform = `translate(${erTx}px,${erTy}px) scale(${erScale})`; }
+function erApply() {
+  $('ervp').style.transform = `translate(${erTx}px,${erTy}px) scale(${erScale})`;
+  erSizeArrows();
+}
+// The arrowhead is drawn in the diagram's own coordinates and then the whole drawing is scaled, so
+// its size on screen was the zoom times its size in the markup: measured on the sample org, 20.6px
+// across on a focused view at 1.15 and **3.3px** on the whole org at 0.28. It was reported as «the
+// arrows are sometimes there and sometimes not» - they were always there, and a three-pixel triangle
+// is not there in any sense that matters. Direction is half of what an edge says.
+//
+// So the marker is sized against the zoom and comes out the same on screen at any of them. It needs
+// `markerUnits="userSpaceOnUse"`, or the size would also multiply by each link's stroke width - four
+// different values here - and one marker cannot be four sizes. The `viewBox` is what lets the width
+// change without the shape or `refX` moving with it, so the tip still lands on the box edge.
+const ARROW = { erarrow: [9, 8], erarrowsel: [12, 9] };
+function erSizeArrows() {
+  const k = 1 / Math.max(erScale, 0.02);
+  for (const [id, [w, h]] of Object.entries(ARROW)) {
+    const m = document.getElementById(id); if (!m) continue;
+    m.setAttribute('markerWidth', (w * k).toFixed(2));
+    m.setAttribute('markerHeight', (h * k).toFixed(2));
+  }
+}
 function erRender() {
   const shown = new Set(erIds);
   const boxes = $('erboxes'); boxes.innerHTML = '';

@@ -1,0 +1,7 @@
+// orders.orderButton - sample function, invented for the fixture org.
+map orderButton(string orderId)
+{
+    info "orders.orderButton start";
+    r0 = orders.validateOrder();
+    return r0;
+}

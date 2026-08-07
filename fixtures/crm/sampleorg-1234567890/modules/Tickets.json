@@ -84,5 +84,22 @@
       "sections": 3
     }
   ],
-  "related_lists": []
+  "related_lists": [
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
+    }
+  ]
 }

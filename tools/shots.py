@@ -50,6 +50,13 @@ SHOTS = [
     ("crm-explorer", "crm", "graph-crm-calls.json", """
         select('orders.onOrderCreate');
     """),
+    ("crm-buttons", "crm", "graph-crm-calls.json", """
+        // Narrowed to one category, which is both a picture of the filter and the only way a
+        // reader sees that custom buttons are in here at all.
+        hiddenKinds = new Set(allKinds().filter((k) => k !== 'custombutton'));
+        syncChips(); applyFilter();
+        select('support.openTicket');
+    """),
     ("crm-relations", "crm", "graph-crm-calls.json", """
         $('focusx').click();
         document.querySelector('.tab[data-v="rel"]').click();

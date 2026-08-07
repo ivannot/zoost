@@ -70,7 +70,38 @@
       "name": "Standard",
       "visible": true,
       "sections": 3
+    },
+    {
+      "id": 3210,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
     }
   ],
-  "related_lists": []
+  "related_lists": [
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
+    },
+    {
+      "api_name": "Campaign_Products",
+      "label": "Campaign products",
+      "module": "Products",
+      "type": "multiselect",
+      "visible": true,
+      "via": "linking: Campaign_Product_Link"
+    }
+  ]
 }

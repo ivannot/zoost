@@ -88,6 +88,12 @@
       "name": "Standard",
       "visible": true,
       "sections": 3
+    },
+    {
+      "id": 3205,
+      "name": "Retired",
+      "visible": false,
+      "sections": 1
     }
   ],
   "related_lists": [
@@ -96,7 +102,24 @@
       "label": "Orders",
       "module": "Orders",
       "type": "default",
-      "visible": true
+      "visible": true,
+      "via": "Orders_Ref"
+    },
+    {
+      "api_name": "Attachments",
+      "label": "Attachments",
+      "module": "Attachments",
+      "type": "system",
+      "visible": true,
+      "via": ""
+    },
+    {
+      "api_name": "Notes",
+      "label": "Notes",
+      "module": "Notes",
+      "type": "system",
+      "visible": false,
+      "via": ""
     }
   ]
 }
