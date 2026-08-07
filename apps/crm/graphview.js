@@ -70,10 +70,18 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   $('statline').innerHTML = _schema
-    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
+    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
     : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
-  $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
+  // The name the user gave the workspace, if there is one, and never *instead of* the platform's:
+  // a header showing only our own words would be one nobody could check against Zoho, which is the
+  // reason the panel keeps both too.
+  $('s-ws').innerHTML = (ws.instance || ws.org)
+    ? `\u00b7 ${ws.label ? `<b>${esc(ws.label)}</b> \u00b7 ` : ''}${ws.label ? '' : '<b>'}${esc(ws.instance || '?')}${ws.label ? '' : '</b>'} \u00b7 org ${esc(ws.org || '?')}`
+    : '';
+  // The box searches whatever this window is drawing, and it stopped being only functions the day
+  // workflows, schedules and connections became nodes.
+  $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
   buildChips(); render(); buildLegend(); initCanvas(); updateTopTools(); wireSubject();
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
@@ -130,7 +138,7 @@ function buildChips() {
     chips.appendChild(c);
   });
   const x = document.createElement('span');
-  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u2715';
+  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u2715 Clear';
   x.title = 'Clear the filter'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Clear the filter');
   x.onclick = () => { picked.clear(); buildChips(); applyFilter(); };
   chips.appendChild(x);
@@ -827,7 +835,7 @@ function updateDepthUI() {
   const dp = $('erdepth'); if (dp) dp.style.opacity = scopeAll ? '.45' : '';
 }
 function updateScopeUI() {
-  const lbl = scopeAll ? `Scope: ${NOUN().all.toLowerCase()}` : `Scope: ${curFocus || 'focus'}`;
+  const lbl = scopeAll ? `Scope: ${NOUN().all.toLowerCase()}` : `Scope: ${focusName(curFocus) || 'focus'}`;
   const ttl = scopeAll
     ? 'Showing every module. Click to go back to the focused neighbourhood.'
     : 'Showing the focus neighbourhood. Click to show every module (full diagram for A0 printing).';
@@ -844,7 +852,7 @@ function setScope(all) {
   // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it - we
   // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
   if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} ${NOUN().n}</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(curFocus)}</b>; widen with depth instead.`;
+    $('statline').innerHTML = `<b>${nodesA.length} ${NOUN().n}</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(focusName(curFocus))}</b>; widen with depth instead.`;
     return;
   }
   scopeAll = !!all;
@@ -852,15 +860,16 @@ function setScope(all) {
   if (curView === 'er') erShow();
   else if (curView === 'visual') { fitView(); draw(); }
 }
+const focusName = (id) => (id && N[id] ? label(N[id]) : (id || ''));
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 <b>${DATA.counts.nodes}</b> ${NOUN().n} \u00b7 <b>${DATA.counts.edges}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 <b>${DATA.counts.nodes}</b> ${NOUN().n} \u00b7 <b>${DATA.counts.edges}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(focusName(curFocus))}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
     return;
   }
   const nn = egoSet ? egoSet.size : DATA.counts.nodes;
   const ne = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> ${NOUN().n} \u00b7 <b>${ne}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> ${NOUN().n} \u00b7 <b>${ne}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));

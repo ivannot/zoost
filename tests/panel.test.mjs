@@ -640,6 +640,28 @@ test('a function box lists what it calls, the way a module box lists its fields'
     ['Email'], 'erFieldsFor stopped returning a module\'s fields');
 });
 
+test('nothing user-facing prints a raw node id', () => {
+  // The rule is already written down - anything a person reads goes through label(), with the id
+  // only as a last resort - and it held by luck: a function's id *is* namespace.name, so it read
+  // fine. A workflow's is «wf:501», and the Focus label printed exactly that. Reported.
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(src, /const focusName = \(id\) => \(id && N\[id\] \? label\(N\[id\]\) : \(id \|\| ''\)\)/,
+    'the accessor that keeps an id off the screen is gone');
+  for (const raw of [/esc\(curFocus\)/, /esc\(DATA\.focus\)/, /\$\{curFocus \|\| 'focus'\}/]) {
+    assert.ok(!raw.test(src), `a raw id reaches the screen again: ${raw}`);
+  }
+});
+
+test('the workspace bar carries the name the user gave it, next to the platform\'s', () => {
+  // A list showing only our own words would be one nobody could check against Zoho - the reason the
+  // panel keeps both - and the diagram window was showing only the platform's.
+  const js = read('apps/crm/sidepanel.js');
+  const w = [...js.matchAll(/workspace = \{[^}]*\}/g)].map((m) => m[0]);
+  assert.ok(w.length >= 3, 'the graph stopped carrying its workspace');
+  for (const one of w) assert.match(one, /label: bound\?\.label/, `a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
+  assert.match(read('apps/crm/graphview.js'), /ws\.label \?/, 'the window ignores it');
+});
+
 test('the chips are two dimensions, multi-select, and they steer every projection', () => {
   // Reported: Workflows, Schedules and Connections are Zoho objects, not kinds of function, and
   // dressing them like the six category chips made nine chips read as one list of nine kinds.

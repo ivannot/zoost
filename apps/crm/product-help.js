@@ -61,7 +61,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   a schedule that fires a function is a node of its own, and so is every connection a function uses.
   All of it from what is already on disk - nothing extra is fetched. The chips above the list choose
   what is drawn: any number can be on at once, and switching "Connections" off is how you read the
-  diagram without them. The ✕ beside them clears the filter, and there is one in the search box too. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
+  diagram without them. The ✕ Clear beside them removes the filter, and there is one in the
+  search box too. The button that opens that window is in the workspace bar, between "MD" and
+  "Health ♥". Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
   what holds the working folder - so it has to be open and the folder granted.

@@ -100,9 +100,13 @@
      dressed the same, nine chips read as one list of nine kinds. */
   .chip.ent{border-radius:5px}
   .chip.ent:first-of-type{margin-left:6px}
-  .chipx{font:12px var(--sans);line-height:1;padding:4px 7px;border:1px solid transparent;border-radius:999px;
-         color:var(--muted);cursor:pointer;align-self:center}
-  .chipx:hover{background:var(--sel-soft);color:var(--sel)}
+  /* It read as a stray character: no border, no shape, and nothing under the cursor said it could
+     be pressed. It is a chip like its neighbours now, with the word beside the mark - reported as
+     «you have to find it by trial». */
+  .chipx{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;
+         background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+         margin-left:6px}
+  .chipx:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-soft)}
   /* A chip carries the colour of what it selects: pressed fills, released outlines. Without this the
      dots in the list were a code with no key anywhere on the screen. */
   .chip[data-hue]{border-color:var(--hue);color:var(--hue)}

@@ -731,7 +731,7 @@ async function loadGraph() {
   }
   const g = window.buildGraph(nodes);
   nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; g.nodes[id].stats = fnStats(nd.dg); } });
-  g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
+  g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
   return g;
 }
 async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
@@ -1250,7 +1250,7 @@ async function openGraph() {
   try {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus('Building graph…', 'busy'); await refreshContext(); const g = await callGraphWithContext();
-    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
+    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Graph: ${g.counts.nodes} nodes, ${g.counts.edges} edges.`, 'ok');
@@ -1878,7 +1878,7 @@ async function buildGraphFor(kind) {
     if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the panel');
     const g = kind === 'schema' ? await buildSchemaGraph() : await callGraphWithContext();
     if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
-    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
+    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
     await chrome.storage.local.set({ graphData: g });
     setStatus(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
     return { ok: true };
@@ -2276,7 +2276,9 @@ function setMode(mode) {
   $('pullone').title = `Pull only ${_typeLabel} into the local mirror - "Pull all" pulls every type`;
   buildTypeChips();
   $('funcs').style.display = mode === 'functions' ? '' : 'none';
-  $('graph').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
+  // It lives in the workspace bar now, beside Export and Health, so it no longer comes and goes with
+  // the tab - the diagram window can switch between the two drawings by itself, so there is always
+  // something for it to open. Only *which* one it opens follows the tab.
   $('nameToggle').style.display = (mode === 'functions' || mode === 'modules') ? '' : 'none';
   // The mark stays; only what it opens changes. Writing textContent here wiped it on the first
   // mode switch - the same defect as #pullone, and the general shape: a control whose label lives
@@ -2284,10 +2286,10 @@ function setMode(mode) {
   // Two names, because two different drawings: functions are a call graph, modules are an ER model.
   // Everything else that opens this window uses one of these two and no third word - «Schema»,
   // «Graph ↗» and «Open ER» were four names for one thing and the author could not keep them apart.
-  $('graph').setAttribute('aria-label', mode === 'functions' ? 'Call graph' : 'ER diagram');
-  $('graph').title = mode === 'functions'
-    ? 'Call graph - which function calls which, in its own window'
-    : 'ER diagram - modules and the relations between them, in its own window';
+  $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Call graph');
+  $('graph').title = mode === 'modules'
+    ? 'ER diagram - modules and the relations between them, in its own window'
+    : 'Call graph - what fires each function, what it calls, and what it reaches, in its own window';
   $('nameToggle').textContent = 'Name: ' + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
@@ -2746,7 +2748,7 @@ async function openCallFocus(id, depth) {
     if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });
-    gg.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
+    gg.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
     await chrome.storage.local.set({ graphData: gg });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     const n = g.nodes[id];
@@ -3887,7 +3889,7 @@ loadScope();
 // again whenever either can have moved: a workspace opening (different org, different roles) and a
 // pull learning something new both call renderTabs themselves.
 loadTabPrefs().then(renderTabs);
-$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'functions' ? openGraph() : openSchemaGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
+$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;
