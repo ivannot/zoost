@@ -847,6 +847,16 @@ handle and the binding are one fact about one workspace and are now set together
 order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
 the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
+**A label can be stale; the action must not be.** Reported as pressing «+ Sample workspace» over and
+over and recreating the sample each time. The label is repainted by `updateWsButtons()`, so between
+the workspace list changing and that running it can say the wrong thing - and I could not reproduce
+the stale label at all, which is exactly why the fix does not depend on finding it. **The function
+checks**: with a sample on disk it opens it and never writes a second, whatever the button says. Two
+more guards came with it, both of them ways this could go wrong rather than ways it had: a re-entry
+flag, because nothing stopped a second click landing while the first was writing three hundred files,
+and the overlay comes down *first*, because it is opaque and covers the status line - the progress was
+being written where nobody could read it, which is what made pressing again look reasonable.
+
 **«A control with nothing to do is absent» does not transfer between two copies of it.** The
 workspace bar's `+ Sample` is hidden once one exists - right, because the dropdown beside it opens
 the sample in one click either way. I gave the **overlay's** copy the same wiring without thinking

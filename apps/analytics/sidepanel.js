@@ -1944,20 +1944,42 @@ $('wsadd').onclick = addWorkspace;
 $('wssample').onclick = () => addSampleWorkspace();
 // The same action from the off-Zoho overlay, which is where somebody who has just installed
 // Zoost and is not signed in to anything actually is.
-$('offsample').onclick = () => {
-  const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
-  if (have) { $('ws').value = have.id; return selectWorkspace(have); }
-  return addSampleWorkspace();
-};
+// One call for both copies of the button: addSampleWorkspace() decides whether there is one to
+// open or one to write, so the two cannot disagree and neither can act on a stale label.
+$('offsample').onclick = () => addSampleWorkspace();
 /** Write the sample workspace into the working folder, then open it.
  *
  * It goes through the same code every other workspace does - the files land on disk and the ordinary
  * list picks them up - so nothing downstream has to know it exists. `sample: true` in .zoost.json is
  * the whole mechanism.
  */
+let sampleBusy = false;
 async function addSampleWorkspace() {
+  // Three guards, and the reason for each is a way this went wrong or could.
+  //
+  // 1. Never write a second. The button is *labelled* «Open» once one exists, but a label can be
+  //    stale - it is repainted by updateWsButtons, and if that has not run since the workspace list
+  //    changed it still says «+». Reported as clicking it again and again and recreating the sample
+  //    each time. So the **action** checks, not only the label: with one on disk this opens it.
+  // 2. Not twice at once. Nothing stopped a second click landing while the first was still writing
+  //    three hundred files.
+  // 3. The overlay comes down first. It is opaque and covers the status line, so the progress was
+  //    written where nobody could read it - which is what made pressing again look reasonable.
+  if (sampleBusy) return;
+  const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
+  if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return selectWorkspace(have); }
   if (!root) { await pickRoot(); return; }
   if (!(await ensurePerm(root))) return;
+  sampleBusy = true;
+  $('offoverlay').classList.remove('show');
+  ['wssample', 'offsample'].forEach((b) => { const e = $(b); if (e) e.disabled = true; });
+  try { await writeSampleWorkspace(); }
+  finally {
+    sampleBusy = false;
+    ['wssample', 'offsample'].forEach((b) => { const e = $(b); if (e) e.disabled = false; });
+  }
+}
+async function writeSampleWorkspace() {
   try {
     const gen = window.SAMPLE_ORG;
     if (!gen) { status('The sample generator is not loaded.', 'bad'); return; }
