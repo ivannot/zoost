@@ -166,6 +166,7 @@ d710bd314f03a02f  site/docs-crm.html: Selecting anything in Explorer re-centres 
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
 ec45862413686797  site/docs-crm.html: The bar at the top of that window carries the name you gave the workspace, if you gave it one - beside the platform's own instance and org, never instead of them.
 6d42a2d49c48845b  site/docs-crm.html: The call graph is not only functions.
+81a5bcd193708cdb  site/docs-crm.html: The dashed Only group is the other question, «narrow to nodes that are also…», and it starts empty because that is the truth when nothing is chosen; those three apply to functions.
 9c08a13a728de39d  site/docs-crm.html: The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it.
 559f912244b58afb  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order - the panel is narrow, and a type you never look at is only in the way.
 98ecb6a7dd36d2ac  site/docs-crm.html: The whole conversation is re-sent with every message, so a long thread costs more per question and drags old, irrelevant context into new answers.
@@ -326,6 +327,7 @@ cc9faf92979cf93a  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima d
 16668d9173bc4b4c  site/it/docs-crm.html: HTML ( Export HTML ) - tutto il workspace come un unico file autoconsistente e navigabile.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
+6f651bde71129d16  site/it/docs-crm.html: Il gruppo tratteggiato Only è l'altra domanda, «restringi ai nodi che sono anche…», e parte vuoto perché è la verità quando non hai scelto niente; quei tre valgono per le funzioni.
 a7ab635a5ebd3058  site/it/docs-crm.html: Il modello mentale Tre cose, e tutto il resto discende da queste.
 1f40c1458ddea622  site/it/docs-crm.html: Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente.
 9d47461c202fa82d  site/it/docs-crm.html: Il pull è lento Normale su org grandi: una chiamata per ogni modulo per campi, layout e related list, deliberatamente cadenzata per restare gentile con l'API di Zoho.
@@ -378,6 +380,7 @@ e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consent
 81c8d1f78827e846  site/it/docs-crm.html: Selezionare qualcosa in Explorer ricentra tutte le viste su quello.
 55efef1d11461fb3  site/it/docs-crm.html: Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo schema intero, sia l'ER di un modulo solo.
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
+0809a4256306b81d  site/it/docs-crm.html: Sono raggruppate per dimensione - Functions contiene le cinque categorie Deluge, Workflows , Schedules e Connections valgono una ciascuna - e mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
 d295701fb2f2f160  site/it/docs-crm.html: Spegnere una scheda spegne anche quello, perché quasi sempre una scheda si spegne per un'area che l'account non può leggere e chiederla produrrebbe solo un errore - riaccendilo se rispecchi un tipo per Git senza volerlo sfogliare.
 4a3206eb467b140e  site/it/docs-crm.html: Togliere una chiave, e cambiare motore Ogni blocco provider ha un pulsante Forget : svuota il modello e la chiave, e la rimozione ha effetto quando premi Save AI settings .
 f9361537f89b4ce0  site/it/docs-crm.html: Trovare il nome di una relazione L'API name di una related list non è l'API name di nessuno dei due moduli.
