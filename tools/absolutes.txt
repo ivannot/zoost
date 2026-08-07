@@ -126,6 +126,8 @@ d7ec42cad6a53999  site/docs-analytics.html: Workspace index is how much of the w
 1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
 13c896893d2759e0  site/docs-analytics.html: Zoost only ever reads from Zoho Analytics.
 fb1480858e09fe96  site/docs-crm.html: A module shows no fields and a grey ⊘ Zoho refused to describe it - usually because the module is hidden in that org - so its fields, layouts and related lists were never read.
+d46596c26e556b05  site/docs-crm.html: A workflow or a schedule that fires one is a node of its own, and so is every connection a function reaches - each in its own colour, filterable from the chips.
+d526906a4512534d  site/docs-crm.html: All of it comes from what is already on your disk: a workflow's own JSON says which functions it fires, a schedule's index row names the one it runs, and a function's captured meta lists its connections.
 5236f5b433884e75  site/docs-crm.html: Both are per window and not remembered, and they exist only there: the other three views have no list.
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
 687f4dbbe3ee516c  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".
@@ -161,6 +163,7 @@ d710bd314f03a02f  site/docs-crm.html: Selecting anything in Explorer re-centres 
 4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
 67fd9370d9a74e3c  site/docs-crm.html: That is deliberate - the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
+6d42a2d49c48845b  site/docs-crm.html: The call graph is not only functions.
 9c08a13a728de39d  site/docs-crm.html: The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it.
 559f912244b58afb  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order - the panel is narrow, and a type you never look at is only in the way.
 98ecb6a7dd36d2ac  site/docs-crm.html: The whole conversation is re-sent with every message, so a long thread costs more per question and drags old, irrelevant context into new answers.
@@ -377,9 +380,11 @@ de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata 
 103ff924d2b7fcdd  site/it/docs-crm.html: Tutto ciò che dipende da questa connessione è già rotto.
 9673f3bcc6c69fca  site/it/docs-crm.html: Tutto il resto di Zoost è locale.
 09efc6d3098224d7  site/it/docs-crm.html: Tutto quello che Zoost scrive sta lì dentro.
+b568a66c73bc12a1  site/it/docs-crm.html: Tutto viene da quello che hai già su disco: il JSON di un workflow dice quali funzioni lancia, la riga di indice di uno schedule nomina quella che esegue, e il meta catturato di una funzione elenca le sue connessioni.
 021b613b86f5419b  site/it/docs-crm.html: Un click lo ripristina; non si apre nessun selettore di file.
 29113e00d9dd5d1b  site/it/docs-crm.html: Un modulo non ha campi e ha un ⊘ grigio Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti.
 a5111fdaa94e7fb0  site/it/docs-crm.html: Un ordinamento numerico lascia cadere il raggruppamento per namespace e mostra un elenco piatto, con il namespace che si sposta su ogni riga, perché «quali sono le più grandi» è una domanda diversa da «cosa c'è in questo namespace».
+eb9293f24986f6c7  site/it/docs-crm.html: Un workflow o uno schedule che ne fa partire una è un nodo a sé, e così ogni connessione che una funzione raggiunge - ognuno con il suo colore, filtrabile dalle chip.
 290ba7bcd1ce9f2e  site/it/docs-crm.html: Una volta attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che hai scelto - Anthropic oppure OpenAI - e a nessun altro.
 9c22c57f746005e1  site/it/docs-crm.html: Una volta impostata i campi spariscono - la passphrase non è conservata, quindi non c'è niente da mostrarci dentro - e la sezione dichiara che la chiave è cifrata, con un pulsante Change passphrase per quando ne vuoi un'altra.
 6d70b8d1adb9de49  site/it/docs-crm.html: Unused - è nel catalogo, e nessuna funzione la referenzia.
