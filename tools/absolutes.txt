@@ -170,6 +170,7 @@ bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and c
 0558870da9bdd943  site/docs-crm.html: The ✎ Name this workspace button next to the list gives it a name of your own, and 🗑 Remove workspace beside it deletes that folder - the local mirror only, never anything in Zoho, and a pull brings it back.
 7a054ac91c2bbd48  site/docs-crm.html: These are counts, not a score : length measures verbosity, not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not mine.
 191cefc2a311bbf6  site/docs-crm.html: They look different and are the same fact - the stored key has to be decrypted before it can be written again - and Zoost checks what you type against the stored key before saving anything, so a mistyped passphrase cannot leave you locked out of a key you believe you know.
+becfa6d34e4f50bc  site/docs-crm.html: They steer all three views, so switching Connections off is how you read a diagram without them - the search box narrows the list only.
 e381a6dd705f05ba  site/docs-crm.html: Treat every entry as a candidate to review .
 16620d5094730468  site/docs-crm.html: Turning a tab off clears it, because most tabs are turned off for an area the account cannot read and pulling it then only produces an error - turn it back on if you mirror a type for Git without browsing it.
 f2be60441d80c752  site/docs-crm.html: Usage counts only cover Deluge functions in this workspace .
@@ -319,6 +320,7 @@ cc9faf92979cf93a  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima d
 1a58c0151528ff5c  site/it/docs-crm.html: Entrambi i report dichiarano comunque le date per area: il fatto sta a te pesarlo, e nasconderlo sarebbe l'unica cosa peggiore di un capitolo vecchio.
 1e018b7bb98f49ce  site/it/docs-crm.html: Entrambi portano tutto quello che mostra il pannello, compresi la dimensione di ogni funzione e i conteggi delle chiamate in uscita (una tabella Size and outbound calls nel Markdown, delle colonne nell'indice HTML): un report non deve mai essere una copia ridotta di quello che hai visto a schermo.
 17665e1b260d9afd  site/it/docs-crm.html: Find ha accanto un selettore di ambito: in: names cerca nei nomi dei file, in: code fa una ricerca full-text su tutti i sorgenti delle funzioni dell'org - la cosa più vicina a un grep sul tuo Deluge, e qualcosa che Zoho non offre.
+5ff88323d6720862  site/it/docs-crm.html: Guidano tutte e tre le viste, quindi spegnere Connections è il modo di leggere un diagramma senza di esse - la ricerca invece restringe solo l'elenco.
 16668d9173bc4b4c  site/it/docs-crm.html: HTML ( Export HTML ) - tutto il workspace come un unico file autoconsistente e navigabile.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
