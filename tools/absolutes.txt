@@ -172,6 +172,7 @@ ec45862413686797  site/docs-crm.html: The bar at the top of that window carries 
 98ecb6a7dd36d2ac  site/docs-crm.html: The whole conversation is re-sent with every message, so a long thread costs more per question and drags old, irrelevant context into new answers.
 0558870da9bdd943  site/docs-crm.html: The ✎ Name this workspace button next to the list gives it a name of your own, and 🗑 Remove workspace beside it deletes that folder - the local mirror only, never anything in Zoho, and a pull brings it back.
 7a054ac91c2bbd48  site/docs-crm.html: These are counts, not a score : length measures verbosity, not complexity, and every outbound call is work Zoho meters - how to weigh that is your call, not mine.
+712a7d336c833b8e  site/docs-crm.html: They are grouped by dimension - Functions holds whatever categories your own functions actually have, Workflows , Schedules and Connections one each, and a kind with nothing in it gets no chip.
 191cefc2a311bbf6  site/docs-crm.html: They look different and are the same fact - the stored key has to be decrypted before it can be written again - and Zoost checks what you type against the stored key before saving anything, so a mistyped passphrase cannot leave you locked out of a key you believe you know.
 becfa6d34e4f50bc  site/docs-crm.html: They steer all three views, so switching Connections off is how you read a diagram without them - the search box narrows the list only.
 e381a6dd705f05ba  site/docs-crm.html: Treat every entry as a candidate to review .
@@ -342,6 +343,7 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
+19371a5ef726b718  site/it/docs-crm.html: Mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
 422e56827ea6d29d  site/it/docs-crm.html: Niente related list / nessuna matrice dei layout Quel workspace è stato scaricato prima che esistessero.
 bae2bb9358c7cde4  site/it/docs-crm.html: Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di un'altra.
 e2e23a434d105a25  site/it/docs-crm.html: No, con un'unica eccezione che accendi tu.
@@ -381,7 +383,8 @@ faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appar
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
 55efef1d11461fb3  site/it/docs-crm.html: Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo schema intero, sia l'ER di un modulo solo.
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
-0809a4256306b81d  site/it/docs-crm.html: Sono raggruppate per dimensione - Functions contiene le cinque categorie Deluge, Workflows , Schedules e Connections valgono una ciascuna - e mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
+a85be118c9cb540b  site/it/docs-crm.html: Sono lette dalla tua org invece che elencate nel codice, quindi c'è anche una categoria che Zoho riporta e che nessuno si aspettava, colore compreso; una funzione per cui Zoho non ha dato una categoria è no category .
+ff1e7431193e79e8  site/it/docs-crm.html: Sono raggruppate per dimensione - Functions contiene le categorie che le tue funzioni hanno davvero, Workflows , Schedules e Connections una ciascuna, e un tipo senza niente dentro non ha la sua chip.
 d295701fb2f2f160  site/it/docs-crm.html: Spegnere una scheda spegne anche quello, perché quasi sempre una scheda si spegne per un'area che l'account non può leggere e chiederla produrrebbe solo un errore - riaccendilo se rispecchi un tipo per Git senza volerlo sfogliare.
 4a3206eb467b140e  site/it/docs-crm.html: Togliere una chiave, e cambiare motore Ogni blocco provider ha un pulsante Forget : svuota il modello e la chiave, e la rimozione ha effetto quando premi Save AI settings .
 f9361537f89b4ce0  site/it/docs-crm.html: Trovare il nome di una relazione L'API name di una related list non è l'API name di nessuno dei due moduli.
