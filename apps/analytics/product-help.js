@@ -80,6 +80,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   otherwise, deleted like any other, and the button is absent once one exists.
   The same action is on the "Not on a Zoho tab" screen, as "+ Sample workspace": a sample owes the
   platform nothing, so it opens and reads without a tab and without an account.
+  Once one exists that button reads "Open sample workspace" and opens it: that overlay covers the
+  workspace list too, so hiding it there would leave the sample unreachable.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

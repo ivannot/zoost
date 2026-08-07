@@ -112,6 +112,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   otherwise, deleted like any other, and the button is absent once one exists.
   The same action is on the "Not on a Zoho tab" screen, as "+ Sample workspace": a sample owes the
   platform nothing, so it opens and reads without a tab and without an account.
+  Once one exists that button reads "Open sample workspace" and opens it: that overlay covers the
+  workspace list too, so hiding it there would leave the sample unreachable.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there

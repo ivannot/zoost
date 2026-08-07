@@ -2233,11 +2233,21 @@ function updateWsButtons() {
   add.title = !root ? 'Set the working folder first'
     : !lastCtx ? 'Open a Zoho CRM tab first'
     : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
-  // Absent once one exists - it would do nothing - and while there is nowhere to write it.
+  // Absent once one exists - it would do nothing - and while there is nowhere to write it. The
+  // dropdown is right beside it, so opening the one that is already there costs a click either way.
+  const have = (wsList || []).find((w) => w.binding && w.binding.sample);
   const sb = $('wssample');
-  if (sb) {
-    const have = (wsList || []).some((w) => w.binding && w.binding.sample);
-    sb.hidden = have || !root || !rootGranted;
+  if (sb) sb.hidden = !!have || !root || !rootGranted;
+  // The overlay's copy is a different case and I gave it the same wiring, which was wrong: that
+  // overlay covers the whole panel, dropdown included, so hiding the button there would leave
+  // somebody with a sample already on disk and no way to reach it. It **opens** the existing one
+  // instead, and says so - reported.
+  const ob = $('offsample');
+  if (ob) {
+    ob.textContent = have ? 'Open sample workspace' : '+ Sample workspace';
+    ob.title = have
+      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
+      : 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other';
   }
 }
 
@@ -2369,7 +2379,12 @@ $('wsadd').onclick = () => addWorkspaceForTab();
 $('wssample').onclick = () => addSampleWorkspace();
 // The same action from the off-Zoho overlay, which is where somebody who has just installed
 // Zoost and is not signed in to anything actually is.
-$('offsample').onclick = () => addSampleWorkspace();
+$('offsample').onclick = () => {
+  const have = (wsList || []).find((w) => w.binding && w.binding.sample);
+  // A gesture, so the folder permission can be re-requested if Chrome has let it lapse.
+  if (have) { $('ws').value = have.id; return activate(have, true); }
+  return addSampleWorkspace();
+};
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
 $('wsdel').onclick = async () => {
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;

@@ -478,9 +478,21 @@ function updateButtons() {
   // Harmless, and still a control saying it will do something it will not.
   const known = (wsList || []).some((w) => ctx && ctx.workspace && String(w.id) === String(ctx.workspace));
   $('wsadd').hidden = known;
-  // Absent once one exists - it would do nothing - and while there is nowhere to write it.
+  // Absent once one exists - it would do nothing - and while there is nowhere to write it. The
+  // dropdown is right beside it, so opening the one that is already there costs a click either way.
+  const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
   const sb = $('wssample');
-  if (sb) sb.hidden = (wsList || []).some((w) => w.cfg && w.cfg.sample) || !root || !rootGranted;
+  if (sb) sb.hidden = !!have || !root || !rootGranted;
+  // The overlay's copy is a different case: it covers the whole panel, dropdown included, so hiding
+  // the button there would leave somebody with a sample already on disk and no way to reach it. It
+  // opens the existing one instead, and says so.
+  const ob = $('offsample');
+  if (ob) {
+    ob.textContent = have ? 'Open sample workspace' : '+ Sample workspace';
+    ob.title = have
+      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
+      : 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other';
+  }
   $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
   $('wsdel').disabled = busy || !dir || !wsList.length;
   $('wsrename').disabled = busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
@@ -1932,7 +1944,11 @@ $('wsadd').onclick = addWorkspace;
 $('wssample').onclick = () => addSampleWorkspace();
 // The same action from the off-Zoho overlay, which is where somebody who has just installed
 // Zoost and is not signed in to anything actually is.
-$('offsample').onclick = () => addSampleWorkspace();
+$('offsample').onclick = () => {
+  const have = (wsList || []).find((w) => w.cfg && w.cfg.sample);
+  if (have) { $('ws').value = have.id; return selectWorkspace(have); }
+  return addSampleWorkspace();
+};
 /** Write the sample workspace into the working folder, then open it.
  *
  * It goes through the same code every other workspace does - the files land on disk and the ordinary

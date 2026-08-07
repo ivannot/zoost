@@ -847,6 +847,16 @@ handle and the binding are one fact about one workspace and are now set together
 order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
 the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
+**«A control with nothing to do is absent» does not transfer between two copies of it.** The
+workspace bar's `+ Sample` is hidden once one exists - right, because the dropdown beside it opens
+the sample in one click either way. I gave the **overlay's** copy the same wiring without thinking
+about where it sits: that overlay covers the whole panel, dropdown included, so hiding the button
+there would leave somebody with a sample on disk and no way to reach it. And I got it wrong in the
+other direction too - it went on saying «+ Sample workspace» when one already existed, offering to
+write a second. It reads **Open sample workspace** and opens the existing one. Reported, and the
+shape is the one this file keeps recording: *when you add one of a set, walk the others* - I did the
+opposite here and copied a rule to a place where its reason did not hold.
+
 **A sample needs no tab and no account, and the off-Zoho overlay was hiding it.** That overlay is
 `position:fixed; inset:0; z-index:70`, so with no Zoho tab the whole panel - `+ Sample` included -
 was unreachable: the one workspace anybody can open without an account was the one you could not open

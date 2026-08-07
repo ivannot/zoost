@@ -2420,8 +2420,20 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
     // and the way in has to be on the overlay itself, which is where a new install actually lands
     const ov = html.slice(html.indexOf('id="offoverlay"'), html.indexOf('id="offoverlay"') + 800);
     assert.ok(/id="offsample"/.test(ov), `${app}: the overlay offers no way to try Zoost without signing in`);
-    assert.ok(/\$\('offsample'\)\.onclick = \(\) => addSampleWorkspace\(\)/.test(js),
+    assert.ok(/\$\('offsample'\)\.onclick = \(\) => \{/.test(js),
       `${app}: the overlay's sample button is not wired`);
+    // ...and it opens the one that is already there rather than offering to write a second. Hiding
+    // it, which is right in the workspace bar, would be wrong here: this overlay covers the
+    // dropdown too, so somebody with a sample on disk would have no way to reach it. Reported.
+    const wire = js.slice(js.indexOf("$('offsample').onclick"), js.indexOf("$('offsample').onclick") + 320);
+    assert.ok(/w\.(binding|cfg) && w\.\1\.sample/.test(wire) || /\.sample\)/.test(wire),
+      `${app}: the overlay button does not look for an existing sample`);
+    assert.ok(/addSampleWorkspace\(\)/.test(wire), `${app}: it can no longer write one`);
+    assert.ok(/(activate|selectWorkspace)\(have/.test(wire), `${app}: it cannot open the one that exists`);
+    // the label has to say which of the two it will do
+    const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 400);
+    assert.ok(/'Open sample workspace' : '\+ Sample workspace'/.test(lbl),
+      `${app}: the button says «+ Sample workspace» even when one already exists`);
     assert.ok(/without signing in anywhere/.test(ov),
       `${app}: the overlay does not say the sample needs no account, which is the whole point`);
   }
