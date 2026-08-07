@@ -589,13 +589,31 @@ needs a user gesture a message handler does not have. And the window **reloads**
 the data in place: every global in `graphview.js` is derived from the graph being replaced, and
 re-deriving them one at a time is precisely the half-migrated state this file keeps recording.
 
-**The call chain stops at functions, and that is worth knowing before promising otherwise.** Nodes
-are `.dg` files; edges are function→function, found by `CALL_RE` in the source. A workflow or a
-schedule that *fires* a function is known to the panel - Health reports the broken ones, the exports
-list them, the Explorer shows `associated_place` - and is **neither a node nor an edge**. The one
-place it is accounted for is `dead_suspect`, which is false when a function has an `associated_place`
-or is REST, so a function fired only by a workflow is not miscounted as an orphan. The counting is
-honest; the drawing is incomplete, and closing it means workflow and schedule nodes.
+**The call chain no longer stops at functions, and `callGraphWithContext()` is a separate function
+for a reason.** The graph now carries what *starts* the code and what it *reaches*: a workflow or a
+schedule that fires a function is a node, and so is every connection a function uses. Everything is
+read from disk - the workflow's own JSON, the schedule's index row, the function's captured meta -
+so nothing is fetched and nothing is inferred.
+
+It does **not** widen `ensureGraph()`, which has **eleven** other readers - the health audit, both
+exports, the AI index and seed, the connection usage counts, `showCallers`, `makeCallResolver` - and
+every one of them assumes each node is a Deluge function. Widening that shape would have made all
+eleven quietly wrong, which is why the enrichment is built beside it and only the diagram window
+sees it. **Find every other user before touching a shared thing** - here it was cheaper to add one
+than to alter one.
+
+Three consequences worth keeping. `dead_suspect` is recomputed after the new edges, so «nothing calls
+this» is a stronger statement than it was and a **connection nobody uses** becomes visible as the
+same kind of candidate. A workflow whose file has not been pulled is a node with **no measured
+actions**, never one with none - the rule this file already states for its scheduled-action count.
+And the status line stops saying «N functions»: it prints the breakdown, because «3 functions · 1
+workflow · 2 connections» is a fact and «6 nodes» is a shrug.
+
+The hues are plural on purpose - `--n-workflows` against the Deluge category `schedule` - because
+«Schedules» is the Zoho object and «schedule» is what a function attached to one is called, and the
+two have to sit in the same chip row without reading as the same thing. `KIND_FILTERS` is derived
+from `FILTERS` rather than repeated in `pass()`, since adding a kind and forgetting the second list
+is how a chip ends up selecting nothing, silently.
 
 **The ER diagram has two layout branches**, and they are mutually exclusive:
 concentric (focus + ego set) driven by `ring`, and force-directed driven by `spread`.

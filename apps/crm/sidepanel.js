@@ -1156,11 +1156,100 @@ async function pullAll() {
     await noteAccess('functions', null);
   } catch (e) { await noteAccess('functions', e); setStatus(pullFailMessage('functions', e), 'bad'); } finally { pullActive = false; }
 }
+// The call graph with everything around it: what fires the code, and what the code reaches out to.
+//
+// A separate function on purpose. `ensureGraph()` has eleven other readers - the health audit, the
+// exports, the AI index, the connection usage counts - and every one of them assumes each node is a
+// Deluge function. Widening that shape would have made all eleven quietly wrong, so the enrichment
+// lives here and only the diagram window sees it.
+//
+// Everything it adds is already on disk. Nothing is fetched, and nothing is inferred: a workflow
+// fires a function because its own JSON says so, a schedule because its index row names it, a
+// connection because the function's captured meta lists it.
+const CTX_ID = { wf: (id) => 'wf:' + id, sch: (id) => 'sch:' + id, conn: (name) => 'conn:' + name };
+function ctxNode(id, name, category, namespace, file, extra) {
+  return Object.assign({
+    id, name, api_name: name, display_name: name, namespace: namespace || '', category,
+    calls: [], called_by: [], rest: false, dead_suspect: false, unresolved: [], ambiguous: [],
+    associated_place: null, file: file || '', source_code: '', params: [], stats: null,
+    description: '', connections: [], entity: category,
+  }, extra || {});
+}
+async function callGraphWithContext() {
+  const g = await ensureGraph();
+  const nodes = {};
+  for (const [id, n] of Object.entries(g.nodes)) {
+    nodes[id] = Object.assign({}, n, { calls: n.calls.slice(), called_by: n.called_by.slice(), entity: 'function' });
+  }
+  // The same resolution the health audit uses, and for the same reason: an action names a function
+  // by id when Zoho gives one and by name when it does not.
+  const byId = {}, byName = {};
+  Object.values(nodes).forEach((n) => { if (n.id) byId[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) byName[String(k).toLowerCase()] = n; }); });
+  const link = (from, to) => { if (!from.calls.includes(to.id)) from.calls.push(to.id); if (!to.called_by.includes(from.id)) to.called_by.push(from.id); };
+  const resolveFn = (a) => byId[String(a.id)] || byName[String(a.name || '').toLowerCase()] || null;
+
+  // ---- workflows: their own file says which functions each condition fires -------------------
+  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdx) {
+    let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
+    const node = ctxNode(CTX_ID.wf(w.id), w.name || String(w.id), 'workflows', w.module || '',
+      `workflows/${w.id}.json`, { _downloaded: !!d, _active: w.status !== 'inactive' });
+    nodes[node.id] = node;
+    if (!d) continue;   // not pulled yet: it is a node with no measured actions, never a node with none
+    (d.conditions || []).forEach((c) => {
+      const acts = [];
+      if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions);
+      (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || [])));
+      acts.filter((a) => a.type === 'functions').forEach((a) => { const fn = resolveFn(a); if (fn) link(node, fn); });
+    });
+  }
+
+  // ---- schedules: the index row carries the function it runs ---------------------------------
+  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  scheds.forEach((sc) => {
+    const node = ctxNode(CTX_ID.sch(sc.id), sc.name || String(sc.id), 'schedules', sc.frequency || '',
+      'schedules/index.json', { _active: sc.status !== 'inactive' });
+    nodes[node.id] = node;
+    const fn = resolveFn({ id: sc.function_id, name: sc.function_name });
+    if (fn) link(node, fn);
+  });
+
+  // ---- connections: the join key is the name inside invokeurl [...connection:"..."] ------------
+  let cat = []; try { cat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
+  const conn = {};
+  const ensureConn = (name, meta) => {
+    const id = CTX_ID.conn(name);
+    if (!conn[id]) { conn[id] = ctxNode(id, (meta && meta.label) || name, 'connections', (meta && meta.service) || '', 'connections/index.json'); nodes[id] = conn[id]; }
+    return conn[id];
+  };
+  cat.forEach((c) => { if (c && c.name) ensureConn(c.name, c); });
+  Object.values(nodes).forEach((n) => {
+    if (n.entity !== 'function') return;
+    (n.connections || []).forEach((c) => { if (c && c.name) link(n, ensureConn(c.name, c)); });
+  });
+
+  // ---- and the counts follow the graph that is actually drawn ---------------------------------
+  // "Nothing calls this" is now a stronger statement than it was, because a workflow and a schedule
+  // are callers. A connection with no caller is a connection nothing uses - which is the same
+  // candidate, never a verdict, that the panel already states with its coverage gap beside it.
+  let dead = 0;
+  Object.values(nodes).forEach((n) => {
+    n.calls.sort(); n.called_by.sort();
+    n.dead_suspect = !n.called_by.length && !n.rest && !(n.associated_place && n.associated_place.length);
+    if (n.dead_suspect) dead++;
+  });
+  const edges = new Set();
+  Object.values(nodes).forEach((n) => n.calls.forEach((c) => edges.add(n.id + '\u0000' + c)));
+  return Object.assign({}, g, {
+    nodes,
+    counts: Object.assign({}, g.counts, { nodes: Object.keys(nodes).length, edges: edges.size, dead_suspects: dead }),
+  });
+}
 async function openGraph() {
   if (!dir) return;
   try {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
-    setStatus('Building graph…', 'busy'); await refreshContext(); const g = await ensureGraph();
+    setStatus('Building graph…', 'busy'); await refreshContext(); const g = await callGraphWithContext();
     g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
@@ -1787,7 +1876,7 @@ async function buildGraphFor(kind) {
     // panel does not have here. If it has lapsed the switch stops and says so, rather than throwing
     // a DOMException whose message names neither the folder nor the remedy.
     if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the panel');
-    const g = kind === 'schema' ? await buildSchemaGraph() : await ensureGraph();
+    const g = kind === 'schema' ? await buildSchemaGraph() : await callGraphWithContext();
     if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
     g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null };
     await chrome.storage.local.set({ graphData: g });
@@ -2653,7 +2742,7 @@ async function openCallFocus(id, depth) {
   try {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
     setStatus(`Building the call graph for ${id}\u2026`, 'busy');
-    const g = await ensureGraph();
+    const g = await callGraphWithContext();
     if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });

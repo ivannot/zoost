@@ -57,7 +57,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
 - "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
-  modules relate. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
+  modules relate. The call graph also shows what *starts* the code and what it reaches: a workflow or
+  a schedule that fires a function is a node of its own, and so is every connection a function uses.
+  All of it from what is already on disk - nothing extra is fetched. Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
   what holds the working folder - so it has to be open and the folder granted.

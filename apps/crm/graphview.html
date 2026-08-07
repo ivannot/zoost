@@ -24,6 +24,11 @@
   --n-standalone:#3b82f6; --n-automation:#10b981; --n-button:#f59e0b;
   --n-schedule:#8b5cf6; --n-validation_rule:#ef4444; --n-rest:#06b6d4;
   --n-standard:#3b82f6; --n-custom:#a78bfa;
+  /* What fires the code, and what it reaches. A node is a Deluge function of one category, or a
+     workflow, or a schedule, or a connection - mutually exclusive answers to the same question,
+     so one dimension and one hue each. The plural is what keeps `schedules` (the Zoho object)
+     apart from `schedule` (the Deluge category of a function that one runs). */
+  --n-workflows:#e11d48; --n-schedules:#0891b2; --n-connections:#ca8a04;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -218,6 +223,11 @@
   .erbox .erhdr{padding:6px 9px;font-weight:700;color:#fff;font-family:var(--sans);font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:center}
   .erbox .erhdr small{opacity:.85;font-weight:500;font-size:10px}
   .erbox.standard .erhdr{background:#3b82f6} .erbox.custom .erhdr{background:#a78bfa}
+  /* On a call graph the header takes the node's own hue, so a workflow, a schedule and a
+     connection are told apart at a glance and read the same colour as their dot in the list and
+     their chip in the row above it. One fact, one colour, three places - the rule the filter
+     chips already follow. */
+  .erbox.hued .erhdr{background:var(--kind)}
   /* relation-first mode: the module is context, not content */
   .erbox.dim{background:#fbfcfd;border-color:#d7dee7;box-shadow:none}
   .erbox.dim .erhdr{background:#eef2f7 !important;color:#5b6b80;font-weight:600;font-size:11px;padding:5px 8px}

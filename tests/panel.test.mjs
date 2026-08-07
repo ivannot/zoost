@@ -629,6 +629,59 @@ test('a function box lists what it calls, the way a module box lists its fields'
     ['Email'], 'erFieldsFor stopped returning a module\'s fields');
 });
 
+test('the call graph carries what fires the code and what the code reaches', async () => {
+  // The chain used to stop at functions: a workflow or a schedule that fires one, and a connection
+  // one reaches, were known to the panel and drawn nowhere. Everything here is already on disk -
+  // nothing is fetched and nothing is inferred.
+  const files = {
+    'workflows/index.json': JSON.stringify([{ id: 501, name: 'Deal won', module: 'Deals' }, { id: 502, name: 'Never pulled' }]),
+    'workflows/501.json': JSON.stringify({ conditions: [
+      { instant_actions: { actions: [{ type: 'functions', id: 9, name: 'createInvoice' }, { type: 'email' }] } },
+      { scheduled_actions: [{ actions: [{ type: 'functions', name: 'calcTax' }] }] },
+    ] }),
+    'schedules/index.json': JSON.stringify([{ id: 77, name: 'Nightly', function_id: 12, function_name: 'nightly', frequency: 'daily' }]),
+    'connections/index.json': JSON.stringify([{ name: 'books', label: 'Zoho Books', service: 'zohobooks' }, { name: 'unused', label: 'Legacy' }]),
+  };
+  const fn = (ns, name, id, conns) => ({ id: ns + '.' + name, name, api_name: name, display_name: name,
+    namespace: ns, category: 'standalone', calls: [], called_by: [], rest: false, unresolved: [],
+    ambiguous: [], associated_place: null, connections: conns || [] , _zid: id });
+  const nodes = {};
+  for (const [ns, nm, id, c] of [['billing', 'createInvoice', 9, [{ name: 'books' }]],
+                                 ['billing', 'calcTax', 10, []], ['shared', 'nightly', 12, []]]) {
+    const n = fn(ns, nm, id, c); n.id2 = id; nodes[n.id] = n;
+  }
+  // the resolver matches on Zoho's own function id first, then on the name
+  nodes['billing.createInvoice'].id = 'billing.createInvoice';
+  const ctx = {
+    ensureGraph: async () => ({ counts: { nodes: 3, edges: 0, dead_suspects: 3, unresolved: 0 }, nodes }),
+    readFile: async (p) => { if (!(p in files)) throw new Error('not on disk'); return files[p]; },
+    Object, JSON, Set, Date,
+  };
+  const { callGraphWithContext } = load([
+    sliceConst('apps/crm/sidepanel.js', 'CTX_ID'),
+    sliceFn('apps/crm/sidepanel.js', 'ctxNode'),
+    sliceFn('apps/crm/sidepanel.js', 'callGraphWithContext')], ctx);
+
+  const g = await callGraphWithContext();
+  const ids = Object.keys(g.nodes).sort().join(' ');
+  assert.ok(ids.includes('wf:501'), 'a workflow is not a node');
+  assert.ok(ids.includes('wf:502'), 'a workflow whose file was never pulled is dropped instead of shown with nothing measured');
+  assert.ok(ids.includes('sch:77'), 'a schedule is not a node');
+  assert.ok(ids.includes('conn:books') && ids.includes('conn:unused'), 'the connections catalogue is not a node set');
+
+  // the links, in the direction that makes «who calls this» true
+  assert.ok(g.nodes['wf:501'].calls.includes('billing.calcTax'), 'a scheduled action of a workflow does not link');
+  assert.ok(g.nodes['billing.createInvoice'].called_by.includes('wf:501'), 'the function does not know the workflow fires it');
+  assert.ok(g.nodes['sch:77'].calls.includes('shared.nightly'), 'a schedule does not link to the function it runs');
+  assert.ok(g.nodes['billing.createInvoice'].calls.includes('conn:books'), 'a function does not link to the connection it uses');
+  assert.equal(g.nodes['wf:502'].calls.length, 0, 'a workflow with no file on disk was given actions it never had');
+
+  // and the counts follow the graph that is drawn
+  assert.equal(g.counts.nodes, Object.keys(g.nodes).length, 'the node count is of the old graph');
+  assert.ok(g.nodes['conn:unused'].dead_suspect, 'a connection nothing uses is not flagged as a candidate');
+  assert.ok(!g.nodes['billing.createInvoice'].dead_suspect, 'a function a workflow fires is still called an orphan');
+});
+
 test('the diagram window can change subject, and says why when it cannot', async () => {
   // The window carries a context in and could not change its mind without going back to the panel.
   // It has no file access of its own - deliberately, and it stays that way - so the switch asks the
@@ -678,7 +731,7 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
   // switch with a sentence naming the remedy instead of a DOMException naming neither.
   const mk = (over) => Object.assign({
     dir: {}, hasPerm: async () => true,
-    ensureGraph: async () => ({ counts: { nodes: 3 } }),
+    callGraphWithContext: async () => ({ counts: { nodes: 3 } }),
     buildSchemaGraph: async () => ({ counts: { nodes: 5 } }),
     chrome: { storage: { local: { set: async () => {} } } },
     setStatus: () => {}, bound: null, lastCtx: null,
@@ -697,7 +750,7 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
   const lapsed = (await buildGraphFor('calls')).error;
   assert.match(lapsed, /re-granting/, 'a lapsed folder does not name the remedy');
 
-  ctx = mk({ ensureGraph: async () => ({ counts: { nodes: 0 } }) });
+  ctx = mk({ callGraphWithContext: async () => ({ counts: { nodes: 0 } }) });
   ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
   assert.match((await buildGraphFor('calls')).error, /no functions pulled/, 'an empty graph is handed over as if it were one');
 });

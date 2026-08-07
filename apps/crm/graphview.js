@@ -20,9 +20,20 @@ const label = (n) => (nameMode === 'internal'
 // namespace at all. One accessor now decides both, so they cannot drift apart again.
 // What this window is drawing, in words. Four status lines were writing «modules» and «lookups»
 // literally, so a call graph reported the wrong nouns in three of them. Derived once, from the kind.
+// A call graph carries what fires the code and what the code reaches, so its nodes are not all
+// functions and calling them that would be counting the wrong thing. The breakdown is stated rather
+// than summarised: «3 functions · 1 workflow · 1 schedule · 2 connections» is a fact, «7 nodes» is a
+// shrug - and this window exists to answer what is there, not how much of it.
+const ENTITY_WORD = { workflows: 'workflow', schedules: 'schedule', connections: 'connection' };
+function entityBreakdown() {
+  const c = {};
+  Object.values(N).forEach((n) => { const k = ENTITY_WORD[n.category] || 'function'; c[k] = (c[k] || 0) + 1; });
+  return ['function', 'workflow', 'schedule', 'connection']
+    .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${k}${c[k] === 1 ? '' : 's'}`).join(' \u00b7 ');
+}
 const NOUN = () => (DATA.kind === 'schema'
   ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
-  : { n: 'functions', e: 'calls', dead: 'no-caller', all: 'All functions', box: 'function' });
+  : { n: 'nodes', e: 'links', dead: 'nothing calls them', all: 'Everything', box: 'node' });
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
 const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
@@ -60,7 +71,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   }
   $('statline').innerHTML = _schema
     ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
-    : `<b>${DATA.counts.nodes}</b> functions · <b>${DATA.counts.edges}</b> calls · <b>${DATA.counts.dead_suspects}</b> no-caller · <b>${DATA.counts.unresolved}</b> unresolved`;
+    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved`;
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
   buildChips(); render(); buildLegend(); initCanvas(); updateTopTools(); wireSubject();
@@ -75,7 +86,15 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 // ---------------- Explorer ----------------
 const FILTERS = [['all', 'All'], ['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
-  ['schedule', 'schedule'], ['validation_rule', 'validation'], ['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']];
+  ['schedule', 'schedule'], ['validation_rule', 'validation'], ['rest', 'REST'],
+  // The three around the code. Capitalised and plural, because they are Zoho objects rather than a
+  // function's category - «Schedules» is the thing, «schedule» is what a function attached to one is.
+  ['workflows', 'Workflows'], ['schedules', 'Schedules'], ['connections', 'Connections'],
+  ['dead', 'no-caller'], ['unres', 'unresolved']];
+// Conditions, not values: they are something true *about* a node, not a kind of node, so they get
+// no hue and they are not kind filters. Same rule the schema chips already follow.
+const NOT_A_KIND = new Set(['all', 'rest', 'dead', 'unres']);
+const KIND_FILTERS = new Set(FILTERS.map(([k]) => k).filter((k) => !NOT_A_KIND.has(k)));
 const FILTERS_SCHEMA = [['all', 'All'], ['standard', 'standard'], ['custom', 'custom'], ['hub', 'hub (3+)'], ['orphan', 'orphan']];
 function buildChips() {
   const chips = $('chips'); const F = DATA.kind === 'schema' ? FILTERS_SCHEMA : FILTERS;
@@ -100,7 +119,9 @@ function pass(n, q) {
   if (filter === 'rest' && !n.rest) return false;
   if (filter === 'dead' && !n.dead_suspect) return false;
   if (filter === 'unres' && !n.unresolved.length) return false;
-  if (['standalone', 'automation', 'button', 'schedule', 'validation_rule'].includes(filter) && KINDOF(n) !== filter) return false;
+  // The list is derived from FILTERS rather than repeated here: adding a kind above and forgetting
+  // it in this line is how a chip ends up selecting nothing, silently.
+  if (KIND_FILTERS.has(filter) && KINDOF(n) !== filter) return false;
   return matchQ;
 }
 function render() {
@@ -1069,10 +1090,11 @@ function erRender() {
     const div = document.createElement('div');
     const pickIds = erSelEdge ? erSelEdge.split('\u0000') : null;
     const inPick = pickIds ? pickIds.includes(id) : null;
-    div.className = 'erbox ' + (n.namespace === 'custom' ? 'custom' : 'standard') + (erEmph === 'relations' ? ' dim' : '')
+    const hue = DATA.kind === 'schema' ? '' : NSCOL(KINDOF(n));
+    div.className = 'erbox ' + (DATA.kind === 'schema' ? (n.namespace === 'custom' ? 'custom' : 'standard') : 'hued') + (erEmph === 'relations' ? ' dim' : '')
       + (inPick === false ? ' faded' : '') + (inPick === true ? ' epick' : '')
       + (id === sel ? ' sel' : '') + (id === curFocus ? ' focus' : '');
-    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px`;
+    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px${hue ? `;--kind:${hue}` : ''}`;
     const rows = s.rows.slice(0, s.shown).map((fld) => {
       const lk = fld.lookup ? ' lk' : ''; const req = fld.mandatory ? '<span class="pk">*</span>' : '';
       const t = fld.lookup ? ('\u2192 ' + esc(fld.lookup)) : esc(fld.data_type || '');
