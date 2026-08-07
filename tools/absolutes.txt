@@ -142,6 +142,7 @@ f13a92a1cf15097b  site/docs-crm.html: If Zoho refuses an area, the pull says so 
 05846579ba66e9e2  site/docs-crm.html: It is absent for a function that calls nothing and that nothing calls: one box and no arrows is not a diagram.
 e5832c2af79f3465  site/docs-crm.html: It is shown instead of the platform's name, and the platform's name never goes away: it stays in the list's tooltip and in the bar underneath, which always states the real workspace or org the folder is bound to.
 a3e9f35b4ea9f20d  site/docs-crm.html: It is the one place where an empty field means erase - everywhere else an empty key field means "keep what is stored", which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
+bbb4881c12a0342f  site/docs-crm.html: It no longer comes and goes with the tab: the window can switch between the two drawings itself, so there is always something for it to open, and only which one follows the tab you are on.
 9564ada47e772afd  site/docs-crm.html: It says what goes and what stays before it acts: the encrypted key is removed and the protection turned off, your model names and every other setting are kept, and you paste the API key in again from your provider's dashboard.
 3aa746d9cc9ee1c9  site/docs-crm.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: a Zoho CRM instance id is exact without being memorable, and two sandboxes of the same org differ by nothing you would recognise at a glance.
 1c0ca583b59af0f9  site/docs-crm.html: Nobody can decrypt that key without the passphrase, Zoost included - this is the only way out, and it is a button rather than a sequence you have to work out.
@@ -163,6 +164,7 @@ d710bd314f03a02f  site/docs-crm.html: Selecting anything in Explorer re-centres 
 4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
 67fd9370d9a74e3c  site/docs-crm.html: That is deliberate - the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
+ec45862413686797  site/docs-crm.html: The bar at the top of that window carries the name you gave the workspace, if you gave it one - beside the platform's own instance and org, never instead of them.
 6d42a2d49c48845b  site/docs-crm.html: The call graph is not only functions.
 9c08a13a728de39d  site/docs-crm.html: The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it.
 559f912244b58afb  site/docs-crm.html: The same page is where you choose which tabs to show at all, and in what order - the panel is narrow, and a type you never look at is only in the way.
@@ -330,6 +332,7 @@ a7ab635a5ebd3058  site/it/docs-crm.html: Il modello mentale Tre cose, e tutto il
 45f407cf87a72bc6  site/it/docs-crm.html: Il pulsante ✎ Name this workspace accanto all'elenco gli dà un nome tuo, e 🗑 Remove workspace lì accanto cancella quella cartella - solo il mirror locale, mai niente dentro Zoho, e un pull la riporta indietro.
 a162655f352adef9  site/it/docs-crm.html: L'assistente è l'unica funzionalità che manda dati fuori dalla tua macchina.
 7685beb8f204daee  site/it/docs-crm.html: L'unica protezione vera è un segreto che l'estensione non possiede, quindi ⚙ Settings → AI assistant offre Protect the API key with a passphrase .
+f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra porta il nome che hai dato al workspace, se gliene hai dato uno - accanto all'istanza e all'org della piattaforma, mai al posto loro.
 8f28b0569b3318b3  site/it/docs-crm.html: La scheda Connections ribalta la prospettiva: tutto il catalogo, a livello di org - vedi la sezione 8, Le connessioni .
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
@@ -342,6 +345,7 @@ e2e23a434d105a25  site/it/docs-crm.html: No, con un'unica eccezione che accendi 
 257c9786d8d3e21c  site/it/docs-crm.html: Non c'è nessun recupero - nessun suggerimento, nessun reset, nessuna porta di servizio: dimentichi la passphrase e reincolli la chiave API scegliendone una nuova, il che costa una visita alla dashboard del provider.
 d23df49d9fda8717  site/it/docs-crm.html: Non c'è nessuna soglia e nessun verdetto attaccato: una funzione lunga merita un'occhiata, non è necessariamente un problema, e una corta può benissimo essere quella pericolosa.
 8fb725ca69c8028d  site/it/docs-crm.html: Non c'è per una funzione che non chiama niente e che nessuno chiama: un riquadro solo e nessuna freccia non è un diagramma.
+70180d51d22af648  site/it/docs-crm.html: Non compare e sparisce più con la scheda: la finestra sa passare da un disegno all'altro da sola, quindi c'è sempre qualcosa da aprire, e a seguire la scheda è solo quale dei due.
 aebd2d67d5085241  site/it/docs-crm.html: Non devi fare niente.
 5b957648b8191690  site/it/docs-crm.html: Non tutti gli utenti Zoho possono leggere tutte queste cose.
 1793d0b84f24db04  site/it/docs-crm.html: Non viene chiesto niente in più a Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.
