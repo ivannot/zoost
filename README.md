@@ -207,6 +207,14 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 5. Explore: open a function, follow its links, open the **Graph**, run **Health** (♥), or **Export**.
 6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
 
+**Or press `+ Sample` and skip all of it.** It writes a workspace of invented data into the working
+folder - a couple of hundred functions with real call chains, modules with lookups, workflows,
+schedules and connections - so you can open the tree, the graph, the audit and the exports before
+pointing Zoost at anything of your own. It needs no Zoho tab and no account, it is generated rather
+than fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other
+workspace. The same button is on the **Not on a Zoho tab** screen, which is where a fresh install
+lands.
+
 ---
 
 ## The AI assistant - setup & how it works

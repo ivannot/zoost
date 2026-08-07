@@ -20,6 +20,14 @@ the last section says which ones cannot be checked and why.
   SQL of each query table as its own file, and the dependency graph. Adds an ER diagram, a list of
   what nothing depends on any more, exports, and the same assistant.
 
+## Trying them without an account
+
+Both extensions can write a **sample workspace** of invented data into the working folder - `+ Sample`
+in the panel, and on the «not on a Zoho tab» screen. It is generated rather than fetched, needs no
+Zoho tab and no sign-in, carries `sample: true` in its own config, and every action that would reach
+the platform is refused for it. It is an ordinary folder otherwise, deleted like any other. The point
+is that the product can be assessed without connecting it to anything.
+
 ## How to use them
 
 - [How to use Zoost CRM](https://zoost.it/docs-crm.html)

@@ -32,6 +32,8 @@ WHAT IT DOES
 
 - Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
+- Try it before you connect anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
+
 - Search across every function at once. Full-text search over all your Deluge sources - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
 
 - Auto-sync on save. Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
