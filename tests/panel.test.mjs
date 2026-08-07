@@ -2429,6 +2429,15 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
                         js.indexOf('async function writeSampleWorkspace()'));
     assert.ok(/w\.(binding|cfg) && w\.\1\.sample/.test(fn),
       `${app}: addSampleWorkspace does not look for one that already exists, so a stale label writes a second`);
+    // Grant *first*, then decide. Until the folder permission is granted the enumeration returns
+    // early, so `wsList` is empty for a reason that has nothing to do with the question - and the
+    // panel offered to create a sample that was sitting right there. Three reports.
+    const grant = fn.indexOf('ensurePerm(root)');
+    const decide = fn.search(/w\.(binding|cfg) && w\.(binding|cfg)\.sample/);
+    assert.ok(grant >= 0 && decide > grant,
+      `${app}: it decides whether a sample exists before the folder can be read`);
+    assert.ok(/if \(!rootGranted\) \{ rootGranted = true; await (loadWorkspaces|refreshWorkspaces)\(\)/.test(fn),
+      `${app}: the list is not re-read after the permission is granted, so it is still empty`);
     assert.ok(/(activate\(have|selectWorkspace\(have)/.test(fn), `${app}: it cannot open the one that exists`);
     assert.ok(/if \(sampleBusy\) return;/.test(fn),
       `${app}: a second click lands while the first is still writing three hundred files`);
@@ -2440,5 +2449,30 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
       `${app}: the button says «+ Sample workspace» even when one already exists`);
     assert.ok(/without signing in anywhere/.test(ov),
       `${app}: the overlay does not say the sample needs no account, which is the whole point`);
+  }
+});
+
+test('the panel remembers whether a sample exists, for the moment it cannot look', () => {
+  // Chrome drops the folder permission between sessions, so the state right after the panel opens is
+  // the one where it cannot enumerate anything - and that is exactly when the overlay asks whether
+  // to create or open the sample. It offered to create one that was already there, three times.
+  //
+  // Same shape as `tabAccessView`: a display-only copy of a fact, in chrome.storage.local, for a
+  // surface that cannot reach the folder. The folder stays the authority - this is only read into a
+  // label, and the action re-checks after granting.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(/chrome\.storage\.local\.get\('sampleWs'\)/.test(js),
+      `${app}: nothing remembers whether a sample exists`);
+    assert.ok(/chrome\.storage\.local\.set\(\{ sampleWs/.test(js), `${app}: the fact is never recorded`);
+    const known = js.slice(js.indexOf('function knownSample()'), js.indexOf('function updateSampleButtons()'));
+    assert.ok(/sampleWsKnown/.test(known), `${app}: the label ignores what was remembered`);
+    assert.ok(/wsList \|\| \[\]/.test(known), `${app}: it trusts the memory over the folder it can read`);
+    // recorded from a list that is real, and set back to null when the sample is deleted
+    assert.ok(/noteSampleWs\(\(wsList\.find/.test(js),
+      `${app}: the remembered answer is not refreshed from a real enumeration`);
+    // one place decides both buttons
+    assert.ok((js.match(/updateSampleButtons\(\)/g) || []).length >= 2,
+      `${app}: the two buttons are decided in two places, which is how they came to disagree`);
   }
 });

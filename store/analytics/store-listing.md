@@ -102,7 +102,7 @@ The extension's entire interface is a side panel shown beside the Zoho Analytics
 ## 6. storage justification (max 1000)
 
 ```
-chrome.storage.local holds the user's own settings, on their machine only: which AI provider is selected, the model name and the API key entered, the maximum number of tool steps for the agent, and the ER diagram's layout defaults. The API key may be protected by a passphrase, in which case only the encrypted form is kept (AES-GCM, key derived with PBKDF2-SHA256). It also carries the graph data from the side panel to the diagram window, which is a separate extension page and cannot be handed the object directly.
+chrome.storage.local holds the user's own settings, on their machine only: which AI provider is selected, the model name and the API key entered, the maximum number of tool steps for the agent, the ER diagram's layout defaults, and the id of the sample workspace if one was created, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256). It also carries the graph data from the side panel to the diagram window, which is a separate extension page and cannot be handed the object directly.
 
 chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
 

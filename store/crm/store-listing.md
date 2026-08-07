@@ -127,11 +127,11 @@ No content is injected into the page for UI purposes. The sidePanel permission i
 ```
 storage persists the user's own settings between sessions, in chrome.storage.local only. Nothing is stored remotely or synced.
 
-What is kept: the selected AI engine, model id and API key (the assistant is optional and off by default; the key is used only to call the chosen provider, and may be protected by a user passphrase, in which case only the encrypted form is kept - AES-GCM, PBKDF2-SHA256); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull should ask Zoho for; and a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone.
+What is kept: the selected AI engine, model id and API key (optional, off by default; used only to call the chosen provider, and encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull asks Zoho for; a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone; and the id of the sample workspace, if any, so the panel can offer to open it before it may read the folder.
 
-chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
+chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked: memory-only, cleared when the browser closes.
 
-No browsing data, no Zoho CRM data and no personal information go into storage. The mirrored Deluge sources are written as ordinary files into the folder the user selected.
+No browsing data, no Zoho CRM data and no personal information go into storage. The mirrored Deluge sources are ordinary files in the user's own folder.
 ```
 
 ## 7. scripting justification (max 1000)

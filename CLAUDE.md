@@ -847,6 +847,21 @@ handle and the binding are one fact about one workspace and are now set together
 order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
 the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
+**A panel that cannot read the folder cannot answer questions about it - and that is the state it
+opens in.** Chrome drops the File System Access permission between sessions, so `loadWorkspaces()`
+returns *before it enumerates anything* until the first click grants it again. `wsList` is therefore
+empty for a reason that has nothing to do with the question being asked, and the overlay offered to
+**create a sample that was sitting right there**. It took three reports, and the diagnosis was mine
+to make rather than his: he supplied it in the end.
+
+Two fixes, and the order matters. `addSampleWorkspace()` **grants first and decides second** - a
+click is the only context in which the permission can be re-requested, so anything decided before
+that line is decided on an empty list. And whether a sample exists is kept in `chrome.storage.local`,
+the same shape as `tabAccessView` and for the same reason: **a display-only copy of a fact, for a
+surface that cannot reach the folder.** The folder stays the authority; the copy is only ever read
+into a label, is refreshed from every real enumeration, and is set back to `null` when the sample is
+deleted.
+
 **A label can be stale; the action must not be.** Reported as pressing «+ Sample workspace» over and
 over and recreating the sample each time. The label is repainted by `updateWsButtons()`, so between
 the workspace list changing and that running it can say the wrong thing - and I could not reproduce

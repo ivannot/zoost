@@ -2094,24 +2094,58 @@ async function pickRoot() {
  * list picks them up - so nothing downstream has to know it exists. `sample: true` in .zoost.json is
  * the whole mechanism.
  */
+// Whether a sample workspace exists, kept where it can be read **without the folder handle**.
+//
+// This is the bug that took three reports to find, and the diagnosis was mine to make. Until the
+// folder permission is granted, loadWorkspaces() returns before it enumerates anything, so `wsList`
+// is empty and the panel cannot tell a sample apart from no sample - it offered to create one that
+// was sitting right there. Chrome drops that permission between sessions, so the state right after
+// the panel opens is exactly the state where the question is asked.
+//
+// Same shape as `tabAccessView`, and for the same reason: a display-only copy of a fact, in
+// chrome.storage.local, for a surface that cannot reach the folder. The folder stays the authority -
+// this is only ever read into a label, and the *action* re-checks after granting.
+let sampleWsKnown = null;
+try { chrome.storage.local.get('sampleWs').then((v) => { sampleWsKnown = (v && v.sampleWs) || null; updateSampleButtons(); }); } catch (_) {}
+function noteSampleWs(id) {
+  sampleWsKnown = id || null;
+  try { chrome.storage.local.set({ sampleWs: sampleWsKnown }); } catch (_) {}
+}
+/** The one the panel can act on, or - when the folder is not readable yet - the one it remembers. */
+function knownSample() {
+  const w = (wsList || []).find((x) => x.binding && x.binding.sample);
+  return w || (sampleWsKnown ? { id: sampleWsKnown, remembered: true } : null);
+}
+function updateSampleButtons() {
+  const have = knownSample();
+  const sb = $('wssample');
+  if (sb) sb.hidden = !!have || !root || !rootGranted;
+  // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
+  // unreachable. It changes what it says instead.
+  const ob = $('offsample');
+  if (ob) {
+    ob.textContent = have ? 'Open sample workspace' : '+ Sample workspace';
+    ob.title = have
+      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
+      : 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other';
+  }
+}
+
 let sampleBusy = false;
 async function addSampleWorkspace() {
-  // Three guards, and the reason for each is a way this went wrong or could.
-  //
-  // 1. Never write a second. The button is *labelled* «Open» once one exists, but a label can be
-  //    stale - it is repainted by updateWsButtons, and if that has not run since the workspace list
-  //    changed it still says «+». Reported as clicking it again and again and recreating the sample
-  //    each time. So the **action** checks, not only the label: with one on disk this opens it.
-  // 2. Not twice at once. Nothing stopped a second click landing while the first was still writing
-  //    three hundred files.
-  // 3. The overlay comes down first. It is opaque and covers the status line, so the progress was
-  //    written where nobody could read it - which is what made pressing again look reasonable.
   if (sampleBusy) return;
+  if (!root) { await pickRoot(); return; }
+  // **Grant first, then decide.** A click is the only context in which the permission can be
+  // re-requested, and until it is granted the panel cannot see what is in the folder - so deciding
+  // before this line means deciding on a list that is empty for a reason unrelated to the question.
+  if (!(await ensurePerm(root))) return;
+  if (!rootGranted) { rootGranted = true; await loadWorkspaces(); }
   const have = (wsList || []).find((w) => w.binding && w.binding.sample);
   if (have) { $('ws').value = have.id; $('offoverlay').classList.remove('show'); return activate(have, true); }
-  if (!root) { await pickRoot(); return; }
-  if (!(await ensurePerm(root))) return;
   sampleBusy = true;
+  // The overlay is opaque and covers the status line, so it comes down before the writing starts -
+  // otherwise the progress is written where nobody can read it, which is what made pressing again
+  // look like the reasonable thing to do.
   $('offoverlay').classList.remove('show');
   ['wssample', 'offsample'].forEach((b) => { const e = $(b); if (e) e.disabled = true; });
   try { await writeSampleWorkspace(); }
@@ -2257,22 +2291,9 @@ function updateWsButtons() {
   add.title = !root ? 'Set the working folder first'
     : !lastCtx ? 'Open a Zoho CRM tab first'
     : `Create a workspace folder for \u00ab${lastCtx.instance}\u00bb inside ${root.name}`;
-  // Absent once one exists - it would do nothing - and while there is nowhere to write it. The
-  // dropdown is right beside it, so opening the one that is already there costs a click either way.
-  const have = (wsList || []).find((w) => w.binding && w.binding.sample);
-  const sb = $('wssample');
-  if (sb) sb.hidden = !!have || !root || !rootGranted;
-  // The overlay's copy is a different case and I gave it the same wiring, which was wrong: that
-  // overlay covers the whole panel, dropdown included, so hiding the button there would leave
-  // somebody with a sample already on disk and no way to reach it. It **opens** the existing one
-  // instead, and says so - reported.
-  const ob = $('offsample');
-  if (ob) {
-    ob.textContent = have ? 'Open sample workspace' : '+ Sample workspace';
-    ob.title = have
-      ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-      : 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other';
-  }
+  // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
+  // decided in one place, because they were decided in two and disagreed.
+  updateSampleButtons();
 }
 
 async function loadWorkspaces() {
@@ -2328,6 +2349,9 @@ async function loadWorkspaces() {
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
+  // The list is real now, so the remembered answer is refreshed from it - including to null,
+  // which is how deleting the sample stops the button offering to open one that is gone.
+  noteSampleWs((wsList.find((w) => w.binding && w.binding.sample) || {}).id || null);
   const active = await window.idbHandle.get('activeWs');
   wsList.forEach((w) => {
     const o = document.createElement('option');
