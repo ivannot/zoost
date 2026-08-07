@@ -697,6 +697,25 @@ test('the chips show what is on screen and are switched off, not on', () => {
   assert.equal(shown(), 'b', 'the two questions are not ANDed');
 });
 
+test('the filter can be emptied as well as filled, and says so when it is', () => {
+  // Starting from everything is right while reading a result and wrong while hunting for one kind:
+  // isolating «standalone» meant switching eight things off, which is the same eight clicks the
+  // first model charged for the opposite job. Both directions exist now, and each button is absent
+  // when it would do nothing.
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(src, /btn\('chipall'/, 'there is no way back to everything');
+  assert.match(src, /btn\('chipnone'[\s\S]*?hiddenKinds = new Set\(allKinds\(\)\)/, 'there is no way to empty it');
+  const sync = src.slice(src.indexOf('function syncChips('), src.indexOf('\n}', src.indexOf('function syncChips(')));
+  assert.match(sync, /chipall[\s\S]*?hiddenKinds\.size \|\| onlyConds\.size/, 'All is offered when there is nothing to restore');
+  assert.match(sync, /chipnone[\s\S]*?hiddenKinds\.size < allKinds\(\)\.length/, 'None is offered when everything is already off');
+
+  // and an empty list names which of the three reasons it is
+  const r = src.slice(src.indexOf('function render('), src.indexOf('\n}', src.indexOf('function render(')));
+  for (const why of [/Everything is switched off/, /Nothing matches the filter/, /Nothing matches that search/]) {
+    assert.match(r, why, `an empty list is silent about one of its reasons: ${why}`);
+  }
+});
+
 test('the filter is reachable from every view, and reaches every view', () => {
   // Reported as «why is there no filter for the connections». There was - the chips - and it lived
   // inside the Explorer column, which exists in one of the four views. So from the diagram, the
@@ -890,26 +909,6 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
   b2.buildRels();
   assert.equal(c2.RELS.length, 2, 'buildRels does not reach the call catalogue on a call graph');
   assert.ok(c2.RELS[0].call, 'buildRels built schema rows for a call graph');
-});
-
-test('the filter is reachable from every view, and reaches every view', () => {
-  // Reported as «why is there no filter for the connections». There was - the chips - and it lived
-  // inside the Explorer column, which exists in one of the four views. So from the diagram, the
-  // control that decides what the diagram draws was off screen.
-  const html = read('apps/crm/graphview.html');
-  const header = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
-  assert.ok(header.includes('id="chips"'), 'the filter is not in the window chrome');
-  const aside = html.slice(html.indexOf('<aside>'), html.indexOf('</aside>'));
-  assert.ok(!aside.includes('id="chips"'), 'the filter is back inside the one view that has a column');
-
-  // and Relations honours it too, so «excluded» means excluded in all four
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
-  const rp = src.slice(src.indexOf('function relPass('), src.indexOf('\n}', src.indexOf('function relPass(')));
-  assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
-  assert.match(src, /if \(curView === 'rel'\) relRender\(\)/, 'the catalogue is not redrawn when the filter changes');
-
-  // one colour key, not two: the chips carry the hue and the word and are always on screen now
-  assert.ok(!/id="legend"/.test(html), 'a second colour key is back inside the canvas');
 });
 
 test('a call graph is never described in the nouns of a schema', () => {
@@ -1204,7 +1203,6 @@ test('a lapsed permission is reported in words, on both sides', () => {
   }
 });
 
-
 test('the empty state is written in one place, not two', () => {
   // The Analytics markup hard-coded "Nothing pulled yet …" inside #list, and render() produced the
   // same sentence. Fixing the one in the code changed nothing on screen, because the markup copy is
@@ -1227,7 +1225,6 @@ test('every early return still redraws the list', () => {
     assert.match(before, /render\(\);\s*$/, 'an early return leaves the previous reason on screen');
   }
 });
-
 
 test('both panels say the same thing when the folder is not granted', () => {
   // The CRM said it only in the status line and Analytics only in the list, so the same state read as
@@ -1263,7 +1260,6 @@ test('only the first b in an empty state is a heading', () => {
     assert.ok(!/\.empty b\{[^}]*display:block/.test(css), `${app}: every b in an empty state is a block again`);
   }
 });
-
 
 test('the click-anywhere shortcut exists on both, and stays out of the same places', () => {
   // Saying it in the message is only honest if it is true, and it was true on both — with *different*

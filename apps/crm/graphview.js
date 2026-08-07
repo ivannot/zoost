@@ -159,11 +159,20 @@ function buildChips() {
   onlyList().forEach(([k, l]) => only.appendChild(chipEl(k, l, null)));
   box.appendChild(only);
 
-  const x = document.createElement('span');
-  x.className = 'chipx'; x.id = 'chipx'; x.textContent = '\u21ba Show everything';
-  x.title = 'Show everything again'; x.setAttribute('role', 'button'); x.setAttribute('aria-label', 'Show everything again');
-  x.onclick = () => { hiddenKinds.clear(); onlyConds.clear(); syncChips(); applyFilter(); };
-  box.appendChild(x);
+  // Both directions, because either one alone is the other's problem. Starting from everything is
+  // right while you are reading a result and wrong while you are hunting for one kind: isolating
+  // «standalone» meant switching eight things off, which is the same eight clicks the first model
+  // charged for the opposite job. «None» empties it so one click brings back what you want.
+  const btn = (id, label, title, fn) => {
+    const e = document.createElement('span');
+    e.className = 'chipx'; e.id = id; e.textContent = label; e.title = title;
+    e.setAttribute('role', 'button'); e.setAttribute('aria-label', title);
+    e.onclick = fn; box.appendChild(e);
+  };
+  btn('chipall', '\u21ba All', 'Show everything again',
+    () => { hiddenKinds.clear(); onlyConds.clear(); syncChips(); applyFilter(); });
+  btn('chipnone', 'None', 'Switch everything off, then turn on the one you want',
+    () => { hiddenKinds = new Set(allKinds()); syncChips(); applyFilter(); });
 
   box.onclick = (e) => {
     const c = e.target.closest('.chip'); if (!c) return;
@@ -180,9 +189,11 @@ function syncChips() {
     const k = c.dataset.k;
     c.setAttribute('aria-pressed', CONDITION_KEYS.has(k) ? onlyConds.has(k) : !hiddenKinds.has(k));
   });
-  const x = $('chipx');
-  // Absent while nothing is switched off: there is no «everything» to go back to.
-  if (x) x.style.display = (hiddenKinds.size || onlyConds.size) ? '' : 'none';
+  // Each is absent when it would do nothing: no «everything» to go back to while nothing is off, and
+  // no «none» to reach while nothing is on.
+  const a = $('chipall'), n = $('chipnone');
+  if (a) a.style.display = (hiddenKinds.size || onlyConds.size) ? '' : 'none';
+  if (n) n.style.display = hiddenKinds.size < allKinds().length ? '' : 'none';
 }
 function passKind(n) {
   if (hiddenKinds.has(KINDOF(n))) return false;
@@ -211,6 +222,18 @@ function applyFilter() {
 }
 function render() {
   const q = $('q').value.trim().toLowerCase(); const listEl = $('list'); listEl.innerHTML = '';
+  // An empty list has three reasons and they are not the same advice. Nothing here is ever silent
+  // about which one it is - the rule this project applies to every empty state.
+  const shownIds = ids.filter((i) => pass(N[i], q));
+  if (!shownIds.length) {
+    const why = hiddenKinds.size >= allKinds().length
+      ? '<b>Everything is switched off.</b> Turn a chip on above to choose what to show.'
+      : (hiddenKinds.size || onlyConds.size)
+        ? '<b>Nothing matches the filter.</b> <span>\u21ba All</span> above puts everything back.'
+        : (q ? '<b>Nothing matches that search.</b>' : '<b>Nothing in this graph.</b>');
+    listEl.innerHTML = `<div class="empty" style="padding:14px 12px">${why}</div>`;
+    return;
+  }
   ids.map((i) => N[i]).filter((n) => pass(n, q))
     .sort((a, b) => (b.called_by.length - a.called_by.length) || a.name.localeCompare(b.name))
     .forEach((n) => {

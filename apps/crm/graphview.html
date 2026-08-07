@@ -132,6 +132,10 @@
   .dot{width:7px;height:7px;border-radius:50%;flex:none}
   main{flex:1;overflow:auto;padding:22px 26px;min-width:0}
   .empty{color:var(--muted);font-size:14px;margin-top:40px;text-align:center}
+  /* The list's own empty state sits at the top of a column, not in the middle of a pane. */
+  .list .empty{margin-top:0;text-align:left;font-size:12.5px;line-height:1.6}
+  .list .empty b{color:var(--ink);display:block}
+  .list .empty span{border:1px solid var(--border);border-radius:999px;padding:1px 7px;font-size:11px}
   .crumbs{font:12px var(--mono);color:var(--muted);margin-bottom:14px;min-height:16px}
   .crumbs a{color:var(--sel);cursor:pointer} .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .title h2{margin:0;font:20px var(--mono)}

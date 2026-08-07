@@ -627,6 +627,17 @@ visible, not inferred.** `Functions` is a box holding the five Deluge categories
 Schedules and Connections are one chip each at the same level - a label plus a single chip saying the
 same word twice is a box drawn for symmetry's sake.
 
+**And neither starting point is right on its own, which is the actual lesson.** All-off charged
+eight clicks to exclude one kind; all-on charges eight to isolate one. So the window offers both
+ends - **`\u21ba All`** and **`None`** - and each is absent when it would do nothing. The chips
+themselves keep the all-on default, because «what am I looking at» is the question you have most of
+the time; `None` is there for the other one. Two buttons is a smaller answer than a mode.
+
+**An empty list has three reasons here and they are different advice**: everything switched off, a
+filter that matches nothing, a search that matches nothing. It names which - the rule this project
+applies to every empty state, and one that becomes easy to break the moment a list can be emptied
+from three directions.
+
 **A control that governs the window belongs to the window, not to one of its views.** The chips
 steered all four views and lived inside the Explorer column - which three of the four do not have -
 so from the diagram, the control that decides what the diagram draws was off screen. It was reported

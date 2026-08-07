@@ -62,7 +62,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   All of it from what is already on disk - nothing extra is fetched. The chips in that window's header show
   what is on screen, grouped by dimension: all lit means everything, and one click switches a kind
   off - "Connections" off is how you read the diagram without them. The dashed "Only" group narrows
-  instead, and starts empty. "↺ Show everything" puts it all back, and the search box has its own ✕. The button that opens that window is in the workspace bar, between "MD" and
+  instead, and starts empty. "↺ All" puts it all back and "None" switches
+  everything off so one click brings back the one kind you want. The search box has its own ✕. The button that opens that window is in the workspace bar, between "MD" and
   "Health ♥". Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
