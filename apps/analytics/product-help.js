@@ -82,6 +82,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   platform nothing, so it opens and reads without a tab and without an account.
   Once one exists that button reads "Open sample workspace" and opens it: that overlay covers the
   workspace list too, so hiding it there would leave the sample unreachable.
+  Before Chrome has given the panel access to the working folder it cannot tell whether one exists,
+  so it says neither and reads just "Sample workspace": clicking asks for access and then does
+  whichever is right.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

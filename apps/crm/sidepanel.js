@@ -497,7 +497,11 @@ async function refreshContext() {
     // Not over a sample. A sample has nothing to say to Zoho, so a Zoho tab is not a precondition
     // for reading it - and covering the panel there would mean the one workspace anybody can open
     // without an account is the one you cannot open without one. Reported.
-    $('offoverlay').classList.toggle('show', !isSample());
+    // `sampleBusy` belongs here and not only at the click. This panel re-derives its whole state on
+    // a five-second poll, so anything set imperatively on top of that is undone by the next tick -
+    // reported as the overlay coming back in the middle of writing the sample and then leaving
+    // again. A state that has to hold across time is a term in the condition, never an assignment.
+    $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
     ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho tab';
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
     document.body.classList.add('zoho-blocked'); $('pull').disabled = true;
@@ -2116,6 +2120,13 @@ function knownSample() {
   const w = (wsList || []).find((x) => x.binding && x.binding.sample);
   return w || (sampleWsKnown ? { id: sampleWsKnown, remembered: true } : null);
 }
+/** Can the panel answer «is there a sample?» at all right now?
+ *
+ * Only if it has read the folder. Until the permission is granted the enumeration returns early, so
+ * an empty list means «not looked», not «not there» - and the button was reading it as the second
+ * and offering to create a sample that existed. Four reports.
+ */
+const sampleKnowable = () => !!(root && rootGranted) || !!sampleWsKnown;
 function updateSampleButtons() {
   const have = knownSample();
   const sb = $('wssample');
@@ -2124,10 +2135,17 @@ function updateSampleButtons() {
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
-    ob.textContent = have ? 'Open sample workspace' : '+ Sample workspace';
+    // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
+    // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
+    // honest label asserts nothing and the tooltip says the click will find out. This project does
+    // not state what it has not measured, and a button label is a statement like any other.
+    ob.textContent = have ? 'Open sample workspace'
+      : sampleKnowable() ? '+ Sample workspace' : 'Sample workspace';
     ob.title = have
       ? 'Open the sample workspace already in your working folder - invented data, nothing is fetched'
-      : 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other';
+      : sampleKnowable()
+        ? 'Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other'
+        : 'Opens the sample workspace, or writes one if there is none. Clicking asks for access to the working folder first, which is what the panel needs before it can tell.';
   }
 }
 

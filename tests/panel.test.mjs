@@ -2413,7 +2413,7 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
     const html = read(`apps/${app}/sidepanel.html`);
-    assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)\)/.test(js),
+    assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)/.test(js),
       `${app}: the off-Zoho overlay still covers a sample workspace, which owes Zoho nothing`);
     assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
       `${app}: something still shows that overlay unconditionally`);
@@ -2445,7 +2445,7 @@ test('the sample can be reached and read without any Zoho tab at all', () => {
       `${app}: the overlay stays up over the progress, which is what made pressing again look reasonable`);
     // the label still has to say which of the two it will do
     const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 400);
-    assert.ok(/'Open sample workspace' : '\+ Sample workspace'/.test(lbl),
+    assert.ok(/have \? 'Open sample workspace'/.test(lbl),
       `${app}: the button says «+ Sample workspace» even when one already exists`);
     assert.ok(/without signing in anywhere/.test(ov),
       `${app}: the overlay does not say the sample needs no account, which is the whole point`);
@@ -2474,5 +2474,29 @@ test('the panel remembers whether a sample exists, for the moment it cannot look
     // one place decides both buttons
     assert.ok((js.match(/updateSampleButtons\(\)/g) || []).length >= 2,
       `${app}: the two buttons are decided in two places, which is how they came to disagree`);
+  }
+});
+
+test('the panel does not claim what it has not looked at, and a poll does not undo a decision', () => {
+  // Four reports of the same thing. Two mistakes of mine, and both are general.
+  //
+  // 1. «+ Sample workspace» asserts there is none and «Open sample workspace» asserts there is one.
+  //    Until the folder permission is granted the enumeration returns early, so the panel has not
+  //    looked and neither claim is warranted. It said «+». This project does not state what it has
+  //    not measured, and a button label is a statement like any other.
+  //
+  // 2. The panel re-derives its whole state on a five-second poll. I hid the overlay with an
+  //    assignment at the click, and the next tick put it back - reported as the overlay returning in
+  //    the middle of writing the sample. A state that has to hold across time is a **term in the
+  //    condition**, never an assignment on top of the derivation.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(/const sampleKnowable = \(\) => !!\(root && rootGranted\) \|\| !!sampleWsKnown;/.test(js),
+      `${app}: nothing distinguishes «there is none» from «I have not looked»`);
+    const lbl = js.slice(js.indexOf("const ob = $('offsample')"), js.indexOf("const ob = $('offsample')") + 700);
+    assert.ok(/sampleKnowable\(\) \? '\+ Sample workspace' : 'Sample workspace'/.test(lbl),
+      `${app}: the button still says «+ Sample workspace» when it cannot tell`);
+    assert.ok(/toggle\('show', !isSample\(\) && !sampleBusy\)/.test(js),
+      `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);
   }
 });

@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.38.3</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.38.4</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -118,7 +118,9 @@
   <p>The same action is on the <b>Not on a Zoho tab</b> screen, as <b class="ui">+ Sample workspace</b>:
     a sample owes the platform nothing, so it opens and reads without a tab and without an account.
     That screen is where somebody who has just installed Zoost actually is. Once one exists that button
-    reads <b class="ui">Open sample workspace</b> and opens it - the overlay covers the workspace list,
+    reads <b class="ui">Open sample workspace</b> and opens it; before Chrome has given the panel access
+    to the working folder it cannot tell, so it says neither and reads just <b class="ui">Sample
+    workspace</b> - clicking asks for access first and then does whichever is right - the overlay covers the workspace list,
     so hiding it there would leave the sample unreachable.</p>
   <div class="box warn">
     <p><b>Do not put the working folder in OneDrive, Dropbox or iCloud Drive.</b> You will be creating Git

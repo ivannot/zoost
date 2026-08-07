@@ -847,6 +847,21 @@ handle and the binding are one fact about one workspace and are now set together
 order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
 the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
+**A button label is a statement, and «I have not looked» is not «there is none».** Four reports of
+one thing, and I fixed the symptom three times before finding the cause. `+ Sample workspace` asserts
+there is no sample; `Open sample workspace` asserts there is one. Until Chrome grants the folder
+permission the panel has read nothing, so **neither claim is warranted** - and it was making the
+first. The third state is a label that asserts nothing (`Sample workspace`) and a tooltip saying the
+click will ask for access and then do whichever is right. The rule this project already applies to
+every count and every empty state applies to a control's own text.
+
+**And a state that has to hold across time is a term in the condition, never an assignment.** The
+panel re-derives everything on a five-second poll. I hid the off-Zoho overlay with a
+`classList.remove` at the click, and the next tick put it back - reported as the overlay returning in
+the middle of writing the sample and then leaving again. `sampleBusy` is part of the derivation now.
+Anything set imperatively on top of a periodic re-render survives until the next tick and no longer;
+that is not a bug in the poll.
+
 **A panel that cannot read the folder cannot answer questions about it - and that is the state it
 opens in.** Chrome drops the File System Access permission between sessions, so `loadWorkspaces()`
 returns *before it enumerates anything* until the first click grants it again. `wsList` is therefore
