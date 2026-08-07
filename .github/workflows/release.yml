@@ -92,39 +92,73 @@ jobs:
         with:
           subject-path: ${{ steps.tag.outputs.zip }}
 
+      # What changed, ahead of how it was built. The body this workflow writes answers "is this
+      # archive what it claims to be"; it never answered "what am I getting", and the Chrome Web
+      # Store has no field for that either — so the Release is the only place it can be published.
+      # Missing notes fail the run rather than publishing a Release without them: tools/release.sh
+      # refuses to tag without the file, so reaching here without one means the tag bypassed it.
+      # The whole body is assembled here and handed over as one file. `body` and `body_path` together
+      # are ambiguous — one of them wins and which is not worth depending on — so only `body_path` is
+      # passed and there is nothing to get wrong.
+      - name: Assemble the Release body
+        id: notes
+        env:
+          APP: ${{ steps.tag.outputs.app }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          SHA256: ${{ steps.build.outputs.sha256 }}
+          COMMIT: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          NOTES="store/$APP/whatsnew/$VERSION.md"
+          if [ ! -s "$NOTES" ]; then
+            echo "No release notes at $NOTES. tools/release.sh refuses to tag without them," >&2
+            echo "so this tag bypassed it. Write the file and re-tag." >&2
+            exit 1
+          fi
+          BODY="$RUNNER_TEMP/body.md"
+          cat "$NOTES" > "$BODY"
+          cat >> "$BODY" <<EOF
+
+          ---
+
+          Built by GitHub Actions from \`$COMMIT\`, not on anyone's laptop.
+
+          \`\`\`
+          package  zoost-$APP-$VERSION-store.zip
+          sha256   $SHA256
+          commit   $COMMIT
+          \`\`\`
+
+          **The asset attached here is the file submitted to the Chrome Web Store.** Nothing is
+          rebuilt in between.
+
+          Verify it yourself, without trusting us:
+
+          \`\`\`bash
+          # 1. the archive really came from this repository, this workflow, this commit
+          gh attestation verify zoost-$APP-$VERSION-store.zip \\
+             --repo $REPO
+
+          # 2. and the same source produces the same bytes on your machine
+          git clone https://github.com/$REPO && cd zoost
+          git checkout $REF
+          ./build.sh $APP
+          sha256sum dist/zoost-$APP-$VERSION-store.zip
+          \`\`\`
+
+          The row for \`RELEASES.md\`:
+
+          \`\`\`
+          | $APP | $VERSION | \`$REF\` | \`$COMMIT\` | \`$SHA256\` | (date submitted) |
+          \`\`\`
+          EOF
+          echo "path=$BODY" >> "$GITHUB_OUTPUT"
+
       - name: Publish the Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.4.0
         with:
           files: ${{ steps.tag.outputs.zip }}
           name: ${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}
-          body: |
-            Built by GitHub Actions from `${{ github.sha }}`, not on anyone's laptop.
-
-            ```
-            package  zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip
-            sha256   ${{ steps.build.outputs.sha256 }}
-            commit   ${{ github.sha }}
-            ```
-
-            **The asset attached here is the file submitted to the Chrome Web Store.** Nothing is
-            rebuilt in between.
-
-            Verify it yourself, without trusting us:
-
-            ```bash
-            # 1. the archive really came from this repository, this workflow, this commit
-            gh attestation verify zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip \
-               --repo ${{ github.repository }}
-
-            # 2. and the same source produces the same bytes on your machine
-            git clone https://github.com/${{ github.repository }} && cd zoost
-            git checkout ${{ github.ref_name }}
-            ./build.sh ${{ steps.tag.outputs.app }}
-            sha256sum dist/zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip
-            ```
-
-            The row for `RELEASES.md`:
-
-            ```
-            | ${{ steps.tag.outputs.app }} | ${{ steps.tag.outputs.version }} | `${{ github.ref_name }}` | `${{ github.sha }}` | `${{ steps.build.outputs.sha256 }}` | (date submitted) |
-            ```
+          body_path: ${{ steps.notes.outputs.path }}

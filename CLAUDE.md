@@ -2154,6 +2154,27 @@ does not write** — a commit subject is addressed to this repository and a "Wha
 who has the extension installed and has never read one. What it guarantees is that nothing is
 missing, which is the part memory gets wrong.
 
+**And there is no "What's new" field on the Chrome Web Store**, which both this file and the tool
+asserted for months. The Store listing tab holds the detailed description, the category, the language,
+the graphic assets, the URLs and the content declaration, and nothing per version. It was believed on
+nobody's authority in particular, which is how a claim about another product's dashboard survives:
+nothing here can check it, so this is the class where reading the documentation remains the only
+method.
+
+**The consequence is that the GitHub Release is the only place the notes can be published**, and
+therefore that forgetting them is unrecoverable rather than untidy — nobody else can add them later.
+They live at **`store/<app>/whatsnew/<version>.md`**, `release.sh` refuses to tag without one, the
+workflow puts it at the top of the Release body and fails if it is missing, and `tools_test.py` holds
+every ledger row at or after the version each app adopted the convention.
+
+**What hid this for 69 commits is worth knowing, because the shape recurs: an automated artefact that
+looks finished.** The workflow already wrote a body — the hash, the commit, the two verification
+commands, the `RELEASES.md` row — so every Release *had* one and nothing looked absent. But that body
+answers "is this archive what it claims to be", and never answered "what am I getting"; two questions,
+one of them unasked. The routine below had seven steps and none of them said "write the notes", so it
+was not a lapse of memory - there was nothing to remember. **When a generated artefact stands where a
+written one should be, check which question it answers before reading it as done.**
+
 Its first version used `\x1e` as the field separator and reported that **nothing had changed** —
 Python's `splitlines()` treats `\x1e`, `\x1c`, `\x1d`, `\x85`, `\u2028` and `\u2029` as line
 boundaries, so every record broke in half. The worst possible answer from a release-notes tool, and
@@ -2329,6 +2350,10 @@ What that request means, in order. Do all of it without being asked:
    public ref; fixing a premature one costs more than waiting.
 2. **Bump `version` in `apps/<app>/manifest.json`** — patch for fixes, minor for features — and
    commit everything. The tree must be clean or `release.sh` refuses, by design.
+2b. **Write `store/<app>/whatsnew/<version>.md`.** `python3 tools/whatsnew.py <app>` gathers the raw
+   material; the file is written for somebody who has the extension installed and has never read a
+   commit. `release.sh` **refuses to tag without it** and so does the workflow, because this is the
+   one thing in the release that cannot be added afterwards by anyone but the author.
 3. **`tools/release.sh <app>`** — verifies the tree, builds twice locally and compares (fast
    feedback: a non-reproducible build must fail *before* the tag exists), then creates
    `<app>-v<version>`.

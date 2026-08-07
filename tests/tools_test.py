@@ -835,13 +835,113 @@ class WhatsNew(unittest.TestCase):
         self.assertEqual(rows, [['abc123', 'A subject'], ['def456', 'Another subject']])
 
     def test_it_reports_this_repository_today(self):
+        # The range is the app's **first** tag rather than its newest, and that is the whole point of
+        # this case. Asking since the newest tag went red the day a release was cut - no commit has
+        # touched the app since, correctly - and a test that fails for a benign reason is one whose
+        # red stops meaning anything. It exists to catch the \x1e bug, whose signature is finding
+        # nothing where there is plainly something, so it has to ask a range that cannot be empty.
         for app in ('crm', 'analytics'):
-            out = subprocess.run([sys.executable, str(ROOT / 'tools/whatsnew.py'), app],
+            tags = subprocess.run(['git', '-C', str(ROOT), 'tag', '--list', f'{app}-v*'],
+                                  capture_output=True, text=True).stdout.split()
+            if not tags:
+                continue                                  # nothing released for this app yet
+            first = min(tags, key=lambda t: [int(x) for x in re.search(r'-v(\d+)\.(\d+)\.(\d+)$', t).groups()])
+            out = subprocess.run([sys.executable, str(ROOT / 'tools/whatsnew.py'), app, '--since', first],
                                  capture_output=True, text=True)
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertIn('commit(s) touched', out.stdout,
-                          f'{app}: the tool found nothing, which is what the \\x1e bug looked like')
+                          f'{app}: the tool found nothing since {first}, '
+                          f'which is what the \\x1e bug looked like')
             self.assertNotIn('no commit has touched', out.stdout)
+
+
+class ReleaseNotesAreARequirement(unittest.TestCase):
+    """A release without notes is one nobody can read, and the Store has no field for them.
+
+    `release.yml` already wrote a body — hash, commit, verification commands — so the Release looked
+    finished, which is exactly why nobody noticed it never said what had changed. 69 commits reached
+    one submission answering only "is this archive what it claims to be". The Chrome Web Store has no
+    per-version note anywhere on its listing tab, so the Release is the only place these can be
+    published: forgetting them is unrecoverable, not untidy, and the tagging step therefore refuses
+    rather than warning.
+
+    Run against a throwaway repository, because the gate sits before the build and the point is what
+    the script *does*, not what its source contains.
+    """
+
+    def _repo(self, tmp: str, notes: str | None):
+        root = pathlib.Path(tmp)
+        (root / 'apps/crm').mkdir(parents=True)
+        (root / 'apps/crm/manifest.json').write_text('{"version": "9.9.9"}', encoding='utf-8')
+        (root / 'tools').mkdir()
+        (root / 'tools/release.sh').write_bytes((ROOT / 'tools/release.sh').read_bytes())
+        (root / 'tools/release.sh').chmod(0o755)
+        if notes is not None:
+            p = root / 'store/crm/whatsnew/9.9.9.md'
+            p.parent.mkdir(parents=True)
+            p.write_text(notes, encoding='utf-8')
+        for a in (['init', '-q'], ['add', '-A'], ['-c', 'user.email=t@t', '-c', 'user.name=t',
+                                                  'commit', '-qm', 'x']):
+            subprocess.run(['git', '-C', str(root), *a], check=True, capture_output=True)
+        return subprocess.run(['bash', str(root / 'tools/release.sh'), 'crm'],
+                              capture_output=True, text=True)
+
+    def test_it_refuses_to_tag_without_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self._repo(tmp, None)
+        self.assertNotEqual(out.returncode, 0, 'a release with no notes was allowed to tag')
+        self.assertIn('store/crm/whatsnew/9.9.9.md', out.stdout,
+                      'the refusal has to name the file to write')
+        self.assertIn('whatsnew.py', out.stdout, 'and how to gather the raw material')
+
+    def test_it_gets_past_them_once_they_exist(self):
+        # The discriminating half: with the file present it must fail for some *other* reason (there
+        # is no build.sh in the throwaway repo), never for the notes. A gate that refuses either way
+        # is not a gate.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self._repo(tmp, 'Something changed.\n')
+        self.assertNotIn('No release notes', out.stdout + out.stderr)
+
+    def test_an_empty_file_does_not_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self._repo(tmp, '')
+        self.assertIn('No release notes', out.stdout,
+                      'an empty notes file satisfied the check, which is the same as no notes')
+
+    def test_the_workflow_reads_the_same_path(self):
+        # One path, two readers: the tagging step and the workflow that publishes. If they disagree,
+        # release.sh passes and the run fails after the tag is public.
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        self.assertIn('store/$APP/whatsnew/$VERSION.md', wf)
+        sh = (ROOT / 'tools/release.sh').read_text(encoding='utf-8')
+        self.assertIn('store/$APP/whatsnew/$VERSION.md', sh)
+        # Only body_path: `body` and `body_path` together leave it to the action which one wins.
+        self.assertIn('body_path:', wf)
+        self.assertNotIn('body: |', wf)
+
+    # Where the convention starts, per app, stated once with the reason — the same posture as
+    # RELEASES.md recording that CRM 0.13.8 has no commit and Analytics 1.0.0 no hash. Everything at
+    # or after these versions must carry notes; what came before was released without the practice
+    # existing, and inventing notes for it now would be writing history rather than recording it.
+    # A version listed and a file missing is a finding, so nothing here can go quiet by omission.
+    NOTES_FROM = {'crm': (1, 38, 4), 'analytics': None}   # analytics: not yet released under it
+
+    def test_every_release_since_the_convention_has_notes(self):
+        rows = 0
+        for line in (ROOT / 'RELEASES.md').read_text(encoding='utf-8').split('\n'):
+            c = [x.strip().strip('`') for x in line.split('|')]
+            if len(c) < 7 or c[1] not in ('crm', 'analytics'):
+                continue
+            if not re.fullmatch(r'\d+\.\d+\.\d+', c[2] or ''):
+                continue
+            floor = self.NOTES_FROM[c[1]]
+            if floor is None or tuple(int(x) for x in c[2].split('.')) < floor:
+                continue
+            rows += 1
+            self.assertTrue((ROOT / f'store/{c[1]}/whatsnew/{c[2]}.md').is_file(),
+                            f'{c[1]} {c[2]} is in the ledger with no release notes at '
+                            f'store/{c[1]}/whatsnew/{c[2]}.md')
+        self.assertTrue(rows, 'no ledger row was checked — the parse or the floors are wrong')
 
 
 class DeployStateIsPartOfTheAudit(unittest.TestCase):

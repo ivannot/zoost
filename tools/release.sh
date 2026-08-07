@@ -33,6 +33,29 @@ ZIP="dist/zoost-$APP-$VERSION-store.zip"
 git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && {
   echo "Tag $TAG already exists — bump the version in apps/$APP/manifest.json first."; exit 1; }
 
+# The release notes, and the release stops without them.
+#
+# `release.yml` already writes a body — the hash, the commit, the verification commands — and that
+# body looked complete, which is exactly why nobody noticed there was nothing in it about what
+# changed. Two different questions: how the archive was built, and what the person who installs it is
+# getting. 69 commits reached one submission with an answer to only the first.
+#
+# The Chrome Web Store has no field for this (checked: the Store listing tab has no per-version note
+# anywhere), so the Release **is** the only place these can be published. That makes forgetting them
+# unrecoverable rather than untidy, which is why this refuses to tag instead of warning.
+NOTES="store/$APP/whatsnew/$VERSION.md"
+if [[ ! -s "$NOTES" ]]; then
+  echo "No release notes at $NOTES."
+  echo
+  echo "The Release body is the only place they can be published — the Store has no field for them."
+  echo "Gather the raw material, then write it for somebody who has the extension installed:"
+  echo
+  echo "    python3 tools/whatsnew.py $APP"
+  echo
+  echo "Then write $NOTES and commit it."
+  exit 1
+fi
+
 # Fail here rather than in CI: a non-reproducible build makes every published hash meaningless, and
 # finding that out after the tag is pushed means an orphaned tag to clean up.
 ./build.sh "$APP" >/dev/null

@@ -2,11 +2,17 @@
 """
 whatsnew.py — the commits that changed one app, since that app's last released tag.
 
-The Chrome Web Store asks for a "What's new" on every submission and the GitHub Release wants a
-body, and both were being written from memory. Memory is the wrong source: this repository ships two
-products from one history, so «what changed» for Zoho CRM is not the last N commits — it is the
-commits that touched `apps/crm/`, and a fortnight of work on the site or on the other product sits
-between them.
+The GitHub Release wants a body, and it was being written from memory. Memory is the wrong source:
+this repository ships two products from one history, so «what changed» for Zoho CRM is not the last N
+commits — it is the commits that touched `apps/crm/`, and a fortnight of work on the site or on the
+other product sits between them.
+
+**The Chrome Web Store has no "What's new" field**, which this file used to claim it did. Its Store
+listing tab carries the detailed description, the category, the language, the graphic assets, the URLs
+and the content declaration — there is no per-version release note anywhere in it. So what this
+gathers has two destinations and neither is a dashboard field a submission would block on: the Release
+body, and optionally a lead paragraph in the detailed description. Worth knowing before planning a
+submission around a field that does not exist.
 
     python3 tools/whatsnew.py crm              # since the newest crm-v* tag
     python3 tools/whatsnew.py crm --since crm-v1.9.0
