@@ -280,6 +280,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
 82d595fa2cd12539  site/it/docs-analytics.html: Lo legge e lo scrive su disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.
+a5b636681017c17d  site/it/docs-analytics.html: Lo stesso insieme viene disposto allo stesso modo ogni volta.
 448dc709768c5cea  site/it/docs-analytics.html: MD ( Export Markdown ) produce la stessa cosa nella forma adatta a farne contesto per uno strumento AI che non ha mai visto il tuo workspace.
 5ab8f22c06c9b887  site/it/docs-analytics.html: Metterlo sotto Git Nella cartella del workspace: cd <cartella di lavoro>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" Quello che ti ritrovi su disco: views.json il censimento: ogni vista con tipo, cartella, proprietario, date, tag schema.json colonne e tipi di dato per tabella, più le relazioni lineage.json chi legge da cosa, nelle due direzioni sql/*.sql un file per query table - la parte su cui il diff ha qualcosa da dire sql/index.json la mappa id-file, e quali colonne sorgente coinvolge ogni query export/ i report che generi I file .sql sono il punto.
 ae0ed2b91841f946  site/it/docs-analytics.html: Non c'è niente da scegliere e niente da sbagliare.
@@ -342,6 +343,7 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
+e9b082a5ca27517a  site/it/docs-crm.html: Lo stesso filtro dispone il grafo allo stesso modo ogni volta.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
 19371a5ef726b718  site/it/docs-crm.html: Mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
 422e56827ea6d29d  site/it/docs-crm.html: Niente related list / nessuna matrice dei layout Quel workspace è stato scaricato prima che esistessero.
@@ -381,6 +383,7 @@ e323c43d02373e0a  site/it/docs-crm.html: Quello che resta fuori viene dichiarato
 1ecd822277badea3  site/it/docs-crm.html: Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge 🔓 Grant access - un click, e non si apre nessun selettore di file.
 faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho e mostra una barra che ti offre di cambiare scheda o cambiare workspace.
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
+a393f1f75339b325  site/it/docs-crm.html: Selezionare qualcosa in Explorer ricentra le altre due su quello, Relations compresa: da quel momento elenca i legami intorno a quell'elemento e lo dice sopra la tabella, dove show all la riallarga a tutto.
 55efef1d11461fb3  site/it/docs-crm.html: Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo schema intero, sia l'ER di un modulo solo.
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
 a85be118c9cb540b  site/it/docs-crm.html: Sono lette dalla tua org invece che elencate nel codice, quindi c'è anche una categoria che Zoho riporta e che nessuno si aspettava, colore compreso; una funzione per cui Zoho non ha dato una categoria è no category .
@@ -401,6 +404,7 @@ eb9293f24986f6c7  site/it/docs-crm.html: Un workflow o uno schedule che ne fa pa
 290ba7bcd1ce9f2e  site/it/docs-crm.html: Una volta attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che hai scelto - Anthropic oppure OpenAI - e a nessun altro.
 9c22c57f746005e1  site/it/docs-crm.html: Una volta impostata i campi spariscono - la passphrase non è conservata, quindi non c'è niente da mostrarci dentro - e la sezione dichiara che la chiave è cifrata, con un pulsante Change passphrase per quando ne vuoi un'altra.
 6d70b8d1adb9de49  site/it/docs-crm.html: Unused - è nel catalogo, e nessuna funzione la referenzia.
+2cf493887d45c699  site/it/docs-crm.html: Viene calcolato una volta per insieme: tornare sulla scheda è immediato, e cambiare filtro o scope lo ricalcola su quello che resta - le chip non nascondono soltanto dei riquadri, il disegno si richiude intorno a ciò che sopravvive, che è poi il motivo per cui si spegne una categoria.
 4561461d1fa2a39a  site/it/docs-crm.html: Viene mostrato al posto del nome della piattaforma, e il nome della piattaforma non sparisce mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è legata davvero la cartella.
 9d55274d92d7e698  site/it/docs-crm.html: Zoho te le elenca nel setup, ma non ti dice mai quali funzioni ne usano davvero una - così nessuno osa cancellarne una.
 d30866ac957270d5  site/it/docs-crm.html: Zoost legge soltanto da Zoho - non riscrive mai indietro.
