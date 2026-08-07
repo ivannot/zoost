@@ -40,6 +40,21 @@
   header h1{font-size:15px;margin:0}
   header .stat{font-size:12px;color:var(--muted)} header .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
   .tabs{display:flex;gap:4px;flex-wrap:wrap}
+  /* The focus is the window's context, so it wears the same shape as the chips: a labelled box
+     with its own question. The name chip takes the amber the diagram already uses for the focused
+     box and the picked arc - an existing meaning rather than a sixth colour.
+     `Everything` keeps the focus rather than dropping it: the name stays on screen and one click
+     picks it up again, which is what the diagram's «Scope» button used to do from inside a single
+     view. `✕` is the one that forgets it, and it is absent when there is nothing to forget. */
+  .focusg{margin-left:auto}
+  .focusg .chip.off{opacity:.45;cursor:default}
+  .fdepth{display:inline-flex;align-items:center;gap:4px;font:11px var(--sans);color:var(--muted);padding-left:2px}
+  .fdepth button{border:none;background:#eef1f6;border-radius:5px;width:19px;height:19px;cursor:pointer;font-weight:700;color:var(--ink)}
+  .fdepth button:disabled{opacity:.35;cursor:default}
+  .fdepth b{min-width:11px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
+  .fdepth #erdMax{color:#94a3b8}
+  .tabrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  @media print{ .tabrow .focusg{display:none} }
   /* What the window is looking at, as against which view of it - so it sits on the title row and
      not among the view tabs, which are a different question about the same thing. */
   .subj{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
@@ -304,7 +319,19 @@
       <span class="stat" id="s-ws"></span>
     </div>
     <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
-    <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none">Graph</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+    <div class="tabrow">
+      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none">Graph</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+      <!-- The focus is the whole window's context - all three views project it - so it is
+           chrome, beside the tabs, and not a button inside one of the views. Its own group,
+           the same shape the chips use, because it answers its own question. -->
+      <span class="dim focusg" id="focusg">
+        <span class="dimt">Focus</span>
+        <span class="chip" id="focusnode" data-hue="focus" style="--hue:#d98e00" role="button"></span>
+        <span class="chip" id="focusall" role="button">Everything</span>
+        <span class="fdepth" id="erdepth" style="display:none">depth<button id="erdMinus" aria-label="One hop less">−</button><b id="erdVal">2</b><span id="erdMax">/ 6</span><button id="erdPlus" aria-label="One hop more">+</button></span>
+        <span class="chipx" id="focusx" role="button" aria-label="Clear the focus" title="Clear the focus">✕</span>
+      </span>
+    </div>
   </header>
   <div class="wrap">
     <div class="view on" id="v-explorer">
@@ -329,9 +356,6 @@
       <div id="ertools">
         <button id="erLayBtn" title="Layout controls: spacing, spread, label size">Layout ⚙</button>
         <button id="erEmph" title="Relation-first rendering: modules shrink to labels, relation API names take the foreground">Emphasis: modules</button>
-        <button id="erScope" title="Switch between the focused neighbourhood and the whole org" style="display:none">Scope: focus</button>
-        <button id="erReset" title="Clear the focus and show the whole graph again" style="display:none">↺ Whole graph</button>
-        <span id="erdepth" style="display:none;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 8px;font:12px var(--sans)">Depth <button id="erdMinus" style="border:none;background:#eef1f6;border-radius:5px;width:20px;height:20px;cursor:pointer;font-weight:700">−</button><b id="erdVal" style="min-width:12px;text-align:center">2</b><span id="erdMax" style="color:#94a3b8;font-size:11px">/ 6</span><button id="erdPlus" style="border:none;background:#eef1f6;border-radius:5px;width:20px;height:20px;cursor:pointer;font-weight:700">+</button></span>
         <button id="erAll">Fields: key</button>
         <button id="nameToggle" title="Node labels: the display label or the internal api_name">Name: display</button>
         <button id="erFit2">Fit</button>

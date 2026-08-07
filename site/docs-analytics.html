@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.16.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.17.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -215,7 +215,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     table's detail pane opens the same window focused on that table, at depth 2.</p>
   <ul>
     <li>Tables as boxes, relations as arrows, the join written on the arc.</li>
-    <li>Click a box to re-centre on it; <b class="ui">±</b> widens or narrows the depth around the focus.</li>
+    <li>Click a box to re-centre on it. The <b class="ui">Focus</b> group beside the tabs is where that
+      context lives: the table's own name, <b class="ui">Everything</b>, the <b class="ui">depth</b> that
+      decides how far out from it to go, and <b class="ui">✕</b> to forget it. It sits with the tabs
+      because it belongs to the window rather than to one view - the diagram, the list and
+      <b>Relations</b> all follow it. <b class="ui">Everything</b> pauses the focus rather than dropping
+      it: the name stays on screen and one click picks it up again.</li>
     <li>Click an arc to isolate one relation and push everything else back - the cheapest way to read a
       crowded diagram.</li>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread, ring radius, label gap and label size as live

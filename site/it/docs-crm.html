@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:294e7e81407569be -->
+<!-- translated-from: site/docs-crm.html sha256:112cf9d049601b61 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.32.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.33.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -324,11 +324,16 @@ git commit -m "baseline"</code></pre>
       scheda è immediato, e cambiare filtro o scope lo ricalcola su quello che resta - le chip non
       nascondono soltanto dei riquadri, il disegno si richiude intorno a ciò che sopravvive, che è poi
       il motivo per cui si spegne una categoria. Lo stesso filtro dispone il grafo allo stesso modo ogni volta.</li>
-    <li>Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo
-      schema intero, sia l'ER di un modulo solo. <b>Depth</b> controlla quanti salti di distanza vengono disegnati; cliccare una tabella ricentra il diagramma lì. <b class="ui">↺ Whole graph</b> azzera il fuoco e torna a mostrare tutti i moduli.</li>
-    <li><b class="ui">Scope</b> alterna fra il vicinato del fuoco e l'org intera. Org intera più
-      <b class="ui">Save PDF</b> produce una pagina sola grande quanto il disegno - il caso del poster da
-      parete. Prima imposta <b class="ui">Fields: key</b>, altrimenti sarà illeggibile.</li>
+    <li>Selezionare qualcosa in Explorer imposta il fuoco per tutte e tre le viste, e il gruppo
+      <b class="ui">Focus</b> accanto alle schede è dove quel contesto vive: il nome dell'elemento,
+      <b class="ui">Everything</b>, la <b class="ui">depth</b> che decide fin dove arrivare, e
+      <b class="ui">✕</b> per dimenticarlo. Sta con le schede perché appartiene alla finestra e non a una
+      vista sola: il diagramma, l'elenco e <b>Relations</b> lo seguono tutti.</li>
+    <li><b class="ui">Everything</b> mette in pausa il fuoco invece di buttarlo via: il nome resta a
+      schermo e basta un clic per riprenderlo. Everything più <b class="ui">Save PDF</b> produce una
+      pagina sola grande quanto il disegno - il caso del poster da parete. Prima imposta
+      <b class="ui">Fields: key</b>, altrimenti sarà illeggibile. Cliccare un riquadro nel diagramma
+      sposta lì il fuoco.</li>
     <li><b class="ui">Emphasis: relations</b> spinge i riquadri dei moduli sullo sfondo e porta avanti i
       nomi delle relazioni.</li>
     <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce,
@@ -336,9 +341,9 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Layout ⚙</b> espone spaziatura, apertura e dimensione delle etichette come slider dal
       vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
   </ul>
-  <p><b>Cosa non fa:</b> sopra qualche centinaio di nodi il layout libero non viene nemmeno tentato -
-    calcolarlo bloccherebbe la finestra - quindi lo <b class="ui">Scope</b> sull'org intera lo dice invece di
-    piantarsi. <b>Explorer</b> e un <b>Graph</b> centrato restano veloci a qualsiasi dimensione di org; usa un
+  <p><b>Cosa non fa:</b> sopra 1200 nodi il layout libero non viene nemmeno tentato - calcolarlo
+    bloccherebbe la finestra - quindi <b class="ui">Everything</b> lo dice invece di piantarsi, e resta
+    sul fuoco. <b>Explorer</b> e un <b>Graph</b> centrato restano veloci a qualsiasi dimensione di org; usa un
     fuoco e una profondità piccola.</p>
 
   <h2 id="relation-name">7. Trovare il nome di una relazione</h2>

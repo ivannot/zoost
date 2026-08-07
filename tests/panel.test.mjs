@@ -1836,3 +1836,44 @@ test('a control that comes and goes may not move the numbers beside it', () => {
   assert.ok(/\.laychev\{flex:0 0 12px/.test(css), 'the slot has no fixed width, so it cannot hold a column');
   assert.ok(/\.laychev\.none\{[^}]*pointer-events:none/.test(css), 'the empty slot still takes the cursor');
 });
+
+test('the focus is chrome, and the diagram no longer owns the control for it', () => {
+  // A control that governs the window belongs to the window. «Scope» and «↺ Whole graph» lived in
+  // the diagram's own toolbar while the focus they change is projected by all three views - so from
+  // Relations, the control that decides what Relations is scoped to was on another tab. It is one
+  // group beside the tabs now, the same shape the chips use, and it carries the depth with it:
+  // leaving that behind would have recreated the same problem one control over.
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    assert.ok(!html.includes('id="erScope"'), `${app}: the diagram still owns the scope button`);
+    assert.ok(!html.includes('id="erReset"'), `${app}: the diagram still owns the reset button`);
+    const head = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    for (const id of ['focusg', 'focusnode', 'focusall', 'focusx', 'erdepth']) {
+      assert.ok(head.includes(`id="${id}"`), `${app}: #${id} is not in the header`);
+    }
+    // the group wears the chips' own shape, so it reads as one question like FUNCTIONS does
+    assert.ok(/class="dim focusg"/.test(html), `${app}: the focus group is not a labelled dimension`);
+    // Everything pauses the focus; only the ✕ forgets it. Two actions, two controls, no mode.
+    assert.ok(/\$\('focusall'\)\.onclick = \(\) => \{ if \(curFocus\) setScope\(true\)/.test(js),
+      `${app}: Everything does not go through the shared scope`);
+    assert.ok(/\$\('focusx'\)\.onclick = \(\) => clearFocus\(\)/.test(js),
+      `${app}: the clear is not wired to clearFocus`);
+  }
+});
+
+test('the status line stops repeating what the focus group already says', () => {
+  // The name, the scope and the depth are on screen in the header now. Saying them again in the
+  // status line is the duplication this project keeps having to remove - and the line has facts of
+  // its own that were being crowded out.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`);
+    const ego = js.slice(js.indexOf('function egoStat('), js.indexOf('\n}', js.indexOf('function egoStat(')));
+    assert.ok(!/Focus: /.test(ego), `${app}: the status line still names the focus`);
+    assert.ok(!/depth \$\{egoDepth\}/.test(ego), `${app}: the status line still prints the depth`);
+    assert.ok(!/paused/.test(ego), `${app}: the status line still says the focus is paused`);
+    assert.ok(/statOf\(/.test(ego), `${app}: it stopped counting what is on screen`);
+    // ...and the counts are still there, on both branches
+    assert.equal((ego.match(/statOf\(/g) || []).length, 2, `${app}: one branch of the line lost its counts`);
+    assert.equal((ego.match(/orphanNote\(\)/g) || []).length, 2, `${app}: one branch lost the orphan note`);
+  }
+});

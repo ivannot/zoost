@@ -100,11 +100,11 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // The box searches whatever this window is drawing, and it stopped being only functions the day
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
-  buildChips(); render(); initPositions(); wireSubject(); graphStat();
+  buildChips(); render(); initPositions(); wireSubject(); graphStat(); updateScopeUI();
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
-    $('erdepth').style.display = 'inline-flex'; updateDepthUI();
+    updateDepthUI();
     bfsEgo(); egoStat(); updateScopeUI();
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
@@ -979,21 +979,31 @@ function updateDepthUI() {
   const mx = $('erdMax'); if (mx) mx.textContent = '/ ' + maxEgoDepth;
   $('erdMinus').disabled = scopeAll || egoDepth <= 1;
   $('erdPlus').disabled = scopeAll || egoDepth >= maxEgoDepth;
-  const dp = $('erdepth'); if (dp) dp.style.opacity = scopeAll ? '.45' : '';
 }
 function updateScopeUI() {
-  const lbl = scopeAll ? `Scope: ${NOUN().all.toLowerCase()}` : `Scope: ${focusName(curFocus) || 'focus'}`;
-  const ttl = scopeAll
-    ? 'Showing every module. Click to go back to the focused neighbourhood.'
-    : 'Showing the focus neighbourhood. Click to show every module (full diagram for A0 printing).';
-  {
-    const b = $('erScope'); if (!b) return;
-    b.style.display = curFocus ? '' : 'none';
-    b.textContent = lbl; b.title = ttl; b.classList.toggle('on', scopeAll);
-  }
-  // The reset appears only when a focus is active (whole-graph view already IS the reset target).
-  { const b = $('erReset'); if (b) b.style.display = curFocus ? '' : 'none'; }
+  const nodeChip = $('focusnode'), allChip = $('focusall'), x = $('focusx'), dp = $('erdepth');
+  if (!nodeChip) return;
+  const has = !!curFocus;
+  nodeChip.textContent = has ? focusName(curFocus) : 'nothing selected';
+  nodeChip.title = has
+    ? `Draw only what is around ${focusName(curFocus)}`
+    : `Select ${NOUN().box === 'table' ? 'a table' : 'an item'} in the Explorer to focus on it`;
+  nodeChip.classList.toggle('off', !has);
+  nodeChip.setAttribute('aria-pressed', String(has && !scopeAll));
+  allChip.setAttribute('aria-pressed', String(!has || scopeAll));
+  allChip.title = has
+    ? `Draw ${NOUN().all.toLowerCase()} - the focus is kept and one click picks it up again`
+    : `Drawing ${NOUN().all.toLowerCase()}`;
+  // Absent when there is nothing to forget, and when there is no neighbourhood to widen.
+  if (x) x.style.display = has ? '' : 'none';
+  if (dp) dp.style.display = (has && !scopeAll) ? 'inline-flex' : 'none';
 }
+// The focus group governs the window, so it is wired once here and not from a view.
+// `Everything` pauses the focus rather than dropping it - the name stays on screen and can be
+// picked up again - and `✕` is the one that forgets it. Two actions, two controls, no mode.
+$('focusnode').onclick = () => { if (curFocus) setScope(false); };
+$('focusall').onclick = () => { if (curFocus) setScope(true); };
+$('focusx').onclick = () => clearFocus();
 // One sentence, one function, two callers - the setter that refuses, and the diagram that puts
 // itself back when a scope widened elsewhere turns out to be more than it can draw.
 function tooWideToDraw(wide) {
@@ -1055,7 +1065,7 @@ function statOf(set, allN, allE) {
 // underneath a summary of the unfiltered graph.
 function graphStat() {
   $('statline').innerHTML = DATA.kind === 'schema'
-    ? `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${orphanNote()}`
+    ? `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}${orphanNote()}`
     : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
 }
 // Whichever of the two is the right one for the state we are in.
@@ -1074,12 +1084,12 @@ function orphanNote() {
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 ${statOf(null, DATA.counts.nodes, DATA.counts.edges)} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(focusName(curFocus))}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <span style=\"color:#94a3b8\">Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
     return;
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -1098,9 +1108,7 @@ function setFocus(id) {
     $('statline').innerHTML = `<b style="color:#94a3b8">${esc(label(N[id]))}</b> \u00b7 Zoho would not describe this module, so its fields and relations were never read - there is nothing to draw for it.`;
     return;
   }
-  const wasUnfocused = !curFocus;
   curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
-  if (wasUnfocused) $('erdepth').style.display = 'inline-flex';   // first focus (e.g. from the whole-graph view): reveal the depth control
   updateDepthUI(); updateScopeUI();
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
@@ -1114,9 +1122,8 @@ function setFocus(id) {
 function clearFocus() {
   // Back to the pristine whole-graph view - the state you get opening via "Schema".
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
-  $('erdepth').style.display = 'none';
   updateScopeUI(); erLaidOut = false;
-  $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`;
+  graphStat();
   if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 
@@ -1533,8 +1540,6 @@ document.addEventListener('wheel', (e) => {
   const before = erScale; erScale = Math.max(0.02, Math.min(3, erScale * (e.deltaY < 0 ? 1.1 : 0.9)));
   erTx = mx - (mx - erTx) * (erScale / before); erTy = my - (my - erTy) * (erScale / before); erApply();
 }, { passive: false });
-$('erScope').onclick = () => setScope(!scopeAll);
-$('erReset').onclick = clearFocus;
 // ---- runtime layout controls ----
 const ER_CTL = [
   ['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],

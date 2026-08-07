@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.32.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.33.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -298,12 +298,15 @@ git commit -m "baseline"</code></pre>
       instant, and changing the filter or the scope computes it again for what is left - the chips do
       not merely hide boxes, the drawing closes up around what survives, which is the point of switching
       a category off. The same filter lays the graph out the same way each time.</li>
-    <li>Selecting a module in Explorer sets the focus for all views - whether you opened the whole schema
-      or one module's ER. <b>Depth</b> controls how many hops out from it are drawn; clicking a table
-      re-centres the diagram there. <b class="ui">↺ Whole graph</b> clears the focus and shows every module again.</li>
-    <li><b class="ui">Scope</b> switches between the focused neighbourhood and the whole org. Whole-org plus
-      <b class="ui">Save PDF</b> produces a single page the size of the drawing - the wall-poster case. Set
-      <b class="ui">Fields: key</b> first or it will be unreadable.</li>
+    <li>Selecting anything in Explorer sets the focus for all three views, and the
+      <b class="ui">Focus</b> group beside the tabs is where that context lives: the item's own name,
+      <b class="ui">Everything</b>, the <b class="ui">depth</b> that decides how far out from it to go,
+      and <b class="ui">✕</b> to forget it. It sits with the tabs because it belongs to the window rather
+      than to one view - the diagram, the list and <b>Relations</b> all follow it.</li>
+    <li><b class="ui">Everything</b> pauses the focus rather than dropping it: the name stays on screen and
+      one click picks it up again. Everything plus <b class="ui">Save PDF</b> produces a single page the
+      size of the drawing - the wall-poster case. Set <b class="ui">Fields: key</b> first or it will be
+      unreadable. Clicking a box in the diagram re-centres the focus there.</li>
     <li><b class="ui">Emphasis: relations</b> pushes the module boxes into the background and brings the
       relation names forward.</li>
     <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
@@ -311,8 +314,9 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread and label size as live sliders. There is no correct
       value - dense or airy depends on what you are looking at.</li>
   </ul>
-  <p><b>What it will not do:</b> above a few hundred nodes the free-form layout is not attempted at all -
-    computing it would freeze the window - so the whole-org <b class="ui">Scope</b> says so instead of hanging.
+  <p><b>What it will not do:</b> above 1200 nodes the free-form layout is not attempted at all -
+    computing it would freeze the window - so <b class="ui">Everything</b> says so instead of hanging, and
+    stays on the focus.
     The <b>Explorer</b> and a focused <b>Graph</b> stay fast at any org size; use a focus and a small depth.</p>
 
   <h2 id="relation-name">7. Finding a relation name</h2>

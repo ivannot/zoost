@@ -50,11 +50,11 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   }
   const ws = DATA.workspace || {};
   $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
-  buildChips(); render(); initPositions(); graphStat();
+  buildChips(); render(); initPositions(); graphStat(); updateScopeUI();
   if (DATA.kind === 'schema' && DATA.focus) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
-    $('erdepth').style.display = 'inline-flex'; updateDepthUI();
+    updateDepthUI();
     bfsEgo(); egoStat(); updateScopeUI();
     const t = document.querySelector('.tab[data-v="er"]'); if (t) setTimeout(() => t.click(), 60);
   }
@@ -735,21 +735,32 @@ function updateDepthUI() {
   const mx = $('erdMax'); if (mx) mx.textContent = '/ ' + maxEgoDepth;
   $('erdMinus').disabled = scopeAll || egoDepth <= 1;
   $('erdPlus').disabled = scopeAll || egoDepth >= maxEgoDepth;
-  const dp = $('erdepth'); if (dp) dp.style.opacity = scopeAll ? '.45' : '';
 }
+const focusName = (id) => (id && N[id] ? label(N[id]) : (id || ''));
 function updateScopeUI() {
-  const lbl = scopeAll ? 'Scope: all tables' : `Scope: ${(curFocus && label(N[curFocus])) || 'focus'}`;
-  const ttl = scopeAll
-    ? 'Showing every table. Click to go back to the focused neighbourhood.'
-    : 'Showing the focus neighbourhood. Click to show every table (full diagram for A0 printing).';
-  {
-    const b = $('erScope'); if (!b) return;
-    b.style.display = curFocus ? '' : 'none';
-    b.textContent = lbl; b.title = ttl; b.classList.toggle('on', scopeAll);
-  }
-  // The reset appears only when a focus is active (whole-graph view already IS the reset target).
-  { const b = $('erReset'); if (b) b.style.display = curFocus ? '' : 'none'; }
+  const nodeChip = $('focusnode'), allChip = $('focusall'), x = $('focusx'), dp = $('erdepth');
+  if (!nodeChip) return;
+  const has = !!curFocus;
+  nodeChip.textContent = has ? focusName(curFocus) : 'nothing selected';
+  nodeChip.title = has
+    ? `Draw only what is around ${focusName(curFocus)}`
+    : 'Select a table in the Explorer to focus on it';
+  nodeChip.classList.toggle('off', !has);
+  nodeChip.setAttribute('aria-pressed', String(has && !scopeAll));
+  allChip.setAttribute('aria-pressed', String(!has || scopeAll));
+  allChip.title = has
+    ? `Draw every table - the focus is kept and one click picks it up again`
+    : `Drawing every table`;
+  // Absent when there is nothing to forget, and when there is no neighbourhood to widen.
+  if (x) x.style.display = has ? '' : 'none';
+  if (dp) dp.style.display = (has && !scopeAll) ? 'inline-flex' : 'none';
 }
+// The focus group governs the window, so it is wired once here and not from a view.
+// `Everything` pauses the focus rather than dropping it - the name stays on screen and can be
+// picked up again - and `✕` is the one that forgets it. Two actions, two controls, no mode.
+$('focusnode').onclick = () => { if (curFocus) setScope(false); };
+$('focusall').onclick = () => { if (curFocus) setScope(true); };
+$('focusx').onclick = () => clearFocus();
 // The counts are of what the chips leave standing, with the full figure beside them when they
 // differ. A status line reading 900 tables over a diagram drawing 200 is the same defect as a
 // diagram that does not shrink when you filter it: a number that is not about what is on screen.
@@ -774,7 +785,7 @@ function statOf(set, allN, allE) {
 // back: it was written once at startup and then never again, so filtering changed the drawing
 // underneath a summary of the unfiltered graph.
 function graphStat() {
-  $('statline').innerHTML = `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(label(N[DATA.focus]) || DATA.focus)}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
 }
 // Whichever of the two is the right one for the state we are in.
 function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
@@ -818,12 +829,12 @@ function setScope(all) {
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>All tables</b> \u00b7 ${statOf(null, DATA.counts.nodes, DATA.counts.edges)} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(label(N[curFocus]) || curFocus)}\u00bb paused - Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
+    $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <span style=\"color:#94a3b8\">Save PDF prints the whole diagram on one page</span>${orphanNote()}`;
     return;
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(label(N[curFocus]) || curFocus)}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -834,9 +845,7 @@ function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
   // projections of the same context, so whoever changes the focus updates all of them.
   if (!id || !N[id] || id === curFocus) return;
-  const wasUnfocused = !curFocus;
   curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
-  if (wasUnfocused) $('erdepth').style.display = 'inline-flex';   // first focus (e.g. from the whole-graph view): reveal the depth control
   updateDepthUI(); updateScopeUI();
   if (scopeAll) {
     // remember the new focus for when the scope goes back, but do not re-lay-out the org
@@ -845,15 +854,14 @@ function setFocus(id) {
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 function clearFocus() {
   // Back to the pristine whole-graph view - the state you get opening via "Schema".
   curFocus = null; scopeAll = false; egoSet = null; egoLevel = {};
-  $('erdepth').style.display = 'none';
   updateScopeUI(); erLaidOut = false;
   graphStat();
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 // ---------------- ER diagram (entities + FK arrows) ----------------
 let erLaidOut = false, erAll = false, erScale = 1, erTx = 0, erTy = 0;
@@ -1201,8 +1209,6 @@ document.addEventListener('wheel', (e) => {
   const before = erScale; erScale = Math.max(0.02, Math.min(3, erScale * (e.deltaY < 0 ? 1.1 : 0.9)));
   erTx = mx - (mx - erTx) * (erScale / before); erTy = my - (my - erTy) * (erScale / before); erApply();
 }, { passive: false });
-$('erScope').onclick = () => setScope(!scopeAll);
-$('erReset').onclick = clearFocus;
 // ---- runtime layout controls ----
 const ER_CTL = [
   ['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],

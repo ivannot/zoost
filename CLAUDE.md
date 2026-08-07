@@ -690,6 +690,17 @@ filter that matches nothing, a search that matches nothing. It names which - the
 applies to every empty state, and one that becomes easy to break the moment a list can be emptied
 from three directions.
 
+**The focus is the window's context, so it is chrome — and «Scope» was the same lesson unlearnt.**
+The focus is projected by all three views, and the two controls that changed it (`Scope`, `↺ Whole
+graph`) lived in the *diagram's* toolbar: from Relations, the control deciding what Relations was
+scoped to sat on another tab. It is one labelled group beside the view tabs now — the item's name,
+`Everything`, the depth, and `✕` — wearing the same shape as the chips because it answers its own
+question. **The depth moved with it**, and had to: leaving it in the diagram would have recreated the
+identical problem one control over, which is the trap this file already records about doing one of a
+set. `Everything` **pauses** the focus rather than dropping it (the name stays on screen, one click
+picks it up again) and `✕` is the one that forgets it — two actions, two controls, no mode. The
+status line stopped repeating the name, the depth and «paused», which the header now says.
+
 **A control that governs the window belongs to the window, not to one of its views.** The chips
 steered all four views and lived inside the Explorer column - which three of the four do not have -
 so from the diagram, the control that decides what the diagram draws was off screen. It was reported
