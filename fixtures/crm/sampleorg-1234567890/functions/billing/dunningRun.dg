@@ -1,0 +1,8 @@
+// billing.dunningRun - sample function, invented for the fixture org.
+void dunningRun()
+{
+    info "billing.dunningRun start";
+    r0 = billing.buildInvoice();
+    r1 = shared.log();
+    return null;
+}

@@ -1,0 +1,19 @@
+{
+  "sv": 3,
+  "id": "9025",
+  "name": "exportCsv",
+  "namespace": "reporting",
+  "display_name": "exportCsv",
+  "category": "custombutton",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "view",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-08T09:00:00+00:00",
+  "rest": true
+}

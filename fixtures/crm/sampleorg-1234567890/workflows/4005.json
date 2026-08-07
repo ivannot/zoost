@@ -1,0 +1,19 @@
+{
+  "id": "4005",
+  "name": "Deal won",
+  "module": "Deals",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [
+        {
+          "type": "function",
+          "name": "billing.buildInvoice"
+        }
+      ],
+      "scheduled_actions": []
+    }
+  ],
+  "last_executed_time": "2026-07-25T11:20:00+00:00"
+}

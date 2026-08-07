@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9023",
+  "name": "weeklyDigest",
+  "namespace": "reporting",
+  "display_name": "weeklyDigest",
+  "category": "scheduler",
+  "return_type": "void",
+  "params": [],
+  "connections": [
+    "mail_relay"
+  ],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-06T09:00:00+00:00",
+  "rest": false
+}

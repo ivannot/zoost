@@ -1,0 +1,7 @@
+// shared.log - sample function, invented for the fixture org.
+map log(string message)
+{
+    info "shared.log start";
+    // nothing else is called
+    return r0;
+}

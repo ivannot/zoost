@@ -1,0 +1,11 @@
+{
+  "api_name": "Deals",
+  "layouts": [
+    {
+      "id": 3003,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

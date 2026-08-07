@@ -1,0 +1,108 @@
+{
+  "api_name": "Accounts",
+  "display_name": "Accounts",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3000,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    },
+    {
+      "id": 3100,
+      "name": "Compact",
+      "visible": true,
+      "sections": 2
+    }
+  ],
+  "related_lists": [
+    {
+      "api_name": "Contacts_of_Accounts",
+      "label": "Contacts",
+      "module": "Contacts",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Deals_of_Accounts",
+      "label": "Deals",
+      "module": "Deals",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Quotes_of_Accounts",
+      "label": "Quotes",
+      "module": "Quotes",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Invoices_of_Accounts",
+      "label": "Invoices",
+      "module": "Invoices",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Orders_of_Accounts",
+      "label": "Orders",
+      "module": "Orders",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Tickets_of_Accounts",
+      "label": "Tickets",
+      "module": "Tickets",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Subscriptions_of_Accounts",
+      "label": "Subscriptions",
+      "module": "Subscriptions",
+      "type": "default",
+      "visible": true
+    }
+  ]
+}

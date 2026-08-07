@@ -1,0 +1,21 @@
+{
+  "sv": 3,
+  "id": "9010",
+  "name": "reserveStock",
+  "namespace": "orders",
+  "display_name": "reserveStock",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "orderId",
+      "type": "string"
+    }
+  ],
+  "connections": [
+    "warehouse_api"
+  ],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-02T09:00:00+00:00",
+  "rest": false
+}

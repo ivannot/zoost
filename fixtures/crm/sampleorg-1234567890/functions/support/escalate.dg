@@ -1,0 +1,8 @@
+// support.escalate - sample function, invented for the fixture org.
+map escalate(string ticketId)
+{
+    info "support.escalate start";
+    r0 = shared.log();
+    r1 = reporting.weeklyDigest();
+    return r0;
+}

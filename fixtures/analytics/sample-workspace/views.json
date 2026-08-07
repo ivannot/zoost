@@ -1,0 +1,317 @@
+{
+  "views": [
+    {
+      "VIEW_ID": "177856000000000004",
+      "VIEW_NAME": "Accounts",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000001000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000008",
+      "VIEW_NAME": "Contacts",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000002000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000012",
+      "VIEW_NAME": "Orders",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000003000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000016",
+      "VIEW_NAME": "Order_Lines",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000004000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000020",
+      "VIEW_NAME": "Products",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000005000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000024",
+      "VIEW_NAME": "Shipments",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000006000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000028",
+      "VIEW_NAME": "Invoices",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000007000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000032",
+      "VIEW_NAME": "Payments",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000008000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000036",
+      "VIEW_NAME": "Tickets",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000009000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000040",
+      "VIEW_NAME": "Regions",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Data",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786000010000,
+      "LAST_DATA_MODIFY": "2 hours ago",
+      "LAST_DESIGN_MODIFY": " 03 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000044",
+      "VIEW_NAME": "Revenue_By_Region",
+      "VIEW_TYPE": "QueryTable",
+      "FOLDER": "Queries",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786100011000,
+      "LAST_DATA_MODIFY": "1 day ago",
+      "LAST_DESIGN_MODIFY": " 21 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000048",
+      "VIEW_NAME": "Open_Invoices",
+      "VIEW_TYPE": "QueryTable",
+      "FOLDER": "Queries",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786100012000,
+      "LAST_DATA_MODIFY": "1 day ago",
+      "LAST_DESIGN_MODIFY": " 21 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000052",
+      "VIEW_NAME": "Late_Shipments",
+      "VIEW_TYPE": "QueryTable",
+      "FOLDER": "Queries",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786100013000,
+      "LAST_DATA_MODIFY": "1 day ago",
+      "LAST_DESIGN_MODIFY": " 21 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000056",
+      "VIEW_NAME": "Basket_Size",
+      "VIEW_TYPE": "QueryTable",
+      "FOLDER": "Queries",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786100014000,
+      "LAST_DATA_MODIFY": "1 day ago",
+      "LAST_DESIGN_MODIFY": " 21 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000060",
+      "VIEW_NAME": "Ticket_Load",
+      "VIEW_TYPE": "QueryTable",
+      "FOLDER": "Queries",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786100015000,
+      "LAST_DATA_MODIFY": "1 day ago",
+      "LAST_DESIGN_MODIFY": " 21 Jul 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000064",
+      "VIEW_NAME": "Revenue by country",
+      "VIEW_TYPE": "Chart",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000044",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200016000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000068",
+      "VIEW_NAME": "Revenue trend",
+      "VIEW_TYPE": "Chart",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000044",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200017000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000072",
+      "VIEW_NAME": "Open invoices",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000048",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200018000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000076",
+      "VIEW_NAME": "Ageing buckets",
+      "VIEW_TYPE": "Pivot",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000048",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200019000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000080",
+      "VIEW_NAME": "Carrier performance",
+      "VIEW_TYPE": "Chart",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000052",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200020000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000084",
+      "VIEW_NAME": "Units per order",
+      "VIEW_TYPE": "Chart",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000056",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200021000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000088",
+      "VIEW_NAME": "Tickets by segment",
+      "VIEW_TYPE": "Chart",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000060",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200022000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000092",
+      "VIEW_NAME": "Product catalogue",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000020",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200023000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000096",
+      "VIEW_NAME": "Contact coverage",
+      "VIEW_TYPE": "Pivot",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000008",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200024000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000100",
+      "VIEW_NAME": "Unused view",
+      "VIEW_TYPE": "Table",
+      "FOLDER": "Reports",
+      "PARENT_ID": "177856000000000040",
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786200025000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000104",
+      "VIEW_NAME": "Commercial overview",
+      "VIEW_TYPE": "Dashboard",
+      "FOLDER": "Reports",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786300026000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000108",
+      "VIEW_NAME": "Operations",
+      "VIEW_TYPE": "Dashboard",
+      "FOLDER": "Reports",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786300027000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    },
+    {
+      "VIEW_ID": "177856000000000112",
+      "VIEW_NAME": "Finance",
+      "VIEW_TYPE": "Dashboard",
+      "FOLDER": "Reports",
+      "PARENT_ID": null,
+      "SYSTEM": false,
+      "ACT_VIEW_MODTIME": 1786300028000,
+      "LAST_DATA_MODIFY": "3 days ago",
+      "LAST_DESIGN_MODIFY": " 02 Aug 2026"
+    }
+  ],
+  "folders": [
+    "Data",
+    "Queries",
+    "Reports"
+  ]
+}

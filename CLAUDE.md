@@ -759,6 +759,33 @@ A control that does nothing in the active branch must be hidden, not shown and i
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 
+**Open: the concentric ring is as wide for eight boxes as for eighty.** Measured while rendering the
+Store screenshots, on the sample org at 1280 x 800: a focused ER at depth 2 with **eight** boxes fits
+at **38%** zoom with the default `ring` (420), where `ring: 140` fits the same drawing at **101%** -
+10px text rendered under 4px. The cause is `ringR = max(L * erP.ring, needed)`: the radius is a fixed
+multiple of the level, so the ring is the same size whatever has to go on it, and `erFit` then scales
+the whole drawing down to fit a circle that is mostly empty. A radius derived from what has to sit on
+it - each ring just outside the previous one, plus a gap the slider controls - would fix it, and it
+changes what the `ring` slider *means*, which is why it has not been done in passing. `tools/shots.py`
+moves the slider and says so; the defect is still there for anyone who does not.
+
+**The sample org lives in `fixtures/`, outside `apps/`, so it can never ship.** `python3
+fixtures/make.py` writes a workspace in the exact shape a pull produces, plus the `graphData`
+payloads the diagram window consumes. It exists for three reasons and the second is the one that is
+easy to forget: screenshots that need no blurring, **data that survives the session** (fixtures built
+in a scratch directory die with the conversation that made them, so a fresh checkout starts with
+nothing to point the panel at), and tests that want a real workspace. The seed is fixed, so two runs
+are byte-identical and a diff means something changed on purpose. Every name in it is generic -
+Zoho's own module names and ordinary business words - because a real portal or function name in a
+fixture contradicts the independence this project states, on a surface about to be published.
+
+**Screenshots are rendered, never captured: `python3 tools/shots.py`.** Headless Chrome writes
+exactly what the Store wants - 1280 x 800, `8-bit/color RGB`, no alpha - so nothing is converted
+afterwards and nothing can quietly re-introduce an alpha channel. The pages are the shipped ones byte
+for byte; only the data and a click script are added, so an image cannot show a control the product
+does not have. `store/assets.md` records every slot the dashboard offers, including the one that
+wastes an afternoon: **the promotional video is a YouTube link, not an upload**, and we have none.
+
 **A filter says which graph you are looking at, so it changes the geometry — it is not a visibility
 switch.** Reported: switching a category off in a large graph removed a big share of the boxes and
 the drawing stayed the same size, so nothing became more readable. The force positions were computed

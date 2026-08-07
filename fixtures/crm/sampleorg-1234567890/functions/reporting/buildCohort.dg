@@ -1,0 +1,7 @@
+// reporting.buildCohort - sample function, invented for the fixture org.
+map buildCohort(string from, string to)
+{
+    info "reporting.buildCohort start";
+    // nothing else is called
+    return r0;
+}

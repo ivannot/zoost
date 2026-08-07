@@ -1,0 +1,11 @@
+{
+  "api_name": "Contacts",
+  "layouts": [
+    {
+      "id": 3001,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

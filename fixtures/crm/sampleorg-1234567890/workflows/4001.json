@@ -1,0 +1,19 @@
+{
+  "id": "4001",
+  "name": "Order amount changed",
+  "module": "Orders",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [
+        {
+          "type": "function",
+          "name": "orders.recalcTotals"
+        }
+      ],
+      "scheduled_actions": []
+    }
+  ],
+  "last_executed_time": "2026-07-21T11:20:00+00:00"
+}

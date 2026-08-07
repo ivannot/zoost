@@ -1,0 +1,19 @@
+{
+  "id": "4007",
+  "name": "Lead untouched",
+  "module": "Leads",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [],
+      "scheduled_actions": [
+        {
+          "delay": "2 days",
+          "actions": []
+        }
+      ]
+    }
+  ],
+  "last_executed_time": "2026-07-27T11:20:00+00:00"
+}

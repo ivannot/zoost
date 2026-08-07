@@ -1,0 +1,64 @@
+{
+  "api_name": "Invoices",
+  "display_name": "Invoices",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Account_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Accounts"
+    },
+    {
+      "api_name": "Order_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Orders"
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3006,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ],
+  "related_lists": []
+}

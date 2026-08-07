@@ -1,0 +1,19 @@
+{
+  "sv": 3,
+  "id": "9000",
+  "name": "log",
+  "namespace": "shared",
+  "display_name": "log",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "message",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-01T09:00:00+00:00",
+  "rest": false
+}

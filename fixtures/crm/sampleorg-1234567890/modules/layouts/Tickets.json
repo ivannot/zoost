@@ -1,0 +1,11 @@
+{
+  "api_name": "Tickets",
+  "layouts": [
+    {
+      "id": 3009,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

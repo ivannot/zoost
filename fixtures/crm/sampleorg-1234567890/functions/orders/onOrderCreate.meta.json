@@ -1,0 +1,19 @@
+{
+  "sv": 3,
+  "id": "9012",
+  "name": "onOrderCreate",
+  "namespace": "orders",
+  "display_name": "onOrderCreate",
+  "category": "crmfundamentals",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "orderId",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-04T09:00:00+00:00",
+  "rest": false
+}

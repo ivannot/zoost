@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "api_name": "Accounts",
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Contacts",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Leads",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Deals",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Products",
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Quotes",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Invoices",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Orders",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Shipments",
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Tickets",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Campaigns",
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Subscriptions",
+      "layoutCount": 1
+    }
+  ]
+}

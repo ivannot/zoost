@@ -1,0 +1,7 @@
+// support.openTicket - sample function, invented for the fixture org.
+map openTicket(string accountId, string subject)
+{
+    info "support.openTicket start";
+    r0 = shared.log();
+    return r0;
+}

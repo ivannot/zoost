@@ -1,0 +1,11 @@
+{
+  "api_name": "Invoices",
+  "layouts": [
+    {
+      "id": 3006,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

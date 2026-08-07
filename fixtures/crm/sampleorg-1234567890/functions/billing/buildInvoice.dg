@@ -1,0 +1,10 @@
+// billing.buildInvoice - sample function, invented for the fixture org.
+map buildInvoice(string orderId)
+{
+    info "billing.buildInvoice start";
+    r0 = billing.calcTax();
+    r1 = billing.applyDiscount();
+    r2 = shared.formatMoney();
+    r3 = shared.log();
+    return r0;
+}

@@ -1,0 +1,16 @@
+{
+  "sv": 3,
+  "id": "9021",
+  "name": "pullCatalogue",
+  "namespace": "sync",
+  "display_name": "pullCatalogue",
+  "category": "scheduler",
+  "return_type": "void",
+  "params": [],
+  "connections": [
+    "catalogue_feed"
+  ],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-04T09:00:00+00:00",
+  "rest": false
+}

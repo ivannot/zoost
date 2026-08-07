@@ -1,0 +1,19 @@
+{
+  "sv": 3,
+  "id": "9002",
+  "name": "isBusinessDay",
+  "namespace": "shared",
+  "display_name": "isBusinessDay",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "day",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-03T09:00:00+00:00",
+  "rest": false
+}

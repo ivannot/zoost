@@ -1,0 +1,469 @@
+{
+  "tables": {
+    "177856000000000004": {
+      "name": "Accounts",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Account_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000004-0"
+        },
+        {
+          "name": "Account_Name",
+          "type": "PLAIN",
+          "colid": "177856000000000004-1"
+        },
+        {
+          "name": "Region",
+          "type": "PLAIN",
+          "colid": "177856000000000004-2"
+        },
+        {
+          "name": "Segment",
+          "type": "PLAIN",
+          "colid": "177856000000000004-3"
+        },
+        {
+          "name": "Created_On",
+          "type": "DATE",
+          "colid": "177856000000000004-4"
+        }
+      ]
+    },
+    "177856000000000008": {
+      "name": "Contacts",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Contact_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000008-0"
+        },
+        {
+          "name": "Account_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000008-1"
+        },
+        {
+          "name": "Full_Name",
+          "type": "PLAIN",
+          "colid": "177856000000000008-2"
+        },
+        {
+          "name": "Email_Domain",
+          "type": "PLAIN",
+          "colid": "177856000000000008-3"
+        },
+        {
+          "name": "Opted_In",
+          "type": "PLAIN",
+          "colid": "177856000000000008-4"
+        }
+      ]
+    },
+    "177856000000000012": {
+      "name": "Orders",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Order_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000012-0"
+        },
+        {
+          "name": "Account_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000012-1"
+        },
+        {
+          "name": "Order_Date",
+          "type": "PLAIN",
+          "colid": "177856000000000012-2"
+        },
+        {
+          "name": "Channel",
+          "type": "PLAIN",
+          "colid": "177856000000000012-3"
+        },
+        {
+          "name": "Net_Amount",
+          "type": "PLAIN",
+          "colid": "177856000000000012-4"
+        }
+      ]
+    },
+    "177856000000000016": {
+      "name": "Order_Lines",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Line_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000016-0"
+        },
+        {
+          "name": "Order_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000016-1"
+        },
+        {
+          "name": "Product_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000016-2"
+        },
+        {
+          "name": "Quantity",
+          "type": "PLAIN",
+          "colid": "177856000000000016-3"
+        },
+        {
+          "name": "Unit_Price",
+          "type": "PLAIN",
+          "colid": "177856000000000016-4"
+        }
+      ]
+    },
+    "177856000000000020": {
+      "name": "Products",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Product_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000020-0"
+        },
+        {
+          "name": "Product_Name",
+          "type": "PLAIN",
+          "colid": "177856000000000020-1"
+        },
+        {
+          "name": "Family",
+          "type": "PLAIN",
+          "colid": "177856000000000020-2"
+        },
+        {
+          "name": "List_Price",
+          "type": "PLAIN",
+          "colid": "177856000000000020-3"
+        }
+      ]
+    },
+    "177856000000000024": {
+      "name": "Shipments",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Shipment_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000024-0"
+        },
+        {
+          "name": "Order_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000024-1"
+        },
+        {
+          "name": "Carrier",
+          "type": "PLAIN",
+          "colid": "177856000000000024-2"
+        },
+        {
+          "name": "Dispatched_On",
+          "type": "DATE",
+          "colid": "177856000000000024-3"
+        },
+        {
+          "name": "Delivered_On",
+          "type": "DATE",
+          "colid": "177856000000000024-4"
+        }
+      ]
+    },
+    "177856000000000028": {
+      "name": "Invoices",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Invoice_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000028-0"
+        },
+        {
+          "name": "Order_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000028-1"
+        },
+        {
+          "name": "Issued_On",
+          "type": "DATE",
+          "colid": "177856000000000028-2"
+        },
+        {
+          "name": "Due_On",
+          "type": "DATE",
+          "colid": "177856000000000028-3"
+        },
+        {
+          "name": "Gross_Amount",
+          "type": "PLAIN",
+          "colid": "177856000000000028-4"
+        }
+      ]
+    },
+    "177856000000000032": {
+      "name": "Payments",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Payment_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000032-0"
+        },
+        {
+          "name": "Invoice_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000032-1"
+        },
+        {
+          "name": "Received_On",
+          "type": "DATE",
+          "colid": "177856000000000032-2"
+        },
+        {
+          "name": "Method",
+          "type": "PLAIN",
+          "colid": "177856000000000032-3"
+        },
+        {
+          "name": "Amount",
+          "type": "PLAIN",
+          "colid": "177856000000000032-4"
+        }
+      ]
+    },
+    "177856000000000036": {
+      "name": "Tickets",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Ticket_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000036-0"
+        },
+        {
+          "name": "Account_Id",
+          "type": "BIGINT",
+          "colid": "177856000000000036-1"
+        },
+        {
+          "name": "Opened_On",
+          "type": "DATE",
+          "colid": "177856000000000036-2"
+        },
+        {
+          "name": "Severity",
+          "type": "PLAIN",
+          "colid": "177856000000000036-3"
+        },
+        {
+          "name": "Closed_On",
+          "type": "DATE",
+          "colid": "177856000000000036-4"
+        }
+      ]
+    },
+    "177856000000000040": {
+      "name": "Regions",
+      "kind": "Table",
+      "columns": [
+        {
+          "name": "Region",
+          "type": "PLAIN",
+          "colid": "177856000000000040-0"
+        },
+        {
+          "name": "Country",
+          "type": "PLAIN",
+          "colid": "177856000000000040-1"
+        },
+        {
+          "name": "Timezone",
+          "type": "PLAIN",
+          "colid": "177856000000000040-2"
+        }
+      ]
+    },
+    "177856000000000044": {
+      "name": "Revenue_By_Region",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000044-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000044-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000044-2"
+        }
+      ]
+    },
+    "177856000000000048": {
+      "name": "Open_Invoices",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000048-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000048-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000048-2"
+        }
+      ]
+    },
+    "177856000000000052": {
+      "name": "Late_Shipments",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000052-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000052-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000052-2"
+        }
+      ]
+    },
+    "177856000000000056": {
+      "name": "Basket_Size",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000056-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000056-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000056-2"
+        }
+      ]
+    },
+    "177856000000000060": {
+      "name": "Ticket_Load",
+      "kind": "QueryTable",
+      "columns": [
+        {
+          "name": "Col_1",
+          "type": "PLAIN",
+          "colid": "177856000000000060-0"
+        },
+        {
+          "name": "Col_2",
+          "type": "PLAIN",
+          "colid": "177856000000000060-1"
+        },
+        {
+          "name": "Col_3",
+          "type": "PLAIN",
+          "colid": "177856000000000060-2"
+        }
+      ]
+    }
+  },
+  "relations": [
+    {
+      "from": "177856000000000008",
+      "fromColumn": "Account_Id",
+      "to": "177856000000000004",
+      "toColumn": "Account_Id",
+      "relation": "(\"Contacts\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+    },
+    {
+      "from": "177856000000000012",
+      "fromColumn": "Account_Id",
+      "to": "177856000000000004",
+      "toColumn": "Account_Id",
+      "relation": "(\"Orders\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+    },
+    {
+      "from": "177856000000000016",
+      "fromColumn": "Order_Id",
+      "to": "177856000000000012",
+      "toColumn": "Order_Id",
+      "relation": "(\"Order_Lines\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+    },
+    {
+      "from": "177856000000000016",
+      "fromColumn": "Product_Id",
+      "to": "177856000000000020",
+      "toColumn": "Product_Id",
+      "relation": "(\"Order_Lines\".\"Product_Id\")=(\"Products\".\"Product_Id\")"
+    },
+    {
+      "from": "177856000000000024",
+      "fromColumn": "Order_Id",
+      "to": "177856000000000012",
+      "toColumn": "Order_Id",
+      "relation": "(\"Shipments\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+    },
+    {
+      "from": "177856000000000028",
+      "fromColumn": "Order_Id",
+      "to": "177856000000000012",
+      "toColumn": "Order_Id",
+      "relation": "(\"Invoices\".\"Order_Id\")=(\"Orders\".\"Order_Id\")"
+    },
+    {
+      "from": "177856000000000032",
+      "fromColumn": "Invoice_Id",
+      "to": "177856000000000028",
+      "toColumn": "Invoice_Id",
+      "relation": "(\"Payments\".\"Invoice_Id\")=(\"Invoices\".\"Invoice_Id\")"
+    },
+    {
+      "from": "177856000000000036",
+      "fromColumn": "Account_Id",
+      "to": "177856000000000004",
+      "toColumn": "Account_Id",
+      "relation": "(\"Tickets\".\"Account_Id\")=(\"Accounts\".\"Account_Id\")"
+    },
+    {
+      "from": "177856000000000004",
+      "fromColumn": "Region",
+      "to": "177856000000000040",
+      "toColumn": "Region",
+      "relation": "(\"Accounts\".\"Region\")=(\"Regions\".\"Region\")"
+    }
+  ]
+}

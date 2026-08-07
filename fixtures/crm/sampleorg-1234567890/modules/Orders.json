@@ -1,0 +1,85 @@
+{
+  "api_name": "Orders",
+  "display_name": "Sales Orders",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Opened_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Account_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Accounts"
+    },
+    {
+      "api_name": "Quote_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Quotes"
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3007,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ],
+  "related_lists": [
+    {
+      "api_name": "Invoices_of_Orders",
+      "label": "Invoices",
+      "module": "Invoices",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Shipments_of_Orders",
+      "label": "Shipments",
+      "module": "Shipments",
+      "type": "default",
+      "visible": true
+    }
+  ]
+}

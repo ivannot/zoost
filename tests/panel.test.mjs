@@ -1923,3 +1923,52 @@ test('the focus chip wears the focused item\'s own colour, not a colour of its o
     assert.ok(!/\.focusg\{[^}]*margin-left:auto/.test(html), `${app}: the focus group is pushed away from the tabs`);
   }
 });
+
+test('the sample org is in the shape a pull writes, and it never ships', () => {
+  // Fixtures built in a scratch directory die with the session that made them, so this one is in
+  // the repository: for the screenshots, for the tests, and for whoever opens the project next with
+  // no context. It sits outside apps/, which is the only thing build.sh copies.
+  const build = read('build.sh');
+  assert.ok(/cp -R "apps\/\$APP\/\." "\$STAGE"/.test(build), 'the build no longer copies only the app');
+  assert.ok(!/fixtures/.test(build), 'the build has learnt about fixtures/, which would ship them');
+
+  for (const p of ['fixtures/crm/sampleorg-1234567890/functions/index.json',
+                   'fixtures/crm/sampleorg-1234567890/modules/index.json',
+                   'fixtures/crm/sampleorg-1234567890/modules/layouts/index.json',
+                   'fixtures/crm/sampleorg-1234567890/workflows/index.json',
+                   'fixtures/crm/sampleorg-1234567890/schedules/index.json',
+                   'fixtures/crm/sampleorg-1234567890/connections/index.json',
+                   'fixtures/crm/sampleorg-1234567890/.zoost.json',
+                   'fixtures/analytics/sample-workspace/views.json',
+                   'fixtures/analytics/sample-workspace/schema.json',
+                   'fixtures/analytics/sample-workspace/lineage.json',
+                   'fixtures/analytics/sample-workspace/sql/index.json']) {
+    assert.doesNotThrow(() => JSON.parse(read(p)), `${p} is missing or not JSON`);
+  }
+  // one folder per kind, no underscores - the shape this project settled on in 1.13
+  const fns = JSON.parse(read('fixtures/crm/sampleorg-1234567890/functions/index.json'));
+  assert.ok(fns.items.length > 10, 'the sample org has too little in it to show anything');
+  assert.ok(fns.items.every((f) => f.namespace && !f.namespace.startsWith('_')),
+    'a namespace carries the leading underscore that was removed in 1.13');
+
+  // and the graph payloads the diagram window consumes
+  for (const g of ['graph-crm-calls.json', 'graph-crm-schema.json', 'graph-analytics.json']) {
+    const d = JSON.parse(read('fixtures/' + g));
+    assert.ok(d.nodes && d.counts && d.workspace, `${g} is not a graphData payload`);
+    for (const n of Object.values(d.nodes)) {
+      assert.ok(Array.isArray(n.calls) && Array.isArray(n.called_by), `${g}: ${n.id} has no edges`);
+    }
+  }
+});
+
+test('nothing in the sample org names the org this is developed against', () => {
+  // Zoost is stated to be built independently of its author's day job, and a real portal, module or
+  // function name in a fixture would quietly contradict that - on a surface that is about to be
+  // published as a screenshot, which is worse than a comment.
+  const gen = read('fixtures/make.py');
+  assert.ok(/ORG = "1234567890"/.test(gen), 'the sample org id is no longer the neutral placeholder');
+  assert.ok(/INSTANCE = "sampleorg"/.test(gen), 'the sample instance is no longer neutral');
+  const cfg = JSON.parse(read('fixtures/crm/sampleorg-1234567890/.zoost.json'));
+  assert.equal(cfg.org, '1234567890');
+  assert.equal(cfg.instance, 'sampleorg');
+});

@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": "4000",
+      "name": "New order received",
+      "module": "Orders",
+      "active": true
+    },
+    {
+      "id": "4001",
+      "name": "Order amount changed",
+      "module": "Orders",
+      "active": true
+    },
+    {
+      "id": "4002",
+      "name": "Invoice overdue",
+      "module": "Invoices",
+      "active": true
+    },
+    {
+      "id": "4003",
+      "name": "Ticket unanswered",
+      "module": "Tickets",
+      "active": true
+    },
+    {
+      "id": "4004",
+      "name": "Contact created",
+      "module": "Contacts",
+      "active": true
+    },
+    {
+      "id": "4005",
+      "name": "Deal won",
+      "module": "Deals",
+      "active": true
+    },
+    {
+      "id": "4006",
+      "name": "Shipment dispatched",
+      "module": "Shipments",
+      "active": true
+    },
+    {
+      "id": "4007",
+      "name": "Lead untouched",
+      "module": "Leads",
+      "active": true
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "items": [
+    {
+      "api_name": "Accounts",
+      "display_name": "Accounts",
+      "category": "standard",
+      "fieldCount": 6,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Contacts",
+      "display_name": "Contacts",
+      "category": "standard",
+      "fieldCount": 8,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Leads",
+      "display_name": "Leads",
+      "category": "standard",
+      "fieldCount": 8,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Deals",
+      "display_name": "Deals",
+      "category": "standard",
+      "fieldCount": 11,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Products",
+      "display_name": "Products",
+      "category": "standard",
+      "fieldCount": 10,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Quotes",
+      "display_name": "Quotes",
+      "category": "standard",
+      "fieldCount": 13,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Invoices",
+      "display_name": "Invoices",
+      "category": "standard",
+      "fieldCount": 8,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Orders",
+      "display_name": "Sales Orders",
+      "category": "standard",
+      "fieldCount": 9,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Shipments",
+      "display_name": "Shipments",
+      "category": "custom",
+      "fieldCount": 9,
+      "layoutCount": 2
+    },
+    {
+      "api_name": "Tickets",
+      "display_name": "Support Tickets",
+      "category": "custom",
+      "fieldCount": 12,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Campaigns",
+      "display_name": "Campaigns",
+      "category": "standard",
+      "fieldCount": 10,
+      "layoutCount": 1
+    },
+    {
+      "api_name": "Subscriptions",
+      "display_name": "Subscriptions",
+      "category": "custom",
+      "fieldCount": 13,
+      "layoutCount": 1
+    }
+  ]
+}

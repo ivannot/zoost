@@ -1,0 +1,19 @@
+{
+  "id": "4000",
+  "name": "New order received",
+  "module": "Orders",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [
+        {
+          "type": "function",
+          "name": "orders.onOrderCreate"
+        }
+      ],
+      "scheduled_actions": []
+    }
+  ],
+  "last_executed_time": "2026-07-20T11:20:00+00:00"
+}

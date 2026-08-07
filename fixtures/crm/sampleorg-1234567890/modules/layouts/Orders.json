@@ -1,0 +1,11 @@
+{
+  "api_name": "Orders",
+  "layouts": [
+    {
+      "id": 3007,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

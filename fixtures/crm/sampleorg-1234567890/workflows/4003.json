@@ -1,0 +1,24 @@
+{
+  "id": "4003",
+  "name": "Ticket unanswered",
+  "module": "Tickets",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [],
+      "scheduled_actions": [
+        {
+          "delay": "2 days",
+          "actions": [
+            {
+              "type": "function",
+              "name": "support.escalate"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "last_executed_time": "2026-07-23T11:20:00+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "4004",
+  "name": "Contact created",
+  "module": "Contacts",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [],
+      "scheduled_actions": []
+    }
+  ],
+  "last_executed_time": "2026-07-24T11:20:00+00:00"
+}

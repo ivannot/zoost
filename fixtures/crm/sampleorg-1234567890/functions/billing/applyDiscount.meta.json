@@ -1,0 +1,23 @@
+{
+  "sv": 3,
+  "id": "9006",
+  "name": "applyDiscount",
+  "namespace": "billing",
+  "display_name": "applyDiscount",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "amount",
+      "type": "string"
+    },
+    {
+      "name": "code",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-07T09:00:00+00:00",
+  "rest": false
+}

@@ -1,0 +1,861 @@
+{
+  "kind": "schema",
+  "nodes": {
+    "Accounts": {
+      "id": "Accounts",
+      "name": "Accounts",
+      "api_name": "Accounts",
+      "display_name": "Accounts",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [
+        "Contacts",
+        "Deals",
+        "Quotes",
+        "Invoices",
+        "Orders",
+        "Tickets",
+        "Subscriptions"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Contacts": {
+      "id": "Contacts",
+      "name": "Contacts",
+      "api_name": "Contacts",
+      "display_name": "Contacts",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts"
+      ],
+      "called_by": [
+        "Deals",
+        "Tickets"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Leads": {
+      "id": "Leads",
+      "name": "Leads",
+      "api_name": "Leads",
+      "display_name": "Leads",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Deals": {
+      "id": "Deals",
+      "name": "Deals",
+      "api_name": "Deals",
+      "display_name": "Deals",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Contact_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Contacts"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts",
+        "Contacts"
+      ],
+      "called_by": [
+        "Quotes"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Products": {
+      "id": "Products",
+      "name": "Products",
+      "api_name": "Products",
+      "display_name": "Products",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [
+        "Tickets",
+        "Subscriptions"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Quotes": {
+      "id": "Quotes",
+      "name": "Quotes",
+      "api_name": "Quotes",
+      "display_name": "Quotes",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Deal_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Deals"
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Deals",
+        "Accounts"
+      ],
+      "called_by": [
+        "Orders"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Invoices": {
+      "id": "Invoices",
+      "name": "Invoices",
+      "api_name": "Invoices",
+      "display_name": "Invoices",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Order_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Orders"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts",
+        "Orders"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Orders": {
+      "id": "Orders",
+      "name": "Orders",
+      "api_name": "Orders",
+      "display_name": "Sales Orders",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Quote_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Quotes"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts",
+        "Quotes"
+      ],
+      "called_by": [
+        "Invoices",
+        "Shipments"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Shipments": {
+      "id": "Shipments",
+      "name": "Shipments",
+      "api_name": "Shipments",
+      "display_name": "Shipments",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Order_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Orders"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Orders"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Tickets": {
+      "id": "Tickets",
+      "name": "Tickets",
+      "api_name": "Tickets",
+      "display_name": "Support Tickets",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Contact_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Contacts"
+        },
+        {
+          "api_name": "Product_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Products"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts",
+        "Contacts",
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Campaigns": {
+      "id": "Campaigns",
+      "name": "Campaigns",
+      "api_name": "Campaigns",
+      "display_name": "Campaigns",
+      "namespace": "standard",
+      "category": "standard",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Subscriptions": {
+      "id": "Subscriptions",
+      "name": "Subscriptions",
+      "api_name": "Subscriptions",
+      "display_name": "Subscriptions",
+      "namespace": "custom",
+      "category": "custom",
+      "fields": [
+        {
+          "api_name": "Name",
+          "data_type": "text",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Owner",
+          "data_type": "ownerlookup",
+          "mandatory": true,
+          "lookup": null
+        },
+        {
+          "api_name": "Description",
+          "data_type": "textarea",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Status",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Amount",
+          "data_type": "currency",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Currency",
+          "data_type": "picklist",
+          "mandatory": false,
+          "lookup": null
+        },
+        {
+          "api_name": "Account_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Accounts"
+        },
+        {
+          "api_name": "Product_Ref",
+          "data_type": "lookup",
+          "mandatory": false,
+          "lookup": "Products"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 1,
+          "name": "Standard",
+          "visible": true
+        }
+      ],
+      "related_lists": [],
+      "calls": [
+        "Accounts",
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    }
+  },
+  "edges": [],
+  "focus": null,
+  "depth": 2,
+  "counts": {
+    "nodes": 12,
+    "edges": 15,
+    "dead_suspects": 0,
+    "unresolved": 0
+  },
+  "workspace": {
+    "instance": "sampleorg",
+    "org": "1234567890",
+    "label": "Sample org"
+  }
+}

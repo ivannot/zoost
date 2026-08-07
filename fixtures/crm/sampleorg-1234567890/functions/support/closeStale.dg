@@ -1,0 +1,7 @@
+// support.closeStale - sample function, invented for the fixture org.
+void closeStale()
+{
+    info "support.closeStale start";
+    r0 = support.escalate();
+    return null;
+}

@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "name": "warehouse_api",
+      "display_name": "Warehouse API",
+      "service": "custom",
+      "status": "connected",
+      "used_by": [
+        "shipping.planShipment",
+        "orders.reserveStock"
+      ]
+    },
+    {
+      "name": "payments_gw",
+      "display_name": "Payments gateway",
+      "service": "custom",
+      "status": "connected",
+      "used_by": [
+        "billing.syncPayments"
+      ]
+    },
+    {
+      "name": "mail_relay",
+      "display_name": "Mail relay",
+      "service": "custom",
+      "status": "connected",
+      "used_by": [
+        "reporting.weeklyDigest",
+        "support.escalate"
+      ]
+    },
+    {
+      "name": "catalogue_feed",
+      "display_name": "Catalogue feed",
+      "service": "custom",
+      "status": "connected",
+      "used_by": [
+        "sync.pullCatalogue"
+      ]
+    },
+    {
+      "name": "archive_store",
+      "display_name": "Archive store",
+      "service": "custom",
+      "status": "connected",
+      "used_by": []
+    }
+  ]
+}

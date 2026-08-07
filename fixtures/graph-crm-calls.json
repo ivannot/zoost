@@ -1,0 +1,966 @@
+{
+  "kind": "calls",
+  "nodes": {
+    "shared.log": {
+      "id": "shared.log",
+      "name": "log",
+      "display_name": "log",
+      "namespace": "shared",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "billing.buildInvoice",
+        "billing.applyDiscount",
+        "billing.dunningRun",
+        "billing.syncPayments",
+        "orders.validateOrder",
+        "orders.reserveStock",
+        "orders.releaseStock",
+        "shipping.planShipment",
+        "support.openTicket",
+        "support.escalate",
+        "sync.pushAccounts",
+        "sync.reconcile"
+      ],
+      "params": [
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shared.formatMoney": {
+      "id": "shared.formatMoney",
+      "name": "formatMoney",
+      "display_name": "formatMoney",
+      "namespace": "shared",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "billing.buildInvoice",
+        "orders.recalcTotals",
+        "reporting.weeklyDigest"
+      ],
+      "params": [
+        {
+          "name": "amount",
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shared.isBusinessDay": {
+      "id": "shared.isBusinessDay",
+      "name": "isBusinessDay",
+      "display_name": "isBusinessDay",
+      "namespace": "shared",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "shipping.planShipment"
+      ],
+      "params": [
+        {
+          "name": "day",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shared.orgSettings": {
+      "id": "shared.orgSettings",
+      "name": "orgSettings",
+      "display_name": "orgSettings",
+      "namespace": "shared",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "orders.validateOrder",
+        "sync.pushAccounts",
+        "sync.pullCatalogue"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "billing.calcTax": {
+      "id": "billing.calcTax",
+      "name": "calcTax",
+      "display_name": "calcTax",
+      "namespace": "billing",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "billing.buildInvoice",
+        "orders.recalcTotals"
+      ],
+      "params": [
+        {
+          "name": "amount",
+          "type": "string"
+        },
+        {
+          "name": "rate",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "billing.buildInvoice": {
+      "id": "billing.buildInvoice",
+      "name": "buildInvoice",
+      "display_name": "buildInvoice",
+      "namespace": "billing",
+      "category": "standalone",
+      "calls": [
+        "billing.calcTax",
+        "billing.applyDiscount",
+        "shared.formatMoney",
+        "shared.log"
+      ],
+      "called_by": [
+        "billing.dunningRun",
+        "wf:4005"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "billing.applyDiscount": {
+      "id": "billing.applyDiscount",
+      "name": "applyDiscount",
+      "display_name": "applyDiscount",
+      "namespace": "billing",
+      "category": "standalone",
+      "calls": [
+        "shared.log"
+      ],
+      "called_by": [
+        "billing.buildInvoice"
+      ],
+      "params": [
+        {
+          "name": "amount",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "billing.dunningRun": {
+      "id": "billing.dunningRun",
+      "name": "dunningRun",
+      "display_name": "dunningRun",
+      "namespace": "billing",
+      "category": "scheduler",
+      "calls": [
+        "billing.buildInvoice",
+        "shared.log"
+      ],
+      "called_by": [
+        "wf:4002",
+        "sch:5001"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "billing.syncPayments": {
+      "id": "billing.syncPayments",
+      "name": "syncPayments",
+      "display_name": "syncPayments",
+      "namespace": "billing",
+      "category": "scheduler",
+      "calls": [
+        "shared.log",
+        "sync.reconcile",
+        "conn:payments_gw"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.validateOrder": {
+      "id": "orders.validateOrder",
+      "name": "validateOrder",
+      "display_name": "validateOrder",
+      "namespace": "orders",
+      "category": "crmfundamentals",
+      "calls": [
+        "shared.orgSettings",
+        "shared.log"
+      ],
+      "called_by": [
+        "orders.onOrderCreate"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.reserveStock": {
+      "id": "orders.reserveStock",
+      "name": "reserveStock",
+      "display_name": "reserveStock",
+      "namespace": "orders",
+      "category": "standalone",
+      "calls": [
+        "shared.log",
+        "conn:warehouse_api"
+      ],
+      "called_by": [
+        "orders.onOrderCreate"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.releaseStock": {
+      "id": "orders.releaseStock",
+      "name": "releaseStock",
+      "display_name": "releaseStock",
+      "namespace": "orders",
+      "category": "standalone",
+      "calls": [
+        "shared.log"
+      ],
+      "called_by": [
+        "shipping.planShipment"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.onOrderCreate": {
+      "id": "orders.onOrderCreate",
+      "name": "onOrderCreate",
+      "display_name": "onOrderCreate",
+      "namespace": "orders",
+      "category": "crmfundamentals",
+      "calls": [
+        "orders.validateOrder",
+        "orders.reserveStock",
+        "orders.recalcTotals"
+      ],
+      "called_by": [
+        "wf:4000"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "orders.recalcTotals": {
+      "id": "orders.recalcTotals",
+      "name": "recalcTotals",
+      "display_name": "recalcTotals",
+      "namespace": "orders",
+      "category": "standalone",
+      "calls": [
+        "billing.calcTax",
+        "shared.formatMoney"
+      ],
+      "called_by": [
+        "orders.onOrderCreate",
+        "wf:4001"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shipping.planShipment": {
+      "id": "shipping.planShipment",
+      "name": "planShipment",
+      "display_name": "planShipment",
+      "namespace": "shipping",
+      "category": "standalone",
+      "calls": [
+        "shared.isBusinessDay",
+        "orders.releaseStock",
+        "shared.log",
+        "conn:warehouse_api"
+      ],
+      "called_by": [
+        "shipping.nightlyDispatch"
+      ],
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shipping.trackParcel": {
+      "id": "shipping.trackParcel",
+      "name": "trackParcel",
+      "display_name": "trackParcel",
+      "namespace": "shipping",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "shipping.nightlyDispatch",
+        "wf:4006"
+      ],
+      "params": [
+        {
+          "name": "tracking",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "shipping.nightlyDispatch": {
+      "id": "shipping.nightlyDispatch",
+      "name": "nightlyDispatch",
+      "display_name": "nightlyDispatch",
+      "namespace": "shipping",
+      "category": "scheduler",
+      "calls": [
+        "shipping.planShipment",
+        "shipping.trackParcel"
+      ],
+      "called_by": [
+        "sch:5000"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "support.openTicket": {
+      "id": "support.openTicket",
+      "name": "openTicket",
+      "display_name": "openTicket",
+      "namespace": "support",
+      "category": "custombutton",
+      "calls": [
+        "shared.log"
+      ],
+      "called_by": [],
+      "params": [
+        {
+          "name": "accountId",
+          "type": "string"
+        },
+        {
+          "name": "subject",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": true,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "support.escalate": {
+      "id": "support.escalate",
+      "name": "escalate",
+      "display_name": "escalate",
+      "namespace": "support",
+      "category": "standalone",
+      "calls": [
+        "shared.log",
+        "reporting.weeklyDigest",
+        "conn:mail_relay"
+      ],
+      "called_by": [
+        "support.closeStale",
+        "wf:4003"
+      ],
+      "params": [
+        {
+          "name": "ticketId",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "support.closeStale": {
+      "id": "support.closeStale",
+      "name": "closeStale",
+      "display_name": "closeStale",
+      "namespace": "support",
+      "category": "scheduler",
+      "calls": [
+        "support.escalate"
+      ],
+      "called_by": [
+        "sch:5002"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sync.pushAccounts": {
+      "id": "sync.pushAccounts",
+      "name": "pushAccounts",
+      "display_name": "pushAccounts",
+      "namespace": "sync",
+      "category": "scheduler",
+      "calls": [
+        "shared.orgSettings",
+        "shared.log"
+      ],
+      "called_by": [
+        "sch:5005"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sync.pullCatalogue": {
+      "id": "sync.pullCatalogue",
+      "name": "pullCatalogue",
+      "display_name": "pullCatalogue",
+      "namespace": "sync",
+      "category": "scheduler",
+      "calls": [
+        "shared.orgSettings",
+        "conn:catalogue_feed"
+      ],
+      "called_by": [
+        "sch:5004"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sync.reconcile": {
+      "id": "sync.reconcile",
+      "name": "reconcile",
+      "display_name": "reconcile",
+      "namespace": "sync",
+      "category": "standalone",
+      "calls": [
+        "shared.log"
+      ],
+      "called_by": [
+        "billing.syncPayments"
+      ],
+      "params": [
+        {
+          "name": "since",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "reporting.weeklyDigest": {
+      "id": "reporting.weeklyDigest",
+      "name": "weeklyDigest",
+      "display_name": "weeklyDigest",
+      "namespace": "reporting",
+      "category": "scheduler",
+      "calls": [
+        "reporting.buildCohort",
+        "shared.formatMoney",
+        "conn:mail_relay"
+      ],
+      "called_by": [
+        "support.escalate",
+        "sch:5003"
+      ],
+      "params": [],
+      "return_type": "void",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "reporting.buildCohort": {
+      "id": "reporting.buildCohort",
+      "name": "buildCohort",
+      "display_name": "buildCohort",
+      "namespace": "reporting",
+      "category": "standalone",
+      "calls": [],
+      "called_by": [
+        "reporting.weeklyDigest",
+        "reporting.exportCsv"
+      ],
+      "params": [
+        {
+          "name": "from",
+          "type": "string"
+        },
+        {
+          "name": "to",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "reporting.exportCsv": {
+      "id": "reporting.exportCsv",
+      "name": "exportCsv",
+      "display_name": "exportCsv",
+      "namespace": "reporting",
+      "category": "custombutton",
+      "calls": [
+        "reporting.buildCohort"
+      ],
+      "called_by": [],
+      "params": [
+        {
+          "name": "view",
+          "type": "string"
+        }
+      ],
+      "return_type": "map",
+      "rest": true,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4000": {
+      "id": "wf:4000",
+      "name": "New order received",
+      "display_name": "New order received",
+      "namespace": "Orders",
+      "category": "workflows",
+      "calls": [
+        "orders.onOrderCreate"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4001": {
+      "id": "wf:4001",
+      "name": "Order amount changed",
+      "display_name": "Order amount changed",
+      "namespace": "Orders",
+      "category": "workflows",
+      "calls": [
+        "orders.recalcTotals"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4002": {
+      "id": "wf:4002",
+      "name": "Invoice overdue",
+      "display_name": "Invoice overdue",
+      "namespace": "Invoices",
+      "category": "workflows",
+      "calls": [
+        "billing.dunningRun"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4003": {
+      "id": "wf:4003",
+      "name": "Ticket unanswered",
+      "display_name": "Ticket unanswered",
+      "namespace": "Tickets",
+      "category": "workflows",
+      "calls": [
+        "support.escalate"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4004": {
+      "id": "wf:4004",
+      "name": "Contact created",
+      "display_name": "Contact created",
+      "namespace": "Contacts",
+      "category": "workflows",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4005": {
+      "id": "wf:4005",
+      "name": "Deal won",
+      "display_name": "Deal won",
+      "namespace": "Deals",
+      "category": "workflows",
+      "calls": [
+        "billing.buildInvoice"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4006": {
+      "id": "wf:4006",
+      "name": "Shipment dispatched",
+      "display_name": "Shipment dispatched",
+      "namespace": "Shipments",
+      "category": "workflows",
+      "calls": [
+        "shipping.trackParcel"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "wf:4007": {
+      "id": "wf:4007",
+      "name": "Lead untouched",
+      "display_name": "Lead untouched",
+      "namespace": "Leads",
+      "category": "workflows",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5000": {
+      "id": "sch:5000",
+      "name": "Nightly dispatch",
+      "display_name": "Nightly dispatch",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "shipping.nightlyDispatch"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5001": {
+      "id": "sch:5001",
+      "name": "Dunning run",
+      "display_name": "Dunning run",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "billing.dunningRun"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5002": {
+      "id": "sch:5002",
+      "name": "Close stale tickets",
+      "display_name": "Close stale tickets",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "support.closeStale"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5003": {
+      "id": "sch:5003",
+      "name": "Weekly digest",
+      "display_name": "Weekly digest",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "reporting.weeklyDigest"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5004": {
+      "id": "sch:5004",
+      "name": "Catalogue pull",
+      "display_name": "Catalogue pull",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "sync.pullCatalogue"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "sch:5005": {
+      "id": "sch:5005",
+      "name": "Account push",
+      "display_name": "Account push",
+      "namespace": "schedules",
+      "category": "schedules",
+      "calls": [
+        "sync.pushAccounts"
+      ],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:warehouse_api": {
+      "id": "conn:warehouse_api",
+      "name": "Warehouse API",
+      "display_name": "Warehouse API",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [
+        "orders.reserveStock",
+        "shipping.planShipment"
+      ],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:payments_gw": {
+      "id": "conn:payments_gw",
+      "name": "Payments gateway",
+      "display_name": "Payments gateway",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [
+        "billing.syncPayments"
+      ],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:mail_relay": {
+      "id": "conn:mail_relay",
+      "name": "Mail relay",
+      "display_name": "Mail relay",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [
+        "support.escalate",
+        "reporting.weeklyDigest"
+      ],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:catalogue_feed": {
+      "id": "conn:catalogue_feed",
+      "name": "Catalogue feed",
+      "display_name": "Catalogue feed",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [
+        "sync.pullCatalogue"
+      ],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "conn:archive_store": {
+      "id": "conn:archive_store",
+      "name": "Archive store",
+      "display_name": "Archive store",
+      "namespace": "connections",
+      "category": "connections",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": true,
+      "unresolved": [],
+      "ambiguous": []
+    }
+  },
+  "edges": [],
+  "focus": null,
+  "depth": 2,
+  "counts": {
+    "nodes": 45,
+    "edges": 52,
+    "dead_suspects": 4,
+    "unresolved": 0
+  },
+  "workspace": {
+    "instance": "sampleorg",
+    "org": "1234567890",
+    "label": "Sample org"
+  }
+}

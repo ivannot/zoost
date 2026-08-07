@@ -983,9 +983,32 @@ function orphanedByFilter() {
   return nodesA.filter((id) => N[id] && passKind(N[id]) && !linked.has(id) && id !== curFocus
     && (!egoSet || egoSet.has(id))).length;
 }
+// Text measured, not guessed. The box was a fixed 250px and a long name simply ran past its own
+// edge - reported. There is no canvas in this window any more, so one is made here for its 2D
+// context, which is the only text-measuring API that does not require laying anything out.
+let _tm = null;
+function textWidth(text, font) {
+  if (!_tm) _tm = document.createElement('canvas').getContext('2d');
+  _tm.font = font;
+  return _tm.measureText(String(text || '')).width;
+}
+const BOX_MIN = 190, BOX_MAX = 460;
 function erBoxSize(n) {
-  const rows = erFieldsFor(n); const w = erEmph === 'relations' ? 190 : 250, headerH = 28, rowH = 18, cap = 40;
-  const shown = Math.min(rows.length, cap); const more = rows.length > cap ? 16 : 0;
+  const rows = erFieldsFor(n); const headerH = 28, rowH = 18, cap = 40;
+  // The header is name + a smaller sub-label, with padding and the gap between them. The rows are
+  // measured too: a long column name overflows just as readily as a title does.
+  const sans = 'var(--sans)';
+  const head = textWidth(label(n), `700 12px ${sans}`)
+    + textWidth(n.api_name || '', `500 10px ${sans}`)
+    + 18 + 8;
+  const shown = Math.min(rows.length, cap);
+  const widest = rows.slice(0, shown).reduce((m, f) => Math.max(m,
+    textWidth(f.api_name, '11px ui-monospace, monospace')
+    // The row draws label(N[id]), not the id - in Zoho Analytics an id is a number - so that is
+    // what has to be measured. Measuring the id would size the box for a string nobody sees.
+    + textWidth(f.lookup ? '\u2192 ' + (label(N[f.lookup]) || f.lookup) : (f.data_type || ''), '11px ui-monospace, monospace') + 26), 0);
+  const w = Math.round(Math.max(BOX_MIN, Math.min(BOX_MAX, erEmph === 'relations' ? head : Math.max(head, widest))));
+  const more = rows.length > cap ? 16 : 0;
   return { w, h: headerH + shown * rowH + more, rows, shown, more };
 }
 function erLayout() {

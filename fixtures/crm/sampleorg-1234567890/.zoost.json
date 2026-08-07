@@ -1,0 +1,35 @@
+{
+  "org": "1234567890",
+  "instance": "sampleorg",
+  "host": "crm.zoho.eu",
+  "sandbox": false,
+  "label": "Sample org",
+  "lastPull": "2026-08-07T10:00:00.000Z",
+  "access": {
+    "functions": {
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z",
+      "ok": true
+    },
+    "modules": {
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z",
+      "ok": true
+    },
+    "workflows": {
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z",
+      "ok": true
+    },
+    "schedules": {
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z",
+      "ok": true
+    },
+    "connections": {
+      "at": "2026-08-07T10:00:00.000Z",
+      "pulledAt": "2026-08-07T10:00:00.000Z",
+      "ok": true
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "api_name": "Campaigns",
+  "layouts": [
+    {
+      "id": 3010,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ]
+}

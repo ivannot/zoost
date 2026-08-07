@@ -1,0 +1,102 @@
+{
+  "api_name": "Quotes",
+  "display_name": "Quotes",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Opened_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Closed_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Priority",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "External_Ref",
+      "data_type": "text",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Notes",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Deal_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Deals"
+    },
+    {
+      "api_name": "Account_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Accounts"
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3005,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ],
+  "related_lists": [
+    {
+      "api_name": "Orders_of_Quotes",
+      "label": "Orders",
+      "module": "Orders",
+      "type": "default",
+      "visible": true
+    }
+  ]
+}

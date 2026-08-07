@@ -1,0 +1,64 @@
+{
+  "api_name": "Leads",
+  "display_name": "Leads",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Opened_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Closed_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3002,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ],
+  "related_lists": []
+}

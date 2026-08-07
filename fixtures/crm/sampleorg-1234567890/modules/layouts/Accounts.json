@@ -1,0 +1,17 @@
+{
+  "api_name": "Accounts",
+  "layouts": [
+    {
+      "id": 3000,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    },
+    {
+      "id": 3100,
+      "name": "Compact",
+      "visible": true,
+      "sections": 2
+    }
+  ]
+}

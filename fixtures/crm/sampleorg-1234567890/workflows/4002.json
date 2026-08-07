@@ -1,0 +1,24 @@
+{
+  "id": "4002",
+  "name": "Invoice overdue",
+  "module": "Invoices",
+  "active": true,
+  "conditions": [
+    {
+      "criteria": "Status is not empty",
+      "actions": [],
+      "scheduled_actions": [
+        {
+          "delay": "2 days",
+          "actions": [
+            {
+              "type": "function",
+              "name": "billing.dunningRun"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "last_executed_time": "2026-07-22T11:20:00+00:00"
+}

@@ -1,0 +1,79 @@
+{
+  "api_name": "Contacts",
+  "display_name": "Contacts",
+  "category": "standard",
+  "fields": [
+    {
+      "api_name": "Name",
+      "data_type": "text",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Owner",
+      "data_type": "ownerlookup",
+      "mandatory": true,
+      "lookup": null
+    },
+    {
+      "api_name": "Description",
+      "data_type": "textarea",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Status",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Amount",
+      "data_type": "currency",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Currency",
+      "data_type": "picklist",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Opened_On",
+      "data_type": "date",
+      "mandatory": false,
+      "lookup": null
+    },
+    {
+      "api_name": "Account_Ref",
+      "data_type": "lookup",
+      "mandatory": false,
+      "lookup": "Accounts"
+    }
+  ],
+  "layouts": [
+    {
+      "id": 3001,
+      "name": "Standard",
+      "visible": true,
+      "sections": 3
+    }
+  ],
+  "related_lists": [
+    {
+      "api_name": "Deals_of_Contacts",
+      "label": "Deals",
+      "module": "Deals",
+      "type": "default",
+      "visible": true
+    },
+    {
+      "api_name": "Tickets_of_Contacts",
+      "label": "Tickets",
+      "module": "Tickets",
+      "type": "default",
+      "visible": true
+    }
+  ]
+}

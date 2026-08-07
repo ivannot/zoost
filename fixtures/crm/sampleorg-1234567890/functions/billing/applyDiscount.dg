@@ -1,0 +1,7 @@
+// billing.applyDiscount - sample function, invented for the fixture org.
+map applyDiscount(string amount, string code)
+{
+    info "billing.applyDiscount start";
+    r0 = shared.log();
+    return r0;
+}

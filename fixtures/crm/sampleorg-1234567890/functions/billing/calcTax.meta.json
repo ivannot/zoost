@@ -1,0 +1,23 @@
+{
+  "sv": 3,
+  "id": "9004",
+  "name": "calcTax",
+  "namespace": "billing",
+  "display_name": "calcTax",
+  "category": "standalone",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "amount",
+      "type": "string"
+    },
+    {
+      "name": "rate",
+      "type": "string"
+    }
+  ],
+  "connections": [],
+  "modified_by": "Sample User",
+  "modified_time": "2026-07-05T09:00:00+00:00",
+  "rest": false
+}
