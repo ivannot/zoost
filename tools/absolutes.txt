@@ -101,16 +101,18 @@ c97ddcf4e88db2b5  site/docs-analytics.html: MD ( Export Markdown ) produces the 
 38ebd58849240f29  site/docs-analytics.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: Zoho Analytics names the first workspace of every account the same way, so two projects can arrive on disk looking identical.
 503f2e7127394d7c  site/docs-analytics.html: Nothing goes to the developer.
 19250b999b73f778  site/docs-analytics.html: On disk every query is its own file, so grep and git log -p work on them like any other source.
-87e5985373cdbc2b  site/docs-analytics.html: Per window, not remembered, and only there: the other three views have no list.
+7fed3f5b16504cbf  site/docs-analytics.html: Per window, not remembered, and only there: the other two views have no list.
 b79fe41d9d34be67  site/docs-analytics.html: Pick Nothing depends on in the Type filter to see only the candidates.
 f944da6c2df85337  site/docs-analytics.html: Pulling Pull all reads the whole workspace in one pass: the list of views, the columns and types of every table and query table, the relations between them, the SQL of each query table, and the dependency graph.
 b590b3f975ae3ae4  site/docs-analytics.html: Putting it under Git In the workspace folder: cd <working folder>/analytics/<workspace> git init && git add -A && git commit -m "initial mirror" What you get on disk: views.json the census: every view with type, folder, owner, dates, tags schema.json columns and data types per table, plus the relations lineage.json what reads from what, both directions sql/*.sql one file per query table - the diffable part sql/index.json id-to-file map, and which source columns each query involves export/ the reports you generate The .sql files are the point.
 f11541dcbe113f85  site/docs-analytics.html: Reading the workspace The list is every view.
+8ec38141b1045cb7  site/docs-analytics.html: Switching a kind off removes what it strands as well: a table whose only relations went into it has nothing left to link it, so it is not drawn, and the status line says how many.
 e2cfd044eb528279  site/docs-analytics.html: The Cols column counts columns, and a number in brackets means the view has none of its own: only tables and query tables carry columns, so a report or a chart shows the count of the view it is built on, and the tooltip names it.
 f1608bbd1ea626f8  site/docs-analytics.html: The Markdown carries one thing the HTML does not: the constraints of Zoho Analytics' SQL dialect , so an assistant reading that file does not write queries that cannot run.
 1e707cd0d2b8d007  site/docs-analytics.html: The SQL option sits indented under Structure because it depends on it, and it is flagged every time: it is the part somebody wrote.
 30ea005ff05d3472  site/docs-analytics.html: The assistant is told what Zoho documents about query-table SQL - SELECT only, double-quoted identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of query-over-query.
 e26a820e83f13220  site/docs-analytics.html: The browser asks for permission; it is the only way an extension may write files, and it applies to that folder alone.
+3cc7cee9aff74867  site/docs-analytics.html: The chips above the tabs are the filter and the colour key at once, grouped by what they ask: Views is which kinds are on screen and every one of them starts on, so switching one off removes it; Only narrows to tables that are also a hub, an orphan or a system table, and starts empty.
 00c6c6e5a78e3d87  site/docs-analytics.html: The window also has a Relations tab: one row per join, searchable by table, column or join, and every join copyable.
 aeaf04ab914655cf  site/docs-analytics.html: The worst it can do to your workspace is nothing.
 31c35d662b06b969  site/docs-analytics.html: There is nothing to pick and nothing to pick wrong.
@@ -278,6 +280,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 63783a6966eb8c5a  site/it/docs-analytics.html: L'opzione SQL sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.
 0ed5a31bb52ce3b8  site/it/docs-analytics.html: La finestra ha anche una scheda Relations : una riga per join, cercabile per tabella, colonna o join, e ogni join si può copiare.
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
+a68b09b3d913dd3a  site/it/docs-analytics.html: Le chip sopra le schede sono insieme il filtro e la legenda dei colori, raggruppate per la domanda che pongono: Views è quali tipi sono a schermo e partono tutti accesi, quindi spegnerne uno lo toglie; Only restringe alle tabelle che sono anche hub, orfane o di sistema, e parte vuoto.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
 82d595fa2cd12539  site/it/docs-analytics.html: Lo legge e lo scrive su disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.
 a5b636681017c17d  site/it/docs-analytics.html: Lo stesso insieme viene disposto allo stesso modo ogni volta.
@@ -303,6 +306,7 @@ d72e1a7f50078e96  site/it/docs-analytics.html: Per report e dashboard Zoho Analy
 b2ec4c05b1634520  site/it/docs-analytics.html: Sempre un timestamp vero, sempre ordinabile.
 4b6fb0a7919b1655  site/it/docs-analytics.html: Sintomo Causa e rimedio È tutto disattivato La scheda e la cartella sono due workspace diversi.
 2a7a89fe782a7a96  site/it/docs-analytics.html: Sono l'unica cosa in Zoho Analytics che è davvero sorgente scritta da qualcuno, e un file per ciascuna è ciò che permette a git diff di rispondere a cosa è cambiato in questo workspace il mese scorso - una domanda a cui Zoho Analytics non sa rispondere per niente.
+6e1854f756cbcb18  site/it/docs-analytics.html: Spegnere un tipo porta via anche quello che resta isolato: una tabella le cui uniche relazioni andavano lì non ha più niente che la leghi, quindi non viene disegnata, e la riga di stato dice quante sono.
 9e76fcd9de637347  site/it/docs-analytics.html: Su disco ogni query è un file a sé, così grep e git log -p ci lavorano come su qualunque altro sorgente.
 bcd418e3c870952c  site/it/docs-analytics.html: Tabelle e query table hanno le proprie; un report o una pivot non ne ha nessuna, quindi Zoost segue ciò su cui è costruito e mostra quella struttura - dicendo di chi è, invece di spacciarla per quella del report.
 b8b4619cdced3dc9  site/it/docs-analytics.html: Tutto quello che Zoost scrive sta lì dentro, e ogni prodotto Zoost tiene la propria sottocartella, così una cartella sola li serve tutti.
@@ -312,6 +316,7 @@ c7df48eecd6e70bb  site/it/docs-analytics.html: Workspace index è quanta parte d
 d9c9a775e83d9c75  site/it/docs-analytics.html: Zoho Analytics sa soltanto cosa leggono le sue viste l'una dall'altra.
 cbdf2ba58ab43188  site/it/docs-analytics.html: Zoost non esegue, non valida e non fa il deploy di nessun SQL.
 08519e4ba10d3f2e  site/it/docs-analytics.html: Zoost su Zoho Analytics legge soltanto .
+a7b2d1b38291e6ef  site/it/docs-analytics.html: ↺ All rimette tutto e None spegne tutto, così basta un clic per riaccendere il tipo che ti serve.
 cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da nessuna parte.
 885f1eba51027648  site/it/docs-crm.html: Cifrarla con un segreto tenuto lì accanto sembrerebbe protezione e non ne offrirebbe nessuna.
 508eeb9f3218d23a  site/it/docs-crm.html: Clicca Refresh outdated nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.
