@@ -82,7 +82,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   Relations, which puts the link first instead of the thing: one row per call on a graph - who calls
   whom, with the call copyable complete with its parameter names - and one row per related list on a
   schema. Selecting anything in Explorer re-centres all three on it, Relations included: it then
-  lists the links around that item, and "show all" beside the count widens it back to everything.
+  lists the links around that item and says so beside the count; "Everything" in the Focus group is
+  what widens it back.
 - The references bar under a function also carries a depth and a "Graph" button, which opens
   that window centred on this function. The Modules preview has the same pair for the ER diagram.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail

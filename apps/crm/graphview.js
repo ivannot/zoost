@@ -531,15 +531,16 @@ function relRender() {
   if (!RELS.length) buildRels();
   const calls = DATA.kind !== 'schema';
   const rows = RELS.filter(relPass);
-  // The scope is stated where it applies and carries its own way out - the same control the diagram
-  // uses, not a second one, because a state with two switches is a state that can disagree with
-  // itself. Without a focus there is nothing to say and the line stays a count.
-  const ego = relScoped();
+  // Four things can narrow this table - the chips, the facet, the search and the focus - so «N of M»
+  // has to say which. It names the reason, not the item: the focus group sits a few pixels above
+  // with the name in it.
+  //
+  // It carried a «show all» of its own, added when the focus lived inside the diagram and this was
+  // the only way out from here. The focus group is on screen in every view now, so that link became
+  // a second switch for one state - the thing the comment it replaced was written to avoid.
   const noun = calls ? 'calls' : 'relations';
-  $('relcount').innerHTML = ego
-    ? `${rows.length} of ${RELS.length} ${noun} · around <b>${esc(focusName(curFocus))}</b> · <a id="relall" role="button" tabindex="0" title="Show every row, and pause the focus in the diagram too">show all</a>`
-    : `${rows.length} of ${RELS.length} ${noun}`;
-  { const a = $('relall'); if (a) a.onclick = () => setScope(true); }
+  $('relcount').textContent = `${rows.length} of ${RELS.length} ${noun}`
+    + (relScoped() ? ' \u00b7 focus neighbourhood' : '');
   if (!RELS.length) {
     $('relwrap').innerHTML = calls
       ? '<div class="empty">No calls between functions in this graph. A call is one Deluge function invoking another; a function that only talks to Zoho makes none.</div>'

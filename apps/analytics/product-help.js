@@ -59,8 +59,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   stays on screen and one click picks it up again.
   That window has three views of one thing: Explorer (a list and a detail pane), the ER diagram, and
   Relations, which puts the join first instead of the table. Selecting anything in Explorer re-centres
-  all three on it, Relations included: it then lists the joins around that table, and "show all"
-  beside the count widens it back to everything.
+  all three on it, Relations included: it then lists the joins around that table and says so beside
+  the count; "Everything" in the Focus group is what widens it back.
   The chips in that window's header show what is on screen, grouped by what they ask: all lit means
   everything, and one click switches a kind off. The dashed "Only" group narrows instead - hub, orphan,
   system table - and starts empty. "↺ All" puts it all back and "None" switches everything off so one

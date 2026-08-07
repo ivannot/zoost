@@ -1701,11 +1701,18 @@ test('Relations is the third projection of the focus, not a catalogue beside it'
   assert.equal(relPass({ parent: 'c', child: null, via: '', api: '', label: '' }), false,
     'a relation outside the neighbourhood is kept');
 
-  // and the way out is the control the diagram already uses, not a second one
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
-  const rr = src.slice(src.indexOf('function relRender('), src.indexOf('\n}', src.indexOf('function relRender(')));
-  assert.ok(/id="relall"/.test(rr), 'the scoped table offers no way to widen');
-  assert.ok(/relall'\)[\s\S]{0,60}setScope\(true\)/.test(rr), 'show all does not go through the shared scope');
+  // The way out is the focus group in the header - the one control, not a second one. This table
+  // carried a «show all» of its own while the focus lived inside the diagram; once the group moved
+  // to the chrome it became a duplicate switch for a single state, which is what its own comment
+  // had been written to avoid.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/graphview.js`).replace(/^\s*\/\/.*$/gm, '');
+    const rr = src.slice(src.indexOf('function relRender('), src.indexOf('\n}', src.indexOf('function relRender(')));
+    assert.ok(!/relall/.test(rr), `${app}: the table still carries a second control for the scope`);
+    // ...but it still says which of the four things narrowed it
+    assert.ok(/relScoped\(\)[\s\S]{0,60}focus neighbourhood/.test(rr),
+      `${app}: «N of M» does not say the focus is why`);
+  }
 });
 
 test('the diagram lends its layout budget to nobody, and says so when it declines', () => {
@@ -1751,7 +1758,7 @@ test('every element the diagram window reaches for is in its own markup', () => 
   //
   // The ids listed here are the ones built at runtime rather than authored, and they are named
   // rather than pattern-matched so that adding one is a decision.
-  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpicksnip', 'layzone', 'relall', 'up']);
+  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
