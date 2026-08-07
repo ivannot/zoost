@@ -132,6 +132,7 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
 687f4dbbe3ee516c  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
+8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
 12f98ef7c51b88b5  site/docs-crm.html: Every tool it uses is shown in the chat.
 dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists (Notes, Attachments, Tasks…) so only your own relations remain.
 9e282c99c84b2b6c  site/docs-crm.html: Find has a scope switch attached to it: in: names matches file names, in: code runs a full-text search across every function source in the org - the closest thing to grep over your Deluge, and something Zoho does not provide.
@@ -319,6 +320,7 @@ cdfaa0d9c12ccf03  site/it/docs-crm.html: Conosce anche la dimensione di ogni fun
 7dbcfb080eddba2c  site/it/docs-crm.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: l'id di un'istanza Zoho CRM è esatto senza essere memorabile, e due sandbox della stessa org non si distinguono a colpo d'occhio.
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
 cc9faf92979cf93a  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei modelli e ogni altra impostazione restano, e la chiave API la incolli di nuovo dalla dashboard del tuo provider.
+9eb1de9ea2cdd531  site/it/docs-crm.html: Due pulsanti coprono l'altra direzione: ↺ All rimette tutto, e None spegne tutto, così un clic solo riaccende la categoria che ti serve.
 927f6f6ee792f348  site/it/docs-crm.html: Elenca anche le connessioni che la funzione usa e chi l'ha modificata per ultimo - clicca una connessione per filtrare l'albero su tutte le funzioni che la usano (basta con il «cerca nel file» per il nome di una connessione).
 1a58c0151528ff5c  site/it/docs-crm.html: Entrambi i report dichiarano comunque le date per area: il fatto sta a te pesarlo, e nasconderlo sarebbe l'unica cosa peggiore di un capitolo vecchio.
 1e018b7bb98f49ce  site/it/docs-crm.html: Entrambi portano tutto quello che mostra il pannello, compresi la dimensione di ogni funzione e i conteggi delle chiamate in uscita (una tabella Size and outbound calls nel Markdown, delle colonne nell'indice HTML): un report non deve mai essere una copia ridotta di quello che hai visto a schermo.
@@ -360,6 +362,7 @@ e637237f4079fc5a  site/it/docs-crm.html: Ogni prodotto Zoost tiene la propria so
 b970e0c83f0269b9  site/it/docs-crm.html: Ogni riga ha un secondo interruttore, pull , per una domanda diversa: se Zoost debba proprio chiedere quel tipo a Zoho.
 7669ebd7aaf2fe3f  site/it/docs-crm.html: Ogni sezione dichiara cosa analizza e cosa no - i client script e le regole di approvazione, per esempio, sono fuori da quello che Zoho espone.
 ea7004a78eb39447  site/it/docs-crm.html: Ogni strumento che usa viene mostrato nella chat.
+9a4286eb7fd021e0  site/it/docs-crm.html: Ognuno dei due è assente quando non farebbe niente.
 6de5d9166bd030d8  site/it/docs-crm.html: Org index è quanta parte dell'org viene descritta all'assistente a ogni messaggio - più grande vuol dire che conosce più nomi, ed è fatturata ogni volta.
 418e1de3897ae17a  site/it/docs-crm.html: Passphrase sbagliata o assente, e non viene cambiato niente - la chiave cifrata resta esattamente com'era invece di essere buttata.
 d788d0ee0a2ce797  site/it/docs-crm.html: Prendi ogni voce come un candidato da rivedere .
