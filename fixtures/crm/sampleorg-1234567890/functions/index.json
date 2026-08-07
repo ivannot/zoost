@@ -1,844 +1,1202 @@
-{
-  "items": [
-    {
-      "id": "9000",
-      "name": "log",
-      "namespace": "standalone",
-      "display_name": "log",
-      "category": "standalone"
-    },
-    {
-      "id": "9001",
-      "name": "formatMoney",
-      "namespace": "standalone",
-      "display_name": "formatMoney",
-      "category": "standalone"
-    },
-    {
-      "id": "9002",
-      "name": "isBusinessDay",
-      "namespace": "standalone",
-      "display_name": "isBusinessDay",
-      "category": "standalone"
-    },
-    {
-      "id": "9003",
-      "name": "orgSettings",
-      "namespace": "standalone",
-      "display_name": "orgSettings",
-      "category": "standalone"
-    },
-    {
-      "id": "9004",
-      "name": "calcTax",
-      "namespace": "standalone",
-      "display_name": "calcTax",
-      "category": "standalone"
-    },
-    {
-      "id": "9005",
-      "name": "applyDiscount",
-      "namespace": "standalone",
-      "display_name": "applyDiscount",
-      "category": "standalone"
-    },
-    {
-      "id": "9006",
-      "name": "buildInvoice",
-      "namespace": "standalone",
-      "display_name": "buildInvoice",
-      "category": "standalone"
-    },
-    {
-      "id": "9007",
-      "name": "reserveStock",
-      "namespace": "standalone",
-      "display_name": "reserveStock",
-      "category": "standalone"
-    },
-    {
-      "id": "9008",
-      "name": "releaseStock",
-      "namespace": "standalone",
-      "display_name": "releaseStock",
-      "category": "standalone"
-    },
-    {
-      "id": "9009",
-      "name": "planShipment",
-      "namespace": "standalone",
-      "display_name": "planShipment",
-      "category": "standalone"
-    },
-    {
-      "id": "9010",
-      "name": "trackParcel",
-      "namespace": "standalone",
-      "display_name": "trackParcel",
-      "category": "standalone"
-    },
-    {
-      "id": "9011",
-      "name": "escalateTicket",
-      "namespace": "standalone",
-      "display_name": "escalateTicket",
-      "category": "standalone"
-    },
-    {
-      "id": "9012",
-      "name": "reconcilePayments",
-      "namespace": "standalone",
-      "display_name": "reconcilePayments",
-      "category": "standalone"
-    },
-    {
-      "id": "9013",
-      "name": "buildCohort",
-      "namespace": "standalone",
-      "display_name": "buildCohort",
-      "category": "standalone"
-    },
-    {
-      "id": "9014",
-      "name": "legacyHelper",
-      "namespace": "standalone",
-      "display_name": "legacyHelper",
-      "category": ""
-    },
-    {
-      "id": "9015",
-      "name": "onOrderCreate",
-      "namespace": "automation",
-      "display_name": "onOrderCreate",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9016",
-      "name": "recalcTotals",
-      "namespace": "automation",
-      "display_name": "recalcTotals",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9017",
-      "name": "onDealWon",
-      "namespace": "automation",
-      "display_name": "onDealWon",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9018",
-      "name": "onContactMerge",
-      "namespace": "automation",
-      "display_name": "onContactMerge",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9019",
-      "name": "dunningRun",
-      "namespace": "schedule",
-      "display_name": "dunningRun",
-      "category": "scheduler"
-    },
-    {
-      "id": "9020",
-      "name": "syncPayments",
-      "namespace": "schedule",
-      "display_name": "syncPayments",
-      "category": "scheduler"
-    },
-    {
-      "id": "9021",
-      "name": "nightlyDispatch",
-      "namespace": "schedule",
-      "display_name": "nightlyDispatch",
-      "category": "scheduler"
-    },
-    {
-      "id": "9022",
-      "name": "closeStaleTickets",
-      "namespace": "schedule",
-      "display_name": "closeStaleTickets",
-      "category": "scheduler"
-    },
-    {
-      "id": "9023",
-      "name": "pushAccounts",
-      "namespace": "schedule",
-      "display_name": "pushAccounts",
-      "category": "scheduler"
-    },
-    {
-      "id": "9024",
-      "name": "pullCatalogue",
-      "namespace": "schedule",
-      "display_name": "pullCatalogue",
-      "category": "scheduler"
-    },
-    {
-      "id": "9025",
-      "name": "weeklyDigest",
-      "namespace": "schedule",
-      "display_name": "weeklyDigest",
-      "category": "scheduler"
-    },
-    {
-      "id": "9026",
-      "name": "openTicket",
-      "namespace": "button",
-      "display_name": "openTicket",
-      "category": "custombutton"
-    },
-    {
-      "id": "9027",
-      "name": "exportCsv",
-      "namespace": "button",
-      "display_name": "exportCsv",
-      "category": "custombutton"
-    },
-    {
-      "id": "9028",
-      "name": "recalcOrder",
-      "namespace": "button",
-      "display_name": "recalcOrder",
-      "category": "custombutton"
-    },
-    {
-      "id": "9029",
-      "name": "validateOrder",
-      "namespace": "validation_rule",
-      "display_name": "validateOrder",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9030",
-      "name": "checkCreditLimit",
-      "namespace": "validation_rule",
-      "display_name": "checkCreditLimit",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9031",
-      "name": "assignVendors",
-      "namespace": "standalone",
-      "display_name": "assignVendors",
-      "category": "standalone"
-    },
-    {
-      "id": "9032",
-      "name": "rebuildLeads",
-      "namespace": "standalone",
-      "display_name": "rebuildLeads",
-      "category": "standalone"
-    },
-    {
-      "id": "9033",
-      "name": "dedupeCampaigns",
-      "namespace": "standalone",
-      "display_name": "dedupeCampaigns",
-      "category": "standalone"
-    },
-    {
-      "id": "9034",
-      "name": "rebuildVendors",
-      "namespace": "standalone",
-      "display_name": "rebuildVendors",
-      "category": "standalone"
-    },
-    {
-      "id": "9035",
-      "name": "syncSubscriptions",
-      "namespace": "automation",
-      "display_name": "syncSubscriptions",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9036",
-      "name": "refreshPricebooks",
-      "namespace": "button",
-      "display_name": "refreshPricebooks",
-      "category": "custombutton"
-    },
-    {
-      "id": "9037",
-      "name": "convertTickets",
-      "namespace": "standalone",
-      "display_name": "convertTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9038",
-      "name": "rebuildPricebooks",
-      "namespace": "validation_rule",
-      "display_name": "rebuildPricebooks",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9039",
-      "name": "archiveTickets",
-      "namespace": "automation",
-      "display_name": "archiveTickets",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9040",
-      "name": "archiveOrders",
-      "namespace": "schedule",
-      "display_name": "archiveOrders",
-      "category": "scheduler"
-    },
-    {
-      "id": "9041",
-      "name": "cleanInvoices",
-      "namespace": "schedule",
-      "display_name": "cleanInvoices",
-      "category": "scheduler"
-    },
-    {
-      "id": "9042",
-      "name": "notifyVendors",
-      "namespace": "schedule",
-      "display_name": "notifyVendors",
-      "category": "scheduler"
-    },
-    {
-      "id": "9043",
-      "name": "fetchAccounts",
-      "namespace": "button",
-      "display_name": "fetchAccounts",
-      "category": "custombutton"
-    },
-    {
-      "id": "9044",
-      "name": "refreshTickets",
-      "namespace": "automation",
-      "display_name": "refreshTickets",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9045",
-      "name": "enrichTerritories",
-      "namespace": "standalone",
-      "display_name": "enrichTerritories",
-      "category": "standalone"
-    },
-    {
-      "id": "9046",
-      "name": "cleanAccounts",
-      "namespace": "automation",
-      "display_name": "cleanAccounts",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9047",
-      "name": "splitTickets",
-      "namespace": "standalone",
-      "display_name": "splitTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9048",
-      "name": "auditShipments",
-      "namespace": "validation_rule",
-      "display_name": "auditShipments",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9049",
-      "name": "mergeShipments",
-      "namespace": "standalone",
-      "display_name": "mergeShipments",
-      "category": "standalone"
-    },
-    {
-      "id": "9050",
-      "name": "rebuildShipments",
-      "namespace": "standalone",
-      "display_name": "rebuildShipments",
-      "category": "standalone"
-    },
-    {
-      "id": "9051",
-      "name": "rebuildTickets",
-      "namespace": "standalone",
-      "display_name": "rebuildTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9052",
-      "name": "cleanSubscriptions",
-      "namespace": "automation",
-      "display_name": "cleanSubscriptions",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9053",
-      "name": "validateTerritories",
-      "namespace": "schedule",
-      "display_name": "validateTerritories",
-      "category": "scheduler"
-    },
-    {
-      "id": "9054",
-      "name": "fetchVendors",
-      "namespace": "automation",
-      "display_name": "fetchVendors",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9055",
-      "name": "archiveProducts",
-      "namespace": "standalone",
-      "display_name": "archiveProducts",
-      "category": "standalone"
-    },
-    {
-      "id": "9056",
-      "name": "dedupeQuotes",
-      "namespace": "validation_rule",
-      "display_name": "dedupeQuotes",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9057",
-      "name": "syncVendors",
-      "namespace": "standalone",
-      "display_name": "syncVendors",
-      "category": "standalone"
-    },
-    {
-      "id": "9058",
-      "name": "cleanCampaigns",
-      "namespace": "automation",
-      "display_name": "cleanCampaigns",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9059",
-      "name": "assignOrders",
-      "namespace": "schedule",
-      "display_name": "assignOrders",
-      "category": "scheduler"
-    },
-    {
-      "id": "9060",
-      "name": "notifyQuotes",
-      "namespace": "standalone",
-      "display_name": "notifyQuotes",
-      "category": "standalone"
-    },
-    {
-      "id": "9061",
-      "name": "validateQuotes",
-      "namespace": "button",
-      "display_name": "validateQuotes",
-      "category": "custombutton"
-    },
-    {
-      "id": "9062",
-      "name": "mergeTerritories",
-      "namespace": "standalone",
-      "display_name": "mergeTerritories",
-      "category": "standalone"
-    },
-    {
-      "id": "9063",
-      "name": "convertVendors",
-      "namespace": "schedule",
-      "display_name": "convertVendors",
-      "category": "scheduler"
-    },
-    {
-      "id": "9064",
-      "name": "validateAccounts",
-      "namespace": "standalone",
-      "display_name": "validateAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9065",
-      "name": "enrichProducts",
-      "namespace": "standalone",
-      "display_name": "enrichProducts",
-      "category": "standalone"
-    },
-    {
-      "id": "9066",
-      "name": "pushOrders",
-      "namespace": "standalone",
-      "display_name": "pushOrders",
-      "category": "standalone"
-    },
-    {
-      "id": "9067",
-      "name": "refreshQuotes",
-      "namespace": "standalone",
-      "display_name": "refreshQuotes",
-      "category": "standalone"
-    },
-    {
-      "id": "9068",
-      "name": "assignSubscriptions",
-      "namespace": "standalone",
-      "display_name": "assignSubscriptions",
-      "category": "standalone"
-    },
-    {
-      "id": "9069",
-      "name": "fetchProducts",
-      "namespace": "standalone",
-      "display_name": "fetchProducts",
-      "category": "standalone"
-    },
-    {
-      "id": "9070",
-      "name": "splitAccounts",
-      "namespace": "standalone",
-      "display_name": "splitAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9071",
-      "name": "rebuildInvoices",
-      "namespace": "standalone",
-      "display_name": "rebuildInvoices",
-      "category": "standalone"
-    },
-    {
-      "id": "9072",
-      "name": "cleanDeals",
-      "namespace": "standalone",
-      "display_name": "cleanDeals",
-      "category": "standalone"
-    },
-    {
-      "id": "9073",
-      "name": "cleanAccounts",
-      "namespace": "standalone",
-      "display_name": "cleanAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9074",
-      "name": "fetchTickets",
-      "namespace": "standalone",
-      "display_name": "fetchTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9075",
-      "name": "notifyQuotes",
-      "namespace": "button",
-      "display_name": "notifyQuotes",
-      "category": "custombutton"
-    },
-    {
-      "id": "9076",
-      "name": "assignOrders",
-      "namespace": "standalone",
-      "display_name": "assignOrders",
-      "category": "standalone"
-    },
-    {
-      "id": "9077",
-      "name": "fetchLeads",
-      "namespace": "automation",
-      "display_name": "fetchLeads",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9078",
-      "name": "refreshSubscriptions",
-      "namespace": "standalone",
-      "display_name": "refreshSubscriptions",
-      "category": "standalone"
-    },
-    {
-      "id": "9079",
-      "name": "syncPricebooks",
-      "namespace": "schedule",
-      "display_name": "syncPricebooks",
-      "category": "scheduler"
-    },
-    {
-      "id": "9080",
-      "name": "assignTickets",
-      "namespace": "standalone",
-      "display_name": "assignTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9081",
-      "name": "splitProducts",
-      "namespace": "automation",
-      "display_name": "splitProducts",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9082",
-      "name": "rebuildTerritories",
-      "namespace": "schedule",
-      "display_name": "rebuildTerritories",
-      "category": "scheduler"
-    },
-    {
-      "id": "9083",
-      "name": "syncContacts",
-      "namespace": "validation_rule",
-      "display_name": "syncContacts",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9084",
-      "name": "enrichSubscriptions",
-      "namespace": "schedule",
-      "display_name": "enrichSubscriptions",
-      "category": "scheduler"
-    },
-    {
-      "id": "9085",
-      "name": "auditDeals",
-      "namespace": "standalone",
-      "display_name": "auditDeals",
-      "category": "standalone"
-    },
-    {
-      "id": "9086",
-      "name": "splitVendors",
-      "namespace": "schedule",
-      "display_name": "splitVendors",
-      "category": "scheduler"
-    },
-    {
-      "id": "9087",
-      "name": "auditShipments",
-      "namespace": "standalone",
-      "display_name": "auditShipments",
-      "category": "standalone"
-    },
-    {
-      "id": "9088",
-      "name": "archiveCampaigns",
-      "namespace": "standalone",
-      "display_name": "archiveCampaigns",
-      "category": "standalone"
-    },
-    {
-      "id": "9089",
-      "name": "refreshInvoices",
-      "namespace": "button",
-      "display_name": "refreshInvoices",
-      "category": "custombutton"
-    },
-    {
-      "id": "9090",
-      "name": "refreshPricebooks",
-      "namespace": "schedule",
-      "display_name": "refreshPricebooks",
-      "category": "scheduler"
-    },
-    {
-      "id": "9091",
-      "name": "assignDeals",
-      "namespace": "automation",
-      "display_name": "assignDeals",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9092",
-      "name": "syncProducts",
-      "namespace": "button",
-      "display_name": "syncProducts",
-      "category": "custombutton"
-    },
-    {
-      "id": "9093",
-      "name": "enrichAccounts",
-      "namespace": "automation",
-      "display_name": "enrichAccounts",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9094",
-      "name": "dedupeQuotes",
-      "namespace": "automation",
-      "display_name": "dedupeQuotes",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9095",
-      "name": "fetchInvoices",
-      "namespace": "standalone",
-      "display_name": "fetchInvoices",
-      "category": "standalone"
-    },
-    {
-      "id": "9096",
-      "name": "enrichPricebooks",
-      "namespace": "automation",
-      "display_name": "enrichPricebooks",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9097",
-      "name": "rebuildCampaigns",
-      "namespace": "standalone",
-      "display_name": "rebuildCampaigns",
-      "category": "standalone"
-    },
-    {
-      "id": "9098",
-      "name": "fetchAccounts",
-      "namespace": "standalone",
-      "display_name": "fetchAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9099",
-      "name": "auditPricebooks",
-      "namespace": "standalone",
-      "display_name": "auditPricebooks",
-      "category": "standalone"
-    },
-    {
-      "id": "9100",
-      "name": "notifyContacts",
-      "namespace": "automation",
-      "display_name": "notifyContacts",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9101",
-      "name": "syncInvoices",
-      "namespace": "schedule",
-      "display_name": "syncInvoices",
-      "category": "scheduler"
-    },
-    {
-      "id": "9102",
-      "name": "assignPricebooks",
-      "namespace": "standalone",
-      "display_name": "assignPricebooks",
-      "category": "standalone"
-    },
-    {
-      "id": "9103",
-      "name": "mergeVendors",
-      "namespace": "standalone",
-      "display_name": "mergeVendors",
-      "category": "standalone"
-    },
-    {
-      "id": "9104",
-      "name": "enrichContacts",
-      "namespace": "button",
-      "display_name": "enrichContacts",
-      "category": "custombutton"
-    },
-    {
-      "id": "9105",
-      "name": "archiveLeads",
-      "namespace": "validation_rule",
-      "display_name": "archiveLeads",
-      "category": "crmfundamentals"
-    },
-    {
-      "id": "9106",
-      "name": "syncAccounts",
-      "namespace": "standalone",
-      "display_name": "syncAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9107",
-      "name": "assignInvoices",
-      "namespace": "button",
-      "display_name": "assignInvoices",
-      "category": "custombutton"
-    },
-    {
-      "id": "9108",
-      "name": "auditCampaigns",
-      "namespace": "standalone",
-      "display_name": "auditCampaigns",
-      "category": "standalone"
-    },
-    {
-      "id": "9109",
-      "name": "validateContacts",
-      "namespace": "standalone",
-      "display_name": "validateContacts",
-      "category": "standalone"
-    },
-    {
-      "id": "9110",
-      "name": "convertOrders",
-      "namespace": "standalone",
-      "display_name": "convertOrders",
-      "category": "standalone"
-    },
-    {
-      "id": "9111",
-      "name": "pushTickets",
-      "namespace": "standalone",
-      "display_name": "pushTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9112",
-      "name": "notifyInvoices",
-      "namespace": "standalone",
-      "display_name": "notifyInvoices",
-      "category": "standalone"
-    },
-    {
-      "id": "9113",
-      "name": "assignAccounts",
-      "namespace": "standalone",
-      "display_name": "assignAccounts",
-      "category": "standalone"
-    },
-    {
-      "id": "9114",
-      "name": "auditContacts",
-      "namespace": "standalone",
-      "display_name": "auditContacts",
-      "category": "standalone"
-    },
-    {
-      "id": "9115",
-      "name": "pushDeals",
-      "namespace": "standalone",
-      "display_name": "pushDeals",
-      "category": "standalone"
-    },
-    {
-      "id": "9116",
-      "name": "notifyTickets",
-      "namespace": "standalone",
-      "display_name": "notifyTickets",
-      "category": "standalone"
-    },
-    {
-      "id": "9117",
-      "name": "refreshQuotes",
-      "namespace": "button",
-      "display_name": "refreshQuotes",
-      "category": "custombutton"
-    },
-    {
-      "id": "9118",
-      "name": "cleanTickets",
-      "namespace": "button",
-      "display_name": "cleanTickets",
-      "category": "custombutton"
-    },
-    {
-      "id": "9119",
-      "name": "splitVendors",
-      "namespace": "button",
-      "display_name": "splitVendors",
-      "category": "custombutton"
-    }
-  ]
-}
+[
+  {
+    "id": "9000",
+    "api_name": "log",
+    "name": "log",
+    "display_name": "Log",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9001",
+    "api_name": "format_Money",
+    "name": "formatMoney",
+    "display_name": "Format money",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9002",
+    "api_name": "is_Business_Day",
+    "name": "isBusinessDay",
+    "display_name": "Is business day",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9003",
+    "api_name": "org_Settings",
+    "name": "orgSettings",
+    "display_name": "Org settings",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9004",
+    "api_name": "calc_Tax",
+    "name": "calcTax",
+    "display_name": "Calc tax",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9005",
+    "api_name": "apply_Discount",
+    "name": "applyDiscount",
+    "display_name": "Apply discount",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9006",
+    "api_name": "build_Invoice",
+    "name": "buildInvoice",
+    "display_name": "Build invoice",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9007",
+    "api_name": "reserve_Stock",
+    "name": "reserveStock",
+    "display_name": "Reserve stock",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9008",
+    "api_name": "release_Stock",
+    "name": "releaseStock",
+    "display_name": "Release stock",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9009",
+    "api_name": "plan_Shipment",
+    "name": "planShipment",
+    "display_name": "Plan shipment",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9010",
+    "api_name": "track_Parcel",
+    "name": "trackParcel",
+    "display_name": "Track parcel",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9011",
+    "api_name": "escalate_Ticket",
+    "name": "escalateTicket",
+    "display_name": "Escalate ticket",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9012",
+    "api_name": "reconcile_Payments",
+    "name": "reconcilePayments",
+    "display_name": "Reconcile payments",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9013",
+    "api_name": "build_Cohort",
+    "name": "buildCohort",
+    "display_name": "Build cohort",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9014",
+    "api_name": "legacy_Helper",
+    "name": "legacyHelper",
+    "display_name": "Legacy helper",
+    "namespace": "standalone",
+    "category": "",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9015",
+    "api_name": "on_Order_Create",
+    "name": "onOrderCreate",
+    "display_name": "On order create",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9016",
+    "api_name": "recalc_Totals",
+    "name": "recalcTotals",
+    "display_name": "Recalc totals",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9017",
+    "api_name": "on_Deal_Won",
+    "name": "onDealWon",
+    "display_name": "On deal won",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9018",
+    "api_name": "on_Contact_Merge",
+    "name": "onContactMerge",
+    "display_name": "On contact merge",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9019",
+    "api_name": "dunning_Run",
+    "name": "dunningRun",
+    "display_name": "Dunning run",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9020",
+    "api_name": "sync_Payments",
+    "name": "syncPayments",
+    "display_name": "Sync payments",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9021",
+    "api_name": "nightly_Dispatch",
+    "name": "nightlyDispatch",
+    "display_name": "Nightly dispatch",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9022",
+    "api_name": "close_Stale_Tickets",
+    "name": "closeStaleTickets",
+    "display_name": "Close stale tickets",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9023",
+    "api_name": "push_Accounts",
+    "name": "pushAccounts",
+    "display_name": "Push accounts",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9024",
+    "api_name": "pull_Catalogue",
+    "name": "pullCatalogue",
+    "display_name": "Pull catalogue",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9025",
+    "api_name": "weekly_Digest",
+    "name": "weeklyDigest",
+    "display_name": "Weekly digest",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9026",
+    "api_name": "open_Ticket",
+    "name": "openTicket",
+    "display_name": "Open ticket",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": true
+  },
+  {
+    "id": "9027",
+    "api_name": "export_Csv",
+    "name": "exportCsv",
+    "display_name": "Export csv",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": true
+  },
+  {
+    "id": "9028",
+    "api_name": "recalc_Order",
+    "name": "recalcOrder",
+    "display_name": "Recalc order",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9029",
+    "api_name": "validate_Order",
+    "name": "validateOrder",
+    "display_name": "Validate order",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9030",
+    "api_name": "check_Credit_Limit",
+    "name": "checkCreditLimit",
+    "display_name": "Check credit limit",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9031",
+    "api_name": "notify_Owner",
+    "name": "notifyOwner",
+    "display_name": "Notify owner",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9032",
+    "api_name": "notify_Owner",
+    "name": "notifyOwner",
+    "display_name": "Notify owner",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9033",
+    "api_name": "assign_Vendors",
+    "name": "assignVendors",
+    "display_name": "Assign vendors",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9034",
+    "api_name": "rebuild_Leads",
+    "name": "rebuildLeads",
+    "display_name": "Rebuild leads",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9035",
+    "api_name": "dedupe_Campaigns",
+    "name": "dedupeCampaigns",
+    "display_name": "Dedupe campaigns",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9036",
+    "api_name": "rebuild_Vendors",
+    "name": "rebuildVendors",
+    "display_name": "Rebuild vendors",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9037",
+    "api_name": "sync_Subscriptions",
+    "name": "syncSubscriptions",
+    "display_name": "Sync subscriptions",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9038",
+    "api_name": "refresh_Pricebooks",
+    "name": "refreshPricebooks",
+    "display_name": "Refresh pricebooks",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9039",
+    "api_name": "convert_Tickets",
+    "name": "convertTickets",
+    "display_name": "Convert tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9040",
+    "api_name": "rebuild_Pricebooks",
+    "name": "rebuildPricebooks",
+    "display_name": "Rebuild pricebooks",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9041",
+    "api_name": "archive_Tickets",
+    "name": "archiveTickets",
+    "display_name": "Archive tickets",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9042",
+    "api_name": "archive_Orders",
+    "name": "archiveOrders",
+    "display_name": "Archive orders",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9043",
+    "api_name": "clean_Invoices",
+    "name": "cleanInvoices",
+    "display_name": "Clean invoices",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9044",
+    "api_name": "notify_Vendors",
+    "name": "notifyVendors",
+    "display_name": "Notify vendors",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9045",
+    "api_name": "fetch_Accounts",
+    "name": "fetchAccounts",
+    "display_name": "Fetch accounts",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9046",
+    "api_name": "refresh_Tickets",
+    "name": "refreshTickets",
+    "display_name": "Refresh tickets",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9047",
+    "api_name": "enrich_Territories",
+    "name": "enrichTerritories",
+    "display_name": "Enrich territories",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9048",
+    "api_name": "clean_Accounts",
+    "name": "cleanAccounts",
+    "display_name": "Clean accounts",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9049",
+    "api_name": "split_Tickets",
+    "name": "splitTickets",
+    "display_name": "Split tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9050",
+    "api_name": "audit_Shipments",
+    "name": "auditShipments",
+    "display_name": "Audit shipments",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9051",
+    "api_name": "merge_Shipments",
+    "name": "mergeShipments",
+    "display_name": "Merge shipments",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9052",
+    "api_name": "rebuild_Shipments",
+    "name": "rebuildShipments",
+    "display_name": "Rebuild shipments",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9053",
+    "api_name": "rebuild_Tickets",
+    "name": "rebuildTickets",
+    "display_name": "Rebuild tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9054",
+    "api_name": "clean_Subscriptions",
+    "name": "cleanSubscriptions",
+    "display_name": "Clean subscriptions",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9055",
+    "api_name": "validate_Territories",
+    "name": "validateTerritories",
+    "display_name": "Validate territories",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9056",
+    "api_name": "fetch_Vendors",
+    "name": "fetchVendors",
+    "display_name": "Fetch vendors",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9057",
+    "api_name": "archive_Products",
+    "name": "archiveProducts",
+    "display_name": "Archive products",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9058",
+    "api_name": "dedupe_Quotes",
+    "name": "dedupeQuotes",
+    "display_name": "Dedupe quotes",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9059",
+    "api_name": "sync_Vendors",
+    "name": "syncVendors",
+    "display_name": "Sync vendors",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9060",
+    "api_name": "clean_Campaigns",
+    "name": "cleanCampaigns",
+    "display_name": "Clean campaigns",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9061",
+    "api_name": "assign_Orders",
+    "name": "assignOrders",
+    "display_name": "Assign orders",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9062",
+    "api_name": "notify_Quotes",
+    "name": "notifyQuotes",
+    "display_name": "Notify quotes",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9063",
+    "api_name": "validate_Quotes",
+    "name": "validateQuotes",
+    "display_name": "Validate quotes",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9064",
+    "api_name": "merge_Territories",
+    "name": "mergeTerritories",
+    "display_name": "Merge territories",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9065",
+    "api_name": "convert_Vendors",
+    "name": "convertVendors",
+    "display_name": "Convert vendors",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9066",
+    "api_name": "validate_Accounts",
+    "name": "validateAccounts",
+    "display_name": "Validate accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9067",
+    "api_name": "enrich_Products",
+    "name": "enrichProducts",
+    "display_name": "Enrich products",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9068",
+    "api_name": "push_Orders",
+    "name": "pushOrders",
+    "display_name": "Push orders",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9069",
+    "api_name": "refresh_Quotes",
+    "name": "refreshQuotes",
+    "display_name": "Refresh quotes",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9070",
+    "api_name": "assign_Subscriptions",
+    "name": "assignSubscriptions",
+    "display_name": "Assign subscriptions",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9071",
+    "api_name": "fetch_Products",
+    "name": "fetchProducts",
+    "display_name": "Fetch products",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9072",
+    "api_name": "split_Accounts",
+    "name": "splitAccounts",
+    "display_name": "Split accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9073",
+    "api_name": "rebuild_Invoices",
+    "name": "rebuildInvoices",
+    "display_name": "Rebuild invoices",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9074",
+    "api_name": "clean_Deals",
+    "name": "cleanDeals",
+    "display_name": "Clean deals",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9075",
+    "api_name": "clean_Accounts",
+    "name": "cleanAccounts",
+    "display_name": "Clean accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9076",
+    "api_name": "fetch_Tickets",
+    "name": "fetchTickets",
+    "display_name": "Fetch tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9077",
+    "api_name": "notify_Quotes",
+    "name": "notifyQuotes",
+    "display_name": "Notify quotes",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9078",
+    "api_name": "assign_Orders",
+    "name": "assignOrders",
+    "display_name": "Assign orders",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9079",
+    "api_name": "fetch_Leads",
+    "name": "fetchLeads",
+    "display_name": "Fetch leads",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9080",
+    "api_name": "refresh_Subscriptions",
+    "name": "refreshSubscriptions",
+    "display_name": "Refresh subscriptions",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9081",
+    "api_name": "sync_Pricebooks",
+    "name": "syncPricebooks",
+    "display_name": "Sync pricebooks",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9082",
+    "api_name": "assign_Tickets",
+    "name": "assignTickets",
+    "display_name": "Assign tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9083",
+    "api_name": "split_Products",
+    "name": "splitProducts",
+    "display_name": "Split products",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9084",
+    "api_name": "rebuild_Territories",
+    "name": "rebuildTerritories",
+    "display_name": "Rebuild territories",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9085",
+    "api_name": "sync_Contacts",
+    "name": "syncContacts",
+    "display_name": "Sync contacts",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9086",
+    "api_name": "enrich_Subscriptions",
+    "name": "enrichSubscriptions",
+    "display_name": "Enrich subscriptions",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9087",
+    "api_name": "audit_Deals",
+    "name": "auditDeals",
+    "display_name": "Audit deals",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9088",
+    "api_name": "split_Vendors",
+    "name": "splitVendors",
+    "display_name": "Split vendors",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9089",
+    "api_name": "audit_Shipments",
+    "name": "auditShipments",
+    "display_name": "Audit shipments",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9090",
+    "api_name": "archive_Campaigns",
+    "name": "archiveCampaigns",
+    "display_name": "Archive campaigns",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9091",
+    "api_name": "refresh_Invoices",
+    "name": "refreshInvoices",
+    "display_name": "Refresh invoices",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9092",
+    "api_name": "refresh_Pricebooks",
+    "name": "refreshPricebooks",
+    "display_name": "Refresh pricebooks",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9093",
+    "api_name": "assign_Deals",
+    "name": "assignDeals",
+    "display_name": "Assign deals",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9094",
+    "api_name": "sync_Products",
+    "name": "syncProducts",
+    "display_name": "Sync products",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9095",
+    "api_name": "enrich_Accounts",
+    "name": "enrichAccounts",
+    "display_name": "Enrich accounts",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9096",
+    "api_name": "dedupe_Quotes",
+    "name": "dedupeQuotes",
+    "display_name": "Dedupe quotes",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9097",
+    "api_name": "fetch_Invoices",
+    "name": "fetchInvoices",
+    "display_name": "Fetch invoices",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9098",
+    "api_name": "enrich_Pricebooks",
+    "name": "enrichPricebooks",
+    "display_name": "Enrich pricebooks",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9099",
+    "api_name": "rebuild_Campaigns",
+    "name": "rebuildCampaigns",
+    "display_name": "Rebuild campaigns",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9100",
+    "api_name": "fetch_Accounts",
+    "name": "fetchAccounts",
+    "display_name": "Fetch accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9101",
+    "api_name": "audit_Pricebooks",
+    "name": "auditPricebooks",
+    "display_name": "Audit pricebooks",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9102",
+    "api_name": "notify_Contacts",
+    "name": "notifyContacts",
+    "display_name": "Notify contacts",
+    "namespace": "automation",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9103",
+    "api_name": "sync_Invoices",
+    "name": "syncInvoices",
+    "display_name": "Sync invoices",
+    "namespace": "schedule",
+    "category": "scheduler",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9104",
+    "api_name": "assign_Pricebooks",
+    "name": "assignPricebooks",
+    "display_name": "Assign pricebooks",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9105",
+    "api_name": "merge_Vendors",
+    "name": "mergeVendors",
+    "display_name": "Merge vendors",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9106",
+    "api_name": "enrich_Contacts",
+    "name": "enrichContacts",
+    "display_name": "Enrich contacts",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9107",
+    "api_name": "archive_Leads",
+    "name": "archiveLeads",
+    "display_name": "Archive leads",
+    "namespace": "validation_rule",
+    "category": "crmfundamentals",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9108",
+    "api_name": "sync_Accounts",
+    "name": "syncAccounts",
+    "display_name": "Sync accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9109",
+    "api_name": "assign_Invoices",
+    "name": "assignInvoices",
+    "display_name": "Assign invoices",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9110",
+    "api_name": "audit_Campaigns",
+    "name": "auditCampaigns",
+    "display_name": "Audit campaigns",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9111",
+    "api_name": "validate_Contacts",
+    "name": "validateContacts",
+    "display_name": "Validate contacts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9112",
+    "api_name": "convert_Orders",
+    "name": "convertOrders",
+    "display_name": "Convert orders",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9113",
+    "api_name": "push_Tickets",
+    "name": "pushTickets",
+    "display_name": "Push tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9114",
+    "api_name": "notify_Invoices",
+    "name": "notifyInvoices",
+    "display_name": "Notify invoices",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9115",
+    "api_name": "assign_Accounts",
+    "name": "assignAccounts",
+    "display_name": "Assign accounts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9116",
+    "api_name": "audit_Contacts",
+    "name": "auditContacts",
+    "display_name": "Audit contacts",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9117",
+    "api_name": "push_Deals",
+    "name": "pushDeals",
+    "display_name": "Push deals",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9118",
+    "api_name": "notify_Tickets",
+    "name": "notifyTickets",
+    "display_name": "Notify tickets",
+    "namespace": "standalone",
+    "category": "standalone",
+    "source": "crm",
+    "rest": false
+  },
+  {
+    "id": "9119",
+    "api_name": "refresh_Quotes",
+    "name": "refreshQuotes",
+    "display_name": "Refresh quotes",
+    "namespace": "button",
+    "category": "custombutton",
+    "source": "crm",
+    "rest": false
+  }
+]

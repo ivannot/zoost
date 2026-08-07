@@ -1,8 +1,0 @@
-// standalone.rebuildLeads - sample function, generated for the sample org.
-void rebuildLeads()
-{
-    info "standalone.rebuildLeads start";
-    r0 = schedule.weeklyDigest();
-    r1 = standalone.fetchProducts();
-    return null;
-}

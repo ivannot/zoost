@@ -1,0 +1,8 @@
+// schedule.splitVendors - sample function, generated for the sample org.
+void splitVendors()
+{
+    info "schedule.splitVendors start";
+    r0 = standalone.auditDeals();
+    r1 = automation.syncSubscriptions();
+    return null;
+}

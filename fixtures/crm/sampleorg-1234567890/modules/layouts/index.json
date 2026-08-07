@@ -1,80 +1,304 @@
-{
-  "items": [
-    {
-      "api_name": "Accounts",
-      "layoutCount": 3
-    },
-    {
-      "api_name": "Contacts",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Leads",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Deals",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Products",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Quotes",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Invoices",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Orders",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Vendors",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Pricebooks",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Campaigns",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Cases",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Shipments",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Tickets",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Subscriptions",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Territories",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Contracts",
-      "layoutCount": 2
-    },
-    {
-      "api_name": "Assets",
-      "layoutCount": 1
-    },
-    {
-      "api_name": "Ledger",
-      "layoutCount": 0
-    }
-  ]
-}
+[
+  {
+    "module": "Accounts",
+    "generated": "Accounts",
+    "layouts": [
+      {
+        "id": "3000",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3100",
+        "name": "Compact",
+        "visible": true,
+        "status": "active",
+        "sections": 1
+      },
+      {
+        "id": "3200",
+        "name": "Retired",
+        "visible": false,
+        "status": "inactive",
+        "sections": 0
+      }
+    ]
+  },
+  {
+    "module": "Contacts",
+    "generated": "Contacts",
+    "layouts": [
+      {
+        "id": "3001",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Leads",
+    "generated": "Leads",
+    "layouts": [
+      {
+        "id": "3002",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Deals",
+    "generated": "Deals",
+    "layouts": [
+      {
+        "id": "3003",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Products",
+    "generated": "Products",
+    "layouts": [
+      {
+        "id": "3004",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3104",
+        "name": "Compact",
+        "visible": true,
+        "status": "active",
+        "sections": 1
+      }
+    ]
+  },
+  {
+    "module": "Quotes",
+    "generated": "Quotes",
+    "layouts": [
+      {
+        "id": "3005",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3205",
+        "name": "Retired",
+        "visible": false,
+        "status": "inactive",
+        "sections": 0
+      }
+    ]
+  },
+  {
+    "module": "Invoices",
+    "generated": "Invoices",
+    "layouts": [
+      {
+        "id": "3006",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Orders",
+    "generated": "Orders",
+    "layouts": [
+      {
+        "id": "3007",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Vendors",
+    "generated": "Vendors",
+    "layouts": [
+      {
+        "id": "3008",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3108",
+        "name": "Compact",
+        "visible": true,
+        "status": "active",
+        "sections": 1
+      }
+    ]
+  },
+  {
+    "module": "Pricebooks",
+    "generated": "Pricebooks",
+    "layouts": [
+      {
+        "id": "3009",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Campaigns",
+    "generated": "Campaigns",
+    "layouts": [
+      {
+        "id": "3010",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3210",
+        "name": "Retired",
+        "visible": false,
+        "status": "inactive",
+        "sections": 0
+      }
+    ]
+  },
+  {
+    "module": "Cases",
+    "generated": "Cases",
+    "layouts": [
+      {
+        "id": "3011",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Shipments",
+    "generated": "Shipments",
+    "layouts": [
+      {
+        "id": "3012",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3112",
+        "name": "Compact",
+        "visible": true,
+        "status": "active",
+        "sections": 1
+      }
+    ]
+  },
+  {
+    "module": "Tickets",
+    "generated": "Tickets",
+    "layouts": [
+      {
+        "id": "3013",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Subscriptions",
+    "generated": "Subscriptions",
+    "layouts": [
+      {
+        "id": "3014",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Territories",
+    "generated": "Territories",
+    "layouts": [
+      {
+        "id": "3015",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3215",
+        "name": "Retired",
+        "visible": false,
+        "status": "inactive",
+        "sections": 0
+      }
+    ]
+  },
+  {
+    "module": "Contracts",
+    "generated": "Contracts",
+    "layouts": [
+      {
+        "id": "3016",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      },
+      {
+        "id": "3116",
+        "name": "Compact",
+        "visible": true,
+        "status": "active",
+        "sections": 1
+      }
+    ]
+  },
+  {
+    "module": "Assets",
+    "generated": "Assets",
+    "layouts": [
+      {
+        "id": "3017",
+        "name": "Standard",
+        "visible": true,
+        "status": "active",
+        "sections": 2
+      }
+    ]
+  },
+  {
+    "module": "Ledger",
+    "generated": "Ledger",
+    "layouts": []
+  }
+]

@@ -1,7 +1,0 @@
-// standalone.rebuildCampaigns - sample function, generated for the sample org.
-void rebuildCampaigns()
-{
-    info "standalone.rebuildCampaigns start";
-    // nothing else is called
-    return null;
-}

@@ -1,17 +1,27 @@
-{
-  "api_name": "Shipments",
-  "layouts": [
-    {
-      "id": 3012,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3112,
-      "name": "Compact",
-      "visible": true,
-      "sections": 2
-    }
-  ]
-}
+[
+  {
+    "id": "3012",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  },
+  {
+    "id": "3112",
+    "name": "Compact",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      }
+    ]
+  }
+]

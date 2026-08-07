@@ -1,0 +1,24 @@
+{
+  "id": "9028",
+  "name": "recalcOrder",
+  "display_name": "Recalc order",
+  "api_name": "recalc_Order",
+  "nameSpace": "button",
+  "category": "custombutton",
+  "source": "crm",
+  "return_type": "map",
+  "params": [
+    {
+      "name": "orderId",
+      "type": "string"
+    }
+  ],
+  "description": "",
+  "updatedTime": "2026-07-02T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

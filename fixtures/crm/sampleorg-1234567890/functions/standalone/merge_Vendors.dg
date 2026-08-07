@@ -1,0 +1,7 @@
+// standalone.mergeVendors - sample function, generated for the sample org.
+void mergeVendors()
+{
+    info "standalone.mergeVendors start";
+    r0 = standalone.assignVendors();
+    return null;
+}

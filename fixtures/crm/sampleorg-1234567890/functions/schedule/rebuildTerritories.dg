@@ -1,8 +1,0 @@
-// schedule.rebuildTerritories - sample function, generated for the sample org.
-void rebuildTerritories()
-{
-    info "schedule.rebuildTerritories start";
-    r0 = standalone.legacyHelper();
-    r1 = automation.splitProducts();
-    return null;
-}

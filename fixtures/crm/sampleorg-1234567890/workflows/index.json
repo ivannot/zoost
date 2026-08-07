@@ -1,64 +1,102 @@
-{
-  "items": [
-    {
-      "id": "4000",
-      "name": "New order received",
-      "module": "Orders",
-      "active": true
-    },
-    {
-      "id": "4001",
-      "name": "Order amount changed",
-      "module": "Orders",
-      "active": true
-    },
-    {
-      "id": "4002",
-      "name": "Invoice overdue",
-      "module": "Invoices",
-      "active": true
-    },
-    {
-      "id": "4003",
-      "name": "Ticket unanswered",
-      "module": "Tickets",
-      "active": true
-    },
-    {
-      "id": "4004",
-      "name": "Contact merged",
-      "module": "Contacts",
-      "active": true
-    },
-    {
-      "id": "4005",
-      "name": "Deal won",
-      "module": "Deals",
-      "active": true
-    },
-    {
-      "id": "4006",
-      "name": "Shipment dispatched",
-      "module": "Shipments",
-      "active": true
-    },
-    {
-      "id": "4007",
-      "name": "Lead untouched",
-      "module": "Leads",
-      "active": true
-    },
-    {
-      "id": "4008",
-      "name": "Credit limit changed",
-      "module": "Accounts",
-      "active": true
-    },
-    {
-      "id": "4009",
-      "name": "Quote accepted",
-      "module": "Quotes",
-      "active": true
-    }
-  ]
-}
+[
+  {
+    "id": "4000",
+    "name": "New order received",
+    "description": "",
+    "module": "Orders",
+    "module_id": "6000",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4001",
+    "name": "Order amount changed",
+    "description": "",
+    "module": "Orders",
+    "module_id": "6001",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4002",
+    "name": "Invoice overdue",
+    "description": "",
+    "module": "Invoices",
+    "module_id": "6002",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4003",
+    "name": "Ticket unanswered",
+    "description": "",
+    "module": "Tickets",
+    "module_id": "6003",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4004",
+    "name": "Contact merged",
+    "description": "",
+    "module": "Contacts",
+    "module_id": "6004",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4005",
+    "name": "Deal won",
+    "description": "",
+    "module": "Deals",
+    "module_id": "6005",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4006",
+    "name": "Shipment dispatched",
+    "description": "",
+    "module": "Shipments",
+    "module_id": "6006",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4007",
+    "name": "Lead untouched",
+    "description": "",
+    "module": "Leads",
+    "module_id": "6007",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4008",
+    "name": "Credit limit changed",
+    "description": "",
+    "module": "Accounts",
+    "module_id": "6008",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  },
+  {
+    "id": "4009",
+    "name": "Quote accepted",
+    "description": "",
+    "module": "Quotes",
+    "module_id": "6009",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
+  }
+]

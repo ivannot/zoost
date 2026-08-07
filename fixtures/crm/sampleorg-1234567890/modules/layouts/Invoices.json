@@ -1,11 +1,16 @@
-{
-  "api_name": "Invoices",
-  "layouts": [
-    {
-      "id": 3006,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ]
-}
+[
+  {
+    "id": "3006",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  }
+]

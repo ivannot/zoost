@@ -1,8 +1,0 @@
-// standalone.fetchInvoices - sample function, generated for the sample org.
-void fetchInvoices()
-{
-    info "standalone.fetchInvoices start";
-    r0 = automation.fetchVendors();
-    r1 = automation.notifyContacts();
-    return null;
-}

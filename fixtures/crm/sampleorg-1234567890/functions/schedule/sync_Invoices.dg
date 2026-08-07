@@ -1,0 +1,7 @@
+// schedule.syncInvoices - sample function, generated for the sample org.
+void syncInvoices()
+{
+    info "schedule.syncInvoices start";
+    // nothing else is called
+    return null;
+}

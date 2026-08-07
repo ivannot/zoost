@@ -1,7 +1,0 @@
-// automation.cleanSubscriptions - sample function, generated for the sample org.
-void cleanSubscriptions()
-{
-    info "automation.cleanSubscriptions start";
-    r0 = schedule.syncInvoices();
-    return null;
-}

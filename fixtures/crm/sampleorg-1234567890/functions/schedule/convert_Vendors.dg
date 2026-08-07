@@ -1,0 +1,7 @@
+// schedule.convertVendors - sample function, generated for the sample org.
+void convertVendors()
+{
+    info "schedule.convertVendors start";
+    // nothing else is called
+    return null;
+}

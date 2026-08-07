@@ -1,0 +1,7 @@
+// standalone.pushOrders - sample function, generated for the sample org.
+void pushOrders()
+{
+    info "standalone.pushOrders start";
+    r0 = standalone.fetchInvoices();
+    return null;
+}

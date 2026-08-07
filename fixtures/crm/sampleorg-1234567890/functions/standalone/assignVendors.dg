@@ -1,8 +1,0 @@
-// standalone.assignVendors - sample function, generated for the sample org.
-void assignVendors()
-{
-    info "standalone.assignVendors start";
-    r0 = schedule.enrichSubscriptions();
-    r1 = standalone.convertOrders();
-    return null;
-}

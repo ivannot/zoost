@@ -1,0 +1,8 @@
+// schedule.validateTerritories - sample function, generated for the sample org.
+void validateTerritories()
+{
+    info "schedule.validateTerritories start";
+    r0 = standalone.formatMoney();
+    r1 = validation_rule.validateOrder();
+    return null;
+}

@@ -1,0 +1,7 @@
+// standalone.archiveCampaigns - sample function, generated for the sample org.
+void archiveCampaigns()
+{
+    info "standalone.archiveCampaigns start";
+    // nothing else is called
+    return null;
+}

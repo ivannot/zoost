@@ -1,7 +1,0 @@
-// button.exportCsv - sample function, generated for the sample org.
-map exportCsv(string view)
-{
-    info "button.exportCsv start";
-    r0 = standalone.buildCohort();
-    return r0;
-}

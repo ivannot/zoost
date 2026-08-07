@@ -1,0 +1,7 @@
+// standalone.assignOrders - sample function, generated for the sample org.
+void assignOrders()
+{
+    info "standalone.assignOrders start";
+    // nothing else is called
+    return null;
+}

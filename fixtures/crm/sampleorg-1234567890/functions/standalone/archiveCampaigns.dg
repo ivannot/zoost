@@ -1,7 +1,0 @@
-// standalone.archiveCampaigns - sample function, generated for the sample org.
-void archiveCampaigns()
-{
-    info "standalone.archiveCampaigns start";
-    r0 = schedule.convertVendors();
-    return null;
-}

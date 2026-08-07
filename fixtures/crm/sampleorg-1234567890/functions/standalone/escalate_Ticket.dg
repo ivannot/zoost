@@ -1,0 +1,8 @@
+// standalone.escalateTicket - sample function, generated for the sample org.
+map escalateTicket(string ticketId)
+{
+    info "standalone.escalateTicket start";
+    r0 = standalone.log();
+    r1 = button.notifyOwner();
+    return r0;
+}

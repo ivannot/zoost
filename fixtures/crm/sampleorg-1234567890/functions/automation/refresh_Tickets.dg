@@ -1,0 +1,8 @@
+// automation.refreshTickets - sample function, generated for the sample org.
+void refreshTickets()
+{
+    info "automation.refreshTickets start";
+    r0 = automation.onContactMerge();
+    r1 = standalone.splitAccounts();
+    return null;
+}

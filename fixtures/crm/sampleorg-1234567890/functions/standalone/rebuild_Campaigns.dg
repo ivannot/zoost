@@ -1,0 +1,8 @@
+// standalone.rebuildCampaigns - sample function, generated for the sample org.
+void rebuildCampaigns()
+{
+    info "standalone.rebuildCampaigns start";
+    r0 = automation.cleanSubscriptions();
+    r1 = standalone.fetchAccounts();
+    return null;
+}

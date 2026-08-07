@@ -1960,8 +1960,9 @@ test('the sample org is in the shape a pull writes, and it never ships', () => {
   }
   // one folder per kind, no underscores - the shape this project settled on in 1.13
   const fns = JSON.parse(read('fixtures/crm/sampleorg-1234567890/functions/index.json'));
-  assert.ok(fns.items.length > 10, 'the sample org has too little in it to show anything');
-  assert.ok(fns.items.every((f) => f.namespace && !f.namespace.startsWith('_')),
+  assert.ok(Array.isArray(fns), 'functions/index.json is not a bare array, which is what the pull writes');
+  assert.ok(fns.length > 10, 'the sample org has too little in it to show anything');
+  assert.ok(fns.every((f) => f.namespace && !f.namespace.startsWith('_')),
     'a namespace carries the leading underscore that was removed in 1.13');
 
   // and the graph payloads the diagram window consumes
@@ -2017,34 +2018,39 @@ test('the sample org exercises every state the panels can draw', () => {
 
   // on disk: stale meta, hidden layouts, and both related-list facets
   const ws = 'fixtures/crm/sampleorg-1234567890/';
-  const metas = JSON.parse(read(ws + 'functions/index.json')).items;
+  const metas = JSON.parse(read(ws + 'functions/index.json'));
   assert.ok(metas.length > 20, 'the sample org is too small to show a list');
-  const anyMeta = (pred) => ['standalone/legacyHelper', 'standalone/reconcile', 'standalone/calcTax']
-    .some((f) => pred(JSON.parse(read(ws + 'functions/' + f + '.meta.json'))));
+  // the file stem is the api_name, not the name - the pull writes it that way
+  const anyMeta = (pred) => metas.some((f) => pred(JSON.parse(read(ws + 'functions/' + f.namespace + '/' + f.api_name + '.meta.json'))));
   assert.ok(anyMeta((m) => m.sv < 2), 'nothing on disk is stale, so «Refresh outdated» has nothing to do');
   const mods = ['Products', 'Campaigns', 'Accounts'].map((m) => JSON.parse(read(ws + 'modules/' + m + '.json')));
   assert.ok(mods.some((m) => m.related_lists.some((r) => r.type === 'system')),
     'no system related list, so that facet is empty');
-  assert.ok(mods.some((m) => m.related_lists.some((r) => /linking:/.test(r.via || ''))),
+  // The pull records the junction as `linking_module`, not as a `via` string - the graph window
+  // renders «linking: X» from it. The fixture must carry the field, not the rendering.
+  assert.ok(mods.some((m) => m.related_lists.some((r) => r.linking_module)),
     'no many-to-many related list, so that facet is empty');
   assert.ok(mods.some((m) => m.layouts.some((l) => l.visible === false)),
     'no hidden layout, so «(hidden)» never renders');
-  const wf = JSON.parse(read(ws + 'workflows/index.json')).items;
+  const wf = JSON.parse(read(ws + 'workflows/index.json'));
   assert.ok(wf.length > 4, 'too few workflows');
 
   // Analytics: system tables, orphans, and the two different ways a query has no SQL
   assert.ok(Object.values(an.nodes).some((n) => n.system), 'no system table, so that condition is empty');
   assert.ok(an.counts.dead_suspects > 0, 'nothing is in no relation');
-  const kinds = new Set(JSON.parse(read('fixtures/analytics/sample-workspace/views.json'))
-    .views.map((v) => v.VIEW_TYPE));
+  const kinds = new Set(JSON.parse(read('fixtures/analytics/sample-workspace/views.json')).views.map((v) => v.type));
   for (const k of ['Table', 'QueryTable', 'Chart', 'Pivot', 'Dashboard']) {
     assert.ok(kinds.has(k), `no view of type ${k}`);
   }
+  // «could not be read» is recorded in lineage.failed, which is what «Retry failed» works from;
+  // «returned nothing» is a .sql file that exists and is empty. Different facts, different places.
+  const lin = JSON.parse(read('fixtures/analytics/sample-workspace/lineage.json'));
+  assert.ok((lin.failed || []).length, 'no unreadable query, so «Retry failed» has nothing to do');
   const sql = JSON.parse(read('fixtures/analytics/sample-workspace/sql/index.json'));
-  assert.ok(Object.values(sql).some((v) => v.failed), 'no unreadable query, so «Retry failed» has nothing to do');
-  const files = Object.values(sql).filter((v) => v.file).map((v) => v.file);
-  assert.ok(files.some((f) => read('fixtures/analytics/sample-workspace/sql/' + f) === ''),
-    'no empty query - «returned nothing» and «could not be read» must both have an instance');
+  const stems = Object.values(sql).map((v) => v.stem);
+  const bodies = stems.map((st) => { try { return read('fixtures/analytics/sample-workspace/sql/' + st + '.sql'); } catch { return null; } });
+  assert.ok(bodies.some((b) => b === ''), 'no empty query - «returned nothing» must have an instance');
+  assert.ok(bodies.some((b) => b === null), 'every query has a file, so nothing is unreadable');
 });
 
 test('the arrowhead is the same size on screen at any zoom', () => {
@@ -2083,7 +2089,7 @@ test('the sample org speaks Deluge, so the reference graph can find its calls', 
       `${n.id} is in namespace «${n.namespace}», which CALL_RE cannot match - Zoho has only ${NS.join(', ')}`);
   }
   // ...and the sources on disk have to write the call in that form
-  const src = read('fixtures/crm/sampleorg-1234567890/functions/standalone/buildInvoice.dg');
+  const src = read('fixtures/crm/sampleorg-1234567890/functions/standalone/build_Invoice.dg');
   const re = new RegExp(String.raw`\b(${NS.join('|')})\.([A-Za-z_]\w*)\s*\(`, 'g');
   const found = [...src.matchAll(re)];
   assert.ok(found.length >= 4, 'the sample sources do not call anything the scanner can see');
@@ -2265,4 +2271,110 @@ test('a window resize re-fits the diagram, unless the view is the reader\'s own'
     const move = js.slice(js.indexOf("addEventListener('mousemove'"), js.indexOf("addEventListener('mousemove'") + 400);
     assert.ok(/erUserMoved = true/.test(move), `${app}: panning does not mark the view as chosen`);
   }
+});
+
+test('the sample workspace has the shape the pull writes, field for field', () => {
+  // This is the test that would have saved a whole round. The first generator invented the shapes -
+  // `{items: […]}` instead of a bare array, `namespace` instead of `nameSpace`, a boolean `rest`
+  // instead of `rest_api`, `sv: 3` when META_SV is 2, connections as strings - and the panel
+  // answered with «wfIdx is not iterable», «idx.map is not a function», no connections and a broken
+  // export. Each key below is read from the writer in content-bridge.js or the reader in
+  // sidepanel.js, so the fixture cannot drift from what a real workspace contains.
+  const ctx = { window: {}, Object, JSON, Math, String, Array, Set, Number };
+  vm.createContext(ctx);
+  vm.runInContext(read('apps/crm/sample-org.js'), ctx);
+  const files = ctx.window.SAMPLE_ORG.files({ functions: 40 });
+
+  for (const p of ['functions/index.json', 'modules/index.json', 'modules/layouts/index.json',
+                   'workflows/index.json', 'schedules/index.json', 'connections/index.json']) {
+    assert.ok(Array.isArray(JSON.parse(files[p])), `${p} is not a bare array - the pull writes one`);
+  }
+  const fn = JSON.parse(files['functions/index.json'])[0];
+  for (const k of ['id', 'api_name', 'name', 'display_name', 'namespace', 'category', 'source', 'rest']) {
+    assert.ok(k in fn, `functions/index.json entries have no ${k}`);
+  }
+  assert.notEqual(fn.api_name, fn.display_name,
+    'api_name and display_name are equal, so «Name: display / internal» does nothing');
+
+  // the meta is toFile()'s, including the casing Zoho uses and the version the panel calls current
+  const meta = JSON.parse(files[`functions/${fn.namespace}/${fn.api_name}.meta.json`]);
+  for (const k of ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source',
+                   'return_type', 'params', 'description', 'updatedTime', 'modified_by',
+                   'associated_place', 'workflow', 'rest_api', 'connections', 'sv']) {
+    assert.ok(k in meta, `the function meta has no ${k}`);
+  }
+  const SV = +read('apps/crm/sidepanel.js').match(/const META_SV = (\d+)/)[1];
+  assert.equal(meta.sv, SV, `the meta says sv ${meta.sv} where the panel's META_SV is ${SV}`);
+  assert.ok(Array.isArray(meta.rest_api), 'rest_api is not the list the reader tests with .some()');
+  assert.ok(meta.connections.every((c) => c && typeof c === 'object' && c.name),
+    'connections are not the {name,label,…} objects the reader expects');
+
+  const mod = JSON.parse(files['modules/index.json'])[0];
+  for (const k of ['api_name', 'module_name', 'generated_type', 'fields', 'layouts', 'related_lists']) {
+    assert.ok(k in mod, `modules/index.json entries have no ${k}`);
+  }
+  assert.equal(typeof mod.fields, 'number', 'the module index holds field objects, not a count');
+
+  const wf = JSON.parse(files['workflows/index.json'])[0];
+  for (const k of ['id', 'name', 'module', 'module_id', 'type', 'active', 'source']) {
+    assert.ok(k in wf, `workflows/index.json entries have no ${k}`);
+  }
+  // the per-workflow file is the rule itself, and wfScheduled() reads execute_after off it
+  const rule = JSON.parse(files[`workflows/${wf.id}.json`]);
+  assert.ok(Array.isArray(rule.conditions), 'the workflow file is not the rule object');
+  const anyRule = Object.keys(files).filter((p) => /^workflows\/\d+\.json$/.test(p))
+    .map((p) => JSON.parse(files[p]));
+  assert.ok(anyRule.some((r) => (r.conditions || []).some((c) =>
+    (c.scheduled_actions || []).some((sa) => sa.execute_after && sa.execute_after.period))),
+    'no scheduled action carries execute_after, so the delay never shows');
+
+  const sch = JSON.parse(files['schedules/index.json'])[0];
+  for (const k of ['id', 'name', 'status', 'function_id', 'function_name', 'frequency', 'next', 'last']) {
+    assert.ok(k in sch, `schedules/index.json entries have no ${k}`);
+  }
+  const conn = JSON.parse(files['connections/index.json'])[0];
+  for (const k of ['name', 'label', 'connector', 'connectorLabel', 'connected', 'createdBy', 'scopes', 'id']) {
+    assert.ok(k in conn, `connections/index.json entries have no ${k}`);
+  }
+
+  // Analytics: a document with folders and views, not the raw API keys the bridge transforms away
+  const actx = { window: {}, Object, JSON, Math, String, Array, Set, Number };
+  vm.createContext(actx);
+  vm.runInContext(read('apps/analytics/sample-org.js'), actx);
+  const af = actx.window.SAMPLE_ORG.files({});
+  const doc = JSON.parse(af['views.json']);
+  assert.ok(Array.isArray(doc.views) && Array.isArray(doc.folders),
+    'views.json is not {folders, views} - which is what loadFromDisk reads');
+  for (const k of ['id', 'name', 'type', 'folder', 'folderName', 'parent', 'system',
+                   'dataModifiedAt', 'designModifiedText']) {
+    assert.ok(k in doc.views[0], `a view has no ${k} - the bridge renames VIEW_ID before it lands`);
+  }
+  const sc = JSON.parse(af['schema.json']);
+  assert.ok(sc.tables && Array.isArray(sc.relations), 'schema.json is not {tables, relations}');
+  const t = Object.values(sc.tables)[0];
+  for (const k of ['name', 'kind', 'system', 'columns']) assert.ok(k in t, `a table has no ${k}`);
+  const rel = sc.relations[0];
+  for (const k of ['source', 'target', 'sourceName', 'targetName', 'sourceColumns', 'targetColumns', 'relation']) {
+    assert.ok(k in rel, `a relation has no ${k}`);
+  }
+  const lin = JSON.parse(af['lineage.json']);
+  assert.ok(lin.deps && 'failed' in lin, 'lineage.json is not {deps, failed}');
+  const sq = Object.values(JSON.parse(af['sql/index.json']))[0];
+  for (const k of ['stem', 'name', 'parents', 'sources']) assert.ok(k in sq, `a sql index entry has no ${k}`);
+});
+
+test('a workspace binding is in place before anything is enabled from it', () => {
+  // Reported as «the per-type Pull is still enabled on the sample org». setEnabled() asks
+  // isSample(), which reads `bound` - and `bound` was assigned four lines *after* the call, so it
+  // was still answering about the workspace being left. «Fields first, state second» in its mirror
+  // image: here the state is read before it is written.
+  // Comments stripped first: the note explaining this bug names setEnabled( above the line that
+  // calls it, so searching the raw text found the explanation and reported the fix as the defect.
+  const js = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  const body = js.slice(js.indexOf('async function activate('), js.indexOf('\n}', js.indexOf('async function activate(')));
+  const bind = body.indexOf('bound = w.binding');
+  const enable = body.indexOf('setEnabled(');
+  assert.ok(bind >= 0 && enable >= 0, 'activate() no longer binds or enables');
+  assert.ok(bind < enable,
+    'the binding is read after setEnabled(), so a control that depends on it sees the previous workspace');
 });

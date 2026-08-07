@@ -1,65 +1,4 @@
 {
-  "api_name": "Invoices",
-  "display_name": "Invoices",
-  "category": "standard",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Account_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Accounts"
-    },
-    {
-      "api_name": "Order_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Orders"
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3006,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Attachments",
@@ -67,7 +6,130 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8506",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Invoices",
+  "module_name": "Invoices",
+  "singular_label": "Invoice",
+  "plural_label": "Invoices",
+  "id": "6006",
+  "generated_type": "standard",
+  "deletable": false,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3006",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7120"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7121"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7122"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7123"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7124"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7125"
+    },
+    {
+      "api_name": "Account_Ref",
+      "label": "Account",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Accounts",
+      "picklist": [],
+      "id": "7620"
+    },
+    {
+      "api_name": "Order_Ref",
+      "label": "Order",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Orders",
+      "picklist": [],
+      "id": "7621"
     }
   ]
 }

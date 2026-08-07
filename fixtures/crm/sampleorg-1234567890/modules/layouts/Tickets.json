@@ -1,11 +1,16 @@
-{
-  "api_name": "Tickets",
-  "layouts": [
-    {
-      "id": 3013,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ]
-}
+[
+  {
+    "id": "3013",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  }
+]

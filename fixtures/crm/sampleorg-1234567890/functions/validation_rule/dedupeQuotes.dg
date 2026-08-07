@@ -1,7 +1,0 @@
-// validation_rule.dedupeQuotes - sample function, generated for the sample org.
-void dedupeQuotes()
-{
-    info "validation_rule.dedupeQuotes start";
-    // nothing else is called
-    return null;
-}

@@ -1,11 +1,16 @@
-{
-  "api_name": "Leads",
-  "layouts": [
-    {
-      "id": 3002,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ]
-}
+[
+  {
+    "id": "3002",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  }
+]

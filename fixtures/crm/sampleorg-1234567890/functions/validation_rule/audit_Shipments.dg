@@ -1,0 +1,7 @@
+// validation_rule.auditShipments - sample function, generated for the sample org.
+void auditShipments()
+{
+    info "validation_rule.auditShipments start";
+    r0 = schedule.weeklyDigest();
+    return null;
+}

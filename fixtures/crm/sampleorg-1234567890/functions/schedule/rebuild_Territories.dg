@@ -1,0 +1,7 @@
+// schedule.rebuildTerritories - sample function, generated for the sample org.
+void rebuildTerritories()
+{
+    info "schedule.rebuildTerritories start";
+    // nothing else is called
+    return null;
+}

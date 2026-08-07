@@ -1,0 +1,7 @@
+// automation.fetchLeads - sample function, generated for the sample org.
+void fetchLeads()
+{
+    info "automation.fetchLeads start";
+    // nothing else is called
+    return null;
+}

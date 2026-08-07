@@ -1,60 +1,72 @@
-{
-  "items": [
-    {
-      "id": "5000",
-      "name": "Nightly dispatch",
-      "function": "schedule.nightlyDispatch",
-      "recurrence": "Every day at 02:00",
-      "active": true,
-      "last_run": "2026-08-01T02:00:00+00:00"
-    },
-    {
-      "id": "5001",
-      "name": "Dunning run",
-      "function": "schedule.dunningRun",
-      "recurrence": "Every day at 06:00",
-      "active": true,
-      "last_run": "2026-08-02T02:00:00+00:00"
-    },
-    {
-      "id": "5002",
-      "name": "Close stale tickets",
-      "function": "schedule.closeStaleTickets",
-      "recurrence": "Every Monday at 07:00",
-      "active": true,
-      "last_run": "2026-08-03T02:00:00+00:00"
-    },
-    {
-      "id": "5003",
-      "name": "Weekly digest",
-      "function": "schedule.weeklyDigest",
-      "recurrence": "Every Monday at 08:00",
-      "active": true,
-      "last_run": "2026-08-04T02:00:00+00:00"
-    },
-    {
-      "id": "5004",
-      "name": "Catalogue pull",
-      "function": "schedule.pullCatalogue",
-      "recurrence": "Every 6 hours",
-      "active": true,
-      "last_run": "2026-08-05T02:00:00+00:00"
-    },
-    {
-      "id": "5005",
-      "name": "Account push",
-      "function": "schedule.pushAccounts",
-      "recurrence": "Every day at 23:30",
-      "active": true,
-      "last_run": "2026-08-06T02:00:00+00:00"
-    },
-    {
-      "id": "5006",
-      "name": "Payment sync",
-      "function": "schedule.syncPayments",
-      "recurrence": "Every 2 hours",
-      "active": true,
-      "last_run": "2026-08-07T02:00:00+00:00"
-    }
-  ]
-}
+[
+  {
+    "id": "5000",
+    "name": "Nightly dispatch",
+    "status": "active",
+    "function_id": "9021",
+    "function_name": "nightlyDispatch",
+    "frequency": "Every day at 02:00",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-01T02:00:00+00:00"
+  },
+  {
+    "id": "5001",
+    "name": "Dunning run",
+    "status": "active",
+    "function_id": "9019",
+    "function_name": "dunningRun",
+    "frequency": "Every day at 06:00",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-02T02:00:00+00:00"
+  },
+  {
+    "id": "5002",
+    "name": "Close stale tickets",
+    "status": "active",
+    "function_id": "9022",
+    "function_name": "closeStaleTickets",
+    "frequency": "Every Monday at 07:00",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-03T02:00:00+00:00"
+  },
+  {
+    "id": "5003",
+    "name": "Weekly digest",
+    "status": "active",
+    "function_id": "9025",
+    "function_name": "weeklyDigest",
+    "frequency": "Every Monday at 08:00",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-04T02:00:00+00:00"
+  },
+  {
+    "id": "5004",
+    "name": "Catalogue pull",
+    "status": "active",
+    "function_id": "9024",
+    "function_name": "pullCatalogue",
+    "frequency": "Every 6 hours",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-05T02:00:00+00:00"
+  },
+  {
+    "id": "5005",
+    "name": "Account push",
+    "status": "active",
+    "function_id": "9023",
+    "function_name": "pushAccounts",
+    "frequency": "Every day at 23:30",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-06T02:00:00+00:00"
+  },
+  {
+    "id": "5006",
+    "name": "Payment sync",
+    "status": "active",
+    "function_id": "9020",
+    "function_name": "syncPayments",
+    "frequency": "Every 2 hours",
+    "next": "2026-08-08T02:00:00+00:00",
+    "last": "2026-08-07T02:00:00+00:00"
+  }
+]

@@ -1,0 +1,8 @@
+// schedule.syncPricebooks - sample function, generated for the sample org.
+void syncPricebooks()
+{
+    info "schedule.syncPricebooks start";
+    r0 = automation.archiveTickets();
+    r1 = automation.enrichPricebooks();
+    return null;
+}

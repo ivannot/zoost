@@ -1,17 +1,23 @@
-{
-  "api_name": "Campaigns",
-  "layouts": [
-    {
-      "id": 3010,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3210,
-      "name": "Retired",
-      "visible": false,
-      "sections": 1
-    }
-  ]
-}
+[
+  {
+    "id": "3010",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  },
+  {
+    "id": "3210",
+    "name": "Retired",
+    "visible": false,
+    "status": "inactive",
+    "sections": []
+  }
+]

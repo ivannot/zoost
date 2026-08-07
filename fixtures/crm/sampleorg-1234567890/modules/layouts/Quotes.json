@@ -1,17 +1,23 @@
-{
-  "api_name": "Quotes",
-  "layouts": [
-    {
-      "id": 3005,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3205,
-      "name": "Retired",
-      "visible": false,
-      "sections": 1
-    }
-  ]
-}
+[
+  {
+    "id": "3005",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  },
+  {
+    "id": "3205",
+    "name": "Retired",
+    "visible": false,
+    "status": "inactive",
+    "sections": []
+  }
+]

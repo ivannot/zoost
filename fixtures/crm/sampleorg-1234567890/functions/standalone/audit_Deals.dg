@@ -1,0 +1,7 @@
+// standalone.auditDeals - sample function, generated for the sample org.
+void auditDeals()
+{
+    info "standalone.auditDeals start";
+    r0 = schedule.pushAccounts();
+    return null;
+}

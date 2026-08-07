@@ -1,19 +1,40 @@
 {
   "id": "4003",
   "name": "Ticket unanswered",
-  "module": "Tickets",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Tickets",
+    "id": "6003"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [],
       "scheduled_actions": [
         {
-          "delay": "2 days",
+          "execute_after": {
+            "unit": 2,
+            "period": "days"
+          },
           "actions": [
             {
               "type": "function",
-              "name": "standalone.escalateTicket"
+              "name": "standalone.escalateTicket",
+              "id": "4503"
             }
           ]
         }

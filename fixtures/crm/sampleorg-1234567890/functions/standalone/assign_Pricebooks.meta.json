@@ -1,0 +1,19 @@
+{
+  "id": "9104",
+  "name": "assignPricebooks",
+  "display_name": "Assign pricebooks",
+  "api_name": "assign_Pricebooks",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-06T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

@@ -1,15 +1,33 @@
 {
   "id": "4005",
   "name": "Deal won",
-  "module": "Deals",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Deals",
+    "id": "6005"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "automation.onDealWon"
+          "name": "automation.onDealWon",
+          "id": "4505"
         }
       ],
       "scheduled_actions": []

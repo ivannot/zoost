@@ -1,7 +1,0 @@
-// standalone.splitAccounts - sample function, generated for the sample org.
-void splitAccounts()
-{
-    info "standalone.splitAccounts start";
-    r0 = standalone.mergeTerritories();
-    return null;
-}

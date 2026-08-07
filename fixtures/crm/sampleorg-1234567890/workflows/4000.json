@@ -1,15 +1,33 @@
 {
   "id": "4000",
   "name": "New order received",
-  "module": "Orders",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Orders",
+    "id": "6000"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "automation.onOrderCreate"
+          "name": "automation.onOrderCreate",
+          "id": "4500"
         }
       ],
       "scheduled_actions": []

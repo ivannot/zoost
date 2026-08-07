@@ -1,8 +1,0 @@
-// standalone.cleanAccounts - sample function, generated for the sample org.
-void cleanAccounts()
-{
-    info "standalone.cleanAccounts start";
-    r0 = standalone.rebuildVendors();
-    r1 = standalone.notifyInvoices();
-    return null;
-}

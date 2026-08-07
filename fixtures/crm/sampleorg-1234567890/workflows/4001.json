@@ -1,15 +1,33 @@
 {
   "id": "4001",
   "name": "Order amount changed",
-  "module": "Orders",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Orders",
+    "id": "6001"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "automation.recalcTotals"
+          "name": "automation.recalcTotals",
+          "id": "4501"
         }
       ],
       "scheduled_actions": []

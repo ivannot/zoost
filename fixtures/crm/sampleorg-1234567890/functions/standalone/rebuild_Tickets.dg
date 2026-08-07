@@ -1,0 +1,7 @@
+// standalone.rebuildTickets - sample function, generated for the sample org.
+void rebuildTickets()
+{
+    info "standalone.rebuildTickets start";
+    // nothing else is called
+    return null;
+}

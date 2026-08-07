@@ -1,7 +1,0 @@
-// standalone.mergeVendors - sample function, generated for the sample org.
-void mergeVendors()
-{
-    info "standalone.mergeVendors start";
-    // nothing else is called
-    return null;
-}

@@ -1,0 +1,8 @@
+// standalone.assignTickets - sample function, generated for the sample org.
+void assignTickets()
+{
+    info "standalone.assignTickets start";
+    r0 = validation_rule.validateOrder();
+    r1 = standalone.archiveCampaigns();
+    return null;
+}

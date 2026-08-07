@@ -1,8 +1,0 @@
-// automation.splitProducts - sample function, generated for the sample org.
-void splitProducts()
-{
-    info "automation.splitProducts start";
-    r0 = standalone.auditDeals();
-    r1 = schedule.nightlyDispatch();
-    return null;
-}

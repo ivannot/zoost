@@ -17,6 +17,13 @@
  * harness. Volume is composed from two small vocabularies instead, deterministically, so a few
  * hundred names come out plausible without anyone inventing them one at a time.
  *
+ * THE FILE SHAPES ARE NOT INVENTED HERE. Every index is a **bare array**, not `{items: […]}`, and
+ * every record carries the keys the pull writes - `nameSpace` with a capital S, `rest_api` rather
+ * than a boolean `rest`, `sv: 2` and not 3, connections as objects. The first version guessed, and
+ * the panel answered with `wfIdx is not iterable`, `idx.map is not a function`, no connections and a
+ * broken export. Derive a shape from the writer in content-bridge.js and the reader in sidepanel.js,
+ * never from what looks reasonable.
+ *
  * A DELUGE NAMESPACE IS NOT FREE. `CALL_RE` in graph-core.js matches `<namespace>.<name>(` for
  * exactly the five namespaces Zoho CRM has. An earlier fixture invented its own, so the reference
  * scanner found nothing in perfectly plausible sources and the panel called a function that makes
@@ -71,6 +78,11 @@
     ['validation_rule', 'validateOrder', 'crmfundamentals', ['orderId'],
       ['standalone.orgSettings', 'standalone.log']],
     ['validation_rule', 'checkCreditLimit', 'crmfundamentals', ['accountId'], ['standalone.log']],
+    // `notifyOwner` exists under two namespaces on purpose. A call that names neither exactly -
+    // `button.notifyOwner()` from escalateTicket - resolves to two functions and is reported as
+    // ambiguous, which is a state derived from the sources and not asserted anywhere.
+    ['automation', 'notifyOwner', 'crmfundamentals', ['recordId'], ['standalone.log']],
+    ['schedule', 'notifyOwner', 'scheduler', [], ['standalone.log']],
   ];
 
   // ---- volume -------------------------------------------------------------------------------
@@ -183,14 +195,26 @@
   // States that only exist so the panel's own marks and filters have something to show. They belong
   // in the fixture the tests and the screenshots read; they do NOT belong in the workspace a
   // first-time reader opens, where a refused module is just confusing.
+  // An unresolved call is one the scanner finds in the source and cannot resolve; an ambiguous one
+  // resolves to more than one function of that name. Both are derived from the Deluge by
+  // graph-core.js, so both are created by *writing the call*, not by asserting the outcome.
   const EDGE = {
     refusedModule: 'Ledger',
     stale: ['standalone.legacyHelper', 'standalone.reconcilePayments'],
     unresolved: { 'validation_rule.validateOrder': ['standalone.lookupBand'],
-                  'button.exportCsv': ['standalone.dump'] },
-    ambiguous: { 'standalone.escalateTicket': ['log'] },
+                  'button.exportCsv': ['standalone.dumpEverything'] },
+    // Not a name that is missing - one that is there twice. `button.notifyOwner` matches neither
+    // namespace exactly, so it falls back to the name and finds two.
+    ambiguous: { 'standalone.escalateTicket': ['button.notifyOwner'] },
   };
 
+  // Zoho generates an api_name from the label, and the two are different strings - which is what the
+  // «Name: display / internal» toggle switches between. A fixture where they are equal makes that
+  // control look broken, which is how it was reported.
+  function labelOf(name) {
+    const words = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ');
+    return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? ' ' + words.slice(1).join(' ').toLowerCase() : '');
+  }
   function deluge(ns, name, params, calls) {
     const sig = (params.length ? 'map ' : 'void ') + name +
       '(' + params.map((p) => 'string ' + p).join(', ') + ')';
@@ -204,95 +228,154 @@
       '    return ' + (params.length ? 'r0' : 'null') + ';\n}\n';
   }
 
-  /** The whole workspace as {path: text}. `opts.functions` is roughly how many to make;
-   *  `opts.edgeCases` adds the states above. */
+  const snake = (n) => n.replace(/([a-z0-9])([A-Z])/g, '$1_$2');
+
+  /** The whole workspace as {path: text}, in the shape a pull writes it.
+   *
+   * Every index is a bare array. Every record carries the keys the reader asks for. Both were
+   * guessed the first time and every one of the guesses was wrong; see the note at the top.
+   *
+   * `opts.functions` is roughly how many to make; `opts.edgeCases` adds the awkward states;
+   * `opts.onProgress(done, total, what)` is called as it goes, because writing three hundred files
+   * through the File System Access API takes long enough to look like a hang.
+   */
   function files(opts) {
-    const o = Object.assign({ functions: 120, edgeCases: false }, opts || {});
+    const o = Object.assign({ functions: 120, edgeCases: false, onProgress: null }, opts || {});
     const list = CORE.concat(volume(Math.max(0, o.functions - CORE.length), 20260807));
     const out = {};
     const J = (p, v) => { out[p] = JSON.stringify(v, null, 2) + '\n'; };
+    const say = (done, total, what) => { if (o.onProgress) o.onProgress(done, total, what); };
 
+    // ---- functions ----
+    // The index is what the tree lists before anything is downloaded: a bare array, and `namespace`
+    // here (the meta file spells it `nameSpace`, which is Zoho's own casing and not a typo).
     const index = [];
     list.forEach(([ns, name, cat, params, calls], i) => {
-      const id = ns + '.' + name;
-      out['functions/' + ns + '/' + name + '.dg'] = deluge(ns, name, params, calls);
-      J('functions/' + ns + '/' + name + '.meta.json', {
-        sv: (o.edgeCases && EDGE.stale.includes(id)) ? 1 : 3,
-        id: String(9000 + i), name: name, namespace: ns, display_name: name, category: cat,
+      const id = String(9000 + i);
+      const api = snake(name);
+      // An unresolved reference is a call in the *source* to something that is not there - that is
+      // how the panel finds them, by scanning the Deluge. Writing it into the meta instead would
+      // have been a claim the source does not support, and the fixture would show a state no real
+      // workspace can reach.
+      const extra = o.edgeCases
+        ? (EDGE.unresolved[ns + '.' + name] || []).concat(EDGE.ambiguous[ns + '.' + name] || [])
+        : [];
+      out['functions/' + ns + '/' + api + '.dg'] = deluge(ns, name, params, calls.concat(extra));
+      // toFile()'s meta, field for field. sv is 2 - the current META_SV - and 1 for the ones that are
+      // meant to read as stale; 3 would be *newer* than the panel understands.
+      J('functions/' + ns + '/' + api + '.meta.json', {
+        id: id, name: name, display_name: labelOf(name), api_name: api,
+        nameSpace: ns, category: cat, source: 'crm',
         return_type: params.length ? 'map' : 'void',
         params: params.map((p) => ({ name: p, type: 'string' })),
-        connections: CONNECTIONS.filter((c) => c[2].includes(id)).map((c) => c[0]),
-        modified_by: 'Sample User',
-        modified_time: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
-        rest: name === 'exportCsv' || name === 'openTicket',
-        unresolved: (o.edgeCases && EDGE.unresolved[id]) || [],
-        ambiguous: (o.edgeCases && EDGE.ambiguous[id]) || [],
+        description: '', updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
+        modified_by: 'Sample User', associated_place: null, workflow: '',
+        rest_api: (name === 'exportCsv' || name === 'openTicket')
+          ? [{ type: 'GET', active: true }] : [],
+        connections: CONNECTIONS.filter((c) => c[2].includes(ns + '.' + name))
+          .map((c) => ({ name: c[0], label: c[1], service: 'custom', scopes: [] })),
+        sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 2,
       });
-      index.push({ id: String(9000 + i), name: name, namespace: ns, display_name: name, category: cat });
+      index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
+                   namespace: ns, category: cat, source: 'crm',
+                   rest: name === 'exportCsv' || name === 'openTicket' });
+      say(i + 1, list.length, 'functions');
     });
-    J('functions/index.json', { items: index });
+    J('functions/index.json', index);
 
-    const mods = [];
+    // ---- modules ----
+    const index2 = [], layIndex = [];
     const modList = MODULES.concat(o.edgeCases ? [[EDGE.refusedModule, 'Ledger', 'custom']] : []);
     modList.forEach(([api, label, cat], i) => {
-      if (o.edgeCases && api === EDGE.refusedModule) {
-        const refusal = { status: 400, code: 'INVALID_MODULE', at: WHEN,
-                          message: 'operation cannot be performed for hidden module' };
-        J('modules/' + api + '.json', { api_name: api, display_name: label, category: cat,
-                                        fields: [], layouts: [], related_lists: [], unreadable: refusal });
-        J('modules/layouts/' + api + '.json', { api_name: api, layouts: [] });
-        mods.push({ api_name: api, display_name: label, category: cat,
-                    fieldCount: 0, layoutCount: 0, unreadable: refusal });
-        return;
+      const refused = o.edgeCases && api === EDGE.refusedModule;
+      const fields = refused ? [] : FIELD_POOL.slice(0, 6 + (i % 6)).map(([a, t, m], k) =>
+        ({ api_name: a, label: a.replace(/_/g, ' '), data_type: t, length: t === 'text' ? 255 : null,
+           custom: cat === 'custom', mandatory: m, lookup: null,
+           picklist: t === 'picklist' ? ['One', 'Two', 'Three'] : [], id: String(7000 + i * 20 + k) }));
+      if (!refused) {
+        (LOOKUPS[api] || []).forEach((t, k) => fields.push(
+          { api_name: t.replace(/s$/, '') + '_Ref', label: t.replace(/s$/, ''), data_type: 'lookup',
+            length: null, custom: false, mandatory: false, lookup: t, picklist: [],
+            id: String(7500 + i * 20 + k) }));
       }
-      const fields = FIELD_POOL.slice(0, 6 + (i % 6)).map(([a, t, m]) =>
-        ({ api_name: a, data_type: t, mandatory: m, lookup: null }));
-      (LOOKUPS[api] || []).forEach((t) => fields.push(
-        { api_name: t.replace(/s$/, '') + '_Ref', data_type: 'lookup', mandatory: false, lookup: t }));
-      const layouts = [{ id: 3000 + i, name: 'Standard', visible: true, sections: 3 }];
-      if (i % 4 === 0) layouts.push({ id: 3100 + i, name: 'Compact', visible: true, sections: 2 });
-      if (o.edgeCases && i % 5 === 0) layouts.push({ id: 3200 + i, name: 'Retired', visible: false, sections: 1 });
-      const related = Object.keys(LOOKUPS).filter((c) => (LOOKUPS[c] || []).includes(api)).map((c) =>
+      const layouts = refused ? [] : [{ id: String(3000 + i), name: 'Standard', visible: true,
+                                        status: 'active', sections: [{ name: 'Information' }, { name: 'Details' }] }];
+      if (!refused && i % 4 === 0) layouts.push({ id: String(3100 + i), name: 'Compact', visible: true, status: 'active', sections: [{ name: 'Information' }] });
+      if (!refused && o.edgeCases && i % 5 === 0) layouts.push({ id: String(3200 + i), name: 'Retired', visible: false, status: 'inactive', sections: [] });
+      const related = refused ? [] : Object.keys(LOOKUPS).filter((c) => (LOOKUPS[c] || []).includes(api)).map((c) =>
         ({ api_name: c + '_of_' + api, label: c, module: c, type: 'default', visible: true,
-           via: c.replace(/s$/, '') + '_Ref' }));
-      if (o.edgeCases) {
+           connected_module: null, linking_module: null, id: String(8000 + i), src: 'api' }));
+      if (!refused && o.edgeCases) {
         related.push({ api_name: 'Attachments', label: 'Attachments', module: 'Attachments',
-                       type: 'system', visible: true, via: '' });
+                       type: 'system', visible: true, connected_module: null, linking_module: null,
+                       id: String(8500 + i), src: 'api' });
         if (api === 'Products' || api === 'Campaigns') {
           related.push({ api_name: 'Campaign_Products', label: 'Campaign products',
-                         module: api === 'Campaigns' ? 'Products' : 'Campaigns',
-                         type: 'multiselect', visible: true, via: 'linking: Campaign_Product_Link' });
+                         module: api === 'Campaigns' ? 'Products' : 'Campaigns', type: 'multiselect',
+                         visible: true, connected_module: null,
+                         linking_module: 'Campaign_Product_Link', id: String(8600 + i), src: 'api' });
         }
       }
-      J('modules/' + api + '.json', { api_name: api, display_name: label, category: cat,
-                                      fields: fields, layouts: layouts, related_lists: related });
-      J('modules/layouts/' + api + '.json', { api_name: api, layouts: layouts });
-      mods.push({ api_name: api, display_name: label, category: cat,
-                  fieldCount: fields.length, layoutCount: layouts.length });
+      // The compact summary the module JSON keeps, which is what the preview line reads.
+      const summary = layouts.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false,
+                                            status: l.status || null, sections: (l.sections || []).length }));
+      const mod = {
+        related_lists: related,
+        unreadable: refused ? { status: 400, code: 'INVALID_MODULE', at: WHEN,
+                                message: 'operation cannot be performed for hidden module' } : null,
+        api_name: api, module_name: api, singular_label: label.replace(/s$/, ''), plural_label: label,
+        id: String(6000 + i), generated_type: cat,
+        deletable: cat === 'custom', editable: true, creatable: true,
+        viewable: true, visible: true, api_supported: true,
+        layouts: summary, fields: fields,
+      };
+      J('modules/' + api + '.json', mod);
+      J('modules/layouts/' + api + '.json', layouts);
+      index2.push({ api_name: api, module_name: api, generated_type: cat,
+                    fields: fields.length, layouts: summary.length, related_lists: related.length });
+      layIndex.push({ module: api, generated: api, layouts: summary });
+      say(i + 1, modList.length, 'modules');
     });
-    J('modules/index.json', { items: mods });
-    J('modules/layouts/index.json',
-      { items: mods.map((m) => ({ api_name: m.api_name, layoutCount: m.layoutCount })) });
+    J('modules/index.json', index2);
+    J('modules/layouts/index.json', layIndex);
 
+    // ---- workflows ----
     const wfs = [];
     WORKFLOWS.forEach(([mod, name, fn, sched], i) => {
       const wid = String(4000 + i);
-      const actions = fn ? [{ type: 'function', name: fn }] : [];
+      const actions = fn ? [{ type: 'function', name: fn, id: String(4500 + i) }] : [];
+      // The *rule* object, which is what fetchWorkflow returns and what the file holds - not a
+      // wrapper around it. wfScheduled() reads conditions[].scheduled_actions[].execute_after.
       J('workflows/' + wid + '.json', {
-        id: wid, name: name, module: mod, active: true,
-        conditions: [{ criteria: 'Status is not empty',
-                       actions: sched ? [] : actions,
-                       scheduled_actions: sched ? [{ delay: '2 days', actions: actions }] : [] }],
+        id: wid, name: name, description: '',
+        module: { api_name: mod, id: String(6000 + i) },
+        execute_when: { type: 'Record Action', on: 'created' },
+        status: { active: true },
+        conditions: [{
+          sequence_number: 1, criteria: { field: { api_name: 'Status' }, comparator: 'not_equal', value: '' },
+          actions: sched ? [] : actions,
+          scheduled_actions: sched ? [{ execute_after: { unit: 2, period: 'days' }, actions: actions }] : [],
+        }],
         last_executed_time: '2026-07-2' + (i % 9) + 'T11:20:00+00:00',
       });
-      wfs.push({ id: wid, name: name, module: mod, active: true });
+      wfs.push({ id: wid, name: name, description: '', module: mod, module_id: String(6000 + i),
+                 type: 'Record Action', active: true, source: 'crm' });
     });
-    J('workflows/index.json', { items: wfs });
-    J('schedules/index.json', { items: SCHEDULES.map(([n, f, r], i) =>
-      ({ id: String(5000 + i), name: n, function: f, recurrence: r, active: true,
-         last_run: '2026-08-0' + (1 + (i % 7)) + 'T02:00:00+00:00' })) });
-    J('connections/index.json', { items: CONNECTIONS.map(([c, lbl, users]) =>
-      ({ name: c, display_name: lbl, service: 'custom', status: 'connected', used_by: users })) });
+    J('workflows/index.json', wfs);
+
+    // ---- schedules and connections ----
+    J('schedules/index.json', SCHEDULES.map(([n, f, r], i) => {
+      const [ns, nm] = f.split('.');
+      const fi = list.findIndex(([a, b]) => a === ns && b === nm);
+      return { id: String(5000 + i), name: n, status: 'active',
+               function_id: fi >= 0 ? String(9000 + fi) : '', function_name: nm,
+               frequency: r, next: '2026-08-08T02:00:00+00:00',
+               last: '2026-08-0' + (1 + (i % 7)) + 'T02:00:00+00:00' };
+    }));
+    J('connections/index.json', CONNECTIONS.map(([c, lbl], i) =>
+      ({ name: c, label: lbl, connector: 'custom', connectorLabel: 'Custom service',
+         connected: true, createdBy: 'Sample User', scopes: ['ZohoCRM.modules.ALL'],
+         id: String(2000 + i) })));
 
     const areas = {};
     ['functions', 'modules', 'workflows', 'schedules', 'connections']

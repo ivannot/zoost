@@ -1,8 +1,0 @@
-// standalone.notifyTickets - sample function, generated for the sample org.
-void notifyTickets()
-{
-    info "standalone.notifyTickets start";
-    r0 = validation_rule.auditShipments();
-    r1 = standalone.splitAccounts();
-    return null;
-}

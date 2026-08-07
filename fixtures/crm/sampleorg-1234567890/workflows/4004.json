@@ -1,15 +1,33 @@
 {
   "id": "4004",
   "name": "Contact merged",
-  "module": "Contacts",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Contacts",
+    "id": "6004"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "automation.onContactMerge"
+          "name": "automation.onContactMerge",
+          "id": "4504"
         }
       ],
       "scheduled_actions": []

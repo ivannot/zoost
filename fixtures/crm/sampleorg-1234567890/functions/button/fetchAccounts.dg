@@ -1,7 +1,0 @@
-// button.fetchAccounts - sample function, generated for the sample org.
-void fetchAccounts()
-{
-    info "button.fetchAccounts start";
-    // nothing else is called
-    return null;
-}

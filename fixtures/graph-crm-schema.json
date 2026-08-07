@@ -5,65 +5,103 @@
       "id": "Accounts",
       "name": "Accounts",
       "api_name": "Accounts",
-      "display_name": "Accounts",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7000"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7001"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7002"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7003"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7004"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7005"
         }
       ],
       "layouts": [
         {
-          "id": 3000,
+          "id": "3000",
           "name": "Standard",
           "visible": true,
-          "sections": 3
-        },
-        {
-          "id": 3100,
-          "name": "Compact",
-          "visible": true,
+          "status": "active",
           "sections": 2
         },
         {
-          "id": 3200,
+          "id": "3100",
+          "name": "Compact",
+          "visible": true,
+          "status": "active",
+          "sections": 1
+        },
+        {
+          "id": "3200",
           "name": "Retired",
           "visible": false,
-          "sections": 1
+          "status": "inactive",
+          "sections": 0
         }
       ],
       "related_lists": [
@@ -73,7 +111,10 @@
           "module": "Contacts",
           "type": "default",
           "visible": true,
-          "via": "Contact_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Deals_of_Accounts",
@@ -81,7 +122,10 @@
           "module": "Deals",
           "type": "default",
           "visible": true,
-          "via": "Deal_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Quotes_of_Accounts",
@@ -89,7 +133,10 @@
           "module": "Quotes",
           "type": "default",
           "visible": true,
-          "via": "Quote_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Invoices_of_Accounts",
@@ -97,7 +144,10 @@
           "module": "Invoices",
           "type": "default",
           "visible": true,
-          "via": "Invoice_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Orders_of_Accounts",
@@ -105,7 +155,10 @@
           "module": "Orders",
           "type": "default",
           "visible": true,
-          "via": "Order_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Tickets_of_Accounts",
@@ -113,7 +166,10 @@
           "module": "Tickets",
           "type": "default",
           "visible": true,
-          "via": "Ticket_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Subscriptions_of_Accounts",
@@ -121,7 +177,10 @@
           "module": "Subscriptions",
           "type": "default",
           "visible": true,
-          "via": "Subscription_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Cases_of_Accounts",
@@ -129,7 +188,10 @@
           "module": "Cases",
           "type": "default",
           "visible": true,
-          "via": "Case_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Contracts_of_Accounts",
@@ -137,7 +199,10 @@
           "module": "Contracts",
           "type": "default",
           "visible": true,
-          "via": "Contract_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Assets_of_Accounts",
@@ -145,7 +210,10 @@
           "module": "Assets",
           "type": "default",
           "visible": true,
-          "via": "Asset_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -153,7 +221,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8500",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -177,65 +248,111 @@
       "id": "Contacts",
       "name": "Contacts",
       "api_name": "Contacts",
-      "display_name": "Contacts",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7020"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7021"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7022"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7023"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7024"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7025"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7026"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7520"
         }
       ],
       "layouts": [
         {
-          "id": 3001,
+          "id": "3001",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -245,7 +362,10 @@
           "module": "Deals",
           "type": "default",
           "visible": true,
-          "via": "Deal_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Tickets_of_Contacts",
@@ -253,7 +373,10 @@
           "module": "Tickets",
           "type": "default",
           "visible": true,
-          "via": "Ticket_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Cases_of_Contacts",
@@ -261,7 +384,10 @@
           "module": "Cases",
           "type": "default",
           "visible": true,
-          "via": "Case_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -269,7 +395,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8501",
+          "src": "api"
         }
       ],
       "calls": [
@@ -288,65 +417,111 @@
       "id": "Leads",
       "name": "Leads",
       "api_name": "Leads",
-      "display_name": "Leads",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7040"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7041"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7042"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7043"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7044"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7045"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7046"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7047"
         }
       ],
       "layouts": [
         {
-          "id": 3002,
+          "id": "3002",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -356,7 +531,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8502",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -369,83 +547,148 @@
       "id": "Deals",
       "name": "Deals",
       "api_name": "Deals",
-      "display_name": "Deals",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7060"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7061"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7062"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7063"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7064"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7065"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7066"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7067"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7068"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7560"
         },
         {
           "api_name": "Contact_Ref",
+          "label": "Contact",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Contacts"
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7561"
         }
       ],
       "layouts": [
         {
-          "id": 3003,
+          "id": "3003",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -455,7 +698,10 @@
           "module": "Quotes",
           "type": "default",
           "visible": true,
-          "via": "Quote_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8003",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -463,7 +709,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8503",
+          "src": "api"
         }
       ],
       "calls": [
@@ -481,83 +730,144 @@
       "id": "Products",
       "name": "Products",
       "api_name": "Products",
-      "display_name": "Products",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7080"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7081"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7082"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7083"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7084"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7085"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7086"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7087"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7088"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7089"
         }
       ],
       "layouts": [
         {
-          "id": 3004,
+          "id": "3004",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3104,
+          "id": "3104",
           "name": "Compact",
           "visible": true,
-          "sections": 2
+          "status": "active",
+          "sections": 1
         }
       ],
       "related_lists": [
@@ -567,7 +877,10 @@
           "module": "Tickets",
           "type": "default",
           "visible": true,
-          "via": "Ticket_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Subscriptions_of_Products",
@@ -575,7 +888,10 @@
           "module": "Subscriptions",
           "type": "default",
           "visible": true,
-          "via": "Subscription_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Assets_of_Products",
@@ -583,7 +899,10 @@
           "module": "Assets",
           "type": "default",
           "visible": true,
-          "via": "Asset_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Pricebooks_of_Products",
@@ -591,7 +910,10 @@
           "module": "Pricebooks",
           "type": "default",
           "visible": true,
-          "via": "Pricebook_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -599,7 +921,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8504",
+          "src": "api"
         },
         {
           "api_name": "Campaign_Products",
@@ -607,7 +932,10 @@
           "module": "Campaigns",
           "type": "multiselect",
           "visible": true,
-          "via": "linking: Campaign_Product_Link"
+          "connected_module": null,
+          "linking_module": "Campaign_Product_Link",
+          "id": "8604",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -625,101 +953,177 @@
       "id": "Quotes",
       "name": "Quotes",
       "api_name": "Quotes",
-      "display_name": "Quotes",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7100"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7101"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7102"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7103"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7104"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7105"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7106"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7107"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7108"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7109"
         },
         {
           "api_name": "Notes",
+          "label": "Notes",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7110"
         },
         {
           "api_name": "Deal_Ref",
+          "label": "Deal",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Deals"
+          "lookup": "Deals",
+          "picklist": [],
+          "id": "7600"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7601"
         }
       ],
       "layouts": [
         {
-          "id": 3005,
+          "id": "3005",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3205,
+          "id": "3205",
           "name": "Retired",
           "visible": false,
-          "sections": 1
+          "status": "inactive",
+          "sections": 0
         }
       ],
       "related_lists": [
@@ -729,7 +1133,10 @@
           "module": "Orders",
           "type": "default",
           "visible": true,
-          "via": "Order_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8005",
+          "src": "api"
         },
         {
           "api_name": "Contracts_of_Quotes",
@@ -737,7 +1144,10 @@
           "module": "Contracts",
           "type": "default",
           "visible": true,
-          "via": "Contract_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8005",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -745,7 +1155,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8505",
+          "src": "api"
         }
       ],
       "calls": [
@@ -764,65 +1177,111 @@
       "id": "Invoices",
       "name": "Invoices",
       "api_name": "Invoices",
-      "display_name": "Invoices",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7120"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7121"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7122"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7123"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7124"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7125"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7620"
         },
         {
           "api_name": "Order_Ref",
+          "label": "Order",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Orders"
+          "lookup": "Orders",
+          "picklist": [],
+          "id": "7621"
         }
       ],
       "layouts": [
         {
-          "id": 3006,
+          "id": "3006",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -832,7 +1291,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8506",
+          "src": "api"
         }
       ],
       "calls": [
@@ -848,71 +1310,122 @@
       "id": "Orders",
       "name": "Orders",
       "api_name": "Orders",
-      "display_name": "Sales Orders",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7140"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7141"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7142"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7143"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7144"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7145"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7146"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7640"
         },
         {
           "api_name": "Quote_Ref",
+          "label": "Quote",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Quotes"
+          "lookup": "Quotes",
+          "picklist": [],
+          "id": "7641"
         }
       ],
       "layouts": [
         {
-          "id": 3007,
+          "id": "3007",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -922,7 +1435,10 @@
           "module": "Invoices",
           "type": "default",
           "visible": true,
-          "via": "Invoice_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8007",
+          "src": "api"
         },
         {
           "api_name": "Shipments_of_Orders",
@@ -930,7 +1446,10 @@
           "module": "Shipments",
           "type": "default",
           "visible": true,
-          "via": "Shipment_Ref"
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8007",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
@@ -938,7 +1457,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8507",
+          "src": "api"
         }
       ],
       "calls": [
@@ -957,71 +1479,118 @@
       "id": "Vendors",
       "name": "Vendors",
       "api_name": "Vendors",
-      "display_name": "Vendors",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7160"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7161"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7162"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7163"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7164"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7165"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7166"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7167"
         }
       ],
       "layouts": [
         {
-          "id": 3008,
+          "id": "3008",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3108,
+          "id": "3108",
           "name": "Compact",
           "visible": true,
-          "sections": 2
+          "status": "active",
+          "sections": 1
         }
       ],
       "related_lists": [
@@ -1031,7 +1600,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8508",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -1044,77 +1616,137 @@
       "id": "Pricebooks",
       "name": "Pricebooks",
       "api_name": "Pricebooks",
-      "display_name": "Price Books",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7180"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7181"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7182"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7183"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7184"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7185"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7186"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7187"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7188"
         },
         {
           "api_name": "Product_Ref",
+          "label": "Product",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Products"
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7680"
         }
       ],
       "layouts": [
         {
-          "id": 3009,
+          "id": "3009",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -1124,7 +1756,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8509",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1139,83 +1774,144 @@
       "id": "Campaigns",
       "name": "Campaigns",
       "api_name": "Campaigns",
-      "display_name": "Campaigns",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7200"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7201"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7202"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7203"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7204"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7205"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7206"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7207"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7208"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7209"
         }
       ],
       "layouts": [
         {
-          "id": 3010,
+          "id": "3010",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3210,
+          "id": "3210",
           "name": "Retired",
           "visible": false,
-          "sections": 1
+          "status": "inactive",
+          "sections": 0
         }
       ],
       "related_lists": [
@@ -1225,7 +1921,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8510",
+          "src": "api"
         },
         {
           "api_name": "Campaign_Products",
@@ -1233,7 +1932,10 @@
           "module": "Products",
           "type": "multiselect",
           "visible": true,
-          "via": "linking: Campaign_Product_Link"
+          "connected_module": null,
+          "linking_module": "Campaign_Product_Link",
+          "id": "8610",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -1246,95 +1948,170 @@
       "id": "Cases",
       "name": "Cases",
       "api_name": "Cases",
-      "display_name": "Cases",
-      "namespace": "standard",
-      "category": "standard",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7220"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7221"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7222"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7223"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7224"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7225"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7226"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7227"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7228"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7229"
         },
         {
           "api_name": "Notes",
+          "label": "Notes",
           "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7230"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7720"
         },
         {
           "api_name": "Contact_Ref",
+          "label": "Contact",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Contacts"
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7721"
         }
       ],
       "layouts": [
         {
-          "id": 3011,
+          "id": "3011",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -1344,7 +2121,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8511",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1360,65 +2140,107 @@
       "id": "Shipments",
       "name": "Shipments",
       "api_name": "Shipments",
-      "display_name": "Shipments",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7240"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7241"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7242"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7243"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7244"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7245"
         },
         {
           "api_name": "Order_Ref",
+          "label": "Order",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Orders"
+          "lookup": "Orders",
+          "picklist": [],
+          "id": "7740"
         }
       ],
       "layouts": [
         {
-          "id": 3012,
+          "id": "3012",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3112,
+          "id": "3112",
           "name": "Compact",
           "visible": true,
-          "sections": 2
+          "status": "active",
+          "sections": 1
         }
       ],
       "related_lists": [
@@ -1428,7 +2250,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8512",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1443,77 +2268,133 @@
       "id": "Tickets",
       "name": "Tickets",
       "api_name": "Tickets",
-      "display_name": "Support Tickets",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7260"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7261"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7262"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7263"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7264"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7265"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7266"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7760"
         },
         {
           "api_name": "Contact_Ref",
+          "label": "Contact",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Contacts"
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7761"
         },
         {
           "api_name": "Product_Ref",
+          "label": "Product",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Products"
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7762"
         }
       ],
       "layouts": [
         {
-          "id": 3013,
+          "id": "3013",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -1523,7 +2404,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8513",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1540,77 +2424,133 @@
       "id": "Subscriptions",
       "name": "Subscriptions",
       "api_name": "Subscriptions",
-      "display_name": "Subscriptions",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7280"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7281"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7282"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7283"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7284"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7285"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7286"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7287"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7780"
         },
         {
           "api_name": "Product_Ref",
+          "label": "Product",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Products"
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7781"
         }
       ],
       "layouts": [
         {
-          "id": 3014,
+          "id": "3014",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -1620,7 +2560,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8514",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1636,77 +2579,133 @@
       "id": "Territories",
       "name": "Territories",
       "api_name": "Territories",
-      "display_name": "Territories",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7300"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7301"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7302"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7303"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7304"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7305"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7306"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7307"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7308"
         }
       ],
       "layouts": [
         {
-          "id": 3015,
+          "id": "3015",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3215,
+          "id": "3215",
           "name": "Retired",
           "visible": false,
-          "sections": 1
+          "status": "inactive",
+          "sections": 0
         }
       ],
       "related_lists": [
@@ -1716,7 +2715,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8515",
+          "src": "api"
         }
       ],
       "calls": [],
@@ -1729,95 +2731,166 @@
       "id": "Contracts",
       "name": "Contracts",
       "api_name": "Contracts",
-      "display_name": "Contracts",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7320"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7321"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7322"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7323"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7324"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7325"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7326"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7327"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7328"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7329"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7820"
         },
         {
           "api_name": "Quote_Ref",
+          "label": "Quote",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Quotes"
+          "lookup": "Quotes",
+          "picklist": [],
+          "id": "7821"
         }
       ],
       "layouts": [
         {
-          "id": 3016,
+          "id": "3016",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         },
         {
-          "id": 3116,
+          "id": "3116",
           "name": "Compact",
           "visible": true,
-          "sections": 2
+          "status": "active",
+          "sections": 1
         }
       ],
       "related_lists": [
@@ -1827,7 +2900,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8516",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1843,95 +2919,170 @@
       "id": "Assets",
       "name": "Assets",
       "api_name": "Assets",
-      "display_name": "Assets",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [
         {
           "api_name": "Name",
+          "label": "Name",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7340"
         },
         {
           "api_name": "Owner",
+          "label": "Owner",
           "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
           "mandatory": true,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7341"
         },
         {
           "api_name": "Description",
+          "label": "Description",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7342"
         },
         {
           "api_name": "Status",
+          "label": "Status",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7343"
         },
         {
           "api_name": "Amount",
+          "label": "Amount",
           "data_type": "currency",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7344"
         },
         {
           "api_name": "Currency",
+          "label": "Currency",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7345"
         },
         {
           "api_name": "Opened_On",
+          "label": "Opened On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7346"
         },
         {
           "api_name": "Closed_On",
+          "label": "Closed On",
           "data_type": "date",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7347"
         },
         {
           "api_name": "Priority",
+          "label": "Priority",
           "data_type": "picklist",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7348"
         },
         {
           "api_name": "External_Ref",
+          "label": "External Ref",
           "data_type": "text",
+          "length": 255,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7349"
         },
         {
           "api_name": "Notes",
+          "label": "Notes",
           "data_type": "textarea",
+          "length": null,
+          "custom": true,
           "mandatory": false,
-          "lookup": null
+          "lookup": null,
+          "picklist": [],
+          "id": "7350"
         },
         {
           "api_name": "Account_Ref",
+          "label": "Account",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Accounts"
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7840"
         },
         {
           "api_name": "Product_Ref",
+          "label": "Product",
           "data_type": "lookup",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "lookup": "Products"
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7841"
         }
       ],
       "layouts": [
         {
-          "id": 3017,
+          "id": "3017",
           "name": "Standard",
           "visible": true,
-          "sections": 3
+          "status": "active",
+          "sections": 2
         }
       ],
       "related_lists": [
@@ -1941,7 +3092,10 @@
           "module": "Attachments",
           "type": "system",
           "visible": true,
-          "via": ""
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8517",
+          "src": "api"
         }
       ],
       "calls": [
@@ -1957,9 +3111,6 @@
       "id": "Ledger",
       "name": "Ledger",
       "api_name": "Ledger",
-      "display_name": "Ledger",
-      "namespace": "custom",
-      "category": "custom",
       "fields": [],
       "layouts": [],
       "related_lists": [],

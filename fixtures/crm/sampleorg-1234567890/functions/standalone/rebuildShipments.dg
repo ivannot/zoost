@@ -1,7 +1,0 @@
-// standalone.rebuildShipments - sample function, generated for the sample org.
-void rebuildShipments()
-{
-    info "standalone.rebuildShipments start";
-    r0 = automation.fetchLeads();
-    return null;
-}

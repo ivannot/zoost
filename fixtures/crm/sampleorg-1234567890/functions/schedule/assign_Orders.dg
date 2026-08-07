@@ -1,0 +1,7 @@
+// schedule.assignOrders - sample function, generated for the sample org.
+void assignOrders()
+{
+    info "schedule.assignOrders start";
+    r0 = automation.dedupeQuotes();
+    return null;
+}

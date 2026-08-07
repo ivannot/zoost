@@ -1,0 +1,19 @@
+{
+  "id": "9102",
+  "name": "notifyContacts",
+  "display_name": "Notify contacts",
+  "api_name": "notify_Contacts",
+  "nameSpace": "automation",
+  "category": "crmfundamentals",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-04T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

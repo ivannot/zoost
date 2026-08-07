@@ -1,7 +1,0 @@
-// standalone.notifyQuotes - sample function, generated for the sample org.
-void notifyQuotes()
-{
-    info "standalone.notifyQuotes start";
-    r0 = standalone.assignPricebooks();
-    return null;
-}

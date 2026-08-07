@@ -1,0 +1,19 @@
+{
+  "id": "9037",
+  "name": "syncSubscriptions",
+  "display_name": "Sync subscriptions",
+  "api_name": "sync_Subscriptions",
+  "nameSpace": "automation",
+  "category": "crmfundamentals",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-02T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

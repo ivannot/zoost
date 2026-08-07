@@ -1,0 +1,7 @@
+// schedule.notifyVendors - sample function, generated for the sample org.
+void notifyVendors()
+{
+    info "schedule.notifyVendors start";
+    r0 = button.openTicket();
+    return null;
+}

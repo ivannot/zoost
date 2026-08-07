@@ -405,7 +405,9 @@ async function refreshContext() {
   if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready - reload it)'; bnd.innerHTML = localLbl; }
   else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Zoho Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
   else {
-    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>`;
+    // True and irrelevant on a sample: the tab really is on that workspace, and this folder has
+    // nothing to do with it. Two halves side by side otherwise imply a relationship there is not.
+    who.innerHTML = `<span class="rlbl remote">Zoho Analytics tab</span><b>${esc(ctx.workspace)}</b>${isSample() ? '<span> · not related to the sample</span>' : ''}`;
     if (!bound) { el.className = 'unbound'; bnd.innerHTML = localLbl; }
     else if (guardOk()) { el.className = 'match'; bnd.innerHTML = localLbl + ' ✓'; }
     // Not a mismatch: the mismatch bar is for two workspaces that could match, and this one never
@@ -441,7 +443,7 @@ async function switchTab() {
   // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
   // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
   // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
+  if (isSample()) { status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
   const id = await analyticsTabId();
   const url = homeUrl();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
@@ -450,7 +452,7 @@ async function openZohoHome() {
   // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
   // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
   // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
+  if (isSample()) { status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = homeUrl();
   if (a && HOST_RE.test(a.url || '')) await chrome.tabs.update(a.id, { url, active: true });
@@ -1926,13 +1928,18 @@ async function addSampleWorkspace() {
   if (!(await ensurePerm(root))) return;
   try {
     const gen = window.SAMPLE_ORG;
-    if (!gen) { setStatus('The sample generator is not loaded.', 'bad'); return; }
+    if (!gen) { status('The sample generator is not loaded.', 'bad'); return; }
     const base = await appRoot(true);
-    if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
-    setStatus('Writing the sample workspace\u2026', 'busy');
+    if (!base) { status(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
     const h = await base.getDirectoryHandle(gen.folderName(), { create: true });
     const files = gen.files({});
-    for (const [rel, text] of Object.entries(files)) {
+    const all = Object.entries(files);
+    // Three hundred files through the File System Access API take long enough to look like a hang -
+    // reported as exactly that. The count is what says it is working, so it is written often enough
+    // to move and rarely enough not to be the cost itself.
+    status(`Writing the sample workspace - 0 of ${all.length} files\u2026`, 'busy');
+    for (let i = 0; i < all.length; i++) {
+      const [rel, text] = all[i];
       const parts = rel.split('/');
       let d = h;
       for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -1940,10 +1947,14 @@ async function addSampleWorkspace() {
       const w = await fh.createWritable();
       await w.write(text);
       await w.close();
+      if (i % 10 === 9 || i === all.length - 1) {
+        status(`Writing the sample workspace - ${i + 1} of ${all.length} files \u00b7 ${rel.split('/')[0]}\u2026`, 'busy');
+        await new Promise((r) => setTimeout(r, 0));   // let the status line actually paint
+      }
     }
-    setStatus(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho Analytics.`, 'ok');
-    await loadWorkspaces();
-  } catch (e) { setStatus('Could not write the sample: ' + e.message, 'bad'); }
+    status(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho Analytics.`, 'ok');
+    await refreshWorkspaces();
+  } catch (e) { status('Could not write the sample: ' + e.message, 'bad'); }
 }
 $('wsdel').onclick = delWorkspace;
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };

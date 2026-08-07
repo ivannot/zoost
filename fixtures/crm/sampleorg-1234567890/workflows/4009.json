@@ -1,15 +1,33 @@
 {
   "id": "4009",
   "name": "Quote accepted",
-  "module": "Quotes",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Quotes",
+    "id": "6009"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "automation.onOrderCreate"
+          "name": "automation.onOrderCreate",
+          "id": "4509"
         }
       ],
       "scheduled_actions": []

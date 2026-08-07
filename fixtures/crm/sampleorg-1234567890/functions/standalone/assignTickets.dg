@@ -1,7 +1,0 @@
-// standalone.assignTickets - sample function, generated for the sample org.
-void assignTickets()
-{
-    info "standalone.assignTickets start";
-    // nothing else is called
-    return null;
-}

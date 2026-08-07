@@ -1,7 +1,0 @@
-// automation.refreshTickets - sample function, generated for the sample org.
-void refreshTickets()
-{
-    info "automation.refreshTickets start";
-    // nothing else is called
-    return null;
-}

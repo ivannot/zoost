@@ -1,0 +1,8 @@
+// button.refreshQuotes - sample function, generated for the sample org.
+void refreshQuotes()
+{
+    info "button.refreshQuotes start";
+    r0 = schedule.syncInvoices();
+    r1 = standalone.assignVendors();
+    return null;
+}

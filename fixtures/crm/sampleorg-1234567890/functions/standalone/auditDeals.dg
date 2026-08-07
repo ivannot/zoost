@@ -1,8 +1,0 @@
-// standalone.auditDeals - sample function, generated for the sample org.
-void auditDeals()
-{
-    info "standalone.auditDeals start";
-    r0 = standalone.rebuildTickets();
-    r1 = standalone.assignOrders();
-    return null;
-}

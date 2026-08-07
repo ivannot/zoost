@@ -1,7 +1,0 @@
-// automation.syncSubscriptions - sample function, generated for the sample org.
-void syncSubscriptions()
-{
-    info "automation.syncSubscriptions start";
-    // nothing else is called
-    return null;
-}

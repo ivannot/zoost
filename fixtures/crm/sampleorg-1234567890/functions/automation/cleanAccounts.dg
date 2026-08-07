@@ -1,7 +1,0 @@
-// automation.cleanAccounts - sample function, generated for the sample org.
-void cleanAccounts()
-{
-    info "automation.cleanAccounts start";
-    r0 = schedule.weeklyDigest();
-    return null;
-}

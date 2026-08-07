@@ -1,7 +1,0 @@
-// validation_rule.syncContacts - sample function, generated for the sample org.
-void syncContacts()
-{
-    info "validation_rule.syncContacts start";
-    r0 = schedule.pushAccounts();
-    return null;
-}

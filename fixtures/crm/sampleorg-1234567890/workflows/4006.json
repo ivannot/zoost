@@ -1,15 +1,33 @@
 {
   "id": "4006",
   "name": "Shipment dispatched",
-  "module": "Shipments",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Shipments",
+    "id": "6006"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "standalone.trackParcel"
+          "name": "standalone.trackParcel",
+          "id": "4506"
         }
       ],
       "scheduled_actions": []

@@ -1,10 +1,11 @@
 {
-  "sv": 3,
   "id": "9000",
   "name": "log",
-  "namespace": "standalone",
-  "display_name": "log",
+  "display_name": "Log",
+  "api_name": "log",
+  "nameSpace": "standalone",
   "category": "standalone",
+  "source": "crm",
   "return_type": "map",
   "params": [
     {
@@ -12,10 +13,12 @@
       "type": "string"
     }
   ],
-  "connections": [],
+  "description": "",
+  "updatedTime": "2026-07-01T09:00:00+00:00",
   "modified_by": "Sample User",
-  "modified_time": "2026-07-01T09:00:00+00:00",
-  "rest": false,
-  "unresolved": [],
-  "ambiguous": []
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
 }

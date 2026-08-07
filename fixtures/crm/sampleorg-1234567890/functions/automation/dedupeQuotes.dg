@@ -1,7 +1,0 @@
-// automation.dedupeQuotes - sample function, generated for the sample org.
-void dedupeQuotes()
-{
-    info "automation.dedupeQuotes start";
-    r0 = button.exportCsv();
-    return null;
-}

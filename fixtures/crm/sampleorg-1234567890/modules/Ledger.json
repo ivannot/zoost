@@ -1,14 +1,23 @@
 {
-  "api_name": "Ledger",
-  "display_name": "Ledger",
-  "category": "custom",
-  "fields": [],
-  "layouts": [],
   "related_lists": [],
   "unreadable": {
     "status": 400,
     "code": "INVALID_MODULE",
     "at": "2026-08-07T10:00:00.000Z",
     "message": "operation cannot be performed for hidden module"
-  }
+  },
+  "api_name": "Ledger",
+  "module_name": "Ledger",
+  "singular_label": "Ledger",
+  "plural_label": "Ledger",
+  "id": "6018",
+  "generated_type": "custom",
+  "deletable": true,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [],
+  "fields": []
 }

@@ -1,0 +1,8 @@
+// automation.notifyContacts - sample function, generated for the sample org.
+void notifyContacts()
+{
+    info "automation.notifyContacts start";
+    r0 = standalone.rebuildLeads();
+    r1 = schedule.closeStaleTickets();
+    return null;
+}

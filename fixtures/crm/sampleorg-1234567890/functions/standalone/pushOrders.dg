@@ -1,7 +1,0 @@
-// standalone.pushOrders - sample function, generated for the sample org.
-void pushOrders()
-{
-    info "standalone.pushOrders start";
-    // nothing else is called
-    return null;
-}

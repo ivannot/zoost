@@ -1,0 +1,8 @@
+// button.enrichContacts - sample function, generated for the sample org.
+void enrichContacts()
+{
+    info "button.enrichContacts start";
+    r0 = schedule.notifyOwner();
+    r1 = schedule.convertVendors();
+    return null;
+}

@@ -1,0 +1,7 @@
+// schedule.notifyOwner - sample function, generated for the sample org.
+void notifyOwner()
+{
+    info "schedule.notifyOwner start";
+    r0 = standalone.log();
+    return null;
+}

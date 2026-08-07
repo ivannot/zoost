@@ -1,8 +1,0 @@
-// schedule.refreshPricebooks - sample function, generated for the sample org.
-void refreshPricebooks()
-{
-    info "schedule.refreshPricebooks start";
-    r0 = standalone.fetchAccounts();
-    r1 = automation.cleanSubscriptions();
-    return null;
-}

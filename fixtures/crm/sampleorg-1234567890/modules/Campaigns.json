@@ -1,83 +1,4 @@
 {
-  "api_name": "Campaigns",
-  "display_name": "Campaigns",
-  "category": "standard",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Opened_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Closed_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Priority",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "External_Ref",
-      "data_type": "text",
-      "mandatory": false,
-      "lookup": null
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3010,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3210,
-      "name": "Retired",
-      "visible": false,
-      "sections": 1
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Attachments",
@@ -85,7 +6,10 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8510",
+      "src": "api"
     },
     {
       "api_name": "Campaign_Products",
@@ -93,7 +17,163 @@
       "module": "Products",
       "type": "multiselect",
       "visible": true,
-      "via": "linking: Campaign_Product_Link"
+      "connected_module": null,
+      "linking_module": "Campaign_Product_Link",
+      "id": "8610",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Campaigns",
+  "module_name": "Campaigns",
+  "singular_label": "Campaign",
+  "plural_label": "Campaigns",
+  "id": "6010",
+  "generated_type": "standard",
+  "deletable": false,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3010",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    },
+    {
+      "id": "3210",
+      "name": "Retired",
+      "visible": false,
+      "status": "inactive",
+      "sections": 0
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7200"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7201"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7202"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7203"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7204"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7205"
+    },
+    {
+      "api_name": "Opened_On",
+      "label": "Opened On",
+      "data_type": "date",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7206"
+    },
+    {
+      "api_name": "Closed_On",
+      "label": "Closed On",
+      "data_type": "date",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7207"
+    },
+    {
+      "api_name": "Priority",
+      "label": "Priority",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7208"
+    },
+    {
+      "api_name": "External_Ref",
+      "label": "External Ref",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7209"
     }
   ]
 }

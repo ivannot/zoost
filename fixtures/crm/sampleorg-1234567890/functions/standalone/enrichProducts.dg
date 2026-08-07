@@ -1,8 +1,0 @@
-// standalone.enrichProducts - sample function, generated for the sample org.
-void enrichProducts()
-{
-    info "standalone.enrichProducts start";
-    r0 = validation_rule.archiveLeads();
-    r1 = button.syncProducts();
-    return null;
-}

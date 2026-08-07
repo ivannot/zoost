@@ -1,0 +1,7 @@
+// automation.archiveTickets - sample function, generated for the sample org.
+void archiveTickets()
+{
+    info "automation.archiveTickets start";
+    r0 = standalone.validateAccounts();
+    return null;
+}

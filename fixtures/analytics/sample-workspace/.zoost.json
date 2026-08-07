@@ -2,8 +2,16 @@
   "workspace": "99000001",
   "name": "Sample workspace",
   "label": "Sample workspace",
-  "base": "https://analytics.zoho.eu",
+  "origin": "https://analytics.zoho.eu",
+  "sv": 1,
   "sample": true,
   "sampleAt": "2026-08-07T10:00:00.000Z",
-  "lastPull": "2026-08-07T10:00:00.000Z"
+  "lastPull": "2026-08-07T10:00:00.000Z",
+  "counts": {
+    "views": 44,
+    "folders": 4,
+    "tables": 27,
+    "relations": 14,
+    "sql": 10
+  }
 }

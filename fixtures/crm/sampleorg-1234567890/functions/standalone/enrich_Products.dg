@@ -1,0 +1,8 @@
+// standalone.enrichProducts - sample function, generated for the sample org.
+void enrichProducts()
+{
+    info "standalone.enrichProducts start";
+    r0 = standalone.pushTickets();
+    r1 = standalone.mergeShipments();
+    return null;
+}

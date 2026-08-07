@@ -1,0 +1,7 @@
+// standalone.assignPricebooks - sample function, generated for the sample org.
+void assignPricebooks()
+{
+    info "standalone.assignPricebooks start";
+    // nothing else is called
+    return null;
+}

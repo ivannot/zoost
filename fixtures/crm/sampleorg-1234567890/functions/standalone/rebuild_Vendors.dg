@@ -1,0 +1,8 @@
+// standalone.rebuildVendors - sample function, generated for the sample org.
+void rebuildVendors()
+{
+    info "standalone.rebuildVendors start";
+    r0 = schedule.weeklyDigest();
+    r1 = standalone.refreshQuotes();
+    return null;
+}

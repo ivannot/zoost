@@ -1,0 +1,19 @@
+{
+  "id": "9075",
+  "name": "cleanAccounts",
+  "display_name": "Clean accounts",
+  "api_name": "clean_Accounts",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-04T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

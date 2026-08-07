@@ -1,7 +1,0 @@
-// standalone.validateAccounts - sample function, generated for the sample org.
-void validateAccounts()
-{
-    info "standalone.validateAccounts start";
-    r0 = standalone.rebuildCampaigns();
-    return null;
-}

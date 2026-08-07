@@ -1,65 +1,4 @@
 {
-  "api_name": "Accounts",
-  "display_name": "Accounts",
-  "category": "standard",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3000,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3100,
-      "name": "Compact",
-      "visible": true,
-      "sections": 2
-    },
-    {
-      "id": 3200,
-      "name": "Retired",
-      "visible": false,
-      "sections": 1
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Contacts_of_Accounts",
@@ -67,7 +6,10 @@
       "module": "Contacts",
       "type": "default",
       "visible": true,
-      "via": "Contact_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Deals_of_Accounts",
@@ -75,7 +17,10 @@
       "module": "Deals",
       "type": "default",
       "visible": true,
-      "via": "Deal_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Quotes_of_Accounts",
@@ -83,7 +28,10 @@
       "module": "Quotes",
       "type": "default",
       "visible": true,
-      "via": "Quote_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Invoices_of_Accounts",
@@ -91,7 +39,10 @@
       "module": "Invoices",
       "type": "default",
       "visible": true,
-      "via": "Invoice_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Orders_of_Accounts",
@@ -99,7 +50,10 @@
       "module": "Orders",
       "type": "default",
       "visible": true,
-      "via": "Order_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Tickets_of_Accounts",
@@ -107,7 +61,10 @@
       "module": "Tickets",
       "type": "default",
       "visible": true,
-      "via": "Ticket_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Subscriptions_of_Accounts",
@@ -115,7 +72,10 @@
       "module": "Subscriptions",
       "type": "default",
       "visible": true,
-      "via": "Subscription_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Cases_of_Accounts",
@@ -123,7 +83,10 @@
       "module": "Cases",
       "type": "default",
       "visible": true,
-      "via": "Case_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Contracts_of_Accounts",
@@ -131,7 +94,10 @@
       "module": "Contracts",
       "type": "default",
       "visible": true,
-      "via": "Contract_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Assets_of_Accounts",
@@ -139,7 +105,10 @@
       "module": "Assets",
       "type": "default",
       "visible": true,
-      "via": "Asset_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8000",
+      "src": "api"
     },
     {
       "api_name": "Attachments",
@@ -147,7 +116,122 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8500",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Accounts",
+  "module_name": "Accounts",
+  "singular_label": "Account",
+  "plural_label": "Accounts",
+  "id": "6000",
+  "generated_type": "standard",
+  "deletable": false,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3000",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    },
+    {
+      "id": "3100",
+      "name": "Compact",
+      "visible": true,
+      "status": "active",
+      "sections": 1
+    },
+    {
+      "id": "3200",
+      "name": "Retired",
+      "visible": false,
+      "status": "inactive",
+      "sections": 0
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7000"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7001"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7002"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7003"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7004"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7005"
     }
   ]
 }

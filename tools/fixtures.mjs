@@ -47,18 +47,32 @@ function writeTree(base, files) {
 function callGraph(files, meta) {
   const nodes = {};
   const read = (p) => JSON.parse(files[p]);
-  for (const f of read('functions/index.json').items) {
+  for (const f of read('functions/index.json')) {
     const id = f.namespace + '.' + f.name;
-    const m = read('functions/' + f.namespace + '/' + f.name + '.meta.json');
-    const src = files['functions/' + f.namespace + '/' + f.name + '.dg'];
+    const m = read('functions/' + f.namespace + '/' + f.api_name + '.meta.json');
+    const src = files['functions/' + f.namespace + '/' + f.api_name + '.dg'];
     const re = new RegExp(String.raw`\b(${meta.namespaces.join('|')})\.([A-Za-z_]\w*)\s*\(`, 'g');
-    const calls = [...new Set([...src.matchAll(re)].map((x) => x[1] + '.' + x[2]))].filter((c) => c !== id);
-    nodes[id] = { id, name: f.name, display_name: f.name, namespace: f.namespace,
+    // Resolved the way graph-core does it: a call that names nothing is unresolved, and that is a
+    // measurement of the source rather than a field anybody wrote down.
+    const found = [...new Set([...src.matchAll(re)].map((x) => x[1] + '.' + x[2]))].filter((c) => c !== id);
+    const known = new Set(read('functions/index.json').map((x) => x.namespace + '.' + x.name));
+    // graph-core resolves (namespace, name) first, then a unique name, and calls two hits ambiguous.
+    const byName = {};
+    for (const x of read('functions/index.json')) (byName[x.name] ||= []).push(x.namespace + '.' + x.name);
+    const calls = [], unresolved = [], ambiguous = [];
+    for (const c of found) {
+      const nm = c.split('.')[1];
+      if (known.has(c)) calls.push(c);
+      else if ((byName[nm] || []).length === 1) calls.push(byName[nm][0]);
+      else if ((byName[nm] || []).length > 1) ambiguous.push(c);
+      else unresolved.push(c);
+    }
+    nodes[id] = { id, name: f.name, display_name: f.display_name || f.name, api_name: f.api_name, namespace: f.namespace,
                   category: f.category, calls, called_by: [], params: m.params || [],
-                  return_type: m.return_type || '', rest: !!m.rest, dead_suspect: false,
-                  unresolved: m.unresolved || [], ambiguous: m.ambiguous || [] };
+                  return_type: m.return_type || '', rest: (m.rest_api || []).some((r) => r.active), dead_suspect: false,
+                  unresolved: unresolved, ambiguous: ambiguous };
   }
-  for (const w of read('workflows/index.json').items) {
+  for (const w of read('workflows/index.json')) {
     const full = read('workflows/' + w.id + '.json');
     const fns = [];
     for (const c of full.conditions || []) {
@@ -71,19 +85,34 @@ function callGraph(files, meta) {
                             params: [], return_type: '', rest: false, dead_suspect: false,
                             unresolved: [], ambiguous: [] };
   }
-  for (const s of read('schedules/index.json').items) {
+  for (const s of read('schedules/index.json')) {
     nodes['sch:' + s.id] = { id: 'sch:' + s.id, name: s.name, display_name: s.name,
                              namespace: 'schedules', category: 'schedules',
-                             calls: s.function ? [s.function] : [], called_by: [], params: [],
+                             calls: [], called_by: [], params: [],
                              return_type: '', rest: false, dead_suspect: false,
                              unresolved: [], ambiguous: [] };
   }
-  for (const c of read('connections/index.json').items) {
+  for (const c of read('connections/index.json')) {
     const id = 'conn:' + c.name;
-    nodes[id] = { id, name: c.display_name, display_name: c.display_name, namespace: 'connections',
+    nodes[id] = { id, name: c.label, display_name: c.label, namespace: 'connections',
                   category: 'connections', calls: [], called_by: [], params: [], return_type: '',
                   rest: false, dead_suspect: false, unresolved: [], ambiguous: [] };
-    for (const u of c.used_by || []) if (nodes[u]) nodes[u].calls.push(id);
+
+  }
+  // A schedule points at the function it runs, by id - the index carries function_id, not a
+  // namespace.name - so it is resolved through the function index rather than guessed.
+  const byFnId = {};
+  for (const f of read('functions/index.json')) byFnId[f.id] = f.namespace + '.' + f.name;
+  for (const s of read('schedules/index.json')) {
+    const t = byFnId[s.function_id];
+    if (t && nodes[t]) nodes['sch:' + s.id].calls.push(t);
+  }
+  // A connection is reached by whichever function's meta names it.
+  for (const f of read('functions/index.json')) {
+    const m = read('functions/' + f.namespace + '/' + f.api_name + '.meta.json');
+    for (const c of m.connections || []) {
+      if (nodes['conn:' + c.name]) nodes[f.namespace + '.' + f.name].calls.push('conn:' + c.name);
+    }
   }
   for (const n of Object.values(nodes)) {
     for (const c of n.calls) if (nodes[c]) nodes[c].called_by.push(n.id);
@@ -103,7 +132,7 @@ function callGraph(files, meta) {
  * makes no claim about its own fields. */
 function schemaGraph(files, meta) {
   const nodes = {};
-  const index = JSON.parse(files['modules/index.json']).items;
+  const index = JSON.parse(files['modules/index.json']);
   for (const m of index) {
     const full = JSON.parse(files['modules/' + m.api_name + '.json']);
     const n = { id: m.api_name, name: m.api_name, api_name: m.api_name,
@@ -136,38 +165,38 @@ J('graph-crm-schema.json', schemaGraph(files, meta));
 console.log('CRM      : %d files, %d nodes, %d edges in the call graph',
             Object.keys(files).length, calls.counts.nodes, calls.counts.edges);
 console.log('           %d modules, %d workflows, %d schedules, %d connections',
-            JSON.parse(files['modules/index.json']).items.length,
-            JSON.parse(files['workflows/index.json']).items.length,
-            JSON.parse(files['schedules/index.json']).items.length,
-            JSON.parse(files['connections/index.json']).items.length);
+            JSON.parse(files['modules/index.json']).length,
+            JSON.parse(files['workflows/index.json']).length,
+            JSON.parse(files['schedules/index.json']).length,
+            JSON.parse(files['connections/index.json']).length);
 
 /* Zoho Analytics: one node per data-bearing view, foreign keys as the edges. Presentation views are
  * not nodes - they have no columns of their own, which is a fact about the platform and not a gap. */
 function analyticsGraph(af) {
-  const views = JSON.parse(af['views.json']).views;
-  const schema = JSON.parse(af['schema.json']);
-  const byId = Object.fromEntries(views.map((v) => [v.VIEW_ID, v]));
+  const doc = JSON.parse(af['views.json']);
+  const sch = JSON.parse(af['schema.json']);
+  const byId = Object.fromEntries(doc.views.map((v) => [v.id, v]));
   const nodes = {};
-  for (const v of views) {
-    if (v.VIEW_TYPE !== 'Table' && v.VIEW_TYPE !== 'QueryTable') continue;
-    const t = schema.tables[v.VIEW_ID] || { columns: [] };
-    nodes[v.VIEW_ID] = {
-      id: v.VIEW_ID, name: v.VIEW_NAME, api_name: v.VIEW_NAME, display_name: v.VIEW_NAME,
-      namespace: v.VIEW_TYPE === 'QueryTable' ? 'query' : 'table', category: v.VIEW_TYPE,
-      system: !!v.SYSTEM, joins: [], calls: [], called_by: [],
+  for (const v of doc.views) {
+    if (v.type !== 'Table' && v.type !== 'QueryTable') continue;
+    const t = sch.tables[v.id] || { columns: [] };
+    nodes[v.id] = {
+      id: v.id, name: v.name, api_name: v.name, display_name: v.name,
+      namespace: v.type === 'QueryTable' ? 'query' : 'table', category: v.type,
+      system: !!v.system, joins: [], calls: [], called_by: [],
       dead_suspect: false, unresolved: [], ambiguous: [],
       fields: t.columns.map((c) => ({ api_name: c.name, data_type: c.type, mandatory: false,
-        lookup: (schema.relations.find((r) => r.from === v.VIEW_ID && r.fromColumn === c.name) || {}).to || null })),
+        lookup: (sch.relations.find((r) => r.source === v.id && r.sourceColumns[0] === c.name) || {}).target || null })),
     };
   }
-  for (const r of schema.relations) {
-    const a = nodes[r.from], b = nodes[r.to];
+  for (const r of sch.relations) {
+    const a = nodes[r.source], b = nodes[r.target];
     if (!a || !b) continue;
-    a.calls.push(r.to); b.called_by.push(r.from);
-    a.joins.push({ direction: 'out', column: r.fromColumn, other: r.to,
-                   otherName: byId[r.to].VIEW_NAME, otherColumn: r.toColumn, relation: r.relation });
-    b.joins.push({ direction: 'in', column: r.toColumn, other: r.from,
-                   otherName: byId[r.from].VIEW_NAME, otherColumn: r.fromColumn, relation: r.relation });
+    a.calls.push(r.target); b.called_by.push(r.source);
+    a.joins.push({ direction: 'out', column: r.sourceColumns[0], other: r.target,
+                   otherName: byId[r.target].name, otherColumn: r.targetColumns[0], relation: r.relation });
+    b.joins.push({ direction: 'in', column: r.targetColumns[0], other: r.source,
+                   otherName: byId[r.source].name, otherColumn: r.sourceColumns[0], relation: r.relation });
   }
   for (const nd of Object.values(nodes)) nd.dead_suspect = !nd.calls.length && !nd.called_by.length;
   const edges = Object.values(nodes).reduce((s, nd) => s + nd.calls.length, 0);

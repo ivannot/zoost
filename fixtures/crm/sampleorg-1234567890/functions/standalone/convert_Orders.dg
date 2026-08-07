@@ -1,0 +1,7 @@
+// standalone.convertOrders - sample function, generated for the sample org.
+void convertOrders()
+{
+    info "standalone.convertOrders start";
+    r0 = schedule.weeklyDigest();
+    return null;
+}

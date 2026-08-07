@@ -1,7 +1,0 @@
-// button.splitVendors - sample function, generated for the sample org.
-void splitVendors()
-{
-    info "button.splitVendors start";
-    // nothing else is called
-    return null;
-}

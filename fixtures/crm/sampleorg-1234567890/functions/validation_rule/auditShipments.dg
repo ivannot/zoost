@@ -1,8 +1,0 @@
-// validation_rule.auditShipments - sample function, generated for the sample org.
-void auditShipments()
-{
-    info "validation_rule.auditShipments start";
-    r0 = standalone.calcTax();
-    r1 = standalone.archiveCampaigns();
-    return null;
-}

@@ -1,0 +1,7 @@
+// standalone.archiveProducts - sample function, generated for the sample org.
+void archiveProducts()
+{
+    info "standalone.archiveProducts start";
+    // nothing else is called
+    return null;
+}

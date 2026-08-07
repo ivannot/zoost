@@ -1,0 +1,7 @@
+// validation_rule.rebuildPricebooks - sample function, generated for the sample org.
+void rebuildPricebooks()
+{
+    info "validation_rule.rebuildPricebooks start";
+    r0 = schedule.syncPayments();
+    return null;
+}

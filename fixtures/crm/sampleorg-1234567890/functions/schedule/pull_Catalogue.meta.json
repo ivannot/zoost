@@ -1,0 +1,26 @@
+{
+  "id": "9024",
+  "name": "pullCatalogue",
+  "display_name": "Pull catalogue",
+  "api_name": "pull_Catalogue",
+  "nameSpace": "schedule",
+  "category": "scheduler",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-07T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [
+    {
+      "name": "catalogue_feed",
+      "label": "Catalogue feed",
+      "service": "custom",
+      "scopes": []
+    }
+  ],
+  "sv": 2
+}

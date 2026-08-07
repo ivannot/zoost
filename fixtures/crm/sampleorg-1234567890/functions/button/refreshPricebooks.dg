@@ -1,7 +1,0 @@
-// button.refreshPricebooks - sample function, generated for the sample org.
-void refreshPricebooks()
-{
-    info "button.refreshPricebooks start";
-    r0 = schedule.syncPayments();
-    return null;
-}

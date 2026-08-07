@@ -1,0 +1,8 @@
+// standalone.dedupeCampaigns - sample function, generated for the sample org.
+void dedupeCampaigns()
+{
+    info "standalone.dedupeCampaigns start";
+    r0 = schedule.rebuildTerritories();
+    r1 = standalone.auditCampaigns();
+    return null;
+}

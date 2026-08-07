@@ -1,7 +1,0 @@
-// automation.fetchVendors - sample function, generated for the sample org.
-void fetchVendors()
-{
-    info "automation.fetchVendors start";
-    r0 = validation_rule.dedupeQuotes();
-    return null;
-}

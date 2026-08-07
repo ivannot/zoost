@@ -1,7 +1,0 @@
-// schedule.assignOrders - sample function, generated for the sample org.
-void assignOrders()
-{
-    info "schedule.assignOrders start";
-    // nothing else is called
-    return null;
-}

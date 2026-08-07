@@ -1,15 +1,33 @@
 {
   "id": "4008",
   "name": "Credit limit changed",
-  "module": "Accounts",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Accounts",
+    "id": "6008"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [
         {
           "type": "function",
-          "name": "validation_rule.checkCreditLimit"
+          "name": "validation_rule.checkCreditLimit",
+          "id": "4508"
         }
       ],
       "scheduled_actions": []

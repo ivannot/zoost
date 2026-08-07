@@ -1,7 +1,0 @@
-// schedule.cleanInvoices - sample function, generated for the sample org.
-void cleanInvoices()
-{
-    info "schedule.cleanInvoices start";
-    r0 = standalone.assignOrders();
-    return null;
-}

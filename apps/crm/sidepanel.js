@@ -505,7 +505,11 @@ async function refreshContext() {
   const cfid = await crmFrameId(activeId);
   try { const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, { frameId: cfid }); lastCtx = r?.ok ? r : null; } catch { lastCtx = null; }
   if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; document.body.classList.add('zoho-blocked'); $('pull').disabled = true; updateWsButtons(); return; }
-  who.innerHTML = `<span class="rlbl remote">Zoho tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}</span>`;
+  // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
+  // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
+  // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the
+  // previous one», which it does, correctly, and read as a bug because nothing said it did not matter.
+  who.innerHTML = `<span class="rlbl remote">Zoho tab</span><b>${escHtml(lastCtx.instance || '?')}</b> <span>· org ${escHtml(lastCtx.org || '?')} · ${envOf(lastCtx.origin)}${isSample() ? ' · not related to the sample' : ''}</span>`;
   if (!bound) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">not bound yet</span>'; }
   else if (guardOk()) { ctxEl.className = 'match'; bnd.innerHTML = `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)} ✓`; }
   else if (isSample()) { ctxEl.className = 'unbound'; bnd.innerHTML = '<span class="rlbl local">Workspace</span><span style="color:var(--muted)">sample - generated, never pulled</span>'; }
@@ -2025,7 +2029,16 @@ async function appRoot(create) {
 const wsFolderName = (ctx) => `${sanitize(ctx.instance || 'workspace')}${envOf(ctx.origin) === 'sandbox' ? '-sandbox' : ''}-${sanitize(ctx.org || 'org')}`;
 async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); return JSON.parse(await (await fh.getFile()).text()); }
 
-function setEnabled(on) { ['pull', 'pullone', 'graph', 'refresh', 'export', 'exportmd', 'health', 'askai'].forEach((b) => ($(b).disabled = !on)); }
+// Two groups, because they answer different questions. The local ones work on what is already on
+// disk and are fine on a sample workspace; the two that read from Zoho are not, and were left
+// enabled - reported. `pull` is also disabled by refreshContext on every state change, and
+// `pullone` was the one nothing else covered.
+const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
+const ZOHO_BTNS = ['pull', 'pullone'];
+function setEnabled(on) {
+  LOCAL_BTNS.forEach((b) => ($(b).disabled = !on));
+  ZOHO_BTNS.forEach((b) => ($(b).disabled = !on || isSample()));
+}
 
 // Re-granting access to a folder we already know must NOT reopen the file picker: a lapsed
 // permission is not a request to choose a different folder. This is one click, no OS dialog.
@@ -2072,10 +2085,15 @@ async function addSampleWorkspace() {
     if (!gen) { setStatus('The sample generator is not loaded.', 'bad'); return; }
     const base = await appRoot(true);
     if (!base) { setStatus(`Could not create the ${APP_DIR}/ folder inside the working folder.`, 'bad'); return; }
-    setStatus('Writing the sample workspace\u2026', 'busy');
     const h = await base.getDirectoryHandle(gen.folderName(), { create: true });
     const files = gen.files({});
-    for (const [rel, text] of Object.entries(files)) {
+    const all = Object.entries(files);
+    // Three hundred files through the File System Access API take long enough to look like a hang -
+    // reported as exactly that. The count is what says it is working, so it is written often enough
+    // to move and rarely enough not to be the cost itself.
+    setStatus(`Writing the sample workspace - 0 of ${all.length} files\u2026`, 'busy');
+    for (let i = 0; i < all.length; i++) {
+      const [rel, text] = all[i];
       const parts = rel.split('/');
       let d = h;
       for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -2083,6 +2101,10 @@ async function addSampleWorkspace() {
       const w = await fh.createWritable();
       await w.write(text);
       await w.close();
+      if (i % 10 === 9 || i === all.length - 1) {
+        setStatus(`Writing the sample workspace - ${i + 1} of ${all.length} files \u00b7 ${rel.split('/')[0]}\u2026`, 'busy');
+        await new Promise((r) => setTimeout(r, 0));   // let the status line actually paint
+      }
     }
     await window.idbHandle.set('activeWs', 'org:' + gen.org);
     setStatus(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho.`, 'ok');
@@ -2137,13 +2159,17 @@ function dropWorkspaceState() {
 
 async function activate(w, viaGesture) {
   const sameWs = activeWsId === w.id;
-  dir = w.handle; activeWsId = w.id; await window.idbHandle.set('activeWs', w.id); setEnabled(true);
+  // The binding is set with the handle, not four lines later. It used to be read after
+  // setEnabled(true), so `isSample()` was still answering about the *previous* workspace and the
+  // per-type Pull came back on - «fields first, state second», which this repository already
+  // records in its mirror image. The two are one fact about one workspace; they move together.
+  dir = w.handle; activeWsId = w.id; bound = w.binding || null;
+  await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   oldLayout = await hasOldLayout(w.handle);
   // Not on a re-activation of the workspace already open - regranting a folder must not throw
   // away a conversation about the org you are still in.
   if (!sameWs) { const n = dropWorkspaceState(); if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn'); }
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
-  bound = w.binding || null;                         // read from the workspace's own .zoost.json
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
   // Carrying the previous org's answers over would hide a tab in an org that grants it - the same
   // class of mistake the environment guard exists to prevent, one field further in.
@@ -2412,7 +2438,10 @@ async function rebuildActive() { return viewMode === 'functions' ? rebuildTree()
 // when the current pull has finished - success or error.
 function setPullBusy(b) {
   pullBusy = b;
-  $('pullone').disabled = b;
+  // Both read from Zoho, so both are also off on a sample workspace - and this function is what
+  // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
+  // already turned it off. A state that is restored somewhere else has to know every reason for it.
+  $('pullone').disabled = b || isSample() || !dir;
   $('pull').disabled = b || !zohoReady() || !dir;
 }
 async function pullCurrent() {
@@ -2927,7 +2956,9 @@ function updateMissingButton() {
   const miss = arr.filter((e) => !e.downloaded).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
   const n = miss + stale;
-  b.style.display = n > 0 ? '' : 'none';
+  // It downloads from Zoho, so on a sample there is nothing it could do. Absent rather than
+  // disabled: a greyed button says «there is something here you cannot have», and there is not.
+  b.style.display = (n > 0 && !isSample()) ? '' : 'none';
   b.textContent = (stale && !miss) ? `Refresh ${stale} outdated` : `Complete missing (${n})`;
 }
 

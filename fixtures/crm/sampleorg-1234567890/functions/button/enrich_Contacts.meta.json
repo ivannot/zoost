@@ -1,0 +1,19 @@
+{
+  "id": "9106",
+  "name": "enrichContacts",
+  "display_name": "Enrich contacts",
+  "api_name": "enrich_Contacts",
+  "nameSpace": "button",
+  "category": "custombutton",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-08T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

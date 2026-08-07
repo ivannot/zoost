@@ -1,0 +1,19 @@
+{
+  "id": "9050",
+  "name": "auditShipments",
+  "display_name": "Audit shipments",
+  "api_name": "audit_Shipments",
+  "nameSpace": "validation_rule",
+  "category": "crmfundamentals",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-06T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

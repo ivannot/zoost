@@ -1,0 +1,26 @@
+{
+  "id": "9025",
+  "name": "weeklyDigest",
+  "display_name": "Weekly digest",
+  "api_name": "weekly_Digest",
+  "nameSpace": "schedule",
+  "category": "scheduler",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-08T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [
+    {
+      "name": "mail_relay",
+      "label": "Mail relay",
+      "service": "custom",
+      "scopes": []
+    }
+  ],
+  "sv": 2
+}

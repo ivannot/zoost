@@ -1,0 +1,8 @@
+// standalone.rebuildShipments - sample function, generated for the sample org.
+void rebuildShipments()
+{
+    info "standalone.rebuildShipments start";
+    r0 = standalone.calcTax();
+    r1 = schedule.splitVendors();
+    return null;
+}

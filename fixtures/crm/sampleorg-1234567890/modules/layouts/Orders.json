@@ -1,11 +1,16 @@
-{
-  "api_name": "Orders",
-  "layouts": [
-    {
-      "id": 3007,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ]
-}
+[
+  {
+    "id": "3007",
+    "name": "Standard",
+    "visible": true,
+    "status": "active",
+    "sections": [
+      {
+        "name": "Information"
+      },
+      {
+        "name": "Details"
+      }
+    ]
+  }
+]

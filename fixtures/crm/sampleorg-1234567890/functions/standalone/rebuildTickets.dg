@@ -1,8 +1,0 @@
-// standalone.rebuildTickets - sample function, generated for the sample org.
-void rebuildTickets()
-{
-    info "standalone.rebuildTickets start";
-    r0 = standalone.formatMoney();
-    r1 = validation_rule.validateOrder();
-    return null;
-}

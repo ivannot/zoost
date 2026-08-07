@@ -1,71 +1,4 @@
 {
-  "api_name": "Orders",
-  "display_name": "Sales Orders",
-  "category": "standard",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Opened_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Account_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Accounts"
-    },
-    {
-      "api_name": "Quote_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Quotes"
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3007,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Invoices_of_Orders",
@@ -73,7 +6,10 @@
       "module": "Invoices",
       "type": "default",
       "visible": true,
-      "via": "Invoice_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8007",
+      "src": "api"
     },
     {
       "api_name": "Shipments_of_Orders",
@@ -81,7 +17,10 @@
       "module": "Shipments",
       "type": "default",
       "visible": true,
-      "via": "Shipment_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8007",
+      "src": "api"
     },
     {
       "api_name": "Attachments",
@@ -89,7 +28,141 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8507",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Orders",
+  "module_name": "Orders",
+  "singular_label": "Sales Order",
+  "plural_label": "Sales Orders",
+  "id": "6007",
+  "generated_type": "standard",
+  "deletable": false,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3007",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7140"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7141"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7142"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7143"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7144"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7145"
+    },
+    {
+      "api_name": "Opened_On",
+      "label": "Opened On",
+      "data_type": "date",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7146"
+    },
+    {
+      "api_name": "Account_Ref",
+      "label": "Account",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Accounts",
+      "picklist": [],
+      "id": "7640"
+    },
+    {
+      "api_name": "Quote_Ref",
+      "label": "Quote",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Quotes",
+      "picklist": [],
+      "id": "7641"
     }
   ]
 }

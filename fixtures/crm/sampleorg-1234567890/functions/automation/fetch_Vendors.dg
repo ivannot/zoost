@@ -1,0 +1,7 @@
+// automation.fetchVendors - sample function, generated for the sample org.
+void fetchVendors()
+{
+    info "automation.fetchVendors start";
+    r0 = standalone.auditPricebooks();
+    return null;
+}

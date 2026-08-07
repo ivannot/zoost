@@ -1,0 +1,8 @@
+// button.notifyQuotes - sample function, generated for the sample org.
+void notifyQuotes()
+{
+    info "button.notifyQuotes start";
+    r0 = standalone.rebuildLeads();
+    r1 = standalone.convertOrders();
+    return null;
+}

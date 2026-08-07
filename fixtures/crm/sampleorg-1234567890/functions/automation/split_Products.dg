@@ -1,0 +1,7 @@
+// automation.splitProducts - sample function, generated for the sample org.
+void splitProducts()
+{
+    info "automation.splitProducts start";
+    // nothing else is called
+    return null;
+}

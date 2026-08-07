@@ -110,80 +110,109 @@
   ];
   const DASHBOARDS = ['Commercial overview', 'Operations', 'Finance', 'Marketing'];
 
+  const stemOf = (name, id) => (String(name || 'unnamed').replace(/[^\w.\- ]/g, '_').trim().slice(0, 80) || 'unnamed') + '-' + id;
+
+  /** The whole workspace as {path: text}, in the shape the pull writes it.
+   *
+   * NOT the raw Zoho payload: the bridge transforms `VIEW_ID`/`VIEW_NAME` into `id`/`name` before
+   * anything reaches disk, and the first version of this file wrote the raw keys - so the panel read
+   * a workspace with no views in it. Derive a shape from writeToDisk() and loadFromDisk(), never
+   * from the API the bridge happens to call.
+   */
   function files(opts) {
     const o = Object.assign({ edgeCases: false }, opts || {});
     const out = {};
     const J = (p, v) => { out[p] = JSON.stringify(v, null, 2) + '\n'; };
     let n = 0;
     const newId = () => '177856000000' + String(++n * 4).padStart(6, '0');
-    const vid = {}, views = [], schema = {}, lineage = {}, sqlindex = {};
+    const vid = {}, views = [], schema = {}, deps = {}, sqlindex = {};
 
-    const tables = TABLES.concat(o.edgeCases ? SYSTEM.map((s) => [s, ['Id', 'Logged_On', 'Detail']]) : []);
-    for (const [name, cols] of tables) {
+    const FOLDERS = [['1', 'Data'], ['2', 'Queries'], ['3', 'Reports']]
+      .concat(o.edgeCases ? [['4', 'System']] : []);
+    const folders = FOLDERS.map(([id, name], i) =>
+      ({ id: id, name: name, description: '', parent: null, isDefault: i === 0 }));
+    const fid = Object.fromEntries(FOLDERS.map(([id, name]) => [name, id]));
+
+    const view = (name, type, folder, parent, system) => {
       const id = newId(); vid[name] = id;
+      views.push({
+        id: id, name: name, type: type, description: '',
+        folder: fid[folder], folderName: folder, parent: parent ? vid[parent] : null,
+        createdText: ' 03 Jul 2026', createdBy: 'Sample User', owner: 'Sample User',
+        // Only one of these is machine-readable. The other two arrive already rendered in the
+        // user's interface language and are carried verbatim - the fixture keeps that asymmetry,
+        // because a workspace where every date sorts would hide the reason Design cannot.
+        dataModifiedAt: 1786000000000 + n * 1000, dataModifiedBy: 'Sample User',
+        designModifiedText: ' 21 Jul 2026', designModifiedBy: 'Sample User',
+        live: false, system: !!system, favourite: false, tags: [],
+      });
+      return id;
+    };
+    const cols = (list) => list.map((c, j) => ({
+      name: c, type: /_Id$/.test(c) ? 'BIGINT' : (/_On$|_Date$/.test(c) ? 'DATE' : 'PLAIN'),
+      colid: 'c' + (++n) + '-' + j, description: '' }));
+
+    const tables = TABLES.concat(o.edgeCases ? SYSTEM.map((t) => [t, ['Id', 'Logged_On', 'Detail']]) : []);
+    for (const [name, c] of tables) {
       const sys = SYSTEM.indexOf(name) >= 0;
-      views.push({ VIEW_ID: id, VIEW_NAME: name, VIEW_TYPE: 'Table',
-                   FOLDER: sys ? 'System' : 'Data', PARENT_ID: null, SYSTEM: sys,
-                   ACT_VIEW_MODTIME: 1786000000000 + n * 1000,
-                   LAST_DATA_MODIFY: '2 hours ago', LAST_DESIGN_MODIFY: ' 03 Jul 2026' });
-      schema[id] = { name: name, kind: 'Table', system: sys, columns: cols.map((c, j) =>
-        ({ name: c, type: /_Id$/.test(c) ? 'BIGINT' : (/_On$|_Date$/.test(c) ? 'DATE' : 'PLAIN'),
-           colid: id + '-' + j })) };
+      const id = view(name, 'Table', sys ? 'System' : 'Data', null, sys);
+      schema[id] = { name: name, kind: 'Table', description: '', system: sys, dataPrep: false,
+                     designModifiedAt: 1786000000000 + n * 1000, columns: cols(c) };
     }
     const queries = QUERIES.concat(o.edgeCases ? EDGE_QUERIES : []);
     for (const [name, sql, sources] of queries) {
-      const id = newId(); vid[name] = id;
-      views.push({ VIEW_ID: id, VIEW_NAME: name, VIEW_TYPE: 'QueryTable', FOLDER: 'Queries',
-                   PARENT_ID: null, SYSTEM: false, ACT_VIEW_MODTIME: 1786100000000 + n * 1000,
-                   LAST_DATA_MODIFY: '1 day ago', LAST_DESIGN_MODIFY: ' 21 Jul 2026' });
-      schema[id] = { name: name, kind: 'QueryTable', system: false,
-                     columns: ['Col_1', 'Col_2', 'Col_3'].map((c, j) =>
-                       ({ name: c, type: 'PLAIN', colid: id + '-' + j })) };
+      const id = view(name, 'QueryTable', 'Queries', null, false);
+      schema[id] = { name: name, kind: 'QueryTable', description: '', system: false, dataPrep: false,
+                     designModifiedAt: 1786100000000 + n * 1000, columns: cols(['Col_1', 'Col_2', 'Col_3']) };
+      const stem = stemOf(name, id);
+      const src = {};
+      sources.forEach((t) => { if (vid[t]) src[vid[t]] = [t]; });
+      // A query that could not be read has no file and no stem - «Retry failed» is what exists for
+      // it - while one Zoho returned empty has a file with nothing in it. Different facts.
       if (sql === null) {
-        sqlindex[id] = { file: null, failed: true, sources: [] };
+        sqlindex[id] = { stem: stem, name: name, parents: [], sources: {} };
       } else {
-        out['sql/' + name + '-' + id + '.sql'] = sql ? sql + '\n' : '';
-        sqlindex[id] = { file: name + '-' + id + '.sql',
-                         sources: sources.map((s) => vid[s]).filter(Boolean) };
+        out['sql/' + stem + '.sql'] = sql;
+        sqlindex[id] = { stem: stem, name: name, parents: sources.map((t) => vid[t]).filter(Boolean), sources: src };
       }
-      lineage[id] = { reads: sources.map((s) => vid[s]).filter(Boolean), read_by: [] };
+      deps[id] = { id: id, parents: sources.map((t) => vid[t]).filter(Boolean), children: [], dashboards: [] };
     }
-    for (const [name, parent, kind] of REPORTS) {
-      const id = newId(); vid[name] = id;
-      views.push({ VIEW_ID: id, VIEW_NAME: name, VIEW_TYPE: kind, FOLDER: 'Reports',
-                   PARENT_ID: vid[parent] || null, SYSTEM: false,
-                   ACT_VIEW_MODTIME: 1786200000000 + n * 1000,
-                   LAST_DATA_MODIFY: '3 days ago', LAST_DESIGN_MODIFY: ' 02 Aug 2026' });
-      lineage[id] = { reads: vid[parent] ? [vid[parent]] : [], read_by: [] };
-    }
-    for (const name of DASHBOARDS) {
-      const id = newId(); vid[name] = id;
-      views.push({ VIEW_ID: id, VIEW_NAME: name, VIEW_TYPE: 'Dashboard', FOLDER: 'Reports',
-                   PARENT_ID: null, SYSTEM: false, ACT_VIEW_MODTIME: 1786300000000 + n * 1000,
-                   LAST_DATA_MODIFY: '3 days ago', LAST_DESIGN_MODIFY: ' 02 Aug 2026' });
-      lineage[id] = { reads: [], read_by: [] };
-    }
-    // A snapshot: the loop below adds keys for the data-bearing views a report reads, which have no
-    // lineage entry of their own until it does.
-    for (const [src, d] of Object.entries(JSON.parse(JSON.stringify(lineage)))) {
-      for (const r of d.reads) {
-        if (!lineage[r]) lineage[r] = { reads: [], read_by: [] };
-        lineage[r].read_by.push(src);
-      }
-    }
-    const relations = FKS.map(([a, ca, b, cb]) =>
-      ({ from: vid[a], fromColumn: ca, to: vid[b], toColumn: cb,
-         relation: '("' + a + '"."' + ca + '")=("' + b + '"."' + cb + '")' }));
+    for (const [name, parent, kind] of REPORTS) view(name, kind, 'Reports', parent, false);
+    for (const name of DASHBOARDS) view(name, 'Dashboard', 'Reports', null, false);
 
-    J('views.json', { views: views, folders: ['Data', 'Queries', 'Reports'].concat(o.edgeCases ? ['System'] : []),
-                      pullFailed: o.edgeCases && vid.Unreadable_Query ? [vid.Unreadable_Query] : [] });
-    J('schema.json', { tables: schema, relations: relations });
-    J('lineage.json', lineage);
+    // Presentation views read their parent; a dashboard collects the reports in its folder. Both
+    // directions are filled, because the panel reads children and dashboards as well as parents.
+    for (const v of views) {
+      if (!deps[v.id]) deps[v.id] = { id: v.id, parents: [], children: [], dashboards: [] };
+      if (v.parent) deps[v.id].parents.push(v.parent);
+    }
+    for (const v of views) {
+      for (const p of deps[v.id].parents) {
+        if (!deps[p]) deps[p] = { id: p, parents: [], children: [], dashboards: [] };
+        if (v.type === 'Dashboard') deps[p].dashboards.push(v.id); else deps[p].children.push(v.id);
+      }
+    }
+
+    const relations = FKS.filter(([a, , b]) => vid[a] && vid[b]).map(([a, ca, b, cb]) => ({
+      source: vid[a], target: vid[b], sourceName: a, targetName: b,
+      sourceColumns: [ca], targetColumns: [cb],
+      relation: '(' + a + '.' + ca + ')=(' + b + '.' + cb + ')',
+    }));
+
+    const failed = (o.edgeCases && vid.Unreadable_Query) ? [vid.Unreadable_Query] : [];
+    J('views.json', { workspace: WS, pulledAt: WHEN, folders: folders, views: views });
+    J('schema.json', { workspace: WS, tables: schema, relations: relations });
+    J('lineage.json', { workspace: WS, deps: deps, failed: failed });
     J('sql/index.json', sqlindex);
-    J('.zoost.json', { workspace: WS, name: 'Sample workspace', label: 'Sample workspace',
-                       base: 'https://analytics.zoho.eu',
-                       // The one field that makes this a sample rather than a mirror.
-                       sample: true, sampleAt: WHEN, lastPull: WHEN });
+    J('.zoost.json', {
+      workspace: WS, name: 'Sample workspace', label: 'Sample workspace',
+      origin: 'https://analytics.zoho.eu', sv: 1,
+      // The one field that makes this a sample rather than a mirror.
+      sample: true, sampleAt: WHEN, lastPull: WHEN,
+      counts: { views: views.length, folders: folders.length,
+                tables: Object.keys(schema).length, relations: relations.length,
+                sql: Object.keys(sqlindex).length },
+    });
     return out;
   }
 

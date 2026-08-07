@@ -1,0 +1,7 @@
+// automation.notifyOwner - sample function, generated for the sample org.
+map notifyOwner(string recordId)
+{
+    info "automation.notifyOwner start";
+    r0 = standalone.log();
+    return r0;
+}

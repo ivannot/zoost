@@ -1,0 +1,9 @@
+// validation_rule.validateOrder - sample function, generated for the sample org.
+map validateOrder(string orderId)
+{
+    info "validation_rule.validateOrder start";
+    r0 = standalone.orgSettings();
+    r1 = standalone.log();
+    r2 = standalone.lookupBand();
+    return r0;
+}

@@ -1,7 +1,0 @@
-// standalone.auditShipments - sample function, generated for the sample org.
-void auditShipments()
-{
-    info "standalone.auditShipments start";
-    // nothing else is called
-    return null;
-}

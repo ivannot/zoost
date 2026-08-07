@@ -1,77 +1,4 @@
 {
-  "api_name": "Territories",
-  "display_name": "Territories",
-  "category": "custom",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Opened_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Closed_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Priority",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3015,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    },
-    {
-      "id": 3215,
-      "name": "Retired",
-      "visible": false,
-      "sections": 1
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Attachments",
@@ -79,7 +6,152 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8515",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Territories",
+  "module_name": "Territories",
+  "singular_label": "Territorie",
+  "plural_label": "Territories",
+  "id": "6015",
+  "generated_type": "custom",
+  "deletable": true,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3015",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    },
+    {
+      "id": "3215",
+      "name": "Retired",
+      "visible": false,
+      "status": "inactive",
+      "sections": 0
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": true,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7300"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": true,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7301"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7302"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7303"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7304"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7305"
+    },
+    {
+      "api_name": "Opened_On",
+      "label": "Opened On",
+      "data_type": "date",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7306"
+    },
+    {
+      "api_name": "Closed_On",
+      "label": "Closed On",
+      "data_type": "date",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7307"
+    },
+    {
+      "api_name": "Priority",
+      "label": "Priority",
+      "data_type": "picklist",
+      "length": null,
+      "custom": true,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7308"
     }
   ]
 }

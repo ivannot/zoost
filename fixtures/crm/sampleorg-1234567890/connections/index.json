@@ -1,59 +1,74 @@
-{
-  "items": [
-    {
-      "name": "warehouse_api",
-      "display_name": "Warehouse API",
-      "service": "custom",
-      "status": "connected",
-      "used_by": [
-        "standalone.planShipment",
-        "standalone.reserveStock"
-      ]
-    },
-    {
-      "name": "payments_gw",
-      "display_name": "Payments gateway",
-      "service": "custom",
-      "status": "connected",
-      "used_by": [
-        "schedule.syncPayments",
-        "standalone.reconcilePayments"
-      ]
-    },
-    {
-      "name": "mail_relay",
-      "display_name": "Mail relay",
-      "service": "custom",
-      "status": "connected",
-      "used_by": [
-        "schedule.weeklyDigest",
-        "standalone.escalateTicket"
-      ]
-    },
-    {
-      "name": "catalogue_feed",
-      "display_name": "Catalogue feed",
-      "service": "custom",
-      "status": "connected",
-      "used_by": [
-        "schedule.pullCatalogue"
-      ]
-    },
-    {
-      "name": "tax_service",
-      "display_name": "Tax service",
-      "service": "custom",
-      "status": "connected",
-      "used_by": [
-        "standalone.calcTax"
-      ]
-    },
-    {
-      "name": "archive_store",
-      "display_name": "Archive store",
-      "service": "custom",
-      "status": "connected",
-      "used_by": []
-    }
-  ]
-}
+[
+  {
+    "name": "warehouse_api",
+    "label": "Warehouse API",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2000"
+  },
+  {
+    "name": "payments_gw",
+    "label": "Payments gateway",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2001"
+  },
+  {
+    "name": "mail_relay",
+    "label": "Mail relay",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2002"
+  },
+  {
+    "name": "catalogue_feed",
+    "label": "Catalogue feed",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2003"
+  },
+  {
+    "name": "tax_service",
+    "label": "Tax service",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2004"
+  },
+  {
+    "name": "archive_store",
+    "label": "Archive store",
+    "connector": "custom",
+    "connectorLabel": "Custom service",
+    "connected": true,
+    "createdBy": "Sample User",
+    "scopes": [
+      "ZohoCRM.modules.ALL"
+    ],
+    "id": "2005"
+  }
+]

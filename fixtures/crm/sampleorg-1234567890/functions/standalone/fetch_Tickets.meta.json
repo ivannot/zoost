@@ -1,0 +1,19 @@
+{
+  "id": "9076",
+  "name": "fetchTickets",
+  "display_name": "Fetch tickets",
+  "api_name": "fetch_Tickets",
+  "nameSpace": "standalone",
+  "category": "standalone",
+  "source": "crm",
+  "return_type": "void",
+  "params": [],
+  "description": "",
+  "updatedTime": "2026-07-05T09:00:00+00:00",
+  "modified_by": "Sample User",
+  "associated_place": null,
+  "workflow": "",
+  "rest_api": [],
+  "connections": [],
+  "sv": 2
+}

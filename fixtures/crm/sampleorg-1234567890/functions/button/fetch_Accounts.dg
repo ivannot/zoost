@@ -1,0 +1,7 @@
+// button.fetchAccounts - sample function, generated for the sample org.
+void fetchAccounts()
+{
+    info "button.fetchAccounts start";
+    r0 = standalone.fetchTickets();
+    return null;
+}

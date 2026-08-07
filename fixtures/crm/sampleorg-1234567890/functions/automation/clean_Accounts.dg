@@ -1,0 +1,7 @@
+// automation.cleanAccounts - sample function, generated for the sample org.
+void cleanAccounts()
+{
+    info "automation.cleanAccounts start";
+    // nothing else is called
+    return null;
+}

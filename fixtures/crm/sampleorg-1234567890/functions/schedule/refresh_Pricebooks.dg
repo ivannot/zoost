@@ -1,0 +1,7 @@
+// schedule.refreshPricebooks - sample function, generated for the sample org.
+void refreshPricebooks()
+{
+    info "schedule.refreshPricebooks start";
+    r0 = button.validateQuotes();
+    return null;
+}

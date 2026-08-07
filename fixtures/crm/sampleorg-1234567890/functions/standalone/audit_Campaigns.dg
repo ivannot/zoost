@@ -1,0 +1,8 @@
+// standalone.auditCampaigns - sample function, generated for the sample org.
+void auditCampaigns()
+{
+    info "standalone.auditCampaigns start";
+    r0 = automation.notifyContacts();
+    r1 = automation.archiveTickets();
+    return null;
+}

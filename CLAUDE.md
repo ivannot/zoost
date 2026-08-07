@@ -805,6 +805,22 @@ marker is sized against the zoom now, which needs `markerUnits="userSpaceOnUse"`
 multiplies by each link's stroke width, and there are four of those against one marker) and a
 `viewBox` (or the shape and `refX` move with the width, and the tip stops landing on the box edge).
 
+**Derive a file shape from the writer, never from what looks reasonable.** The first sample
+workspace invented every one of them - `{items: […]}` where the pull writes a **bare array**,
+`namespace` where the meta says **`nameSpace`**, a boolean `rest` where it is **`rest_api`**, `sv: 3`
+where `META_SV` is **2**, connections as strings where they are objects, and on the Analytics side
+the raw `VIEW_ID`/`VIEW_NAME` the bridge renames to `id`/`name` before anything reaches disk. The
+panel answered with «wfIdx is not iterable», «idx.map is not a function», no connections, a broken
+export and a graph that would not open - five separate reports from one mistake. A test now reads
+every key of every index against `content-bridge.js` and `sidepanel.js`, so the fixture cannot drift
+from what a real workspace contains.
+
+**And a state has to be *created*, not asserted.** «Unresolved» and «ambiguous» were written into the
+meta as fields; they are not fields, they are what `graph-core` finds when it scans the Deluge. The
+sample writes a call to a name that is not there, and a name that exists under two namespaces - so
+the states come out of the sources the way they do in a real org, instead of being claimed by a
+fixture that no pull could produce.
+
 **One generator, two consumers: `apps/<app>/sample-org.js`.** It is shipped, because the panel has
 to be able to write a sample workspace into the working folder; `node tools/fixtures.mjs` runs the
 same code to write `fixtures/`. It replaced a Python script beside the fixture, which was a second
@@ -823,6 +839,13 @@ core, names are composed from a verb list and a noun list, deterministically, so
 ones exist without anyone inventing them one at a time. The generated ones are wired into what is
 already there, so the graph gains depth rather than becoming a hedge of isolated boxes: 143 nodes and
 135 edges today.
+
+**«Fields first, state second» has a mirror image, and it cost the per-type Pull.** `setEnabled()`
+asks `isSample()`, which reads `bound` - and `activate()` assigned `bound` four lines *after* calling
+it, so the control was enabled from the workspace being left rather than the one being opened. The
+handle and the binding are one fact about one workspace and are now set together. A test asserts the
+order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
+the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
 **`+ Sample` writes it, and `sample: true` in `.zoost.json` is the whole mechanism.** The button is
 in the workspace bar, absent once one exists and while there is nowhere to write it. It writes the

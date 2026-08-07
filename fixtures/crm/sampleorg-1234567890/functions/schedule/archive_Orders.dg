@@ -1,0 +1,7 @@
+// schedule.archiveOrders - sample function, generated for the sample org.
+void archiveOrders()
+{
+    info "schedule.archiveOrders start";
+    r0 = schedule.pushAccounts();
+    return null;
+}

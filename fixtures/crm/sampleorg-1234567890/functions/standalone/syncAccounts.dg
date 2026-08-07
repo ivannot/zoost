@@ -1,8 +1,0 @@
-// standalone.syncAccounts - sample function, generated for the sample org.
-void syncAccounts()
-{
-    info "standalone.syncAccounts start";
-    r0 = standalone.assignPricebooks();
-    r1 = schedule.cleanInvoices();
-    return null;
-}

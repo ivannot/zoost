@@ -1,83 +1,4 @@
 {
-  "api_name": "Deals",
-  "display_name": "Deals",
-  "category": "standard",
-  "fields": [
-    {
-      "api_name": "Name",
-      "data_type": "text",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Owner",
-      "data_type": "ownerlookup",
-      "mandatory": true,
-      "lookup": null
-    },
-    {
-      "api_name": "Description",
-      "data_type": "textarea",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Status",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Amount",
-      "data_type": "currency",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Currency",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Opened_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Closed_On",
-      "data_type": "date",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Priority",
-      "data_type": "picklist",
-      "mandatory": false,
-      "lookup": null
-    },
-    {
-      "api_name": "Account_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Accounts"
-    },
-    {
-      "api_name": "Contact_Ref",
-      "data_type": "lookup",
-      "mandatory": false,
-      "lookup": "Contacts"
-    }
-  ],
-  "layouts": [
-    {
-      "id": 3003,
-      "name": "Standard",
-      "visible": true,
-      "sections": 3
-    }
-  ],
   "related_lists": [
     {
       "api_name": "Quotes_of_Deals",
@@ -85,7 +6,10 @@
       "module": "Quotes",
       "type": "default",
       "visible": true,
-      "via": "Quote_Ref"
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8003",
+      "src": "api"
     },
     {
       "api_name": "Attachments",
@@ -93,7 +17,167 @@
       "module": "Attachments",
       "type": "system",
       "visible": true,
-      "via": ""
+      "connected_module": null,
+      "linking_module": null,
+      "id": "8503",
+      "src": "api"
+    }
+  ],
+  "unreadable": null,
+  "api_name": "Deals",
+  "module_name": "Deals",
+  "singular_label": "Deal",
+  "plural_label": "Deals",
+  "id": "6003",
+  "generated_type": "standard",
+  "deletable": false,
+  "editable": true,
+  "creatable": true,
+  "viewable": true,
+  "visible": true,
+  "api_supported": true,
+  "layouts": [
+    {
+      "id": "3003",
+      "name": "Standard",
+      "visible": true,
+      "status": "active",
+      "sections": 2
+    }
+  ],
+  "fields": [
+    {
+      "api_name": "Name",
+      "label": "Name",
+      "data_type": "text",
+      "length": 255,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7060"
+    },
+    {
+      "api_name": "Owner",
+      "label": "Owner",
+      "data_type": "ownerlookup",
+      "length": null,
+      "custom": false,
+      "mandatory": true,
+      "lookup": null,
+      "picklist": [],
+      "id": "7061"
+    },
+    {
+      "api_name": "Description",
+      "label": "Description",
+      "data_type": "textarea",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7062"
+    },
+    {
+      "api_name": "Status",
+      "label": "Status",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7063"
+    },
+    {
+      "api_name": "Amount",
+      "label": "Amount",
+      "data_type": "currency",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7064"
+    },
+    {
+      "api_name": "Currency",
+      "label": "Currency",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7065"
+    },
+    {
+      "api_name": "Opened_On",
+      "label": "Opened On",
+      "data_type": "date",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7066"
+    },
+    {
+      "api_name": "Closed_On",
+      "label": "Closed On",
+      "data_type": "date",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [],
+      "id": "7067"
+    },
+    {
+      "api_name": "Priority",
+      "label": "Priority",
+      "data_type": "picklist",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": null,
+      "picklist": [
+        "One",
+        "Two",
+        "Three"
+      ],
+      "id": "7068"
+    },
+    {
+      "api_name": "Account_Ref",
+      "label": "Account",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Accounts",
+      "picklist": [],
+      "id": "7560"
+    },
+    {
+      "api_name": "Contact_Ref",
+      "label": "Contact",
+      "data_type": "lookup",
+      "length": null,
+      "custom": false,
+      "mandatory": false,
+      "lookup": "Contacts",
+      "picklist": [],
+      "id": "7561"
     }
   ]
 }

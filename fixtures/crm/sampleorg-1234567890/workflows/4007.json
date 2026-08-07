@@ -1,15 +1,35 @@
 {
   "id": "4007",
   "name": "Lead untouched",
-  "module": "Leads",
-  "active": true,
+  "description": "",
+  "module": {
+    "api_name": "Leads",
+    "id": "6007"
+  },
+  "execute_when": {
+    "type": "Record Action",
+    "on": "created"
+  },
+  "status": {
+    "active": true
+  },
   "conditions": [
     {
-      "criteria": "Status is not empty",
+      "sequence_number": 1,
+      "criteria": {
+        "field": {
+          "api_name": "Status"
+        },
+        "comparator": "not_equal",
+        "value": ""
+      },
       "actions": [],
       "scheduled_actions": [
         {
-          "delay": "2 days",
+          "execute_after": {
+            "unit": 2,
+            "period": "days"
+          },
           "actions": []
         }
       ]

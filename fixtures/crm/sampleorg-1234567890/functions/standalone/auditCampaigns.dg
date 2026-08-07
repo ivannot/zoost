@@ -1,7 +1,0 @@
-// standalone.auditCampaigns - sample function, generated for the sample org.
-void auditCampaigns()
-{
-    info "standalone.auditCampaigns start";
-    r0 = schedule.weeklyDigest();
-    return null;
-}
