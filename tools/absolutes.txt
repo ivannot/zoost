@@ -161,7 +161,6 @@ cadf7901b8ca4d73  site/docs-crm.html: Pulling again re-asks, which is worth doin
 417d35878ad4de50  site/docs-crm.html: Putting it under Git Nothing is automatic here, on purpose: it is your repository, with your conventions.
 bc92a8be1a457ff0  site/docs-crm.html: Roles are per org: a workspace that refuses an area says nothing about the next one.
 81043876b31aa0af  site/docs-crm.html: Rows highlighted in cream are fields on no layout - API-only.
-d710bd314f03a02f  site/docs-crm.html: Selecting anything in Explorer re-centres all of them on it.
 4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
 67fd9370d9a74e3c  site/docs-crm.html: That is deliberate - the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
@@ -324,6 +323,7 @@ cc9faf92979cf93a  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima d
 927f6f6ee792f348  site/it/docs-crm.html: Elenca anche le connessioni che la funzione usa e chi l'ha modificata per ultimo - clicca una connessione per filtrare l'albero su tutte le funzioni che la usano (basta con il «cerca nel file» per il nome di una connessione).
 1a58c0151528ff5c  site/it/docs-crm.html: Entrambi i report dichiarano comunque le date per area: il fatto sta a te pesarlo, e nasconderlo sarebbe l'unica cosa peggiore di un capitolo vecchio.
 1e018b7bb98f49ce  site/it/docs-crm.html: Entrambi portano tutto quello che mostra il pannello, compresi la dimensione di ogni funzione e i conteggi delle chiamate in uscita (una tabella Size and outbound calls nel Markdown, delle colonne nell'indice HTML): un report non deve mai essere una copia ridotta di quello che hai visto a schermo.
+354694a25ccbb21b  site/it/docs-crm.html: Explorer è un elenco più un pannello di dettaglio; Graph è il disegno - riquadri e frecce, e ogni riquadro elenca che cosa chiama quella funzione o che cosa contiene quel modulo; Relations mette al primo posto il legame invece della cosa, una riga per chiamata o per related list, cercabile e filtrabile.
 17665e1b260d9afd  site/it/docs-crm.html: Find ha accanto un selettore di ambito: in: names cerca nei nomi dei file, in: code fa una ricerca full-text su tutti i sorgenti delle funzioni dell'org - la cosa più vicina a un grep sul tuo Deluge, e qualcosa che Zoho non offre.
 5ff88323d6720862  site/it/docs-crm.html: Guidano tutte e tre le viste, quindi spegnere Connections è il modo di leggere un diagramma senza di esse - la ricerca invece restringe solo l'elenco.
 16668d9173bc4b4c  site/it/docs-crm.html: HTML ( Export HTML ) - tutto il workspace come un unico file autoconsistente e navigabile.
@@ -341,7 +341,6 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
-c4909ad4b4e62df7  site/it/docs-crm.html: Le schede: Explorer (elenco + dettaglio) e Visual (nodi e archi) in entrambi i disegni, più quello a riquadri - Call graph se la finestra è stata aperta sulle funzioni, dove ogni riquadro elenca che cosa chiama quella funzione, e ER diagram se è stata aperta sui moduli, dove ogni riquadro elenca i suoi campi.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
 422e56827ea6d29d  site/it/docs-crm.html: Niente related list / nessuna matrice dei layout Quel workspace è stato scaricato prima che esistessero.
 bae2bb9358c7cde4  site/it/docs-crm.html: Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di un'altra.
@@ -380,7 +379,6 @@ e323c43d02373e0a  site/it/docs-crm.html: Quello che resta fuori viene dichiarato
 1ecd822277badea3  site/it/docs-crm.html: Se ha bisogno di te, il pulsante della cartella diventa ambra e si legge 🔓 Grant access - un click, e non si apre nessun selettore di file.
 faca81db2d7500b1  site/it/docs-crm.html: Se la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho e mostra una barra che ti offre di cambiare scheda o cambiare workspace.
 e82b94e72643040f  site/it/docs-crm.html: Se la tua organizzazione non lo consente, lascialo spento: tutto il resto funziona esattamente allo stesso modo.
-81c8d1f78827e846  site/it/docs-crm.html: Selezionare qualcosa in Explorer ricentra tutte le viste su quello.
 55efef1d11461fb3  site/it/docs-crm.html: Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo schema intero, sia l'ER di un modulo solo.
 c8e9e0dda8cb12c7  site/it/docs-crm.html: Sono conteggi, non un voto : la lunghezza misura la verbosità, non la complessità, e ogni chiamata in uscita è lavoro che Zoho contabilizza - come pesarlo lo decidi tu, non io.
 0809a4256306b81d  site/it/docs-crm.html: Sono raggruppate per dimensione - Functions contiene le cinque categorie Deluge, Workflows , Schedules e Connections valgono una ciascuna - e mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
