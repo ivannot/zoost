@@ -529,6 +529,18 @@ for tables. Anything that opens it focused on one item uses the same name and sa
 on in the tooltip. The dead `graph:` field in the `TABS` registry, which nothing read and which kept
 two retired names alive, is gone.
 
+**The same mismatch had a second half, and it survived the fix for eight months.** `KINDOF` was
+corrected to read `category`; the **list of values** was not, and it still held `NS` from
+`graph-core` - `standalone`, `automation`, `button`, `schedule`, `validation_rule` - which are the
+Deluge **namespaces** the call regex matches. Real categories are `scheduler`, `crmfundamentals`,
+`custombutton`. So a function whose category was not coincidentally one of the five namespaces
+matched no chip, got no hue, and **could never be switched off**: it was found because «None» left
+items on screen. The kinds are **derived from the nodes** now - a category Zoho invents tomorrow gets
+a chip and a hue without anyone remembering, a kind with no nodes gets none, and the empty category
+is a kind of its own («no category»), because a value nothing lists is a value nothing can filter.
+Declared hues still win; anything else gets a stable hashed fallback, since the set of categories is
+the platform's to decide and not ours.
+
 **A colour is a claim about a dimension, and this one was wired to the wrong dimension.** In the graph
 window the filter chips select a function's **category**; the dot beside each row was coloured by its
 Deluge **namespace**, and `pass()` compared the chip against the namespace too — so those five filters

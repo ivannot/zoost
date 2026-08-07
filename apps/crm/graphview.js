@@ -35,7 +35,15 @@ const NOUN = () => (DATA.kind === 'schema'
   ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
   : { n: 'nodes', e: 'links', dead: 'nothing calls them', all: 'Everything', box: 'node' });
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
-const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim();
+// A declared hue where there is one, and a stable fallback where there is not - because the set of
+// categories is the platform's to decide, not ours. Hashed rather than indexed by position, so a
+// kind keeps its colour when another appears or disappears beside it.
+const FALLBACK_HUES = ['#0ea5e9', '#f97316', '#14b8a6', '#a855f7', '#84cc16', '#ec4899', '#64748b', '#eab308'];
+function hueFor(k) {
+  let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return FALLBACK_HUES[h % FALLBACK_HUES.length];
+}
+const KINDCOL = (k) => getComputedStyle(document.documentElement).getPropertyValue('--n-' + k).trim() || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
@@ -105,23 +113,38 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 // of node - so they carry no hue and they start off, because «no condition applied» is the truth
 // when none is chosen. Two behaviours, which is why they are two labelled groups and not one row:
 // the level of a dimension has to be visible, not inferred.
-const KINDS = {
-  calls: [
-    ['Functions', [['standalone', 'standalone'], ['automation', 'automation'], ['button', 'button'],
-                   ['schedule', 'schedule'], ['validation_rule', 'validation']]],
-    ['Workflows', [['workflows', null]]],
-    ['Schedules', [['schedules', null]]],
-    ['Connections', [['connections', null]]],
-  ],
-  schema: [['Modules', [['standard', 'standard'], ['custom', 'custom']]]],
-};
+// Derived from the graph, never listed here.
+//
+// The list used to be written out, and it was written out **wrong**: those five words -
+// standalone, automation, button, schedule, validation_rule - are `NS` from graph-core, the Deluge
+// *namespaces* the call regex matches. `KINDOF` reads `category`, which is a different field with
+// different values (`scheduler`, `crmfundamentals`, …). So a node whose category was not one of the
+// five namespaces matched no chip, got no hue, and could never be switched off - which is how
+// «None» left items on screen. It is the same mismatch this repository already recorded once:
+// variables named after categories and consumed as namespaces. Fixed on one side then, and the
+// list left holding the other side's values.
+//
+// So the kinds come from the nodes. A category Zoho invents tomorrow gets a chip without anyone
+// remembering, and nothing can be switched off that the filter does not know about.
+const ENTITY_KINDS = [['workflows', 'Workflows'], ['schedules', 'Schedules'], ['connections', 'Connections']];
+function kindGroups() {
+  // The empty string is a kind too. A function Zoho gave no category for is a fact about the org,
+  // and filtering it out of this set left it with no chip - so it could not be switched off, and
+  // «None» left it on screen, which is exactly the defect one layer down.
+  const seen = new Set(Object.values(N).map((n) => KINDOF(n)));
+  const entity = ENTITY_KINDS.filter(([k]) => seen.has(k));
+  entity.forEach(([k]) => seen.delete(k));
+  const rest = [...seen].sort();
+  const title = DATA.kind === 'schema' ? 'Modules' : 'Functions';
+  return (rest.length ? [[title, rest.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])]] : [])
+    .concat(entity.map(([k, l]) => [l, [[k, null]]]));
+}
 // Function-only, all three of them, which is the other half of why they cannot sit among the kinds:
 // «REST» and «unresolved» say nothing about a workflow or a connection.
 const ONLY = {
   calls: [['rest', 'REST'], ['dead', 'no-caller'], ['unres', 'unresolved']],
   schema: [['hub', 'hub (3+)'], ['orphan', 'orphan']],
 };
-const kindGroups = () => KINDS[DATA.kind === 'schema' ? 'schema' : 'calls'];
 const onlyList = () => ONLY[DATA.kind === 'schema' ? 'schema' : 'calls'];
 const allKinds = () => kindGroups().flatMap(([, ks]) => ks.map(([k]) => k));
 

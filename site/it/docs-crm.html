@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:383679d60b7711d7 -->
+<!-- translated-from: site/docs-crm.html sha256:463eaba6a728f789 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.29.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.30.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -276,9 +276,12 @@ git commit -m "baseline"</code></pre>
       scaricato è un nodo <b>senza</b> azioni misurate, non un nodo che non ne ha.</li>
     <li>Le chip stanno nell'header della finestra, sopra le schede, quindi ci sono in qualunque vista tu
       sia, e sono anche la chiave dei colori: ognuna porta la sua tinta e la sua parola. Sono raggruppate
-      per dimensione - <b class="ui">Functions</b> contiene le cinque categorie Deluge,
-      <b class="ui">Workflows</b>, <b class="ui">Schedules</b> e <b class="ui">Connections</b> valgono una
-      ciascuna - e mostrano <b>cosa c'è a schermo</b>: tutte accese vuol dire tutto, e un clic ne spegne
+      per dimensione - <b class="ui">Functions</b> contiene le categorie che le tue funzioni hanno
+      davvero, <b class="ui">Workflows</b>, <b class="ui">Schedules</b> e <b class="ui">Connections</b> una
+      ciascuna, e un tipo senza niente dentro non ha la sua chip. Sono lette dalla tua org invece che
+      elencate nel codice, quindi c'è anche una categoria che Zoho riporta e che nessuno si aspettava,
+      colore compreso; una funzione per cui Zoho non ha dato una categoria è <b class="ui">no category</b>.
+      Mostrano <b>cosa c'è a schermo</b>: tutte accese vuol dire tutto, e un clic ne spegne
       una. Il gruppo tratteggiato <b class="ui">Only</b> è l'altra domanda, «restringi ai nodi che sono
       anche…», e parte vuoto perché è la verità quando non hai scelto niente; quei tre valgono per le
       funzioni. Due pulsanti coprono l'altra direzione: <b class="ui">↺ All</b> rimette tutto, e

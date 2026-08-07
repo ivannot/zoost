@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.29.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.30.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -251,9 +251,12 @@ git commit -m "baseline"</code></pre>
       actions rather than a node with none.</li>
     <li>The chips sit in the window's header, above the view tabs, so they are there whichever view you
       are in, and they are also the colour key: each carries its own hue and its own word. They are
-      grouped by dimension - <b class="ui">Functions</b> holds the five Deluge categories,
-      <b class="ui">Workflows</b>, <b class="ui">Schedules</b> and <b class="ui">Connections</b> are one
-      each - and they show <b>what is on screen</b>: all lit means everything, and one click switches
+      grouped by dimension - <b class="ui">Functions</b> holds whatever categories your own functions
+      actually have, <b class="ui">Workflows</b>, <b class="ui">Schedules</b> and
+      <b class="ui">Connections</b> one each, and a kind with nothing in it gets no chip. They are read
+      off your org rather than listed in the code, so a category Zoho reports that nobody expected is
+      there too, colour and all; a function Zoho gave no category for is <b class="ui">no category</b>.
+      They show <b>what is on screen</b>: all lit means everything, and one click switches
       one off. The dashed <b class="ui">Only</b> group is the other question, «narrow to nodes that are
       also…», and it starts empty because that is the truth when nothing is chosen; those three apply to
       functions. Two buttons cover the other direction: <b class="ui">↺ All</b> puts everything back, and

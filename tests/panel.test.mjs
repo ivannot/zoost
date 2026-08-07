@@ -487,24 +487,56 @@ test('the dot, the chips and the filter read the same fact', () => {
   }
 });
 
-test('every value the chips select has a colour, and no condition has one', () => {
-  // A hue says "this is a kind of thing". hub, orphan, no-caller and unresolved are not kinds, they
-  // are facts about one — giving them a colour would claim eleven categories where there are six.
-  //
-  // `rest` was on the wrong side of that line from the start and this test recorded the mistake: a
-  // function exposed as REST is still standalone or automation or a button, so REST is something
-  // true *about* it, not what it is. Single-select chips hid it - you could never hold REST and a
-  // category at once - and multi-select made it visible immediately. The CRM's is a condition now;
-  // the Analytics copy still has the old hue and is declared below rather than quietly exempted.
-  const VALUES = {
-    crm: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'workflows', 'schedules', 'connections', 'standard', 'custom'],
-    analytics: ['standalone', 'automation', 'button', 'schedule', 'validation_rule', 'rest', 'table', 'query', 'system'],
+test('the kinds are read off the graph, never listed in the code', () => {
+  // The list used to be written out, and it was written out wrong: standalone / automation / button
+  // / schedule / validation_rule are graph-core's NS - the Deluge *namespaces* the call regex
+  // matches - while KINDOF reads `category`, a different field with different values (scheduler,
+  // crmfundamentals, …). So a node whose category was not one of the five namespaces matched no
+  // chip, got no hue, and could never be switched off: «None» left it on screen, which is how this
+  // was found. It is the same mismatch already recorded here once, fixed on the KINDOF side and
+  // left standing on the list side.
+  const N = {
+    a: { id: 'a', name: 'a', namespace: 'schedule', category: 'scheduler' },
+    b: { id: 'b', name: 'b', namespace: 'validation_rule', category: 'crmfundamentals' },
+    c: { id: 'c', name: 'c', namespace: 'standalone', category: 'standalone' },
+    d: { id: 'd', name: 'd', namespace: 'x', category: '' },
+    e: { id: 'e', name: 'Deal won', namespace: 'Deals', category: 'workflows' },
   };
-  const CONDITIONS = { crm: ['all', 'hub', 'orphan', 'dead', 'unres', 'rest'], analytics: ['all', 'hub', 'orphan', 'dead', 'unres'] };
-  for (const [app, values] of Object.entries(VALUES)) {
+  const ctx = { N, DATA: { kind: 'calls' }, Object, Set };
+  const api = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
+                    sliceConst('apps/crm/graphview.js', 'ENTITY_KINDS'),
+                    sliceFn('apps/crm/graphview.js', 'kindGroups'),
+                    sliceConst('apps/crm/graphview.js', 'allKinds')], ctx);
+  const groups = api.kindGroups();
+  assert.equal(groups.map(([t]) => t).join(' '), 'Functions Workflows',
+    'the groups are not the kinds actually present');
+  assert.equal(groups[0][1].map(([k]) => k).join(','), ',crmfundamentals,scheduler,standalone',
+    'the categories are not read off the nodes');
+  // ...including the one Zoho gave no category for, or it can never be switched off
+  assert.equal(groups[0][1].find(([k]) => k === '')[1], 'no category', 'a node with no category has no chip');
+  assert.ok(api.allKinds().includes(''), '«None» would leave the uncategorised nodes on screen');
+  // and a kind that is not present gets no chip at all
+  assert.ok(!api.allKinds().includes('schedules'), 'a kind with no nodes still has a chip');
+});
+
+test('every kind gets a colour, and no condition gets one', () => {
+  // A hue says «this is a kind of thing». The set of kinds is the platform's to decide, so declared
+  // hues cannot cover it: what is declared is used, and anything else gets a stable fallback, hashed
+  // rather than indexed so a kind keeps its colour when another appears beside it.
+  const js = read('apps/crm/graphview.js');
+  assert.match(js, /const FALLBACK_HUES = \[/, 'an unknown kind would have no colour');
+  assert.match(js, /getPropertyValue\('--n-' \+ k\)\.trim\(\) \|\| \(k \? hueFor\(k\) : ''\)/,
+    'the declared hue no longer wins, or the fallback is gone');
+  const { hueFor } = load([sliceConst('apps/crm/graphview.js', 'FALLBACK_HUES'),
+                           sliceFn('apps/crm/graphview.js', 'hueFor')], {});
+  assert.equal(hueFor('scheduler'), hueFor('scheduler'), 'the fallback is not stable');
+  assert.notEqual(hueFor('scheduler'), hueFor('crmfundamentals'), 'two kinds collapse to one colour');
+
+  for (const app of ['crm', 'analytics']) {
     const css = read(`apps/${app}/graphview.html`);
-    for (const v of values) assert.match(css, new RegExp(`--n-${v}\\s*:`), `${app}: no colour for «${v}»`);
-    for (const c of CONDITIONS[app]) assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
+    for (const c of ['all', 'hub', 'orphan', 'dead', 'unres']) {
+      assert.ok(!css.includes(`--n-${c}:`), `${app}: «${c}» is a condition and has been given a hue`);
+    }
   }
 });
 
