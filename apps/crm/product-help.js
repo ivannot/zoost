@@ -110,6 +110,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
   says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
   otherwise, deleted like any other, and the button is absent once one exists.
+  The same action is on the "Not on a Zoho tab" screen, as "+ Sample workspace": a sample owes the
+  platform nothing, so it opens and reads without a tab and without an account.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there

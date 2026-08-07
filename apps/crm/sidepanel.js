@@ -494,7 +494,10 @@ async function refreshContext() {
   const activeId = await activeZohoTabId();
   if (!activeId) {                         // the ACTIVE tab is not Zoho
     lastCtx = null; $('mmbar').classList.remove('show'); updateWsButtons();
-    $('offoverlay').classList.add('show');
+    // Not over a sample. A sample has nothing to say to Zoho, so a Zoho tab is not a precondition
+    // for reading it - and covering the panel there would mean the one workspace anybody can open
+    // without an account is the one you cannot open without one. Reported.
+    $('offoverlay').classList.toggle('show', !isSample());
     ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho tab';
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
     document.body.classList.add('zoho-blocked'); $('pull').disabled = true;
@@ -2364,6 +2367,9 @@ async function renameWorkspace() {
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
 $('wssample').onclick = () => addSampleWorkspace();
+// The same action from the off-Zoho overlay, which is where somebody who has just installed
+// Zoost and is not signed in to anything actually is.
+$('offsample').onclick = () => addSampleWorkspace();
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
 $('wsdel').onclick = async () => {
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;

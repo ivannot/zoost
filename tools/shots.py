@@ -133,13 +133,10 @@ PANEL_STUB = """window.chrome = {{
   // nothing. The guard compares org, origin and instance, so the stub answers with the three the
   // fixture's .zoost.json holds.
   tabs: {{
-    query: async () => [{{ id: 1, url: 'https://crm.zoho.eu/crm/org1234567890/tab/Home', active: true }}],
+    query: async () => [{{ id: 1, url: {taburl}, active: true }}],
     get: async () => ({{ id: 1, status: 'complete' }}),
     create: () => {{}},
-    sendMessage: async (id, msg) => (msg && msg.cmd === 'context'
-      ? {{ ok: true, org: '1234567890', instance: 'sampleorg', origin: 'https://crm.zoho.eu',
-           zuid: '0', user: 'Sample User' }}
-      : {{ ok: true }}),
+    sendMessage: async (id, msg) => (msg && msg.cmd === 'context' ? {ctx} : {{ ok: true }}),
     onUpdated: {{ addListener: () => {{}} }}, onActivated: {{ addListener: () => {{}} }},
   }},
   windows: {{ getAll: async () => [], create: () => {{}} }},
@@ -173,8 +170,10 @@ def render_panel(shot):
             if f.is_file():
                 shutil.copy2(f, stage / f.name)
         shutil.copy2(ROOT / "tools" / "fsshim.js", stage / "fsshim.js")
+        taburl, ctx = PANEL_CTX[app]
         (stage / "shot.js").write_text(
-            PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script),
+            PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script,
+                              taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
         page = stage / "sidepanel.html"
         html = page.read_text(encoding="utf-8")
@@ -195,6 +194,16 @@ def render_panel(shot):
     return dest
 
 
+PANEL_CTX = {
+    # What the bridge answers for `context`. Without a matching one the environment guard fires and
+    # covers the panel - correct behaviour, and a photograph of nothing.
+    "crm": ("https://crm.zoho.eu/crm/sampleorg/tab/Home",
+            "{ ok: true, org: '1234567890', instance: 'sampleorg', origin: 'https://crm.zoho.eu', zuid: '0' }"),
+    # No tab for the Analytics shots: a sample workspace needs none, the overlay is suppressed for
+    # it, and the picture is then of the panel rather than of the bar explaining a discrepancy.
+    "analytics": ("https://example.com/", "{ ok: false }"),
+}
+
 PANELS = [
     ("crm-sample", "crm", "crm/sampleorg-1234567890", """
         // Start from nothing: clear the shim's tree, then press the button. This is the feature
@@ -210,8 +219,30 @@ PANELS = [
     """),
     ("crm-panel", "crm", "crm/sampleorg-1234567890", """
         // the tree is already drawn; open one function so the preview has something in it
-        const el = [...document.querySelectorAll('#tree .f')].find((e) => /buildInvoice/.test(e.textContent));
+        const el = [...document.querySelectorAll('#tree .f')].find((e) => /uild.nvoice/.test(e.textContent));
         if (el) el.click();
+    """),
+    ("crm-modules", "crm", "crm/sampleorg-1234567890", """
+        const seg = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
+        if (seg) seg.click();
+        setTimeout(() => {
+          const el = [...document.querySelectorAll('#tree .f')].find((e) => /Orders/.test(e.textContent));
+          if (el) el.click();
+        }, 900);
+    """),
+    ("analytics-panel", "analytics", "analytics/sample-workspace", """
+        // open a query table, so the SQL and the lineage the panel is for are on screen
+        setTimeout(() => {
+          const el = [...document.querySelectorAll('#list tbody tr')].find((e) => /Revenue_By_Region/.test(e.textContent));
+          if (el) el.click();
+          setTimeout(() => { const t = [...document.querySelectorAll('.dtab')].find((x) => /SQL/.test(x.textContent)); if (t) t.click(); }, 700);
+        }, 1400);
+    """),
+    ("analytics-columns", "analytics", "analytics/sample-workspace", """
+        setTimeout(() => {
+          const el = [...document.querySelectorAll('#list tbody tr')].find((e) => /Order_Lines/.test(e.textContent));
+          if (el) el.click();
+        }, 1400);
     """),
 ]
 

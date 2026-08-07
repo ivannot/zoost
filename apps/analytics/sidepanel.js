@@ -393,7 +393,9 @@ async function refreshContext() {
 
   if (id == null) {                                  // the ACTIVE tab is not Analytics
     ctx = null;
-    $('offoverlay').classList.add('show');
+    // Not over a sample - see the note in the CRM panel: a Zoho Analytics tab is not a
+    // precondition for reading invented data.
+    $('offoverlay').classList.toggle('show', !isSample());
     $('mmbar').classList.remove('show'); $('mmoverlay').classList.remove('show');
     el.className = 'offzoho'; who.innerHTML = 'Not on a Zoho Analytics tab'; bnd.innerHTML = localLbl;
     return updateButtons();
@@ -1928,6 +1930,9 @@ async function renameWorkspace() {
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = addWorkspace;
 $('wssample').onclick = () => addSampleWorkspace();
+// The same action from the off-Zoho overlay, which is where somebody who has just installed
+// Zoost and is not signed in to anything actually is.
+$('offsample').onclick = () => addSampleWorkspace();
 /** Write the sample workspace into the working folder, then open it.
  *
  * It goes through the same code every other workspace does - the files land on disk and the ordinary

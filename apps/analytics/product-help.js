@@ -78,6 +78,8 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   own. It is generated, never fetched - nothing is requested from the platform - and the workspace bar
   says so. Everything that would talk to the platform is disabled for it. It is an ordinary folder
   otherwise, deleted like any other, and the button is absent once one exists.
+  The same action is on the "Not on a Zoho tab" screen, as "+ Sample workspace": a sample owes the
+  platform nothing, so it opens and reads without a tab and without an account.
 - "Health ♥": what looks unused or unreachable. It states what it cannot see: Zoho Analytics only knows
   what its own views read from each other, so a shared link, a scheduled export or an embedded
   report is invisible to it. Candidates to review, never a verdict.

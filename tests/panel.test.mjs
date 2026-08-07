@@ -2405,3 +2405,24 @@ test('a sample workspace states the discrepancy, and only the blocking differs',
       `${app}: the bar offers to switch to a Zoho org the sample does not have`);
   }
 });
+
+test('the sample can be reached and read without any Zoho tab at all', () => {
+  // The off-Zoho overlay is fixed, inset:0 and above everything, so with no Zoho tab the panel was
+  // unreachable - including «+ Sample». That made the one workspace anybody can open without an
+  // account the one you could not open without one, which is the opposite of what it is for.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+    const html = read(`apps/${app}/sidepanel.html`);
+    assert.ok(/\$\('offoverlay'\)\.classList\.toggle\('show', !isSample\(\)\)/.test(js),
+      `${app}: the off-Zoho overlay still covers a sample workspace, which owes Zoho nothing`);
+    assert.ok(!/\$\('offoverlay'\)\.classList\.add\('show'\)/.test(js),
+      `${app}: something still shows that overlay unconditionally`);
+    // and the way in has to be on the overlay itself, which is where a new install actually lands
+    const ov = html.slice(html.indexOf('id="offoverlay"'), html.indexOf('id="offoverlay"') + 800);
+    assert.ok(/id="offsample"/.test(ov), `${app}: the overlay offers no way to try Zoost without signing in`);
+    assert.ok(/\$\('offsample'\)\.onclick = \(\) => addSampleWorkspace\(\)/.test(js),
+      `${app}: the overlay's sample button is not wired`);
+    assert.ok(/without signing in anywhere/.test(ov),
+      `${app}: the overlay does not say the sample needs no account, which is the whole point`);
+  }
+});

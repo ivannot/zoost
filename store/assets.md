@@ -19,9 +19,10 @@ rejected even when it is fully opaque, so the exact bit depth is worth checking 
 
 Generated, never captured from a real org. `python3 tools/shots.py` renders the panel and the diagram
 window against the fixture in `fixtures/`, at exactly 1280 x 800, and writes 24-bit PNGs to
-`dist/shots/` (git-ignored, like every other build output). Seven today: the panel with a function
-open, the call graph, the custom buttons isolated, the Relations table, and an ER diagram from each
-of the two panels. **Re-render them whenever there is something new to show** - they are a build output,
+`dist/shots/` (git-ignored, like every other build output). Eleven today, both panels and both
+diagram windows: the panel with a function open, the modules list, the sample workspace just after
+it is written, the graph, the custom buttons isolated, the Relations table, the ER diagram - and on
+the other side the view census, a table's columns with its foreign keys, and its ER diagram. **Re-render them whenever there is something new to show** - they are a build output,
 not an asset anyone should be editing.
 
 That is not only convenience. Screenshots taken against the org this is developed on had to be

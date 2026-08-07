@@ -847,6 +847,12 @@ handle and the binding are one fact about one workspace and are now set together
 order, and it needed comments stripped first: the note explaining the bug names `setEnabled(` above
 the line that calls it, so the first version found the explanation and reported the fix as the defect.
 
+**A sample needs no tab and no account, and the off-Zoho overlay was hiding it.** That overlay is
+`position:fixed; inset:0; z-index:70`, so with no Zoho tab the whole panel - `+ Sample` included -
+was unreachable: the one workspace anybody can open without an account was the one you could not open
+without one. It is suppressed for a sample, and the overlay itself now carries
+`+ Sample workspace`, because that screen is where somebody who has just installed Zoost actually is.
+
 **`+ Sample` writes it, and `sample: true` in `.zoost.json` is the whole mechanism.** The button is
 in the workspace bar, absent once one exists and while there is nowhere to write it. It writes the
 generator's file tree into `<working folder>/<app>/<name>/` and stops: from that point the workspace
