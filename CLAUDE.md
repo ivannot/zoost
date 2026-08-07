@@ -617,6 +617,18 @@ means everything, which is what the old `All` chip was without a chip that had t
 A `\u2715` clears them, and the search box has one of its own; both are absent while there is nothing to
 clear.
 
+**A control that governs the window belongs to the window, not to one of its views.** The chips
+steered all four views and lived inside the Explorer column - which three of the four do not have -
+so from the diagram, the control that decides what the diagram draws was off screen. It was reported
+as «why is there no filter for the connections»: there was, and it could not be reached from where
+it mattered. They are in the header now, above the tabs. **They are also the colour key**: each
+carries its hue and its word, and they are on screen always, which the canvas legend never was - so
+that legend is gone rather than being a second key for one dimension.
+
+**A hue alone asks the reader to hold a key in their head.** «I colori sono utili ma non
+sufficienti» - the boxes name their category next to it now, and the category comes first, because it
+is the dimension everything in this window is coloured and filtered by.
+
 **And they steer all three projections, not just the list.** «Show me this without the connections»
 is the question, and answering it in the Explorer while the diagram beside it drew everything is two
 panes disagreeing again. One predicate - `passKind` - feeds `render()`, `draw()` and `erVisibleIds()`,
@@ -1081,7 +1093,10 @@ These all failed **silently**, with no console error. They are the expensive kin
   the test asserts the **order** - shown, then work, then hidden - rather than the nesting. Below
   `SPIN_NODES` the layout is under ~350ms and the spinner would only flicker, so it stays out of the
   way; the threshold is a rendering decision backed by that measurement, not a claim about anyone's
-  org. The ER free-layout branch calls the same `settle()` and has the same cost, and is **not**
+  org. It was **150 and had to come down to 60**: tuned on the force layout alone, on an org of 87
+  modules it never appeared, which was reported as the spinner having disappeared. And the boxed
+  diagram - the slower of the two, and the one that leaves a pane blank - had none at all until
+  then. **A threshold measured on one path is not a threshold for the others.** The ER free-layout branch calls the same `settle()` and has the same cost, and is **not**
   covered - its entry point cannot tell in advance whether the concentric branch will be taken.
 - **`width:0` on a flex item does nothing unless `min-width:0` goes with it.** A flex item's default
   `min-width:auto` resolves to its *min-content* size, so the folded-away list in the diagram window

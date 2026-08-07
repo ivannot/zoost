@@ -82,7 +82,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // The box searches whatever this window is drawing, and it stopped being only functions the day
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
-  buildChips(); render(); buildLegend(); initCanvas(); updateTopTools(); wireSubject();
+  buildChips(); render(); initCanvas(); updateTopTools(); wireSubject();
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
@@ -154,11 +154,12 @@ function updateChipX() {
 function applyFilter() {
   updateChipX();
   render();
+  if (curView === 'rel') relRender();
   // The boxed layout is invalidated whatever view you are on: filtering from the Explorer and then
   // switching to the diagram would otherwise arrive at a layout computed for the old set of nodes.
   erLaidOut = false;
   if (curView === 'visual') draw();
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShowMaybeHeavy();
 }
 function passKind(n) {
   const ks = pickedKinds();
@@ -183,6 +184,7 @@ function render() {
     .forEach((n) => {
       const d = document.createElement('div'); d.className = 'item'; d.setAttribute('aria-selected', n.id === sel);
       d.innerHTML = `<span class="dot" style="background:${NSCOL(KINDOF(n))}"></span><span class="nm">${esc(label(n))}</span><span class="ns">${esc(String(n.namespace || "").slice(0, 4))}</span><span class="deg">${n.unreadable ? '?' : n.called_by.length + '◂'}</span>`;
+      d.title = [KINDOF(n), n.namespace].filter(Boolean).join(' \u00b7 ');
       if (n.unreadable) { d.classList.add('unread'); d.title = 'Zoho would not describe this module - its fields and relations were never read, so it is not that it has none'; }
       d.onclick = () => select(n.id); listEl.appendChild(d);
     });
@@ -407,6 +409,10 @@ const relSnippet = (r) => (r.call
   : `zoho.crm.getRelatedRecords("${r.api}", "${r.parent}", recordId);`);
 function relPass(r) {
   if (r.call) {
+    // The chips are window-wide, so a call whose either end is filtered out is not a row here either.
+    // Reported as «why can I not exclude the connections» - they could be excluded, in three views
+    // out of four, and this was the fourth.
+    if (!N[r.from] || !N[r.to] || !passKind(N[r.from]) || !passKind(N[r.to])) return false;
     if (relFilter === 'cross' && !r.cross) return false;
     if (relFilter === 'same' && r.cross) return false;
     if (!relQ) return true;
@@ -612,7 +618,10 @@ wireAsideFold();
 // task that schedules it. One requestAnimationFrame is not enough either: that callback runs before
 // the frame it belongs to is painted, so blocking inside it blocks that very frame and nothing is
 // ever shown. Two gets one full paint in between.
-const SPIN_NODES = 150;   // below this the layout is under ~350ms and a spinner would only flicker
+const SPIN_NODES = 60;   // ~80ms of layout: below this the two frames the overlay costs are more
+                         // than the work itself. It was 150, tuned on the force layout alone, and
+                         // on an org of 87 modules that meant it never appeared at all - reported
+                         // as «the spinner is gone». The boxed layout is the slower of the two.
 function runHeavy(host, label, work) {
   let ov = host.querySelector('.busy');
   if (!ov) { ov = document.createElement('div'); ov.className = 'busy'; host.appendChild(ov); }
@@ -658,7 +667,17 @@ function showView(v) {
       else requestAnimationFrame(work);
     }
   }
-  if (curView === 'er') requestAnimationFrame(erShow);
+  // The boxed layout is the one that leaves a blank pane: the concentric branch is cheap, but the
+  // free one runs the same O(n^2) settle as Visual and then several collision passes on top.
+  if (curView === 'er') erShowMaybeHeavy();
+}
+// Whether the work about to happen is worth saying something about. erShow's cost is in erLayout,
+// and erLayout only runs when the layout is stale - so a second visit to the tab is instant and
+// must not flash anything.
+function erShowMaybeHeavy() {
+  if (!erLaidOut && nodesA.length >= SPIN_NODES) {
+    runHeavy($('v-er'), `Laying out ${erVisibleIds().length} ${NOUN().n}\u2026`, erShow);
+  } else requestAnimationFrame(erShow);
 }
 
 // Explorer, Visual and ER are three projections of one context. A selection that cannot be projected
@@ -710,17 +729,9 @@ function showVisualTooBig() {
 }
 function hideVisualTooBig() { const ov = document.getElementById('vistoobig'); if (ov) ov.style.display = 'none'; }
 
-function buildLegend() {
-  // The same dimension as the list and the chips, or the window would carry two colour keys that
-  // disagree - which is how it read before: dots by namespace, chips by category.
-  const seen = {}; Object.values(N).forEach((n) => (seen[KINDOF(n)] = 1));
-  const leg = $('legend');
-  Object.keys(seen).sort().forEach((ns) => {
-    const li = document.createElement('div'); li.className = 'li';
-    li.innerHTML = `<span class="dot" style="width:9px;height:9px;border-radius:50%;background:${NSCOL(ns)}"></span>${ns}`;
-    leg.appendChild(li);
-  });
-}
+// The chips are the colour key now: each carries its hue and its word, they sit in the header, and
+// they are on screen in every view - which the legend never was, since it lived inside the canvas.
+// Two keys for one dimension is how they end up disagreeing, and this window has done that before.
 function initCanvas() {
   cv = $('cv'); ctx2d = cv.getContext('2d');
   $('visual').style.position = $('visual').style.position || 'relative';   // anchor the too-big overlay to the canvas area, not the page
@@ -1171,7 +1182,11 @@ function erRender() {
     // The small right-hand label is the second identity of the thing. A module has an api_name that
     // differs from its label; a function's does not, and printing the same word twice says nothing -
     // its namespace is the fact worth having there.
-    const sub = DATA.kind === 'schema' ? (n.api_name || '') : (n.namespace || '');
+    // The colour says which kind it is and the word says it again, because a hue alone asks the
+    // reader to hold a key in their head - reported as «i colori sono utili ma non sufficienti».
+    // Category first: it is the dimension everything else in this window is coloured and filtered by.
+    const sub = DATA.kind === 'schema' ? (n.api_name || '')
+      : [KINDOF(n), n.namespace].filter(Boolean).join(' \u00b7 ');
     div.innerHTML = `<div class="erhdr"><span>${esc(label(n))}</span><small>${esc(sub)}</small></div>${rows}${more}`;
     div.onclick = () => { if (erDragged) return; const wasFocus = curFocus; select(id); if (!wasFocus) erRender(); };
     boxes.appendChild(div);
@@ -1377,7 +1392,7 @@ function erParamsToUI() {
 function erApplyParams(relayout) {
   if (_erT) clearTimeout(_erT);
   _erT = setTimeout(() => {
-    if (relayout) { erLaidOut = false; erShow(); } else { erRender(); }
+    if (relayout) { erLaidOut = false; erShowMaybeHeavy(); } else { erRender(); }
   }, 110);
 }
 function erInitControls() {
@@ -1417,7 +1432,7 @@ $('erEmph').onclick = () => {
   $('erAll').disabled = erEmph === 'relations';
   erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);   // each mode has its own sensible starting point
   erParamsToUI(); erUpdateControlVis(); erSaveParams();
-  erLaidOut = false; erShow();
+  erLaidOut = false; erShowMaybeHeavy();
 };
 $('erpickx').onclick = () => erClearPick();
 $('v-er').addEventListener('click', (e) => {
@@ -1426,7 +1441,7 @@ $('v-er').addEventListener('click', (e) => {
   if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erpick') || t.closest('.erbox'))) return;
   erClearPick();
 });
-$('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erLaidOut = false; erShow(); };
+$('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();
 

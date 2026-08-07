@@ -849,7 +849,7 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
     'billing.calcTax': { id: 'billing.calcTax', name: 'calcTax', namespace: 'billing', calls: [], category: '', params: [{ type: 'double', name: 'amount' }, { type: 'double', name: 'rate' }] },
     'shared.log': { id: 'shared.log', name: 'log', namespace: 'shared', calls: [], category: 'automation', params: [{ name: 'message' }] },
   };
-  const ctx = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], relFilter: 'all', relQ: '' };
+  const ctx = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], relFilter: 'all', relQ: '', passKind: () => true };
   const { buildCallRels, relSnippet, relPass } = load([
     sliceFn('apps/crm/graphview.js', 'buildCallRels'),
     sliceConst('apps/crm/graphview.js', 'relSnippet'),
@@ -878,12 +878,32 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
 
   // ...and buildRels has to route to it. The same hole as with erFieldsFor: testing the builder
   // without the line that reaches it let deleting that line pass.
-  const c2 = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], SYS_REL: /^$/ };
+  const c2 = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], SYS_REL: /^$/, passKind: () => true };
   const b2 = load([sliceFn('apps/crm/graphview.js', 'buildCallRels'),
                    sliceFn('apps/crm/graphview.js', 'buildRels')], c2);
   b2.buildRels();
   assert.equal(c2.RELS.length, 2, 'buildRels does not reach the call catalogue on a call graph');
   assert.ok(c2.RELS[0].call, 'buildRels built schema rows for a call graph');
+});
+
+test('the filter is reachable from every view, and reaches every view', () => {
+  // Reported as «why is there no filter for the connections». There was - the chips - and it lived
+  // inside the Explorer column, which exists in one of the four views. So from the diagram, the
+  // control that decides what the diagram draws was off screen.
+  const html = read('apps/crm/graphview.html');
+  const header = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
+  assert.ok(header.includes('id="chips"'), 'the filter is not in the window chrome');
+  const aside = html.slice(html.indexOf('<aside>'), html.indexOf('</aside>'));
+  assert.ok(!aside.includes('id="chips"'), 'the filter is back inside the one view that has a column');
+
+  // and Relations honours it too, so «excluded» means excluded in all four
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const rp = src.slice(src.indexOf('function relPass('), src.indexOf('\n}', src.indexOf('function relPass(')));
+  assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
+  assert.match(src, /if \(curView === 'rel'\) relRender\(\)/, 'the catalogue is not redrawn when the filter changes');
+
+  // one colour key, not two: the chips carry the hue and the word and are always on screen now
+  assert.ok(!/id="legend"/.test(html), 'a second colour key is back inside the canvas');
 });
 
 test('a call graph is never described in the nouns of a schema', () => {

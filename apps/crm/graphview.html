@@ -92,7 +92,11 @@
               color:var(--muted);cursor:pointer;padding:3px 5px;border-radius:6px;display:none}
   .search .qx.on{display:block} .search .qx:hover{background:var(--sel-soft);color:var(--sel)}
   .search input:focus{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
+  /* Window-wide, so it lives in the header and not inside the Explorer column. It was in the
+     column, which exists in one of the four views - so the filter that chooses what the diagram
+     draws was invisible from the diagram, and reported as missing. */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:0}
+  @media print{ .chips{display:none} }
   .chip{font:11px var(--sans);padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer}
   .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
   /* Zoho objects around the code, not kinds of function. Square corners say «different dimension»
@@ -159,8 +163,6 @@
   @media (prefers-reduced-motion:reduce){ .busy i{animation-duration:2.4s} }
   @media print{ .busy{display:none !important} }
   #cv{width:100%;height:100%;display:block;cursor:grab} #cv:active{cursor:grabbing}
-  .legend{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:11px var(--sans);color:var(--muted)}
-  .legend b{color:var(--ink)} .legend .li{display:flex;align-items:center;gap:6px;margin-top:3px}
   .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
   #tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font:11px var(--mono);padding:3px 7px;border-radius:6px;display:none;transform:translate(-50%,-140%)}
   #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
@@ -276,7 +278,7 @@
   .erbox .ermore{padding:3px 9px;color:#94a3b8;border-top:1px solid #eef1f6;font-style:italic}
   @media print{ #v-er.on{position:static;overflow:visible} #ervp{transform:none !important} #ertools,.hint2{display:none !important} }
   @media print{
-    header .tabs, #vistools, #v-explorer, .legend, .hint2, #tip{display:none !important}
+    header .tabs, #vistools, #v-explorer, .hint2, #tip{display:none !important}
     header{border:0} body{height:auto;overflow:visible}
     .wrap{position:static} .view{position:static}
     #v-visual{display:flex !important} #visual{background:#fff}
@@ -294,13 +296,13 @@
       <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
       <span class="stat" id="s-ws"></span>
     </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
     <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="visual">Visual</span><span class="tab" data-v="er" id="ertab" style="display:none">ER diagram</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
   </header>
   <div class="wrap">
     <div class="view on" id="v-explorer">
       <aside>
         <div class="search"><input id="q" placeholder="Search function…  (/ to focus)" autocomplete="off"><span class="qx" id="qx" role="button" aria-label="Clear the search" title="Clear the search">✕</span></div>
-        <div class="chips" id="chips"></div>
         <div class="list" id="list"></div>
       </aside>
       <button id="asidebtn" aria-expanded="true" aria-label="Hide the list"
@@ -319,7 +321,6 @@
           <button id="pdfBtn" title="Save the graph as PDF">Save PDF</button>
         </div>
         <canvas id="cv"></canvas>
-        <div class="legend" id="legend"><b>Colour key</b></div>
         <div class="hint2">scroll to zoom · drag to pan · click a node to inspect</div>
         <div id="tip"></div>
       </div>
