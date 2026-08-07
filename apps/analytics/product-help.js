@@ -52,6 +52,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Retry N failed": appears only when a pull could not read some views, and re-reads exactly those.
 - "Schema ↗": opens the ER diagram in its own window - tables as boxes, the links between them as
   arrows. Focus one table, adjust how far out to follow the links, and save it as a PDF.
+  "Fit" frames the whole drawing in the window, and a window resize does it on its own - unless
+  the reader has panned or zoomed, in which case the view they chose is kept and "Fit" hands it
+  back.
   Beside the tabs in that window, the "Focus" group is the whole window's context: the focused item's
   own name, "Everything", the depth that decides how far out from it to go, and an "x" to forget it.
   It sits with the tabs because it belongs to the window and not to one view: Explorer sets it, and

@@ -2242,3 +2242,27 @@ test('nothing reaches Zoho for a sample workspace, navigations included', () => 
     }
   }
 });
+
+test('a window resize re-fits the diagram, unless the view is the reader\'s own', () => {
+  // Asked for: resizing the window left the drawing framed for a size it no longer had, and the
+  // only way back was clicking Fit every time. The half that is not obvious is the exception -
+  // panning and zooming are a view somebody chose, and re-fitting because the window changed size
+  // would be the window overruling them. Measured on the sample org: fitted 0.109, the reader zooms
+  // to 0.119, a resize keeps 0.119; Fit hands it back and the next resize follows again.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/graphview.js`);
+    assert.ok(/window\.addEventListener\('resize'/.test(js), `${app}: nothing listens for a resize`);
+    const h = js.slice(js.indexOf("window.addEventListener('resize'"));
+    assert.ok(/curView === 'er' && !erUserMoved/.test(h.slice(0, 300)),
+      `${app}: the resize re-fits regardless of what the reader has done to the view`);
+    assert.ok(/clearTimeout\(_erFitT\)/.test(h.slice(0, 300)),
+      `${app}: resize fires continuously through a drag and this is not debounced`);
+    // the flag has to be set where the view is moved, and cleared where it is fitted
+    const fit = js.slice(js.indexOf('function erFit()'), js.indexOf('\n}', js.indexOf('function erFit()')));
+    assert.ok(/erUserMoved = false/.test(fit), `${app}: a fit does not hand the view back to the window`);
+    const wheel = js.slice(js.indexOf("addEventListener('wheel'"), js.indexOf("addEventListener('wheel'") + 500);
+    assert.ok(/erUserMoved = true/.test(wheel), `${app}: zooming does not mark the view as chosen`);
+    const move = js.slice(js.indexOf("addEventListener('mousemove'"), js.indexOf("addEventListener('mousemove'") + 400);
+    assert.ok(/erUserMoved = true/.test(move), `${app}: panning does not mark the view as chosen`);
+  }
+});

@@ -756,6 +756,15 @@ is how a chip ends up selecting nothing, silently.
 concentric (focus + ego set) driven by `ring`, and force-directed driven by `spread`.
 A control that does nothing in the active branch must be hidden, not shown and ignored.
 
+**A window resize re-fits the diagram, and the exception is the interesting half.** Resizing left
+the drawing framed for a size it no longer had, and the only way back was clicking `Fit` every time.
+But panning and zooming are a view somebody *chose*, and re-fitting because the window changed size
+would be the window overruling them - so `erUserMoved` is set by the wheel and the drag, cleared by
+`erFit()`, and the resize handler asks it. Measured on the sample org: fitted at 0.109, the reader
+zooms to 0.119, a resize keeps 0.119, `Fit` hands it back and the next resize follows again. The
+handler is debounced at 120ms, because resize fires continuously through a drag and `erFit()` walks
+every box.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 

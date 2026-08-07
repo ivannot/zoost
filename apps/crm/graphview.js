@@ -1587,12 +1587,18 @@ function erRender() {
   svg.setAttribute('width', maxX + 60); svg.setAttribute('height', maxY + 60);
   erPickCard();
 }
+// Whether the reader has moved the diagram since it was last fitted. A window resize re-fits, which
+// is what the Fit button was being clicked for every time - but only while this is false: panning
+// and zooming are a view somebody chose, and throwing it away because the window changed size would
+// be the window overruling them.
+let erUserMoved = false;
 function erFit() {
   let maxX = erMaxX, maxY = erMaxY;
   erIds.forEach((id) => { const p = erPos[id]; if (!p) return; maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
   const vw = $('v-er').clientWidth || 1000, vh = $('v-er').clientHeight || 700, pad = 40;
   erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
+  erUserMoved = false;
 }
 function erShow() {
   // A scope widened from Relations, where it is free, may be more than the diagram can lay out.
@@ -1614,14 +1620,24 @@ document.addEventListener('mousedown', (e) => {
 });
 document.addEventListener('mousemove', (e) => {
   if (!erDown) return; const dx = e.clientX - erSx, dy = e.clientY - erSy;
-  if (Math.abs(dx) + Math.abs(dy) > 4) erDragged = true; erTx = erT0x + dx; erTy = erT0y + dy; erApply();
+  if (Math.abs(dx) + Math.abs(dy) > 4) { erDragged = true; erUserMoved = true; }
+  erTx = erT0x + dx; erTy = erT0y + dy; erApply();
 });
 document.addEventListener('mouseup', () => { erDown = false; setTimeout(() => (erDragged = false), 0); });
+// The window changing size leaves the drawing framed for a size it no longer has, and the only way
+// back was the Fit button. Debounced, because resize fires continuously through a drag and erFit
+// walks every box; 120ms is below what reads as a delay and well above the event rate.
+let _erFitT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_erFitT);
+  _erFitT = setTimeout(() => { if (curView === 'er' && !erUserMoved) erFit(); }, 120);
+});
 document.addEventListener('wheel', (e) => {
   if (curView !== 'er') return; e.preventDefault();
   const rect = $('v-er').getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;
   const before = erScale; erScale = Math.max(0.02, Math.min(3, erScale * (e.deltaY < 0 ? 1.1 : 0.9)));
   erTx = mx - (mx - erTx) * (erScale / before); erTy = my - (my - erTy) * (erScale / before); erApply();
+  erUserMoved = true;
 }, { passive: false });
 // ---- runtime layout controls ----
 const ER_CTL = [

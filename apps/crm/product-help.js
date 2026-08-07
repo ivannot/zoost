@@ -69,6 +69,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   it closes up and becomes readable rather than keeping the shape of the graph it no longer is.
   The button that opens that window is in the workspace bar, between "MD" and
   "Health ♥". Depth, spacing and label size are adjustable, and it can be saved as a PDF.
+  "Fit" frames the whole drawing in the window, and a window resize does it on its own - unless
+  the reader has panned or zoomed, in which case the view they chose is kept and "Fit" hands it
+  back.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
   what holds the working folder - so it has to be open and the folder granted.
