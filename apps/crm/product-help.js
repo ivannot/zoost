@@ -68,10 +68,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
   what holds the working folder - so it has to be open and the folder granted.
-  That window has three views of the same thing: Explorer (a list and a detail pane), Visual (dots
-  and lines, good for the shape of it) and a boxed diagram - "Call graph" for functions, where each
-  box lists what that function calls, and "ER diagram" for modules, where each box lists its fields.
-  Selecting anything in Explorer re-centres all three on it. A fourth, Relations, puts the link first
+  That window has three views of the same thing: Explorer (a list and a detail pane), Graph (boxes
+  and arrows - each box lists what that function calls, or what that module holds) and Relations.
+  Selecting anything in Explorer re-centres the other two on it. A fourth, Relations, puts the link first
   instead of the thing: one row per call on a call graph - who calls whom, with the call copyable
   complete with its parameter names - and one row per related list on a schema.
 - The references bar under a function also carries a depth and a "Call graph" button, which opens

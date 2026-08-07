@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:db6480d6a6d5437d -->
+<!-- translated-from: site/docs-crm.html sha256:383679d60b7711d7 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.28.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.29.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -300,13 +300,11 @@ git commit -m "baseline"</code></pre>
       disegni è a schermo, e passa all'altro senza tornare al pannello. È il pannello a costruirlo - questa
       finestra alla tua cartella non ha accesso, per scelta - quindi il pannello dev'essere aperto e la
       cartella concessa; se non lo è, il passaggio si ferma e dice quale delle due cose manca.</li>
-    <li>Le schede: <b>Explorer</b> (elenco + dettaglio) e <b>Visual</b> (nodi e archi) in entrambi i disegni,
-      più quello a riquadri - <b>Call graph</b> se la finestra è stata aperta sulle funzioni, dove ogni
-      riquadro elenca che cosa chiama quella funzione, e <b>ER diagram</b> se è stata aperta sui moduli,
-      dove ogni riquadro elenca i suoi campi. Poi <b>Relations</b>, che mette al primo posto il legame
-      invece della cosa: una riga per related list su uno schema, una riga per chiamata su un grafo di
-      chiamate, cercabili e filtrabili. Selezionare qualcosa in <b>Explorer</b> ricentra tutte le viste
-      su quello.</li>
+    <li>Tre schede. <b>Explorer</b> è un elenco più un pannello di dettaglio; <b>Graph</b> è il disegno -
+      riquadri e frecce, e ogni riquadro elenca che cosa chiama quella funzione o che cosa contiene quel
+      modulo; <b>Relations</b> mette al primo posto il legame invece della cosa, una riga per chiamata o
+      per related list, cercabile e filtrabile. Selezionare qualcosa in <b>Explorer</b> ricentra le altre
+      due su quello.</li>
     <li>Sotto i riferimenti di una funzione ci sono una profondità e un pulsante
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b>,
       che apre quella finestra centrata su questa funzione - la stessa coppia che l'anteprima dei moduli
@@ -317,9 +315,9 @@ git commit -m "baseline"</code></pre>
       <b class="ui">▸ Show the list</b> lo riporta indietro. <b>Trascina lo stesso bordo</b> per allargarlo o
       stringerlo invece che ripiegarlo. Valgono per quella finestra, non vengono ricordati, ed esistono
       solo lì: le altre tre viste l'elenco non ce l'hanno.</li>
-    <li>Il primo passaggio a <b>Visual</b> calcola il layout, che su un'org grande ci mette un momento e
-      lo dice con uno spinner e il numero di nodi. Viene calcolato una volta per finestra: tornare sulla
-      scheda è immediato.</li>
+    <li>Il primo passaggio a <b>Graph</b> calcola il layout, che su un'org grande ci mette un momento e lo
+      dice con uno spinner e il numero di nodi. Viene calcolato una volta per finestra: tornare sulla
+      scheda è immediato, e cambiare filtro o scope lo ricalcola dicendolo di nuovo.</li>
     <li>Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo
       schema intero, sia l'ER di un modulo solo. <b>Depth</b> controlla quanti salti di distanza vengono disegnati; cliccare una tabella ricentra il diagramma lì. <b class="ui">↺ Whole graph</b> azzera il fuoco e torna a mostrare tutti i moduli.</li>
     <li><b class="ui">Scope</b> alterna fra il vicinato del fuoco e l'org intera. Org intera più
@@ -332,10 +330,10 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Layout ⚙</b> espone spaziatura, apertura e dimensione delle etichette come slider dal
       vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
   </ul>
-  <p><b>Cosa non fa:</b> sopra qualche centinaio di nodi il layout libero <b>Visual</b> non viene nemmeno
-    tentato - calcolarlo bloccherebbe la finestra - quindi lo dice invece di piantarsi, e lo stesso vale per
-    lo <b class="ui">Scope</b> sull'org intera. <b>Explorer</b> e l'<b>ER diagram</b> centrato restano veloci
-    a qualsiasi dimensione di org; usa un modulo come fuoco e una profondità piccola.</p>
+  <p><b>Cosa non fa:</b> sopra qualche centinaio di nodi il layout libero non viene nemmeno tentato -
+    calcolarlo bloccherebbe la finestra - quindi lo <b class="ui">Scope</b> sull'org intera lo dice invece di
+    piantarsi. <b>Explorer</b> e un <b>Graph</b> centrato restano veloci a qualsiasi dimensione di org; usa un
+    fuoco e una profondità piccola.</p>
 
   <h2 id="relation-name">7. Trovare il nome di una relazione</h2>
   <div class="box">
@@ -553,7 +551,7 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k">La scheda Connections è vuota</td><td>Il catalogo arriva con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (o con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nella scheda Connections). Serve una scheda Zoho attiva e corrispondente.</td></tr>
       <tr><td class="k">Un modulo non ha campi e ha un <b>⊘</b> grigio</td><td>Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti. Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente. Rifare il pull richiede di nuovo, il che ha senso se nel frattempo il modulo è stato reso visibile; cambiare la risposta non è in potere di Zoost. Quel modulo non ha il pulsante del diagramma ER e non si può nemmeno aprire nella finestra del diagramma: non c'è niente da disegnare, e un diagramma vuoto si leggerebbe come «questo non è in relazione con niente».</td></tr>
       <tr><td class="k">Le funzioni mostrano un pallino ambra <b>◐</b></td><td>Sono state scaricate prima che venissero catturate connessioni e autore. Clicca <b class="ui">Refresh outdated</b> nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.</td></tr>
-      <tr><td class="k">Il grafo Visual dice che i nodi sono troppi</td><td>Sopra qualche centinaio di nodi il layout libero non viene tentato, perché bloccherebbe la finestra. Usa <b>Explorer</b>, oppure metti a fuoco un modulo e abbassa la profondità.</td></tr>
+      <tr><td class="k">Il grafo dice che i nodi sono troppi</td><td>Sopra qualche centinaio di nodi il layout libero non viene tentato, perché bloccherebbe la finestra. Usa <b>Explorer</b>, oppure metti a fuoco un elemento e abbassa la profondità.</td></tr>
       <tr><td class="k">AI: <code>401</code></td><td>Chiave sbagliata, o spazi incollati insieme alla chiave.</td></tr>
       <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>La chiave è valida ma il credito API è a zero. La fatturazione delle API è separata da qualsiasi abbonamento alla chat.</td></tr>
       <tr><td class="k">AI: <code>404</code> sul modello</td><td>Errore di battitura nell'id del modello, o il modello non è abilitato per il livello del tuo account. Copialo dall'elenco dei modelli del provider.</td></tr>

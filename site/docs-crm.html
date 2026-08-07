@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.28.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.29.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -275,12 +275,10 @@ git commit -m "baseline"</code></pre>
       drawings is on screen, and switches to the other without going back to the panel. The panel builds
       it - this window has no access to your folder at all - so the panel has to be open and the folder
       granted; if it is not, the switch stops and says which.</li>
-    <li>Tabs: <b>Explorer</b> (list + detail) and <b>Visual</b> (node-link) in both drawings, plus the boxed
-      one - <b>Call graph</b> when the window was opened on functions, where each box lists what that
-      function calls, and <b>ER diagram</b> when it was opened on modules, where each box lists its fields.
-      Then <b>Relations</b>, which puts the link first instead of the thing - one row per related list on a
-      schema, one row per call on a call graph, both searchable and filterable. Selecting anything in
-      <b>Explorer</b> re-centres all of them on it.</li>
+    <li>Three tabs. <b>Explorer</b> is a list and a detail pane; <b>Graph</b> is the drawing - boxes and
+      arrows, each box listing what that function calls or what that module holds; <b>Relations</b> puts
+      the link first instead of the thing, one row per call or per related list, searchable and
+      filterable. Selecting anything in <b>Explorer</b> re-centres the other two on it.</li>
     <li>Under a function's references there is a depth and a
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> button,
       which opens that window centred on this function - the same pair the Modules preview has for the
@@ -290,9 +288,9 @@ git commit -m "baseline"</code></pre>
       away so a field table or a source listing gets the whole window; <b class="ui">▸ Show the list</b>
       brings it back. <b>Drag the same edge</b> to make the list wider or narrower instead. Both are per
       window and not remembered, and they exist only there: the other three views have no list.</li>
-    <li>The first switch to <b>Visual</b> computes the layout, which takes a moment on a large org and
-      says so with a spinner and the node count. It is computed once per window; going back to the tab
-      is instant.</li>
+    <li>The first switch to <b>Graph</b> computes the layout, which takes a moment on a large org and says
+      so with a spinner and the node count. It is computed once per window; going back to the tab is
+      instant, and changing the filter or the scope recomputes it and says so again.</li>
     <li>Selecting a module in Explorer sets the focus for all views - whether you opened the whole schema
       or one module's ER. <b>Depth</b> controls how many hops out from it are drawn; clicking a table
       re-centres the diagram there. <b class="ui">↺ Whole graph</b> clears the focus and shows every module again.</li>
@@ -306,10 +304,9 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Layout ⚙</b> exposes spacing, spread and label size as live sliders. There is no correct
       value - dense or airy depends on what you are looking at.</li>
   </ul>
-  <p><b>What it will not do:</b> above a few hundred nodes the free-form <b>Visual</b> layout is not attempted at
-    all - computing it would freeze the window - so it says so instead of hanging, and the same applies to the
-    whole-org <b class="ui">Scope</b>. The <b>Explorer</b> and the focused <b>ER diagram</b> stay fast at any org
-    size; use a module focus and a small depth.</p>
+  <p><b>What it will not do:</b> above a few hundred nodes the free-form layout is not attempted at all -
+    computing it would freeze the window - so the whole-org <b class="ui">Scope</b> says so instead of hanging.
+    The <b>Explorer</b> and a focused <b>Graph</b> stay fast at any org size; use a focus and a small depth.</p>
 
   <h2 id="relation-name">7. Finding a relation name</h2>
   <div class="box">
@@ -507,7 +504,7 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k">Connections tab is empty</td><td>The catalogue arrives with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (or <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> in the Connections tab). It needs an active, matching Zoho tab.</td></tr>
       <tr><td class="k">A module shows no fields and a grey <b>⊘</b></td><td>Zoho refused to describe it - usually because the module is hidden in that org - so its fields, layouts and related lists were never read. The panel quotes what Zoho answered and the day it was asked, and the exports carry the same note, because a section with three empty tables and no reason reads as a module with nothing in it. Pulling again re-asks, which is worth doing if the module has since been unhidden; nothing in Zoost can change the answer. That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".</td></tr>
       <tr><td class="k">Functions show an amber <b>◐</b> dot</td><td>They were pulled before connections and authorship were captured. Click <b class="ui">Refresh outdated</b> in the button bar above the list to top them up - no full re-download.</td></tr>
-      <tr><td class="k">Visual graph says there are too many nodes</td><td>Above a few hundred nodes the free layout is not attempted, because it would freeze the window. Use <b>Explorer</b>, or focus one module and lower the depth.</td></tr>
+      <tr><td class="k">The graph says there are too many nodes</td><td>Above a few hundred nodes the free layout is not attempted, because it would freeze the window. Use <b>Explorer</b>, or focus one item and lower the depth.</td></tr>
       <tr><td class="k">AI: <code>401</code></td><td>Wrong key, or whitespace pasted with it.</td></tr>
       <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>The key is valid but the API balance is zero. API billing is separate from any chat subscription.</td></tr>
       <tr><td class="k">AI: <code>404</code> on the model</td><td>Model id typo, or the model is not enabled for your account tier. Copy it from the provider's model list.</td></tr>

@@ -716,6 +716,63 @@ test('the filter can be emptied as well as filled, and says so when it is', () =
   }
 });
 
+test('the Visual view is gone, and nothing it alone used survives', () => {
+  // It was a second, weaker drawing of what the boxed diagram already shows, so it went. What must
+  // not go with it is the layout machinery the boxed free branch shares - settle, the position
+  // arrays, forceFeasible - which is the whole risk in deleting a view rather than a file.
+  const js = read('apps/crm/graphview.js'), html = read('apps/crm/graphview.html');
+  for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
+                      'pdfBtn', 'vistoobig', 'id="cv"', 'id="tip"']) {
+    assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
+  }
+  for (const dead of [/function draw\(/, /function fitView\(/, /function screenXY\(/, /function pick\(/,
+                      /curView === 'visual'/, /ctx2d/, /labelMode/, /subFocus/]) {
+    assert.ok(!dead.test(js), `dead code from the Visual view survives: ${dead}`);
+  }
+  // ...and the shared half is still there
+  for (const kept of [/function settle\(/, /function forceFeasible\(/, /function initPositions\(/, /\bposX\b/]) {
+    assert.match(js, kept, `the boxed diagram lost something it shares: ${kept}`);
+  }
+  // Every $('x') still has an element to find. Ids come from the markup and from the two places the
+  // script builds elements - `e.id = ...` in a helper, and the chip row's own children.
+  const ids = new Set([...html.matchAll(/id="([\w-]+)"/g)].map((m) => m[1])
+    .concat([...js.matchAll(/\.id = '([\w-]+)'/g)].map((m) => m[1]))
+    .concat([...js.matchAll(/btn\('([\w-]+)'/g)].map((m) => m[1]))
+    // ...and from the markup the script writes into the detail pane and the diagram
+    .concat([...js.matchAll(/id="([\w-]+)"/g)].map((m) => m[1])));
+  for (const m of js.matchAll(/\$\('([\w-]+)'\)/g)) {
+    assert.ok(ids.has(m[1]), `$('${m[1]}') has no element - a deletion took its markup`);
+  }
+  // the three views that remain
+  // `[^"]*` ate the X when this was mutated to class="viewX", so it counted a broken view as a view.
+  assert.equal([...html.matchAll(/class="view(?: on)?" id="v-/g)].length, 3, 'a view was lost or added');
+});
+
+test('a box is as wide as what is written in it', () => {
+  // Reported: long headers ran past the edge of a fixed 250px box. Text is measured now, and the
+  // measurer makes its own canvas because this window no longer has one.
+  const js = read('apps/crm/graphview.js');
+  assert.match(js, /function textWidth\(/, 'nothing measures the text');
+  assert.match(js, /const BOX_MIN = \d+, BOX_MAX = \d+;/, 'the width has no bounds');
+  // Run it rather than read it: asserting that the clamp *appears* passed when the whole expression
+  // was left in place behind a `250 ||`, which is the mutation that found this.
+  const wide = { name: 'recalculateQuarterlyCommissionForSalesRepresentative', namespace: 'billing', category: 'standalone', calls: [] };
+  const narrow = { name: 'log', namespace: 'shared', category: 'standalone', calls: [] };
+  const ctx = {
+    DATA: { kind: 'calls' }, erEmph: 'modules', erFieldsFor: () => [], label: (n) => n.name,
+    KINDOF: (n) => n.category, Math,
+    document: { createElement: () => ({ getContext: () => ({ set font(_v) {}, measureText: (t) => ({ width: t.length * 7 }) }) }) },
+  };
+  const { erBoxSize } = load([sliceConst('apps/crm/graphview.js', 'BOX_MIN'),
+                              sliceConst('apps/crm/graphview.js', '_tm'),
+                              sliceFn('apps/crm/graphview.js', 'textWidth'),
+                              sliceFn('apps/crm/graphview.js', 'erBoxSize')], ctx);
+  const w1 = erBoxSize(wide).w, w2 = erBoxSize(narrow).w;
+  assert.ok(w1 > w2, `a long name does not widen its box (${w1} vs ${w2})`);
+  assert.ok(w2 >= 190, `a short name goes below the minimum (${w2})`);
+  assert.ok(w1 <= 460, `a long name is unbounded (${w1})`);
+});
+
 test('the filter is reachable from every view, and reaches every view', () => {
   // Reported as «why is there no filter for the connections». There was - the chips - and it lived
   // inside the Explorer column, which exists in one of the four views. So from the diagram, the
@@ -729,8 +786,9 @@ test('the filter is reachable from every view, and reaches every view', () => {
   const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
   const rp = src.slice(src.indexOf('function relPass('), src.indexOf('\n}', src.indexOf('function relPass(')));
   assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
+  // Three views, since Visual is gone: the list, the catalogue and the boxed diagram.
   const af = src.slice(src.indexOf('function applyFilter('), src.indexOf('\n}', src.indexOf('function applyFilter(')));
-  for (const v of [/render\(\)/, /relRender\(\)/, /draw\(\)/, /erShowMaybeHeavy\(\)/]) {
+  for (const v of [/render\(\)/, /relRender\(\)/, /erShowMaybeHeavy\(\)/]) {
     assert.match(af, v, `a view is not redrawn when the filter changes: ${v}`);
   }
   assert.ok(!/id="legend"/.test(html), 'a second colour key is back inside the canvas');

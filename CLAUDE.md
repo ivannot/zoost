@@ -554,6 +554,35 @@ were rewritten in its copy — the edge card (a join, not a related-list snippet
 the filter chips and the wording. If you find yourself changing the layout maths on one side, it
 almost certainly belongs on both.
 
+**The Visual view is gone, and the tab is called `Graph`.** It was a second, weaker drawing of what
+the boxed diagram already shows - dots and lines against boxes with their contents - and «poco
+visibile» was the report. Deleting a *view* rather than a file is the risky kind: `settle()`, the
+position arrays, `forceFeasible()` and the whole force layout are **shared with the boxed free
+branch**, so what came out was only what nothing else used - `draw`, `fitView`, `screenXY`, `pick`,
+the canvas and its listeners, `labelMode`, `subFocus`, five toolbar buttons. `initCanvas` became
+`initPositions()`, which is what the other branch always wanted from it. `Name:` moved into
+`#ertools`, because `nameMode` feeds `label()` and losing the button would have lost the setting.
+A test asserts the dead half is gone, the shared half is not, and that **every `$('x')` still has an
+element** - the deletion took `#v-rel` with it on the first pass, because that view sat between
+Visual and ER in the markup.
+
+**The tab is `Graph` and the window keeps its two names.** «Call graph» and «ER diagram» still name
+the *window*, from the panel's button and in the docs; the tab is one word because the subject is
+already on screen, in the `Functions / Modules` switch beside the title. That is not the fourth name
+this file bans - it is one fewer.
+
+**A box is as wide as what is written in it.** It was a fixed 250px and long headers ran past their
+own edge. Text is measured with a 2D context made on the spot, since this window no longer has a
+canvas, and the result is clamped between 190 and 460.
+
+**`spread` and `ring` drive two different branches, and only one is ever in use.** The `relations`
+preset's spread had never been exercised, because «edges» used to be reachable only with a focus -
+where `ring` does the work. Reaching it with `Scope: everything` put 19 boxes on a 3000px canvas:
+measured at 0.25 zoom against 0.39 for the same graph in boxes mode, which is a diagram laid out
+correctly and drawn too small to read. The free branch now **normalises the settled positions** - the
+canvas is sized from the boxes that have to fit on it - so `spread` means the same thing at 20 nodes
+and at 300, and the preset came down from 72 to 38.
+
 **The boxed diagram draws functions too, and it is the same tab under the drawing's own name.**
 Functions already had Explorer and Visual - Visual *is* the who-calls-whom graph, and it was there
 long before anyone asked for one. What they did not have is the boxed, focusable, printable view the
