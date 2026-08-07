@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.14.1</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv">1.15.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -227,7 +227,10 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <b>Drag the same edge</b> to make the list wider or narrower instead. Per window, not remembered,
       and only there: the other three views have no list.</li>
     <li>The first switch to <b>Visual</b> computes the layout, which takes a moment on a large workspace
-      and says so with a spinner and the node count. Once per window; coming back is instant.</li>
+      and says so with a spinner and the node count. It is computed once per set of views, so coming
+      back is instant, and narrowing what is drawn computes it again for what is left rather than
+      leaving the boxes where a bigger drawing had put them. The same set always comes out the same
+      way.</li>
     <li><b class="ui">Save PDF</b> prints it at wall size.</li>
   </ul>
   <p>The window also has a <b>Relations</b> tab: one row per join, searchable by table, column or join,

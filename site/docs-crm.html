@@ -57,7 +57,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.30.0</span> · updated <span class="dd">7 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv">1.31.0</span> · updated <span class="dd">7 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -115,7 +115,7 @@
       repositories inside it, and file-sync services corrupt <code>.git</code> directories by touching index
       and lock files mid-operation. On-demand (placeholder) files also break the full-text search. Use a
       local folder and push to a private Git remote if you want an off-machine copy.</p>
-<p class="note">Three toolbar controls are drawn as marks rather than words - <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
+<p class="note">Three toolbar controls are drawn as marks rather than words - <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> and the diagram button, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> in Functions mode and <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in Modules. The name has not gone anywhere: it is the tooltip, and it is what a screen reader announces. This guide shows the mark next to the name throughout.</p>
   </div>
   <p>Chrome does not keep file-system permissions across side-panel reopens: this is how the browser's
     File System Access API works for extensions, not a bug. Zoost restores it on your first click anywhere
@@ -238,7 +238,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <h2 id="diagram">6. The diagram</h2>
-  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> (in Functions mode) opens which function calls which; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> (in Functions mode) opens which function calls which; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
   <ul>
@@ -281,9 +281,11 @@ git commit -m "baseline"</code></pre>
     <li>Three tabs. <b>Explorer</b> is a list and a detail pane; <b>Graph</b> is the drawing - boxes and
       arrows, each box listing what that function calls or what that module holds; <b>Relations</b> puts
       the link first instead of the thing, one row per call or per related list, searchable and
-      filterable. Selecting anything in <b>Explorer</b> re-centres the other two on it.</li>
+      filterable. Selecting anything in <b>Explorer</b> re-centres the other two on it -
+      <b>Relations</b> included: it then lists the links around that item and says so above the table,
+      where <b class="ui">show all</b> widens it back to everything.</li>
     <li>Under a function's references there is a depth and a
-      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> button,
+      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> button,
       which opens that window centred on this function - the same pair the Modules preview has for the
       ER diagram. It is absent for a function that calls nothing and that nothing calls: one box and no
       arrows is not a diagram.</li>
@@ -292,8 +294,10 @@ git commit -m "baseline"</code></pre>
       brings it back. <b>Drag the same edge</b> to make the list wider or narrower instead. Both are per
       window and not remembered, and they exist only there: the other three views have no list.</li>
     <li>The first switch to <b>Graph</b> computes the layout, which takes a moment on a large org and says
-      so with a spinner and the node count. It is computed once per window; going back to the tab is
-      instant, and changing the filter or the scope recomputes it and says so again.</li>
+      so with a spinner and the node count. It is computed once per set; going back to the tab is
+      instant, and changing the filter or the scope computes it again for what is left - the chips do
+      not merely hide boxes, the drawing closes up around what survives, which is the point of switching
+      a category off. The same filter always produces the same drawing.</li>
     <li>Selecting a module in Explorer sets the focus for all views - whether you opened the whole schema
       or one module's ER. <b>Depth</b> controls how many hops out from it are drawn; clicking a table
       re-centres the diagram there. <b class="ui">↺ Whole graph</b> clears the focus and shows every module again.</li>

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:463eaba6a728f789 -->
+<!-- translated-from: site/docs-crm.html sha256:58da07f9a9630827 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -59,7 +59,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.30.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv">1.31.0</span> · aggiornata il <span class="dd">7 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -126,7 +126,7 @@
       copia fuori dalla macchina.</p>
     <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole -
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> e il pulsante del diagramma,
-      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> in modalità Functions e <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in
+      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> in modalità Functions e <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in
       Modules. Il nome non è sparito: è il tooltip, ed è quello che annuncia uno screen reader. Questa guida
       mostra sempre il simbolo accanto al nome.</p>
   </div>
@@ -262,7 +262,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <h2 id="diagram">6. Il diagramma</h2>
-  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b> (in modalità Functions) apre quale funzione chiama quale;
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> (in modalità Functions) apre quale funzione chiama quale;
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in modalità Modules) apre i moduli e le loro relazioni.
     Dall'anteprima di un modulo, lo stesso pulsante apre il diagramma entità-relazioni centrato su quel
     modulo.</p>
@@ -307,9 +307,10 @@ git commit -m "baseline"</code></pre>
       riquadri e frecce, e ogni riquadro elenca che cosa chiama quella funzione o che cosa contiene quel
       modulo; <b>Relations</b> mette al primo posto il legame invece della cosa, una riga per chiamata o
       per related list, cercabile e filtrabile. Selezionare qualcosa in <b>Explorer</b> ricentra le altre
-      due su quello.</li>
+      due su quello, <b>Relations</b> compresa: da quel momento elenca i legami intorno a quell'elemento
+      e lo dice sopra la tabella, dove <b class="ui">show all</b> la riallarga a tutto.</li>
     <li>Sotto i riferimenti di una funzione ci sono una profondità e un pulsante
-      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Call graph</b>,
+      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b>,
       che apre quella finestra centrata su questa funzione - la stessa coppia che l'anteprima dei moduli
       ha per il diagramma ER. Non c'è per una funzione che non chiama niente e che nessuno chiama: un
       riquadro solo e nessuna freccia non è un diagramma.</li>
@@ -319,8 +320,10 @@ git commit -m "baseline"</code></pre>
       stringerlo invece che ripiegarlo. Valgono per quella finestra, non vengono ricordati, ed esistono
       solo lì: le altre tre viste l'elenco non ce l'hanno.</li>
     <li>Il primo passaggio a <b>Graph</b> calcola il layout, che su un'org grande ci mette un momento e lo
-      dice con uno spinner e il numero di nodi. Viene calcolato una volta per finestra: tornare sulla
-      scheda è immediato, e cambiare filtro o scope lo ricalcola dicendolo di nuovo.</li>
+      dice con uno spinner e il numero di nodi. Viene calcolato una volta per insieme: tornare sulla
+      scheda è immediato, e cambiare filtro o scope lo ricalcola su quello che resta - le chip non
+      nascondono soltanto dei riquadri, il disegno si richiude intorno a ciò che sopravvive, che è poi
+      il motivo per cui si spegne una categoria. Lo stesso filtro produce sempre lo stesso disegno.</li>
     <li>Selezionare un modulo in Explorer imposta il fuoco per tutte le viste - sia che tu abbia aperto lo
       schema intero, sia l'ER di un modulo solo. <b>Depth</b> controlla quanti salti di distanza vengono disegnati; cliccare una tabella ricentra il diagramma lì. <b class="ui">↺ Whole graph</b> azzera il fuoco e torna a mostrare tutti i moduli.</li>
     <li><b class="ui">Scope</b> alterna fra il vicinato del fuoco e l'org intera. Org intera più

@@ -968,6 +968,7 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
   const { buildCallRels, relSnippet, relPass } = load([
     sliceFn('apps/crm/graphview.js', 'buildCallRels'),
     sliceConst('apps/crm/graphview.js', 'relSnippet'),
+    sliceConst('apps/crm/graphview.js', 'relScoped'),
     sliceFn('apps/crm/graphview.js', 'relPass')], ctx);
 
   buildCallRels();
@@ -984,6 +985,9 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
   // and it must not have borrowed the schema's snippet
   assert.ok(!/getRelatedRecords/.test(relSnippet(rels[0])), 'a call is being written as a related-list read');
 
+  // No focus, so no neighbourhood to narrow to: this case is about the facets alone. The scoping
+  // is exercised on its own, further down.
+  ctx.curFocus = null; ctx.egoSet = null; ctx.scopeAll = false;
   ctx.relFilter = 'cross';
   assert.equal(rels.filter(relPass).map((r) => r.to).join(' '), 'shared.log', 'the cross-namespace facet does not filter');
   ctx.relFilter = 'same';
@@ -1024,7 +1028,10 @@ test('widening the scope clears, says so, and only then computes', async () => {
     querySelector: () => ({ set textContent(_v) {} }), setAttribute() {} };
   const ctx = {
     curFocus: 'a', scopeAll: false, nodesA: new Array(200), SPIN_NODES: 60, curView: 'er',
-    forceFeasible: () => true, N: { a: { id: 'a', name: 'a' } }, label: (n) => n.name,
+    // The budget is now asked about what the chips leave standing, and the refusal is one shared
+    // sentence rather than a string written here.
+    forceFeasible: () => true, visibleKindCount: () => 200, tooWideToDraw() {},
+    N: { a: { id: 'a', name: 'a' } }, label: (n) => n.name,
     bfsEgo: () => order.push('work'), updateDepthUI() {}, updateScopeUI() {}, egoStat() {},
     erLaidOut: true, erShow: () => order.push('draw'), fitView() {}, draw() {},
     $: (id) => (id === 'erboxes' ? { set innerHTML(_v) { order.push('cleared'); } }
@@ -1592,4 +1599,145 @@ test('the three marks share one geometry and differ only in hue', () => {
   const hues = ['apps/crm/icons/icon.svg', 'apps/analytics/icons/icon.svg', 'site/icon.svg']
     .map((f) => read(f).match(/<rect[^>]*fill="(#[0-9a-f]{6})"/i)[1]);
   assert.equal(new Set(hues).size, 3, 'two marks share a hue, so nothing tells them apart');
+});
+
+test('a filter changes the graph, not only what is painted of it', () => {
+  // Reported: switching a category off in a large graph removed a big share of the boxes and the
+  // drawing stayed exactly as large, so nothing became more readable. The layout was computed once
+  // for every node and latched behind a boolean; filtering then drew a subset of a diagram laid out
+  // for a set it no longer was.
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/\blet\b[^\n]*\blaidOut\b\s*=\s*false/.test(src), 'the layout still latches behind a boolean');
+  assert.ok(/laidOutKey/.test(src), 'nothing records which set the positions belong to');
+  const er = src.slice(src.indexOf('function erLayout('), src.indexOf('\n}', src.indexOf('function erLayout(')));
+  assert.ok(/const key = erIds\.join/.test(er), 'the key is not derived from the set on screen');
+  assert.ok(/seedRing\(erIds\)[\s\S]*?settle\(erIds, edgesAmong\(erIds\)\)/.test(er),
+    'the layout is still computed for every node rather than for the ones being drawn');
+  assert.ok(/forceFeasible\(erIds\.length\)/.test(er),
+    'the budget is asked about the whole graph, so filtering cannot bring it within reach');
+
+  // and the chips have to reach the layout at all
+  const af = src.slice(src.indexOf('function applyFilter('), src.indexOf('\n}', src.indexOf('function applyFilter(')));
+  assert.ok(/erLaidOut = false/.test(af), 'a chip change does not invalidate the layout');
+  assert.ok(/statRefresh\(\)/.test(af), 'the counts do not follow the filter');
+});
+
+test('the force layout carries the structure instead of drawing a ring', () => {
+  // Measured, not argued: on a 728-node graph the old spring model put **100% of the boxes on its
+  // own clamp radius** - a circle - and the mean edge came out as long as the distance between two
+  // nodes picked at random. A drawing that says nothing about what is connected to what.
+  //
+  // The replacement is Fruchterman-Reingold, whose two forces are derived from one ideal distance
+  // rather than from three constants tuned at about fifty nodes.
+  const src = read('apps/crm/graphview.js');
+  const s = src.slice(src.indexOf('function settle('), src.indexOf('\n}', src.indexOf('function settle(')));
+  assert.ok(!/maxR/.test(s), 'the radius clamp is back, and it is what made the layout a circle');
+  assert.ok(/Math\.sqrt\(area \/ n\)/.test(s), 'the ideal distance is not derived from the area');
+  assert.ok(/Float64Array/.test(s), 'the O(n^2) loop is back on string-keyed objects');
+  assert.ok(/t -= cool/.test(s), 'nothing cools the displacement, so it never settles');
+  // it lays out what it is given, and only that
+  assert.ok(/function settle\(list, edges\)/.test(src), 'settle no longer takes the set to lay out');
+  assert.ok(!/\bnodesA\b/.test(s) && !/\bedgesA\b/.test(s), 'settle still reaches for the whole graph');
+});
+
+test('the layout is reproducible: the same set comes out the same way', () => {
+  // The starting ring used Math.random(), so switching a chip off and back on rearranged a diagram
+  // the reader had already learnt. Hashed per id instead - which also makes the PDF reproducible.
+  const src = read('apps/crm/graphview.js');
+  const seed = src.slice(src.indexOf('function seedRing('), src.indexOf('\n}', src.indexOf('function seedRing(')));
+  assert.ok(!/Math\.random/.test(seed), 'the ring is seeded randomly, so the same filter draws differently');
+  const { jitter } = load([sliceFn('apps/crm/graphview.js', 'jitter')], { Math });
+  assert.equal(jitter('ns.alpha', 'x'), jitter('ns.alpha', 'x'), 'the scatter is not a function of the id');
+  assert.notEqual(jitter('ns.alpha', 'x'), jitter('ns.alpha', 'y'), 'both axes get the same offset');
+  assert.notEqual(jitter('ns.alpha', 'x'), jitter('ns.beta', 'x'), 'two nodes get the same offset');
+  for (const id of ['a', 'ns.some.long.name', 'wf:12', 'conn:c3']) {
+    assert.ok(Math.abs(jitter(id, 'x')) <= 20, `${id} is scattered outside the ring's own width`);
+  }
+});
+
+test('a status line counts what is on screen, on both sides of the window', () => {
+  // A line reading 900 nodes over a diagram drawing 200 is the same defect as a diagram that does
+  // not shrink when filtered: a number that is not about what is being looked at. And it is counted
+  // from the graph, never from the layout arrays - those are filled later, which is why the schema
+  // side alone reported «0 of 90 modules» while the call graph was right.
+  const src = read('apps/crm/graphview.js');
+  const sc = src.slice(src.indexOf('function statCounts('), src.indexOf('\n}', src.indexOf('function statCounts(')));
+  assert.ok(!/\bnodesA\b/.test(sc), 'the counts read layout state that is empty when the line is first written');
+  assert.ok(/passKind/.test(sc), 'the counts ignore the chips');
+
+  const N = {
+    a: { id: 'a', name: 'a', category: 'standalone', calls: ['b'], called_by: [], rest: false, dead_suspect: false, unresolved: [] },
+    b: { id: 'b', name: 'b', category: 'standalone', calls: [], called_by: ['a'], rest: false, dead_suspect: false, unresolved: [] },
+    c: { id: 'c', name: 'c', category: 'connections', calls: [], called_by: [], rest: false, dead_suspect: false, unresolved: [] },
+  };
+  const hiddenKinds = new Set(), onlyConds = new Set();
+  const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds, Set, Object };
+  const { statCounts } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
+                               sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
+                               sliceFn('apps/crm/graphview.js', 'passKind'),
+                               sliceFn('apps/crm/graphview.js', 'statCounts')], ctx);
+  assert.deepEqual([statCounts(null).n, statCounts(null).e], [3, 1], 'the unfiltered counts are wrong');
+  hiddenKinds.add('connections');
+  assert.deepEqual([statCounts(null).n, statCounts(null).e], [2, 1], 'switching a kind off does not change the count');
+  hiddenKinds.add('standalone');
+  assert.deepEqual([statCounts(null).n, statCounts(null).e], [0, 0], 'an edge survives both its ends being hidden');
+});
+
+test('Relations is the third projection of the focus, not a catalogue beside it', () => {
+  // Reported: selecting an item in Explorer and clicking Relations showed the whole table, so the
+  // selection looked as though it had done nothing. Explorer and the diagram had shared a focus for
+  // a long time; the table never joined them.
+  const N = { a: {}, b: {}, c: {} };
+  const ctx = { N, curFocus: 'a', egoSet: new Set(['a', 'b']), scopeAll: false, relFilter: 'all', relQ: '' };
+  const { relPass, relScoped } = load([sliceConst('apps/crm/graphview.js', 'relScoped'),
+                                       sliceFn('apps/crm/graphview.js', 'relPass')],
+    Object.assign(ctx, { passKind: () => true, Set }));
+  assert.ok(relScoped(), 'a focus with a neighbourhood does not scope the table');
+  assert.equal(relPass({ call: true, from: 'a', to: 'b' }), true, 'a call inside the neighbourhood is dropped');
+  assert.equal(relPass({ call: true, from: 'a', to: 'c' }), false, 'a call leaving the neighbourhood is kept');
+  // a related list with no child module is still about its parent
+  assert.equal(relPass({ parent: 'b', child: null, via: '', api: '', label: '' }), true,
+    'an absent end is read as being outside the neighbourhood');
+  assert.equal(relPass({ parent: 'c', child: null, via: '', api: '', label: '' }), false,
+    'a relation outside the neighbourhood is kept');
+
+  // and the way out is the control the diagram already uses, not a second one
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const rr = src.slice(src.indexOf('function relRender('), src.indexOf('\n}', src.indexOf('function relRender(')));
+  assert.ok(/id="relall"/.test(rr), 'the scoped table offers no way to widen');
+  assert.ok(/relall'\)[\s\S]{0,60}setScope\(true\)/.test(rr), 'show all does not go through the shared scope');
+});
+
+test('the diagram lends its layout budget to nobody, and says so when it declines', () => {
+  // «show all» beside the row count did nothing on a large org: setScope refused before setting the
+  // state because the *diagram* could not lay that many out - a table pays no such cost. The limit
+  // belongs where the cost is, and the diagram re-asserts it for itself rather than blocking a view
+  // that was never going to be slow.
+  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const ss = src.slice(src.indexOf('function setScope('), src.indexOf('\n}', src.indexOf('function setScope(')));
+  assert.ok(/curView === 'er' && !forceFeasible/.test(ss), 'the table is refused a scope it can afford');
+  const es = src.slice(src.indexOf('function erShow('), src.indexOf('\n}', src.indexOf('function erShow(')));
+  assert.ok(/scopeAll[\s\S]{0,120}forceFeasible[\s\S]{0,160}tooWideToDraw/.test(es),
+    'the diagram draws a scope it cannot lay out, or drops it without saying so');
+  // one sentence, one function - it is stated in two places and must not be written twice
+  assert.equal((src.match(/too many to lay out all at once/g) || []).length, 1,
+    'the refusal is worded in more than one place');
+});
+
+test('the functions drawing has one name, and the code does not write the old one back', () => {
+  // Renamed to «Graph», and it stayed «Call graph» because the markup said one thing and this line
+  // wrote the other over it on every open - the trap this repository already records about labels
+  // that live in the markup and are rebuilt by the code that updates state. It reached the user
+  // twice, which is the failure.
+  const js = read('apps/crm/graphview.js');
+  assert.ok(/\$\('ertab'\)\.textContent = _schema \? 'ER diagram' : 'Graph'/.test(js),
+    'the tab is still labelled Call graph from code');
+  // and nowhere a control is named may the old name survive - a third name is worse than either
+  for (const f of ['apps/crm/graphview.html', 'apps/crm/sidepanel.html', 'apps/crm/sidepanel.js',
+                   'apps/crm/product-help.js', 'apps/crm/graphview.js']) {
+    const named = read(f).split('\n')
+      .filter((l) => !/^\s*(\/\/|\*)/.test(l))
+      .filter((l) => /aria-label="Call graph"|title="Call graph|>Call graph<|'Call graph'|"Call graph"/.test(l));
+    assert.deepEqual(named, [], `${f} still names a control Call graph`);
+  }
 });

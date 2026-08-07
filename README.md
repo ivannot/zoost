@@ -204,7 +204,7 @@ lifted out of the panels and run in isolation, which proves the logic and not th
 2. On a Zoho CRM tab, click **+** in the panel. Zoost creates the workspace for that org.
 3. Click **Pull all** to mirror functions, modules, layouts, relations, workflows, schedules and connections.
 4. Optional: `git init` in the workspace folder to start versioning. Everything else works without it.
-5. Explore: open a function, follow its links, open the **Call graph**, run **Health** (♥), or **Export**.
+5. Explore: open a function, follow its links, open the **Graph**, run **Health** (♥), or **Export**.
 6. (Optional) **Settings → AI assistant** to set up the assistant (see below).
 
 ---
@@ -271,7 +271,7 @@ offer zero-retention.
   four-month-old chapter looking as current as the rest. A section whose data is behind is **unticked
   by default** in the export dialog with the reason and the date - tick it back on and the report says
   so. Both reports state the per-area dates whether or not anything is behind.
-- **Pull · Call graph · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
+- **Pull · Graph · Functions page ↗ · ↻** (refresh), plus **Find** (name or in-file full-text),
   name toggle (internal/display), a **Type / Kind / Status** filter, and (Functions) a **Sort**
   dropdown - name (grouped by namespace) or lines / API calls / size / last modified, which sorts
   flat - plus a **↑/↓** button for the direction.

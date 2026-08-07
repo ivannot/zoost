@@ -26,10 +26,17 @@ const label = (n) => (nameMode === 'internal'
 // shrug - and this window exists to answer what is there, not how much of it.
 const ENTITY_WORD = { workflows: 'workflow', schedules: 'schedule', connections: 'connection' };
 function entityBreakdown() {
-  const c = {};
-  Object.values(N).forEach((n) => { const k = ENTITY_WORD[n.category] || 'function'; c[k] = (c[k] || 0) + 1; });
-  return ['function', 'workflow', 'schedule', 'connection']
-    .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${k}${c[k] === 1 ? '' : 's'}`).join(' \u00b7 ');
+  const c = {}, all = {};
+  Object.values(N).forEach((n) => {
+    const k = ENTITY_WORD[n.category] || 'function';
+    all[k] = (all[k] || 0) + 1;
+    if (passKind(n)) c[k] = (c[k] || 0) + 1;
+  });
+  return ['function', 'workflow', 'schedule', 'connection'].filter((k) => all[k]).map((k) => {
+    const shown = c[k] || 0;
+    const of = shown !== all[k] ? ` <span style="color:#94a3b8">of ${all[k]}</span>` : '';
+    return `<b>${shown}</b>${of} ${k}${all[k] === 1 ? '' : 's'}`;
+  }).join(' \u00b7 ');
 }
 const NOUN = () => (DATA.kind === 'schema'
   ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
@@ -59,12 +66,17 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
   // The boxed diagram is the same drawing in both cases, so it is the same tab - under the name the
-  // project already gives each one: "ER diagram" for modules and tables, "Call graph" for functions.
-  // Two names, never a third. `Relations` stays schema-only: the relation-first catalogue is about
-  // related-list API names, and a function graph has no equivalent to put in it.
+  // project already gives each one: "ER diagram" for modules and tables, "Graph" for functions.
+  // Two names, never a third.
+  //
+  // It was "Call graph" and it stayed "Call graph" through a rename, because the markup said Graph
+  // and this line wrote the old word back over it on every open - the exact trap this repository
+  // already records about labels that live in the markup and are rebuilt by the code that updates
+  // state. The label is written here because it genuinely varies with the subject; what it must not
+  // do is disagree with the button in the panel that opens it, which now says Graph too.
   {
     $('ertab').style.display = '';
-    $('ertab').textContent = _schema ? 'ER diagram' : 'Call graph';
+    $('ertab').textContent = _schema ? 'ER diagram' : 'Graph';
     $('reltab').style.display = ''; buildRelChips();
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
@@ -77,9 +89,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdMinus').onclick = () => setDepth(egoDepth - 1);
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
-  $('statline').innerHTML = _schema
-    ? `${DATA.focus ? `<b style=\"color:#d98e00\">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
-    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved`;
+  graphStat();
   const ws = DATA.workspace || {};
   // The name the user gave the workspace, if there is one, and never *instead of* the platform's:
   // a header showing only our own words would be one nobody could check against Zoho, which is the
@@ -90,7 +100,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // The box searches whatever this window is drawing, and it stopped being only functions the day
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
-  buildChips(); render(); initPositions(); wireSubject();
+  buildChips(); render(); initPositions(); wireSubject(); graphStat();
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
@@ -238,7 +248,10 @@ function pass(n, q) {
 // feature wearing the same control.
 function applyFilter() {
   render();
+  statRefresh();
   if (curView === 'rel') relRender();
+  // Not just a repaint: erLayout re-runs the force settle for the set that is left, so the diagram
+  // closes up around what survives instead of keeping the extent of the graph it no longer is.
   erLaidOut = false;
   if (curView === 'er') erShowMaybeHeavy();
 }
@@ -483,7 +496,19 @@ function buildRels() {
 const relSnippet = (r) => (r.call
   ? `${r.to}(${(r.params || []).map((p) => p.name).join(', ')});`
   : `zoho.crm.getRelatedRecords("${r.api}", "${r.parent}", recordId);`);
+// The neighbourhood the whole window is looking at, or null when nothing is focused. Explorer sets
+// it on every selection and the diagram follows it; Relations did not, so selecting an item and
+// switching to Relations landed on the whole catalogue and the click looked like it had done
+// nothing. Reported. It is one context with three projections, not two and a table.
+const relScoped = () => (curFocus && egoSet && !scopeAll ? egoSet : null);
 function relPass(r) {
+  const ego = relScoped();
+  if (ego) {
+    const ends = r.call ? [r.from, r.to] : [r.parent, r.child];
+    // A related list with no child module is still about its parent, so an absent end does not
+    // exclude the row - only an end that exists and sits outside the neighbourhood does.
+    if (!ends.every((x) => !x || ego.has(x))) return false;
+  }
   if (r.call) {
     // The chips are window-wide, so a call whose either end is filtered out is not a row here either.
     // Reported as «why can I not exclude the connections» - they could be excluded, in three views
@@ -506,7 +531,15 @@ function relRender() {
   if (!RELS.length) buildRels();
   const calls = DATA.kind !== 'schema';
   const rows = RELS.filter(relPass);
-  $('relcount').textContent = `${rows.length} of ${RELS.length} ${calls ? 'calls' : 'relations'}`;
+  // The scope is stated where it applies and carries its own way out - the same control the diagram
+  // uses, not a second one, because a state with two switches is a state that can disagree with
+  // itself. Without a focus there is nothing to say and the line stays a count.
+  const ego = relScoped();
+  const noun = calls ? 'calls' : 'relations';
+  $('relcount').innerHTML = ego
+    ? `${rows.length} of ${RELS.length} ${noun} · around <b>${esc(focusName(curFocus))}</b> · <a id="relall" role="button" tabindex="0" title="Show every row, and pause the focus in the diagram too">show all</a>`
+    : `${rows.length} of ${RELS.length} ${noun}`;
+  { const a = $('relall'); if (a) a.onclick = () => setScope(true); }
   if (!RELS.length) {
     $('relwrap').innerHTML = calls
       ? '<div class="empty">No calls between functions in this graph. A call is one Deluge function invoking another; a function that only talks to Zoho makes none.</div>'
@@ -693,10 +726,18 @@ wireAsideFold();
 // task that schedules it. One requestAnimationFrame is not enough either: that callback runs before
 // the frame it belongs to is painted, so blocking inside it blocks that very frame and nothing is
 // ever shown. Two gets one full paint in between.
-const SPIN_NODES = 60;   // ~80ms of layout: below this the two frames the overlay costs are more
-                         // than the work itself. It was 150, tuned on the force layout alone, and
-                         // on an org of 87 modules that meant it never appeared at all - reported
-                         // as «the spinner is gone». The boxed layout is the slower of the two.
+// Re-measured after settle() became Fruchterman-Reingold over typed arrays, which is about twenty
+// times faster than the spring model it replaced: 4ms at 50 nodes, 27 at 150, 75 at 300, 294 at the
+// 600 cap, against 53 / 359 / 1419 / 5854 before. A whole erShow at 352 nodes - layout, collision
+// passes, boxes and fit - comes to 266ms on this machine.
+//
+// So 60 now means a spinner over about five milliseconds of work, which is the flicker the number
+// exists to avoid. 200 keeps the same rule as before (show it when the work is around a third of a
+// second) with a margin for a machine slower than the one it was measured on. It was 150 once,
+// tuned on the force layout alone rather than on the whole path, and on an org of 87 modules it
+// never appeared at all - reported as «the spinner is gone», which is why this is derived from a
+// measurement of erShow and not of settle.
+const SPIN_NODES = 200;
 function runHeavy(host, label, work) {
   let ov = host.querySelector('.busy');
   if (!ov) { ov = document.createElement('div'); ov.className = 'busy'; host.appendChild(ov); }
@@ -736,8 +777,11 @@ function showView(v) {
 // and erLayout only runs when the layout is stale - so a second visit to the tab is instant and
 // must not flash anything.
 function erShowMaybeHeavy() {
-  if (!erLaidOut && nodesA.length >= SPIN_NODES) {
-    runHeavy($('v-er'), `Laying out ${erVisibleIds().length} ${NOUN().n}\u2026`, erShow);
+  // Counted on what is about to be laid out. It used to ask how big the graph was, so filtering a
+  // thousand nodes down to twenty still flashed a spinner over work that takes a few milliseconds.
+  const n = erVisibleIds().length;
+  if (!erLaidOut && n >= SPIN_NODES) {
+    runHeavy($('v-er'), `Laying out ${n} ${NOUN().n}\u2026`, erShow);
   } else requestAnimationFrame(erShow);
 }
 
@@ -761,7 +805,13 @@ function updateProjectableTabs() {
 }
 
 // ---------------- Layout state, shared by the boxed diagram ----------------
-let nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {}, laidOut = false;
+// laidOutKey is the *set* the force positions were computed for, not a boolean. It was a boolean,
+// and that is the bug this replaces: switching a chip off removed the boxes and left every survivor
+// exactly where it was, so a graph that had just lost half its nodes kept the extent of the whole
+// one and gained nothing but holes. Reported. A filter is not a visibility toggle, it says which
+// graph we are looking at - so it changes the geometry, and keying on the set means it re-runs when
+// the set changes and never when it has not.
+let nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {}, laidOutKey = '';
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
 let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-poster mode)
 
@@ -771,7 +821,14 @@ let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-
 // and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
 // this single number if you ever profile one.
 const FORCE_MAX_NODES = 600;
-function forceFeasible() { return nodesA.length <= FORCE_MAX_NODES; }
+// The count that matters is what is about to be laid out, never how big the org is: switching a
+// category off can bring a graph that was refused under the budget, and refusing it anyway would
+// mean the filters cannot buy what they exist to buy.
+function forceFeasible(n) { return (n == null ? nodesA.length : n) <= FORCE_MAX_NODES; }
+// What "everything" would cost with the chips as they stand - used before scopeAll is applied, so
+// it cannot ask erVisibleIds().
+function visibleKindCount() { return nodesA.filter((id) => N[id] && passKind(N[id])).length; }
+const edgesAmong = (list) => { const s = new Set(list); return edgesA.filter(([a, b]) => s.has(a) && s.has(b)); };
 
 // The chips are the colour key now: each carries its hue and its word, they sit in the header, and
 // they are on screen in every view - which the legend never was, since it lived inside the canvas.
@@ -781,46 +838,99 @@ function forceFeasible() { return nodesA.length <= FORCE_MAX_NODES; }
 // actually needed from it was only ever this.
 function initPositions() {
   nodesA = Object.keys(N);
-  const idx = {}; nodesA.forEach((id, i) => (idx[id] = i));
   const es = new Set();
   Object.values(N).forEach((n) => n.calls.forEach((c) => es.add(n.id + '\u0000' + c)));
   edgesA = [...es].map((e) => { const [a, b] = e.split('\u0000'); return [a, b]; });
-  const R = Math.min(400, 60 + nodesA.length * 2);
-  nodesA.forEach((id, i) => {
-    const a = (i / nodesA.length) * Math.PI * 2;
-    posX[id] = Math.cos(a) * R + (Math.random() - 0.5) * 40;
-    posY[id] = Math.sin(a) * R + (Math.random() - 0.5) * 40;
+  seedRing(nodesA);
+}
+
+// The starting ring, sized for the list it is given rather than for the whole graph - which is what
+// makes a filtered layout compact instead of a sparse copy of the unfiltered one.
+//
+// The scatter is a hash of the id, not Math.random(): the same set has to come out the same way
+// every time, or switching a chip off and back on would rearrange a diagram the reader had already
+// learnt to read. It also makes the PDF reproducible, which is worth having on its own.
+function seedRing(list) {
+  const R = Math.min(400, 60 + list.length * 2);
+  list.forEach((id, i) => {
+    const a = (i / list.length) * Math.PI * 2;
+    posX[id] = Math.cos(a) * R + jitter(id, 'x');
+    posY[id] = Math.sin(a) * R + jitter(id, 'y');
     vx[id] = 0; vy[id] = 0;
   });
 }
+function jitter(id, salt) {
+  let h = 2166136261; const s = id + salt;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) / 4294967295 - 0.5) * 40;
+}
 
-function settle() {
-  const k = 5200, maxR = 120 + nodesA.length * 3, maxV = 40;
-  let a = 0.5;
-  for (let it = 0; it < 420; it++) {
-    for (let i = 0; i < nodesA.length; i++) {
-      const A = nodesA[i]; let fx = 0, fy = 0;
-      for (let j = 0; j < nodesA.length; j++) {
-        if (i === j) continue; const B = nodesA[j];
-        let dx = posX[A] - posX[B], dy = posY[A] - posY[B]; let d2 = dx * dx + dy * dy + 0.01;
-        const f = k / d2; fx += dx * f; fy += dy * f;
-      }
-      vx[A] = (vx[A] + fx) * 0.85; vy[A] = (vy[A] + fy) * 0.85;
-    }
-    for (const [A, B] of edgesA) {
-      let dx = posX[B] - posX[A], dy = posY[B] - posY[A]; const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = (d - 90) * 0.02; const ux = dx / d, uy = dy / d;
-      vx[A] += ux * f; vy[A] += uy * f; vx[B] -= ux * f; vy[B] -= uy * f;
-    }
-    for (const id of nodesA) {
-      vx[id] += -posX[id] * 0.006; vy[id] += -posY[id] * 0.006;
-      vx[id] = Math.max(-maxV, Math.min(maxV, vx[id])); vy[id] = Math.max(-maxV, Math.min(maxV, vy[id]));
-      posX[id] += vx[id] * a; posY[id] += vy[id] * a;
-      const d = Math.hypot(posX[id], posY[id]);
-      if (d > maxR) { const s = maxR / d; posX[id] *= s; posY[id] *= s; vx[id] *= 0.5; vy[id] *= 0.5; }
-    }
-    a *= 0.986;
+function settle(list, edges) {
+  // Fruchterman-Reingold. The ideal edge length is derived from the area the drawing has to fill, so
+  // the same code behaves at twenty nodes and at five hundred.
+  //
+  // What was here before was a hand-tuned spring model with three constants - a repulsion of 5200,
+  // a rest length of 90, and a radius clamp of 120 + 3n. It looked right at about fifty nodes, which
+  // is where it was tuned, and above that repulsion overwhelmed attraction and the clamp caught
+  // every node on the way out: measured on a 700-node graph, **100% of the boxes ended up on the
+  // clamp radius**, which is to say the diagram was a circle of boxes - and the mean edge came out
+  // as long as the distance between two nodes picked at random, which is a drawing that carries no
+  // information at all. That is why filtering it did not make it more readable: there was no
+  // structure in it to reveal.
+  //
+  // Nothing here is tuned by eye. The two forces are the published ones and the only free parameter
+  // is the area, which cancels out downstream - erLayout normalises the extent before drawing.
+  const n = list.length;
+  if (n < 2) return;
+  // Typed arrays, not the posX/posY objects. This is the one O(n^2) loop in the window and it runs
+  // on the main thread behind a spinner, so the cost of a string key lookup is paid n^2 * iterations
+  // times: measured, moving the inner loop off the objects took a 352-node layout from 2.2s to a
+  // fraction of it. The positions are read in and written back once.
+  const X = new Float64Array(n), Y = new Float64Array(n), DX = new Float64Array(n), DY = new Float64Array(n);
+  const idx = new Map();
+  for (let i = 0; i < n; i++) { idx.set(list[i], i); X[i] = posX[list[i]] || 0; Y[i] = posY[list[i]] || 0; }
+  const E = [];
+  for (const [a, b] of edges) {
+    const i = idx.get(a), j = idx.get(b);
+    if (i !== undefined && j !== undefined && i !== j) E.push(i, j);
   }
+  const area = 1000 * 1000;
+  const L = Math.sqrt(area / n);          // ideal distance between two nodes
+  const iter = 300;
+  let t = Math.sqrt(area) / 8;            // maximum displacement, cooled linearly to zero
+  const cool = t / (iter + 1);
+  for (let it = 0; it < iter; it++) {
+    DX.fill(0); DY.fill(0);
+    for (let i = 0; i < n; i++) {
+      const xi = X[i], yi = Y[i];
+      let ax = 0, ay = 0;
+      for (let j = i + 1; j < n; j++) {
+        let ex = xi - X[j], ey = yi - Y[j];
+        let d2 = ex * ex + ey * ey;
+        // Two nodes on the same point have no direction to push apart in, so give them one that
+        // depends on which they are - a random nudge would make the layout different every time.
+        if (d2 < 1e-4) { ex = jitter(list[i] + list[j], 'r'); ey = jitter(list[j] + list[i], 'r'); d2 = ex * ex + ey * ey || 1; }
+        const f = (L * L) / d2;
+        ax += ex * f; ay += ey * f; DX[j] -= ex * f; DY[j] -= ey * f;
+      }
+      DX[i] += ax; DY[i] += ay;
+    }
+    for (let e = 0; e < E.length; e += 2) {
+      const i = E[e], j = E[e + 1];
+      const ex = X[i] - X[j], ey = Y[i] - Y[j];
+      const d = Math.sqrt(ex * ex + ey * ey) || 0.01;
+      const f = d / L;
+      DX[i] -= ex * f; DY[i] -= ey * f; DX[j] += ex * f; DY[j] += ey * f;
+    }
+    for (let i = 0; i < n; i++) {
+      const d = Math.sqrt(DX[i] * DX[i] + DY[i] * DY[i]);
+      if (!d) continue;
+      const s = (d < t ? d : t) / d;
+      X[i] += DX[i] * s; Y[i] += DY[i] * s;
+    }
+    t -= cool;
+  }
+  for (let i = 0; i < n; i++) { posX[list[i]] = X[i]; posY[list[i]] = Y[i]; vx[list[i]] = 0; vy[list[i]] = 0; }
 }
 
 function bfsEgo() {
@@ -867,14 +977,25 @@ function updateScopeUI() {
   // The reset appears only when a focus is active (whole-graph view already IS the reset target).
   { const b = $('erReset'); if (b) b.style.display = curFocus ? '' : 'none'; }
 }
+// One sentence, one function, two callers - the setter that refuses, and the diagram that puts
+// itself back when a scope widened elsewhere turns out to be more than it can draw.
+function tooWideToDraw(wide) {
+  const filtered = wide < nodesA.length;
+  $('statline').innerHTML = `<b>${wide} ${NOUN().n}</b>${filtered ? ` of ${nodesA.length}` : ''} - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(focusName(curFocus))}</b>; switch a category off above, or widen with depth instead.`;
+}
 function setScope(all) {
   if (!curFocus) return;
   // "All modules" triggers the whole-org free layout. Above the budget we don't attempt it - we
   // stay focused and say why, rather than freezing on the way to a poster nobody can wait for.
-  if (all && !forceFeasible()) {
-    $('statline').innerHTML = `<b>${nodesA.length} ${NOUN().n}</b> - too many to lay out all at once. Staying focused on <b style="color:#d98e00">${esc(focusName(curFocus))}</b>; widen with depth instead.`;
-    return;
-  }
+  // The budget is asked about what the chips leave standing, not about the org: switching a
+  // category off is now a way to bring the whole graph within reach, and it says so.
+  //
+  // And it is the *diagram's* budget, not the window's. Relations is a table: widening it costs
+  // nothing to lay out, so refusing there would be borrowing one view's limit to block another -
+  // which is what made «show all» beside the row count do nothing at all. The diagram re-asserts
+  // the limit for itself when it is the view being drawn.
+  const wide = visibleKindCount();
+  if (all && curView === 'er' && !forceFeasible(wide)) { tooWideToDraw(wide); return; }
   scopeAll = !!all;
   // Widening to everything lays the whole org out again, which is the most expensive thing this
   // window does - and it did it in the click handler, so the interface sat there looking hung and
@@ -883,29 +1004,59 @@ function setScope(all) {
   // being computed is the stale-projection problem in miniature.
   const work = () => {
     bfsEgo(); updateDepthUI(); updateScopeUI(); egoStat(); erLaidOut = false;
-    if (curView === 'er') erShow();
+    if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
     };
-  const heavy = nodesA.length >= SPIN_NODES && curView === 'er';
+  const heavy = wide >= SPIN_NODES && curView === 'er';
   if (!heavy) return work();
   $('erboxes').innerHTML = '';
   runHeavy($('v-er'),
     all ? `Laying out ${NOUN().all.toLowerCase()}\u2026` : `Laying out around ${focusName(curFocus)}\u2026`, work);
 }
 const focusName = (id) => (id && N[id] ? label(N[id]) : (id || ''));
+// The counts are of what the chips leave standing, with the full figure beside them when they
+// differ. A status line reading 900 nodes over a diagram drawing 200 is the same defect as a
+// diagram that does not shrink when you filter it: a number that is not about what is on screen.
+// Counted from the graph, never from nodesA/edgesA - those are layout state, and this line is
+// written once before initPositions() has filled them. It reported «0 of 90 modules» on the schema
+// side and nowhere else, because the call-graph branch happens to count from N already.
+function statCounts(set) {
+  const inSet = (id) => !set || set.has(id);
+  const nodes = Object.keys(N).filter((id) => inSet(id) && passKind(N[id]));
+  const keep = new Set(nodes);
+  let e = 0;
+  Object.values(N).forEach((n) => { if (!keep.has(n.id)) return; n.calls.forEach((c) => { if (keep.has(c)) e++; }); });
+  return { n: nodes.length, e };
+}
+function statOf(set, allN, allE) {
+  const c = statCounts(set);
+  const nf = c.n !== allN ? ` <span style="color:#94a3b8">of ${allN}</span>` : '';
+  const ef = c.e !== allE ? ` <span style="color:#94a3b8">of ${allE}</span>` : '';
+  return `<b>${c.n}</b>${nf} ${NOUN().n} \u00b7 <b>${c.e}</b>${ef} ${NOUN().e}`;
+}
+// The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it
+// back: it was written once at startup and then never again, so filtering changed the drawing
+// underneath a summary of the unfiltered graph.
+function graphStat() {
+  $('statline').innerHTML = DATA.kind === 'schema'
+    ? `${DATA.focus ? `<b style="color:#d98e00">Focus: ${esc(focusName(DATA.focus))}</b> · depth ${DATA.depth} · ` : ''}${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`
+    : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved`;
+}
+// Whichever of the two is the right one for the state we are in.
+function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
-    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 <b>${DATA.counts.nodes}</b> ${NOUN().n} \u00b7 <b>${DATA.counts.edges}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(focusName(curFocus))}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
+    $('statline').innerHTML = `<b>${NOUN().all}</b> \u00b7 ${statOf(null, DATA.counts.nodes, DATA.counts.edges)} \u00b7 <span style=\"color:#94a3b8\">focus \u00ab${esc(focusName(curFocus))}\u00bb paused - Save PDF prints the whole diagram on one page</span>`;
     return;
   }
-  const nn = egoSet ? egoSet.size : DATA.counts.nodes;
-  const ne = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 <b>${nn}</b> ${NOUN().n} \u00b7 <b>${ne}</b> ${NOUN().e} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
+  const allN = egoSet ? egoSet.size : DATA.counts.nodes;
+  const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
+  $('statline').innerHTML = `<b style=\"color:#d98e00\">Focus: ${esc(focusName(curFocus))}</b> \u00b7 depth ${egoDepth}/${maxEgoDepth} \u00b7 ${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>`;
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
   updateDepthUI(); bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
@@ -930,7 +1081,7 @@ function setFocus(id) {
     return;
   }
   bfsEgo(); egoStat(); erLaidOut = false;
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 function clearFocus() {
   // Back to the pristine whole-graph view - the state you get opening via "Schema".
@@ -938,7 +1089,7 @@ function clearFocus() {
   $('erdepth').style.display = 'none';
   updateScopeUI(); erLaidOut = false;
   $('statline').innerHTML = `<b>${DATA.counts.nodes}</b> ${NOUN().n} · <b>${DATA.counts.edges}</b> ${NOUN().e} · <b>${DATA.counts.dead_suspects}</b> ${NOUN().dead}`;
-  if (curView === 'er') erShow();
+  if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 
 // `nameMode` decides what a node is called - the display label or the internal api_name - and it
@@ -948,7 +1099,7 @@ $('nameToggle').onclick = () => {
   nameMode = nameMode === 'display' ? 'internal' : 'display';
   $('nameToggle').textContent = 'Name: ' + nameMode;
   $('nameToggle').classList.toggle('on', nameMode === 'internal');
-  render(); if (sel) select(sel, true); erLaidOut = false; if (curView === 'er') erShow();
+  render(); if (sel) select(sel, true); erLaidOut = false; if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 };
 
 // ---------------- ER diagram (entities + FK arrows) ----------------
@@ -1076,9 +1227,19 @@ function erLayout() {
   } else {
     // Free layout needs the force positions. Concentric focus mode above does NOT (it uses rings),
     // so settle() is skipped there - that is the common case and it stays cheap at any org size.
-    // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their initial
-    // circular positions (from initPositions) and the diagram still renders instead of freezing.
-    if (!laidOut && forceFeasible()) { settle(); laidOut = true; }
+    // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their ring
+    // positions and the diagram still renders instead of freezing.
+    //
+    // Both are computed for erIds - the set on screen - and re-computed whenever that set changes.
+    // Laying out the whole graph and then drawing part of it is what made the filters feel inert:
+    // the boxes went away and the diagram stayed exactly as large, which is the opposite of what
+    // switching a category off is for.
+    const key = erIds.join('\n');
+    if (laidOutKey !== key) {
+      seedRing(erIds);
+      if (forceFeasible(erIds.length)) settle(erIds, edgesAmong(erIds));
+      laidOutKey = key;
+    }
     // settle() produces positions whose extent depends on how many nodes it was given, so a constant
     // multiplier means something different at 20 nodes and at 300. That is why «Scope: everything»
     // with «Emphasis: edges» came out at 19% zoom - a diagram laid out correctly and drawn too small
@@ -1295,6 +1456,13 @@ function erFit() {
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
 }
 function erShow() {
+  // A scope widened from Relations, where it is free, may be more than the diagram can lay out.
+  // Say so and go back to the focus rather than drawing a ring of boxes nobody can read - the
+  // fallback is stated, never silent.
+  if (scopeAll && curFocus && !forceFeasible(visibleKindCount())) {
+    scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
+    tooWideToDraw(visibleKindCount());
+  }
   if (!erLaidOut) { erLayout(); erLaidOut = true; }
   erRender(); erFit(); erUpdateControlVis();
   const h = document.querySelector('#v-er .hint2');
@@ -1432,7 +1600,7 @@ window.addEventListener('afterprint', () => {
 // Descriptive PDF filename (browsers use document.title as the print filename)
 function pdfTitle() {
   const ws = DATA.workspace || {};
-  const kind = DATA.kind === 'schema' ? (curView === 'er' ? 'schema-ER' : 'schema') : (curView === 'er' ? 'call-graph' : 'functions');
+  const kind = DATA.kind === 'schema' ? (curView === 'er' ? 'schema-ER' : 'schema') : (curView === 'er' ? 'graph' : 'functions');
   const d = new Date().toISOString().slice(0, 10);
   return `Zoost-${kind}-${ws.instance || 'unknown'}-org${ws.org || 'x'}-${d}`;
 }

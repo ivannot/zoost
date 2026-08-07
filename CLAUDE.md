@@ -524,8 +524,11 @@ stated one.
 
 **One window, two names, and never a third.** The same diagram window was reached as `Graph ↗`,
 `Schema ↗`, `ER ↗` and `Open ER` — four names the author himself could not keep apart. Two survive,
-because there are genuinely two drawings: **Call graph** for functions, **ER diagram** for modules and
-for tables. Anything that opens it focused on one item uses the same name and says *what* it is opened
+because there are genuinely two drawings: **Graph** for functions, **ER diagram** for modules and
+for tables. It was «Call graph» and the rename had to be asked for **twice**, because the first pass
+changed the markup and `$('ertab').textContent = … : 'Call graph'` wrote the old word back over it on
+every open — the trap already recorded here about a label that lives in the markup and is rebuilt by
+the code that updates state, hit again in the one place where the label genuinely does vary. Anything that opens it focused on one item uses the same name and says *what* it is opened
 on in the tooltip. The dead `graph:` field in the `TABS` registry, which nothing read and which kept
 two retired names alive, is gone.
 
@@ -721,6 +724,57 @@ A control that does nothing in the active branch must be hidden, not shown and i
 
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
+
+**A filter says which graph you are looking at, so it changes the geometry — it is not a visibility
+switch.** Reported: switching a category off in a large graph removed a big share of the boxes and
+the drawing stayed the same size, so nothing became more readable. The force positions were computed
+once for every node and latched behind a boolean, and filtering then drew a subset of a layout
+computed for a set it no longer was — every survivor kept the place a few hundred invisible
+neighbours had pushed it into. `laidOutKey` is now the **set** the positions belong to, so the layout
+re-runs when the set changes and never when it has not, and the budget (`forceFeasible`) is asked
+about what is about to be drawn rather than about the org — which means switching a category off can
+bring a graph that was refused within reach, and the message says so. The starting ring is seeded
+from a **hash of each id** rather than `Math.random()`, so the same filter always produces the same
+drawing and the PDF is reproducible.
+
+**And the layout underneath it was a circle by construction, which no amount of reading the code
+would have told me.** The spring model here — repulsion 5200, rest length 90, a radius clamp of
+`120 + 3n` — was tuned at about fifty nodes. Above that repulsion overwhelms attraction and the clamp
+collects everything on its own radius: measured on a 728-node graph, **100% of the boxes sat on the
+clamp**, and the mean edge came out as long as the distance between two nodes picked at random. A
+drawing that says nothing about what is connected to what, and the real reason filtering it changed
+nothing. It is **Fruchterman-Reingold** now — two forces derived from one ideal distance
+`sqrt(area/n)`, cooled linearly — over **typed arrays**, which is where the O(n²) loop's cost
+actually was: 4ms at 50 nodes, 27 at 150, 75 at 300, 294 at the 600 cap, against 53 / 359 / 1419 /
+5854 before, with the structure ratio (mean edge length over mean distance between random pairs)
+going from 0.98 to 0.31. `SPIN_NODES` was re-derived from that curve — 60 meant a spinner over five
+milliseconds of work — and the whole engine was ported to Analytics, where the same `settle()` sat
+byte-identical.
+
+**The lesson is about method, not about force layouts.** Three of my own measurements said the fix
+worked and did not discriminate at all — extent, zoom gain, edge length — because the normalisation
+downstream rescales whatever it is given and my first synthetic graphs were random expanders with no
+structure for a layout to reveal. **A metric that cannot fail is not evidence.** What settled it was
+asking the drawing a question with a yes/no answer: *are all the nodes the same distance from the
+centre?*
+
+**A view's budget may not block a view that does not pay it.** «Show all» beside the Relations row
+count did nothing on a large org, because `setScope` refused before setting the state — the *diagram*
+could not lay that many out, and a table costs nothing to widen. The limit belongs where the cost is:
+the setter refuses only while the diagram is the view on screen, and the diagram re-asserts it for
+itself when it is opened, putting the scope back and **saying so** rather than drawing a ring nobody
+can read. One sentence, one function (`tooWideToDraw`), two callers.
+
+**Explorer, the diagram and Relations are three projections of one context — Relations was the one
+that never joined.** Selecting an item and switching to Relations showed the whole catalogue, so the
+selection looked as though it had done nothing. It scopes to the focus neighbourhood now, states it
+above the table, and offers the shared scope control as the way out rather than a second switch of
+its own.
+
+**A count in a status line is about what is on screen, and it must not be read off layout state.**
+`nodesA`/`edgesA` are filled by `initPositions()`, which runs *after* the line is first written — so
+counting from them reported «0 of 90 modules» on the schema side while the call graph, which counts
+from `N`, was right. The one-of-a-set miss again: the same helper, two callers, one of them wrong.
 
 **Analytics takes the workspace from the URL, not from a list.** `/workspace/{id}` carries it, so
 there is nothing to scrape and nothing to be fragile about — and the workspace-list endpoint is not

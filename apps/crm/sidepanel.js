@@ -842,7 +842,7 @@ async function showCallers(path) {
     // draw - a function nobody calls and that calls nothing is a single box and no arrows.
     const drawable = callers.length || (node.calls || []).length;
     if (drawable) {
-      html += `<div class="laybar">Calls from this function \u00b7 depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Call graph" title="Call graph - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
+      html += `<div class="laybar">Calls from this function \u00b7 depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Graph" title="Graph - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
     }
     box.innerHTML = html;
     box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file, true)));
@@ -2286,10 +2286,10 @@ function setMode(mode) {
   // Two names, because two different drawings: functions are a call graph, modules are an ER model.
   // Everything else that opens this window uses one of these two and no third word - «Schema»,
   // «Graph ↗» and «Open ER» were four names for one thing and the author could not keep them apart.
-  $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Call graph');
+  $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Graph');
   $('graph').title = mode === 'modules'
     ? 'ER diagram - modules and the relations between them, in its own window'
-    : 'Call graph - what fires each function, what it calls, and what it reaches, in its own window';
+    : 'Graph - what fires each function, what it calls, and what it reaches, in its own window';
   $('nameToggle').textContent = 'Name: ' + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
@@ -2743,7 +2743,7 @@ async function buildSchemaGraph(focusApi, depth) {
 async function openCallFocus(id, depth) {
   try {
     if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
-    setStatus(`Building the call graph for ${id}\u2026`, 'busy');
+    setStatus(`Building the graph for ${id}\u2026`, 'busy');
     const g = await callGraphWithContext();
     if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
@@ -2752,8 +2752,8 @@ async function openCallFocus(id, depth) {
     await chrome.storage.local.set({ graphData: gg });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     const n = g.nodes[id];
-    setStatus(`Call graph of ${id} (depth ${gg.depth}): calls ${n.calls.length}, called by ${n.called_by.length}.`, 'ok');
-  } catch (e) { setStatus('Call graph error: ' + e.message, 'bad'); }
+    setStatus(`Graph of ${id} (depth ${gg.depth}): calls ${n.calls.length}, called by ${n.called_by.length}.`, 'ok');
+  } catch (e) { setStatus('Graph error: ' + e.message, 'bad'); }
 }
 async function openSchemaFocus(apiName, depth) {
   try {

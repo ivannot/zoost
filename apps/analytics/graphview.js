@@ -407,7 +407,12 @@ wireAsideFold();
 // task that schedules it. One requestAnimationFrame is not enough either: that callback runs before
 // the frame it belongs to is painted, so blocking inside it blocks that very frame and nothing is
 // ever shown. Two gets one full paint in between.
-const SPIN_NODES = 150;   // below this the layout is under ~350ms and a spinner would only flicker
+// Re-measured after settle() became Fruchterman-Reingold over typed arrays: 4ms at 50 nodes, 27 at
+// 150, 75 at 300, 294 at the 600 cap, against 53 / 359 / 1419 / 5854 before. 150 now means a spinner
+// over about twenty-five milliseconds of work, which is the flicker the number exists to avoid; 200
+// keeps the same rule - show it when the work is around a third of a second - with a margin for a
+// machine slower than the one it was measured on.
+const SPIN_NODES = 200;
 function runHeavy(host, label, work) {
   let ov = host.querySelector('.busy');
   if (!ov) { ov = document.createElement('div'); ov.className = 'busy'; host.appendChild(ov); }
@@ -435,11 +440,21 @@ document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
     if (!forceFeasible()) { showVisualTooBig(); }
     else {
       hideVisualTooBig();
-      // The first switch to Visual has to run the force layout, and that blocks. Measured on this
-      // machine: 53ms at 50 nodes, 359ms at 150, 1.4s at 300, 5.9s at 600 - which is the cap. Under
-      // SPIN_NODES it is quick enough that a spinner would only flicker, so it stays out of the way.
-      const heavy = !laidOut && nodesA.length >= SPIN_NODES;
-      const work = () => { resize(); if (!laidOut) { settle(); laidOut = true; } fitView(); draw(); };
+      // The first switch to Visual has to run the force layout, and that blocks. Since settle()
+      // became Fruchterman-Reingold over typed arrays it is about twenty times cheaper - 4ms at 50
+      // nodes, 27 at 150, 75 at 300, 294 at the 600 cap, against 53 / 359 / 1419 / 5854 before.
+      //
+      // It keys on the set, like the boxed diagram, and for a reason that only exists on this side:
+      // the two views lay out *different* sets into the same position arrays, so a boolean latch
+      // left the ER tab's filtered layout standing under a Visual that claims to draw everything.
+      // A key cannot get that wrong.
+      const key = nodesA.join('\n');
+      const heavy = laidOutKey !== key && nodesA.length >= SPIN_NODES;
+      const work = () => {
+        resize();
+        if (laidOutKey !== key) { seedRing(nodesA); settle(nodesA, edgesAmong(nodesA)); laidOutKey = key; }
+        fitView(); draw();
+      };
       if (heavy) runHeavy($('visual'), `Laying out ${nodesA.length} nodes\u2026`, work);
       else requestAnimationFrame(work);
     }
@@ -449,7 +464,8 @@ document.querySelectorAll('.tab').forEach((t) => t.onclick = () => {
 
 // ---------------- Visual (canvas force graph) ----------------
 let cv, ctx2d, W = 0, H = 0, nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {};
-let scale = 1, offX = 0, offY = 0, focusNode = null, subFocus = null, labelMode = 'hubs', laidOut = false;
+let laidOutKey = '';   // the set the force positions belong to, never a boolean - see settle()
+let scale = 1, offX = 0, offY = 0, focusNode = null, subFocus = null, labelMode = 'hubs';
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
 let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-poster mode)
 let dragging = false, lastX = 0, lastY = 0;
@@ -460,7 +476,8 @@ let dragging = false, lastX = 0, lastY = 0;
 // and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
 // this single number if you ever profile one.
 const FORCE_MAX_NODES = 600;
-function forceFeasible() { return nodesA.length <= FORCE_MAX_NODES; }
+function forceFeasible(n) { return (n == null ? nodesA.length : n) <= FORCE_MAX_NODES; }
+const edgesAmong = (list) => { const s = new Set(list); return edgesA.filter(([a, b]) => s.has(a) && s.has(b)); };
 function showVisualTooBig() {
   let ov = document.getElementById('vistoobig');
   if (!ov) {
@@ -491,17 +508,10 @@ function initCanvas() {
   cv = $('cv'); ctx2d = cv.getContext('2d');
   $('visual').style.position = $('visual').style.position || 'relative';   // anchor the too-big overlay to the canvas area, not the page
   nodesA = Object.keys(N);
-  const idx = {}; nodesA.forEach((id, i) => (idx[id] = i));
   const es = new Set();
   Object.values(N).forEach((n) => n.calls.forEach((c) => es.add(n.id + '\u0000' + c)));
   edgesA = [...es].map((e) => { const [a, b] = e.split('\u0000'); return [a, b]; });
-  const R = Math.min(400, 60 + nodesA.length * 2);
-  nodesA.forEach((id, i) => {
-    const a = (i / nodesA.length) * Math.PI * 2;
-    posX[id] = Math.cos(a) * R + (Math.random() - 0.5) * 40;
-    posY[id] = Math.sin(a) * R + (Math.random() - 0.5) * 40;
-    vx[id] = 0; vy[id] = 0;
-  });
+  seedRing(nodesA);
   cv.addEventListener('wheel', (e) => { e.preventDefault(); const f = e.deltaY < 0 ? 1.1 : 0.9; scale *= f; draw(); }, { passive: false });
   cv.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
   window.addEventListener('mouseup', () => (dragging = false));
@@ -533,33 +543,89 @@ function fitView() {
 function screenXY(id) { return [posX[id] * scale + offX, posY[id] * scale + offY]; }
 function nodeRadius(id) { return 3 + Math.min(9, N[id].called_by.length); }
 
-function settle() {
-  const k = 5200, maxR = 120 + nodesA.length * 3, maxV = 40;
-  let a = 0.5;
-  for (let it = 0; it < 420; it++) {
-    for (let i = 0; i < nodesA.length; i++) {
-      const A = nodesA[i]; let fx = 0, fy = 0;
-      for (let j = 0; j < nodesA.length; j++) {
-        if (i === j) continue; const B = nodesA[j];
-        let dx = posX[A] - posX[B], dy = posY[A] - posY[B]; let d2 = dx * dx + dy * dy + 0.01;
-        const f = k / d2; fx += dx * f; fy += dy * f;
-      }
-      vx[A] = (vx[A] + fx) * 0.85; vy[A] = (vy[A] + fy) * 0.85;
-    }
-    for (const [A, B] of edgesA) {
-      let dx = posX[B] - posX[A], dy = posY[B] - posY[A]; const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = (d - 90) * 0.02; const ux = dx / d, uy = dy / d;
-      vx[A] += ux * f; vy[A] += uy * f; vx[B] -= ux * f; vy[B] -= uy * f;
-    }
-    for (const id of nodesA) {
-      vx[id] += -posX[id] * 0.006; vy[id] += -posY[id] * 0.006;
-      vx[id] = Math.max(-maxV, Math.min(maxV, vx[id])); vy[id] = Math.max(-maxV, Math.min(maxV, vy[id]));
-      posX[id] += vx[id] * a; posY[id] += vy[id] * a;
-      const d = Math.hypot(posX[id], posY[id]);
-      if (d > maxR) { const s = maxR / d; posX[id] *= s; posY[id] *= s; vx[id] *= 0.5; vy[id] *= 0.5; }
-    }
-    a *= 0.986;
+function seedRing(list) {
+  const R = Math.min(400, 60 + list.length * 2);
+  list.forEach((id, i) => {
+    const a = (i / list.length) * Math.PI * 2;
+    posX[id] = Math.cos(a) * R + jitter(id, 'x');
+    posY[id] = Math.sin(a) * R + jitter(id, 'y');
+    vx[id] = 0; vy[id] = 0;
+  });
+}
+
+function jitter(id, salt) {
+  let h = 2166136261; const s = id + salt;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) / 4294967295 - 0.5) * 40;
+}
+
+
+function settle(list, edges) {
+  // Fruchterman-Reingold. The ideal edge length is derived from the area the drawing has to fill, so
+  // the same code behaves at twenty nodes and at five hundred.
+  //
+  // What was here before was a hand-tuned spring model with three constants - a repulsion of 5200,
+  // a rest length of 90, and a radius clamp of 120 + 3n. It looked right at about fifty nodes, which
+  // is where it was tuned, and above that repulsion overwhelmed attraction and the clamp caught
+  // every node on the way out: measured on a 700-node graph, **100% of the boxes ended up on the
+  // clamp radius**, which is to say the diagram was a circle of boxes - and the mean edge came out
+  // as long as the distance between two nodes picked at random, which is a drawing that carries no
+  // information at all. That is why filtering it did not make it more readable: there was no
+  // structure in it to reveal.
+  //
+  // Nothing here is tuned by eye. The two forces are the published ones and the only free parameter
+  // is the area, which cancels out downstream - erLayout normalises the extent before drawing.
+  const n = list.length;
+  if (n < 2) return;
+  // Typed arrays, not the posX/posY objects. This is the one O(n^2) loop in the window and it runs
+  // on the main thread behind a spinner, so the cost of a string key lookup is paid n^2 * iterations
+  // times: measured, moving the inner loop off the objects took a 352-node layout from 2.2s to a
+  // fraction of it. The positions are read in and written back once.
+  const X = new Float64Array(n), Y = new Float64Array(n), DX = new Float64Array(n), DY = new Float64Array(n);
+  const idx = new Map();
+  for (let i = 0; i < n; i++) { idx.set(list[i], i); X[i] = posX[list[i]] || 0; Y[i] = posY[list[i]] || 0; }
+  const E = [];
+  for (const [a, b] of edges) {
+    const i = idx.get(a), j = idx.get(b);
+    if (i !== undefined && j !== undefined && i !== j) E.push(i, j);
   }
+  const area = 1000 * 1000;
+  const L = Math.sqrt(area / n);          // ideal distance between two nodes
+  const iter = 300;
+  let t = Math.sqrt(area) / 8;            // maximum displacement, cooled linearly to zero
+  const cool = t / (iter + 1);
+  for (let it = 0; it < iter; it++) {
+    DX.fill(0); DY.fill(0);
+    for (let i = 0; i < n; i++) {
+      const xi = X[i], yi = Y[i];
+      let ax = 0, ay = 0;
+      for (let j = i + 1; j < n; j++) {
+        let ex = xi - X[j], ey = yi - Y[j];
+        let d2 = ex * ex + ey * ey;
+        // Two nodes on the same point have no direction to push apart in, so give them one that
+        // depends on which they are - a random nudge would make the layout different every time.
+        if (d2 < 1e-4) { ex = jitter(list[i] + list[j], 'r'); ey = jitter(list[j] + list[i], 'r'); d2 = ex * ex + ey * ey || 1; }
+        const f = (L * L) / d2;
+        ax += ex * f; ay += ey * f; DX[j] -= ex * f; DY[j] -= ey * f;
+      }
+      DX[i] += ax; DY[i] += ay;
+    }
+    for (let e = 0; e < E.length; e += 2) {
+      const i = E[e], j = E[e + 1];
+      const ex = X[i] - X[j], ey = Y[i] - Y[j];
+      const d = Math.sqrt(ex * ex + ey * ey) || 0.01;
+      const f = d / L;
+      DX[i] -= ex * f; DY[i] -= ey * f; DX[j] += ex * f; DY[j] += ey * f;
+    }
+    for (let i = 0; i < n; i++) {
+      const d = Math.sqrt(DX[i] * DX[i] + DY[i] * DY[i]);
+      if (!d) continue;
+      const s = (d < t ? d : t) / d;
+      X[i] += DX[i] * s; Y[i] += DY[i] * s;
+    }
+    t -= cool;
+  }
+  for (let i = 0; i < n; i++) { posX[list[i]] = X[i]; posY[list[i]] = Y[i]; vx[list[i]] = 0; vy[list[i]] = 0; }
 }
 
 function updateTopTools() {
@@ -840,11 +906,33 @@ function erLayout() {
   } else {
     // Free layout needs the force positions. Concentric focus mode above does NOT (it uses rings),
     // so settle() is skipped there - that is the common case and it stays cheap at any org size.
-    // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their initial
-    // circular positions (from initCanvas) and the diagram still renders instead of freezing.
-    if (!laidOut && forceFeasible()) { settle(); laidOut = true; }
-    const spread = erP.spread / 10;
-    erIds.forEach((id) => { const s = erBoxSize(N[id]); erPos[id] = { x: (posX[id] || 0) * spread, y: (posY[id] || 0) * spread, w: s.w, h: s.h }; });
+    // Here we only run the O(n²) settle if we can afford it; otherwise nodes keep their ring
+    // positions and the diagram still renders instead of freezing.
+    //
+    // Both are computed for erIds - the set on screen - and re-computed whenever that set changes.
+    // Laying out the whole graph and then drawing part of it is what made the filters feel inert:
+    // the boxes went away and the diagram stayed exactly as large, which is the opposite of what
+    // switching a category off is for.
+    const key = erIds.join('\n');
+    if (laidOutKey !== key) {
+      seedRing(erIds);
+      if (forceFeasible(erIds.length)) settle(erIds, edgesAmong(erIds));
+      laidOutKey = key;
+    }
+    // settle() produces positions whose extent depends on how many nodes it was given, so a constant
+    // multiplier means something different at 20 nodes and at 300. That is why «Scope: everything»
+    // with «Emphasis: edges» came out at 19% zoom - a diagram laid out correctly and drawn too small
+    // to read, which is indistinguishable from nothing. So the positions are normalised first: the
+    // canvas is sized from the boxes that have to fit on it, and `spread` then means the same thing
+    // whatever the node count.
+    const sizes = {};
+    let area = 0;
+    erIds.forEach((id) => { const b = erBoxSize(N[id]); sizes[id] = b; area += b.w * b.h; });
+    const ext = (k) => { const v = erIds.map((id) => (k === 'x' ? posX[id] : posY[id]) || 0); return Math.max(...v) - Math.min(...v); };
+    const cur = Math.max(1, Math.max(ext('x'), ext('y')));
+    const target = Math.sqrt(Math.max(1, area)) * (erP.spread / 10);
+    const spread = target / cur;
+    erIds.forEach((id) => { const s = sizes[id]; erPos[id] = { x: (posX[id] || 0) * spread, y: (posY[id] || 0) * spread, w: s.w, h: s.h }; });
   }
   const margin = erP.margin;   // labels live between the boxes, they need the room
   const passes = erIds.length > 150 ? 60 : 140;   // whole-org layouts are O(n\u00b2) per pass

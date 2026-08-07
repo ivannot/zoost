@@ -56,24 +56,29 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   clock and the count, and the tooltip says how long the delay is. The workflow's own panel shows
   "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
-- "Graph ↗" / "Schema ↗": opens a diagram in its own window - which function calls which, or how the
-  modules relate. The call graph also shows what *starts* the code and what it reaches: a workflow or
-  a schedule that fires a function is a node of its own, and so is every connection a function uses.
+- "Graph" (in Functions mode) / "ER diagram" (in Modules): opens a diagram in its own window - which
+  function calls which, or how the modules relate. The graph also shows what *starts* the code and
+  what it reaches: a workflow or a schedule that fires a function is a node of its own, and so is
+  every connection a function uses.
   All of it from what is already on disk - nothing extra is fetched. The chips in that window's header show
   what is on screen, grouped by dimension: all lit means everything, and one click switches a kind
   off - "Connections" off is how you read the diagram without them. The dashed "Only" group narrows
   instead, and starts empty. "↺ All" puts it all back and "None" switches
-  everything off so one click brings back the one kind you want. The search box has its own ✕. The button that opens that window is in the workspace bar, between "MD" and
+  everything off so one click brings back the one kind you want. The search box has its own ✕.
+  Switching a kind off does not merely hide it: the diagram is laid out again for what is left, so
+  it closes up and becomes readable rather than keeping the shape of the graph it no longer is.
+  The button that opens that window is in the workspace bar, between "MD" and
   "Health ♥". Depth, spacing and label size are adjustable, and it can be saved as a PDF.
   Beside the title in that window, "Functions" and "Modules" say which of the two drawings is on
   screen and switch to the other without coming back here. The panel builds it, because the panel is
   what holds the working folder - so it has to be open and the folder granted.
-  That window has three views of the same thing: Explorer (a list and a detail pane), Graph (boxes
-  and arrows - each box lists what that function calls, or what that module holds) and Relations.
-  Selecting anything in Explorer re-centres the other two on it. A fourth, Relations, puts the link first
-  instead of the thing: one row per call on a call graph - who calls whom, with the call copyable
-  complete with its parameter names - and one row per related list on a schema.
-- The references bar under a function also carries a depth and a "Call graph" button, which opens
+  That window has three views of one thing: Explorer (a list and a detail pane), Graph or ER diagram
+  (boxes and arrows - each box lists what that function calls, or what that module holds), and
+  Relations, which puts the link first instead of the thing: one row per call on a graph - who calls
+  whom, with the call copyable complete with its parameter names - and one row per related list on a
+  schema. Selecting anything in Explorer re-centres all three on it, Relations included: it then
+  lists the links around that item, and "show all" beside the count widens it back to everything.
+- The references bar under a function also carries a depth and a "Graph" button, which opens
   that window centred on this function. The Modules preview has the same pair for the ER diagram.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
   gets the whole width; the same tab brings it back, and dragging that edge resizes the list
