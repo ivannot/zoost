@@ -76,7 +76,14 @@ HOW IT WORKS
 
 Everything happens in your browser, using the Zoho session you are already signed into. There is no server, no account and no telemetry. The mirror is written to a folder you pick with the browser's own folder picker. The only thing that ever leaves your machine is what you send to an AI provider, if you choose to configure one - and never the rows in your tables, because Zoost does not read them.
 
-Free and open source, Apache-2.0. Independent and unofficial: not affiliated with, endorsed by or sponsored by Zoho Corporation.
+DOCUMENTATION AND PRIVACY
+
+Source code: https://github.com/ivannot/zoost
+Guide: https://zoost.it/docs-analytics
+Privacy policy: https://zoost.it/privacy
+Home: https://zoost.it
+
+Free and open source, Apache-2.0. Maintained in spare time on a best-effort basis; there is no guaranteed support or response time. Independent and unofficial: not affiliated with, endorsed by or sponsored by Zoho Corporation.
 ```
 
 ---
@@ -84,7 +91,8 @@ Free and open source, Apache-2.0. Independent and unofficial: not affiliated wit
 ## 4. Single purpose description (max 1000)
 
 ```
-Zoost gives a Zoho Analytics user a read-only, local view of the workspace they have built: it mirrors the workspace's structure - views, tables, columns, relations, the SQL of query tables and the dependencies between them - into plain files on the user's own disk, and presents that mirror as a navigable catalogue, an ER diagram, an audit and a shareable report.
+Zoost gives a Zoho Analytics user a local view of the workspace they have built, one it only ever
+reads from and never writes to: it mirrors the workspace's structure - views, tables, columns, relations, the SQL of query tables and the dependencies between them - into plain files on the user's own disk, and presents that mirror as a navigable catalogue, an ER diagram, an audit and a shareable report.
 
 Its single purpose is comprehension and versioning of a Zoho Analytics workspace's design. It reads only what the signed-in user can already see in the Zoho Analytics interface, using their existing session, and never modifies anything in Zoho Analytics and never reads the data rows inside tables.
 ```

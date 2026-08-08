@@ -1,6 +1,6 @@
 # Contributing to Zoost
 
-Thanks for looking. A few honest notes before you spend your time.
+Thanks for looking. A few things worth knowing before you spend your time on this.
 
 ## What this project is
 
@@ -11,7 +11,7 @@ team behind it, a roadmap, or a service-level agreement.
 - Issues and pull requests are welcome, and read.
 - There is **no guaranteed response time**, and none is promised.
 - Not every issue will be fixed and not every pull request will be merged. A "no" is not a
-  judgement of your work — it usually means the change pulls the tool somewhere I do not want it
+  judgement of your work - it usually means the change pulls the tool somewhere I do not want it
   to go, or adds something I cannot commit to maintaining.
 
 If that is not a good deal for you, forking is a perfectly reasonable answer. The licence exists
@@ -23,7 +23,7 @@ The single most useful thing you can include is **how to reproduce it**. Specifi
 
 - Zoost version (shown in **About**) and Chrome version.
 - Operating system, and whether the working folder is on a local disk or a synced one
-  (OneDrive, Dropbox, iCloud Drive — these are known to cause trouble).
+  (OneDrive, Dropbox, iCloud Drive - these are known to cause trouble).
 - Which Zoho data centre (`crm.zoho.eu`, `.com`, `.in`, …), and whether production or sandbox.
 - What you did, what you expected, what happened.
 - Anything in the browser console: right-click the side panel → Inspect → Console.
@@ -34,14 +34,14 @@ Redact them. If a bug can only be explained with real code, describe the shape o
 ## Suggesting a feature
 
 Describe the **problem**, not only the solution you have in mind. "I cannot tell which functions
-touch a module before I rename a field" is far more useful than "add a column to the table" —
+touch a module before I rename a field" is far more useful than "add a column to the table" -
 it leaves room for a better answer than either of us has thought of.
 
 Two kinds of request are unlikely to land:
 
-- **Writing back to Zoho.** Zoost is read-only on purpose. Zoho compiles and validates
-  server-side; a write path means owning deployment, conflicts and rollback, and that is a
-  different product.
+- **Writing back to Zoho.** Not an editor, on purpose: Zoost calls no endpoint that creates, edits
+  or deletes anything. Zoho compiles and validates server-side, and a write path means owning
+  deployment, conflicts and rollback - a different product.
 - **More AI providers.** Only Anthropic and OpenAI are supported, because those are the two that
   are actually tested and the only two the manifest grants network access to. An untested claim
   is worse than a missing feature.
@@ -52,7 +52,7 @@ Two kinds of request are unlikely to land:
   be declined for a reason you could not have known.
 - Keep the change focused. One concern per pull request.
 - Match the surrounding style: plain JavaScript, no build step, no dependencies, no frameworks.
-  This is deliberate — the extension ships as readable source and stays auditable by anyone who
+  This is deliberate - the extension ships as readable source and stays auditable by anyone who
   is about to give it access to their CRM.
 - No new permissions in `manifest.json` without discussing it first. Every permission has to be
   justified to the Chrome Web Store and to users, and the bar is high.

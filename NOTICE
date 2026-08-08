@@ -16,13 +16,14 @@ limitations under the License.
 
 TRADEMARKS
 
-This product is an independent, unofficial developer tool. It is not
+Zoost is a family of independent, unofficial developer tools. They are not
 affiliated with, endorsed by, sponsored by, or supported by Zoho
 Corporation Pvt. Ltd.
 
-"Zoho", "Zoho CRM" and "Deluge" are trademarks or registered trademarks
-of Zoho Corporation Pvt. Ltd. They are used in this project solely in a
-nominative, descriptive sense to indicate compatibility, as permitted
+"Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are trademarks or
+registered trademarks of Zoho Corporation Pvt. Ltd. They are used in this
+project solely in a nominative, descriptive sense to indicate
+compatibility, as permitted
 under Section 6 of the Apache License, Version 2.0, which grants no
 trademark rights.
 
@@ -36,8 +37,9 @@ This software is provided free of charge and AS IS. There is no
 warranty of any kind and no obligation on the author to provide
 support, maintenance, updates or fixes.
 
-The software reads data from the Zoho CRM instance the user is already
-signed in to, and writes it to a local folder chosen by the user. The
+Each extension reads data from the Zoho product the user is already
+signed in to - Zoho CRM or Zoho Analytics - and writes it to a local
+folder chosen by the user. The
 author has no access to that data and no control over what the user
 subsequently does with it. Deciding what may be extracted and where it
 may be sent is the sole responsibility of the user and, where

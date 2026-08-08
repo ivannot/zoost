@@ -87,8 +87,8 @@ REQUIREMENTS
 DOCUMENTATION AND PRIVACY
 
 Source code: https://github.com/ivannot/zoost
-Guide: https://zoost.it/docs-crm.html
-Privacy policy: https://zoost.it/privacy.html
+Guide: https://zoost.it/docs-crm
+Privacy policy: https://zoost.it/privacy
 Home: https://zoost.it
 
 Free and open source, licensed under the Apache License 2.0. Maintained in spare time on a best-effort basis; there is no guaranteed support or response time.
@@ -103,11 +103,14 @@ Zoost is an independent, unofficial developer tool. It is not affiliated with, e
 ## 4. Single purpose description (max 1000)
 
 ```
-Zoost has one purpose: to give a Zoho CRM administrator or developer a local, read-only mirror of their own org's Deluge code and configuration, and the tools to navigate and document it.
+Zoost has one purpose: to give a Zoho CRM administrator or developer a local mirror of their own
+org's Deluge code and configuration - read from Zoho, never written back - and the tools to
+navigate and document it.
 
 Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an entity-relationship diagram, a catalogue of related-list API names, a cross-reference of which functions use which connection, a health audit and offline exports.
 
-Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost never writes back to Zoho, never touches Zoho CRM records, and does nothing on any other website.
+Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM
+records, and does nothing on any other website.
 ```
 
 ## 5. sidePanel justification (max 1000)
@@ -115,7 +118,7 @@ Every feature serves that single purpose: understanding and version-controlling 
 ```
 The extension's entire user interface is a Chrome side panel.
 
-This is deliberate rather than cosmetic: the tool is used side by side with Zoho CRM. The user reads a function in the panel while the corresponding record or setup page is open in the tab, jumps from a function to its callers, and moves between the panel and the Zoho editor continuously. A popup would close on every click on the page, and an injected overlay would modify Zoho's own interface, which we explicitly avoid.
+This is deliberate rather than cosmetic: the tool is used side by side with Zoho CRM. The user reads a function in the panel while the corresponding record or setup page is open in the tab, jumps from a function to its callers, and moves between the panel and the Zoho editor continuously. A popup would close on every click on the page, and an injected overlay would modify Zoho's own interface, which Zoost deliberately never does.
 
 The side panel also lets the extension observe which Zoho tab is active and keep the local workspace aligned with it, which is what makes the production/sandbox guard possible.
 
@@ -175,6 +178,6 @@ No host access is requested for any other website.
 ## Notes before submitting
 
 - URLs in the store description are allowed; the three above point to first-party pages on zoost.it.
-- Update the Privacy policy URL field in the dashboard to `https://zoost.it/privacy.html`.
+- Update the Privacy policy URL field in the dashboard to `https://zoost.it/privacy`.
 - The old description claimed the extension "never sends your code or data to the developer or any third party". That was true before the AI assistant existed and is no longer accurate. The text above corrects it explicitly.
 - Data-use disclosures in the dashboard should be reviewed: with the AI assistant, "website content" (the user's own source code) is transmitted to a third party at the user's initiative. Declare it rather than leaving the previous "no data collected" answers untouched.

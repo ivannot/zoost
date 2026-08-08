@@ -4,24 +4,26 @@
 
 Zoost is a small family of Chrome extensions (Manifest V3), **one per Zoho product**. Each mirrors
 what *you* have built inside that product into plain local files you can put under your own Git -
-then layers navigation, diagrams, search, an honest health audit, exports and an optional AI
-assistant on top of that mirror. None of them writes anything back. Everything runs in your browser.
+then layers navigation, diagrams, search, a health audit that states its own blind spots, exports
+and an optional AI
+assistant on top of that mirror. None of them calls an endpoint that writes. Everything runs in
+your browser.
 
 | | What it mirrors | |
 |---|---|---|
-| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm.html) · [guide](https://zoost.it/docs-crm.html) |
-| **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics.html) · [guide](https://zoost.it/docs-analytics.html) |
+| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
+| **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics) · [guide](https://zoost.it/docs-analytics) |
 
 Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
 give you what Zoho's editors do not.
 
 **The rest of this file documents Zoost CRM in detail.** Zoost Analytics has its own
-[page](https://zoost.it/analytics.html) and [guide](https://zoost.it/docs-analytics.html), kept in
+[page](https://zoost.it/analytics) and [guide](https://zoost.it/docs-analytics), kept in
 step with it - duplicating a full manual here would be a second copy to keep true, and the one that
 went stale would be this one.
 
 **Site:** [zoost.it](https://zoost.it) ·
-**Privacy:** [zoost.it/privacy](https://zoost.it/privacy.html) ·
+**Privacy:** [zoost.it/privacy](https://zoost.it/privacy) ·
 **Releases & verification:** [RELEASES.md](RELEASES.md) ·
 **Source:** [github.com/ivannot/zoost](https://github.com/ivannot/zoost)
 
@@ -33,9 +35,9 @@ went stale would be this one.
 
 ## What to expect from this project
 
-Zoost is **free**, licensed under [Apache-2.0](LICENSE), and built and maintained by one person
-in his spare time - with substantial help from Claudio on
-design, code and wording. The judgement calls, and the responsibility for the result, are mine.
+Zoost is **free**, licensed under [Apache-2.0](LICENSE), and built and maintained by one person in his spare time - me, with substantial help from Claudio on
+design, code and wording. The judgement calls, and the responsibility for how they turn out, are
+mine.
 
 - Issues and pull requests are welcome and are read.
 - There is **no guaranteed response time**, and no support commitment of any kind.
@@ -43,8 +45,8 @@ design, code and wording. The judgement calls, and the responsibility for the re
 - The licence lets you fork and go your own way. That is a legitimate outcome, not a failure.
 
 If you are about to depend on this for something that matters, read the code - that is precisely
-why it is here - and keep in mind that the tool is read-only towards Zoho by design, so the worst
-it can do to your org is nothing. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
+why it is here - and keep in mind that it calls no endpoint that creates, edits or deletes anything in Zoho, so the
+worst it can do to your org is nothing. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
 request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 
 ---
@@ -61,8 +63,8 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
   in one navigable place and one shareable document.
 - **Not an editor, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
-  server-side and versions a function, one at a time; we give you comprehension, audit, a history of the
-  parts Zoho does not version - and now an agent. Zoost never drives
+  server-side and versions a function, one at a time; Zoost adds comprehension, an audit, a history
+  of the parts Zoho does not version - and now an agent. Zoost never drives
   Zoho's interface: it navigates by URL and reads through the API - it does not script clicks it
   cannot be sure of.
 - **An AI that actually knows your org.** Not a generic chatbot: it opens your functions, traces
@@ -132,15 +134,14 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   (switch workspace, or switch tab - with a clean logout when crossing accounts).
 
 Everything runs locally in your browser. The extension talks to your own Zoho CRM (your session)
-and, **only if you enable the AI**, to the LLM provider you configure. Nothing goes to us.
+and, **only if you enable the AI**, to the LLM provider you configure. Nothing reaches me, ever.
 
 ---
 
 ## Which commit is on the Web Store
 
 [`RELEASES.md`](RELEASES.md) lists every version submitted to the Store with the commit it was built
-from and the SHA-256 of the package that was uploaded. The build is reproducible, so you can check
-that yourself rather than take our word for it:
+from and the SHA-256 of the package that was uploaded. The build is reproducible, so you can check it yourself instead of taking my word:
 
 ```bash
 git checkout <tag> && ./build.sh <app>
