@@ -1453,6 +1453,22 @@ These all failed **silently**, with no console error. They are the expensive kin
   there: the same call made after a round trip to the model is refused for want of activation, which is
   the error itself. The Health view hit this first and its fix was never generalised; that is the
   recurring shape, not the DOMException.
+- **Open, and measured rather than fixed: the Analytics pull writes the mirror with no permission
+  guard at all.** Folding the CRM's nine copies of
+  `if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');` into `requirePerm()`
+  raised the obvious twin question - nine on one side, one on the other - and the answer is not that
+  the CRM over-guards. Censused by walking every top-level function that reaches `writeFile`,
+  `writeJson`, `patchCfg` or `writeToDisk`: **the CRM guards all fifteen**, with `ensurePerm` where a
+  gesture exists and `hasPerm`-and-bail in `syncOne()`, which runs from a background message and by
+  the rule above cannot ask. **Analytics guards two of five** - `doExport()` and `renameWorkspace()` -
+  while `pullAll()`, `pullOne()` and `retryFailed()` go straight to disk. With the permission lapsed
+  those three do not re-request it and the `getDirectoryHandle` below them throws `NotAllowedError`,
+  so the panel prints Chrome's own sentence under «Pull failed:» - the symptom-as-message trap in the
+  bullet below, on the path most likely to meet it. **What is not established is how often it is
+  reachable**: the click listener re-grants `root`, and whether that grant covers the workspace's own
+  `dir` handle was not tested, in a browser or otherwise. Deliberately left alone - it is a behaviour
+  change and the fold was not - but it is the next thing to do on that side, and the fix is the CRM's
+  helper, not a tenth copy of the line.
 - **A platform exception's message is a symptom, and shipping it verbatim ships a symptom.**
   `aiErrorText()` translates that one string into which button to press, and passes everything else
   through untouched rather than dressing it up. It matches, it does not parse, and it branches on

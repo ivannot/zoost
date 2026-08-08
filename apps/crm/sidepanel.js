@@ -23,6 +23,16 @@ const zohoReady = () => !!(lastCtx && guardOk());
 // no demo *mode* anywhere: an `if (demo)` branch in rendering code is how invented data eventually
 // gets shown as somebody's own. This flag exists so nothing talks to Zoho about it, and to say so.
 const isSample = () => !!(bound && bound.sample);
+// The one refusal every «open this in Zoho» navigation makes. A sample workspace has no Zoho org
+// behind it, so a link built from its instance would open a URL that does not exist: refused with a
+// reason rather than left to 404, because «nothing talks to the platform» has to be true of the
+// navigations too, or it is not the claim the guide makes. It reads as `if (sampleRefuse()) return;`
+// at each site - one sentence, in one place, instead of the same string copied at seven of them.
+function sampleRefuse() {
+  if (!isSample()) return false;
+  setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn');
+  return true;
+}
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
@@ -38,6 +48,8 @@ let pullActive = false, pullBusy = false;
 
 const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; };
+// A comparator over one field, with the `|| ''` the sites all carried: `.sort(byField('name'))`.
+const byField = (k) => (a, b) => (a[k] || '').localeCompare(b[k] || '');
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // escHtml is NOT attribute-safe (it leaves " alone). Use escA inside an attribute value, or a
 // double quote in the data closes it early and truncates - the trap that halved the getRelated snippet.
@@ -245,6 +257,14 @@ function pullFailMessage(area, e) {
   return `${tabLabel(area)} pull error: ${(e && e.message) || 'unknown'}`;
 }
 
+// The two halves of a failed pull, always taken together: record what Zoho answered for the area,
+// then say it. Recording without saying leaves the user with a tab that vanished and no reason;
+// saying without recording loses the verdict the next pull skips on. Six sites did both by hand.
+async function notePullFailure(area, e) {
+  await noteAccess(area, e);
+  setStatus(pullFailMessage(area, e), 'bad');
+}
+
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than
 // five separate alarms - and it has to be said, because the tabs have just silently gone away.
 function forbiddenNote() {
@@ -326,6 +346,11 @@ function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classLi
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
 const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+// The guard every pull, graph and export opens with. It throws rather than returning false, so the
+// caller's own `catch` writes the message: the nine sites that used it were already a `try` block
+// each, and a helper that returned a boolean would have left the `throw` copied at all nine.
+// Callers that instead want to report and carry on keep their own `ensurePerm` and their own wording.
+async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error('Folder access not granted.'); }
 async function writeFile(rel, content) {
   const parts = rel.split('/'); let d = dir;
   for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -909,19 +934,13 @@ function homeUrl() {
   return base && inst ? `${base}/crm/${inst}/` : 'https://crm.zoho.com/';
 }
 async function openZohoHome() {
-  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
-  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
-  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const url = homeUrl();
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 async function openModulePage(genName, navigable, label) {
-  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
-  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
-  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !genName) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
@@ -931,10 +950,7 @@ async function openModulePage(genName, navigable, label) {
   setStatus(`Opened ${genName} in Zoho.`, 'ok');
 }
 async function openModuleLayouts(gen) {
-  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
-  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
-  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
@@ -943,10 +959,7 @@ async function openModuleLayouts(gen) {
   setStatus(`Opened ${gen} layouts in Zoho.`, 'ok');
 }
 async function openModuleLayout(gen, layoutId) {
-  // A sample workspace has no Zoho org behind it, so a link built from its instance would open a
-  // URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to the
-  // platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
   const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
@@ -963,7 +976,7 @@ function moduleNavigable(m) {
   return true;
 }
 async function switchTab() {
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   if (!bound || !bound.base || !bound.instance) { setStatus('Unknown target - pull that workspace once from its own tab.', 'warn'); return; }
   const targetHome = `${bound.base}/crm/${bound.instance}/`;
   const curBase = (lastCtx && lastCtx.origin) || bound.base;
@@ -984,7 +997,7 @@ async function switchTab() {
   else await chrome.tabs.create({ url, active: true });
 }
 async function openTargetZoho(newTab) {
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return null; }
+  if (sampleRefuse()) return null;   // null, not undefined: the caller reads it as "no tab id"
   const url = functionsUrl();                       // prefers the ACTIVE workspace's base+instance
   if (!url) { setStatus('Unknown target - pull this workspace once, or open Zoho manually.', 'warn'); return null; }
   if (newTab) { const t = await chrome.tabs.create({ url, active: true }); return t.id; }
@@ -1015,7 +1028,7 @@ async function doFilter(id, fn, nice) {
 // Navigate to the Zoho Functions list (deterministic URL) and pre-filter it to `fn` (Find). The
 // only DOM touch left is filling the class-selected search box; there is no click-and-hope here.
 async function reveal(fn) {
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const nice = fn.displayName || fn.name || fn.apiName;
   let id = await zohoTabId();
   if (!id) { id = await openTargetZoho(false); if (!id) return; }
@@ -1186,7 +1199,7 @@ async function contentSearch() {
 async function pullAll() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
@@ -1214,7 +1227,7 @@ async function pullAll() {
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
     await noteAccess('functions', null);
-  } catch (e) { await noteAccess('functions', e); setStatus(pullFailMessage('functions', e), 'bad'); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('functions', e); } finally { pullActive = false; }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
 //
@@ -1308,7 +1321,7 @@ async function callGraphWithContext() {
 async function openGraph() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus('Building graph…', 'busy'); await refreshContext(); const g = await callGraphWithContext();
     g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
     await chrome.storage.local.set({ graphData: g });
@@ -2589,7 +2602,7 @@ async function pullEverything() {
 async function pullModules() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
@@ -2620,7 +2633,7 @@ async function pullModules() {
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
     await noteAccess('modules', null);
-  } catch (e) { await noteAccess('modules', e); setStatus(pullFailMessage('modules', e), 'bad'); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('modules', e); } finally { pullActive = false; }
 }
 
 // ---------- modules: tree ----------
@@ -2953,7 +2966,7 @@ async function buildSchemaGraph(focusApi, depth) {
 // modules, and deliberately so: the window, the controls and the wording are the ones already there.
 async function openCallFocus(id, depth) {
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus(`Building the graph for ${id}\u2026`, 'busy');
     const g = await callGraphWithContext();
     if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
@@ -2968,7 +2981,7 @@ async function openCallFocus(id, depth) {
 }
 async function openSchemaFocus(apiName, depth) {
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus(`Building relations graph for ${apiName}\u2026`, 'busy');
     const g = await buildSchemaGraph();   // full graph; the ER window filters by focus + depth client-side (adjustable there)
     if (!g.counts.nodes) throw new Error('No modules pulled yet - pull in Modules mode.');
@@ -2982,7 +2995,7 @@ async function openSchemaFocus(apiName, depth) {
 }
 async function openSchemaGraph() {
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus('Building schema graph…', 'busy'); await refreshContext();
     const g = await buildSchemaGraph();
     if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet - click Pull in Modules mode.'));
@@ -3180,7 +3193,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   let fnHtml = '';
   Object.keys(byNs).sort().forEach((ns) => {
     fnHtml += `<h3 class="grp">${esc(ns)} <span class="cnt">${byNs[ns].length}</span></h3>`;
-    byNs[ns].sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((f) => {
+    byNs[ns].sort(byField('api_name')).forEach((f) => {
       const node = nodeByApi[f.api_name];
       const uses = node ? node.calls.map(apiOf).filter(Boolean) : [];
       const usedBy = node ? node.called_by.map(apiOf).filter(Boolean) : [];
@@ -3218,7 +3231,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   for (const g2 of ['Standard', 'Custom']) {
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
-    list.sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => {
+    list.sort(byField('api_name')).forEach((m) => {
       const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${(fl.picklist || []).slice(0, 12).map(esc).join(', ')}</td></tr>`).join('');
       const inbound = (modRefs && modRefs[m.api_name]) || [];
       const refBy = inbound.length ? `<div class="refs"><span><b>Referenced by (${inbound.length}):</b> ${inbound.map((r) => `${modLink(r.module)} <span class="none">(${esc(r.field)})</span>`).join(', ')}</span></div>` : '';
@@ -3277,7 +3290,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   let wfHtml = '';
   Object.keys(wfByMod).sort().forEach((mod) => {
     wfHtml += `<h3 class="grp">${esc(mod)} <span class="cnt">${wfByMod[mod].length}</span></h3>`;
-    wfByMod[mod].slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((w) => {
+    wfByMod[mod].slice().sort(byField('name')).forEach((w) => {
       const d = w.detail;
       const modl = mods.some((m) => m.api_name === w.module) ? `<a href="#${modAnchor(w.module)}">${esc(w.module)}</a>` : esc(w.module || '');
       const head = `<section class="item" id="${escA(wfAnchor(w.id))}" data-name="${escA(((w.name || '') + ' ' + (w.module || '')).toLowerCase())}">`
@@ -3311,21 +3324,21 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     });
   });
   const wfRows = [];
-  Object.keys(wfByMod).sort().forEach((mod) => wfByMod[mod].slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((w) => {
+  Object.keys(wfByMod).sort().forEach((mod) => wfByMod[mod].slice().sort(byField('name')).forEach((w) => {
     const wsc = wfScheduled(w.detail);
     wfRows.push(`<tr><td><a href="#${wfAnchor(w.id)}">${esc(w.name)}</a></td><td class="mono">${esc(w.module || '')}</td><td class="ct">${esc(w.type || '')}</td><td class="ct">${w.active ? '\u25cf' : ''}</td><td class="ct">${wfFnActions(w).length}</td><td class="ct">${wsc.count || ''}</td><td class="ct">${esc(((w.detail && w.detail.last_executed_time) || '').slice(0, 16))}</td></tr>`);
   }));
 
   // schedules
   let schHtml = '';
-  scheds.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach((sc) => {
+  scheds.slice().sort(byField('name')).forEach((sc) => {
     const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()];
     const fl = fn ? `<a href="#${fnAnchor(fn.api_name)}">${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">${esc(sc.function_name || '?')}</span>`;
     schHtml += `<section class="item" id="${escA(schAnchor(sc.id))}" data-name="${escA(((sc.name || '') + ' ' + (sc.function_name || '')).toLowerCase())}">`
       + `<div class="ih"><b>${esc(sc.name)}</b> <code>${esc(sc.frequency || '')}</code>${sc.status !== 'active' ? `<span class="badge no">${esc(sc.status || '')}</span>` : ''}</div>`
       + `<div class="refs"><span><b>Runs function:</b> ${fl}</span>${sc.next ? `<span><b>Next:</b> ${esc(sc.next)}</span>` : ''}</div></section>`;
   });
-  const schRows = scheds.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((sc) => {
+  const schRows = scheds.slice().sort(byField('name')).map((sc) => {
     const fn = fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()];
     const fl = fn ? `<a href="#${fnAnchor(fn.api_name)}">${esc(fn.display_name || fn.api_name)}</a>` : esc(sc.function_name || '?');
     return `<tr><td><a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a></td><td>${fl}</td><td class="ct">${esc(sc.frequency || '')}</td><td class="ct">${sc.status === 'active' ? '\u25cf' : esc(sc.status || '')}</td></tr>`;
@@ -3365,7 +3378,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   // Contents index: informative tables (one row per item) for functions and modules
   const fnRows = [];
   Object.keys(byNs).sort().forEach((ns) => {
-    byNs[ns].slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((f) => {
+    byNs[ns].slice().sort(byField('api_name')).forEach((f) => {
       const n = nodeByApi[f.api_name];
       fnRows.push(`<tr><td><a href="#${fnAnchor(f.api_name)}">${esc(f.display_name || f.api_name)}</a></td>`
         + `<td class="mono">${esc(f.api_name)}</td><td class="mono">${esc(ns)}</td>`
@@ -3375,14 +3388,14 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     });
   });
   const modRows = [];
-  ['Standard', 'Custom'].forEach((k) => groups[k].slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => {
+  ['Standard', 'Custom'].forEach((k) => groups[k].slice().sort(byField('api_name')).forEach((m) => {
     const rb = (modRefs && modRefs[m.api_name]) ? modRefs[m.api_name].length : 0;
     modRows.push(`<tr><td><a href="#${modAnchor(m.api_name)}">${esc(m.plural_label || m.singular_label || m.module_name || m.api_name)}</a></td>`
       + `<td class="mono">${esc(m.api_name)}</td><td class="mono">${esc(m.module_name || '')}</td>`
       + `<td class="ct">${k}</td><td class="ct">${(m.fields || []).length ? (m.fields || []).length : (m.unreadable ? `<span title="${escA(moduleRefusal(m.unreadable).text)}">not described</span>` : 0)}</td><td class="ct">${rb}</td></tr>`);
   }));
   // Connections: catalogue + which functions use each
-  const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).map((c) => {
+  const connRows = (conns || []).slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).map((c) => {
     const usesLinks = c.uses.length ? c.uses.map(fnLink).join(', ') : '<span class="none">none</span>';
     const status = c.missing ? '<span style="color:#b45309">not in catalogue</span>' : c.connected === false ? '<span style="color:#b45309">not connected</span>' : 'connected';
     return `<tr id="${escA(connAnchor(c.name))}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
@@ -3471,7 +3484,7 @@ function buildExportMarkdown(d, scope) {
   md += '## Index\n\n### Functions\n';
   fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
-  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
+  mods.slice().sort(byField('api_name')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {
     md += '\n### Workflows\n';
     wfs.forEach((w) => {
@@ -3524,7 +3537,7 @@ function buildExportMarkdown(d, scope) {
     emit(rels.filter((r) => r.sys), 'System related lists (notes, attachments, activities\u2026)');
   }
   if (mods.length) md += '---\n\n## Modules (schema)\n\n';
-  mods.slice().sort((a, b) => (a.api_name || '').localeCompare(b.api_name || '')).forEach((m) => {
+  mods.slice().sort(byField('api_name')).forEach((m) => {
     md += `### ${m.api_name}${(m._layouts && m._layouts.length) ? ` \u00b7 ${m._layouts.length} layout(s)` : ''}\n\n`;
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
@@ -3558,7 +3571,7 @@ function buildExportMarkdown(d, scope) {
   if (conns.length) {
     md += '---\n\n## Connections\n\nThe org\'s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
     md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';
-    conns.slice().sort((a, b) => (b.uses.length - a.uses.length) || (a.name || '').localeCompare(b.name || '')).forEach((c) => {
+    conns.slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).forEach((c) => {
       const status = c.missing ? 'not in catalogue' : c.connected === false ? 'not connected' : 'connected';
       md += `| \`${_mdCell(c.name)}\` | ${_mdCell(c.label || '')} | ${_mdCell(c.connector || '')} | ${status} | ${c.uses.length} | ${_mdCell(c.uses.join(', '))} |\n`;
     });
@@ -3571,7 +3584,7 @@ async function exportMarkdown() {
   if (!dir) return;
   const scope = await askScope(); if (!scope) return;
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus('Building AI (Markdown) export\u2026', 'busy');
     const data = await loadExportData();
     const md = buildExportMarkdown(data, scope);
@@ -3585,7 +3598,7 @@ async function exportHtml() {
   if (!dir) return;
   const scope = await askScope(); if (!scope) return;
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     setStatus('Building HTML export\u2026', 'busy');
     const { fns, mods, g, modRefs, wfs, scheds, conns } = await loadExportData();
     const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope);
@@ -3625,7 +3638,7 @@ function renderSchedules() {
   const keys = Object.keys(byStatus).sort();
   if (!keys.length) { tree.innerHTML = '<div class="empty">' + (scheduleData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No schedules yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   keys.forEach((st) => {
-    const list = byStatus[st].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const list = byStatus[st].sort(byField('name'));
     const isCol = collapsed.has('sc:' + st);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
     g.innerHTML = `<span class="chev">\u25be</span><span>${st}</span><span class="cnt">${list.length}</span>`;
@@ -3749,7 +3762,7 @@ function renderWorkflows() {
     }
   }
   keys.forEach((mod) => {
-    const list = byMod[mod].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const list = byMod[mod].sort(byField('name'));
     const isCol = collapsed.has('wf:' + mod);
     const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
     g.innerHTML = `<span class="chev">\u25be</span><span>${escHtml(mod)}</span><span class="cnt">${list.length}</span>`;
@@ -3811,12 +3824,12 @@ async function pullSchedules() {
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
-    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); return; }
+    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e); return; }
     await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null);
-  } catch (e) { await noteAccess('schedules', e); setStatus(pullFailMessage('schedules', e), 'bad'); }
+  } catch (e) { await notePullFailure('schedules', e); }
 }
 // Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
@@ -3833,7 +3846,7 @@ async function pullConnections() {
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
     await noteAccess('connections', null);
-  } catch (e) { await noteAccess('connections', e); setStatus(pullFailMessage('connections', e), 'bad'); }
+  } catch (e) { await notePullFailure('connections', e); }
 }
 // ---------- connections view (org-wide catalogue + usage) ----------
 let connectionData = [], connCatFilter = 'all';
@@ -3870,7 +3883,7 @@ function renderConnections() {
     if (connCatFilter === 'disconnected' && c.connected !== false) return false;
     return !term || (c.name || '').toLowerCase().includes(term) || (c.label || '').toLowerCase().includes(term) || (c.connector || '').toLowerCase().includes(term);
   };
-  const list = connectionData.filter(pass).sort((a, b) => (b.uses.length - a.uses.length) || (a.label || '').localeCompare(b.label || ''));
+  const list = connectionData.filter(pass).sort((a, b) => (b.uses.length - a.uses.length) || byField('label')(a, b));
   const tree = $('tree'); tree.innerHTML = '';
   if (!list.length) { tree.innerHTML = '<div class="empty">' + (connectionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No connections yet.</b> Press <b>Pull all</b> to read them.')) + '</div>'; return; }
   list.forEach((c) => {
@@ -3918,7 +3931,7 @@ function openConnection(c) {
 async function pullWorkflows() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
@@ -3935,10 +3948,10 @@ async function pullWorkflows() {
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 - some workflows may be missing', 'warn');
     await noteAccess('workflows', null);
-  } catch (e) { await noteAccess('workflows', e); setStatus(pullFailMessage('workflows', e), 'bad'); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('workflows', e); } finally { pullActive = false; }
 }
 async function openWorkflowInZoho(id) {
-  if (isSample()) { setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const ws = bound || {};
   if (!ws.base || !ws.instance) { setStatus('Unknown workspace binding - pull first.', 'warn'); return; }
   const url = `${ws.base}/crm/${ws.instance}/settings/workflow-rules/${id}`;

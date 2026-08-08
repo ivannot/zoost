@@ -2243,7 +2243,9 @@ test('nothing reaches Zoho for a sample workspace, navigations included', () => 
       const head = body.slice(0, body.indexOf('\n}\n') + 3);
       if (!/chrome\.tabs\.(update|create)\(/.test(head)) continue;
       if (!/homeUrl\(\)|functionsUrl\(\)|\/crm\/\$\{|\/workspace\//.test(head)) continue;
-      assert.ok(/isSample\(\)/.test(head),
+      // Either form counts: the eight sites that repeated the refusal by hand now read
+      // `if (sampleRefuse()) return;`, and sampleRefuse() is isSample() plus the sentence.
+      assert.ok(/isSample\(\)|sampleRefuse\(\)/.test(head),
         `${app}: ${fn}() opens a Zoho URL without refusing a sample workspace, which has none`);
     }
   }
@@ -2499,4 +2501,158 @@ test('the panel does not claim what it has not looked at, and a poll does not un
     assert.ok(/toggle\('show', !isSample\(\) && !sampleBusy\)/.test(js),
       `${app}: the overlay is derived without knowing a sample is being written, so the poll brings it back`);
   }
+});
+
+// ---------- one sentence, one place ----------
+//
+// A message copied at eight call sites is eight places to correct when it changes, and the panels
+// have already paid that: the refusal below was reworded once and one site kept the old wording for
+// a release. These four cases hold each folded thing at one occurrence per panel, so putting a
+// duplicate back is a red test rather than something noticed later by eye. They read the source with
+// comments stripped, because the helper's own comment quotes the string it replaced.
+
+const panelBody = (app) => read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+const countOf = (s, lit) => s.split(lit).length - 1;
+
+test('the sample refusal is written once per panel', () => {
+  // Eight sites in the CRM and two in Analytics, seven of the CRM's carrying the same three-line
+  // comment as well. One of them returns null rather than undefined - openTargetZoho hands its
+  // caller a tab id - and that is preserved at the call site, not folded into the helper.
+  const msg = {
+    crm: 'This is the sample workspace - there is no Zoho org to open.',
+    analytics: 'This is the sample workspace - there is no Zoho Analytics workspace to open.',
+  };
+  for (const app of ['crm', 'analytics']) {
+    const src = panelBody(app);
+    assert.equal(countOf(src, msg[app]), 1,
+      `${app}: the sample refusal is written ${countOf(src, msg[app])} times - fold the site back into sampleRefuse()`);
+    assert.ok(/function sampleRefuse\(\) \{/.test(src), `${app}: sampleRefuse() is gone`);
+    // it must report *and* answer true, or `if (sampleRefuse()) return;` refuses nothing
+    const body = src.slice(src.indexOf('function sampleRefuse'), src.indexOf('\n}', src.indexOf('function sampleRefuse')));
+    assert.ok(/if \(!isSample\(\)\) return false;/.test(body), `${app}: sampleRefuse() does not let a real workspace through`);
+    assert.ok(/return true;/.test(body), `${app}: sampleRefuse() never answers true, so every caller carries on`);
+  }
+  // the CRM's one null-returning site keeps its null
+  assert.ok(/if \(sampleRefuse\(\)\) return null;/.test(panelBody('crm')),
+    'openTargetZoho returns undefined where it used to return null - its callers test the id');
+});
+
+test('the folder-access guard throws from one place per panel', () => {
+  // Nine identical `if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');`
+  // lines in the CRM, folded into requirePerm(). Analytics has one such site and no helper: that
+  // asymmetry is real and is recorded here rather than smoothed over - see the note in requirePerm.
+  // Callers that report and carry on instead of throwing keep their own ensurePerm and own wording,
+  // so this counts the *throw*, not the string.
+  const thrown = /throw new Error\('Folder access not granted\.'\)/g;
+  for (const app of ['crm', 'analytics']) {
+    const src = panelBody(app);
+    const n = (src.match(thrown) || []).length;
+    assert.equal(n, 1, `${app}: the guard throws from ${n} places - use requirePerm(dir)`);
+  }
+  const crm = panelBody('crm');
+  assert.ok(/async function requirePerm\(h\)/.test(crm), 'the CRM lost requirePerm()');
+  assert.ok((crm.match(/await requirePerm\(dir\);/g) || []).length >= 9,
+    'a call site stopped guarding the folder before touching the mirror');
+});
+
+test('a failed pull records and reports through one helper', () => {
+  // Six sites did `await noteAccess(area, e); setStatus(pullFailMessage(area, e), 'bad');` by hand.
+  // The two halves belong together: recording without saying leaves a tab that vanished with no
+  // reason, saying without recording loses the verdict the next pull skips on.
+  const src = panelBody('crm');
+  const pair = /await noteAccess\((.+?), e\); setStatus\(pullFailMessage\(/g;
+  assert.equal((src.match(pair) || []).length, 0,
+    'a pull failure still records and reports by hand - call notePullFailure(area, e)');
+  assert.ok(/async function notePullFailure\(area, e\)/.test(src), 'the CRM lost notePullFailure()');
+  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 6,
+    'a pull failure site stopped going through notePullFailure()');
+  // the helper must keep the order: the verdict is on disk before the sentence is on screen
+  const body = src.slice(src.indexOf('async function notePullFailure'), src.indexOf('\n}', src.indexOf('async function notePullFailure')));
+  assert.ok(body.indexOf('noteAccess') < body.indexOf('setStatus'), 'notePullFailure() says it before it records it');
+});
+
+test('sorting by one field goes through one comparator', () => {
+  // Twelve identical arrow functions - six on `name`, six on `api_name` - plus the same expression
+  // as the tail of three compound comparators. byField keeps the `|| ''` each site carried, so a
+  // missing field still sorts as an empty string rather than throwing.
+  const src = panelBody('crm');
+  for (const k of ['name', 'api_name', 'label']) {
+    const lit = `(a.${k} || '').localeCompare(b.${k} || '')`;
+    assert.equal(countOf(src, lit), 0,
+      `a comparator on ${k} is still written out - use byField('${k}')`);
+  }
+  assert.ok(/const byField = \(k\) => \(a, b\) => \(a\[k\] \|\| ''\)\.localeCompare\(b\[k\] \|\| ''\);/.test(src),
+    'byField is gone, or no longer carries the || \'\' the sites relied on');
+  assert.ok((src.match(/byField\('/g) || []).length >= 15, 'a sort stopped going through byField');
+});
+
+// The four cases above read the source; these run the helpers. Both are needed, and the reason is
+// in CLAUDE.md: a free variable is syntax-clean, `node --check` passes, and the ReferenceError only
+// arrives when the line executes. Each of these folded a live call site, so a typo in `setStatus`
+// or `noteAccess` would have been a button that silently stopped working.
+
+test('sampleRefuse() refuses a sample and lets a real workspace through', () => {
+  for (const [app, say, msg] of [
+    ['crm', 'setStatus', 'This is the sample workspace - there is no Zoho org to open.'],
+    ['analytics', 'status', 'This is the sample workspace - there is no Zoho Analytics workspace to open.'],
+  ]) {
+    let said = null, boundState = null;
+    const { sampleRefuse } = load([
+      sliceConst(`apps/${app}/sidepanel.js`, 'isSample'),
+      sliceFn(`apps/${app}/sidepanel.js`, 'sampleRefuse'),
+    ], { get bound() { return boundState; }, [say]: (t, c) => { said = [t, c]; } });
+
+    boundState = { sample: true };
+    assert.equal(sampleRefuse(), true, `${app}: a sample workspace was not refused`);
+    assert.deepEqual(said, [msg, 'warn'], `${app}: the refusal said something else`);
+
+    said = null; boundState = { org: '1234567890' };
+    assert.equal(sampleRefuse(), false, `${app}: a real workspace was refused`);
+    assert.equal(said, null, `${app}: a real workspace got a status line it should not have`);
+  }
+});
+
+test('requirePerm() throws the shipped message, and only when the folder is denied', async () => {
+  const { requirePerm } = load([
+    sliceFn('apps/crm/sidepanel.js', 'requirePerm'),
+    sliceFn('apps/crm/sidepanel.js', 'ensurePerm'),
+  ], {});
+  const handle = (state) => ({ queryPermission: async () => state, requestPermission: async () => state });
+  await requirePerm(handle('granted'));   // must not throw, or every pull stops on a granted folder
+  await assert.rejects(() => requirePerm(handle('denied')), /^Error: Folder access not granted\.$/,
+    'the message a user reads when the folder is gone has changed');
+});
+
+test('notePullFailure() records the verdict before it says anything', async () => {
+  // The order is the point. The status line is what the user reads; the verdict on disk is what the
+  // next pull skips on and what Settings explains. Reporting first and failing to record would leave
+  // a tab that vanished with nothing behind it saying why.
+  const order = [];
+  const { notePullFailure } = load([sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
+    noteAccess: async (a, e) => { await null; order.push(['noteAccess', a, e.message]); },
+    pullFailMessage: (a, e) => `${a} pull error: ${e.message}`,
+    setStatus: (t, c) => order.push(['setStatus', t, c]),
+  });
+  await notePullFailure('connections', new Error('boom'));
+  assert.deepEqual(order, [
+    ['noteAccess', 'connections', 'boom'],
+    ['setStatus', 'connections pull error: boom', 'bad'],
+  ]);
+});
+
+test('byField() sorts exactly as the arrow it replaced did', () => {
+  // Twelve sites carried `(a.name || '').localeCompare(b.name || '')`. The `|| ''` is not decoration:
+  // a missing field is common in a partially pulled workspace, and String() would have been a fix
+  // rather than a fold - so the helper keeps the coercion the sites actually had, and this compares
+  // the two on every shape they meet, missing and null and empty and accented included.
+  const { byField } = load([sliceConst('apps/crm/sidepanel.js', 'byField')], {});
+  const rows = [{ name: 'pear' }, {}, { name: 'Apple' }, { name: '' }, { name: 'apple' },
+    { name: 'Ärger' }, { name: null }, { name: undefined }, { name: 'zebra' }];
+  for (const a of rows) for (const b of rows) {
+    assert.equal(byField('name')(a, b), (a.name || '').localeCompare(b.name || ''),
+      `byField differs from the arrow it replaced on ${JSON.stringify([a, b])}`);
+  }
+  assert.deepEqual(rows.slice().sort(byField('name')),
+    rows.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    'a sorted list came out in a different order');
 });
