@@ -57,6 +57,7 @@ b1f6daca7f08580d  site/ai.html: It is the only limit here that does not depend o
 467d9319adcd7398  site/ai.html: It opens in any browser, it prints, and the person reading it needs nothing installed and no access to your org.
 75243c3194cb00c5  site/ai.html: Markdown - for a model The same content in the shape a language model reads without effort: headings, tables, code fences, nothing to see through.
 790757ab076bf9da  site/ai.html: No key, no configuration, nothing switched on inside Zoost.
+9de6c7cd35f9ae6c  site/ai.html: Nothing else here needs it.
 30b31263a2df5645  site/ai.html: Nothing passes through me, and there is nothing of mine for it to pass through: no backend, no account, no log.
 f4bd35a1827e3dc5  site/ai.html: Nothing trims it.
 c39d9bd830dc99bf  site/ai.html: On this page It works without any of it Two exports, two readers The route that costs nothing What the built-in assistant adds When it is worth a key Why your own key Getting a key What it will not do It works without any of it Zoost mirrors what you built inside Zoho CRM or Zoho Analytics to plain files on your own machine, and then gives you the things the platform does not: a tree of everything at once, diagrams you can focus and print, text search across every file, a health audit that names what nothing references any more, and two exports.
@@ -259,8 +260,8 @@ f00279d5c4002261  site/it/ai.html: Nessun fatto sulla tua org è raggiungibile d
 4cda41d1335b0539  site/it/ai.html: Nessuna chiave, nessuna configurazione, niente da accendere dentro Zoost.
 618edd28242ca9dd  site/it/ai.html: Niente di tutto questo passa da un modello, da una chiave o da un account.
 e08b000c135bee66  site/it/ai.html: Niente la sfoltisce.
+14939114f35c9e8c  site/it/ai.html: Niente qui dentro lo richiede.
 b14413a97de30c05  site/it/ai.html: Non c'è nessuna fotografia da rifare dopo il prossimo pull.
-2fd79f85d20840fc  site/it/ai.html: Non è una condizione di niente.
 60430bdf21fa9cca  site/it/ai.html: Ogni strumento legge lo specchio che hai sul disco.
 220b0d14d3f6931b  site/it/ai.html: Quando un'org è troppo grande per essere nominata per intero, cosa viene lasciato fuori è deciso e non casuale - l'elenco delle funzioni, o gli oggetti dati in Zoho Analytics, non vengono mai lasciati fuori, perché sono il vocabolario a cui tutto il resto si riferisce - e quello che manca viene dichiarato come mancante, così l'assistente non conclude che una cosa non esiste solo perché non gliel'hanno fatta vedere.
 7688a2abe972fe06  site/it/ai.html: Quello che c'è invece è una passphrase che hai solo tu: la chiave viene cifrata con quella, la digiti una volta per sessione del browser, e non esiste recupero - nessun suggerimento, nessun reset, nessun deposito.
