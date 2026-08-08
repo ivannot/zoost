@@ -1834,6 +1834,31 @@ that scroll on purpose. **And the badge only exists when `/api/versions` answers
 against a bare local server has `#vers` at `display:none` and can never see it — measure against the
 live site, or stub the endpoint.
 
+**`main` was a proxy too, and it broke the moment the landing pages needed one.** 28 rules were
+scoped to `main` on the reasoning that the landing pages had none - so `main` was standing in for
+«this is a document page», an editorial fact wearing a structural selector. Giving `index`, `crm` and
+`analytics` a `<main>` for the skip link would have dropped `h1{font-size:30px}` on a 42px hero and
+25 other rules with it, all at once. They are scoped to **`.doc`** now, which the content pages
+declare, and the name says what the set actually is.
+
+**Anchors land under a sticky header unless something says otherwise, and the number has to move with
+the header.** `.doc h2` carried `scroll-margin-top:70px`, chosen against a 54px desktop header, and
+the landing pages' `<section id>` carried nothing. Measured on the live site at 375px, where the
+header is **158px**: both of the home's hero links put their heading **106px underneath it**. One
+`--anchor-top`, moved by the same conditions that move the header, feeds both architectures.
+
+**Every page carries `<main id="content">` and a skip link**, and the site declares
+`color-scheme:dark` so the browser's own scrollbars and form controls stop rendering light over a
+`#0d121c` background. `site/404.html` is served by `assets.not_found_handling: "404-page"` - which
+has one consequence that would have broken a published extension: **navigation requests then stop
+invoking the Worker**, and the Worker is what 301s `/docs.html`, the URL compiled into Zoost for Zoho
+CRM 1.9.0. `/docs` and `/docs.html` are in `run_worker_first` for exactly that reason.
+
+**Open Graph existed on 6 pages of 18**, which are not the pages people paste into a chat: `/try` sent
+to someone who has to approve the install rendered as a bare URL. Every page has the block now, and
+`og:url` is the canonical - they disagreed on five pages because the rewrite that moved every URL to
+its served form matched `href=` and `<loc>` and never `content=`. **Grep the value, not the tag.**
+
 **A width is a proxy for the question; `pointer:coarse` is the question.** The navigation was sized
 for touch below 760px, so an iPad upright and a phone held sideways got the mouse sizing back - eight
 targets under 44px, measured. Asking the browser whether the thing is being touched or pointed at
