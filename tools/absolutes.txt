@@ -52,6 +52,7 @@ b2d1020a5677cce6  README.md: | | What it mirrors | | |---|---|---| | **Zoost - w
 3b5bc153b43d8f59  site/ai.html: I am saying this first rather than last because a tool that only makes sense once you have bought an API key is a different product, and I did not want to build that one.
 9c2088f5621f07d1  site/ai.html: If you never open the assistant, nothing is missing - it was added to a workbench that already worked.
 9446766cfb8fe46a  site/ai.html: It cannot go and read a second function by itself, so it asks you for what it is missing instead of inventing it.
+fe33a9e860c93460  site/ai.html: It is not only a way to tidy the box: it is the control you have over how much history you are paying to carry, and clearing it when you change subject buys two things at once - a cheaper call and a sharper answer, since the model is no longer reading around a previous investigation to reach your question.
 b1f6daca7f08580d  site/ai.html: It is the only limit here that does not depend on estimating anything.
 467d9319adcd7398  site/ai.html: It opens in any browser, it prints, and the person reading it needs nothing installed and no access to your org.
 75243c3194cb00c5  site/ai.html: Markdown - for a model The same content in the shape a language model reads without effort: headings, tables, code fences, nothing to see through.

@@ -93,7 +93,7 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   by someone who has neither Zoost nor Zoho Analytics. Markdown is for giving to another AI
   assistant, and it carries the rules of Zoho Analytics' own SQL dialect so that assistant does not write
   queries that cannot run.
-- "Clear" in this chat: empties the conversation, and that is not housekeeping. The whole thread is
+- "Clear" in this chat: empties the conversation, and that is not only housekeeping. The whole thread is
   re-sent with every message - the questions, the answers, and everything the assistant opened along
   the way - and nothing trims it, so a long conversation costs more per question and drags old
   context into new answers. Clearing it when the subject changes buys a cheaper call and a sharper
