@@ -995,6 +995,66 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertTrue(rows, 'no ledger row was checked — the parse or the floors are wrong')
 
 
+class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
+    """Turning on a 404 page silently took `/api/versions` away.
+
+    `assets.not_found_handling` stops a request that matches no asset from reaching the Worker at
+    all - and `/api/versions` matches no asset, so the endpoint answered the 404 page, for a `fetch`
+    as well as for a navigation. The footer badge and the guides' version stamp were dead on every
+    page of the site and nothing said so: the deploy succeeded, every page rendered, and the one
+    thing that broke is the one thing that fails quietly by design.
+
+    It was verified on a preview beforehand - against `/docs` and `/llms.txt`, the routes I happened
+    to think of. The list has to be derived from the script instead, which is what this does: every
+    path `_worker.js` handles before falling through to `env.ASSETS` must be covered by
+    `run_worker_first`, or the asset layer answers first and the Worker never runs.
+    """
+
+    def setUp(self):
+        self.worker = (ROOT / 'site/_worker.js').read_text(encoding='utf-8')
+        self.cfg = (ROOT / 'site/wrangler.jsonc').read_text(encoding='utf-8')
+        self.first = re.findall(r'"run_worker_first":\s*\[([^\]]*)\]', self.cfg)
+        self.first = re.findall(r'"([^"]+)"', self.first[0]) if self.first else []
+
+    def _covered(self, path):
+        for pat in self.first:
+            if pat.endswith('/*') and path.startswith(pat[:-1]):
+                return True
+            if pat == path:
+                return True
+        return False
+
+    def test_the_api_route_is_covered(self):
+        routes = re.findall(r"url\.pathname === '([^']+)'", self.worker)
+        self.assertTrue(routes, 'no exact route found in _worker.js - has the dispatch changed?')
+        for r in routes:
+            self.assertTrue(self._covered(r),
+                            f'{r} is handled by _worker.js but is not in run_worker_first; with '
+                            f'not_found_handling set, the asset layer answers it with the 404 page')
+
+    def test_every_redirect_source_is_covered(self):
+        block = re.search(r'const MOVED = \{(.*?)\}', self.worker, re.S).group(1)
+        for src in re.findall(r"'(/[^']*)':", block):
+            self.assertTrue(self._covered(src),
+                            f'{src} redirects via the Worker but never reaches it')
+
+    def test_a_404_page_is_configured_at_all(self):
+        # If this is ever removed the rules above stop mattering - and the reader should be told why
+        # they exist rather than finding an inexplicable list.
+        self.assertIn('"not_found_handling"', self.cfg)
+
+    def test_the_check_can_fail(self):
+        saved = self.first
+        try:
+            self.first = ['/llms.txt']
+            self.assertFalse(self._covered('/api/versions'))
+            self.assertTrue(self._covered('/llms.txt'))
+            self.first = ['/api/*']
+            self.assertTrue(self._covered('/api/versions'))
+        finally:
+            self.first = saved
+
+
 class InlineStylesStayTwins(unittest.TestCase):
     """A page and its translation carry the same inline <style>, and the first divergence was a comment.
 

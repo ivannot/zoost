@@ -1854,6 +1854,19 @@ has one consequence that would have broken a published extension: **navigation r
 invoking the Worker**, and the Worker is what 301s `/docs.html`, the URL compiled into Zoost for Zoho
 CRM 1.9.0. `/docs` and `/docs.html` are in `run_worker_first` for exactly that reason.
 
+**And it took `/api/versions` off the air, which is the part worth remembering.** With a 404 page
+configured, a request matching no asset never reaches the Worker - and `/api/versions` matches no
+asset. It answered the 404 page to a `fetch` as well as to a navigation, so the footer badge and the
+guides' version stamp were dead on every page while the deploy reported success and every page
+rendered. **The thing that broke is the one designed to fail quietly.** I had verified the preview
+against `/docs` and `/llms.txt` - the routes I happened to think of - which is a checklist, and the
+list has to be derived from the script: `tests/tools_test.py` now reads every `url.pathname ===` and
+every `MOVED` key out of `_worker.js` and asserts each is covered by `run_worker_first`. Proven by
+removing each entry and getting a finding.
+It also poisoned the Worker's own cache: a 404 body was stored under `?v=16` and served with a JSON
+content-type afterwards, so **the fix looked like it had not worked**. `CACHE_KEY` is the lever for
+exactly that, and this is the second reason to bump it besides a change of payload shape.
+
 **Open Graph existed on 6 pages of 18**, which are not the pages people paste into a chat: `/try` sent
 to someone who has to approve the install rendered as a bare URL. Every page has the block now, and
 `og:url` is the canonical - they disagreed on five pages because the rewrite that moved every URL to
