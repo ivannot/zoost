@@ -234,10 +234,16 @@ test('a partial answer is not cached for as long as a complete one', () => {
   assert.match(src, /max-age=\$\{ttl\}/, 'the header still hard-codes one TTL');
 });
 
-test('the cache key moves when the caching does', () => {
+test('the cache key carries a marker that can be moved', () => {
   // The key ignores the query string on purpose, so a wrong entry cannot be busted from outside. It
   // therefore has to carry a marker, or a change in what gets cached is invisible until expiry.
-  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=15';/);
+  //
+  // The *number* is deliberately not asserted. Pinning it made this go red on every correct bump -
+  // the checker reporting the right change as a defect, which is how a suite stops being believed.
+  // Whether the marker was bumped when it should have been is a judgement no test can make; that it
+  // exists and is bumpable is the part that can be checked.
+  assert.ok(/const CACHE_KEY = '\/api\/versions\?v=\d+';/.test(read('site/_worker.js')),
+    'the cache key has no version marker, so a payload change would be invisible for an hour');
 });
 
 

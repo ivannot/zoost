@@ -2551,12 +2551,18 @@ exactly right about two smaller things, and both are fixed.
   plausible, accepts the same email, and silently spends the one group publisher a developer account
   may ever create — the quota is not restored by deleting it. Google's own pages say only «add the
   required emails in the Developer Dashboard» and never describe the control.
-  **It has to be a Secret, not a plain-text variable, and that is not only about confidentiality.**
-  Cloudflare runs `npx wrangler deploy` on every push and `site/wrangler.jsonc` declares no `vars`, so
-  a plain-text variable added in the dashboard does not survive the next build: it was there, visible,
-  and the Worker answered `no-credential`. Secrets are documented as preserved across deployments.
-  The dashboard's **Encrypt** button converts one in place. A preview version keeps the bindings it
-  was built with, so converting it does not fix a build that already ran - push again.
+  **Cloudflare has two boxes with nearly the same name, and the wrong one costs an afternoon.**
+  The Worker's Settings page carries *Variables and secrets* twice: one under **Build**, described as
+  "used during the build", and one at the top described as "used at runtime". Only the second reaches
+  `env`. The value sat in the first for hours - present, visible, correct - while the Worker answered
+  `no-credential` in preview and in production alike. **Read the description, not the heading.** The
+  type must be **Secret** and not Json: the code does `JSON.parse` on it, so a Json binding would
+  arrive already parsed and fail. And nothing about it goes in `wrangler.jsonc`, which the dashboard
+  offers to update - that file is committed, so a secret in it is a published secret.
+  A wrong guess about which box it was cost two false diagnoses here, both mine: first that plain-text
+  vars do not survive `wrangler deploy`, then that preview versions do not inherit secrets. Neither
+  was established, both were written down as if they were, and the user found the real cause by
+  reading the sentence under the field.
   With the secret missing or the key revoked, `cwsToken()` returns null, every Store field is null and
   the badge says «unknown» — the fail-visible behaviour the rule above requires, rather than a stale
   number. `tools/whatsnew.py`-style raw material for a check does not exist here: the only way to
