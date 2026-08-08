@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:e946abe6e1b7a162 -->
+<!-- translated-from: site/index.html sha256:6e6b85d37c218b5c -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui hai costruito</title>
@@ -78,7 +78,9 @@
   .prod .st.live{color:#83d8c6;border-color:#2f6f62}
   .prod .st.wip{color:#f0a44a;border-color:#6b4a1c}
   .prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
-  .prod .plinks a{color:var(--sel);text-decoration:none;font-weight:600}
+  /* --sel is an accent for fills and borders; read as text on the card it is
+     3.09:1 against the 4.5 AA asks. Same hue, lightened until it can be read. */
+  .prod .plinks a{color:var(--sel-text);text-decoration:none;font-weight:600}
   .prod .plinks a:hover{text-decoration:underline}
 </style>
 </head>
@@ -139,9 +141,9 @@
           cosa, lo schema dei moduli con i layout, gli API name delle related list che devi sempre andare a
           ricercare, i workflow, le schedulazioni e il catalogo delle connessioni.</p>
         <div class="plinks">
-          <a href="/it/crm">Cosa fa →</a>
-          <a href="/it/docs-crm">Come si usa →</a>
-          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa ↗</a>
+          <a href="/it/crm" aria-label="Cosa fa Zoost CRM">Cosa fa →</a>
+          <a href="/it/docs-crm" aria-label="Come si usa Zoost CRM">Come si usa →</a>
+          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj" aria-label="Installa Zoost CRM dal Chrome Web Store">Installa ↗</a>
         </div>
       </div>
 
@@ -155,9 +157,9 @@
           l'SQL dietro ogni query table come file a sé, un diagramma ER dell'insieme, e un elenco onesto di cosa
           non dipende più da niente.</p>
         <div class="plinks">
-          <a href="/it/analytics">Cosa fa →</a>
-          <a href="/it/docs-analytics">Come si usa →</a>
-          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Installa ↗</a>
+          <a href="/it/analytics" aria-label="Cosa fa Zoost Analytics">Cosa fa →</a>
+          <a href="/it/docs-analytics" aria-label="Come si usa Zoost Analytics">Come si usa →</a>
+          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge" aria-label="Installa Zoost Analytics dal Chrome Web Store">Installa ↗</a>
         </div>
       </div>
 
@@ -261,14 +263,14 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/it/crm">Zoost - workbench for Zoho CRM</a><span class="sep">·</span>
-      <a href="/it/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep">·</span>
-      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep">·</span>
-      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep">·</span>
-      <a href="/it/privacy">Privacy policy</a><span class="sep">·</span>
-      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
-      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
-      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="/it/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep" aria-hidden="true">·</span>
       <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
     </div>
     <p class="legal">

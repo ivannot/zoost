@@ -77,7 +77,9 @@
   .prod .st.live{color:#83d8c6;border-color:#2f6f62}
   .prod .st.wip{color:#f0a44a;border-color:#6b4a1c}
   .prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
-  .prod .plinks a{color:var(--sel);text-decoration:none;font-weight:600}
+  /* --sel is an accent for fills and borders; read as text on the card it is
+     3.09:1 against the 4.5 AA asks. Same hue, lightened until it can be read. */
+  .prod .plinks a{color:var(--sel-text);text-decoration:none;font-weight:600}
   .prod .plinks a:hover{text-decoration:underline}
 </style>
 </head>
@@ -131,9 +133,9 @@
           what calls what, module schema with layouts, the related-list API names you keep having to look up,
           workflows, schedules and the connections catalogue.</p>
         <div class="plinks">
-          <a href="/crm">What it does →</a>
-          <a href="/docs-crm">How to use it →</a>
-          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Install ↗</a>
+          <a href="/crm" aria-label="What Zoost CRM does">What it does →</a>
+          <a href="/docs-crm" aria-label="How to use Zoost CRM">How to use it →</a>
+          <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj" aria-label="Install Zoost CRM from the Chrome Web Store">Install ↗</a>
         </div>
       </div>
 
@@ -147,9 +149,9 @@
           the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of
           what nothing depends on any more.</p>
         <div class="plinks">
-          <a href="/analytics">What it does →</a>
-          <a href="/docs-analytics">How to use it →</a>
-          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Install ↗</a>
+          <a href="/analytics" aria-label="What Zoost Analytics does">What it does →</a>
+          <a href="/docs-analytics" aria-label="How to use Zoost Analytics">How to use it →</a>
+          <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge" aria-label="Install Zoost Analytics from the Chrome Web Store">Install ↗</a>
         </div>
       </div>
 
@@ -253,14 +255,14 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/crm">Zoost - workbench for Zoho CRM</a><span class="sep">·</span>
-      <a href="/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep">·</span>
-      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
-      <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep">·</span>
-      <a href="/privacy">Privacy policy</a><span class="sep">·</span>
-      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
-      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
-      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep" aria-hidden="true">·</span>
       <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
     </div>
     <p class="legal">

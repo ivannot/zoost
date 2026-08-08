@@ -4,7 +4,7 @@
 
 :root{color-scheme:dark;--anchor-top:70px;
   --bg:#0d121c; --surface:#151d2b; --panel:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
-  --border:#26303f; --line:#1e2735; --sel:#5a6a86; --amber:#d97706; --teal:#83d8c6;
+  --border:#26303f; --line:#1e2735; --sel:#5a6a86;--sel-text:#8f9aad; --amber:#d97706; --teal:#83d8c6;
   /* --sel is the *suite* accent: the same slate as the family mark, so the home, the guides and
      the privacy page read as Zoost rather than as one of its products. Each product page
      overrides it with its own colour — see the :root block at the top of crm.html and
@@ -57,8 +57,8 @@ header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 header nav a.nprod{color:#fff;border-radius:7px;padding:5px 11px;font-weight:600;line-height:1.2;white-space:nowrap}
 header nav a.ncrm{background:#2563eb}
 header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
-header nav a.nana{background:#dc2d7a}
-header nav a.nana:hover{background:#e8508f;color:#fff}
+header nav a.nana{background:#be2a6b}
+header nav a.nana:hover{background:#d43b7d;color:#fff}
 header nav a.nprod[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px currentColor}
 /* Three widths, three forms of the same name — never a truncation and never a bare "CRM".
    Wide: "Zoost for Zoho CRM". Narrower: "Zoost CRM", the short form, always carrying Zoost.
@@ -181,7 +181,9 @@ header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)
    is structure and belongs to the outline; the size is presentation and stays. */
 .doc h2.h3{font-size:16px;margin:26px 0 6px;color:var(--ink);letter-spacing:0}
 .doc .sub{color:var(--muted);margin:0 0 10px;max-width:66ch}
-.doc .upd{font:12px var(--mono);color:#6b7c93;margin:0 0 30px}
+/* 4.40:1 against the 4.5 AA asks, and it sits on two backgrounds - the page and a card - so the
+   value has to clear the darker of the two. Measured, not guessed at. */
+.doc .upd{font:12px var(--mono);color:#7688a1;margin:0 0 30px}
 .doc p,.doc li{color:#c3cddc}
 .doc ul,.doc ol{padding-left:22px} .doc li{margin:7px 0}
 .doc code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
@@ -238,7 +240,11 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 #vers .vsite{border-left-color:transparent;padding-left:11px}
 #vers a{color:var(--muted);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--border)}
 #vers a:hover{color:var(--ink);text-decoration-color:var(--ink)}
-.sep{color:var(--border);margin:0 7px}
+/* The dot between footer links. It carries no information - the links are a list either way - so it
+   is decoration, and every one of them is aria-hidden so a screen reader does not read "middle dot"
+   nine times. At var(--border) it was 1.41:1, which is not "recessive" so much as absent; --line's
+   neighbour reads as a separator without competing with the links. */
+.sep{color:#3b475a;margin:0 7px}
 
 /* Wide content scrolls inside its own box; the page never scrolls sideways. Measured at 375px: the
    guides overflowed by ~95px and the privacy table by ~32px, from long code tokens in table cells
