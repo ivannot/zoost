@@ -154,6 +154,14 @@ asked by a different person on a different day. That material moved to **`/nerd.
 exhaustive is the correct register rather than a failure of nerve. The product pages are ~850 words;
 the home is ~630.
 
+**A demonstrative that carries an English headline dangles in Italian.** «Hundreds of views, and no
+way to see the shape of them. *This* draws you the map» works in English, where a bare `this` can
+point at the product you are looking at. Italian inflects it for gender, so «Questa ti disegna la
+mappa» goes looking for a feminine noun and finds *la forma* - which is the thing being complained
+about. Reported by the author. The subject is named on both sides now, which is the same rule as the
+one below, and the general form is: **a construction that leans on deixis in one language has to be
+re-anchored in the other, not translated.**
+
 **A headline needs its subject in it.** «You built it. It is yours. / And the platform gives you no
 way to see it whole» — built *what*, on *what* platform? The reader works it out from the paragraph
 below, which is one paragraph too late. It names Zoho and it names the things now.
