@@ -33,7 +33,9 @@ It decides nothing. A difference may be deliberate — say so below, with the re
 
     python3 tools/twincheck.py            # everything not declared product-specific
     python3 tools/twincheck.py --all      # everything, declarations ignored
+    python3 tools/twincheck.py --accept   # record the twin-function ledger as read
 """
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -263,8 +265,94 @@ def selector_is_product_only(sel):
     return False
 
 
+# ---------------------------------------------------------------------------------------------
+# Check 7: the code the two products hold in common, and whether it has drifted.
+#
+# No code is shared between the apps, by decision (CLAUDE.md): two products still finding their
+# form pay more for a premature abstraction than for the copy. The bill for that decision is real
+# and has been paid at least once - when the force layout was rewritten, `settle()` was carried to
+# the other side by hand, and it got there because somebody remembered.
+#
+# So the duplication is not removed, it is **held**. Every function name present in both products
+# is recorded in tools/twins.txt with a hash of each side's body, and a one-sided change is
+# reported. That converts "fixed on one side only" from silent into stated, without touching the
+# architecture - which matters here because the extensions are loaded unpacked, so a shared folder
+# assembled at build time would exist in the package and not in the tree being developed.
+#
+# It is a ledger, not an allow-list. Nothing is listed by hand: a function that becomes a twin
+# tomorrow is recorded without anyone remembering, and the failure mode an allow-list has - forget
+# to add something and it goes unchecked - cannot happen. `--accept` records the current state
+# after it has been read, the same differential shape as tools/absolutes.txt.
+#
+# What it does not catch, said rather than left to be found: a change made on both sides in the
+# same commit is exactly what should happen and is recorded silently, so a fix applied twice but
+# *differently* reads as intentional. Only the count of sides that moved is compared, never the
+# content of the change.
+LEDGER = ROOT / 'tools/twins.txt'
+
+
+def functions(js):
+    """Top-level function bodies, whitespace-collapsed. A regex over declarations plus a brace walk:
+    the panels are plain scripts with no nesting worth chasing, and a parser would be the first
+    dependency in a repository whose pitch is that it has none."""
+    src = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
+    src = re.sub(r'^\s*//.*$', '', src, flags=re.M)
+    out = {}
+    for m in re.finditer(r'^(?:async )?function (\w+)\s*\(', src, re.M):
+        i = src.index('{', m.end() - 1)
+        depth, j = 0, i
+        while j < len(src):
+            if src[j] == '{':
+                depth += 1
+            elif src[j] == '}':
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        out[m.group(1)] = re.sub(r'\s+', ' ', src[i:j + 1])
+    return out
+
+
+def twins():
+    """Every function name both products define, with each side's body hash. The file set is
+    globbed, so a script added tomorrow is covered."""
+    side = {}
+    for app in ('crm', 'analytics'):
+        seen = {}
+        for f in sorted((ROOT / 'apps' / app).glob('*.js')):
+            for name, body in functions(f.read_text(encoding='utf-8')).items():
+                seen[name] = (hashlib.sha256(body.encode()).hexdigest()[:12], len(body))
+        side[app] = seen
+    return {n: (side['crm'][n], side['analytics'][n]) for n in sorted(set(side['crm']) & set(side['analytics']))}
+
+
+def read_ledger():
+    if not LEDGER.exists():
+        return {}
+    out = {}
+    for line in LEDGER.read_text(encoding='utf-8').splitlines():
+        if not line.strip() or line.startswith('#'):
+            continue
+        name, a, b = line.split('\t')[:3]
+        out[name] = (a, b)
+    return out
+
+
+def write_ledger(now):
+    lines = [
+        '# Derived by tools/twincheck.py - do not edit by hand; run it with --accept.',
+        '# Every function name both products define, with a hash of each side\'s body. A one-sided',
+        '# change is a fix that landed on one twin and not the other, which is what this catches.',
+        '# name\tcrm\tanalytics\tstate',
+    ]
+    for name, ((ac, _), (bc, _)) in sorted(now.items()):
+        lines.append(f'{name}\t{ac}\t{bc}\t{"identical" if ac == bc else "divergent"}')
+    LEDGER.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
 def main():
     every = '--all' in sys.argv
+    accept = '--accept' in sys.argv
     html = {k: p.read_text(encoding='utf-8') for k, p in PANELS.items()}
     css = {k: rules(styles(v)) for k, v in html.items()}
     raw = {k: id_attrs(v) for k, v in html.items()}
@@ -342,6 +430,43 @@ def main():
     print('\n'.join(idiff) if idiff else '  none')
     findings += len(idiff)
 
+    print('\n== code the two products hold in common ==')
+    now, was = twins(), read_ledger()
+    ident = {n: v for n, v in now.items() if v[0][0] == v[1][0]}
+    chars = sum(v[0][1] for v in ident.values())
+    print(f'  {len(now)} function names defined in both products; {len(ident)} byte-identical '
+          f'({chars:,} characters of deliberate copy) - tools/twins.txt holds them')
+    drift, fresh, both = [], [], 0
+    for name, ((ac, _), (bc, _)) in sorted(now.items()):
+        if name not in was:
+            fresh.append(name)
+            continue
+        moved = [s for s, o, n in (('crm', was[name][0], ac), ('analytics', was[name][1], bc)) if o != n]
+        if len(moved) == 1:
+            other = 'analytics' if moved[0] == 'crm' else 'crm'
+            what = 'was identical, now differs' if was[name][0] == was[name][1] else 'changed'
+            drift.append(f'  {name:24s} {what} - {moved[0]} moved, {other} did not')
+        elif moved:
+            both += 1
+    for name in sorted(set(was) - set(now)):
+        drift.append(f'  {name:24s} no longer a twin - removed or renamed on one side')
+    # A pair that moved on both sides honoured the twin rule, so it is not a drift. But leaving it
+    # unrecorded is not harmless: the next one-sided change would then be measured against a state
+    # two commits old and read as having moved on both sides too, which is silence exactly where
+    # this check is supposed to speak. So being behind is itself a finding, cleared by --accept.
+    if both:
+        drift.append(f'  the ledger is {both} pair(s) behind - both sides moved; read them, then --accept')
+    if fresh and was:
+        drift.append(f'  {len(fresh)} new twin function(s) not in the ledger: {", ".join(fresh[:6])}'
+                     + (' …' if len(fresh) > 6 else ''))
+    print('\n'.join(drift) if drift else '  no one-sided change, and the ledger is current')
+    if not was:
+        print(f'  (first run: {len(now)} pairs recorded)')
+    findings += len(drift)
+    if accept:
+        write_ledger(now)
+        print(f'  ledger written: {LEDGER.relative_to(ROOT)}')
+
     print('\n== declared deliberate ==')
     for k, v in sorted(EQUIV.items()):
         print(f'  #{k} = #{v} — same element, different name; worth unifying one day')
@@ -351,7 +476,11 @@ def main():
         print(f'  {sel} (one side only) — {why}')
 
     print(f'\n{findings} undeclared difference(s). Each is deliberate or a drift — decide, do not skip.')
-    return 0
+    # Its four siblings have always returned 1 on a finding; this one returned 0, so `tests/run.sh`
+    # ran it and could not fail on it. That was invisible while it printed zero, and would have
+    # stayed invisible exactly when it stopped - including for the twin ledger, which is only
+    # worth keeping if being behind is something a run can refuse to pass.
+    return 1 if findings else 0
 
 
 if __name__ == '__main__':

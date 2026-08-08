@@ -221,6 +221,34 @@ python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles
 python3 tools/twincheck.py --all    # everything, product-specific parts included
 ```
 
+**The duplication between the two products is not removed, it is held - `tools/twins.txt`.** 66 of
+the 138 function names both apps define are **byte-identical**, 26,247 characters of deliberate copy:
+`settle()`, `erLayout`, `aiStreamAnthropic`, `wireAsideFold`, `mergeKeys`, `syncLockRow`. The decision
+above still stands - and the bill for it has already been paid once, when the force layout was
+rewritten and `settle()` was carried across by hand, arriving because somebody remembered. Merging
+them is refused for a reason that beats the tidiness argument: the extensions are developed **loaded
+unpacked**, so a `shared/` folder assembled by `build.sh` would exist in the package and not in the
+tree being tested - a real regression bought with a theoretical gain.
+
+So `twincheck` records every twin function with a hash of each side's body and reports a **one-sided
+change**, which is what "fixed on one twin and not the other" looks like from the outside. It is a
+ledger, not an allow-list: nothing is named by hand, a function that becomes a twin tomorrow is
+recorded without anyone remembering, and `--accept` acknowledges the current state after it has been
+read - the same differential shape as `tools/absolutes.txt`.
+
+**Being *behind* is a finding too, and that is the part that makes it work.** A pair that moved on
+both sides honoured the twin rule, so it is not a drift - but leaving it unrecorded means the next
+one-sided change is measured against a state two commits old, reads as having moved on both sides,
+and passes. Silence exactly where the check is supposed to speak. Proven against all three cases:
+change `settle()` in one app (reported), in both (ledger behind), rename it on one side (no longer a
+twin). Note *why* the first mutation had to be a real statement - inserting a comment changed
+nothing, because the extractor strips comments before hashing, which is correct and made a careless
+proof pass.
+
+**And it exits 1 now.** Its four siblings always did; this one returned 0, so `tests/run.sh` ran it
+and could not fail on it. Invisible while it printed zero, and it would have stayed invisible exactly
+when it stopped.
+
 **The lists inside it are of what is deliberately different, never of what to check.** That
 direction is the whole point: forgetting to declare something makes it *reported*, not silent. Two
 earlier versions had it the other way round and both went quiet on real bugs — one because the rule
