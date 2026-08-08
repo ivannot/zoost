@@ -1,0 +1,24 @@
+# Response headers for the static assets, which the platform otherwise serves with
+# `cache-control: public, max-age=0, must-revalidate` - a revalidation round trip per file per page
+# view. Measured on the live site before this existed.
+#
+# Only the files whose *name* changes when their content does are cached hard. The icons are named by
+# size and are redrawn perhaps once a year; when one is, it gets a new name. site.css and site.js are
+# deliberately NOT here: their names carry no hash, so a long cache would let a returning visitor pair
+# new HTML with an old stylesheet and see a broken page until it expired. That trade needs versioned
+# filenames first, and is a separate piece of work.
+#
+# These do not apply to anything _worker.js generates - /api/versions sets its own cache-control, and
+# the .txt charset header is set there too.
+
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.ico
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  Cache-Control: public, max-age=604800
+
+/site.webmanifest
+  Cache-Control: public, max-age=86400

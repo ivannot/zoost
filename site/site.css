@@ -31,7 +31,12 @@ a{color:var(--teal)}
 /* ---- header (identical on every page) ---- */
 header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
 header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
-header img{width:26px;height:26px;border-radius:6px}
+/* The marks are inline SVG, not images: three 192x192 PNGs were being downloaded on every page and
+   drawn at 22-38px, six times the pixels needed, and each one paid a revalidation round trip because
+   the platform serves assets with `max-age=0, must-revalidate`. Inline they cost no request at all
+   and are sharp at any density. The geometry is the shipped icon's - one stroked path - and not
+   brand/*.svg, which still holds the three-piece Z this project retired. */
+header img,header .bpic{width:26px;height:26px;border-radius:6px}
 header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
 header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 header .brand:hover{opacity:.85}
