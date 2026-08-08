@@ -111,6 +111,40 @@ def live_matches_repo(findings: list, notes: list) -> None:
     notes.append(f'{len(published)} published files compared against the live site')
 
 
+def canonicals_answer_without_redirecting(findings: list, notes: list) -> None:
+    """A canonical URL has to be the one that answers 200, and only the network can say which it is.
+
+    Cloudflare serves `crm.html` at `/crm` and 307s the `.html` form to it. Every page declared
+    `https://zoost.it/crm.html`, so the canonical pointed at a redirect while `/crm` — the URL that
+    actually answers — announced itself as an alternative of it. Google indexed neither: Search
+    Console reported "alternative page with proper canonical tag" and the product pages were
+    invisible. It went unseen for as long as the pages existed because every check derived the URL
+    from the file's path, which is a fact about the repository, and the redirect is a fact about the
+    platform. Nothing that reads only these files can catch the next one either — hence a check that
+    asks the site.
+    """
+    pages = sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html'))
+    checked = 0
+    for p in pages:
+        rel = p.relative_to(SITE).as_posix()
+        for kind, url in re.findall(
+                r'<link rel="(canonical|alternate)" (?:hreflang="[^"]+" )?href="([^"]+)"',
+                p.read_text(encoding='utf-8')):
+            if not url.startswith(BASE_URL):
+                continue
+            out = subprocess.run(['curl', '-sS', '-o', '/dev/null', '--max-time', '20',
+                                  '-w', '%{http_code} %{redirect_url}', '-A',
+                                  'zoost auditcheck (+https://zoost.it)', url],
+                                 capture_output=True, text=True, timeout=30)
+            code, _, dest = (out.stdout.strip() + ' ').partition(' ')
+            checked += 1
+            if code != '200':
+                findings.append(f'{rel}: the {kind} URL {url} answers {code}'
+                                + (f' and redirects to {dest.strip()}' if dest.strip() else '')
+                                + ' — a search engine can index neither it nor its target')
+    notes.append(f'{checked} canonical and alternate URLs answer 200 without redirecting')
+
+
 # ---------------------------------------------------------------------------------------------------
 # 2. The store copy and the manifest are one thing said twice
 # ---------------------------------------------------------------------------------------------------
@@ -341,6 +375,7 @@ def main() -> int:
     deploy_state(findings, notes, args.offline)
     if not args.offline:
         live_matches_repo(findings, notes)
+        canonicals_answer_without_redirecting(findings, notes)
         published_state_is_stated(findings, notes)
     store_matches_manifest(findings, notes)
     description_repeats_the_name(findings, notes)

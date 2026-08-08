@@ -250,9 +250,13 @@ async function versions(request, ctx) {
 // `zoost.it/docs.html` compiled into it** and is in review as this ships. A published extension
 // cannot be asked to change, so the site keeps its side of that contract permanently. 301 rather
 // than 302 so search engines move rather than keep asking.
+// The target is the URL that answers 200. `/docs-crm.html` is itself 307'd to `/docs-crm` by the
+// asset layer, so pointing here at the `.html` form would send a published extension's users through
+// two redirects to reach one page — and it is the same confusion between a file's path and its URL
+// that made every canonical on this site point at a redirect.
 const MOVED = {
-  '/docs': '/docs-crm.html',
-  '/docs.html': '/docs-crm.html',
+  '/docs': '/docs-crm',
+  '/docs.html': '/docs-crm',
 };
 
 export default {

@@ -778,25 +778,37 @@ class CanonicalPointsAtItself(unittest.TestCase):
         self.assertIn('different page', f[0])
 
     def test_its_own_url_is_silent(self):
-        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a.html">'}), [])
+        # `a.html` is served at `/a`, so that — not the file name — is what the page must declare.
+        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a">'}), [])
+
+    def test_the_file_name_is_not_the_url(self):
+        # The defect this whole check missed for months: Cloudflare 307s `/a.html` to `/a`, so a
+        # canonical naming the `.html` form points at a redirect and the URL that answers 200 calls
+        # itself an alternative of it. Google indexes neither.
+        f = self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a.html">'})
+        self.assertEqual(len(f), 1, f)
+        self.assertIn('different page', f[0])
 
     def test_the_home_may_name_the_bare_origin(self):
         self.assertEqual(self.run_on({'index.html': '<link rel="canonical" href="https://zoost.it/">'}), [])
+
+    def test_a_translated_home_names_its_directory(self):
+        self.assertEqual(self.run_on({'it/index.html': '<link rel="canonical" href="https://zoost.it/it/">'}), [])
 
     def test_a_translated_pair_must_point_both_ways(self):
         # The Italian pages declared their original from the day they were written; the English ones
         # said nothing back. A one-way pair leaves the engine to pick which language a reader lands on.
         f = self.run_on({
-            'a.html': '<link rel="canonical" href="https://zoost.it/a.html">',
-            'it/a.html': '<link rel="canonical" href="https://zoost.it/it/a.html">'
-                         '<link rel="alternate" hreflang="en" href="https://zoost.it/a.html">'
-                         '<link rel="alternate" hreflang="it" href="https://zoost.it/it/a.html">',
+            'a.html': '<link rel="canonical" href="https://zoost.it/a">',
+            'it/a.html': '<link rel="canonical" href="https://zoost.it/it/a">'
+                         '<link rel="alternate" hreflang="en" href="https://zoost.it/a">'
+                         '<link rel="alternate" hreflang="it" href="https://zoost.it/it/a">',
         })
         self.assertEqual(len(f), 2, f)          # the English page is missing both directions
         self.assertTrue(all(x.startswith('a.html') for x in f), f)
 
     def test_a_page_with_no_translation_is_not_asked_for_alternates(self):
-        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a.html">'}), [])
+        self.assertEqual(self.run_on({'a.html': '<link rel="canonical" href="https://zoost.it/a">'}), [])
 
     def test_the_site_is_correct_today(self):
         findings = []

@@ -11,11 +11,11 @@ the last section says which ones cannot be checked and why.
 
 ## The two products
 
-- [Zoost - workbench for Zoho CRM](https://zoost.it/crm.html) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj): mirrors Deluge functions, module
+- [Zoost - workbench for Zoho CRM](https://zoost.it/crm) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj): mirrors Deluge functions, module
   schema, layouts, related lists, workflows, schedules and the connections catalogue. Adds a
   reference graph, an ER diagram, full-text search across every function, a health audit, HTML and
   Markdown exports, and an optional AI assistant.
-- [Zoost - workbench for Zoho Analytics](https://zoost.it/analytics.html) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge): mirrors every view with
+- [Zoost - workbench for Zoho Analytics](https://zoost.it/analytics) - [on the Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge): mirrors every view with
   its type and folder, the columns of every table and query table, the foreign keys between them, the
   SQL of each query table as its own file, and the dependency graph. Adds an ER diagram, a list of
   what nothing depends on any more, exports, and the same assistant.
@@ -30,10 +30,10 @@ is that the product can be assessed without connecting it to anything.
 
 ## How to use them
 
-- [How to use Zoost CRM](https://zoost.it/docs-crm.html)
-- [How to use Zoost Analytics](https://zoost.it/docs-analytics.html)
-- [Which guide you want](https://zoost.it/how-to.html)
-- [The nerd page](https://zoost.it/nerd.html) - which endpoints, what breaks it, how a release is
+- [How to use Zoost CRM](https://zoost.it/docs-crm)
+- [How to use Zoost Analytics](https://zoost.it/docs-analytics)
+- [Which guide you want](https://zoost.it/how-to)
+- [The nerd page](https://zoost.it/nerd) - which endpoints, what breaks it, how a release is
   built and signed, and what none of that proves. The product pages point at it rather than
   carrying it, so this is where the technical claims live.
 
@@ -93,7 +93,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 - Check an archive against that record without trusting anyone:
   `gh attestation verify zoost-crm-<version>-store.zip --repo ivannot/zoost`
   and `tools/verify.sh crm <version>`, which rebuilds it from the tag and compares.
-- [Privacy policy](https://zoost.it/privacy.html) - what is stored, where, and what leaves.
+- [Privacy policy](https://zoost.it/privacy) - what is stored, where, and what leaves.
 
 ## What the product rests on
 

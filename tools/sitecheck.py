@@ -518,8 +518,21 @@ def canonical_and_alternates(findings: list) -> None:
     anyone remembering to list it.
     """
     def url_of(p: Path) -> str:
+        """The URL the platform actually serves — which is not the file's path.
+
+        This derived `https://zoost.it/crm.html` for months while Cloudflare served that file at
+        `/crm` and 307'd the `.html` form to it. So every page declared a canonical pointing at a
+        URL that redirected, and `/crm` — the one that answers 200 — declared itself an alternative
+        of it. Neither could be indexed: Search Console reported "alternative page with proper
+        canonical tag" and the product page was invisible. Nothing here caught it because every
+        criterion was derived from the repository and none from the platform, and `auditcheck.py`
+        had the right rule in `published_path()` the whole time. Two tools, two answers, and nobody
+        compared them — so this is deliberately the same rule, kept beside its twin.
+        """
         rel = p.relative_to(SITE).as_posix()
-        return 'https://zoost.it/' if rel == 'index.html' else f'https://zoost.it/{rel}'
+        if rel.endswith('index.html'):
+            return f'https://zoost.it/{rel[:-len("index.html")]}'
+        return f'https://zoost.it/{rel[:-5]}' if rel.endswith('.html') else f'https://zoost.it/{rel}'
 
     for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
         html = p.read_text(encoding='utf-8')
@@ -529,8 +542,6 @@ def canonical_and_alternates(findings: list) -> None:
             findings.append(f'{rel}: no canonical')
         else:
             want = {url_of(p)}
-            if p.name == 'index.html':                      # /it/ and /it/index.html are the same page
-                want.add(url_of(p).rsplit('index.html', 1)[0])
             if m.group(1) not in want:
                 findings.append(f'{rel}: canonical points at {m.group(1)}, which is a different page — '
                                 f'expected {url_of(p)}')
@@ -542,7 +553,7 @@ def canonical_and_alternates(findings: list) -> None:
         alts = dict((lang, href) for lang, href in
                     re.findall(r'<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"', html))
         for lang, other in (('en', SITE / p.name), ('it', SITE / 'it' / p.name)):
-            if alts.get(lang) not in {url_of(other), url_of(other).rsplit('index.html', 1)[0]}:
+            if alts.get(lang) != url_of(other):
                 findings.append(f'{rel}: hreflang="{lang}" is {alts.get(lang)!r}, but the {lang} page '
                                 f'is at {url_of(other)} — a translated pair points both ways or neither')
 
