@@ -18,10 +18,10 @@ const listPages = () => ['', 'it/'].flatMap((d) =>
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
 // tests. The tests do not get to reshape the project.
-const { pickLatestTag, pickStoreVersion, pickSubmissions } = load([
+const { pickLatestTag, pickStatus, pickSubmissions } = load([
   sliceConst('site/_worker.js', 'IS_VERSION'),
   sliceFn('site/_worker.js', 'pickLatestTag'),
-  sliceFn('site/_worker.js', 'pickStoreVersion'),
+  sliceFn('site/_worker.js', 'pickStatus'),
   sliceFn('site/_worker.js', 'pickSubmissions'),
 ]);
 
@@ -71,18 +71,43 @@ test('one product never answers with the other product\'s tag', () => {
   assert.equal(pickLatestTag(xml, 'analytics'), 'analytics-v2.0.0');
 });
 
-test('the store scrape returns a version, or nothing — never a guess', () => {
-  // The shape guard is the promise that a change in Google's markup costs us the number and never
-  // invents one. A promise is worth what its test is worth.
-  assert.equal(pickStoreVersion('<span class="nBZElf">1.9.0</span>'), '1.9.0');
-  assert.equal(pickStoreVersion('<span class="nBZElf">Updated today</span>'), null);
-  assert.equal(pickStoreVersion('<span class="nBZElf"></span>'), null);
-  assert.equal(pickStoreVersion('nothing that looks like the listing at all'), null);
+test('the Store status is read, and a field that is not a version is dropped', () => {
+  // Recorded from a real fetchStatus response, so the shape here cannot drift from the API's.
+  const d = {
+    publishedItemRevisionStatus: { state: 'PUBLISHED',
+      distributionChannels: [{ deployPercentage: 100, crxVersion: '1.9.0' }] },
+    submittedItemRevisionStatus: { state: 'PENDING_REVIEW',
+      distributionChannels: [{ deployPercentage: 100, crxVersion: '1.38.4' }] },
+  };
+  const s = pickStatus(d);
+  assert.equal(s.published.version, '1.9.0');
+  assert.equal(s.published.state, 'PUBLISHED');
+  assert.equal(s.submitted.version, '1.38.4');
+  assert.equal(s.submitted.state, 'PENDING_REVIEW');
+  assert.equal(s.published.deployPercentage, 100);
 });
 
-test('the first value that looks like a version wins, later prose is not consulted', () => {
-  const html = '<span class="nBZElf">1.2.3</span><span class="nBZElf">4.5.6</span>';
-  assert.equal(pickStoreVersion(html), '1.2.3');
+test('a rejected submission is a state, not the absence of one', () => {
+  // The whole reason for moving off the scrape. A refused version looks exactly like a queued one
+  // from outside, so without this the badge would have claimed "awaiting review" for ever.
+  const s = pickStatus({ submittedItemRevisionStatus: { state: 'REJECTED',
+    distributionChannels: [{ crxVersion: '2.0.0' }] } });
+  assert.equal(s.submitted.state, 'REJECTED');
+  assert.equal(s.published, null, 'nothing published is not an error, it is a fact');
+});
+
+test('nothing submitted since the last publish is null, not an empty claim', () => {
+  const s = pickStatus({ publishedItemRevisionStatus: { state: 'PUBLISHED',
+    distributionChannels: [{ crxVersion: '1.0.0' }] } });
+  assert.equal(s.submitted, null);
+});
+
+test('a version-shaped guard still applies to what Google sends', () => {
+  const s = pickStatus({ publishedItemRevisionStatus: { state: 'PUBLISHED',
+    distributionChannels: [{ crxVersion: 'rolling' }] } });
+  assert.equal(s.published.version, null, 'a value that is not a version is dropped, never shown');
+  assert.equal(pickStatus({}), null);
+  assert.equal(pickStatus(null), null);
 });
 
 // ---------- the gap between what is released and what the Store serves ----------
@@ -212,49 +237,59 @@ test('a partial answer is not cached for as long as a complete one', () => {
 test('the cache key moves when the caching does', () => {
   // The key ignores the query string on purpose, so a wrong entry cannot be busted from outside. It
   // therefore has to carry a marker, or a change in what gets cached is invisible until expiry.
-  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=14';/);
+  assert.match(read('site/_worker.js'), /const CACHE_KEY = '\/api\/versions\?v=15';/);
 });
 
 
 // ---------- what is actually in review ----------
+//
+// This used to be derived from RELEASES.md - the newest version recorded as submitted - which
+// answered by proxy: a row typed after clicking Submit. `fetchStatus` answers directly and carries
+// a *state*, so those cases moved up to pickStatus. What stays here is the date, which the API does
+// not report: it says which state a revision is in, never when it entered it.
 
-const submitted = load([sliceFn('site/_worker.js', 'newestSubmitted'),
-                        sliceFn('site/_worker.js', 'cmpVersion'),
-                        sliceConst('site/_worker.js', 'IS_VERSION')], {});
-
-test('the newest submitted version is not the newest tag', () => {
-  // The footer read "Web Store 1.0.0 · latest release 1.11.0 not submitted yet" while 1.9.0 was in
-  // review — every word true, and the one fact a reader wanted was missing. `submitted` answers
-  // "was this tag submitted"; that is the wrong question the moment a later, unsubmitted tag exists.
-  const subs = { crm: { '1.9.0': '2026-08-04' }, analytics: { '1.0.0': '2026-08-03', '1.8.0': '2026-08-05' } };
-  const crm = submitted.newestSubmitted(subs, 'crm');
-  assert.equal(crm.version, '1.9.0'); assert.equal(crm.date, '2026-08-04');
-  const ana = submitted.newestSubmitted(subs, 'analytics');
-  assert.equal(ana.version, '1.8.0'); assert.equal(ana.date, '2026-08-05');
+test('the submission date still comes from the ledger, because the API has none', () => {
+  const subs = pickSubmissions([
+    '| App | Version | Tag | Commit | SHA-256 | Submitted |',
+    '|---|---|---|---|---|---|',
+    '| crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `abc` | 2026-08-07 |',
+  ].join('\n'));
+  assert.equal(subs.crm['1.38.4'], '2026-08-07');
 });
 
-test('versions are compared as numbers, not as text', () => {
-  // 1.10.0 sorts before 1.9.0 as a string, and the ledger will reach 1.10 long before anyone notices.
-  assert.equal(submitted.newestSubmitted({ x: { '1.9.0': 'a', '1.10.0': 'b' } }, 'x').version, '1.10.0');
-});
 
-test('an app with no submissions has nothing in review', () => {
-  assert.equal(submitted.newestSubmitted({ crm: { '1.0.0': 'x' } }, 'analytics'), null);
-  assert.equal(submitted.newestSubmitted(null, 'crm'), null);
-});
-
-test('a malformed version in the ledger is skipped, not ranked', () => {
-  assert.equal(submitted.newestSubmitted({ x: { 'not-a-version': 'a', '1.2.3': 'b' } }, 'x').version, '1.2.3');
+test('a malformed row in the ledger is skipped, not read', () => {
+  // The guard moved with the code: ranking submissions is Google's job now, but the ledger is still
+  // parsed for the date and a row that is not a row must not become one.
+  const subs = pickSubmissions([
+    '| crm | not-a-version | `t` | `c` | `s` | 2026-01-01 |',
+    '| crm | 1.2.3 | `t` | `c` | `s` | not-a-date |',
+    '| crm | 1.2.4 | `t` | `c` | `s` | 2026-02-02 |',
+  ].join('\n'));
+  // Compared key by key: the sliced function builds its object in another realm, so a strict deep
+  // comparison fails on the prototype rather than on the content.
+  assert.deepEqual(Object.keys(subs.crm), ['1.2.4']);
+  assert.equal(subs.crm['1.2.4'], '2026-02-02');
 });
 
 test('the footer says what is in review only when it adds a fact', () => {
   const src = read('site/site.js');
-  assert.match(src, /if \(p && newer\(p\.version, v\.store\) && p\.version !== verOf\(v\.tag\)\)/,
-    'the condition that stops it repeating the release line is gone');
+  assert.ok(/var repeats = p && p\.state === 'PENDING_REVIEW' && p\.version === verOf\(v\.tag\)/.test(src),
+    'the guard that stops it repeating the release line is gone');
+  assert.ok(/&& !repeats\)/.test(src), 'the guard is computed but not applied');
+  // ...and the guard must stay narrow: the release line can only ever say "awaiting", so a rejected
+  // revision on the same version has to survive it. Widening this back to `p.version !== verOf(tag)`
+  // would hide the one state a reader has to act on.
+  assert.ok(!/p\.version !== verOf\(v\.tag\)\)/.test(src),
+    'suppressing every state on the current tag hides REJECTED, which nothing else can say');
+  assert.ok(/rejected: '[^']+'/.test(src), 'no label for a refused submission');
+  assert.ok(/LBL\[p\.state\]/.test(src), 'an unknown state must not be folded into a known one');
   // The label moved into the string table when the site learnt Italian; what must still exist is the
   // fact being stated, in both languages.
-  assert.match(src, /review: '[^']+'/, 'the English label for what is in review is gone');
-  assert.match(src, /t\('review'\)/, 'the footer no longer states what is in review');
+  assert.ok(/review: '[^']+'/.test(src), 'the English label for what is in review is gone');
+  // The label is looked up through LBL rather than named directly, because there are three states
+  // to say and one of them is a refusal. Asserting `t('review')` would now pass only by reverting.
+  assert.ok(/t\(LBL\[p\.state\]\)/.test(src), 'the footer no longer states which state it is in');
 });
 
 // ---------- The footer badge speaks the page's language, all of it ----------

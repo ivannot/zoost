@@ -15,10 +15,12 @@
  *    displayed, so a change in Google's markup can only cost us the number — never invent one.
  *  - Answers are cached at the edge for an hour, so a brief upstream failure is invisible.
  *
- * The store number is scraped from the listing page because Google publishes no API for it. That is
- * a DOM contract we do not own and it will break one day — acceptable *here*, on an informational
- * page where the cost is a missing badge. The extension itself must never depend on anything like
- * this (see CLAUDE.md, "Do what you're certain of, or stop").
+ * The Store figures came from scraping the listing page for years, because the old API could not
+ * report status and Google published nothing else. They come from the Chrome Web Store API now, read
+ * with a service account whose scope is `chromewebstore.readonly` — so the credential this Worker
+ * holds can read our items' status and can do nothing else to them. That removes a DOM contract we
+ * did not own, and it answers a question the scrape never could: whether a submission was
+ * **rejected**, which is otherwise indistinguishable from one still in the queue.
  */
 
 const REPO = 'ivannot/zoost';
@@ -79,28 +81,85 @@ export function pickLatestTag(xml, app) {
   return tags.length ? tags[0][1] : null;   // the tag name alone: it is what you check out
 }
 
-// Published version on the Chrome Web Store. No API exists, so this reads the listing page and only
-// accepts a value shaped like a version.
-async function storeVersion(app) {
-  const r = await fetch(listing(app), {
-    headers: {
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'accept-language': 'en-US,en;q=0.9',
-    },
+// What the Chrome Web Store says about our items, asked of the Store rather than scraped off it.
+//
+// This used to parse the listing page for a `class="nBZElf"` span, because the old API had no way to
+// report status and Google published nothing else. V2 does: `publishers.items.fetchStatus` returns
+// the published revision and the submitted one, each with a state, and it is read through a service
+// account holding `chromewebstore.readonly` — a credential that cannot publish, cannot edit and
+// cannot take anything down. Three things improve at once: the DOM contract we did not own is gone,
+// "in review" is Google saying so instead of a line we wrote in RELEASES.md, and **rejected** became
+// expressible at all — before this, a refused submission would have left the badge claiming it was
+// still in review for ever.
+const CWS_API = 'https://chromewebstore.googleapis.com/v2';
+const PUBLISHER = 'f3724a09-0185-4176-ab7e-3b1df03ca3b7';   // not a secret: it is in every dashboard URL
+
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+function pemBytes(pem) {
+  const raw = atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out.buffer;
+}
+
+// The service-account JWT flow: sign a one-hour assertion with the account's private key and trade
+// it for an access token. Nothing is stored between requests — the whole payload is cached for an
+// hour anyway, so a token per computation costs one extra call and saves having a second thing that
+// can go stale.
+async function cwsToken(env) {
+  if (!env || !env.CWS_SERVICE_ACCOUNT) return null;
+  const key = JSON.parse(env.CWS_SERVICE_ACCOUNT);
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: key.client_email,
+    scope: 'https://www.googleapis.com/auth/chromewebstore.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now, exp: now + 3600,
+  };
+  const enc = new TextEncoder();
+  const head = b64url(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const body = b64url(enc.encode(JSON.stringify(claim)));
+  const signer = await crypto.subtle.importKey(
+    'pkcs8', pemBytes(key.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', signer, enc.encode(`${head}.${body}`));
+  const r = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${head}.${body}.${b64url(sig)}`,
     signal: timeout(8000),
   });
   if (!r.ok) return null;
-  return pickStoreVersion(await r.text());
+  const j = await r.json();
+  return j && j.access_token ? j.access_token : null;
 }
 
-// Separated for the same reason: the shape guard is the promise that a change in Google's markup
-// can only cost us the number, never invent one, and a promise is worth what its test is worth.
-export function pickStoreVersion(html) {
-  for (const m of html.matchAll(/class="nBZElf">([^<]{1,24})</g)) {
-    const v = m[1].trim();
-    if (IS_VERSION.test(v)) return v;   // shape guard — see the header note
-  }
-  return null;
+async function cwsStatus(token, app) {
+  if (!token) return null;
+  const r = await fetch(`${CWS_API}/publishers/${PUBLISHER}/items/${EXT_ID[app]}:fetchStatus`, {
+    headers: { authorization: `Bearer ${token}` }, signal: timeout(8000),
+  });
+  if (!r.ok) return null;
+  return pickStatus(await r.json());
+}
+
+// Separated so it can be tested against a real response. Every version still passes the same shape
+// guard the scrape used: a field that is not a version is discarded rather than displayed, because
+// the promise has always been that a change at Google's end can cost us a number, never invent one.
+export function pickStatus(d) {
+  const rev = (x) => {
+    if (!x || !x.state) return null;
+    const ch = (x.distributionChannels || [])[0] || {};
+    const v = String(ch.crxVersion || '').trim();
+    return { state: x.state, version: IS_VERSION.test(v) ? v : null,
+             deployPercentage: typeof ch.deployPercentage === 'number' ? ch.deployPercentage : null };
+  };
+  const published = rev(d && d.publishedItemRevisionStatus);
+  const submitted = rev(d && d.submittedItemRevisionStatus);
+  if (!published && !submitted) return null;
+  return { published, submitted, takenDown: !!(d && d.takenDown) };
 }
 
 // When a version was submitted to the Store, read from RELEASES.md — the same record a reader can
@@ -165,50 +224,46 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=14';  // bumped: each product now carries what is actually in review
+const CACHE_KEY = '/api/versions?v=15';  // bumped: the Store's own status replaces the listing scrape
 
-/** The newest version of `app` recorded as submitted, and when — regardless of what is tagged.
- *
- * `sub()` below answers "was *this tag* submitted", which is the right question for the release line
- * and the wrong one for everything else: tag a version and do not submit it, and the release that is
- * genuinely sitting in review disappears from the page. That is exactly what happened — Zoho CRM read
- * "Web Store 1.0.0 · latest release 1.11.0 not submitted yet", with no sign that 1.9.0 had been
- * submitted a day earlier and was still being reviewed. Every word was true and the page was wrong.
- */
-function newestSubmitted(subs, app) {
-  const rows = (subs && subs[app]) || {};
-  let best = null;
-  for (const [v, date] of Object.entries(rows)) {
-    if (!IS_VERSION.test(v)) continue;
-    if (!best || cmpVersion(v, best.version) > 0) best = { version: v, date };
-  }
-  return best;
-}
-function cmpVersion(a, b) {
-  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
-  for (let i = 0; i < 3; i++) { if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0); }
-  return 0;
-}
 
-async function versions(request, ctx) {
+async function versions(request, env, ctx) {
   const cache = caches.default;
   const key = new Request(new URL(CACHE_KEY, request.url).toString(), { method: 'GET' });
 
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, subs, updated, docsUpd, docsAnUpd] =
+  const token = await settled(cwsToken(env));
+  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, subs, updated, docsUpd, docsAnUpd] =
     await Promise.all([
-      settled(storeVersion('crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
-      settled(storeVersion('analytics')), settled(repoVersion('analytics')),
+      settled(cwsStatus(token, 'crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
+      settled(cwsStatus(token, 'analytics')), settled(repoVersion('analytics')),
       settled(latestTag('analytics')),
       settled(submissions()),
       settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
+  const crmStore = crmCws && crmCws.published ? crmCws.published.version : null;
+  const anStore = anCws && anCws.published ? anCws.published.version : null;
   const sub = (app, tag) => {
     const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
     return (m && subs && subs[app] && subs[app][m[1]]) || null;
+  };
+
+  /* What is in review, and now with a *state* rather than an inference.
+   *
+   * This used to be the newest version RELEASES.md recorded as submitted, which answered the
+   * question by proxy: a row I typed after clicking Submit. Google answers it directly, and answers
+   * one thing the ledger never could — a submission that was **refused**. Without a state, a
+   * rejected version is indistinguishable from one still queued, and the badge would have gone on
+   * saying "awaiting review" for ever. The date still comes from RELEASES.md, because the API
+   * reports what state a revision is in and not when it entered it. */
+  const inReview = (app, cws) => {
+    const s = cws && cws.submitted;
+    if (!s || !s.version) return null;
+    return { version: s.version, state: s.state,
+             date: (subs && subs[app] && subs[app][s.version]) || null };
   };
 
   // A source that failed is cached for a minute, not an hour. `settled()` turns a blip into null and
@@ -228,8 +283,8 @@ async function versions(request, ctx) {
     // ids already live in this file, and a second copy is a second thing to go stale.
     // `submitted` answers "was this tag submitted"; `pending` answers "is anything in review", which
     // is a different question the moment a later tag exists that was not submitted.
-    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), pending: newestSubmitted(subs, 'crm'), url: listing('crm') },
-    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), pending: newestSubmitted(subs, 'analytics'), url: listing('analytics') },
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), pending: inReview('crm', crmCws), url: listing('crm') },
+    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), pending: inReview('analytics', anCws), url: listing('analytics') },
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {
@@ -266,7 +321,7 @@ const MOVED = {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname === '/api/versions') return versions(request, ctx);
+    if (url.pathname === '/api/versions') return versions(request, env, ctx);
     const to = MOVED[url.pathname];
     if (to) return Response.redirect(new URL(to, url).toString(), 301);
 

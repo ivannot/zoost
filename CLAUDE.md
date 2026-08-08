@@ -344,12 +344,23 @@ is inside a folder, and `chrome://extensions` wants the folder.
 
   **This rule binds the extension absolutely; the website is judged differently.** The extension is
   where work happens: someone acts on what it says, so an uncertain answer there can cost real time
-  or real data. `zoost.it` is informational — if a scraped number goes missing the page says
-  "unknown" and nobody is harmed. So the site may depend on a source we do not control (the version
-  badge reads the Chrome Web Store listing's markup, since Google publishes no API), provided the
-  dependency **fails visibly and cannot lie**: validate the shape of what came back, discard anything
-  that does not match, show "unknown" rather than a stale or guessed value, and cache so a blip is
-  invisible. Never carry this licence back into an app under `apps/`.
+  or real data. `zoost.it` is informational — if a number goes missing the page says "unknown" and
+  nobody is harmed. So the site may depend on a source we do not control, provided the dependency
+  **fails visibly and cannot lie**: validate the shape of what came back, discard anything that does
+  not match, show "unknown" rather than a stale or guessed value, and cache so a blip is invisible.
+  Never carry this licence back into an app under `apps/`.
+
+  **The licence was being spent on a scrape, and it did not have to be.** The badge read the Chrome
+  Web Store listing's markup for a `class="nBZElf"` span, on the belief that Google published no API
+  — a claim about another vendor's product that nothing here could check, which is the class this
+  file already flags as the one where reading the documentation is the only method. **V2 exists**:
+  `publishers.items.fetchStatus` reports the published revision and the submitted one, each with a
+  state, read through a service account scoped to `chromewebstore.readonly` — a credential that can
+  read our items' status and do nothing else to them. Three gains, and the third was invisible until
+  the API made it expressible: the DOM contract is gone, «in review» is Google saying so instead of a
+  row typed into `RELEASES.md` after clicking Submit, and a **rejected** submission can be stated at
+  all. Without a state a refusal is indistinguishable from a queue, so the badge would have promised
+  «awaiting review» about a version Google had already turned down, for ever.
 
 ## Architectural decisions worth not re-litigating
 
@@ -2035,7 +2046,7 @@ the first dependency in a repository whose pitch is that it has none.
 **Every case is a bug that actually happened.** A test written from imagination tests the
 imagination; these were lifted from the throwaway checks run while fixing real defects — the Deluge
 comment/string scanner, which CSRF cookie belongs to which family, staleness derived per area,
-reading an annotated tag out of an Atom feed, the store scrape's shape guard. **The checkers are
+reading an annotated tag out of an Atom feed, the shape guard on what the Store reports. **The checkers are
 tested too**, and that is not ceremony: two of the three shipped broken on the day they were written,
 and a broken checker reports success over the thing it exists to catch, which is worse than none.
 
@@ -2530,6 +2541,22 @@ exactly right about two smaller things, and both are fixed.
   agent at all — gets through, and `tools/reachcheck.sh` proves it rather than assuming it. Run it
   after any change to the Cloudflare configuration. It is **not** in `tests/run.sh`: it needs the
   network and the live site, and a suite that fails because DNS was slow is a suite nobody believes.
+- **The Worker holds one credential, and its scope is the whole safety argument.**
+  `CWS_SERVICE_ACCOUNT` is a Cloudflare **secret** holding the service account's JSON key, and the
+  token it mints carries `https://www.googleapis.com/auth/chromewebstore.readonly` — it can read our
+  items' status and cannot publish, edit, or take anything down. Setting it up has one step that is
+  not in Google's documentation and cost an irreversible mistake: the field is on the **publisher's**
+  account page, the one whose text says the service account «will be able to access all items through
+  public APIs». It is **not** «Create a new publisher» on the developer profile page, which looks
+  plausible, accepts the same email, and silently spends the one group publisher a developer account
+  may ever create — the quota is not restored by deleting it. Google's own pages say only «add the
+  required emails in the Developer Dashboard» and never describe the control.
+  With the secret missing or the key revoked, `cwsToken()` returns null, every Store field is null and
+  the badge says «unknown» — the fail-visible behaviour the rule above requires, rather than a stale
+  number. `tools/whatsnew.py`-style raw material for a check does not exist here: the only way to
+  prove this path is to run it, which `tests/` cannot do without the key, so it is exercised by hand
+  against the live API and the parsing half (`pickStatus`) is what the suite covers.
+
 - **Do not call `api.github.com` from the Worker.** It allows 60 unauthenticated requests an hour
   *per IP*, and the Worker leaves through Cloudflare's shared egress addresses, where that budget is
   already spent by strangers' traffic. Three of the badge's four fields came back null because of it,

@@ -39,12 +39,14 @@
     en: {
       store: 'On the Web Store', release: 'Latest release', dev: 'In development',
       review: 'Awaiting review', updated: 'Site updated',
+      rejected: 'Rejected', staged: 'Approved, not yet published',
       submitted: 'submitted ', awaiting: ', awaiting review', notSubmitted: 'not submitted yet',
       none: 'none yet', unknown: 'unknown',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
       review: 'In revisione', updated: 'Sito aggiornato',
+      rejected: 'Rifiutata', staged: 'Approvata, non ancora pubblicata',
       submitted: 'inviata il ', awaiting: ', in attesa di revisione', notSubmitted: 'non ancora inviata',
       none: 'nessuna', unknown: 'sconosciuta',
     },
@@ -132,11 +134,25 @@
         // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review - every
         // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
         // not already the release line above.
+        // The state comes from the Chrome Web Store itself now, not from a row we typed after
+        // clicking Submit. That is what makes REJECTED sayable: from outside, a refused submission
+        // and a queued one look identical, so the badge used to promise "awaiting review" about a
+        // version Google had already turned down, indefinitely. An unknown state is not rendered
+        // rather than being folded into the nearest one we recognise.
         var review = '';
         var p = v.pending;
-        if (p && newer(p.version, v.store) && p.version !== verOf(v.tag)) {
-          review = '<span class="vitem"><b>' + t('review') + '</b> ' + esc(p.version) +
-            ' <i>' + t('submitted') + esc(fmtDate(p.date) || p.date) + '</i></span>';
+        var LBL = { PENDING_REVIEW: 'review', REJECTED: 'rejected', STAGED: 'staged' };
+        // Said only when it adds a fact. The release line above already reads "1.38.4, submitted 7
+        // Aug, awaiting review" when the newest tag is the one in the queue, and repeating it is how
+        // this line stopped being read. But that line can only ever express *awaiting* - so a
+        // rejected or approved-not-yet-published revision is new information even on the same
+        // version, and suppressing it there would hide the only state anyone needs to act on.
+        var repeats = p && p.state === 'PENDING_REVIEW' && p.version === verOf(v.tag);
+        if (p && p.version && LBL[p.state] && newer(p.version, v.store) && !repeats) {
+          // The date is the one thing the API does not report — it says which state a revision is
+          // in, never when it entered it — so it is stated only when RELEASES.md has recorded it.
+          var when = p.date ? ' <i>' + t('submitted') + esc(fmtDate(p.date) || p.date) + '</i>' : '';
+          review = '<span class="vitem"><b>' + t(LBL[p.state]) + '</b> ' + esc(p.version) + when + '</span>';
         }
         bits.push(
           '<div class="vrow">' +
