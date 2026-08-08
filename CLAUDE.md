@@ -2551,6 +2551,12 @@ exactly right about two smaller things, and both are fixed.
   plausible, accepts the same email, and silently spends the one group publisher a developer account
   may ever create — the quota is not restored by deleting it. Google's own pages say only «add the
   required emails in the Developer Dashboard» and never describe the control.
+  **It has to be a Secret, not a plain-text variable, and that is not only about confidentiality.**
+  Cloudflare runs `npx wrangler deploy` on every push and `site/wrangler.jsonc` declares no `vars`, so
+  a plain-text variable added in the dashboard does not survive the next build: it was there, visible,
+  and the Worker answered `no-credential`. Secrets are documented as preserved across deployments.
+  The dashboard's **Encrypt** button converts one in place. A preview version keeps the bindings it
+  was built with, so converting it does not fix a build that already ran - push again.
   With the secret missing or the key revoked, `cwsToken()` returns null, every Store field is null and
   the badge says «unknown» — the fail-visible behaviour the rule above requires, rather than a stale
   number. `tools/whatsnew.py`-style raw material for a check does not exist here: the only way to

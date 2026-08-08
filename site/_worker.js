@@ -112,6 +112,12 @@ function pemBytes(pem) {
 // "unknown" with no cause is the empty state this project refuses everywhere else: a missing binding,
 // a revoked key and a malformed secret all produce the same null and need different fixes. Nothing in
 // it identifies the credential - it names which step declined.
+// `CWS_SERVICE_ACCOUNT` must be a **Secret**, never a plain-text variable, and the reason is not only
+// that a private key should not be readable in a dashboard. Cloudflare runs `npx wrangler deploy` on
+// every push and `wrangler.jsonc` declares no `vars`, so a plain-text variable added by hand does not
+// survive the next build - it was set, it showed in the dashboard, and the Worker answered
+// `no-credential`. Secrets are documented as preserved across deployments; plain-text vars, in our
+// measurement, are not.
 async function cwsToken(env) {
   if (!env || !env.CWS_SERVICE_ACCOUNT) return { token: null, why: 'no-credential' };
   let key;
