@@ -989,9 +989,18 @@ colour than the bar that means «everything is disabled until you fix this», be
 different situations and a reader has to tell them apart without reading. «Switch tab» is hidden:
 there is no Zoho org to switch to.
 
-**Everything platform-bound is refused in one place** - `guardOk()`, which every such action already
-asks - rather than by a condition repeated at each button, where one is eventually forgotten. But it
-is **not dressed as a mismatch**: the mismatch bar and its overlay are for two environments that
+**The flag is the mechanism; the enforcement has two shapes, and this file described only one.** It
+said everything platform-bound is refused in one place - `guardOk()` - *rather than by a condition
+repeated at each button*. Measured after an outside review said otherwise: `guardOk()` covers the
+actions that move **data** (the save hook and the three pull paths) and drives the context bar, while
+the eight «open this in Zoho» **navigations** each carry their own `if (isSample())`, seven of them
+with the same message copied verbatim. So this note described an intention the code does not
+implement, and the site repeated it **on the page that invites the reader to go and check** - the one
+place where checking found something that did not hold. **The claim worth making is the single source
+of truth, not the single checkpoint**: `sample: true` is read by everything and there is no second
+code path, which is both true and stronger. The seven duplicated strings are a real smell and folding
+them into one refusal helper is worth doing; until then, do not write it down as done. It is
+**not dressed as a mismatch**: the mismatch bar and its overlay are for two environments that
 could match, and offer actions that would fix it; a sample never will, so the bar is suppressed and
 the workspace line says «sample - generated, never pulled» instead.
 

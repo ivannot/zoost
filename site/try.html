@@ -103,10 +103,11 @@
   <ul>
     <li><b>Nothing is fetched.</b> The files are generated in the browser and written to your disk.
       No request goes to Zoho, and none goes anywhere else.</li>
-    <li><b>Everything platform-bound is refused</b>, in one place in the code rather than by a check
-      repeated at each button - <code>guardOk()</code>, which every such action already asks. Pull,
-      per-item refresh, "open this in Zoho": all disabled, with the reason stated rather than left to
-      be worked out.</li>
+    <li><b>One flag, and the whole product reads it.</b> <code>sample: true</code> in the workspace's
+      own config is the entire mechanism - there is no demo mode, no second code path, nothing that
+      treats invented data specially. Everything that would reach Zoho asks that flag before it acts:
+      the buttons that pull are disabled, the ones that would open a Zoho page refuse and say why.
+      There is no org behind a sample, so there is nothing for them to open.</li>
     <li><b>There is no demo mode.</b> The flag <code>sample: true</code> in the workspace's config is
       the entire mechanism. Once the files are on disk they are read by the ordinary code, listed by
       the ordinary list, exported by the ordinary export. A branch that showed invented data

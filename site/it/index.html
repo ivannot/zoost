@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:c24d195b26257eea -->
+<!-- translated-from: site/index.html sha256:b4cef33cd6a4790c -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zoost - workbench per i prodotti Zoho su cui hai costruito</title>
+<title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
 <meta name="description" content="Una piccola famiglia di estensioni Chrome, una per prodotto Zoho. Portano quello che hai costruito su file leggibili, e ti disegnano la mappa.">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://zoost.it/it/">
@@ -107,7 +107,7 @@
 
 <div class="hero">
   <div class="wrap">
-    <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E da oggi con Zoost puoi vederlo tutto insieme.</span></h1>
+    <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E con Zoost puoi vederlo tutto insieme.</span></h1>
     <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per ogni prodotto Zoho. Il codice
       Deluge, lo schema dei moduli, i workspace, l'SQL che ci sta sotto: roba tua, che però puoi
       guardare solo un pezzo alla volta, dentro una scheda del browser. Zoost la porta tutta sul tuo
@@ -157,8 +157,7 @@
           <span class="st live">sul Chrome Web Store</span>
         </div>
         <p>Ogni vista di un workspace con il suo tipo, la cartella e le date, le colonne e le chiavi esterne
-          di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER
-          dell'insieme, e l'elenco di quello da cui non dipende più niente.</p>
+          di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme, e l'elenco di quello da cui sembra non dipendere più niente.</p>
         <div class="plinks">
           <a href="/it/analytics" aria-label="Cosa fa Zoost Analytics">Cosa fa →</a>
           <a href="/it/docs-analytics" aria-label="Come si usa Zoost Analytics">Come si usa →</a>
@@ -176,7 +175,7 @@
     <h2>Cosa hanno in comune tutti gli Zoost</h2>
     <div class="why">
       <div>
-        <h3>Nessuno scrive su Zoho</h3>
+        <h3>Leggono e basta</h3>
         <p>Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa dentro Zoho.
           Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.</p>
       </div>
@@ -195,7 +194,7 @@
       <div>
         <h3>Ti dà i numeri, non i giudizi</h3>
         <p>Conteggi ed elenchi, e finisce lì. Una funzione da quattrocento righe può benissimo essere una
-          tabella di conversione scritta bene, e quali siano le tue lo sai soltanto tu: per questo non
+          tabella di mappatura scritta bene, e quali siano le tue lo sai soltanto tu: per questo non
           troverai niente valutato, messo in classifica o colorato di rosso. Accanto a ogni cifra c'è
           scritto di cosa non tiene conto.</p>
       </div>
@@ -242,11 +241,13 @@
     <table style="max-width:62ch">
       <tbody>
         <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni, la struttura di un workspace. <b>Mai i dati veri e propri</b>: in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.</td></tr>
-        <tr><td class="k">Cosa scrive</td><td>Su Zoho niente: non chiama un solo endpoint che crei, modifichi o cancelli qualcosa.</td></tr>
+        <tr><td class="k">Cosa scrive</td><td>Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.</td></tr>
         <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun server, nessun account, nessuna telemetria.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
-        <tr><td class="k">Come verificarlo</td><td>Il sorgente sono una ventina di file che si leggono. Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.</td></tr>
+        <tr><td class="k">Come verificarlo</td><td>Il sorgente sono una ventina di file di JavaScript in chiaro - nessun bundler, nessun minificatore,
+          quindi quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la
+          firma, e un comando verifica il file pubblicato.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Il dettaglio, endpoint per endpoint, sta sulla

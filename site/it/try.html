@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/try.html sha256:5c00149f61e96281 -->
+<!-- translated-from: site/try.html sha256:e70f6706676a720d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Prova Zoost su dati inventati - senza account Zoho</title>
@@ -105,10 +105,12 @@
   <ul>
     <li><b>Non viene chiesto niente a nessuno.</b> I file sono generati nel browser e scritti sul tuo
       disco. Nessuna richiesta va a Zoho, e nessuna va altrove.</li>
-    <li><b>Tutto ciò che tocca la piattaforma è rifiutato</b>, in un solo punto del codice invece che
-      con un controllo ripetuto a ogni pulsante - <code>guardOk()</code>, che ognuna di quelle azioni
-      interroga già. Pull, aggiornamento del singolo elemento, «aprilo in Zoho»: tutti disattivati,
-      con il motivo scritto invece che lasciato da dedurre.</li>
+    <li><b>Un flag solo, e lo legge tutto il prodotto.</b> <code>sample: true</code> nella
+      configurazione del workspace è tutto il meccanismo: non esiste una modalità demo, non c'è un
+      secondo percorso nel codice, non c'è niente che tratti i dati inventati in modo speciale. Tutto
+      quello che arriverebbe a Zoho interroga quel flag prima di agire: i pulsanti che scaricano sono
+      disattivati, quelli che aprirebbero una pagina Zoho si rifiutano e dicono perché. Dietro un
+      sample non c'è nessuna org, quindi non c'è niente da aprire.</li>
     <li><b>Non esiste una modalità demo.</b> Il flag <code>sample: true</code> nella configurazione
       del workspace è tutto il meccanismo. Una volta che i file sono sul disco, li legge lo stesso codice di sempre, li elenca la stessa lista,
       li esporta lo stesso export. Un ramo che trattasse i dati inventati in modo speciale finirebbe
