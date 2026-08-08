@@ -868,6 +868,44 @@ class WhatsNew(unittest.TestCase):
             self.assertNotIn('no commit has touched', out.stdout)
 
 
+class AQualifiedSelectorIsNotADefinition(unittest.TestCase):
+    """`main td.k` styles that class on a `td`, and this check read it as styling `.k` everywhere.
+
+    Four product pages defined `.k` in their own inline block; a fifth page then used it on a
+    `<span>` with no rule at all, and the span rendered as ordinary text while sitecheck passed -
+    because `td.k` in site.css matched the pattern. Measured in a browser, not read off the CSS:
+    the span's computed style was identical to its paragraph's.
+    """
+
+    def test_an_element_qualified_rule_does_not_answer_for_another_element(self):
+        css = 'main td.k{white-space:nowrap}'
+        self.assertFalse(sitecheck.defines(css, 'k', {'span'}))
+        self.assertTrue(sitecheck.defines(css, 'k', {'td'}), 'a td carrying it is styled')
+
+    def test_a_compound_of_classes_still_defines_it(self):
+        # The first fix reported every `.nprod.ncrm` in the nav. A checker that turns on its own
+        # markup is one nobody reads, so "qualified" was the wrong test - "does it reach the elements
+        # that carry it" is the right one.
+        self.assertTrue(sitecheck.defines('a.nprod.ncrm{color:red}', 'ncrm', {'a'}))
+        self.assertTrue(sitecheck.defines('#hero.wide{color:red}', 'wide', {'div'}))
+
+    def test_a_plain_rule_defines_it_for_anything(self):
+        self.assertTrue(sitecheck.defines('main .k{font-weight:600}', 'k', {'span', 'td'}))
+
+    def test_the_trailing_boundary_still_holds(self):
+        self.assertFalse(sitecheck.defines('.cards{display:grid}', 'card', {'div'}))
+
+    def test_the_markup_says_which_elements_carry_it(self):
+        html = '<p>x <span class="k out">a</span></p><table><td class="k">b</td></table>'
+        self.assertEqual(sitecheck.carried_by(html, 'k'), {'span', 'td'})
+        self.assertEqual(sitecheck.carried_by(html, 'out'), {'span'})
+
+    def test_the_site_is_correct_today(self):
+        findings = []
+        sitecheck.classes_defined(findings)
+        self.assertEqual(findings, [], 'a class is used with no rule that reaches it')
+
+
 class ReleaseNotesAreARequirement(unittest.TestCase):
     """A release without notes is one nobody can read, and the Store has no field for them.
 

@@ -63,8 +63,16 @@ contains the mistakes already made: this one grew a line after each of ten repor
 was still incomplete every time, because the next drift was always in a dimension nobody had thought
 to list. Run this instead — it compares the two panels rather than remembering to:
 
-A class used but never defined renders as nothing, and nothing is hard to see. That check is now
-inside `sitecheck.py` (`classes_defined`), and the one-liner that used to live here is worth
+A class used but never defined renders as nothing, and nothing is hard to see. **And a rule
+qualified by an element name is not a definition of the class**: `main td.k` styles `.k` on a `td`,
+the four product pages each defined `.k` for their `<span>`s in their own inline block, and a fifth
+page then used it with no rule at all - the span rendered as ordinary text while this check passed,
+because `td.k` matched the pattern. Found by *measuring* in a browser (the span's computed style was
+identical to its paragraph's), never by reading the stylesheet. The first fix reported every
+`.nprod.ncrm` in the nav, which is a compound of two classes and does style it: «is the selector
+qualified» was the wrong question, and «does it reach the elements that carry this class **on this
+page**» is the right one - which the markup can be asked. `.k` now lives in `site.css` once instead
+of in four inline copies. That check is now inside `sitecheck.py` (`classes_defined`), and the one-liner that used to live here is worth
 recording as a failure: it concatenated `site.css` with **every** page's inline `<style>` and then
 asked each page separately, so a class defined in one page's block read as defined on all of them —
 which is exactly the defect it existed to catch. It printed nothing for months while `/how-to.html`
@@ -104,6 +112,18 @@ comparison cost the field across the whole file, not one row. `tools/sitemap.py`
 URL by the served rule, `lastmod` from the last commit touching that file, the `hreflang` pair from
 whether the translation exists — and writes **no `<priority>` or `<changefreq>`, because Google says
 plainly it ignores both** and a hand-maintained field nobody reads can only ever be wrong.
+
+**The sample workspace is an argument, and it was documented as a feature.** «+ Sample» writes a
+workspace of invented data, and what that buys is not convenience: it is the only way to answer «what
+does this thing do» *before* giving it something to read. Usually the order is reversed - install,
+grant access to the org, then find out. **`/try.html`** (and `it/try.html`) makes that the page's
+subject: what each sample actually contains, counted rather than described; why nothing reaches the
+platform (`guardOk()`, one place, and `sample: true` as the whole mechanism); what an approver can
+settle without risk; and - the part that makes the rest credible - **what it does not prove**, since
+an invented org shows the product's full complexity and says nothing about its scale. It is in the
+nav on every page, in both languages, because burying it in the guides would put it where only
+someone already convinced would look. The counts in it are read from the shipped generator, so they
+cannot drift into decoration.
 
 **There is a third reader, and the site had no page for them: whoever has to *approve* the install.**
 The IT lead, the DPO, the manager who receives «can I install an extension that reads the CRM?».
@@ -1976,6 +1996,7 @@ When behaviour, UI or features change, check every one of these and update what 
 | `apps/<app>/manifest.json` | the `description` (max 132 chars) — it is what Chrome shows on the extensions page **and** the Store's short description, so it is the most-read sentence the project has. Keep it identical to §2 of `store/<app>/store-listing.md` |
 | `README.md` | features, interface, quick start, known limitations |
 | `site/index.html` | the **suite** home: what the products share, and the card for each. A new product means a new card and a new page |
+| `site/try.html` | the sample workspace as the trust argument: what it contains, what it refuses, what it does not prove. A change to what `+ Sample` writes changes the counts on this page |
 | `site/crm.html`, `site/analytics.html` | the **product** pages. One per app, same structure and voice: why it exists, what's inside, what it does *not* do, get started. A feature landing in an app lands on its page in the same change |
 | `site/docs-crm.html`, `site/docs-analytics.html`, `site/how-to.html` | anything a user does differently. **A control drawn as a mark is shown as that mark in the guide**, inside the `b.ui` chip and next to its name — a guide that spells out a word the panel no longer shows is one the reader has to translate, and it is read by people who are not developers. The version line above it (`Covers Zoost X …`) is filled from `/api/versions`, so it always states which version the page describes; the number in the markup is only the fallback. The two guides must also *look* alike: a class copied from a page that defines it renders as nothing on one that does not — `td.p` and `.note` came from `privacy.html` and left the Analytics guide's term cells unstyled. Check with the one-liner below |
 | `site/privacy.html` | what data is stored, or where it travels, changes at all |

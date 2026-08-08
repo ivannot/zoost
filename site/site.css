@@ -90,7 +90,8 @@ main .box p:first-child{margin-top:0} main .box p:last-child{margin-bottom:0}
 main table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
 main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
 main th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-main td.k{white-space:nowrap;color:var(--ink)}
+main .k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
+main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
 /* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
    used the same class names with nothing behind them — so /how-to.html's two product cards and the
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Try Zoost on invented data - no Zoho account needed</title>
+<meta name="description" content="Zoost writes a sample workspace of invented data into a folder you choose, and everything works on it: the tree, the diagrams, the audit, the exports. No Zoho account, no sign-in, nothing reaching any org.">
+<link rel="canonical" href="https://zoost.it/try">
+<link rel="alternate" hreflang="en" href="https://zoost.it/try">
+<link rel="alternate" hreflang="it" href="https://zoost.it/it/try">
+<link rel="alternate" hreflang="x-default" href="https://zoost.it/try">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0d121c">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .num{border-collapse:collapse;margin:18px 0;font-size:14px}
+  .num td,.num th{border-bottom:1px solid var(--border);padding:7px 16px 7px 0;text-align:left;vertical-align:top}
+  .num th{font-weight:600;color:var(--muted);font-size:13px}
+  .num td:first-child{white-space:nowrap;font-weight:600}
+  .steps{padding-left:20px}
+  .steps li{margin:10px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Zoost - home"><img src="/icon-192.png" alt=""><span class="nm">Zoost</span></a>
+    <nav>
+      <a class="nprod ncrm" href="/crm" aria-label="Zoost - workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
+      <a class="nprod nana" href="/analytics" aria-label="Zoost - workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <a href="/try" aria-current="page">Try it</a>
+      <a href="/how-to">How to</a>
+      <a href="/nerd">Nerd</a>
+      <a href="/privacy">Privacy</a>
+      <a class="ncta" href="/it/try" hreflang="it" lang="it" title="Questa pagina in italiano">Italiano</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <h1>Try it on invented data</h1>
+  <p class="sub">Both extensions can write a workspace of made-up data into a folder you choose, and
+    then work on it exactly as they would on a real one. No Zoho account, no sign-in, no permission
+    granted to anything.</p>
+
+  <p>Every other page here argues that Zoost is worth trusting. This one hands you the means to
+    decide for yourself, which is a different and better thing. Install the extension, press one
+    button, and the whole product is in front of you - the tree, the search, the diagrams, the health
+    audit, the exports, the assistant - running on a workspace that came from nowhere near your
+    company.</p>
+
+  <h2>What gets written</h2>
+
+  <p>The button is <span class="k">+ Sample</span>, in the workspace bar. It creates one folder inside
+    your working folder and fills it with files in the exact shape a real pull produces. Nothing is
+    downloaded, because there is nothing to download from.</p>
+
+  <table class="num">
+    <tr><th>Zoost CRM</th><th>293 files</th><th></th></tr>
+    <tr><td>120</td><td>Deluge functions</td><td>with real call chains between them, in the five
+      namespaces Zoho CRM actually has</td></tr>
+    <tr><td>18</td><td>modules</td><td>fields, layouts, related lists, lookups pointing at each other</td></tr>
+    <tr><td>10</td><td>workflows</td><td>some with actions that fire after a delay</td></tr>
+    <tr><td>7</td><td>schedules</td><td>each pointing at the function it runs</td></tr>
+    <tr><td>6</td><td>connections</td><td>one of them used by nothing, so the audit has something to find</td></tr>
+  </table>
+
+  <table class="num">
+    <tr><th>Zoost Analytics</th><th>13 files</th><th></th></tr>
+    <tr><td>39</td><td>views</td><td>17 tables, 8 query tables, 7 charts, 3 pivots, 4 dashboards</td></tr>
+    <tr><td>14</td><td>relations</td><td>joins between tables, with the columns on each side</td></tr>
+    <tr><td>8</td><td>SQL files</td><td>one per query table, which is what makes a diff meaningful</td></tr>
+  </table>
+
+  <p>The names are ordinary business words - <code>buildInvoice</code>, <code>calcTax</code>,
+    <code>Contacts</code> - and Zoho's own module names where a module name is needed. There is no
+    real portal, function or field name anywhere in it, which matters because this project claims to
+    be built independently of anyone's day job and a real name in a fixture would quietly contradict
+    that.</p>
+
+  <h2>Why this is a security argument, not a convenience</h2>
+
+  <p>A sample workspace is the only way to answer "what does this thing actually do" without first
+    giving it something to read. That order is usually the wrong way round: you install, you grant
+    access to the org, and only then do you find out. Here you can look first.</p>
+
+  <p>What holds while a sample is open:</p>
+
+  <ul>
+    <li><b>Nothing is fetched.</b> The files are generated in the browser and written to your disk.
+      No request goes to Zoho, and none goes anywhere else.</li>
+    <li><b>Everything platform-bound is refused</b>, in one place in the code rather than by a check
+      repeated at each button - <code>guardOk()</code>, which every such action already asks. Pull,
+      per-item refresh, "open this in Zoho": all disabled, with the reason stated rather than left to
+      be worked out.</li>
+    <li><b>There is no demo mode.</b> The flag <code>sample: true</code> in the workspace's config is
+      the entire mechanism. Once the files are on disk they are read by the ordinary code, listed by
+      the ordinary list, exported by the ordinary export. A branch that showed invented data
+      differently would eventually show somebody's real data through it.</li>
+    <li><b>Deleting it is deleting a folder.</b> There is no uninstall step and nothing to clean up
+      elsewhere, because there is no elsewhere.</li>
+  </ul>
+
+  <p>And the sample says what it is, everywhere it appears. If a Zoho tab is open on a real
+    organisation while you are reading invented data, the panel states the discrepancy in the
+    workspace bar instead of letting the two blur. It does not block you - a sample will never match
+    any organisation, so blocking would make it unusable - but it will not let you forget.</p>
+
+  <h2>If you are the one approving the install</h2>
+
+  <p>You can run the whole evaluation yourself, on a machine with no Zoho session at all, and answer
+    the questions that usually have to be taken on faith: what it reads, what it writes, where the
+    files go, what leaves the machine, what the exports contain, what the assistant is told. The
+    <a href="/nerd">nerd page</a> covers how a release is built and how to verify the package you
+    install is the one built from the published source; this page is the other half, and the two
+    together mean an approval can rest on something you saw rather than something you were told.</p>
+
+  <p>The one thing worth knowing in advance: the optional AI assistant is the only feature that sends
+    anything anywhere, it is off until an API key is entered, and it will not run on a sample either
+    way. Everything on <a href="/privacy">the privacy page</a> applies unchanged.</p>
+
+  <h2>How to do it</h2>
+
+  <ol class="steps">
+    <li>Install <a href="/crm">Zoost CRM</a> or <a href="/analytics">Zoost Analytics</a> from the
+      Chrome Web Store, and open the side panel from the toolbar.</li>
+    <li>Choose a working folder when the panel asks. Anywhere will do; an empty folder is tidiest.
+      Chrome asks for permission on that folder and on nothing else.</li>
+    <li>Press <span class="k">+ Sample</span>. It writes the files and opens the workspace. On a
+      machine with no Zoho tab open the same button is on the panel's front screen, because that is
+      exactly where someone who has just installed it will be.</li>
+    <li>Use it. Every part of the product works: search across all the sources, the call graph and
+      the entity-relationship diagram, the health audit with its stated coverage gaps, and both
+      exports.</li>
+    <li>Delete the folder when you are done.</li>
+  </ol>
+
+  <p class="note">The panel will not create a second sample. If one already exists the button reads
+    <b>Open sample workspace</b> and opens the one that is there - and before Chrome has granted the
+    panel access to the folder it says neither, because at that moment it has not looked and neither
+    claim would be warranted.</p>
+
+  <h2>What it does not prove</h2>
+
+  <p>An invented organisation is not yours. It will not tell you how long a pull takes against a
+    portal with three thousand functions, whether your role can read the connections catalogue, or
+    what the diagrams look like at the size your organisation actually is. It is deliberately built
+    to contain one of everything - including the awkward states, like a module Zoho refuses to
+    describe - so what you see is the product at its full complexity rather than a tidied version,
+    but complexity is not scale.</p>
+
+  <p>What it does answer is every question about behaviour, and those are the ones that decide whether
+    something is safe to install.</p>
+
+  <p class="meta">The generator is <code>sample-org.js</code> in each extension, and it ships inside
+    the package - so it is readable in the source you install, and the same file is what writes the
+    fixtures the tests run against. Two consumers, one description, which is why the sample cannot
+    drift from the shape a real pull produces.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/crm">Zoost - workbench for Zoho CRM</a><span class="sep">·</span>
+      <a href="/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep">·</span>
+      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep">·</span>
+      <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep">·</span>
+      <a href="/privacy">Privacy policy</a><span class="sep">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Created by Ivan Notaristefano (with the support of Claudio). Copyright <span class="cyear">2026</span>. Licensed under the Apache License 2.0 and provided
+      <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
+      liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
+      support or maintenance.
+    </p>
+    <p class="legal">
+      Zoost is a family of independent, unofficial developer tools. They are <b>not</b> affiliated with, endorsed by,
+      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
+      trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+</body>
+</html>

@@ -27,6 +27,8 @@ in the panel, and on the «not on a Zoho tab» screen. It is generated rather th
 Zoho tab and no sign-in, carries `sample: true` in its own config, and every action that would reach
 the platform is refused for it. It is an ordinary folder otherwise, deleted like any other. The point
 is that the product can be assessed without connecting it to anything.
+The page that sets out what this is worth, with the exact contents of each sample and what it
+does *not* prove, is [Try it on invented data](https://zoost.it/try).
 
 ## How to use them
 

@@ -316,6 +316,44 @@ def translations_current(findings: list) -> None:
 SCRIPT_HOOKS = {'cyear', 'dv', 'dd'}
 
 
+def carried_by(html: str, cls: str) -> set:
+    """Which element tags actually carry this class on this page."""
+    return {m.group(1).lower() for m in
+            re.finditer(r'<(\w+)\b[^>]*class="[^"]*(?<![\w-])' + re.escape(cls) + r'(?![\w-])', html)}
+
+
+def defines(css: str, cls: str, tags: set) -> bool:
+    """Is `cls` styled for the elements that carry it?
+
+    Two boundaries, and the second was missing for as long as this check existed.
+
+    Trailing: `f'.{c}' in css` was the substring test the original one-liner used, and it counts
+    `.cards` as a definition of `.card`.
+
+    Leading: **`main td.k` is not a definition of `.k` on a `<span>`.** The site carried `.k` on
+    `<span>` in four product pages, each defining it in its own inline block, and a fifth page then
+    used it with no rule at all - the span rendered as ordinary text and this check passed, because
+    `td.k` in site.css matched the pattern. A selector qualified by an element name is a narrower
+    claim than the class, and it does not answer for the class.
+
+    But "qualified" is not the test, or the check turns on itself: `.nprod.ncrm` is a compound of two
+    classes and does style `.ncrm`, and `td.p` is perfectly good for a class that is only ever used on
+    a `td`. So the question is not how the selector is written - it is whether it reaches the elements
+    that actually carry the class *on this page*, which the markup can be asked.
+    """
+    for m in re.finditer(r'\.' + re.escape(cls) + r'(?![\w-])', css):
+        before = css[:m.start()]
+        qual = re.search(r'([\w-]+)$', before)
+        if not qual:
+            return True                                  # plain `.c`
+        start = qual.start(1)
+        if start and before[start - 1] in '.#':
+            return True                                  # `.other.c` / `#id.c` - still reaches it
+        if qual.group(1).lower() in tags or not tags:
+            return True                                  # `td.c`, and a `td` carries it
+    return False
+
+
 def classes_defined(findings: list) -> None:
     """Every class a page uses must be styled by CSS *that page loads*.
 
@@ -332,10 +370,7 @@ def classes_defined(findings: list) -> None:
         html = p.read_text(encoding='utf-8')
         css = base + ''.join(re.findall(r'<style>(.*?)</style>', html, re.S))
         used = {c for m in re.findall(r'class="([^"]*)"', html) for c in m.split()}
-        # `f'.{c}' in css` was the substring test the one-liner used, and it counts `.cards` as a
-        # definition of `.card` — the boundary matters, so it is asserted.
-        missing = sorted(c for c in used - SCRIPT_HOOKS
-                         if not re.search(r'\.' + re.escape(c) + r'(?![\w-])', css))
+        missing = sorted(c for c in used - SCRIPT_HOOKS if not defines(css, c, carried_by(html, c)))
         if missing:
             findings.append(f'{p.relative_to(SITE).as_posix()}: uses {", ".join(missing)} — no rule '
                             f'in site.css or in this page, so it renders as nothing')
