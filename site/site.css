@@ -328,6 +328,26 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
    neighbour reads as a separator without competing with the links. */
 .sep{color:#3b475a;margin:0 7px}
 
+/* On a wide screen the same table was quietly bad too, and the report was only about the phone.
+   Measured at 1280px: the first column is `white-space:nowrap` around `(File System Access)`, so it
+   pins itself at 186px, the middle column takes what is left of the natural distribution, and the
+   third is starved to 169px - **23 characters a line**, on a desktop. A fixed layout with the key
+   column bounded gives the two prose columns a share that does not depend on which sentence happens
+   to be longest. Only three-column tables: the two-column ones are key/value and distribute fine. */
+@media (min-width:761px){
+  main table[data-cols="3"]{table-layout:fixed}
+  main table[data-cols="3"] th:first-child,main table[data-cols="3"] td:first-child{width:21%}
+  main table[data-cols="3"] th:last-child,main table[data-cols="3"] td:last-child{width:31%}
+  /* Two columns of prose - «your situation» against «what I would do» - are not key and value, and
+     the auto layout gave the first 526px against 183 at 768. A cap rather than a width, so the
+     key/value tables elsewhere, whose first column is one or two words, must not be padded out to
+     match. `max-width` was the first attempt and does nothing: the automatic table layout ignores it
+     on a cell. So the distinction is derived instead - `data-prose` is written onto a table whose
+     first column averages more than forty characters, which is a sentence and not a key. */
+  main table[data-prose]{table-layout:fixed}
+  main table[data-prose] th:first-child,main table[data-prose] td:first-child{width:46%}
+}
+
 /* Wide content scrolls inside its own box; the page never scrolls sideways. Measured at 375px: the
    guides overflowed by ~95px and the privacy table by ~32px, from long code tokens in table cells
    (`crm/instance[-sandbox]-orgid` and its kind) and from tables wider than the screen. A page you
@@ -336,4 +356,29 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 .doc pre{overflow-x:auto}
 @media (max-width:760px){
   main table{display:block;overflow-x:auto}
+  /* A table of prose does not shrink, it dies. Reported from the privacy policy at 375px: three
+     columns, the first one `white-space:nowrap` around `(File System Access)` and
+     `chrome.storage.local`, so it took **186px of 316** and left the two prose columns 128 and 105 -
+     two or three words a line, which is not reading. Widening the first column only moves which
+     column is unreadable; there is no width at which three columns of sentences fit on a phone.
+     So a table whose cells know their column header stops being a grid and becomes one block per
+     row, each value under its own label. The labels are `data-label`, written from the table's own
+     `<th>` text rather than typed, so a table added tomorrow is covered and the two languages cannot
+     disagree. Tables with no `<thead>` are left as grids: they are key/value pairs whose first cell
+     is the label, and stacking those would throw the pairing away. */
+  main table[data-labelled],
+  main table[data-labelled] tbody,
+  main table[data-labelled] tr,
+  main table[data-labelled] td{display:block;width:auto}
+  main table[data-labelled]{overflow-x:visible}
+  main table[data-labelled] thead{display:none}
+  main table[data-labelled] tr{border-bottom:1px solid var(--border);padding:12px 0}
+  main table[data-labelled] tr:last-child{border-bottom:0}
+  main table[data-labelled] td{border:0;padding:5px 0 0}
+  main table[data-labelled] td::before{content:attr(data-label);display:block;font:11px var(--mono);
+    text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:3px}
+  /* The nowrap that made the first column claim half the width has nothing left to protect once the
+     cell is a block of its own, and the long identifiers have to be allowed to break. */
+  main table[data-labelled] td.k,
+  main table[data-labelled] td.p{white-space:normal;overflow-wrap:anywhere}
 }

@@ -102,54 +102,54 @@
   <h2>3. What is stored, and where</h2>
   <p>Everything Zoost stores lives on the computer you are using.</p>
 
-  <table>
+  <table data-labelled data-cols="3">
     <thead><tr><th>Where</th><th>What</th><th>Why</th></tr></thead>
     <tbody>
       <tr>
-        <td class="p">Local folder<br>(File System Access)<br><span class="k">Zoho CRM</span></td>
-        <td>Deluge function source and its metadata (including which connections each function uses and who
+        <td class="p" data-label="Where">Local folder<br>(File System Access)<br><span class="k">Zoho CRM</span></td>
+        <td data-label="What">Deluge function source and its metadata (including which connections each function uses and who
           last changed it), module and layout metadata, related lists, workflows, schedules, the org's
           connections catalogue (names, connectors and OAuth scopes - <b>never</b> connection secrets or
           tokens), exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host
           and instance name, plus which types Zoho answered for and which it refused, with the date it was
           asked and the date each type was last read, plus a name for the workspace if you have given it
           one.</td>
-        <td>This is the point of the tool: a local, versionable mirror you can put under Git.</td>
+        <td data-label="Why">This is the point of the tool: a local, versionable mirror you can put under Git.</td>
       </tr>
       <tr>
-        <td class="p">Local folder<br>(File System Access)<br><span class="k">Zoho Analytics</span></td>
-        <td>The workspace's structure: the list of views with their type, folder, owner and dates; the
+        <td class="p" data-label="Where">Local folder<br>(File System Access)<br><span class="k">Zoho Analytics</span></td>
+        <td data-label="What">The workspace's structure: the list of views with their type, folder, owner and dates; the
           columns and data types of every table and query table; the relations between them; the dependency
           graph; and the SQL of each query table as its own <code>.sql</code> file. Plus exports and a
           <code>.zoost.json</code> holding the workspace id, name and host, plus a name of your own if you
           have given it one.
           <b>Never the rows inside your tables</b> - the extension does not read them, and the endpoints
           that return cell values are deliberately not called.</td>
-        <td>Same purpose: a local, versionable mirror. The <code>.sql</code> files are the part that makes
+        <td data-label="Why">Same purpose: a local, versionable mirror. The <code>.sql</code> files are the part that makes
           <code>git diff</code> able to answer what changed.</td>
       </tr>
       <tr>
-        <td class="p">chrome.storage.local</td>
-        <td>Your preferences: AI engine choice, model, API key (in clear text, or encrypted if you turn on
+        <td class="p" data-label="Where">chrome.storage.local</td>
+        <td data-label="What">Your preferences: AI engine choice, model, API key (in clear text, or encrypted if you turn on
           passphrase protection), export defaults, diagram layout settings,
           and which side-panel tabs you show, in what order, and which are included when you pull. Alongside them, a copy of the open
           workspace's access record - the same "answered / refused" list as above - so the settings page can
           say <i>why</i> a tab is unavailable instead of just hiding it, and the identifier of the sample
           workspace if you have created one, so the panel can offer to open it rather than to create a
           second before it has permission to look in the folder.</td>
-        <td>Settings must survive a browser restart.</td>
+        <td data-label="Why">Settings must survive a browser restart.</td>
       </tr>
       <tr>
-        <td class="p">chrome.storage.session</td>
-        <td>Only the API key, and only while it is unlocked - that is, only if you turned on passphrase
+        <td class="p" data-label="Where">chrome.storage.session</td>
+        <td data-label="What">Only the API key, and only while it is unlocked - that is, only if you turned on passphrase
           protection. Held in memory, never written to disk.</td>
-        <td>So the passphrase is typed once per browser session rather than once per question. Cleared when
+        <td data-label="Why">So the passphrase is typed once per browser session rather than once per question. Cleared when
           the browser closes.</td>
       </tr>
       <tr>
-        <td class="p">IndexedDB</td>
-        <td>The browser handle for the working folder you selected, plus which workspace was last active.</td>
-        <td>So you do not have to re-pick the folder every time.</td>
+        <td class="p" data-label="Where">IndexedDB</td>
+        <td data-label="What">The browser handle for the working folder you selected, plus which workspace was last active.</td>
+        <td data-label="Why">So you do not have to re-pick the folder every time.</td>
       </tr>
     </tbody>
   </table>

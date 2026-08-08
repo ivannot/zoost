@@ -321,13 +321,13 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h3>OpenAI (ChatGPT) - single-shot</h3>
   <p>Answers in one pass from the workspace index and the view you have open. It cannot go and read
     anything itself, so it will tell you what it is missing rather than fetch it.</p>
-  <table>
+  <table data-labelled data-cols="3">
     <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
     <tbody>
-      <tr><td class="k">Mode</td><td>Agent with read-only tools</td><td>Single pass</td></tr>
-      <tr><td class="k">What it sees</td><td>Whatever it decides to open: any view's structure, foreign keys, SQL and lineage, plus column and SQL search</td><td>The workspace index and the view currently open</td></tr>
-      <tr><td class="k">Progress</td><td>Each tool call appears in the chat as it happens</td><td>A "thinking…" indicator until the answer arrives</td></tr>
-      <tr><td class="k">Best for</td><td>"What reads from this table?", "is there already a query joining these two?"</td><td>Focused questions about the view in front of you</td></tr>
+      <tr><td class="k">Mode</td><td data-label="Anthropic (Claude)">Agent with read-only tools</td><td data-label="OpenAI (ChatGPT)">Single pass</td></tr>
+      <tr><td class="k">What it sees</td><td data-label="Anthropic (Claude)">Whatever it decides to open: any view's structure, foreign keys, SQL and lineage, plus column and SQL search</td><td data-label="OpenAI (ChatGPT)">The workspace index and the view currently open</td></tr>
+      <tr><td class="k">Progress</td><td data-label="Anthropic (Claude)">Each tool call appears in the chat as it happens</td><td data-label="OpenAI (ChatGPT)">A "thinking…" indicator until the answer arrives</td></tr>
+      <tr><td class="k">Best for</td><td data-label="Anthropic (Claude)">"What reads from this table?", "is there already a query joining these two?"</td><td data-label="OpenAI (ChatGPT)">Focused questions about the view in front of you</td></tr>
     </tbody>
   </table>
 
@@ -413,28 +413,28 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="goes-wrong">13. When something goes wrong</h2>
   <p>If the bar under the toolbar is amber, the tab you are on and the workspace folder you have selected are different workspaces, and everything that talks to Zoho Analytics is disabled until they agree. <b class="ui">Go to Zoho Analytics ↗</b> opens the workspace the folder belongs to, or you switch the folder to match the tab.</p>
-<table>
+<table data-labelled data-cols="2">
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
-      <tr><td class="k">Everything is disabled</td>
-        <td>The tab and the folder are different workspaces. The amber bar offers both ways out: take the
+      <tr><td class="k" data-label="Symptom">Everything is disabled</td>
+        <td data-label="Cause and fix">The tab and the folder are different workspaces. The amber bar offers both ways out: take the
           tab to the mirrored workspace, or move the panel to the one the tab is in.</td></tr>
-      <tr><td class="k">"Not on a Zoho Analytics tab"</td>
-        <td>The panel acts on the active tab. Switch to the Zoho Analytics tab, or use the button on the
+      <tr><td class="k" data-label="Symptom">"Not on a Zoho Analytics tab"</td>
+        <td data-label="Cause and fix">The panel acts on the active tab. Switch to the Zoho Analytics tab, or use the button on the
           overlay.</td></tr>
-      <tr><td class="k">"No workspace open"</td>
-        <td>You are on Zoho Analytics but not inside a workspace. Open one - the URL must contain
+      <tr><td class="k" data-label="Symptom">"No workspace open"</td>
+        <td data-label="Cause and fix">You are on Zoho Analytics but not inside a workspace. Open one - the URL must contain
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
-      <tr><td class="k">The folder button is amber</td>
-        <td>The browser dropped the permission, which it does between sessions. Click anywhere in the panel
+      <tr><td class="k" data-label="Symptom">The folder button is amber</td>
+        <td data-label="Cause and fix">The browser dropped the permission, which it does between sessions. Click anywhere in the panel
           to restore it; clicking the button itself asks for authorisation, not for the folder again.</td></tr>
-      <tr><td class="k">"CSRF token not found"</td>
-        <td>The session is not signed in on that tab. Reload the Zoho Analytics page and try again.</td></tr>
-      <tr><td class="k">N items could not be read</td>
-        <td>Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
+      <tr><td class="k" data-label="Symptom">"CSRF token not found"</td>
+        <td data-label="Cause and fix">The session is not signed in on that tab. Reload the Zoho Analytics page and try again.</td></tr>
+      <tr><td class="k" data-label="Symptom">N items could not be read</td>
+        <td data-label="Cause and fix">Use <b class="ui">Retry N failed</b>. Until they are in, the mirror is short by exactly those,
           and Health lists them.</td></tr>
-      <tr><td class="k">A report shows no columns</td>
-        <td>Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
+      <tr><td class="k" data-label="Symptom">A report shows no columns</td>
+        <td data-label="Cause and fix">Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
           view through what the report is built on, it says so rather than showing an empty table.</td></tr>
     </tbody>
   </table>

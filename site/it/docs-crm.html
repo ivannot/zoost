@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:a5ee9e32020d8845 -->
+<!-- translated-from: site/docs-crm.html sha256:b4700a488f24b1df -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -487,13 +487,13 @@ git commit -m "baseline"</code></pre>
     che gli manca invece di inventarselo. È voluto, ma è una differenza reale di capacità.</p>
 
   <h3>Quale scegliere</h3>
-  <table>
+  <table data-labelled data-cols="3">
     <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
     <tbody>
-      <tr><td class="k">Modalità</td><td>Agente con strumenti in sola lettura</td><td>Passaggio singolo</td></tr>
-      <tr><td class="k">Cosa vede</td><td>Quello che decide di aprire: qualsiasi funzione, modulo, workflow o connessione, più la ricerca nel codice</td><td>L'indice dell'org e la funzione aperta in quel momento</td></tr>
-      <tr><td class="k">Avanzamento</td><td>Ogni chiamata a uno strumento compare nella chat mentre avviene</td><td>Un indicatore «thinking…» finché non arriva la risposta</td></tr>
-      <tr><td class="k">Va bene per</td><td>«Cosa si rompe se cambio questo?», seguire un comportamento attraverso l'org</td><td>Domande circoscritte sulla funzione che hai davanti</td></tr>
+      <tr><td class="k">Modalità</td><td data-label="Anthropic (Claude)">Agente con strumenti in sola lettura</td><td data-label="OpenAI (ChatGPT)">Passaggio singolo</td></tr>
+      <tr><td class="k">Cosa vede</td><td data-label="Anthropic (Claude)">Quello che decide di aprire: qualsiasi funzione, modulo, workflow o connessione, più la ricerca nel codice</td><td data-label="OpenAI (ChatGPT)">L'indice dell'org e la funzione aperta in quel momento</td></tr>
+      <tr><td class="k">Avanzamento</td><td data-label="Anthropic (Claude)">Ogni chiamata a uno strumento compare nella chat mentre avviene</td><td data-label="OpenAI (ChatGPT)">Un indicatore «thinking…» finché non arriva la risposta</td></tr>
+      <tr><td class="k">Va bene per</td><td data-label="Anthropic (Claude)">«Cosa si rompe se cambio questo?», seguire un comportamento attraverso l'org</td><td data-label="OpenAI (ChatGPT)">Domande circoscritte sulla funzione che hai davanti</td></tr>
     </tbody>
   </table>
   <p>Il motore in uso è mostrato come badge nell'intestazione della chat, così sai sempre quale comportamento
@@ -576,21 +576,21 @@ git commit -m "baseline"</code></pre>
     accordano. La barra offre due vie d'uscita: <b class="ui">Go to Zoho CRM ↗</b> apre l'org a cui
     appartiene il workspace, oppure sposti il workspace su quello della scheda. Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di
     un'altra.</p>
-  <table>
+  <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>
-      <tr><td class="k">Il pulsante della cartella è ambra</td><td>Il browser ha lasciato scadere il permesso sul filesystem. Un click lo ripristina; non si apre nessun selettore di file.</td></tr>
-      <tr><td class="k">È tutto disattivato</td><td>O non c'è nessuna scheda Zoho CRM attiva, oppure l'org della scheda non corrisponde al workspace selezionato. La barra in alto dice quale delle due.</td></tr>
-      <tr><td class="k">Niente related list / nessuna matrice dei layout</td><td>Quel workspace è stato scaricato prima che esistessero. Rifai <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> e riapri il diagramma.</td></tr>
-      <tr><td class="k">La scheda Connections è vuota</td><td>Il catalogo arriva con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (o con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nella scheda Connections). Serve una scheda Zoho attiva e corrispondente.</td></tr>
-      <tr><td class="k">Un modulo non ha campi e ha un <b>⊘</b> grigio</td><td>Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti. Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente. Rifare il pull richiede di nuovo, il che ha senso se nel frattempo il modulo è stato reso visibile; cambiare la risposta non è in potere di Zoost. Quel modulo non ha il pulsante del diagramma ER e non si può nemmeno aprire nella finestra del diagramma: non c'è niente da disegnare, e un diagramma vuoto si leggerebbe come «questo non è in relazione con niente».</td></tr>
-      <tr><td class="k">Le funzioni mostrano un pallino ambra <b>◐</b></td><td>Sono state scaricate prima che venissero catturate connessioni e autore. Clicca <b class="ui">Refresh outdated</b> nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.</td></tr>
-      <tr><td class="k">Il grafo dice che i nodi sono troppi</td><td>Sopra qualche centinaio di nodi il layout libero non viene tentato, perché bloccherebbe la finestra. Usa <b>Explorer</b>, oppure metti a fuoco un elemento e abbassa la profondità.</td></tr>
-      <tr><td class="k">AI: <code>401</code></td><td>Chiave sbagliata, o spazi incollati insieme alla chiave.</td></tr>
-      <tr><td class="k">AI: <code>429 insufficient_quota</code></td><td>La chiave è valida ma il credito API è a zero. La fatturazione delle API è separata da qualsiasi abbonamento alla chat.</td></tr>
-      <tr><td class="k">AI: <code>404</code> sul modello</td><td>Errore di battitura nell'id del modello, o il modello non è abilitato per il livello del tuo account. Copialo dall'elenco dei modelli del provider.</td></tr>
-      <tr><td class="k">Il diagramma è illeggibile</td><td>Abbassa la profondità, o apri <b class="ui">Layout ⚙</b> e alza la spaziatura dei riquadri. Per una zona affollata, clicca l'arco che ti interessa per isolarlo.</td></tr>
-      <tr><td class="k">Il pull è lento</td><td>Normale su org grandi: una chiamata per ogni modulo per campi, layout e related list, deliberatamente cadenzata per restare gentile con l'API di Zoho.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Il pulsante della cartella è ambra</td><td data-label="Causa e rimedio">Il browser ha lasciato scadere il permesso sul filesystem. Un click lo ripristina; non si apre nessun selettore di file.</td></tr>
+      <tr><td class="k" data-label="Sintomo">È tutto disattivato</td><td data-label="Causa e rimedio">O non c'è nessuna scheda Zoho CRM attiva, oppure l'org della scheda non corrisponde al workspace selezionato. La barra in alto dice quale delle due.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Niente related list / nessuna matrice dei layout</td><td data-label="Causa e rimedio">Quel workspace è stato scaricato prima che esistessero. Rifai <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> e riapri il diagramma.</td></tr>
+      <tr><td class="k" data-label="Sintomo">La scheda Connections è vuota</td><td data-label="Causa e rimedio">Il catalogo arriva con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b> (o con <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> nella scheda Connections). Serve una scheda Zoho attiva e corrispondente.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Un modulo non ha campi e ha un <b>⊘</b> grigio</td><td data-label="Causa e rimedio">Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti. Il pannello riporta la risposta di Zoho e il giorno in cui è stata chiesta, e gli export portano la stessa nota, perché una sezione con tre tabelle vuote e nessuna spiegazione si legge come un modulo che non contiene niente. Rifare il pull richiede di nuovo, il che ha senso se nel frattempo il modulo è stato reso visibile; cambiare la risposta non è in potere di Zoost. Quel modulo non ha il pulsante del diagramma ER e non si può nemmeno aprire nella finestra del diagramma: non c'è niente da disegnare, e un diagramma vuoto si leggerebbe come «questo non è in relazione con niente».</td></tr>
+      <tr><td class="k" data-label="Sintomo">Le funzioni mostrano un pallino ambra <b>◐</b></td><td data-label="Causa e rimedio">Sono state scaricate prima che venissero catturate connessioni e autore. Clicca <b class="ui">Refresh outdated</b> nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Il grafo dice che i nodi sono troppi</td><td data-label="Causa e rimedio">Sopra qualche centinaio di nodi il layout libero non viene tentato, perché bloccherebbe la finestra. Usa <b>Explorer</b>, oppure metti a fuoco un elemento e abbassa la profondità.</td></tr>
+      <tr><td class="k" data-label="Sintomo">AI: <code>401</code></td><td data-label="Causa e rimedio">Chiave sbagliata, o spazi incollati insieme alla chiave.</td></tr>
+      <tr><td class="k" data-label="Sintomo">AI: <code>429 insufficient_quota</code></td><td data-label="Causa e rimedio">La chiave è valida ma il credito API è a zero. La fatturazione delle API è separata da qualsiasi abbonamento alla chat.</td></tr>
+      <tr><td class="k" data-label="Sintomo">AI: <code>404</code> sul modello</td><td data-label="Causa e rimedio">Errore di battitura nell'id del modello, o il modello non è abilitato per il livello del tuo account. Copialo dall'elenco dei modelli del provider.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Il diagramma è illeggibile</td><td data-label="Causa e rimedio">Abbassa la profondità, o apri <b class="ui">Layout ⚙</b> e alza la spaziatura dei riquadri. Per una zona affollata, clicca l'arco che ti interessa per isolarlo.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Il pull è lento</td><td data-label="Causa e rimedio">Normale su org grandi: una chiamata per ogni modulo per campi, layout e related list, deliberatamente cadenzata per restare gentile con l'API di Zoho.</td></tr>
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è

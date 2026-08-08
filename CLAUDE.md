@@ -2069,6 +2069,33 @@ accessible name, so with «IT» on screen the name would have become «IT».
 second row by about a dozen pixels at 375 and orphaned the switch again; the English page fitted with
 room to spare. Below 430px the horizontal padding gives while the 44px targets do not.
 
+**A table of prose does not shrink, it dies - and the page-level sweep could not see it.** Reported
+from the privacy policy on a phone: three columns, the first one `white-space:nowrap` around
+`(File System Access)` and `chrome.storage.local`, so it took **186px of 316** and left the two prose
+columns 128 and 105 - **fourteen characters a line**. Nothing caught it because nothing overflowed:
+the table fit by wrapping its text to death, which is the failure mode `overflow-x:auto` is blind to.
+Widening one column only moves which column is unreadable; there is no width at which three columns
+of sentences fit on a phone.
+
+So below 760px a table whose cells know their column header stops being a grid and becomes **one
+block per row**, each value under its own label. The labels are `data-label`, written onto the cells
+from the table's own `<th>` text by a script rather than typed, so a table added tomorrow is covered
+and the two languages cannot disagree. Tables with no `<thead>` are left as grids on purpose: they
+are key/value pairs whose first cell *is* the label, and stacking those would throw the pairing away.
+
+**The same table was quietly bad on a desktop and the report was only about the phone.** Measured at
+1280px: the nowrap pinned the first column at 186px and the third was starved to 169 - **23
+characters**. Three-column tables now use a fixed layout with the key column bounded (21% / 48% /
+31%), which took the worst column to 36. Two-column tables of *prose* - «your situation» against
+«what I would do» - get 46/54, and the distinction is derived rather than listed: `data-prose` is
+written onto a table whose first column averages more than forty characters, which is a sentence and
+not a key. Everything measures at least 30 characters a line now, against 14 at the start.
+
+Two mistakes on the way, both worth keeping. `<th[^>]*>` **matches `<thead>`**, so every table was
+labelled with one column too many and the desktop rule hit the wrong tables. And `max-width` on a
+table cell does **nothing** in the automatic layout - a specified `width` is a hint the algorithm can
+overrule, so the fixed layout has to come with it.
+
 **`minmax(320px, 1fr)` cannot shrink below 320px**, so on a 320px phone the home's two product cards
 were 22px wider than their column and the page scrolled sideways - the one thing the responsive rule
 here forbids. `minmax(min(320px,100%), 1fr)` is the fix, and there were **twelve** of them across six

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:64ad1305adf0a328 -->
+<!-- translated-from: site/docs-analytics.html sha256:8a8e83b828642545 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -341,13 +341,13 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h3>OpenAI (ChatGPT) - passaggio singolo</h3>
   <p>Risponde in un colpo solo a partire dall'indice del workspace e dalla vista che hai aperto. Non può
     andare a leggere niente da sé, quindi ti dirà cosa gli manca invece di andarselo a prendere.</p>
-  <table>
+  <table data-labelled data-cols="3">
     <thead><tr><th></th><th>Anthropic (Claude)</th><th>OpenAI (ChatGPT)</th></tr></thead>
     <tbody>
-      <tr><td class="k">Modalità</td><td>Agente con strumenti in sola lettura</td><td>Passaggio singolo</td></tr>
-      <tr><td class="k">Cosa vede</td><td>Quello che decide di aprire: struttura, chiavi esterne, SQL e lineage di qualsiasi vista, più la ricerca su colonne e SQL</td><td>L'indice del workspace e la vista aperta in quel momento</td></tr>
-      <tr><td class="k">Avanzamento</td><td>Ogni chiamata a uno strumento compare nella chat mentre avviene</td><td>Un indicatore «thinking…» finché non arriva la risposta</td></tr>
-      <tr><td class="k">Va bene per</td><td>«Cosa legge da questa tabella?», «esiste già una query che unisce queste due?»</td><td>Domande circoscritte sulla vista che hai davanti</td></tr>
+      <tr><td class="k">Modalità</td><td data-label="Anthropic (Claude)">Agente con strumenti in sola lettura</td><td data-label="OpenAI (ChatGPT)">Passaggio singolo</td></tr>
+      <tr><td class="k">Cosa vede</td><td data-label="Anthropic (Claude)">Quello che decide di aprire: struttura, chiavi esterne, SQL e lineage di qualsiasi vista, più la ricerca su colonne e SQL</td><td data-label="OpenAI (ChatGPT)">L'indice del workspace e la vista aperta in quel momento</td></tr>
+      <tr><td class="k">Avanzamento</td><td data-label="Anthropic (Claude)">Ogni chiamata a uno strumento compare nella chat mentre avviene</td><td data-label="OpenAI (ChatGPT)">Un indicatore «thinking…» finché non arriva la risposta</td></tr>
+      <tr><td class="k">Va bene per</td><td data-label="Anthropic (Claude)">«Cosa legge da questa tabella?», «esiste già una query che unisce queste due?»</td><td data-label="OpenAI (ChatGPT)">Domande circoscritte sulla vista che hai davanti</td></tr>
     </tbody>
   </table>
 
@@ -438,31 +438,31 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     selezionato sono due workspace diversi, e tutto quello che parla con Zoho Analytics è disattivato finché
     non si accordano. <b class="ui">Go to Zoho Analytics ↗</b> apre il workspace a cui appartiene la cartella,
     oppure sposti la cartella su quella della scheda.</p>
-  <table>
+  <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>
-      <tr><td class="k">È tutto disattivato</td>
-        <td>La scheda e la cartella sono due workspace diversi. La barra ambra offre entrambe le vie
+      <tr><td class="k" data-label="Sintomo">È tutto disattivato</td>
+        <td data-label="Causa e rimedio">La scheda e la cartella sono due workspace diversi. La barra ambra offre entrambe le vie
           d'uscita: porta la scheda sul workspace rispecchiato, o sposta il pannello su quello in cui è la
           scheda.</td></tr>
-      <tr><td class="k">«Not on a Zoho Analytics tab»</td>
-        <td>Il pannello agisce sulla scheda attiva. Passa alla scheda di Zoho Analytics, o usa il pulsante
+      <tr><td class="k" data-label="Sintomo">«Not on a Zoho Analytics tab»</td>
+        <td data-label="Causa e rimedio">Il pannello agisce sulla scheda attiva. Passa alla scheda di Zoho Analytics, o usa il pulsante
           sull'overlay.</td></tr>
-      <tr><td class="k">«No workspace open»</td>
-        <td>Sei su Zoho Analytics ma non dentro un workspace. Aprine uno - l'URL deve contenere
+      <tr><td class="k" data-label="Sintomo">«No workspace open»</td>
+        <td data-label="Causa e rimedio">Sei su Zoho Analytics ma non dentro un workspace. Aprine uno - l'URL deve contenere
           <code>/workspace/&lt;id&gt;</code>.</td></tr>
-      <tr><td class="k">Il pulsante della cartella è ambra</td>
-        <td>Il browser ha lasciato scadere il permesso, cosa che fa fra una sessione e l'altra. Clicca in un
+      <tr><td class="k" data-label="Sintomo">Il pulsante della cartella è ambra</td>
+        <td data-label="Causa e rimedio">Il browser ha lasciato scadere il permesso, cosa che fa fra una sessione e l'altra. Clicca in un
           punto qualsiasi del pannello per ripristinarlo; cliccare il pulsante stesso chiede
           l'autorizzazione, non di nuovo la cartella.</td></tr>
-      <tr><td class="k">«CSRF token not found»</td>
-        <td>Su quella scheda la sessione non è autenticata. Ricarica la pagina di Zoho Analytics e
+      <tr><td class="k" data-label="Sintomo">«CSRF token not found»</td>
+        <td data-label="Causa e rimedio">Su quella scheda la sessione non è autenticata. Ricarica la pagina di Zoho Analytics e
           riprova.</td></tr>
-      <tr><td class="k">N elementi non sono stati letti</td>
-        <td>Usa <b class="ui">Retry N failed</b>. Finché non entrano, al mirror mancano esattamente quelli, e
+      <tr><td class="k" data-label="Sintomo">N elementi non sono stati letti</td>
+        <td data-label="Causa e rimedio">Usa <b class="ui">Retry N failed</b>. Finché non entrano, al mirror mancano esattamente quelli, e
           Health li elenca.</td></tr>
-      <tr><td class="k">Un report non mostra colonne</td>
-        <td>Solo tabelle e query table hanno colonne proprie. Se, seguendo ciò su cui il report è costruito, Zoost non arriva a una vista che porta dati, lo dice invece di mostrare una tabella vuota.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Un report non mostra colonne</td>
+        <td data-label="Causa e rimedio">Solo tabelle e query table hanno colonne proprie. Se, seguendo ciò su cui il report è costruito, Zoost non arriva a una vista che porta dati, lo dice invece di mostrare una tabella vuota.</td></tr>
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è
