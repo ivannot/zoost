@@ -279,6 +279,12 @@ main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--l
 .doc th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .doc .k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
 main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
+/* The nowrap keeps a two-word key from breaking; a command is not a key. Reported from the nerd
+   page: `gh attestation verify <file> --repo ivannot/zoost` inherited it and made the cell **416px
+   inside a 331px table**, so the table scrolled sideways and the column beside it was left 93px -
+   twelve characters. Code inside a key cell may wrap, and may break inside a token if a single one
+   is still too long; plain-text keys keep the nowrap they were given it for. */
+main td.k code{white-space:normal;overflow-wrap:anywhere}
 /* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
    used the same class names with nothing behind them — so /how-to.html's two product cards and the
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note
