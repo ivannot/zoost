@@ -108,9 +108,19 @@ function pemBytes(pem) {
 // it for an access token. Nothing is stored between requests — the whole payload is cached for an
 // hour anyway, so a token per computation costs one extra call and saves having a second thing that
 // can go stale.
+// Returns {token, why}. `why` is a short, deliberately non-secret reason, and it exists because
+// "unknown" with no cause is the empty state this project refuses everywhere else: a missing binding,
+// a revoked key and a malformed secret all produce the same null and need different fixes. Nothing in
+// it identifies the credential - it names which step declined.
 async function cwsToken(env) {
-  if (!env || !env.CWS_SERVICE_ACCOUNT) return null;
-  const key = JSON.parse(env.CWS_SERVICE_ACCOUNT);
+  if (!env || !env.CWS_SERVICE_ACCOUNT) return { token: null, why: 'no-credential' };
+  let key;
+  try {
+    key = JSON.parse(env.CWS_SERVICE_ACCOUNT);
+  } catch {
+    return { token: null, why: 'credential-not-json' };
+  }
+  if (!key.client_email || !key.private_key) return { token: null, why: 'credential-incomplete' };
   const now = Math.floor(Date.now() / 1000);
   const claim = {
     iss: key.client_email,
@@ -131,9 +141,10 @@ async function cwsToken(env) {
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${head}.${body}.${b64url(sig)}`,
     signal: timeout(8000),
   });
-  if (!r.ok) return null;
+  if (!r.ok) return { token: null, why: 'token-http-' + r.status };
   const j = await r.json();
-  return j && j.access_token ? j.access_token : null;
+  return j && j.access_token ? { token: j.access_token, why: 'ok' }
+                             : { token: null, why: 'token-empty' };
 }
 
 async function cwsStatus(token, app) {
@@ -141,7 +152,7 @@ async function cwsStatus(token, app) {
   const r = await fetch(`${CWS_API}/publishers/${PUBLISHER}/items/${EXT_ID[app]}:fetchStatus`, {
     headers: { authorization: `Bearer ${token}` }, signal: timeout(8000),
   });
-  if (!r.ok) return null;
+  if (!r.ok) return { http: r.status };
   return pickStatus(await r.json());
 }
 
@@ -224,7 +235,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=15';  // bumped: the Store's own status replaces the listing scrape
+const CACHE_KEY = '/api/versions?v=16';  // bumped: the payload says why the Store is unreadable
 
 
 async function versions(request, env, ctx) {
@@ -234,7 +245,8 @@ async function versions(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const token = await settled(cwsToken(env));
+  const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
+  const token = auth.token;
   const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, subs, updated, docsUpd, docsAnUpd] =
     await Promise.all([
       settled(cwsStatus(token, 'crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
@@ -244,8 +256,11 @@ async function versions(request, env, ctx) {
       settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
-  const crmStore = crmCws && crmCws.published ? crmCws.published.version : null;
-  const anStore = anCws && anCws.published ? anCws.published.version : null;
+  const ok = (x) => (x && x.published !== undefined ? x : null);   // {http:403} is not a status
+  const crmStore = ok(crmCws) && crmCws.published ? crmCws.published.version : null;
+  const anStore = ok(anCws) && anCws.published ? anCws.published.version : null;
+  const cwsWhy = auth.why !== 'ok' ? auth.why
+    : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok';
   const sub = (app, tag) => {
     const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
     return (m && subs && subs[app] && subs[app][m[1]]) || null;
@@ -260,7 +275,7 @@ async function versions(request, env, ctx) {
    * saying "awaiting review" for ever. The date still comes from RELEASES.md, because the API
    * reports what state a revision is in and not when it entered it. */
   const inReview = (app, cws) => {
-    const s = cws && cws.submitted;
+    const s = ok(cws) && cws.submitted;
     if (!s || !s.version) return null;
     return { version: s.version, state: s.state,
              date: (subs && subs[app] && subs[app][s.version]) || null };
@@ -285,6 +300,7 @@ async function versions(request, env, ctx) {
     // is a different question the moment a later tag exists that was not submitted.
     crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), pending: inReview('crm', crmCws), url: listing('crm') },
     analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), pending: inReview('analytics', anCws), url: listing('analytics') },
+    cws: cwsWhy,
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {
