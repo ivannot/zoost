@@ -2656,3 +2656,26 @@ test('byField() sorts exactly as the arrow it replaced did', () => {
     rows.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')),
     'a sorted list came out in a different order');
 });
+
+// ---------- the panel opens on the tab the user put first ----------
+//
+// The tabs are reorderable, and `viewMode` was initialised to the literal 'functions'. The strip
+// honoured the order and the panel ignored it: whatever you dragged to the front, Functions was the
+// one showing. The correcting line only fired when the current tab was *hidden or refused*, which is
+// a different question from "nothing has been chosen yet". Verified by rendering the shipped panel
+// headless over tools/fsshim.js with three different orders - functions/workflows/connections first -
+// and reading which segment carried `active`; with the defect reintroduced all three answered
+// Functions.
+
+test('viewMode starts unchosen, not on a tab named in the source', () => {
+  const src = read('apps/crm/sidepanel.js');
+  assert.ok(/let viewMode = null,/.test(src),
+    'viewMode is initialised to a tab id again - reordering the tabs will not move the panel');
+});
+
+test('the first draw selects the first ordered tab', () => {
+  const src = read('apps/crm/sidepanel.js');
+  assert.ok(/if \(vis\.length && \(viewMode === null \|\| !vis\.includes\(viewMode\)\)\) setMode\(vis\[0\]\);/.test(src),
+    'the selection guard no longer covers the unchosen case, so the panel opens on whatever the ' +
+    'source names rather than on the tab the user ordered first');
+});

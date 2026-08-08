@@ -38,7 +38,11 @@ let connectionFilter = null, connFilterSet = null;   // when set, the functions 
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
 let treeSortDir = 'asc';      // 'asc' | 'desc' - defaults per sort: A→Z for names, biggest-first for numbers
 let currentPath = null, pvHist = [];
-let viewMode = 'functions', moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
+// `viewMode` opens on whatever tab the user put first, decided once in renderTabs() the first time
+// the row is drawn. It used to be hard-coded to 'functions', so reordering the tabs moved the
+// segments and left the panel showing the same one it always had - the preference was honoured in
+// the strip and ignored by the thing the strip is for. Null until that first render, never after.
+let viewMode = null, moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
@@ -2528,7 +2532,9 @@ function renderTabs() {
     `<button class="seg${id === viewMode ? ' active' : ''}" data-tab="${escA(id)}">${escHtml(tabLabel(id))}</button>`).join('')
     || '<span class="segnone">Every tab is hidden - turn one back on in Settings.</span>';
   bar.querySelectorAll('.seg').forEach((b) => (b.onclick = () => setMode(b.dataset.tab)));
-  if (vis.length && !vis.includes(viewMode)) setMode(vis[0]);
+  // First draw: open on the first tab the user ordered, not on a name written into the source.
+  // Afterwards, only move when the tab being shown has gone away.
+  if (vis.length && (viewMode === null || !vis.includes(viewMode))) setMode(vis[0]);
 }
 /** Is this path one module's file?
  *
