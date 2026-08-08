@@ -138,6 +138,13 @@ function status(text, kind) { $('statustext').textContent = text; $('status').cl
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
 const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
+// Chrome drops the folder permission between sessions, so anything that is about to write has to
+// ask first - under a real click, which every caller of this is. Without it the first write throws
+// `NotAllowedError: The request is not allowed by the user agent…`, which names neither the folder
+// nor the remedy and reads as the extension being broken. The CRM panel guards all fifteen of its
+// mirror-writing entry points; this one guarded two of five, and pullAll, pullOne and retryFailed
+// wrote straight to disk. Same wording as the twin, so one message covers both products.
+async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error('Folder access not granted.'); }
 async function writeFile(rel, content) {
   const parts = rel.split('/'); let d = dir;
   for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -525,6 +532,7 @@ async function pullAll() {
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, 'Pulling…');
   try {
+    await requirePerm(dir);
     setBusy(true, 'Reading the workspace…');
     const info = await toBridge({ cmd: 'workspaceInfo' });
 
@@ -585,6 +593,7 @@ async function pullOne(id) {
   if (!v) return;
   setBusy(true, `Re-reading «${v.name}»…`);
   try {
+    await requirePerm(dir);
     if (v.type === 'QueryTable') {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
       if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
@@ -609,6 +618,7 @@ async function retryFailed() {
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, `Retrying ${ids.length} item(s)…`);
   try {
+    await requirePerm(dir);
     const qIds = ids.filter((i) => { const v = viewById().get(i); return v && v.type === 'QueryTable'; });
     const still = [];
     if (qIds.length) { const r = await toBridge({ cmd: 'pullSql', ids: qIds }); Object.assign(sqls, r.sql || {}); still.push(...(r.failed || [])); }
@@ -1800,7 +1810,7 @@ async function doExport(kind) {
   await window.idbHandle.set('exportScopeAnalytics', sc);
   setBusy(true, kind === 'md' ? 'Building AI (Markdown) export…' : 'Building HTML export…');
   try {
-    if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');
+    await requirePerm(dir);
     const md = kind === 'md';
     const body = md ? await buildExportMarkdown(sc) : await buildExportHtml(sc);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');

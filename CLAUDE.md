@@ -481,6 +481,16 @@ empty the chat that reset different things is how the twins drifted on the large
 skipped when the "switch" is a re-activation of the workspace already open, because regranting a
 lapsed folder permission must not throw away a conversation about the org you never left.
 
+**Anything that writes the mirror asks for the folder first, and the twin comparison is what found
+the gap.** Chrome drops the File System Access permission between sessions, so a write that has not
+asked throws `NotAllowedError: The request is not allowed by the user agent…` - a sentence naming
+neither the folder nor the remedy, which reads as the extension being broken. The CRM guarded all
+fifteen of its writing entry points; **Analytics guarded two of five**, and `pullAll`, `pullOne` and
+`retryFailed` went straight to disk. Nobody reported it: it surfaced while folding nine copies of the
+guard into `requirePerm()`, when the counts came out nine against one and the question «which side is
+wrong» was asked instead of making them match. Both panels now share the helper and the wording, and
+a test walks the three entry points by name.
+
 **The environment guard is the most important safety property.** Each workspace is bound to one
 org, host and instance. If the active Zoho tab belongs to a different org, every Zoho-bound action
 is disabled. Do not weaken this for convenience.

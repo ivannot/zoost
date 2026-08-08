@@ -2679,3 +2679,19 @@ test('the first draw selects the first ordered tab', () => {
     'the selection guard no longer covers the unchosen case, so the panel opens on whatever the ' +
     'source names rather than on the tab the user ordered first');
 });
+
+test('every entry point that writes the mirror asks for the folder first', () => {
+  // Chrome drops the permission between sessions, so a write that has not asked throws a raw
+  // NotAllowedError - a sentence naming neither the folder nor the remedy. Analytics guarded two of
+  // its five writing entry points: pullAll, pullOne and retryFailed went straight to disk. Found by
+  // the twin comparison, not by a report - the CRM guarded nine places and Analytics one, and the
+  // asymmetry was the signal.
+  const src = read('apps/analytics/sidepanel.js');
+  for (const fn of ['pullAll', 'pullOne', 'retryFailed']) {
+    const at = src.indexOf(`async function ${fn}(`);
+    assert.ok(at > 0, `id=${fn} is gone from the Analytics panel`);
+    const head = src.slice(at, at + 700);
+    assert.ok(/requirePerm\(dir\)/.test(head),
+      `id=${fn} writes the mirror without asking for the folder first`);
+  }
+});
