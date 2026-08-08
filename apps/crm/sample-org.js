@@ -37,6 +37,9 @@
   const INSTANCE = 'sampleorg';
   const BASE = 'https://crm.zoho.eu';
   const WHEN = '2026-08-07T10:00:00.000Z';
+  const AUTHOR = 'Sample User';       // the one name every generated record is attributed to
+  const WF_TRIGGER = 'Record Action'; // the rule's own `execute_when.type` and its index row say the
+                                      // same fact, so they are the same string or the fixture lies
 
   // ---- the readable core -------------------------------------------------------------------
   // ns, name, category, params, what it calls. Written out because these are the ones a reader
@@ -269,7 +272,7 @@
         return_type: params.length ? 'map' : 'void',
         params: params.map((p) => ({ name: p, type: 'string' })),
         description: '', updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
-        modified_by: 'Sample User', associated_place: null, workflow: '',
+        modified_by: AUTHOR, associated_place: null, workflow: '',
         rest_api: (name === 'exportCsv' || name === 'openTicket')
           ? [{ type: 'GET', active: true }] : [],
         connections: CONNECTIONS.filter((c) => c[2].includes(ns + '.' + name))
@@ -349,7 +352,7 @@
       J('workflows/' + wid + '.json', {
         id: wid, name: name, description: '',
         module: { api_name: mod, id: String(6000 + i) },
-        execute_when: { type: 'Record Action', on: 'created' },
+        execute_when: { type: WF_TRIGGER, on: 'created' },
         status: { active: true },
         conditions: [{
           sequence_number: 1, criteria: { field: { api_name: 'Status' }, comparator: 'not_equal', value: '' },
@@ -359,7 +362,7 @@
         last_executed_time: '2026-07-2' + (i % 9) + 'T11:20:00+00:00',
       });
       wfs.push({ id: wid, name: name, description: '', module: mod, module_id: String(6000 + i),
-                 type: 'Record Action', active: true, source: 'crm' });
+                 type: WF_TRIGGER, active: true, source: 'crm' });
     });
     J('workflows/index.json', wfs);
 
@@ -374,7 +377,7 @@
     }));
     J('connections/index.json', CONNECTIONS.map(([c, lbl], i) =>
       ({ name: c, label: lbl, connector: 'custom', connectorLabel: 'Custom service',
-         connected: true, createdBy: 'Sample User', scopes: ['ZohoCRM.modules.ALL'],
+         connected: true, createdBy: AUTHOR, scopes: ['ZohoCRM.modules.ALL'],
          id: String(2000 + i) })));
 
     const areas = {};

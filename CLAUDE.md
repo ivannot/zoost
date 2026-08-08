@@ -1465,7 +1465,7 @@ These all failed **silently**, with no console error. They are the expensive kin
   recurring shape, not the DOMException.
 - **Open, and measured rather than fixed: the Analytics pull writes the mirror with no permission
   guard at all.** Folding the CRM's nine copies of
-  `if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');` into `requirePerm()`
+  `if (!(await ensurePerm(dir))) throw new Error(<the folder message>);` into `requirePerm()`
   raised the obvious twin question - nine on one side, one on the other - and the answer is not that
   the CRM over-guards. Censused by walking every top-level function that reaches `writeFile`,
   `writeJson`, `patchCfg` or `writeToDisk`: **the CRM guards all fifteen**, with `ensurePerm` where a
@@ -2231,6 +2231,50 @@ the loop that tries five inputs — is already writing a test; the only differen
 survives the session. It goes into `tests/` before the commit that fixes the thing. No ceremony and
 no separate task: if a defect was worth reasoning about, the reasoning belongs where it can run
 again. The suite grows by the bugs we meet, which is why it has teeth.
+
+**One message, one place - and the panel said the same sentence three ways in ten sites.** «Se
+proliferano le funzioni duplicate è la fine», and a *message* written out twice is that defect one
+layer down: the two copies are one careless edit away from disagreeing, and nothing would say so.
+Measured on the tree before the fold - a quoted literal, never a template chunk, starting with a
+capital and containing a space - **39 clusters across the 22 shipped scripts**, 25 of them in
+`apps/crm/sidepanel.js` alone. The worst was not the count: a lapsed folder permission was reported
+as **«needs re-granting» (x5), «denied» (x3) and «not granted» (x2)**, so one browser behaviour
+arrived as three different problems, one of which - «denied» - names a state with no action in it.
+They are one sentence now, **`Folder access needs re-granting - click ↻ Refresh.`**, which names the
+control that fixes it; `requirePerm()` throws it in **both** apps, because the same helper wording
+the same fact differently per product is the drift the twin rule exists to stop.
+
+Everything else folded into a `const MSG = {…}` per file - the two panels, both graph windows, the
+Analytics options page - plus `engineLabel()` for the `'anthropic' ? 'Anthropic (Claude)' : …`
+ternary that both options pages carried twice, and plain data constants in `sample-org.js`, where
+the repeated strings are a fixture author and a workflow trigger rather than messages. The health
+audit's seven section titles were duplicated between the panel's view and the HTML export, which is
+exactly the pair that must not drift, since a reader moves between the two.
+
+**The check is `tests/panel.test.mjs`, it globs `apps/*/*.js`, and it has no allow-list.** That is
+the load-bearing part: the file set is derived, so a script added tomorrow is covered without anyone
+remembering, and there is no exemption map to become a checklist wearing a script's clothes - the
+two failure modes this repository has already recorded. The criterion was tuned by measuring rather
+than argued: on the folded tree it reports **zero** across all 22 scripts, so every future finding is
+real. It reads literals inside `${…}` interpolations (that is where both options pages' engine
+labels were hiding, invisible to the first pass), decodes escapes so `'…'` and `'…'` are one
+message, and skips comments - outward the rule never bends, between us it can. Proven by
+reintroducing a duplicate in `sidepanel.js` and in `options.js`, and by drifting the twin wording by
+one verb: three findings, one each.
+
+**What it does not catch, said rather than left to be found.** A fragment starting lowercase -
+` - click to retry` was duplicated three times beside `Failed: ` and is folded, but nothing here
+would have found it. A message built by concatenation, which is not one literal. And the same
+sentence in two *files*: only the folder wording is held across the twins, by a case of its own.
+Extend the check when one of those bites; do not extend the care.
+
+**The fold found a live bug through the suite, which is the argument for the suite.** `MSG.errPrefix`
+landed inside `friendlyError()`, which `tests/keyvault.test.mjs` lifts and *runs* in a bare context -
+a ReferenceError three lines in, `node --check` perfectly happy, exactly the free-variable trap
+already recorded above. The lifters now take the panel's `MSG` block with the function, reading the
+wording from the shipped constant instead of restating it. Both panels and both graph windows were
+then re-rendered headless through `tools/shots.py` (11 shots, all ok) and both options pages loaded
+in headless Chrome with zero console errors - because a scope bug is only ever found by running.
 
 **The panels are not restructured to be importable.** `tests/slice.mjs` lifts a named function out
 of a browser script and runs it alone; refactoring 3000 lines of DOM-bound code *in order to* add

@@ -9,7 +9,9 @@
 import { test } from 'node:test';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import { sliceFn, sliceConst, load, read } from './slice.mjs';
+import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
@@ -1127,6 +1129,9 @@ test('one click folds the list, and one click brings it back', () => {
     const { wireAsideFold } = load([sliceConst(`apps/${app}/graphview.js`, 'MIN'),
                                     sliceConst(`apps/${app}/graphview.js`, 'KEEP'),
                                     sliceConst(`apps/${app}/graphview.js`, 'DRAG'),
+                                    // setFolded writes the control's own label, which lives in MSG
+                                    // because it is the aria-label and the title of one element.
+                                    sliceConst(`apps/${app}/graphview.js`, 'MSG'),
                                     sliceFn(`apps/${app}/graphview.js`, 'asideWidth'),
                                     sliceFn(`apps/${app}/graphview.js`, 'wireAsideFold')], ctx);
     wireAsideFold();
@@ -2538,12 +2543,13 @@ test('the sample refusal is written once per panel', () => {
 });
 
 test('the folder-access guard throws from one place per panel', () => {
-  // Nine identical `if (!(await ensurePerm(dir))) throw new Error('Folder access not granted.');`
-  // lines in the CRM, folded into requirePerm(). Analytics has one such site and no helper: that
-  // asymmetry is real and is recorded here rather than smoothed over - see the note in requirePerm.
-  // Callers that report and carry on instead of throwing keep their own ensurePerm and own wording,
-  // so this counts the *throw*, not the string.
-  const thrown = /throw new Error\('Folder access not granted\.'\)/g;
+  // Nine identical `if (!(await ensurePerm(dir))) throw new Error(...)` lines in the CRM, folded
+  // into requirePerm(). Analytics has one such site and no helper: that asymmetry is real and is
+  // recorded here rather than smoothed over - see the note in requirePerm. Callers that report and
+  // carry on instead of throwing keep their own ensurePerm, so this counts the *throw*. The message
+  // itself is no longer written here: it is MSG.folder, one sentence for the ten sites that used to
+  // say it three ways, and the case below holds the two panels to the same wording.
+  const thrown = /throw new Error\(MSG\.folder\)/g;
   for (const app of ['crm', 'analytics']) {
     const src = panelBody(app);
     const n = (src.match(thrown) || []).length;
@@ -2614,12 +2620,17 @@ test('sampleRefuse() refuses a sample and lets a real workspace through', () => 
 
 test('requirePerm() throws the shipped message, and only when the folder is denied', async () => {
   const { requirePerm } = load([
+    sliceConst('apps/crm/sidepanel.js', 'MSG'),
     sliceFn('apps/crm/sidepanel.js', 'requirePerm'),
     sliceFn('apps/crm/sidepanel.js', 'ensurePerm'),
   ], {});
   const handle = (state) => ({ queryPermission: async () => state, requestPermission: async () => state });
   await requirePerm(handle('granted'));   // must not throw, or every pull stops on a granted folder
-  await assert.rejects(() => requirePerm(handle('denied')), /^Error: Folder access not granted\.$/,
+  // The wording is read from the shipped MSG rather than repeated here - a copy in the test is one
+  // more place the sentence can drift, which is the whole defect this fold was about. What is
+  // asserted is that the thrown message *is* that constant and names a button the user can press.
+  await assert.rejects(() => requirePerm(handle('denied')),
+    (e) => e.message === 'Folder access needs re-granting - click ↻ Refresh.',
     'the message a user reads when the folder is gone has changed');
 });
 
@@ -2694,4 +2705,158 @@ test('every entry point that writes the mirror asks for the folder first', () =>
     assert.ok(/requirePerm\(dir\)/.test(head),
       `id=${fn} writes the mirror without asking for the folder first`);
   }
+});
+
+// ---------- one message, one place ----------
+//
+// «Se proliferano le funzioni duplicate è la fine» - and a message written out twice is the same
+// defect one layer down, because the two copies are one edit away from disagreeing. It had already
+// happened: the CRM panel said the same lapsed folder permission three ways in ten places - «needs
+// re-granting», «denied», «not granted» - so the reader met three different problems where there
+// was one, and the health audit carried seven section titles in two renderers with nothing holding
+// them level. Measured on the tree before the fold: 39 clusters over 22 shipped scripts, 25 of them
+// in apps/crm/sidepanel.js alone.
+//
+// The criterion is deliberately crude and was tuned by measuring rather than by argument: a quoted
+// literal (never a template chunk), starting with a capital, containing a space. On the fixed tree
+// that reports **zero** across every shipped script - no exemption list, no allow-list, nothing to
+// keep in step. That matters more than catching every possible case: a checker with false positives
+// is one nobody reads, which this repository has learnt twice.
+//
+// What it does NOT catch, stated rather than left to be discovered:
+//   - a fragment that starts lowercase. ` - click to retry` was duplicated three times beside
+//     `Failed: ` and is folded into MSG, but nothing here would have found it.
+//   - the same sentence spelt differently in two files, or in two apps. The twin rule covers that,
+//     and `requirePerm` throwing one wording in both panels is enforced by the case below.
+//   - a message built by concatenation, which is not one literal.
+// Extend the check when one of those bites; do not extend the care.
+
+/** Every quoted string literal in a script, decoded, with template chunks skipped and `${…}`
+ *  expressions scanned - a message inside an interpolation is an ordinary literal and counts.
+ *  Comments are skipped: outward the rule never bends, between us it can. */
+function messageLiterals(src) {
+  const out = [];
+  const n = src.length;
+  const stack = [];
+  let i = 0;
+  const escLen = (j) => {
+    const c = src[j + 1];
+    if (c === 'u' && src[j + 2] === '{') return src.indexOf('}', j) - j + 1;
+    return c === 'u' ? 6 : c === 'x' ? 4 : 2;
+  };
+  const unesc = (j) => {
+    const raw = src.slice(j, j + escLen(j));
+    try { return JSON.parse('"' + raw.replace(/"/g, '\\"') + '"'); } catch { return raw; }
+  };
+  // Template text up to the end of the literal or the start of an interpolation. The chunks
+  // themselves are never collected - they are not a message, they are the frame around one.
+  const skipTplChunk = () => {
+    while (i < n) {
+      if (src[i] === '\\') { i += 2; continue; }
+      if (src[i] === '`') { stack.pop(); i++; return; }
+      if (src[i] === '$' && src[i + 1] === '{') return;
+      i++;
+    }
+  };
+  while (i < n) {
+    const c = src[i];
+    if (c === '/' && src[i + 1] === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+    if (c === '/' && src[i + 1] === '*') { i += 2; while (i < n && !(src[i] === '*' && src[i + 1] === '/')) i++; i += 2; continue; }
+    if (c === "'" || c === '"') {
+      const q = c; let j = i + 1, buf = '';
+      while (j < n && src[j] !== q && src[j] !== '\n') {
+        if (src[j] === '\\') { buf += unesc(j); j += escLen(j); continue; }
+        buf += src[j]; j++;
+      }
+      // An unterminated quote is a regex or an apostrophe in code, not a string: step over it.
+      if (src[j] === q) { out.push({ s: buf, line: src.slice(0, i).split('\n').length }); i = j + 1; continue; }
+      i++; continue;
+    }
+    if (c === '`') { stack.push('tpl'); i++; skipTplChunk(); continue; }
+    if (c === '$' && src[i + 1] === '{' && stack[stack.length - 1] === 'tpl') { stack.push('expr'); i += 2; continue; }
+    if (c === '{' && stack[stack.length - 1] === 'expr') { stack.push('brace'); i++; continue; }
+    if (c === '}' && stack.length) {
+      const top = stack.pop(); i++;
+      if (top === 'expr') skipTplChunk(); else if (top !== 'brace') stack.push(top);
+      continue;
+    }
+    i++;
+  }
+  return out;
+}
+const looksLikeMessage = (s) => /^[A-Z]/.test(s) && s.includes(' ');
+
+/** Every .js an app ships, globbed rather than listed - a file added tomorrow is covered without
+ *  anyone remembering, which is the only direction that fails safe. */
+function shippedScripts() {
+  const apps = readdirSync(join(ROOT, 'apps'), { withFileTypes: true }).filter((d) => d.isDirectory());
+  const out = [];
+  for (const a of apps) {
+    for (const f of readdirSync(join(ROOT, 'apps', a.name))) {
+      if (f.endsWith('.js')) out.push(`apps/${a.name}/${f}`);
+    }
+  }
+  return out.sort();
+}
+
+export function duplicateMessages(rel) {
+  const seen = new Map();
+  for (const { s, line } of messageLiterals(read(rel))) {
+    if (!looksLikeMessage(s)) continue;
+    if (!seen.has(s)) seen.set(s, []);
+    seen.get(s).push(line);
+  }
+  return [...seen].filter(([, lines]) => lines.length > 1);
+}
+
+test('the scanner finds a duplicate, and is not fooled by comments or templates', () => {
+  // Proving the check can fail, on inputs rather than by mutating the tree: a checker that has
+  // never caught anything is a claim, not a check.
+  const dup = messageLiterals(`a('Folder access needs re-granting.'); b('Folder access needs re-granting.');`);
+  assert.equal(dup.filter((d) => looksLikeMessage(d.s)).length, 2, 'two plain literals were not both seen');
+
+  const inComment = messageLiterals(`// See 'Pull all now' twice\nx('Pull all now');`);
+  assert.equal(inComment.filter((d) => looksLikeMessage(d.s)).length, 1,
+    'a message quoted in a comment counted as a use - comments are exempt on purpose');
+
+  const inTpl = messageLiterals('x(`Pull all now ${y} Pull all now`);');
+  assert.equal(inTpl.filter((d) => looksLikeMessage(d.s)).length, 0,
+    'template text was collected as a literal - a chunk is the frame around a message, not one');
+
+  const inInterp = messageLiterals("x(`${a ? 'Pull all now' : 'Pull all now'}`);");
+  assert.equal(inInterp.filter((d) => looksLikeMessage(d.s)).length, 2,
+    'a literal inside an interpolation was missed - that is where the engine labels were hiding');
+
+  const escaped = messageLiterals(`a('Loading\\u2026 now'); b('Loading… now');`);
+  assert.equal(new Set(escaped.map((d) => d.s)).size, 1,
+    'the two escape spellings of one sentence read as two different messages');
+});
+
+test('no shipped script says the same thing twice', () => {
+  const files = shippedScripts();
+  assert.ok(files.length >= 20, `id=glob found only ${files.length} shipped scripts - the walk is wrong`);
+  const findings = [];
+  for (const rel of files) {
+    for (const [s, lines] of duplicateMessages(rel)) {
+      findings.push(`${rel}: ${JSON.stringify(s.slice(0, 60))} at lines ${lines.join(', ')}`);
+    }
+  }
+  assert.equal(findings.length, 0,
+    'a user-facing message is written out more than once - give it a name (MSG.x, or a const beside '
+    + 'its siblings) so the two copies cannot drift apart:\n  ' + findings.join('\n  '));
+});
+
+test('both panels report a lapsed folder permission in the same words', () => {
+  // requirePerm() exists in both apps and is the one place that throws it. Two wordings would mean
+  // the same browser behaviour arrives as two different problems depending on which Zoost you are
+  // in - the drift the twin rule exists to stop, in the helper a previous pass folded for it.
+  const wording = ['apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js'].map((rel) => {
+    const src = read(rel);
+    assert.ok(/async function requirePerm\(h\) \{ if \(!\(await ensurePerm\(h\)\)\) throw new Error\(MSG\.folder\); \}/.test(src),
+      `id=${rel} no longer throws MSG.folder from requirePerm`);
+    return (src.match(/^\s*folder: '([^']*)',/m) || [])[1];
+  });
+  assert.ok(wording[0], 'id=crm has no MSG.folder to compare');
+  assert.equal(wording[0], wording[1], 'the two panels word the lapsed folder permission differently');
+  assert.ok(wording[0].includes('↻'), 'MSG.folder no longer names the ↻ Refresh button that fixes it');
 });

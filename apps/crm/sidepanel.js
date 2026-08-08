@@ -52,6 +52,46 @@ let pullActive = false, pullBusy = false;
 
 const $ = (id) => document.getElementById(id);
 const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; };
+// Every sentence this panel says in more than one place. Not a translation layer and not a habit to
+// extend to one-off wording: a message written out twice is two messages the moment somebody edits
+// one of them, and that had already happened here - the same lapsed folder permission was reported
+// as «needs re-granting», «denied» and «not granted» across ten sites, so the reader met three
+// different problems where there was one. Naming the button is the point of the surviving wording:
+// ↻ Refresh is the control that re-asks, and «denied» named a state with no action in it.
+// A literal that appears once stays where it is used - a constant read by one caller is indirection
+// with nothing to hold together. tests/panel.test.mjs enforces the rule in the other direction.
+const MSG = {
+  noTab: 'No Zoho CRM tab open.',
+  folder: 'Folder access needs re-granting - click ↻ Refresh.',
+  wrongTab: 'Active Zoho tab does not match this workspace.',
+  noModuleTarget: 'Unknown module target - pull once, or open Zoho first.',
+  // The three status-dot tooltips, which say what a click will do rather than what the mark is.
+  notHere: 'Not in workspace - click to download',
+  hereRepull: 'In workspace - click to re-download from Zoho',
+  failed: 'Failed: ',
+  clickRetry: ' - click to retry',
+  // Prefixes, each concatenated with the platform's own sentence rather than replacing it.
+  noFn: 'Function not found: ',
+  readFailed: 'Read failed: ',
+  graphErr: 'Graph error: ',
+  exportErr: 'Export error: ',
+  refreshErr: 'Refresh error: ',
+  namePrefix: 'Name: ',
+  openingFns: 'Opening Functions list…',
+  findByName: 'Find by name…',
+  // The health audit is drawn twice - the panel's view and the HTML export - and the titles are the
+  // only part that has to agree word for word, because a reader moves between the two. The section
+  // descriptions are deliberately shorter in the export and stay separate; this one is shared
+  // because it carries the «length is verbosity» caveat, which may not be dropped from either.
+  hBiggest: 'Largest functions',
+  hChattiest: 'Most outbound calls',
+  hOrphan: 'Orphan candidates',
+  hUnresolved: 'Unresolved calls',
+  hAmbiguous: 'Ambiguous calls',
+  hBroken: 'Broken automations',
+  hMissingRefs: 'Missing module references',
+  hBiggestDesc: 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.',
+};
 // A comparator over one field, with the `|| ''` the sites all carried: `.sort(byField('name'))`.
 const byField = (k) => (a, b) => (a[k] || '').localeCompare(b[k] || '');
 const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -353,8 +393,10 @@ const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) ==
 // The guard every pull, graph and export opens with. It throws rather than returning false, so the
 // caller's own `catch` writes the message: the nine sites that used it were already a `try` block
 // each, and a helper that returned a boolean would have left the `throw` copied at all nine.
-// Callers that instead want to report and carry on keep their own `ensurePerm` and their own wording.
-async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error('Folder access not granted.'); }
+// Callers that instead want to report and carry on keep their own `ensurePerm`, and say MSG.folder:
+// the wording no longer varies by call site, so a wrapper like «Export error: …» is the only thing
+// that differs between one report of a lapsed permission and another.
+async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
 async function writeFile(rel, content) {
   const parts = rel.split('/'); let d = dir;
   for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -507,7 +549,7 @@ async function ensureBridge(tabId) {
   }
 }
 async function toBridge(msg) {
-  const id = await zohoTabId(); if (!id) throw new Error('No Zoho CRM tab open.');
+  const id = await zohoTabId(); if (!id) throw new Error(MSG.noTab);
   await ensureBridge(id); const fid = await crmFrameId(id); return chrome.tabs.sendMessage(id, msg, { frameId: fid });
 }
 async function getContext() { try { const r = await toBridge({ cmd: 'context' }); return r?.ok ? r : null; } catch { return null; } }
@@ -614,7 +656,7 @@ function fnRowEl(e) {
   el.setAttribute('aria-selected', e.path === currentPath);
   const stCls = e.error ? 'st-err' : e.stale ? 'st-stale' : e.downloaded ? 'st-ok' : 'st-no';
   const stCh = e.error ? '⟳' : e.stale ? '◐' : e.downloaded ? '●' : '○';
-  const stTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? 'In workspace - click to re-download from Zoho' : 'Not in workspace - click to download';
+  const stTitle = e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.stale ? 'Older data (no connections / author) - click to refresh' : e.downloaded ? MSG.hereRepull : MSG.notHere;
   // Every trailing slot is always emitted, empty when it has nothing to say. A slot that disappears
   // lets the next one slide into its place, and then the numbers stop lining up down the list -
   // which is the whole point of having them there.
@@ -694,7 +736,7 @@ function renderTree() {
 }
 async function rebuildTree() {
   if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
+  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
   setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; aiConnCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   // scan disk: which functions are already downloaded (have a .meta.json), keyed by id
   const downloadedById = new Map(); const metaPaths = [];
@@ -851,7 +893,7 @@ async function openFile(path, push = false, line = null) {
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
-  let code; try { code = await readFile(path); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
+  let code; try { code = await readFile(path); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
   const lines = code.split('\n').length;
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
   const _g = await ensureGraph().catch(() => null);
@@ -947,7 +989,7 @@ async function openModulePage(genName, navigable, label) {
   if (sampleRefuse()) return;
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !genName) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !genName) { setStatus(MSG.noModuleTarget, 'warn'); return; }
   const url = `${base}/crm/${inst}/tab/${genName}`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -956,7 +998,7 @@ async function openModulePage(genName, navigable, label) {
 async function openModuleLayouts(gen) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
   const url = `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -965,7 +1007,7 @@ async function openModuleLayouts(gen) {
 async function openModuleLayout(gen, layoutId) {
   if (sampleRefuse()) return;
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst || !gen) { setStatus('Unknown module target - pull once, or open Zoho first.', 'warn'); return; }
+  if (!base || !inst || !gen) { setStatus(MSG.noModuleTarget, 'warn'); return; }
   const url = layoutId ? `${base}/crm/${inst}/settings/modules/${gen}/layouts/${layoutId}` : `${base}/crm/${inst}/settings/modules/${gen}/layouts`;
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
@@ -1041,14 +1083,14 @@ async function reveal(fn) {
   let tab = null; try { tab = await chrome.tabs.get(id); } catch (_) {}
   const same = url && tab && (tab.url || '').split('#')[0].split('?')[0] === url.split('#')[0].split('?')[0];
   if (!same) {
-    setStatus('Opening Functions list\u2026', 'busy');
+    setStatus(MSG.openingFns, 'busy');
     if (url) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.reload(id);
     await sleep(400); await waitTabComplete(id); await listReadyWait(id); await doFilter(id, fn, nice); return;
   }
   // Same URL -> reload the list, but open the target only AFTER a real reload completes.
   // Handles Zoho's native "unsaved changes" dialog: if the user picks "Reload" (even seconds
   // later) we still open the function; if they "Cancel", nothing is forced.
-  setStatus('Opening Functions list\u2026', 'busy');
+  setStatus(MSG.openingFns, 'busy');
   let sawLoading = false, handled = false;
   const listener = async (tid, info) => {
     if (tid !== id || handled) return;
@@ -1136,11 +1178,11 @@ function buildTypeChips() {
 $('nameToggle').onclick = () => {
   if (viewMode === 'functions') {
     nameMode = nameMode === 'internal' ? 'display' : 'internal';
-    $('nameToggle').textContent = 'Name: ' + nameMode;
+    $('nameToggle').textContent = MSG.namePrefix + nameMode;
     renderTree(); if (currentPath) showCallers(currentPath);
   } else {
     moduleNameMode = moduleNameMode === 'api' ? 'display' : moduleNameMode === 'display' ? 'generated' : 'api';
-    $('nameToggle').textContent = 'Name: ' + moduleNameMode;
+    $('nameToggle').textContent = MSG.namePrefix + moduleNameMode;
     renderModules();
   }
 };
@@ -1151,7 +1193,7 @@ $('smode').onclick = () => {
   searchMode = searchMode === 'name' ? 'content' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: code';
   $('smode').classList.toggle('on', searchMode === 'content');
-  $('find').placeholder = searchMode === 'name' ? 'Find by name\u2026' : 'Find inside the code\u2026';
+  $('find').placeholder = searchMode === 'name' ? MSG.findByName : 'Find inside the code\u2026';
   runSearch();
 };
 function runSearch() {
@@ -1204,7 +1246,7 @@ async function pullAll() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
-    const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
+    const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
@@ -1331,7 +1373,7 @@ async function openGraph() {
     await chrome.storage.local.set({ graphData: g });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Graph: ${g.counts.nodes} nodes, ${g.counts.edges} edges.`, 'ok');
-  } catch (e) { setStatus('Graph error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.graphErr + e.message, 'bad'); }
 }
 
 // ---------- health / audit ----------
@@ -1366,13 +1408,13 @@ async function buildHealth() {
   const chattiest = withStats.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15)
     .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
   const groups = [
-    { id: 'biggest', tab: 'size', title: 'Largest functions', desc: 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.', bad: false, items: biggest },
-    { id: 'chattiest', tab: 'size', title: 'Most outbound calls', desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
-    { id: 'orphan', tab: 'functions', title: 'Orphan candidates', desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
-    { id: 'unresolved', tab: 'functions', title: 'Unresolved calls', desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
-    { id: 'ambiguous', tab: 'functions', title: 'Ambiguous calls', desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
-    { id: 'broken', tab: 'wiring', title: 'Broken automations', desc: 'A workflow or schedule references a function not in this workspace.', bad: true, items: brokenItems },
-    { id: 'fk', tab: 'wiring', title: 'Missing module references', desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
+    { id: 'biggest', tab: 'size', title: MSG.hBiggest, desc: MSG.hBiggestDesc, bad: false, items: biggest },
+    { id: 'chattiest', tab: 'size', title: MSG.hChattiest, desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
+    { id: 'orphan', tab: 'functions', title: MSG.hOrphan, desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
+    { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
+    { id: 'ambiguous', tab: 'functions', title: MSG.hAmbiguous, desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
+    { id: 'broken', tab: 'wiring', title: MSG.hBroken, desc: 'A workflow or schedule references a function not in this workspace.', bad: true, items: brokenItems },
+    { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs, desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
   ];
   return { groups, coverage };
 }
@@ -1693,9 +1735,9 @@ async function aiExecTool(name, input) {
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
   }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return 'Function not found: ' + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
-  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : 'Function not found: ' + input.name; }
-  if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : 'Function not found: ' + input.name; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
+  if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
+  if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
   if (name === 'get_module') { const mods = await aiLoadModules(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'get_connection') {
@@ -2485,7 +2527,7 @@ $('wsdel').onclick = async () => {
 function setMode(mode) {
   viewMode = mode;
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
-  if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = 'Find by name\u2026'; }
+  if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   const _typeLabel = tabLabel(mode).toLowerCase();
@@ -2509,7 +2551,7 @@ function setMode(mode) {
   $('graph').title = mode === 'modules'
     ? 'ER diagram - modules and the relations between them, in its own window'
     : 'Graph - what fires each function, what it calls, and what it reaches, in its own window';
-  $('nameToggle').textContent = 'Name: ' + (mode === 'functions' ? nameMode : moduleNameMode);
+  $('nameToggle').textContent = MSG.namePrefix + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
 }
@@ -2609,7 +2651,7 @@ async function pullModules() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
-    const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
+    const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
@@ -2645,7 +2687,7 @@ async function pullModules() {
 // ---------- modules: tree ----------
 async function rebuildModules() {
   if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
+  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
   setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   const names = [];
   for await (const p of walk(dir)) if (isModuleFile(p)) names.push(p);
@@ -2750,8 +2792,8 @@ function renderModules() {
   }
 }
 async function resyncModule(m) {
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return; }
-  if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
+  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
   setStatus(`Resyncing ${m.api_name}…`, 'busy');
   const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
   let mod = {}; try { mod = JSON.parse(await readFile(m.path)); } catch (_) {}
@@ -2824,7 +2866,7 @@ async function openModule(path, layoutId) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh.', 'bad'); return; }
   currentPath = path; pvHist = []; updateBack(); if ($('status').className) setStatus('', '');
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
-  let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus('Read failed: ' + e.message, 'bad'); return; }
+  let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
   const nav = moduleNavigable(m);
   const refusal = moduleRefusal(m.unreadable);
   setPvName(`${m.plural_label || m.singular_label || m.module_name || m.api_name} \u00b7 ${m.api_name} \u00b7 ${(m.fields || []).length} fields${nav ? '' : ' \u00b7 no records tab'}`, path);
@@ -2983,7 +3025,7 @@ async function openCallFocus(id, depth) {
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     const n = g.nodes[id];
     setStatus(`Graph of ${id} (depth ${gg.depth}): calls ${n.calls.length}, called by ${n.called_by.length}.`, 'ok');
-  } catch (e) { setStatus('Graph error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.graphErr + e.message, 'bad'); }
 }
 async function openSchemaFocus(apiName, depth) {
   try {
@@ -3024,7 +3066,7 @@ function isTransient(msg) {
 const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return false; }
+  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
   const info = index.get(entry.id) || {};
   try {
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source });
@@ -3064,7 +3106,7 @@ function updateRow(e) {
   const ok = e.downloaded || e.scanned;
   st.className = 'st ' + (e.error ? 'st-err' : ok ? 'st-ok' : 'st-no');
   st.textContent = e.error ? '\u27f3' : ok ? '\u25cf' : '\u25cb';
-  st.title = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : ok ? 'In workspace - click to refresh' : 'Not in workspace - click to download';
+  st.title = e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : ok ? 'In workspace - click to refresh' : MSG.notHere;
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
@@ -3371,13 +3413,13 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   const hSec = (title, count, desc, rows, bad) => `<div class="hxsec"><h3>${esc(title)} <span class="hxn ${count ? (bad ? 'bad' : 'warn') : 'ok'}">${count}</span></h3>${desc ? `<p class="hxd">${desc}</p>` : ''}${count ? rows : '<p class="hxnone">None</p>'}</div>`;
   const healthHtml =
     `<div class="hxcov"><b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules. Items are <b>candidates to review</b>, never automatic deletions.</div>`
-    + hSec('Orphan candidates', hOrph.length, 'No caller in code, not REST, no associated_place.', hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
-    + hSec('Unresolved calls', hUnres.length, 'Calls a function that does not resolve in this workspace.', hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
-    + hSec('Ambiguous calls', hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
-    + hSec('Broken automations', hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
-    + hSec('Missing module references', hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
-    + hSec('Largest functions', hBig.length, 'By line count, longest first. Length is verbosity, not complexity - a long function is worth a look, not necessarily a problem.', hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
-    + hSec('Most outbound calls', hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
+    + hSec(MSG.hOrphan, hOrph.length, 'No caller in code, not REST, no associated_place.', hOrph.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.namespace || '')}</span></div>`).join(''))
+    + hSec(MSG.hUnresolved, hUnres.length, 'Calls a function that does not resolve in this workspace.', hUnres.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.unresolved.join(', '))}</span></div>`).join(''), true)
+    + hSec(MSG.hAmbiguous, hAmbig.length, 'A call matches more than one function.', hAmbig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${esc(n.ambiguous.join(', '))}</span></div>`).join(''))
+    + hSec(MSG.hBroken, hBroken.length, 'A workflow/schedule references a function not in this workspace.', hBroken.map((b) => `<div class="hxrow">${esc(b.kind)} <a href="#${b.kind === 'workflow' ? wfAnchor(b.id) : schAnchor(b.id)}">${esc(b.name || '?')}</a> <span class="hxm">\u2192 missing \u00ab${esc(b.fn || '?')}\u00bb</span></div>`).join(''), true)
+    + hSec(MSG.hMissingRefs, hFK.length, 'A lookup points to a module not in this workspace.', hFK.map((r) => `<div class="hxrow"><b>${esc(r.module)}</b>.${esc(r.field)} <span class="hxm">\u2192 ${esc(r.target)}</span></div>`).join(''))
+    + hSec(MSG.hBiggest, hBig.length, MSG.hBiggestDesc, hBig.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.lines} lines \u00b7 ${n.stats.codeLines} code \u00b7 ${(n.stats.chars / 1024).toFixed(1)} KB</span></div>`).join(''))
+    + hSec(MSG.hChattiest, hChatty.length, 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings.', hChatty.map((n) => `<div class="hxrow">${hLink(n)} <span class="hxm">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl \u00b7 ${n.stats.crm} zoho.crm \u00b7 ${n.stats.zoho} other${n.stats.sendmail ? ' \u00b7 ' + n.stats.sendmail + ' sendmail' : ''}</span></div>`).join(''))
     ;
   const healthTotal = hOrph.length + hUnres.length + hAmbig.length + hBroken.length + hFK.length;
 
@@ -3598,7 +3640,7 @@ async function exportMarkdown() {
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
     await writeFile(name, md);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
-  } catch (e) { setStatus('Export error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 async function exportHtml() {
   if (!dir) return;
@@ -3612,7 +3654,7 @@ async function exportHtml() {
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await writeFile(name, html);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
-  } catch (e) { setStatus('Export error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 
 // ---------- schedules ----------
@@ -3623,13 +3665,13 @@ async function loadScheduleIndex() {
 async function rebuildSchedules() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading schedules\u2026', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadScheduleIndex();
     renderSchedules();
     setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet - use Pull all.', 'ok');
-  } catch (e) { setStatus('Refresh error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.refreshErr + e.message, 'bad'); }
   await refreshContext();
 }
 function renderSchedules() {
@@ -3662,7 +3704,7 @@ function renderSchedules() {
   });
 }
 async function refreshSchedules() {
-  if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
   setStatus('Refreshing schedules…', 'busy');
   await pullSchedules();
   setStatus(`${scheduleData.length} schedules.`, 'ok');
@@ -3733,14 +3775,14 @@ async function loadWorkflowIndex() {
 async function rebuildWorkflows() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading workflows\u2026', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadWorkflowIndex();
     renderWorkflows(); updateMissingButton();
     const dl = workflowData.filter((e) => e.downloaded).length;
     setStatus(`${workflowData.length} workflows (${dl} downloaded).`, 'ok');
-  } catch (e) { setStatus('Refresh error: ' + e.message, 'bad'); }
+  } catch (e) { setStatus(MSG.refreshErr + e.message, 'bad'); }
   await refreshContext();
 }
 function renderWorkflows() {
@@ -3780,7 +3822,7 @@ function renderWorkflows() {
       el.setAttribute('aria-selected', e.path === currentPath);
       const stCls = e.error ? 'st-err' : e.downloaded ? 'st-ok' : 'st-no';
       const stCh = e.error ? '\u27f3' : e.downloaded ? '\u25cf' : '\u25cb';
-      const wfTitle = e.error ? ('Failed: ' + (e.errorMsg || 'unknown') + ' - click to retry') : e.downloaded ? 'In workspace - click to re-download from Zoho' : 'Not in workspace - click to download';
+      const wfTitle = e.error ? (MSG.failed + (e.errorMsg || 'unknown') + MSG.clickRetry) : e.downloaded ? MSG.hereRepull : MSG.notHere;
       // The delay is part of the fact: "2 scheduled" and "2 scheduled, 30 minutes later" are
       // different things to know before touching a rule, and the second costs a tooltip.
       const schedBadge = e.sched > 0
@@ -3796,7 +3838,7 @@ function renderWorkflows() {
 }
 async function downloadOneWf(entry) {
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus('Folder access denied - click Refresh.', 'bad'); return false; }
+  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
   try {
     const r = await toBridge({ cmd: 'fetchWorkflow', id: entry.id });
     if (!r?.ok || !r.rule) throw new Error(r?.error || 'not found');
@@ -3825,8 +3867,8 @@ async function downloadMissingWf() {
 }
 async function pullSchedules() {
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access not granted.', 'warn'); return; }
-    const ctx = await getContext(); if (!ctx) { setStatus('No Zoho CRM tab open.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+    const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
@@ -3841,7 +3883,7 @@ async function pullSchedules() {
 async function pullConnections() {
   try {
     if (!(await ensurePerm(dir))) return;
-    const ctx = await getContext(); if (!ctx) { setStatus('No Zoho CRM tab open.', 'warn'); return; }
+    const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling connections…', 'busy');
@@ -3863,7 +3905,7 @@ async function loadConnectionsIndex() {
 async function rebuildConnections() {
   if (!dir) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - click Refresh.', 'warn'); return; }
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading connections…', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     const cat = await loadConnectionsIndex();
@@ -3907,7 +3949,7 @@ function renderConnections() {
   });
 }
 async function refreshConnections() {
-  if (!guardOk()) { setStatus('Active Zoho tab does not match this workspace.', 'warn'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
   setStatus('Refreshing connections…', 'busy');
   await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
 }
@@ -3938,7 +3980,7 @@ async function pullWorkflows() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
-    const ctx = await getContext(); if (!ctx) throw new Error('No Zoho CRM tab open.');
+    const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
@@ -3967,7 +4009,7 @@ async function openWorkflowInZoho(id) {
 }
 async function openWorkflow(e) {
   if (!e.downloaded) { const ok = await downloadOneWf(e); updateRow(e); updateMissingButton(); if (!ok) { setStatus('Could not download this workflow.', 'warn'); return; } }
-  let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus('Read failed: ' + err.message, 'bad'); return; }
+  let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus(MSG.readFailed + err.message, 'bad'); return; }
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);

@@ -11,6 +11,12 @@ const $ = (id) => document.getElementById(id);
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 
+// The two engines under the names the user chose them by. Written out as a ternary at each site
+// until the duplicate-message check found the pair - two copies of one mapping, which is how a
+// third provider would have ended up named on one surface and not the other.
+const ENGINE_LABEL = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (ChatGPT)' };
+const engineLabel = (id) => ENGINE_LABEL[id] || id;
+
 const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by '
   + 'Zoho Corporation. "Zoho", "Zoho CRM" and "Deluge" are trademarks of Zoho Corporation, used here in a nominative '
   + 'sense only, to indicate compatibility. Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES '
@@ -299,7 +305,7 @@ $('aiengine').onchange = async () => {
   c.active = $('aiengine').value;
   prevEngine = c.active;
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false); await chrome.storage.local.set({ aicfg: c }); await stamp();
-  toast(`Engine set to ${c.active === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)'}.`);
+  toast(`Engine set to ${engineLabel(c.active)}.`);
 };
 $('saveAi').onclick = async () => {
   const cfg = {
@@ -362,7 +368,7 @@ $('saveAi').onclick = async () => {
   let moved = '';
   if (!usable.includes(cfg.active) && usable.length === 1) {
     cfg.active = usable[0];
-    moved = cfg.active === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)';
+    moved = engineLabel(cfg.active);
   }
   const p = cfg[cfg.active] || {};
   const ready = !!((p.apiKey || p.apiKeyEnc) && p.model);

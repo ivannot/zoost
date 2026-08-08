@@ -9,6 +9,14 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
 // the value - that is what cut the getRelatedRecords snippet right after the opening bracket.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// What this window says in more than one place. `showList` is one control's aria-label and its
+// title - the same words twice on the same element by design, which is exactly the pair that goes
+// quiet when only one of them is edited. A literal used once stays where it is used;
+// tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
+const MSG = {
+  showList: 'Show the list',
+  emphasis: 'Emphasis: ',
+};
 const label = (n) => (nameMode === 'internal'
   ? (n.api_name || n.name)
   : ((DATA && DATA.kind === 'schema') ? (n.display_name || n.api_name || n.name) : n.name));
@@ -708,8 +716,8 @@ function wireAsideFold() {
     // discloses a region, it does not toggle a mode.
     btn.textContent = off ? '\u25b8' : '\u25c2';
     btn.setAttribute('aria-expanded', String(!off));
-    btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
-    btn.title = off ? 'Show the list' : 'Drag to resize the list, click to hide it';
+    btn.setAttribute('aria-label', off ? MSG.showList : 'Hide the list');
+    btn.title = off ? MSG.showList : 'Drag to resize the list, click to hide it';
     // The canvas is sized from its box, so it has to be told the box changed.
   }
 
@@ -1655,7 +1663,7 @@ function erUpdateControlVis() {
   // "Fields: key / all" chooses which of a module's fields are worth a row. A call box has no such
   // choice - every call it makes is one - so the control has nothing to do and is absent.
   const fa = $('erAll'); if (fa) fa.style.display = _schema ? '' : 'none';
-  const em = $('erEmph'); if (em) em.textContent = 'Emphasis: ' + erEmphLabel();
+  const em = $('erEmph'); if (em) em.textContent = MSG.emphasis + erEmphLabel();
   set('rowMargin', true);
   set('rowSpread', !conc);
   set('rowRing', conc);
@@ -1709,7 +1717,7 @@ const erEmphLabel = () => (erEmph === 'relations' ? (DATA.kind === 'schema' ? 'r
                                                  : (DATA.kind === 'schema' ? 'modules' : 'calls'));
 $('erEmph').onclick = () => {
   erEmph = erEmph === 'relations' ? 'modules' : 'relations';
-  $('erEmph').textContent = 'Emphasis: ' + erEmphLabel();
+  $('erEmph').textContent = MSG.emphasis + erEmphLabel();
   $('erEmph').classList.toggle('on', erEmph === 'relations');
   $('erAll').disabled = erEmph === 'relations';
   erP = Object.assign({}, ER_PRESET[erEmph === 'relations' ? 'relations' : erBoxPreset()]);   // each mode has its own sensible starting point

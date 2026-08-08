@@ -9,6 +9,13 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 // esc() is NOT attribute-safe: a double quote closes the attribute early and silently truncates
 // the value - that is what cut a snippet in half right after the opening bracket.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// What this window says in more than one place. `showList` is one control's aria-label and its
+// title - the same words twice on the same element by design, which is exactly the pair that goes
+// quiet when only one of them is edited. A literal used once stays where it is used;
+// tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
+const MSG = {
+  showList: 'Show the list',
+};
 // Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph
 // is filtered. Returning '' lets them fall back to the id rather than printing "undefined".
 const label = (n) => (!n ? '' : nameMode === 'internal'
@@ -532,8 +539,8 @@ function wireAsideFold() {
     // discloses a region, it does not toggle a mode.
     btn.textContent = off ? '\u25b8' : '\u25c2';
     btn.setAttribute('aria-expanded', String(!off));
-    btn.setAttribute('aria-label', off ? 'Show the list' : 'Hide the list');
-    btn.title = off ? 'Show the list' : 'Drag to resize the list, click to hide it';
+    btn.setAttribute('aria-label', off ? MSG.showList : 'Hide the list');
+    btn.title = off ? MSG.showList : 'Drag to resize the list, click to hide it';
   }
 
   // The same edge resizes and folds, which is what a divider does everywhere else. They are told

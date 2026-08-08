@@ -15,6 +15,18 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
+// What this page says in more than one place. `saveFailed` prefixes the platform's own sentence
+// rather than replacing it, at all three writers. A literal used once stays where it is used;
+// tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
+const MSG = {
+  saveFailed: 'Could not save: ',
+};
+// The two engines under the names the user chose them by. Written out as a ternary at each site
+// until the duplicate-message check found the pair - two copies of one mapping, which is how a
+// third provider would have ended up named on one surface and not the other.
+const ENGINE_LABEL = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (ChatGPT)' };
+const engineLabel = (id) => ENGINE_LABEL[id] || id;
+
 const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation. '
   + '"Zoho" and "Zoho Analytics" are trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility. '
   + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
@@ -308,14 +320,14 @@ async function saveAi() {
   let moved = '';
   if (!usable.includes(cfg.active) && usable.length === 1) {
     cfg.active = usable[0];
-    moved = cfg.active === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)';
+    moved = engineLabel(cfg.active);
   }
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
   try {
     await chrome.storage.local.set({ aicfg: cfg });
     toast(moved ? `AI settings saved - ${moved} is now the selected engine, being the only one configured.` : 'AI settings saved.');
   }
-  catch (e) { toast('Could not save: ' + e.message, true); }
+  catch (e) { toast(MSG.saveFailed + e.message, true); }
   // Re-read from where it was just written, rather than patching the flags by hand: the form has to
   // agree with the disk, and the page has three of them to keep in step (is a key stored, is it
   // encrypted, is a passphrase set). Reconstructing that here is a second copy of loadAi() waiting to
@@ -336,7 +348,7 @@ $('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI();
 $('saveLay').onclick = async () => {
   markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false);
   try { await chrome.storage.local.set({ erParams: { current: lay } }); toast('Diagram defaults saved.'); }
-  catch (e) { toast('Could not save: ' + e.message, true); }
+  catch (e) { toast(MSG.saveFailed + e.message, true); }
 };
 async function loadLay() {
   try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
@@ -364,8 +376,8 @@ $('aiengine').onchange = async () => {
   markOwn('aicfg'); dirty.delete('aicfg'); conflictBox('aicfg', false);
   try {
     await chrome.storage.local.set({ aicfg: c });
-    toast(`Engine set to ${c.active === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)'}.`);
-  } catch (e) { toast('Could not save: ' + e.message, true); }
+    toast(`Engine set to ${engineLabel(c.active)}.`);
+  } catch (e) { toast(MSG.saveFailed + e.message, true); }
 };
 $('saveAi').onclick = () => saveAi();
 

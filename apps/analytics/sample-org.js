@@ -17,6 +17,8 @@
 (function () {
   const WS = '99000001';
   const WHEN = '2026-08-07T10:00:00.000Z';
+  const AUTHOR = 'Sample User';        // the one name every generated view is attributed to
+  const WS_NAME = 'Sample workspace';  // the derived name and the user label, identical for a sample
 
   // name -> columns. The joins below reference these by name, so the two cannot drift.
   const TABLES = [
@@ -138,12 +140,12 @@
       views.push({
         id: id, name: name, type: type, description: '',
         folder: fid[folder], folderName: folder, parent: parent ? vid[parent] : null,
-        createdText: ' 03 Jul 2026', createdBy: 'Sample User', owner: 'Sample User',
+        createdText: ' 03 Jul 2026', createdBy: AUTHOR, owner: AUTHOR,
         // Only one of these is machine-readable. The other two arrive already rendered in the
         // user's interface language and are carried verbatim - the fixture keeps that asymmetry,
         // because a workspace where every date sorts would hide the reason Design cannot.
-        dataModifiedAt: 1786000000000 + n * 1000, dataModifiedBy: 'Sample User',
-        designModifiedText: ' 21 Jul 2026', designModifiedBy: 'Sample User',
+        dataModifiedAt: 1786000000000 + n * 1000, dataModifiedBy: AUTHOR,
+        designModifiedText: ' 21 Jul 2026', designModifiedBy: AUTHOR,
         live: false, system: !!system, favourite: false, tags: [],
       });
       return id;
@@ -205,7 +207,7 @@
     J('lineage.json', { workspace: WS, deps: deps, failed: failed });
     J('sql/index.json', sqlindex);
     J('.zoost.json', {
-      workspace: WS, name: 'Sample workspace', label: 'Sample workspace',
+      workspace: WS, name: WS_NAME, label: WS_NAME,
       origin: 'https://analytics.zoho.eu', sv: 1,
       // The one field that makes this a sample rather than a mirror.
       sample: true, sampleAt: WHEN, lastPull: WHEN,

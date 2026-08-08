@@ -31,6 +31,18 @@ const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "fo
 const CFG = '.zoost.json';
 const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
 
+// Every sentence this panel says in more than one place, plus the one it shares with the CRM panel.
+// A message written out twice is two messages the moment somebody edits one of them - so a literal
+// that appears once stays where it is used, and `folder` is the declared exception: requirePerm()
+// exists in both apps and must throw the *same* sentence, or the same lapsed permission arrives
+// worded one way in Zoost CRM and another in Zoost Analytics. ↻ Refresh is the control that re-asks.
+// tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
+const MSG = {
+  folder: 'Folder access needs re-granting - click ↻ Refresh.',
+  narrow: 'Use a longer substring to narrow.',
+  errPrefix: 'Error: ',
+};
+
 // Identity and legal text, worded as in the CRM panel - the two are one product to the reader.
 const PRODUCT_URL = 'https://zoost.it';
 
@@ -144,7 +156,7 @@ const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) ==
 // nor the remedy and reads as the extension being broken. The CRM panel guards all fifteen of its
 // mirror-writing entry points; this one guarded two of five, and pullAll, pullOne and retryFailed
 // wrote straight to disk. Same wording as the twin, so one message covers both products.
-async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error('Folder access not granted.'); }
+async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
 async function writeFile(rel, content) {
   const parts = rel.split('/'); let d = dir;
   for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
@@ -1200,7 +1212,7 @@ function friendlyError(e) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
   }
-  return 'Error: ' + m;
+  return MSG.errPrefix + m;
 }
 
 /** Re-grant the working folder before the assistant touches it.
@@ -1445,7 +1457,7 @@ async function aiExecTool(name, input) {
       const line = body.split('\n').find((l) => l.toLowerCase().includes(q)) || '';
       hits.push(`${vv.name}\n    ${line.trim().slice(0, 160)}`);
     }
-    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + aiCap(hits, hits.length, 'Use a longer substring to narrow.', 60) : '(no matches)';
+    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + aiCap(hits, hits.length, MSG.narrow, 60) : '(no matches)';
   }
   if (name === 'search_columns') {
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
@@ -1454,7 +1466,7 @@ async function aiExecTool(name, input) {
       const cols = t.columns.filter((c) => c.name.toLowerCase().includes(q));
       if (cols.length) hits.push(`${t.name} [${t.kind}]: ` + cols.map((c) => `${c.name} (${c.type})`).join(', '));
     }
-    return hits.length ? `${hits.length} table(s) have a matching column:\n` + aiCap(hits, hits.length, 'Use a longer substring to narrow.') : '(no matches)';
+    return hits.length ? `${hits.length} table(s) have a matching column:\n` + aiCap(hits, hits.length, MSG.narrow) : '(no matches)';
   }
   if (name === 'get_relations') {
     const list = v ? relationsOf(v.id) : relations;
@@ -1544,7 +1556,7 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
     }
     msgs.push({ role: 'assistant', content });
     const results = [];
-    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = 'Error: ' + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
+    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
     msgs.push({ role: 'user', content: results });
   }
   aiMessages.push({ role: 'assistant', content: `(Reached the tool-step limit of ${maxIter}. Raise it in Settings or ask something more specific.)` }); aiRenderMessages();
