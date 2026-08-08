@@ -197,9 +197,23 @@ OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/
 
 
 def sentences(path: Path) -> list:
+    """The prose of a page, without its chrome.
+
+    This used to read the whole file, so the `<title>` and every navigation label were glued onto the
+    first sentence - and any change to the chrome rewrote that sentence on all eighteen pages and put
+    them back on the ledger to be read again. Twice in one day: adding a nav item, then adding a skip
+    link. Nothing had been claimed, but a diff of thirty rows that says nothing is how a ledger stops
+    being read, which is the failure mode this file exists to avoid. The header and footer are
+    identical everywhere and `sitecheck` already compares them; what belongs here is what each page
+    actually asserts.
+    """
     s = path.read_text(encoding='utf-8')
     if path.suffix == '.html':
         s = re.sub(r'<(script|style)[\s\S]*?</\1>', ' ', s)
+        s = re.sub(r'<(header|footer)\b[\s\S]*?</\1>', ' ', s)
+        m = re.search(r'<main\b[^>]*>([\s\S]*?)</main>', s)
+        if m:
+            s = m.group(1)
         s = html.unescape(re.sub(r'<[^>]+>', ' ', s))
     return [' '.join(x.split()) for x in re.split(r'(?<=[.!?])\s+', ' '.join(s.split()))]
 
