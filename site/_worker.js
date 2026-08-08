@@ -240,7 +240,16 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=16';  // bumped: the payload says why the Store is unreadable
+const CACHE_KEY = '/api/versions?v=17';  // bumped: a 404 body got cached under v=16 - see below
+
+// Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
+// with a 404 page configured, a request that matches no asset stops reaching the Worker, and
+// `/api/versions` matches no asset. It answered 404 for a fetch as well as for a navigation, so the
+// footer badge and the guides' version stamp were dead on every page. `/api/*` is in
+// `run_worker_first` now. Two lessons, and the second is the one that generalises: **a change to
+// which requests reach the Worker is a change to every route the Worker owns**, and the preview was
+// checked against the routes I happened to think of - /docs, /llms.txt - and not against the list of
+// what `fetch()` actually handles. Derive the list, do not remember it.
 
 
 async function versions(request, env, ctx) {
