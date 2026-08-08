@@ -2678,6 +2678,25 @@ exactly right about two smaller things, and both are fixed.
   opposite of that. `TTL_PARTIAL` is 60 seconds and applies whenever any source returned null, so an
   outage expires with the outage.
 
+**The brand marks are inline SVG, and the platform's default caching was costing more than the
+bytes.** Measured on the live site: three 192x192 PNGs downloaded on every page and drawn at 22-38px
+- six times the pixels needed at dpr 2 - and **every asset served with
+`cache-control: public, max-age=0, must-revalidate`**, which is Cloudflare's default and means a
+revalidation round trip per file per page view. Inlining the marks costs **191 compressed bytes of
+HTML** and removes three requests and 13KB: the page went from 6 requests and 26.1KB of resources to
+3 and 7.0KB, and `load` from 386ms to 223ms. The geometry is copied from the shipped icon sources -
+**not** `brand/*.svg`, which still carries the three-piece Z this project retired and is published
+nowhere.
+
+`site/_headers` caches the images, the icon and the favicon for a week. **`site.css` and `site.js` are
+deliberately not in it**: their names carry no hash, so a long cache would let a returning visitor
+pair new HTML with an old stylesheet and see a broken page until it expired - that trade needs
+versioned filenames first. Three things verified rather than assumed, because `functions/` had already
+proved that a Pages convention is not a Workers one: `_headers` **is** read for Workers static assets;
+it is consumed at deploy time and never served (it 404s); and it keeps working with `_headers` listed
+in `.assetsignore` - which it must be, or `auditcheck` compares a file that has no URL. Nothing in it
+reaches responses `_worker.js` generates, so `/api/versions` still sets its own.
+
 Preview deploys are enabled for non-production branches, and the URL is
 `<branch>-zoost-it.ivannot.workers.dev`. Anything touching the deployment goes there first and gets
 verified with `curl` — endpoint status **and** the pages — before it reaches `main`.
