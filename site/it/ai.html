@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/ai.html sha256:609f781e598f1057 -->
+<!-- translated-from: site/ai.html sha256:4899f1ca4ac3b0cf -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI e Zoost - cosa aggiunge, e quando non serve</title>
@@ -181,6 +181,20 @@
     la trovi qui piuttosto che scoprirla dopo.</p>
 
   <h2 id="perche-una-chiave-tua">Perché una chiave tua</h2>
+  <div class="box">
+    <h3>Cos'è una API key, visto che il resto della pagina la dà per scontata</h3>
+    <p>Anthropic e OpenAI vendono due cose diverse. Una è la chat che usi nel browser - Claude.ai,
+      ChatGPT - che paghi al mese e usi scrivendo dentro il loro sito. L'altra sono gli stessi modelli
+      raggiunti da un <em>programma</em> invece che da una persona: chiedi una chiave alla loro console
+      per sviluppatori, che è una lunga stringa di caratteri, la incolli nel programma, e da quel
+      momento quel programma può mandare domande e te le addebitano - di norma in base alla quantità
+      di testo che va e che torna, non al mese.</p>
+    <p>Una chiave è una credenziale, non un'impostazione. Chi ce l'ha può spendere sul tuo account: per
+      questo vale una passphrase e un limite di spesa, e per questo la tua non deve averla nessuno,
+      me compreso. <b>Un abbonamento a Claude.ai o a ChatGPT Plus non è né l'una né l'altra cosa, e non
+      ne comprende una</b>; è l'inciampo più comune, ed è il motivo per cui i passaggi qui sotto lo
+      ripetono due volte.</p>
+  </div>
   <p>Perché non esiste un server Zoost. La richiesta parte dal tuo browser e arriva direttamente ad
     Anthropic o a OpenAI, con la tua chiave e addebitata sul tuo account. Da me non passa niente, e non
     c'è niente di mio da cui possa passare: nessun backend, nessun account, nessun log.</p>
@@ -290,8 +304,8 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/it/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
-      <a href="/it/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep" aria-hidden="true">·</span>
       <a href="/it/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>

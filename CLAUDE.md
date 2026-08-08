@@ -2130,6 +2130,25 @@ find-and-replace» further down still holds — that is about *Zoost*, the word.
 the name is typography, and changing it costs one edit to each `manifest.json` plus the item name in
 both Store listings at the next submission.
 
+**The site speaks the short form; the full name introduces the product once, at the top of its own
+page.** Both forms stayed legitimate, but using them side by side as *labels* made them read as two
+products - reported from the footer, where the version badge says `Zoost CRM` and the link row three
+lines below said `Zoost - workbench for Zoho CRM`, four labels for two products with nothing saying
+they were the same. And the convention itself appeared **nowhere on the site**: we had a naming rule
+and never told the reader.
+
+So wherever the name is an *label* - nav, footer links, badge, home cards, prose - the site says
+`Zoost CRM` / `Zoost Analytics`, one form, repeated. Wherever it is an *introduction* - the top of
+`/crm` and `/analytics` - the two forms sit adjacent, `Zoost CRM · Zoost - workbench for Zoho CRM`,
+above the headline. That states the convention without a note about naming, and it moves the full
+name **up**: before this it was visible on a product page only in the footer, because the product
+pages' `h1` is a headline about the reader's org and their `<title>` already used the short form.
+The footer links keep the full name in `title`.
+
+Measured before deciding, because "the full name will never be seen again" was the objection and it
+needed a number: the full form is visible 2 to 6 times per page, and on `/crm` and `/analytics` it
+was **2 - both in the footer**. That, not the nav, was the hole.
+
 **Three legitimate forms, and nothing else.** `Zoho CRM` / `Zoho Analytics` name **Zoho's** products
 and are used only when we mean theirs. **`Zoost - workbench for Zoho CRM`** is ours in full, and it is
 the `name` in `manifest.json` — the authority, never a copy. `Zoost CRM` / `Zoost Analytics` name ours

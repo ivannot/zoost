@@ -176,6 +176,19 @@
     here than found it out later.</p>
 
   <h2 id="why-your-own-key">Why your own key</h2>
+  <div class="box">
+    <h3>What an API key is, since the rest of this page assumes it</h3>
+    <p>Anthropic and OpenAI sell two different things. One is the chat you use in a browser -
+      Claude.ai, ChatGPT - which you pay for by the month and use by typing into their website. The
+      other is the same models reached by a <em>program</em> rather than by a person: you ask their
+      developer console for a key, which is a long string of characters, you paste it into the
+      program, and from then on that program can send questions and they are billed to you - normally
+      by the amount of text sent and received, not by the month.</p>
+    <p>A key is a credential, not a setting. Anyone holding it can spend on your account, which is why
+      it is worth a passphrase and a spending limit, and why nobody should ever have yours - including
+      me. <b>A Claude.ai or ChatGPT Plus subscription is neither one of these nor does it include
+      one</b>; that catches most people out, and it is the reason the steps below say it twice.</p>
+  </div>
   <p>Because there is no Zoost server. The request goes from your browser straight to Anthropic or
     OpenAI, carrying your key and billed to your account. Nothing passes through me, and there is
     nothing of mine for it to pass through: no backend, no account, no log.</p>
@@ -281,8 +294,8 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
-      <a href="/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
       <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>

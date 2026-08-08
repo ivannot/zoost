@@ -72,6 +72,10 @@
   .prod .ph{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .prod .ph img,.prod .ph .cpic{width:38px;height:38px;border-radius:9px}
   .prod .ph h3{margin:0}
+  /* The card names the product, then says in full what it is. Both forms are the manifest's
+     own - `name` and `short_name` - and putting them adjacent is how the site states the
+     convention without a note about naming: seen once, every later "Zoost CRM" is legible. */
+  .prod .full{margin:-4px 0 0;font-size:13.5px;color:var(--muted)}
   .prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
     padding:2px 9px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
   .prod .st.live{color:#83d8c6;border-color:#2f6f62}
@@ -127,9 +131,10 @@
       <div class="card">
         <div class="ph">
           <svg class="cpic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#2563eb"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg>
-          <h3>Zoost - workbench for Zoho CRM</h3>
+          <h3>Zoost CRM</h3>
           <span class="st live">on the Chrome Web Store</span>
         </div>
+        <p class="full">Zoost - workbench for Zoho CRM</p>
         <p>Deluge functions as versionable files, full-text search across every one of them, a reference graph of
           what calls what, module schema with layouts, the related-list API names you keep having to look up,
           workflows, schedules and the connections catalogue.</p>
@@ -143,9 +148,10 @@
       <div class="card">
         <div class="ph">
           <svg class="cpic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg>
-          <h3>Zoost - workbench for Zoho Analytics</h3>
+          <h3>Zoost Analytics</h3>
           <span class="st live">on the Chrome Web Store</span>
         </div>
+        <p class="full">Zoost - workbench for Zoho Analytics</p>
         <p>Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table,
           the SQL behind each query table as its own file, an ER diagram of the whole thing, and the list of what nothing seems to depend on any more.</p>
         <div class="plinks">
@@ -264,8 +270,8 @@
   <div class="wrap">
     <div id="vers"></div>
     <div class="flinks">
-      <a href="/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
-      <a href="/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
       <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
