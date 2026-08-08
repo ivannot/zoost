@@ -70,44 +70,38 @@
 
   <h2 id="undocumented-interfaces">Interfacce non documentate</h2>
   <p>Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge. Le due
-    estensioni usano gli stessi endpoint interni che usano le interfacce web dei prodotti, attraverso
-    la sessione con cui sei già autenticato.</p>
+    estensioni usano gli stessi endpoint interni che usano le interfacce web dei prodotti, con la sessione che hai già aperta.</p>
   <p>Questo ha conseguenze che vale la pena conoscere prima di costruirci intorno un processo.</p>
   <div class="box">
     <h3>Come legge Zoho CRM</h3>
     <p>Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina,
       perché nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già.
       Separatamente osserva la pagina per <b>una</b> cosa sola: URL e metodo della richiesta che salva
-      una funzione, così la copia locale può seguire quando salvi. Non legge nessun header e nessun
+      una funzione, così la copia sul disco ti segue quando salvi. Non legge nessun header e nessun
       corpo di risposta, e non altera niente di quello che la pagina invia o riceve.</p>
     <p>Due famiglie di token, e non sono intercambiabili: gli endpoint <code>/crm/</code> vogliono
       <code>crmcsrfparam</code> con il cookie <code>CT_CSRF_TOKEN</code>, quelli <code>/deluge/</code>
-      vogliono <code>drepn</code> con il cookie <code>drecn</code>. Il prefisso non è il nome del
-      cookie, e darlo per scontato è costato una giornata: di solito i due contengono lo stesso
-      valore, finché uno non ruota.</p>
+      vogliono <code>drepn</code> con il cookie <code>drecn</code>. Il prefisso non è il nome del cookie, e darlo per scontato è costato una giornata: di solito i due
+      contengono lo stesso valore - finché uno dei due non ruota.</p>
   </div>
   <div class="box">
     <h3>Come legge Zoho Analytics</h3>
-    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non
-      c'è niente da estrarre e niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
+    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non c'è niente da estrarre, e perciò niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
       ogni POST porta <code>X-ZCSRF-TOKEN</code>, nessuna GET lo fa, misurato su una cattura di 104
       richieste senza eccezioni.</p>
     <p>Il modello ER viene da una POST a <code>ZDBCreateERD.ma</code>. Il suo URL contiene
-      <code>CREATE</code> e non crea niente: calcola e restituisce il modello. È nominata qui perché
-      chiunque voglia verificare alla lettera l'affermazione «in sola lettura» la troverà, e trovarla
+      <code>CREATE</code> e non crea niente: calcola e restituisce il modello. La nomino qui perché chi va a controllare alla lettera l'affermazione «in sola lettura» se la
+      troverà davanti, e trovarla
       senza preavviso si leggerebbe come una bugia colta sul fatto invece che per quello che è.</p>
   </div>
 
   <h2 id="certain-or-stopped">O certi, o fermi</h2>
   <p>Nessun ciclo di tentativi contro un'ipotesi. Nessun aggancio a un'etichetta che cambia con la
-    lingua dell'interfaccia. Nessun click sintetico dentro una pagina che non è mia. Dove un
-    percorso non è certo, la funzionalità si ferma con un messaggio preciso invece di provarci e
-    sperare.</p>
+    lingua dell'interfaccia. Nessun click sintetico dentro una pagina che non è mia. Dove la strada non è certa, la funzione si ferma e te lo dice con precisione, invece di provarci e
+      sperare.</p>
   <p>È il motivo per cui il <b>Go to</b> sulle funzioni di Zoost CRM è stato rimosso nella 1.1.0: guidava l'editor
-    di Zoho cliccando un'etichetta tradotta «Modifica funzione», ci riprovava dieci volte e poi
-    falliva con il messaggio sbagliato. Al suo posto c'è <b>Find in Zoho</b>, che naviga per URL
-    costruito e filtra l'elenco in modo deterministico - e l'ultimo click, quello che dipende dalla
-    lingua, lo fai tu.</p>
+    di Zoho cliccando un'etichetta tradotta «Modifica funzione», ci riprovava dieci volte e poi si arrendeva con il messaggio sbagliato. Al suo posto c'è <b>Find in Zoho</b>, che naviga per URL
+    costruito e filtra l'elenco in modo deterministico - e l'ultimo click, quello che dipende dalla lingua, lo fai tu.</p>
   <p>Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una
     navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un
     4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> - la prima
@@ -115,14 +109,14 @@
     sistema, e questo è stato riprodotto apposta invece che ipotizzato.</p>
 
   <h2 id="what-is-never-called">Cosa non viene mai chiamato</h2>
-  <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una
-    proprietà di quali endpoint stanno nel sorgente, non di qualcosa che impone il browser - e il
+  <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una proprietà di quali endpoint stanno scritti nel sorgente, non di qualcosa che il browser
+      imponga - e il
     sorgente è una ventina di file di JavaScript in chiaro, senza bundler né minificatore fra quello
     che è pubblicato e quello che leggi.</p>
-  <p>Due endpoint di Zoho Analytics sono lasciati stare di proposito, e il motivo è lo stesso in
-    entrambi i casi: restituiscono i tuoi dati.</p>
+  <p>Due endpoint di Zoho Analytics restano deliberatamente intoccati, e per lo stesso motivo tutti e
+      due: restituiscono i tuoi dati.</p>
   <ul>
-    <li><code>ZDBTableDataAction.ma</code> restituisce i valori veri delle celle di una tabella. Zoost
+    <li><code>ZDBTableDataAction.ma</code> restituisce il contenuto vero delle celle di una tabella. Zoost
       dichiara di non leggere mai le tue righe, quindi non lo chiama.</li>
     <li><code>ZAChartView.ve</code> darebbe la definizione dei report che altrimenti manca - tipo di
       grafico, raggruppamenti, assi - ma arriva saldata alla serie calcolata, che sono di nuovo i tuoi

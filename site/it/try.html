@@ -69,8 +69,7 @@
   <h2>Cosa viene scritto</h2>
 
   <p>Il pulsante è <span class="k">+ Sample</span>, nella barra dei workspace. Crea una cartella
-    dentro la tua cartella di lavoro e la riempie di file nella forma esatta che produce uno scarico
-    vero. Non viene scaricato niente, perché non c'è niente da cui scaricare.</p>
+    dentro la tua cartella di lavoro e la riempie di file nella forma esatta che avrebbe un pull vero. Non scarica niente, perché non c'è niente da cui scaricare.</p>
 
   <table class="num">
     <tr><th>Zoost CRM</th><th>293 file</th><th></th></tr>
@@ -85,8 +84,8 @@
   <table class="num">
     <tr><th>Zoost Analytics</th><th>13 file</th><th></th></tr>
     <tr><td>39</td><td>viste</td><td>17 tabelle, 8 query table, 7 grafici, 3 pivot, 4 dashboard</td></tr>
-    <tr><td>14</td><td>relazioni</td><td>join fra tabelle, con le colonne di entrambi i lati</td></tr>
-    <tr><td>8</td><td>file SQL</td><td>uno per query table, che è ciò che rende un diff leggibile</td></tr>
+    <tr><td>14</td><td>relazioni</td><td>join fra tabelle, con le colonne da una parte e dall'altra</td></tr>
+    <tr><td>8</td><td>file SQL</td><td>uno per query table, ed è quello che rende leggibile un diff</td></tr>
   </table>
 
   <p>I nomi sono parole comuni del linguaggio aziendale - <code>buildInvoice</code>,
@@ -97,8 +96,8 @@
 
   <h2>Perché questo è un argomento di sicurezza, non una comodità</h2>
 
-  <p>Un workspace di prova è l'unico modo di rispondere alla domanda «ma questa cosa che fa» senza
-    prima darle qualcosa da leggere. Di solito l'ordine è rovesciato: installi, dai accesso
+  <p>Un workspace di prova è l'unico modo di rispondere alla domanda «ma questa cosa qui che fa?» senza
+    prima averle dato qualcosa da leggere. Di solito l'ordine è rovesciato: installi, dai accesso
     all'organizzazione, e solo dopo scopri. Qui puoi guardare prima.</p>
 
   <p>Cosa vale mentre un sample è aperto:</p>
@@ -111,10 +110,9 @@
       interroga già. Pull, aggiornamento del singolo elemento, «aprilo in Zoho»: tutti disattivati,
       con il motivo scritto invece che lasciato da dedurre.</li>
     <li><b>Non esiste una modalità demo.</b> Il flag <code>sample: true</code> nella configurazione
-      del workspace è tutto il meccanismo. Una volta che i file sono sul disco, li legge il codice
-      ordinario, li elenca la lista ordinaria, li esporta l'export ordinario. Un ramo che mostrasse i
-      dati inventati in modo diverso finirebbe prima o poi per mostrarci attraverso i dati veri di
-      qualcuno.</li>
+      del workspace è tutto il meccanismo. Una volta che i file sono sul disco, li legge lo stesso codice di sempre, li elenca la stessa lista,
+      li esporta lo stesso export. Un ramo che trattasse i dati inventati in modo speciale finirebbe
+      prima o poi per far passare per inventati i dati veri di qualcuno.</li>
     <li><b>Cancellarlo vuol dire cancellare la cartella.</b> L'unica traccia fuori da lì è
       l'identificatore del sample, tenuto nella memoria locale del browser perché il pannello possa
       proporti di aprirlo prima che Chrome gli abbia ridato l'accesso alla cartella.
@@ -133,8 +131,8 @@
     finiscono i file, cosa esce dalla macchina, cosa contengono gli export, cosa viene detto
     all'assistente. La <a href="/it/nerd">pagina per nerd</a> spiega come viene costruita una release
     e come verificare che il pacchetto installato sia quello costruito dal codice pubblicato; questa
-    pagina è l'altra metà, e insieme permettono a un'autorizzazione di poggiare su qualcosa che hai
-    visto invece che su qualcosa che ti è stato detto.</p>
+    pagina è l'altra metà, e insieme fanno sì che un'autorizzazione poggi su quello che hai visto e non su quello che ti hanno
+    raccontato.</p>
 
   <p>Una cosa da avere chiara prima di cominciare: l'assistente AI facoltativo è l'unica funzione che
     manda qualcosa da qualche parte, e resta spento finché non inserisci una tua chiave API. Sul
@@ -153,9 +151,9 @@
     <li>Premi <span class="k">+ Sample</span>. Scrive i file e apre il workspace. Su una macchina
       senza nessun tab di Zoho aperto lo stesso pulsante è sulla schermata iniziale del pannello,
       perché è esattamente lì che si trova chi ha appena installato l'estensione.</li>
-    <li>Usalo. Funziona ogni parte del prodotto: la ricerca su tutti i sorgenti insieme, il grafo
-      delle chiamate e il diagramma entità-relazioni, l'audit con i suoi limiti di copertura
-      dichiarati, e tutti e due gli export.</li>
+    <li>Usalo: funziona tutto. La ricerca su tutti i sorgenti insieme, il grafo delle chiamate e il
+      diagramma entità-relazioni, il controllo di salute con i suoi limiti scritti accanto, e tutti e
+      due gli export.</li>
     <li>Cancella la cartella quando hai finito.</li>
   </ol>
 
@@ -173,13 +171,12 @@
     rifiuta di descrivere - quindi quello che vedi è il prodotto in tutta la sua complessità e non una
     versione ripulita, ma la complessità non è la scala.</p>
 
-  <p>Quello a cui risponde è ogni domanda sul comportamento, e sono quelle che decidono se una cosa
-    si può installare senza rischi.</p>
+  <p>A cosa risponde invece è a ogni domanda sul comportamento - che poi sono quelle che decidono se una
+    cosa si può installare tranquillamente.</p>
 
   <p class="meta">Il generatore è <code>sample-org.js</code> dentro ogni estensione, e viaggia dentro
-    il pacchetto - quindi è leggibile nel codice che installi, e lo stesso file è quello che scrive i
-    dati su cui girano i test. Due consumatori, una sola descrizione: è per questo che il sample non
-    può allontanarsi dalla forma che produce uno scarico vero.</p>
+    il pacchetto - quindi è leggibile nel codice che installi, ed è lo stesso file che scrive i dati su cui girano i test. Due usi, una sola descrizione: è per questo che il sample non può allontanarsi dalla forma che
+    avrebbe un pull vero.</p>
 
 </div>
 </main>
