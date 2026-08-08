@@ -1863,6 +1863,17 @@ against `/docs` and `/llms.txt` - the routes I happened to think of - which is a
 list has to be derived from the script: `tests/tools_test.py` now reads every `url.pathname ===` and
 every `MOVED` key out of `_worker.js` and asserts each is covered by `run_worker_first`. Proven by
 removing each entry and getting a finding.
+`auditcheck` gained `worker_routes_answer()` for it, and note *why* it had to be a new check rather
+than a wider `live_matches_repo`: that one compares **files**, and what broke was not a file. It reads
+the routes out of `_worker.js` and `wrangler.jsonc` - never a list here - and asks each for the shape
+it owes: the endpoint must return JSON carrying the fields `site.js` reads, a `MOVED` source must
+redirect *and its target must answer 200*, a `.txt` must carry its charset. Proven by pointing the
+route at a path that does not exist and by renaming a redirect source: one finding each.
+Its first version reported the charset defect on a header that was correct, because
+`%{http_code} %{content_type} %{redirect_url}` splits on a space and `text/plain; charset=utf-8`
+contains one - the same lesson as the `\x1e` separator in `whatsnew.py`: **a separator has to be
+something the values cannot contain.**
+
 It also poisoned the Worker's own cache: a 404 body was stored under `?v=16` and served with a JSON
 content-type afterwards, so **the fix looked like it had not worked**. `CACHE_KEY` is the lever for
 exactly that, and this is the second reason to bump it besides a change of payload shape.

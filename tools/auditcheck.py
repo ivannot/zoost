@@ -145,6 +145,79 @@ def canonicals_answer_without_redirecting(findings: list, notes: list) -> None:
     notes.append(f'{checked} canonical and alternate URLs answer 200 without redirecting')
 
 
+def worker_routes_answer(findings: list, notes: list) -> None:
+    """Every route the Worker owns, asked of the live site and checked for the right *shape*.
+
+    `live_matches_repo` compares files, and a file is not what the Worker serves - so when
+    `assets.not_found_handling` was switched on and `/api/versions` stopped reaching the script at
+    all, every check here passed while the footer badge and the guides' version stamp were dead on
+    every page. The deploy succeeded, every page rendered, and the one thing that broke is the one
+    designed to fail quietly: a badge that cannot read its endpoint simply does not appear.
+
+    The routes are read out of `_worker.js` and `wrangler.jsonc` rather than listed here, because a
+    list is the thing that failed - the preview was verified against the routes I happened to think
+    of. What each kind must answer is stated per kind: the endpoint returns JSON with the fields the
+    page consumes, a redirect source redirects, and a `.txt` carries its charset.
+    """
+    worker = (SITE / '_worker.js').read_text(encoding='utf-8')
+    cfg = (SITE / 'wrangler.jsonc').read_text(encoding='utf-8')
+
+    def head(url):
+        # `|`, not a space: content_type is `text/plain; charset=utf-8` and splitting on whitespace
+        # put the charset into the redirect field - which made this check report the very defect it
+        # exists to catch, on a header that was correct. A separator has to be one the values cannot
+        # contain, and that is the same lesson as the \x1e record separator two tools over.
+        out = subprocess.run(['curl', '-sS', '-o', '/dev/null', '--max-time', '20', '-w',
+                              '%{http_code}|%{content_type}|%{redirect_url}', '-A',
+                              'zoost auditcheck (+https://zoost.it)', url],
+                             capture_output=True, text=True, timeout=30).stdout.split('|')
+        return (out + ['', '', ''])[:3]
+
+    checked = 0
+    for path in re.findall(r"url\.pathname === '([^']+)'", worker):
+        code, ctype, _ = head(BASE_URL + path)
+        checked += 1
+        if code != '200':
+            findings.append(f'{path}: answers {code}, not 200 - the Worker is not being reached '
+                            f'(check run_worker_first against not_found_handling)')
+            continue
+        body = subprocess.run(['curl', '-sS', '--max-time', '20', BASE_URL + path],
+                              capture_output=True, text=True, timeout=30).stdout
+        try:
+            d = json.loads(body)
+        except Exception:                                     # noqa: BLE001 - reported, not raised
+            findings.append(f'{path}: answers 200 but the body is not JSON '
+                            f'(starts {body[:40]!r}) - a cached error can outlive its fix, so bump '
+                            f'CACHE_KEY as well as fixing the route')
+            continue
+        # the fields site.js actually reads; a payload missing one renders a badge that says nothing
+        for key in ('crm', 'analytics', 'siteUpdated'):
+            if key not in d:
+                findings.append(f'{path}: the payload has no "{key}", which the footer badge reads')
+
+    for src in re.findall(r"'(/[^']*)':", re.search(r'const MOVED = \{(.*?)\}', worker, re.S).group(1)):
+        code, _, dest = head(BASE_URL + src)
+        checked += 1
+        if not code.startswith('3'):
+            findings.append(f'{src}: answers {code} instead of redirecting - a published extension '
+                            f'has this URL compiled into it')
+        elif dest:
+            code2, _, _ = head(dest.strip())
+            if code2 != '200':
+                findings.append(f'{src}: redirects to {dest.strip()}, which answers {code2}')
+
+    for path in re.findall(r'"(/[^"*]+\.txt)"', cfg):
+        code, ctype, _ = head(BASE_URL + path)
+        checked += 1
+        if code != '200':
+            findings.append(f'{path}: answers {code}')
+        elif 'charset' not in ctype:
+            findings.append(f'{path}: served as {ctype.strip()} with no charset - a .txt cannot '
+                            f'declare its own, so every dash arrives mangled')
+
+    notes.append(f'{checked} Worker-owned routes answered in the expected shape')
+
+
 # ---------------------------------------------------------------------------------------------------
 # 2. The store copy and the manifest are one thing said twice
 # ---------------------------------------------------------------------------------------------------
@@ -390,6 +463,7 @@ def main() -> int:
     if not args.offline:
         live_matches_repo(findings, notes)
         canonicals_answer_without_redirecting(findings, notes)
+        worker_routes_answer(findings, notes)
         published_state_is_stated(findings, notes)
     store_matches_manifest(findings, notes)
     description_repeats_the_name(findings, notes)
