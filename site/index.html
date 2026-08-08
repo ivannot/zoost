@@ -38,7 +38,7 @@
   section h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
     margin:0 0 22px;font-weight:600}
   h3{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
   .card p{margin:0;color:var(--muted);font-size:14.5px}
   .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
@@ -47,7 +47,7 @@
     border:1px solid var(--line);border-radius:5px;padding:1px 5px}
   .k{color:var(--ink);font-weight:600}
 
-  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:26px}
   .why h3{font-size:15.5px}
   .why p{margin:0;color:var(--muted);font-size:14.5px}
 
@@ -61,7 +61,9 @@
   .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
     max-width:70ch}
   .note.warn{border-color:var(--amber);color:#e2c98a}
-  .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+  /* min(320px,100%): a bare 320px minimum cannot shrink below itself, so on a 320px
+     phone the two cards were 22px wider than the column and the page scrolled sideways. */
+  .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:20px}
   .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
   /* wrap: the status pill is nowrap by design (a pill that breaks in two is not a pill), so on a
      narrow screen it has to drop to its own line instead of pushing the row past the card. */
@@ -85,6 +87,7 @@
     <nav>
       <a class="nprod ncrm" href="/crm" aria-label="Zoost - workbench for Zoho CRM"><img class="npic" src="/crm-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
       <a class="nprod nana" href="/analytics" aria-label="Zoost - workbench for Zoho Analytics"><img class="npic" src="/analytics-192.png" alt=""><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <span class="nbrk"></span>
       <a href="/try">Try it</a>
       <a href="/how-to">How to</a>
       <a href="/nerd">Nerd</a>

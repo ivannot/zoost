@@ -1845,6 +1845,26 @@ alone**, or the padding wrecks the line spacing of the prose; the check that mat
 "how many targets are small" but "how many *standalone* ones are", and the first version of that
 measurement counted fifteen inline links on the home and would have sent me editing paragraphs.
 
+**Where the navigation breaks is a decision, and it belongs in the markup.** Seven touch-sized
+targets do not fit 375px, so it wrapped wherever the arithmetic ran out - orphaning the language
+switch on a line of its own, which reads as an accident because it is one. `<span class="nbrk">` is a
+zero-height, full-width flex item after the second product: everything below 760px or on a coarse
+pointer starts a new line there, always. Two consequences worth keeping. The products then have a row
+to themselves, **so the icon-only tier could go** - «Zoost CRM» fits at every width this site is read
+at and never has to shrink to a bare mark, which is one fewer place the name can be lost. And the
+break is declared per page rather than achieved with a margin trick, so `sitecheck`'s nav-shape
+comparison sees it and a page missing it is reported.
+
+**The Italian nav found the layout bug, as usual.** «Come si usa» against «How to» overflowed the
+second row by about a dozen pixels at 375 and orphaned the switch again; the English page fitted with
+room to spare. Below 430px the horizontal padding gives while the 44px targets do not.
+
+**`minmax(320px, 1fr)` cannot shrink below 320px**, so on a 320px phone the home's two product cards
+were 22px wider than their column and the page scrolled sideways - the one thing the responsive rule
+here forbids. `minmax(min(320px,100%), 1fr)` is the fix, and there were **twelve** of them across six
+pages: found by grepping for the pattern after fixing the first, which is the «walk the others» rule
+doing its job. Verified down to 280px.
+
 **And the number being right does not mean the result is.** At 44px the product pills became big
 empty blocks with an 18px icon adrift inside, and «Italiano» was orphaned on a row of its own - both
 visible only by looking. The icon grows with the pill (24px), and seven comfortable targets simply do

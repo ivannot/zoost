@@ -37,6 +37,13 @@ header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;colo
 header .brand:hover{opacity:.85}
 header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
 header nav a{color:var(--muted);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;min-height:24px}
+/* Where the navigation breaks, decided rather than left to the wrap.
+   Seven touch-sized targets do not fit 375px in one row, so it wrapped - and it wrapped wherever the
+   arithmetic happened to run out, orphaning «Italiano» on a line of its own. That reads as an
+   accident because it is one. This is a flex item of zero height and full width: everything after it
+   starts a new line, always in the same place. And since the two products then have a row to
+   themselves, they can carry their names again instead of shrinking to bare icons. */
+header nav .nbrk{display:none}
 header nav a:hover{color:var(--ink)}
 header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
@@ -69,13 +76,16 @@ header nav a.nprod .nshort{display:none}
    Links inside a sentence are deliberately left alone - WCAG's target-size rule exempts them, and
    padding them would break the line spacing of the prose they sit in. */
 @media (pointer:coarse){
-  header nav{gap:2px 4px}
+  header nav{flex-wrap:wrap;gap:6px 6px}
+  header nav .nbrk{display:block;width:100%;height:0}
+  header nav a.nprod .nshort{display:inline}
+  header nav a.nprod .npic{display:block}
   header nav a{min-height:44px;display:inline-flex;align-items:center;padding:0 7px}
   /* The icon grows with the pill. At 18px inside a 44px block it read as a big empty button with
      something small lost in the middle - the target was right and the thing looked wrong, which is
      its own kind of defect on a page that is a business card. */
-  header nav a.nprod{padding:0 9px}
-  header nav a.nprod .npic{width:24px;height:24px;border-radius:6px}
+  header nav a.nprod{padding:0 11px}
+  header nav a.nprod .npic{width:22px;height:22px;border-radius:6px}
   header nav a.ncta{padding:0 10px}
   footer .flinks a{display:inline-flex;align-items:center;min-height:44px}
   footer .flinks .sep{padding:0 2px}
@@ -94,15 +104,30 @@ header nav a.nprod .nshort{display:none}
    the words. `min-height` rather than a fixed height, so a label that wraps still grows. */
 @media (max-width:760px){
   header .wrap{flex-wrap:wrap;row-gap:9px;padding:12px 18px}
-  header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:2px 6px;font-size:13.5px}
+  header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:6px;font-size:13.5px}
+  header nav .nbrk{display:block;width:100%;height:0}
+  header nav a.nprod .nshort{display:inline}
+  header nav a.nprod .npic{display:block}
   header nav a{min-height:44px;display:inline-flex;align-items:center;padding:0 9px}
   header nav a.nprod{padding:0 11px}
   header nav a.ncta{padding:0 12px}
 }
+/* The icon-only tier is gone, and the declared break is why: the products have a row to themselves
+   below 760px, so «Zoost CRM» fits at any width this site is read at and never has to shrink to a
+   bare mark. Three tiers instead of four - full name, short name, and the icon beside it. */
 @media (max-width:520px){
-  header nav a.nprod .nshort{display:none}
   header nav a.nprod .npic{display:block}
-  header nav a.nprod{padding:0 11px}
+  header nav a.nprod{padding:0 10px;gap:6px}
+}
+/* The second row has to hold five items in the narrower language too. Measured at 375: the English
+   page fits with room to spare, the Italian one - «Come si usa» against «How to» - overflowed by
+   about a dozen pixels and orphaned the language switch on a third row, which is the very thing the
+   declared break exists to prevent. A translation finding a layout bug is the usual way round.
+   The targets stay 44px tall; only the horizontal padding gives. */
+@media (max-width:430px){
+  header nav{gap:5px;font-size:13px}
+  header nav a{padding:0 6px}
+  header nav a.ncta{padding:0 8px}
 }
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
@@ -134,7 +159,7 @@ main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
    exactly the set of pages that lack an inline copy, so no landing page changes. */
 main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
 main .note.warn{border-color:#6b4a1c;color:#e2c98a}
-main .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin:22px 0}
+main .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px;margin:22px 0}
 main .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
 main .card h3{margin-top:0}
 main .card p:last-child{margin-bottom:0}
