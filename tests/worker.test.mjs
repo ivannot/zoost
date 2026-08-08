@@ -381,7 +381,15 @@ test('every page carries a description and a card type', () => {
   for (const f of listPages()) {
     const s = read(f);
     if (f.endsWith('404.html')) continue;              // deliberately noindex, and shared by no URL
-    assert.ok(/<meta name="description" content="[^"]{40,}"/.test(s), `id=${f} has no description`);
+    // 160 characters, because that is roughly where Google stops printing it. The point is not
+    // brevity - it is that the sentence has to *close* before the cut, or the search result shows a
+    // thought that stops halfway. Seven pages were over 230 and read as truncated in the wild.
+    const d = s.match(/<meta name="description" content="([^"]*)"/);
+    assert.ok(d && d[1].length >= 40, `id=${f} has no description`);
+    assert.ok(d[1].length <= 160, `id=${f} description is ${d[1].length} characters and will be cut`);
+    const og = s.match(/<meta property="og:description" content="([^"]*)"/);
+    assert.ok(og, `id=${f} has no og:description`);
+    assert.equal(og[1], d[1], `id=${f} tells a search engine one summary and a social card another`);
     assert.ok(/<meta name="twitter:card"/.test(s), `id=${f} has no twitter:card`);
     assert.ok(/<meta property="og:image"/.test(s), `id=${f} has no og:image`);
   }

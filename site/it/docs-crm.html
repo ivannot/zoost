@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:f624db1e4bb91669 -->
+<!-- translated-from: site/docs-crm.html sha256:d73bee98a916bd6e -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
-<meta name="description" content="Come si usa Zoost CRM: cartella di lavoro, workspace, il pull, mettere il mirror sotto Git, leggere funzioni e moduli, il grafo delle chiamate e il diagramma ER, gli API name delle related list, le connessioni, l'audit, gli export e l'assistente AI.">
+<meta name="description" content="Guida a Zoost CRM: cartella di lavoro, pull, il grafo delle chiamate, il diagramma ER, il controllo di salute, gli export e l'assistente.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/docs-crm">
 <meta property="og:title" content="Come si usa Zoost CRM">
-<meta property="og:description" content="Come si usa Zoost CRM: cartella di lavoro, workspace, il pull, mettere il mirror sotto Git, leggere funzioni e moduli, il grafo delle chiamate e il diagramma ER, gli API name delle related list, le connessioni, l'audit, gli export e l'assistente AI.">
+<meta property="og:description" content="Guida a Zoost CRM: cartella di lavoro, pull, il grafo delle chiamate, il diagramma ER, il controllo di salute, gli export e l'assistente.">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://zoost.it/it/docs-crm">
@@ -132,7 +132,7 @@
   <p><b class="ui">+ Sample</b> è l'altra via d'ingresso, e non richiede nessun tab Zoho: scrive nella
     cartella di lavoro un workspace di dati inventati, così puoi aprire l'albero, il grafo e gli export
     prima di puntare Zoost su qualcosa di tuo. È generato, non scaricato - la barra del workspace lo
-    dice, e tutto ciò che parlerebbe con Zoho è disabilitato. Per il resto è una cartella come le altre:
+    dice, e tutto quello che parlerebbe con Zoho è disabilitato. Per il resto è una cartella come le altre:
     la cancelli con <b class="ui">🗑</b>. Il pulsante sparisce quando ne esiste già uno.</p>
   <p>La stessa azione è sulla schermata <b>Not on a Zoho tab</b>, come
     <b class="ui">+ Sample workspace</b>: un sample non deve niente alla piattaforma, quindi si apre e
@@ -450,15 +450,14 @@ git commit -m "baseline"</code></pre>
     nessuna parte. Gli scrivi nella lingua che preferisci e ti risponde in quella. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
     e ti indica questa pagina invece di inventarsi un passaggio.</p>
   <p>Opzionale e spento finché non lo configuri. Apri <b class="ui">⚙ Settings</b> (in fondo al pannello) →
-    <b>AI assistant</b>. I provider supportati sono due.</p>
+    <b>AI assistant</b>. I provider sono due.</p>
   <p>Due impostazioni decidono quanto costa una domanda. <b class="ui">Org index</b> è quanta parte dell'org
     viene descritta all'assistente a <em>ogni</em> messaggio - più grande vuol dire che conosce più nomi, ed
     è fatturata ogni volta. Il pannello stampa la cifra reale per il workspace che hai aperto, sotto il
     titolo della chat, così il numero non è una stima. <b class="ui">Max tool steps</b> limita quante volte
     può ricorrere a uno strumento prima di rispondere; 20 è il default e la maggior parte delle risposte ne
     usa due o tre.</p>
-  <p>Quando un'org è troppo grande per essere descritta per intero, cosa viene lasciato fuori è deciso
-    invece che arbitrario: l'elenco delle funzioni non viene mai lasciato fuori, perché è il vocabolario a
+  <p>Quando un'org è troppo grande per essere descritta per intero, cosa resta fuori è una scelta, non un taglio a caso: l'elenco delle funzioni non viene mai lasciato fuori, perché è il vocabolario a
     cui tutto il resto si riferisce, e i nomi di moduli e connessioni vanno per primi perché l'assistente
     quelli li sa comunque recuperare per nome. Quello che resta fuori viene dichiarato come tale - così non
     conclude mai che qualcosa non esiste solo perché non gli è stato mostrato.</p>
@@ -505,7 +504,7 @@ git commit -m "baseline"</code></pre>
   <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
     rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
     vuoto vuol dire <em>cancella</em> - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
-    c'è», che è ciò che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
+    c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
     perché è cifrata. <b class="ui">Forget</b> è anche la via d'uscita se hai perso la passphrase.</p>
   <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha chiave
     API: dice cosa manca e resta dov'era, invece di lasciarti con un assistente che fallisce alla prima

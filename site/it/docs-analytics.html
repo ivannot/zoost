@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:886306ffda494910 -->
+<!-- translated-from: site/docs-analytics.html sha256:2b9459a7aa796361 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
-<meta name="description" content="Come si usa Zoost Analytics: cartella di lavoro, workspace, il pull, leggere la struttura di una tabella e le sue chiavi esterne, il diagramma ER, l'SQL delle query table, cosa non serve più a nessuno, gli export e l'assistente AI.">
+<meta name="description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
-<meta property="og:description" content="Come si usa Zoost Analytics: cartella di lavoro, workspace, il pull, leggere la struttura di una tabella e le sue chiavi esterne, il diagramma ER, l'SQL delle query table, cosa non serve più a nessuno, gli export e l'assistente AI.">
+<meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
@@ -145,7 +145,7 @@
   <p><b class="ui">+ Sample</b> è l'altra via d'ingresso, e non richiede nessun tab di Zoho Analytics:
     scrive nella cartella di lavoro un workspace di dati inventati, così puoi aprire l'elenco delle
     viste, il diagramma ER e gli export prima di puntare Zoost su qualcosa di tuo. È generato, non
-    scaricato - la barra del workspace lo dice, e tutto ciò che parlerebbe con la piattaforma è
+    scaricato - la barra del workspace lo dice, e tutto quello che parlerebbe con la piattaforma è
     disabilitato. Per il resto è una cartella come le altre: la cancelli con <b class="ui">🗑</b>. Il
     pulsante sparisce quando ne esiste già uno.</p>
   <p>La stessa azione è sulla schermata <b>Not on a Zoho tab</b>, come <b class="ui">+ Sample workspace</b>:
@@ -208,7 +208,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     </tbody>
   </table>
   <p>I file <code>.sql</code> sono il punto. Sono l'unica cosa in Zoho Analytics che è davvero sorgente
-    scritta da qualcuno, e un file per ciascuna è ciò che permette a <code>git diff</code> di rispondere a
+    scritta da qualcuno, e tenerne una per file è quello che permette a <code>git diff</code> di rispondere a
     <em>cosa è cambiato in questo workspace il mese scorso</em> - una domanda a cui Zoho Analytics non sa
     rispondere per niente.</p>
 
@@ -296,7 +296,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
 
   <h2 id="sql">8. L'SQL delle query table</h2>
   <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
-    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - che è ciò che rende possibile rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
+    le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - ed è quello che permette di rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
     qualunque altro sorgente.</p>
   <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessun SQL. Lo legge e lo scrive su
@@ -355,13 +355,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <h3>Quale scegliere</h3>
   <p>Claude per tutto quello che richiede di guardarsi intorno - «cosa legge da questa tabella», «esiste già
     una query che unisce queste due» - perché sono domande che costano più letture. OpenAI va benissimo per
-    domande su qualcosa che hai già aperto. Questi due sono gli unici provider supportati, perché sono i due
-    che sono stati provati e gli unici due che l'estensione può raggiungere.</p>
+    domande su qualcosa che hai già aperto. Sono gli unici due provider, perché sono quelli che ho provato davvero e gli unici due che l'estensione può raggiungere.</p>
   <h3>Togliere una chiave, e cambiare motore</h3>
   <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
     rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
     vuoto vuol dire <em>cancella</em> - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
-    c'è», che è ciò che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
+    c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
     perché è cifrata. <b class="ui">Forget</b> è anche la via d'uscita se hai perso la passphrase.</p>
   <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha chiave
     API: dice cosa manca e resta dov'era, invece di lasciarti con un assistente che fallisce alla prima
