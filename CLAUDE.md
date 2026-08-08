@@ -125,6 +125,37 @@ nav on every page, in both languages, because burying it in the guides would put
 someone already convinced would look. The counts in it are read from the shipped generator, so they
 cannot drift into decoration.
 
+**The AI had no page, and a subject mentioned in eleven places and owned by none is a subject the
+reader has to assemble.** `/ai.html` (and `it/ai.html`) states the position rather than the feature
+list, and the position is deliberately smaller than the hype: **the workbench is finished without a
+model**, said first and not last; the **Markdown export** hands any external assistant the same
+mirror for nothing, and for a mid-sized org that is the better route - bigger model, real chat
+window, no key; the **built-in assistant buys retrieval and proximity, not knowledge**, because it
+is given a vocabulary and nine tools that read the mirror instead of being handed the org. A table
+says which situations do *not* justify a key, which is the part that makes the rest believable.
+
+Two absolutes were written and caught before shipping, by reading the ledger rather than by
+instinct. «There is nothing it can tell you that is not already in the mirror» is false - the model
+contributes its own reasoning - and the true claim is about *facts about your org*, which is what it
+says now. And «the one control that cannot be got wrong» about a spending limit is rhetoric: a limit
+can be set badly, what it cannot do is depend on an estimate.
+
+**«Why your own key» is a trust argument and was missing from the site entirely.** There is no Zoost
+server, so the request goes browser to provider; the alternative is a relay the author runs, holding
+a key, with the structure of the user's org crossing it. The header Anthropic requires for a
+browser call - `anthropic-dangerous-direct-browser-access: true` - is quoted on the page rather than
+hidden, because its name is a fair warning and what it warns about is precisely the property being
+chosen.
+
+**The nav pill is amber because the panel's AI button is** (`.abtn`, the same three colours), and it
+is an outline where the two products are filled - a subject that crosses both is not a third
+product. It sits on the products' row, and *that* was decided by measuring: on the second row the
+Italian nav came up **5.3px short** at 375px and orphaned the language switch, which is the accident
+this file already records. Below 360px the declared break is dropped and the bar wraps freely -
+better at 280, 320, 340 and 359 in both languages than keeping it. What remains is stated rather
+than chased: at 320px in English the switch still lands alone, because five short labels fit above
+it and the sixth does not.
+
 **«Your org» was the whole framing, and it left out the reader who needs the tool most.** A
 consultant works on orgs that are not theirs - which is exactly why keeping four clients mirrored,
 each bound to its own org, host and instance, matters more to them than to anyone. The capability

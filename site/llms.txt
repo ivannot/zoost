@@ -38,6 +38,12 @@ does *not* prove, is [Try it on invented data](https://zoost.it/try).
 - [The nerd page](https://zoost.it/nerd) - which endpoints, what breaks it, how a release is
   built and signed, and what none of that proves. The product pages point at it rather than
   carrying it, so this is where the technical claims live.
+- [AI and Zoost](https://zoost.it/ai) - where the assistant sits in the product, and where it does
+  not. The workbench is complete without a model; the Markdown export gives any external assistant
+  the same mirror for nothing; the built-in one adds retrieval and proximity rather than knowledge,
+  and the page says which situations do not justify a key. It also carries why the key is the
+  user's own - there is no server of ours for a request to pass through - and how to obtain one.
+  Read it before concluding either that the product depends on AI or that it merely mentions it.
 
 ## What they do not do
 

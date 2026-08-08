@@ -14,6 +14,18 @@
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/"/>
   </url>
   <url>
+    <loc>https://zoost.it/ai</loc>
+    <lastmod>2026-08-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/ai"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/ai"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/ai</loc>
+    <lastmod>2026-08-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/ai"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/ai"/>
+  </url>
+  <url>
     <loc>https://zoost.it/analytics</loc>
     <lastmod>2026-08-08</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/analytics"/>

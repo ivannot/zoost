@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="it">
+<head>
+<!-- translated-from: site/ai.html sha256:c523dc24a7cd7bd4 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI e Zoost - cosa aggiunge, e quando non serve</title>
+<meta name="description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non vale una chiave.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Zoost">
+<meta property="og:locale" content="it_IT">
+<meta property="og:url" content="https://zoost.it/it/ai">
+<meta property="og:title" content="AI e Zoost - cosa aggiunge, e quando non serve">
+<meta property="og:description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non vale una chiave.">
+<meta property="og:image" content="https://zoost.it/icon-512.png">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://zoost.it/it/ai">
+<link rel="alternate" hreflang="en" href="https://zoost.it/ai">
+<link rel="alternate" hreflang="it" href="https://zoost.it/it/ai">
+<link rel="alternate" hreflang="x-default" href="https://zoost.it/ai">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0d121c">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
+  .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
+  .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
+  .doc .tools{font-size:13.5px;line-height:1.9}
+  .doc .tools code{white-space:nowrap}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Vai al contenuto</a>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/it/" aria-label="Zoost - home"><svg class="bpic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#47536b"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nm">Zoost</span></a>
+    <nav>
+      <a class="nprod ncrm" href="/it/crm" aria-label="Zoost - workbench for Zoho CRM"><svg class="npic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#2563eb"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nfull">Zoost - workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
+      <a class="nprod nana" href="/it/analytics" aria-label="Zoost - workbench for Zoho Analytics"><svg class="npic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <a class="nai" href="/it/ai" aria-current="page">AI</a>
+      <span class="nbrk"></span>
+      <a href="/it/try">Prova</a>
+      <a href="/it/how-to">Come si usa</a>
+      <a href="/it/nerd">Nerd</a>
+      <a href="/it/privacy">Privacy</a>
+      <a class="ncta" href="/ai" hreflang="en" lang="en" title="This page in English" aria-label="This page in English"><span class="lfull">English</span><span class="lshort">EN</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc" id="content">
+<div class="wrap">
+
+  <h1>AI e Zoost</h1>
+  <p class="sub">Il workbench è finito anche senza un modello, e la maggior parte delle volte si usa
+    così. Questa pagina parla dell'altra metà: cosa può fare un assistente con quello che Zoost ha
+    già scritto su disco, cosa aggiunge quello integrato che un file non può dare, e a che punto
+    smette di valere una chiave API.</p>
+  <p class="note" data-it-only>I nomi dei controlli restano in inglese, perché l'estensione è in
+    inglese: <b>Export</b>, <b>Settings</b>, <b>Forget</b> sono i pulsanti che troverai davvero.</p>
+
+  <div class="toc">
+    <b>In questa pagina</b>
+    <ol>
+      <li><a href="#senza-niente-di-tutto-questo">Funziona senza niente di tutto questo</a></li>
+      <li><a href="#due-export-due-lettori">Due export, due lettori</a></li>
+      <li><a href="#la-strada-che-non-costa-niente">La strada che non costa niente</a></li>
+      <li><a href="#cosa-aggiunge-l-assistente-integrato">Cosa aggiunge l'assistente integrato</a></li>
+      <li><a href="#quando-vale-una-chiave">Quando vale una chiave</a></li>
+      <li><a href="#perche-una-chiave-tua">Perché una chiave tua</a></li>
+      <li><a href="#come-ottenere-una-chiave">Come ottenere una chiave</a></li>
+      <li><a href="#cosa-non-fa">Cosa non fa</a></li>
+    </ol>
+  </div>
+
+  <h2 id="senza-niente-di-tutto-questo">Funziona senza niente di tutto questo</h2>
+  <p>Zoost rispecchia in file di testo sulla tua macchina quello che hai costruito dentro Zoho CRM o
+    Zoho Analytics, e poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi
+    che puoi mettere a fuoco e stampare, la ricerca testuale su ogni file, un audit che ti dice cosa
+    non è più referenziato da niente, e due export.</p>
+  <p>Niente di tutto questo passa da un modello, da una chiave o da un account. Se non apri mai
+    l'assistente non ti manca nulla: è stato aggiunto a un workbench che già funzionava. Lo dico
+    all'inizio e non alla fine perché uno strumento che ha senso solo dopo che hai comprato una chiave
+    API è un altro prodotto, e non è quello che volevo costruire.</p>
+
+  <h2 id="due-export-due-lettori">Due export, due lettori</h2>
+  <p>I due export nascono dallo stesso specchio e contengono gli stessi fatti. Quello che cambia è chi
+    dovrebbe leggerli.</p>
+  <div class="box">
+    <h3>HTML - per le persone</h3>
+    <p>Un unico file autonomo, con indice, sezioni e tabelle. Lo passi a un collega, a un auditor, a un
+      cliente, al consulente che prende in mano il progetto. Si apre in qualsiasi browser, si stampa, e
+      chi lo legge non deve installare niente e non deve avere accesso alla tua org.</p>
+  </div>
+  <div class="box">
+    <h3>Markdown - per un modello</h3>
+    <p>Lo stesso contenuto nella forma che un modello linguistico digerisce senza fatica: titoli,
+      tabelle, blocchi di codice, niente grafica da attraversare. È il file che incolli in una chat.</p>
+  </div>
+  <p>Prima di scrivere l'uno o l'altro, una finestra ti chiede cosa può finirci dentro - funzioni,
+    schema dei moduli, dettaglio dei layout, relazioni, workflow, schedulazioni, connessioni, health -
+    con il codice sorgente Deluge come voce a parte, segnalata, perché è la parte sensibile. Ci sono
+    due preset, <b>Everything</b> e <b>Share-safe</b>, e la scelta viene ricordata. Una sezione i cui
+    dati sono più vecchi degli altri arriva già deselezionata, con la data e il motivo.</p>
+  <p>Un export è un file che esce dalla macchina. La decisione su cosa contiene si prende quindi una
+    volta sola, con calma, in un posto dove la vedi tutta.</p>
+
+  <h2 id="la-strada-che-non-costa-niente">La strada che non costa niente</h2>
+  <p>Porti il file Markdown all'assistente che già usi - Claude, ChatGPT, Gemini, Copilot - e fai lì la
+    tua domanda. Nessuna chiave, nessuna configurazione, niente da accendere dentro Zoost.</p>
+  <p>Funziona meglio di quanto la gente si aspetti, e preferisco dirlo piuttosto che aggirarlo. L'org
+    di esempio che Zoost porta con sé - 143 oggetti, sorgenti Deluge compresi - sta in circa 200 KB di
+    testo, che rientrano comodamente in quello che un modello di oggi tiene tutto insieme. Se la
+    domanda è "spiegami cosa fa questa funzione" oppure "riassumimi questi workflow per la nota di
+    passaggio", questa strada ti dà un modello più grande, una vera finestra di chat e una
+    conversazione che puoi tenere.</p>
+  <div class="note">
+    <p>C'è un limite strutturale, ed è quello che decide tutto il resto della pagina. L'export è una
+      fotografia con uno scope scelto prima. Quello che hai lasciato fuori è invisibile al modello in un
+      modo che il modello non ha modo di rilevare: quindi risponde lo stesso, con lo stesso tono
+      sicuro, su un'org di cui ha visto una parte.</p>
+  </div>
+
+  <h2 id="cosa-aggiunge-l-assistente-integrato">Cosa aggiunge l'assistente integrato</h2>
+  <p>All'assistente dentro il pannello non viene consegnata l'org. Gli viene consegnato un
+    <b>vocabolario</b> - i nomi di quello che esiste - e una serie di <b>strumenti che leggono lo specchio
+    che hai sul disco</b>, con cui andarsi a prendere da solo il resto.</p>
+  <div class="box">
+    <h3>Zoost - workbench for Zoho CRM</h3>
+    <p class="tools"><code>list_functions</code> <code>get_function</code> <code>who_calls</code>
+      <code>get_callees</code> <code>search_code</code> <code>get_module</code>
+      <code>get_workflow</code> <code>list_workflows</code> <code>get_connection</code></p>
+  </div>
+  <div class="box">
+    <h3>Zoost - workbench for Zoho Analytics</h3>
+    <p class="tools"><code>list_views</code> <code>get_view</code> <code>get_structure</code>
+      <code>get_sql</code> <code>search_sql</code> <code>search_columns</code>
+      <code>get_relations</code> <code>who_uses</code> <code>orphans</code></p>
+  </div>
+  <p>Ogni chiamata che fa viene scritta nella chat mentre succede, così quello che ha letto è una cosa
+    che vedi invece di una cosa che dichiara. Ne derivano quattro conseguenze, e insieme sono tutta la
+    differenza.</p>
+  <p><b>La scala.</b> L'org non deve entrare da nessuna parte. Quello che viaggia con ogni messaggio è
+    l'indice dei nomi, limitato a 72.000 caratteri per impostazione predefinita e regolabile; il
+    pannello scrive sotto il titolo della chat la dimensione reale per il workspace che hai aperto, in
+    caratteri e token approssimativi, così la manopola e la sua conseguenza stanno nella stessa frase.
+    Quando un'org è troppo grande per essere nominata per intero, cosa viene lasciato fuori è deciso e
+    non casuale - l'elenco delle funzioni, o gli oggetti dati in Zoho Analytics, non vengono mai
+    lasciati fuori, perché sono il vocabolario a cui tutto il resto si riferisce - e quello che manca
+    viene dichiarato come mancante, così l'assistente non conclude che una cosa non esiste solo perché
+    non gliel'hanno fatta vedere.</p>
+  <p><b>Sa cosa stai guardando.</b> Selezioni una funzione, un workflow, una query table, e chiedi
+    "questo cosa fa?" senza premesse. La selezione fa parte della domanda.</p>
+  <p><b>È sempre aggiornato.</b> Non c'è nessuna fotografia da rifare dopo il prossimo pull.</p>
+  <p><b>Sta dove nasce la domanda.</b> Nella pratica è la conseguenza che pesa di più ed è la più
+    facile da trascurare. Zoost esiste perché le domande su un'org smettano di dover arrivare a chi la
+    amministra. Chi ha la domanda spesso non è chi costruirebbe un export, aprirebbe una chat e
+    scriverebbe il contesto: cliccherà una scheda, oppure chiederà a un collega. Un file sul disco
+    quel problema non lo risolve; una scheda sì.</p>
+
+  <h2 id="quando-vale-una-chiave">Quando vale una chiave</h2>
+  <p>Questa è la versione onesta, ed è più stretta di come di solito viene raccontata questa categoria
+    di funzioni.</p>
+  <table>
+    <thead><tr><th>La tua situazione</th><th>Cosa farei io</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Qualche centinaio di oggetti, una domanda ogni tanto</td><td>Export in Markdown, incollato nell'assistente che già paghi</td></tr>
+      <tr><td class="k">Un elemento davanti agli occhi, una domanda</td><td>Indifferente. L'export costa meno e la finestra di chat è più grande</td></tr>
+      <tr><td class="k">L'org è abbastanza grande da doverti chiedere se ci sta</td><td>L'assistente integrato, che va a prendere invece di ricevere tutto</td></tr>
+      <tr><td class="k">"Cosa si rompe se cambio questo?", seguito su tutta l'org</td><td>L'assistente integrato con Anthropic, che la traccia può seguirla da solo</td></tr>
+      <tr><td class="k">Chi fa la domanda non è chi saprebbe costruire un export</td><td>L'assistente integrato. È il caso per cui è stato scritto</td></tr>
+      <tr><td class="k">Preferisci che niente esca dalla macchina senza che tu guardi</td><td>L'export - e leggi il file prima di incollarlo</td></tr>
+    </tbody>
+  </table>
+  <p>L'affermazione che vale la pena fare è più piccola di "c'è l'AI dentro", ed è quella che regge se
+    qualcuno va a controllare: <b>l'assistente integrato compra recupero e vicinanza, non
+    conoscenza.</b> Nessun fatto sulla tua org è raggiungibile da uno dei due e non dall'altro:
+    lo specchio è lo stesso specchio. Se suona come una promessa modesta, è quella esatta, e preferisco che tu
+    la trovi qui piuttosto che scoprirla dopo.</p>
+
+  <h2 id="perche-una-chiave-tua">Perché una chiave tua</h2>
+  <p>Perché non esiste un server Zoost. La richiesta parte dal tuo browser e arriva direttamente ad
+    Anthropic o a OpenAI, con la tua chiave e addebitata sul tuo account. Da me non passa niente, e non
+    c'è niente di mio da cui possa passare: nessun backend, nessun account, nessun log.</p>
+  <p>L'alternativa è quella comune: l'estensione parla con un servizio gestito dall'autore, che tiene
+    una chiave e inoltra le domande. È più comodo, diventa un abbonamento, e vuol dire che la struttura
+    della tua org attraversa una macchina che non controlli. Vista la postura del resto del prodotto,
+    non era uno scambio che potevo fare continuando a raccontare il resto con la faccia seria.</p>
+  <div class="note">
+    <p>Una conseguenza la vedi nel sorgente: la chiamata ad Anthropic porta l'header
+      <code>anthropic-dangerous-direct-browser-access: true</code>. Il nome è di Anthropic ed è un
+      avvertimento legittimo: vuol dire che in mezzo non c'è nessun server, che è esattamente la
+      proprietà scelta qui. Il prezzo è che la chiave sta nel profilo del tuo browser, ed è per questo
+      che esiste la passphrase più sotto.</p>
+  </div>
+
+  <h2 id="come-ottenere-una-chiave">Come ottenere una chiave</h2>
+  <p>Due fornitori, perché quei due sono testati e sono gli unici due che i manifest possono
+    raggiungere. Se ne potrebbero aggiungere altri; finché uno non è stato provato davvero contro un
+    workspace vero non verrà aggiunto, e una funzione non testata è peggio di una funzione che manca.</p>
+
+  <h3>Anthropic (Claude) - il motore agentico</h3>
+  <ol>
+    <li>Apri <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>,
+      accedi e crea una API key.</li>
+    <li><b>Un abbonamento a Claude.ai non è una API key.</b> L'API per sviluppatori è un prodotto
+      separato, che si paga a credito prepagato.</li>
+    <li>Imposta un limite di spesa mentre sei nella console. È l'unico limite di questa pagina che non dipende da
+      una stima.</li>
+    <li>In Zoost apri <b>Settings</b> e incolla la chiave con l'id del modello scritto esattamente come
+      lo scrive Anthropic.</li>
+  </ol>
+  <p>Con questo motore l'assistente lavora come agente: apre quello che gli serve, segue i chiamanti,
+    cerca nel codice, e torna con una risposta più la strada che ha fatto. <b>Max tool steps</b> limita
+    quante volte può usare uno strumento prima di dover rispondere: 20 di default, e la maggior parte
+    delle risposte ne usa due o tre.</p>
+
+  <h3>OpenAI (ChatGPT) - passata singola</h3>
+  <ol>
+    <li>Apri <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
+      e scegli <b>Create new secret key</b>. Copiala subito: viene mostrata una volta sola.</li>
+    <li><b>ChatGPT Plus non è accesso alle API.</b> Aggiungi credito prepagato sotto Billing, e già che
+      ci sei imposta un limite mensile.</li>
+    <li>Incolla la chiave e l'id del modello in <b>Settings</b>.</li>
+  </ol>
+  <p>Questo motore riceve l'indice e quello che hai aperto, e risponde in una passata sola. Non può
+    andarsi a leggere una seconda funzione da solo, quindi ti chiede quello che gli manca invece di
+    inventarlo. È il comportamento previsto ed è anche una differenza reale di capacità: il motore in
+    uso è scritto come badge nell'intestazione della chat, così sai sempre con quale dei due stai
+    parlando.</p>
+
+  <h3>Quanto costa</h3>
+  <p>Non scrivo i prezzi: sono dei fornitori e si muovono. Quello che decide i tuoi è l'indice, che
+    viaggia con ogni messaggio e di cui il pannello ti mostra la dimensione, più quanti passi di
+    strumento serve una risposta. Le risposte degli strumenti sono limitate e ti dicono come restringere
+    la domanda invece di restituire novecento righe. Il limite di spesa impostalo: quella parte non è
+    una stima.</p>
+
+  <h3>Proteggere la chiave</h3>
+  <p>Di base la chiave è salvata in chiaro nel profilo del tuo browser. Chrome non dà alle estensioni
+    né un portachiavi né cifratura a riposo, quindi cifrarla con una chiave tenuta accanto al testo
+    cifrato sarebbe teatro - e peggio che salvarla in chiaro, perché mi lascerebbe rivendicare una
+    protezione che non fornisco.</p>
+  <p>Quello che c'è invece è una passphrase che hai solo tu: la chiave viene cifrata con quella, la
+    digiti una volta per sessione del browser, e <b>non esiste recupero</b> - nessun suggerimento,
+    nessun reset, nessun deposito. Se la perdi, il pulsante <b>Forget</b> di ciascun fornitore cancella
+    quella chiave così puoi incollarne una nuova, e <b>Remove the protection</b> toglie tutto con un
+    controllo solo. È disattivata di default e la cosa è detta invece che decisa: su una macchina
+    personale una passphrase a sessione vale poco, su una condivisa vale molto, e nessuno tranne te può
+    valutarlo.</p>
+
+  <h2 id="cosa-non-fa">Cosa non fa</h2>
+  <ul>
+    <li><b>Non scrive su Zoho.</b> Ogni strumento legge lo specchio che hai sul disco. In nessuna delle
+      due estensioni esiste una strada di scrittura, né per l'AI né per il resto.</li>
+    <li><b>Non vede i tuoi record.</b> Lo specchio contiene struttura, definizioni e codice: i nomi dei
+      campi, non i valori. Zoost non scarica i dati dei clienti, quindi non ce ne sono da dare a un
+      modello.</li>
+    <li><b>Non porta una conversazione da un workspace all'altro.</b> Se cambi workspace il thread viene
+      buttato, perché una risposta che nomina le funzioni dell'org precedente sopra una domanda su
+      quella nuova è peggio che ricominciare.</li>
+    <li><b>Quello che scrive è una bozza.</b> Zoost non esegue, non valida e non distribuisce niente,
+      SQL che l'assistente di Zoho Analytics ti scrive volentieri compreso.</li>
+    <li><b>Non è una condizione di niente.</b> Spegnilo, non configurarlo mai, e il workbench resta lo
+      stesso workbench. È la forma voluta, non un ripiego.</li>
+  </ul>
+
+  <p class="meta">Il dettaglio operativo - dove stanno le impostazioni, cosa vuol dire il badge, cosa
+    succede quando il permesso sulla cartella scade - è nelle guide:
+    <a href="/it/docs-crm">Zoost CRM</a> e <a href="/it/docs-analytics">Zoost Analytics</a>. Cosa
+    salvano le estensioni e dove viaggia è scritto nella
+    <a href="/it/privacy">privacy policy</a>.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/it/crm">Zoost - workbench for Zoho CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/analytics">Zoost - workbench for Zoho Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/it/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep" aria-hidden="true">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Creato da Ivan Notaristefano (con il supporto di Claudio). Copyright <span class="cyear">2026</span>. Distribuito sotto licenza Apache 2.0 e fornito
+      <b>COSÌ COM'È</b>, senza garanzie o condizioni di alcun tipo, esplicite o implicite. L'autore non si assume
+      alcuna responsabilità per perdite, danni o problemi ai dati derivanti dal suo utilizzo, e non è tenuto a
+      fornire supporto o manutenzione. In caso di divergenza, fa fede la
+      <a href="/ai" hreflang="en">versione inglese</a>.
+    </p>
+    <p class="legal">
+      Zoost è una famiglia di strumenti indipendenti e non ufficiali. <b>Non</b> sono affiliati, approvati,
+      sponsorizzati né supportati da Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" e "Deluge" sono
+      marchi di Zoho Corporation, usati qui in senso nominativo, solo per indicare compatibilità.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+</body>
+</html>

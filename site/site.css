@@ -91,7 +91,7 @@ header nav a.nprod .nshort{display:none}
      its own kind of defect on a page that is a business card. */
   header nav a.nprod{padding:0 11px}
   header nav a.nprod .npic{width:22px;height:22px;border-radius:6px}
-  header nav a.ncta{padding:0 10px}
+  header nav a.ncta,header nav a.nai{padding:0 10px}
   footer .flinks a{display:inline-flex;align-items:center;min-height:44px}
   footer .flinks .sep{padding:0 2px}
 }
@@ -133,7 +133,7 @@ header nav a.nprod .nshort{display:none}
   header nav a.nprod .npic{display:block}
   header nav a{min-height:44px;display:inline-flex;align-items:center;padding:0 9px}
   header nav a.nprod{padding:0 11px}
-  header nav a.ncta{padding:0 12px}
+  header nav a.ncta,header nav a.nai{padding:0 12px}
 }
 /* The icon-only tier is gone, and the declared break is why: the products have a row to themselves
    below 760px, so «Zoost CRM» fits at any width this site is read at and never has to shrink to a
@@ -150,8 +150,32 @@ header nav a.nprod .nshort{display:none}
 @media (max-width:430px){
   header nav{gap:5px;font-size:13px}
   header nav a{padding:0 6px}
-  header nav a.ncta{padding:0 8px}
+  header nav a.ncta,header nav a.nai{padding:0 8px}
 }
+/* The AI page's own pill, wearing the amber outline the panels give the AI button (`.abtn`) - the
+   same three colours, so the control on the site and the control in the product read as one thing.
+   It is an outline and not a fill because the two filled pills are the two products, and this is a
+   subject that crosses both rather than a third product. */
+/* Below 360px the declared break is dropped and the bar wraps freely. The break exists so the two
+   products get a row of their own rather than one decided by where the arithmetic ran out - but at
+   320px the arithmetic runs out inside every row anyway, and keeping the break there put first the
+   AI pill and then the language switch alone on a line, which is the orphan the break was added to
+   prevent. Measured at 280/320/340/359 in both languages: free wrapping is strictly better at every
+   one of them. A larger gap was tried, on the theory that pushing one more item down would pair it
+   with the switch; it improved 320 and made 340 worse, so it is not in.
+   What is left, and is stated rather than chased: at 320px in English the switch still lands on a
+   line of its own, because five short labels fit on the row above and the sixth does not. Nothing
+   overflows, every target is still 44px, and no arrangement of a free-wrapping bar can promise
+   balanced rows for an arbitrary set of labels. The width where this starts is 359px, which no
+   current phone reports. */
+@media (max-width:360px){header nav .nbrk{display:none}
+  header nav{gap:5px 4px}
+  header nav a{padding:0 5px}
+  header nav a.nprod{padding:0 8px;gap:5px}
+  header nav a.nai,header nav a.ncta{padding:0 7px}}
+header nav a.nai{border:1px solid #b06a1c;color:#f0a44a;border-radius:7px;padding:4px 10px;font-weight:600;letter-spacing:.3px}
+header nav a.nai:hover{background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
+header nav a.nai[aria-current="page"]{color:#fbbf24;border-color:#d97706;background:rgba(217,119,6,.14)}
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 /* The language switch carries its name in the language it leads to - «Italiano» on an English page -
    because that is the one label a reader of either language can recognise, and it is what the W3C
