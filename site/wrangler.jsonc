@@ -24,6 +24,13 @@
     // evidence (the bytes were always correct; the header was the whole problem). Only these paths
     // run the script first; everything else is served exactly as before. sitecheck.py asserts that
     // every .txt in this directory is listed here, so the list cannot fall behind the files.
-    "run_worker_first": ["/llms.txt", "/robots.txt"]
+    // A request that matches no asset is rewritten to 404.html and served as a real 404, instead of
+    // landing on Cloudflare's own error page - which has none of this site's chrome and no way back.
+    "not_found_handling": "404-page",
+    // ...but `not_found_handling` stops navigation requests from invoking the Worker at all, and the
+    // Worker is what 301s `/docs` and `/docs.html`. **`zoost.it/docs.html` is compiled into Zoost for
+    // Zoho CRM 1.9.0**, the version the Store is serving, so those two must keep redirecting: they run
+    // the script first and the 404 stays the fallback for everything else.
+    "run_worker_first": ["/llms.txt", "/robots.txt", "/docs", "/docs.html"]
   }
 }

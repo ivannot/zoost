@@ -6,7 +6,7 @@ of the package that was uploaded.
 The point is that **you do not have to take our word for how the release asset was built.** The build
 is reproducible: the same commit produces the same bytes, because every file is stamped with the
 commit's own date, the file list is sorted before it reaches `zip`, and machine-specific attributes
-are dropped. So the hash below is not a fact about our laptop — it is a fact about the source, and
+are dropped. So the hash below is not a fact about our laptop - it is a fact about the source, and
 you can check it:
 
 ```bash
@@ -21,14 +21,14 @@ the source in this repository at that tag, and nothing else went into it.
 
 Note the precise claim, because the looser one would be false: this establishes how the *release
 asset* was produced. Uploading it to the Store is a manual step, so nothing here cryptographically
-proves the file Google received is that one. What closes that circle is at the far end — unpack the
+proves the file Google received is that one. What closes that circle is at the far end - unpack the
 installed extension and diff it against the tag. See *What this cannot prove*.
 
 <!-- release rows are appended below the header, newest last -->
 
 | App | Version | Tag | Commit | SHA-256 of the uploaded `.zip` | Submitted |
 |---|---|---|---|---|---|
-| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible — see below* | 2026-08-03 |
+| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible - see below* | 2026-08-03 |
 | crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` | 2026-08-04 |
 | analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` | 2026-08-05 |
 | crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `5818741130e1b683b9e784402b591493e03803fb9f086204391b808ddc4e1045` | 2026-08-07 |
@@ -37,7 +37,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 
 **No Zoho CRM version before 1.9.0 is in this table, and the reason differs by version.**
 
-**1.0.0 — the version the Store is serving today — has a tag and buildable source, but no hash.**
+**1.0.0 - the version the Store is serving today - has a tag and buildable source, but no hash.**
 The tag `v1.0.0` points at commit `89422fe`, which carries the whole extension under `src/` with a
 `src/manifest.json` at version 1.0.0, and `build.sh` at that commit produces `zoost-1.0.0-store.zip`.
 So the source is identified and anyone can rebuild it. What is missing is the hash of the archive
@@ -52,7 +52,7 @@ as the artefact that build produced.
 
 Two corrections have been made to this section, and they are recorded rather than tidied away,
 because a verifiable record that edits its own mistakes out of history is worth less than none.
-The first claimed 0.13.8 was the published version and that the earliest commit here was 1.0.0 —
+The first claimed 0.13.8 was the published version and that the earliest commit here was 1.0.0 -
 both stale. The second, correcting it, claimed the source entered the repository only at 1.6.2 and
 that `v1.0.0` held nothing installable. That was wrong too, and wrong through carelessness: the tree
 listing was read truncated, `src/` sits below `site/` alphabetically, and the conclusion was drawn
@@ -70,7 +70,7 @@ table lets you verify is the input to that process: that the source in this repo
 is what was submitted.
 
 **The tag `v1.0.0` is from before this repository held two products**, when a bare version number was
-unambiguous. It identifies real, buildable source — see above — and is left in place rather than
+unambiguous. It identifies real, buildable source - see above - and is left in place rather than
 renamed, because moving a published ref is worse than an untidy one. Every tag from here on is
 `<app>-v<version>`.
 
@@ -82,7 +82,7 @@ Pushing a tag `crm-v*` or `analytics-v*` makes GitHub check out that exact commi
 the build is deterministic by doing it **twice** and comparing, attach the archive to a Release, and
 sign a [provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations)
 binding that file to this repository, that commit and that workflow. The workflow is
-[`.github/workflows/release.yml`](.github/workflows/release.yml) — read it; it is short, does
+[`.github/workflows/release.yml`](.github/workflows/release.yml) - read it; it is short, does
 nothing clever, and every action it uses is pinned to a commit hash rather than a moving tag. The
 build log is public.
 
@@ -99,7 +99,7 @@ gh attestation verify zoost-<app>-<version>-store.zip --repo ivannot/zoost
 # 2. the same source produces the same bytes on your machine
 tools/verify.sh <app> <version>
 
-# 3. read what is actually inside — a couple of dozen files, no bundler, no minifier, no deps
+# 3. read what is actually inside - a couple of dozen files, no bundler, no minifier, no deps
 unzip -l zoost-<app>-<version>-store.zip
 ```
 
@@ -112,7 +112,7 @@ There is no build step that could put something in the package that is not in th
 **What Google serves is not byte-identical to what was uploaded.** The Store repackages and re-signs
 every extension, so the `.crx` a browser installs cannot be compared to the `.zip` here. What the
 chain above establishes is the *input* to that process. To check the far end, unpack the installed
-extension from your Chrome profile and diff its files against the tag — they are plain text, and
+extension from your Chrome profile and diff its files against the tag - they are plain text, and
 this is also what settles the one manual step in the chain, since the upload to Google is done by
 hand and no signature covers it.
 

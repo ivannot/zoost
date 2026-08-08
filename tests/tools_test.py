@@ -995,6 +995,45 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertTrue(rows, 'no ledger row was checked — the parse or the floors are wrong')
 
 
+class InlineStylesStayTwins(unittest.TestCase):
+    """A page and its translation carry the same inline <style>, and the first divergence was a comment.
+
+    Three landing pages keep 38-52 lines of `<style>` of their own, duplicated into the Italian copy.
+    Nothing enforced that, and an outside audit found the pair had already come apart on the home -
+    `it/index.html` was missing one comment. No rule differed, so nothing was visibly wrong; the point
+    is that the mechanism which dropped a comment will eventually drop a rule, and on a page nobody
+    would think to compare. Rules are compared exactly; comments are compared too, because a comment
+    that exists on one side is the evidence the copy was not carried over whole.
+    """
+
+    PAIRS = ('index.html', 'crm.html', 'analytics.html')
+
+    def _style(self, path):
+        s = (ROOT / path).read_text(encoding='utf-8')
+        m = re.search(r'<style>(.*?)</style>', s, re.S)
+        return m.group(1) if m else None
+
+    def test_every_pair_carries_the_same_block(self):
+        for name in self.PAIRS:
+            en, it = self._style('site/' + name), self._style('site/it/' + name)
+            self.assertIsNotNone(en, name + ' has no inline style block')
+            self.assertIsNotNone(it, 'it/' + name + ' has no inline style block')
+            if en == it:
+                continue
+            a = [l.strip() for l in en.split('\n') if l.strip()]
+            b = [l.strip() for l in it.split('\n') if l.strip()]
+            self.fail(f'{name}: the inline style block differs from its translation. '
+                      f'Only on the English page: {sorted(set(a) - set(b))[:3]} / '
+                      f'only on the Italian one: {sorted(set(b) - set(a))[:3]}')
+
+    def test_the_comparison_can_fail(self):
+        # A checker that has never failed is a claim. This proves the comparison is exact rather than
+        # normalising the difference away - the divergence that was found was a single comment line.
+        en = 'a{color:red}\n/* why */\n'
+        it = 'a{color:red}\n'
+        self.assertNotEqual(en, it)
+
+
 class SitemapIsDerived(unittest.TestCase):
     """Every field in the sitemap was typed by hand, and the dates had drifted three days behind.
 

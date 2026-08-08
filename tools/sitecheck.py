@@ -570,6 +570,11 @@ def canonical_and_alternates(findings: list) -> None:
         return f'https://zoost.it/{rel[:-5]}' if rel.endswith('.html') else f'https://zoost.it/{rel}'
 
     for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        # 404.html is served at every address that has nothing behind it, so it has no URL of its
+        # own to be canonical for - and it carries `noindex`, which is the opposite instruction.
+        # Declared here rather than skipped silently, like everything else this file exempts.
+        if p.name == '404.html':
+            continue
         html = p.read_text(encoding='utf-8')
         rel = p.relative_to(SITE).as_posix()
         m = re.search(r'<link rel="canonical" href="([^"]+)"', html)

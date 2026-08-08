@@ -1,8 +1,8 @@
 /* site.css — shared base for every zoost.it page. Page-specific rules stay in each page's
    inline <style>, which is loaded AFTER this file so it can override. Content-page typography
-   (docs, privacy) is scoped to `main`, so the landing page (no <main>) is left untouched. */
+   (docs, privacy) is scoped to `.doc`, which the content pages declare on their <main>. */
 
-:root{
+:root{color-scheme:dark;--anchor-top:70px;
   --bg:#0d121c; --surface:#151d2b; --panel:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
   --border:#26303f; --line:#1e2735; --sel:#5a6a86; --amber:#d97706; --teal:#83d8c6;
   /* --sel is the *suite* accent: the same slate as the family mark, so the home, the guides and
@@ -99,7 +99,25 @@ header nav a.nprod .nshort{display:none}
 /* Keyboard focus, which the site had no style for at all: the browser default outline on a dark
    background is thin and easy to lose, and someone navigating by keyboard has nothing else to go on.
    `:focus-visible` rather than `:focus`, so a mouse click does not leave a ring behind. */
+/* Where an anchor lands, for both page architectures at once.
+   The header is sticky, so a target scrolled to y=0 sits underneath it. `.doc h2` carried 70px and
+   the landing pages' <section id> carried nothing - and 70 was chosen against a 54px desktop header,
+   while on a phone the header is 158px. Measured on the live site: both of the home's hero links put
+   their heading 106px under the header. One variable, moved by the same conditions that move the
+   header's height, so the two architectures cannot drift apart again. */
+.doc h2[id],.doc h2,section[id],[id]:target{scroll-margin-top:var(--anchor-top)}
+@media (max-width:760px){:root{--anchor-top:176px}}
+@media (pointer:coarse){:root{--anchor-top:176px}}
+
 :focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+
+/* Skip link. Off screen until it takes focus, which is the first thing Tab reaches on every page -
+   without it a keyboard or screen-reader user walks the whole navigation before every page's
+   content. The landing pages had no <main> at all, so the browser's own "skip to main" had nothing
+   to aim at on the three most visited pages. */
+.skip{position:absolute;left:-9999px;top:0;z-index:200;background:var(--surface);color:var(--ink);
+      border:1px solid var(--teal);border-radius:0 0 8px 0;padding:12px 18px;font-size:14px;font-weight:600}
+.skip:focus{left:0}
 
 /* On a phone the navigation is touched, not pointed at, and that changes what "cramped" means.
    Measured at 375 and 390: the four word links were 21px tall with 10px between them, and the
@@ -149,38 +167,46 @@ header nav a.ncta .lshort{display:none}
 }
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
 
-/* ---- content pages (docs, privacy): scoped to main, so the landing page is untouched ---- */
-main{padding:44px 0 80px}
-main h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em}
-main h2{font-size:20px;margin:44px 0 8px;letter-spacing:-.01em;scroll-margin-top:70px}
-main h3{font-size:16px;margin:26px 0 6px;color:var(--ink)}
-main .sub{color:var(--muted);margin:0 0 10px;max-width:66ch}
-main .upd{font:12px var(--mono);color:#6b7c93;margin:0 0 30px}
-main p,main li{color:#c3cddc}
-main ul,main ol{padding-left:22px} main li{margin:7px 0}
-main code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
-main .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 19px;margin:18px 0}
-main .box.warn{border-color:#6b4a1c;background:#1e1a12}
-main .box.warn b{color:#f0a44a}
-main .box h3{margin-top:0}
-main .box p:first-child{margin-top:0} main .box p:last-child{margin-bottom:0}
-main table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
-main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
-main th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-main .k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
-main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
+/* ---- content pages (docs, privacy) ----
+   Scoped to `.doc`, not to `main`. It was `main` for a long time and that read as a tidy scope, but
+   `main` was standing in for "this is a document page" - a structural proxy for an editorial fact,
+   the same shape of mistake as sizing touch targets by viewport width instead of asking the pointer.
+   It bit the moment the landing pages needed a <main> of their own for the skip link: 28 rules,
+   including `h1{font-size:30px}` over a 44px hero, would have landed on them at once. */
+.doc{padding:44px 0 80px}
+.doc h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em}
+.doc h2{font-size:20px;margin:44px 0 8px;letter-spacing:-.01em}
+.doc h3{font-size:16px;margin:26px 0 6px;color:var(--ink)}
+/* A heading that is a section of the page and looked like a sub-heading. The level
+   is structure and belongs to the outline; the size is presentation and stays. */
+.doc h2.h3{font-size:16px;margin:26px 0 6px;color:var(--ink);letter-spacing:0}
+.doc .sub{color:var(--muted);margin:0 0 10px;max-width:66ch}
+.doc .upd{font:12px var(--mono);color:#6b7c93;margin:0 0 30px}
+.doc p,.doc li{color:#c3cddc}
+.doc ul,.doc ol{padding-left:22px} .doc li{margin:7px 0}
+.doc code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.doc .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 19px;margin:18px 0}
+.doc .box.warn{border-color:#6b4a1c;background:#1e1a12}
+.doc .box.warn b{color:#f0a44a}
+.doc .box h3{margin-top:0}
+.doc .box p:first-child{margin-top:0} .doc .box p:last-child{margin-bottom:0}
+.doc table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+.doc th,.doc td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
+.doc th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.doc .k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
+.doc td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
 /* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
    used the same class names with nothing behind them — so /how-to.html's two product cards and the
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note
-   defect already recorded: a class borrowed from the page that defines it. Scoped to main, which is
+   defect already recorded: a class borrowed from the page that defines it. Scoped to .doc, which is
    exactly the set of pages that lack an inline copy, so no landing page changes. */
-main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
-main .note.warn{border-color:#6b4a1c;color:#e2c98a}
-main .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px;margin:22px 0}
-main .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
-main .card h3{margin-top:0}
-main .card p:last-child{margin-bottom:0}
-main .meta{font:12.5px var(--mono);color:var(--muted)}
+.doc .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
+.doc .note.warn{border-color:#6b4a1c;color:#e2c98a}
+.doc .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px;margin:22px 0}
+.doc .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
+.doc .card h3{margin-top:0}
+.doc .card p:last-child{margin-bottom:0}
+.doc .meta{font:12.5px var(--mono);color:var(--muted)}
 
 /* ---- footer (identical on every page) ---- */
 footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);font-size:13px}
@@ -218,8 +244,8 @@ footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
    guides overflowed by ~95px and the privacy table by ~32px, from long code tokens in table cells
    (`crm/instance[-sandbox]-orgid` and its kind) and from tables wider than the screen. A page you
    have to drag left and right to read is broken, whatever the desktop looks like. */
-main code{overflow-wrap:anywhere}
-main pre{overflow-x:auto}
+.doc code{overflow-wrap:anywhere}
+.doc pre{overflow-x:auto}
 @media (max-width:760px){
-  main table{display:block;overflow-x:auto}
+  .doc table{display:block;overflow-x:auto}
 }

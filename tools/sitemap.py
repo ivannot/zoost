@@ -68,6 +68,8 @@ def pages() -> list:
     """
     out = []
     for p in sorted(SITE.glob('*.html'), key=lambda x: (x.name != 'index.html', x.name)):
+        if p.name == '404.html':      # served everywhere, addressed nowhere, and carries noindex
+            continue
         out.append(p.relative_to(SITE).as_posix())
         twin = SITE / 'it' / p.name
         if twin.exists():

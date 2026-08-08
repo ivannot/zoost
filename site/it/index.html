@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:19e65a8b78c5a77b -->
+<!-- translated-from: site/index.html sha256:e946abe6e1b7a162 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui hai costruito</title>
 <meta name="description" content="Una famiglia di estensioni Chrome, una per prodotto Zoho. Rispecchiano quello che hai costruito in file locali, poi ci aggiungono navigazione, diagrammi, ricerca, audit ed export. Nessuna scrive su Zoho.">
+<meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://zoost.it/it/">
 <link rel="alternate" hreflang="en" href="https://zoost.it/">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/">
@@ -17,7 +18,8 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Zoost">
 <meta property="og:description" content="Tutto quello che hai costruito dentro Zoho è tuo. E da oggi con Zoost puoi vederlo tutto insieme.">
-<meta property="og:url" content="https://zoost.it/it/index.html">
+<meta property="og:locale" content="it_IT">
+<meta property="og:url" content="https://zoost.it/it/">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="author" content="Ivan Notaristefano">
 <link rel="stylesheet" href="/site.css">
@@ -66,6 +68,8 @@
      phone the two cards were 22px wider than the column and the page scrolled sideways. */
   .prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:20px}
   .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
+  /* wrap: the status pill is nowrap by design (a pill that breaks in two is not a pill), so on a
+     narrow screen it has to drop to its own line instead of pushing the row past the card. */
   .prod .ph{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .prod .ph img,.prod .ph .cpic{width:38px;height:38px;border-radius:9px}
   .prod .ph h3{margin:0}
@@ -79,6 +83,7 @@
 </style>
 </head>
 <body>
+<a class="skip" href="#content">Vai al contenuto</a>
 
 <header>
   <div class="wrap">
@@ -96,6 +101,8 @@
   </div>
 </header>
 
+<main id="content">
+
 <div class="hero">
   <div class="wrap">
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E da oggi con Zoost puoi vederlo tutto insieme.</span></h1>
@@ -108,7 +115,7 @@
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
       <span class="meta">Gratuiti · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" style="margin-top:22px">Il sito è tutto in italiano, guide e privacy policy comprese; la
+    <p class="note" style="margin-top:22px" data-it-only>Il sito è tutto in italiano, guide e privacy policy comprese; la
       <a href="/llms.txt" hreflang="en">mappa per gli assistenti</a> resta in inglese perché la legge una
       macchina. <b>L'estensione, invece, è in inglese</b>: i nomi dei comandi che
       leggi qui sono quelli che troverai nel pannello, non traduzioni.
@@ -247,6 +254,8 @@
     </ol>
   </div>
 </section>
+
+</main>
 
 <footer>
   <div class="wrap">
