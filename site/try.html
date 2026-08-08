@@ -108,11 +108,10 @@
       own config is the entire mechanism - there is no demo mode, no second code path, nothing that
       treats invented data specially. Everything that would reach Zoho asks that flag before it acts:
       the buttons that pull are disabled, the ones that would open a Zoho page refuse and say why.
-      There is no org behind a sample, so there is nothing for them to open.</li>
-    <li><b>There is no demo mode.</b> The flag <code>sample: true</code> in the workspace's config is
-      the entire mechanism. Once the files are on disk they are read by the ordinary code, listed by
-      the ordinary list, exported by the ordinary export. A branch that showed invented data
-      differently would eventually show somebody's real data through it.</li>
+      There is no org behind a sample, so there is nothing for them to open. Once the files are on
+      disk they are read by the ordinary code, listed by the ordinary list, exported by the ordinary
+      export - and a branch that showed invented data differently would eventually show somebody's
+      real data through it.</li>
     <li><b>Deleting it is deleting the folder.</b> The one trace outside it is the sample's own
       identifier, kept in the browser's local storage so the panel can offer to open it before Chrome
       has granted access to the folder again. <a href="/privacy">The privacy page</a> lists that
