@@ -59,15 +59,23 @@ header nav a.nprod .nshort{display:none}
   header nav a.nprod .nfull{display:none}
   header nav a.nprod .nshort{display:inline}
 }
+/* On a phone the navigation is touched, not pointed at, and that changes what "cramped" means.
+   Measured at 375 and 390: the four word links were 21px tall with 10px between them, and the
+   product pills 28px - against the 44pt minimum touch target Apple's guidelines give. So they did
+   not merely look run-together, they were genuinely easy to mis-tap, which no screenshot shows.
+   One change fixes both: the padding that brings each target to 44px is also what puts air between
+   the words. `min-height` rather than a fixed height, so a label that wraps still grows. */
 @media (max-width:760px){
   header .wrap{flex-wrap:wrap;row-gap:9px;padding:12px 18px}
-  header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:8px 10px;font-size:12.5px}
-  header nav a.nprod{padding:4px 9px}
+  header nav{margin-left:0;width:100%;flex-wrap:wrap;gap:2px 6px;font-size:13.5px}
+  header nav a{min-height:44px;display:inline-flex;align-items:center;padding:0 9px}
+  header nav a.nprod{padding:0 11px}
+  header nav a.ncta{padding:0 12px}
 }
 @media (max-width:520px){
   header nav a.nprod .nshort{display:none}
   header nav a.nprod .npic{display:block}
-  header nav a.nprod{padding:5px 9px}
+  header nav a.nprod{padding:0 11px}
 }
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
