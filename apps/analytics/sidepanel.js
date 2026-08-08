@@ -386,6 +386,16 @@ const isSample = () => !!(bound && bound.sample);
 // Everything platform-bound funnels through here, so this is the one place a sample has to be
 // refused - rather than a condition repeated at each button, where one is eventually forgotten.
 const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace && String(ctx.workspace) === String(bound.workspace));
+// The one refusal every «open this in Zoho Analytics» navigation makes. A sample workspace has no
+// Zoho Analytics workspace behind it, so a link built from its id would open a URL that does not
+// exist: refused with a reason rather than left to 404, because «nothing talks to the platform» has
+// to be true of the navigations too, or it is not the claim the guide makes. It reads as
+// `if (sampleRefuse()) return;` at each site, instead of the same string copied at both of them.
+function sampleRefuse() {
+  if (!isSample()) return false;
+  status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn');
+  return true;
+}
 
 async function refreshContext() {
   const el = $('ctx'), who = $('who'), bnd = $('bound');
@@ -460,19 +470,13 @@ async function refreshContext() {
 // nothing that depends on what the page happens to look like.
 const homeUrl = () => (bound && bound.origin ? `${bound.origin}/workspace/${bound.workspace}` : 'https://analytics.zoho.eu/');
 async function switchTab() {
-  // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
-  // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
-  // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const id = await analyticsTabId();
   const url = homeUrl();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 async function openZohoHome() {
-  // A sample workspace has no Zoho Analytics workspace behind it, so a link built from its id would
-  // open a URL that does not exist. Refused with a reason rather than left to 404: «nothing talks to
-  // the platform» has to be true of the navigations too, or it is not the claim the guide makes.
-  if (isSample()) { status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn'); return; }
+  if (sampleRefuse()) return;
   const [a] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = homeUrl();
   if (a && HOST_RE.test(a.url || '')) await chrome.tabs.update(a.id, { url, active: true });
