@@ -65,12 +65,24 @@ header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
    not var(--sel): that token is the *current* page's accent, so a "Zoho CRM" button would turn
    magenta on the Analytics pages — which is the one thing the colours exist to prevent. */
-header nav a.nprod{color:#fff;border-radius:7px;padding:5px 11px;font-weight:600;line-height:1.2;white-space:nowrap}
-header nav a.ncrm{background:#2563eb}
-header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
-header nav a.nana{background:#be2a6b}
-header nav a.nana:hover{background:#d43b7d;color:#fff}
-header nav a.nprod[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px currentColor}
+/* Outline when it is not the page you are on, solid fill when it is - the same grammar the panel's
+   own AI button uses (`.abtn` outlined, `#askai.on` filled), so the site behaves like the product.
+   The ring that used to mark the current page is gone: a fill says it louder and says it the way the
+   extension does.
+   Two contrast measurements decided the colours rather than taste. Read as *text* on `--bg` the
+   product hues fail AA - #2563eb is 3.63:1 and #be2a6b is 3.33:1 against the 4.5 asks - so the
+   outlined state uses the same hue lightened until it passes (4.55 and 4.51), while the border keeps
+   the base hue, which only owes 3:1 as a UI component and clears it.
+   And white on the amber fill is **3.19:1**, which is why the AI pill filled carries near-black
+   instead: #d97706 against --bg is 5.88:1. The panel makes the same white-on-amber choice in
+   `#askai.on` and has the same problem - that is a separate decision, in the product, not here. */
+header nav a.nprod{background:transparent;border:1px solid;border-radius:7px;padding:4px 10px;font-weight:600;line-height:1.2;white-space:nowrap}
+header nav a.ncrm{color:#4177ee;border-color:#2563eb}
+header nav a.ncrm:hover{background:rgba(37,99,235,.14);border-color:#4177ee;color:#6b96f2}
+header nav a.ncrm[aria-current="page"]{background:#2563eb;border-color:#2563eb;color:#fff}
+header nav a.nana{color:#d64585;border-color:#be2a6b}
+header nav a.nana:hover{background:rgba(190,42,107,.14);border-color:#d64585;color:#e26b9e}
+header nav a.nana[aria-current="page"]{background:#be2a6b;border-color:#be2a6b;color:#fff}
 /* The nav carries the short form at every width, and that was a measurement rather than a taste.
    With both full names the bar was 874px inside a 900px column and the header overflowed it by 87px
    on a 1280px screen - chrome hanging outside the box every other element respects, 300px past
@@ -188,7 +200,7 @@ header nav a.nprod .nshort{display:inline}
   header nav a.nai,header nav a.ncta{padding:0 7px}}
 header nav a.nai{border:1px solid #b06a1c;color:#f0a44a;border-radius:7px;padding:4px 10px;font-weight:600;letter-spacing:.3px}
 header nav a.nai:hover{background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
-header nav a.nai[aria-current="page"]{color:#fbbf24;border-color:#d97706;background:rgba(217,119,6,.14)}
+header nav a.nai[aria-current="page"]{background:#d97706;border-color:#d97706;color:var(--bg)}
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
 /* The language switch carries its name in the language it leads to - «Italiano» on an English page -
    because that is the one label a reader of either language can recognise, and it is what the W3C
