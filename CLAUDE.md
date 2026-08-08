@@ -1917,6 +1917,19 @@ family of ... tools. **It is** not affiliated» (plural subject, singular verb),
 Italian that was correct when there was one product. `trademark_disclaimer_is_one_sentence()` groups
 every `<p class="legal">` naming Zoho Corporation by its text and reports more than one per language.
 
+**The nav marks the page you are on, and three pages had stopped.** `aria-current="page"` used to
+do one small thing - draw the current entry bold - so nobody noticed it missing. Once the pills
+became «outlined unless you are on it», the same attribute became what *fills* them, and a missing
+attribute stopped a visible control from working. Reported as «Come si usa non cambia stile» on
+`it/how-to`; the sweep then found **`it/crm` and `it/analytics` too**, so on the Italian side the
+product pill never filled at all. **I had verified the fill on the English pages only** - the
+one-of-a-set miss this file keeps recording, made while fixing something else.
+`nav_marks_the_page_you_are_on()` derives the criterion instead of listing it: take the URL the
+platform serves for the file, and if the nav links to exactly that URL, that link carries the
+attribute and no other does. A page with no self link - the home, `404` - is silent by construction
+rather than by exemption. Proven against all four shapes: attribute removed from a product page, a
+plain link and a translated hub, and two links marked at once.
+
 **A contextual target is fine; the two languages disagreeing about it is not.** In English the
 product pages' «How to» went straight to that product's guide, in Italian it went to the hub. Neither
 is wrong and they cannot both be deliberate on the same pages.

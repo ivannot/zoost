@@ -698,6 +698,46 @@ def nav_targets_match_across_languages(findings: list) -> None:
                                     f'{a.replace("/it/", "/", 1)} — same label, different destination')
 
 
+def nav_marks_the_page_you_are_on(findings: list) -> None:
+    """A page whose nav links to itself has to say so, and three did not.
+
+    `aria-current="page"` is what draws the current entry bold, and once the pills became "outlined
+    unless you are on it", it is also what fills them. Missing, the control silently stops working -
+    which is how it was found: reported as «Come si usa non cambia stile», on `it/how-to`. The sweep
+    then showed **`it/crm` and `it/analytics` too**, so on the Italian side the product pill never
+    filled at all - and I had verified the fill on the English pages only, which is the one-of-a-set
+    miss this repository keeps recording.
+
+    The criterion is derived, never listed: take the URL the platform serves for this file, and if
+    the nav contains a link to exactly that URL, that link must carry the attribute and no other may.
+    A page with no self link - the home, 404 - is silent by construction rather than by exemption.
+    """
+    def served(rel: str) -> str:
+        rel = rel.removesuffix('.html')
+        return '/' + rel.removesuffix('index').rstrip('/') if not rel.endswith('index') else '/' + rel[:-5]
+
+    for p in sorted(SITE.glob('*.html')) + sorted((SITE / 'it').glob('*.html')):
+        rel = str(p.relative_to(SITE))
+        me = served(rel)
+        html = p.read_text(encoding='utf-8')
+        nav = re.search(r'<nav[\s\S]*?</nav>', html)
+        if not nav:
+            continue
+        links = re.findall(r'<a\b([^>]*)>', nav.group(0))
+        mine = [a for a in links if re.search(r'href="([^"]+)"', a)
+                and re.search(r'href="([^"]+)"', a).group(1).rstrip('/') == me.rstrip('/')]
+        marked = [a for a in links if 'aria-current="page"' in a]
+        if mine and not marked:
+            findings.append(f'{rel}: the nav links to this page ({me}) and nothing carries '
+                            f'aria-current="page", so the current entry is not marked')
+        elif len(marked) > 1:
+            findings.append(f'{rel}: {len(marked)} nav links carry aria-current="page"; exactly one may')
+        elif marked and mine and marked[0] not in mine:
+            href = re.search(r'href="([^"]+)"', marked[0])
+            findings.append(f'{rel}: aria-current="page" is on {href.group(1) if href else "?"}, '
+                            f'but this page is served at {me}')
+
+
 def main() -> int:
     pages = sorted(SITE.glob('*.html'))
     if not pages:
@@ -748,6 +788,7 @@ def main() -> int:
     trademark_disclaimer_is_one_sentence(findings)
     docs_stamp_is_current(findings)
     nav_targets_match_across_languages(findings)
+    nav_marks_the_page_you_are_on(findings)
     txt_served_by_worker(findings)
     hosts_declared(findings)
 
