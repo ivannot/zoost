@@ -61,7 +61,13 @@ header nav a{color:var(--muted);text-decoration:none;white-space:nowrap;display:
    themselves, they can carry their names again instead of shrinking to bare icons. */
 header nav .nbrk{display:none}
 header nav a:hover{color:var(--ink)}
-header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
+/* The current entry changes colour and gains an underline, and it does **not** change weight.
+   Bold is wider than regular, so marking the page you are on moved every link to the right of
+   it - small, constant, and reported as the kind of thing you feel before you can name it. An
+   underline is drawn inside the box the text already occupies, so it costs no width at all;
+   the pills need nothing, since they carry 600 in both states and it is the fill that moves. */
+header nav a[aria-current="page"]{color:var(--ink);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}
+header nav a.nprod[aria-current="page"],header nav a.nai[aria-current="page"]{text-decoration:none}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
    not var(--sel): that token is the *current* page's accent, so a "Zoho CRM" button would turn
    magenta on the Analytics pages — which is the one thing the colours exist to prevent. */
