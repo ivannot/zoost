@@ -3,3 +3,8 @@
 _worker.js
 wrangler.jsonc
 .assetsignore
+# _headers is consumed by the platform at deploy time and never served (verified: it 404s). It is
+# listed here so auditcheck does not compare a file that has no URL - and the cache-control rules it
+# sets were re-checked on a preview after adding it, since this list is also what excludes files from
+# the upload.
+_headers
