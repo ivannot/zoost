@@ -36,7 +36,7 @@ header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
 header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 header .brand:hover{opacity:.85}
 header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
-header nav a{color:var(--muted);text-decoration:none;white-space:nowrap}
+header nav a{color:var(--muted);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;min-height:24px}
 header nav a:hover{color:var(--ink)}
 header nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 /* The two products carry their own colour in the nav, on every page. Deliberately hard-coded and
@@ -59,6 +59,33 @@ header nav a.nprod .nshort{display:none}
   header nav a.nprod .nfull{display:none}
   header nav a.nprod .nshort{display:inline}
 }
+/* Touch sizing, asked of the input rather than guessed from the width.
+   `pointer:coarse` is the browser answering "is this being touched or pointed at", which is the
+   actual question - a width can only ever be a proxy for it, and it gets tablets and phones held
+   sideways wrong. Measured: at 768 (iPad upright) and at 844 (a phone in landscape) the nav was
+   back to 8 targets under 44px, because the width-based rule below had stopped applying.
+   The footer's link row is the same problem and was worse: **nine links 15px tall**, on every
+   device, since it never had a narrow-width rule at all.
+   Links inside a sentence are deliberately left alone - WCAG's target-size rule exempts them, and
+   padding them would break the line spacing of the prose they sit in. */
+@media (pointer:coarse){
+  header nav{gap:2px 4px}
+  header nav a{min-height:44px;display:inline-flex;align-items:center;padding:0 7px}
+  /* The icon grows with the pill. At 18px inside a 44px block it read as a big empty button with
+     something small lost in the middle - the target was right and the thing looked wrong, which is
+     its own kind of defect on a page that is a business card. */
+  header nav a.nprod{padding:0 9px}
+  header nav a.nprod .npic{width:24px;height:24px;border-radius:6px}
+  header nav a.ncta{padding:0 10px}
+  footer .flinks a{display:inline-flex;align-items:center;min-height:44px}
+  footer .flinks .sep{padding:0 2px}
+}
+
+/* Keyboard focus, which the site had no style for at all: the browser default outline on a dark
+   background is thin and easy to lose, and someone navigating by keyboard has nothing else to go on.
+   `:focus-visible` rather than `:focus`, so a mouse click does not leave a ring behind. */
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+
 /* On a phone the navigation is touched, not pointed at, and that changes what "cramped" means.
    Measured at 375 and 390: the four word links were 21px tall with 10px between them, and the
    product pills 28px - against the 44pt minimum touch target Apple's guidelines give. So they did
@@ -116,7 +143,12 @@ main .meta{font:12.5px var(--mono);color:var(--muted)}
 /* ---- footer (identical on every page) ---- */
 footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);font-size:13px}
 footer a{color:var(--muted)} footer a:hover{color:var(--teal)}
+/* Two thresholds, because there are two standards and they are not the same claim.
+   **24x24 CSS px is WCAG 2.5.8, level AA, and it applies whatever is pointing** - these links were
+   15px tall on a desktop too. 44px is Apple's guideline and WCAG's AAA, and is what the touch rule
+   further up raises them to. Links inside a sentence are exempt from both and are left alone. */
 footer .flinks{margin:0 0 14px}
+footer .flinks a{display:inline-flex;align-items:center;min-height:24px}
 footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
 /* Version alignment badge — hidden until site.js has something true to put in it. */
 #vers{display:none}

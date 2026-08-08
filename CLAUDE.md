@@ -1834,6 +1834,24 @@ that scroll on purpose. **And the badge only exists when `/api/versions` answers
 against a bare local server has `#vers` at `display:none` and can never see it — measure against the
 live site, or stub the endpoint.
 
+**A width is a proxy for the question; `pointer:coarse` is the question.** The navigation was sized
+for touch below 760px, so an iPad upright and a phone held sideways got the mouse sizing back - eight
+targets under 44px, measured. Asking the browser whether the thing is being touched or pointed at
+covers every device without anyone enumerating them. Two thresholds, and they are different claims:
+**24x24 CSS px is WCAG 2.5.8 at level AA and applies whatever is pointing** - the footer's nine links
+were **15px tall on a desktop too** - while 44px is Apple's guideline and WCAG's AAA, and is what the
+coarse-pointer rule raises them to. **Links inside a sentence are exempt from both and must be left
+alone**, or the padding wrecks the line spacing of the prose; the check that matters is therefore not
+"how many targets are small" but "how many *standalone* ones are", and the first version of that
+measurement counted fifteen inline links on the home and would have sent me editing paragraphs.
+
+**And the number being right does not mean the result is.** At 44px the product pills became big
+empty blocks with an 18px icon adrift inside, and «Italiano» was orphaned on a row of its own - both
+visible only by looking. The icon grows with the pill (24px), and seven comfortable targets simply do
+not fit one row at 375px, so two balanced rows is the answer rather than a failure. The site also had
+**no focus style at all**; `:focus-visible` now draws a teal ring, verified by reading the computed
+outline rather than by trusting the rule.
+
 **Pages are responsive, and that is checked at a width, not eyeballed.** Wide content — tables, long
 code tokens, diagrams — scrolls inside its own box; the page body never scrolls sideways. The guides
 overflowed 375px by ~95px from code tokens in table cells, and nobody had looked. The nav carries the
