@@ -246,10 +246,14 @@ async function versions(request, ctx) {
 // while the other had to carry its name in the path. The guides are `/docs-crm` and
 // `/docs-analytics` now, and `/how-to` is the neutral way in.
 //
-// The old path must never 404, and not merely for tidiness: **Zoost for Zoho CRM 1.9.0 has
-// `zoost.it/docs.html` compiled into it** and is in review as this ships. A published extension
-// cannot be asked to change, so the site keeps its side of that contract permanently. 301 rather
-// than 302 so search engines move rather than keep asking.
+// The old path must never 404, and not merely for tidiness: **Zoost - workbench for Zoho CRM 1.9.0
+// builds `zoost.it/docs.html`** — `const DOCS_URL = PRODUCT_URL + '/docs.html'` — and 1.9.0 is the
+// version the Chrome Web Store is serving. A published extension cannot be asked to change, so the
+// site keeps its side of that contract. Nothing in this repository links here any more, which is
+// what makes it look removable and is exactly why it is not: the only thing pointing at it is an
+// artefact nobody can edit. It becomes removable once no published version builds it and installs
+// have had time to update — and even then it is four lines against a dead link that cannot be
+// fixed. 301 rather than 302 so search engines move rather than keep asking.
 // The target is the URL that answers 200. `/docs-crm.html` is itself 307'd to `/docs-crm` by the
 // asset layer, so pointing here at the `.html` form would send a published extension's users through
 // two redirects to reach one page — and it is the same confusion between a file's path and its URL
