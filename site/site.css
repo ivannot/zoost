@@ -198,7 +198,10 @@ header nav a.nprod .nshort{display:inline}
   header nav a{padding:0 5px}
   header nav a.nprod{padding:0 8px;gap:5px}
   header nav a.nai,header nav a.ncta{padding:0 7px}}
-header nav a.nai{border:1px solid #b06a1c;color:#f0a44a;border-radius:7px;padding:4px 10px;font-weight:600;letter-spacing:.3px}
+/* Same box as the product pills, which needs `line-height` said out loud: `.nprod` carried 1.2
+   and this did not, so it inherited the body's and came out 32.3px against their 26.2 - six
+   pixels of difference in a row of three pills that are meant to read as one set. Reported. */
+header nav a.nai{border:1px solid #b06a1c;color:#f0a44a;border-radius:7px;padding:4px 10px;font-weight:600;line-height:1.2;letter-spacing:.3px}
 header nav a.nai:hover{background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
 header nav a.nai[aria-current="page"]{background:#d97706;border-color:#d97706;color:var(--bg)}
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
