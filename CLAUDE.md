@@ -1878,6 +1878,12 @@ It also poisoned the Worker's own cache: a 404 body was stored under `?v=16` and
 content-type afterwards, so **the fix looked like it had not worked**. `CACHE_KEY` is the lever for
 exactly that, and this is the second reason to bump it besides a change of payload shape.
 
+**A head block is copied from a neighbour, which is how `og:url` came to disagree with the canonical
+on five pages** - so the fixes are held by tests rather than by having been made: every page declares
+one canonical with `og:url` equal to it, carries `<main>` and a skip link whose target exists on the
+page, and has a description, an `og:image` and a `twitter:card`. Derived from the directory, so a page
+added tomorrow is covered without anyone remembering, and proven by breaking each one.
+
 **Open Graph existed on 6 pages of 18**, which are not the pages people paste into a chat: `/try` sent
 to someone who has to approve the install rendered as a bare URL. Every page has the block now, and
 `og:url` is the canonical - they disagreed on five pages because the rewrite that moved every URL to

@@ -344,3 +344,45 @@ test('nothing in the footer badge is unbreakable on a phone', () => {
   assert.match(css, /@media \(max-width:640px\)\{#vers \.vitem\{white-space:normal\}\}/);
   assert.match(css, /text-size-adjust:100%/);
 });
+
+// ---------- the head, which nothing was holding ----------
+//
+// Open Graph, the canonical/og:url agreement, the landmark and the skip link were all fixed by hand
+// after an outside review, and nothing then stopped the next page from shipping without them - the
+// pages are written by copying a neighbour's head block, which is exactly how `og:url` came to
+// disagree with the canonical on five pages in the first place. Derived from the directory, so a
+// page added tomorrow is covered without anyone remembering.
+
+test('every page declares one canonical, and og:url agrees with it', () => {
+  for (const f of listPages()) {
+    const s = read(f);
+    if (f.endsWith('404.html')) continue;              // served everywhere, canonical for nothing
+    const can = s.match(/<link rel="canonical" href="([^"]+)"/);
+    assert.ok(can, `id=${f} has no canonical`);
+    const og = s.match(/<meta property="og:url" content="([^"]+)"/);
+    assert.ok(og, `id=${f} has no og:url`);
+    assert.equal(og[1], can[1],
+      `id=${f} tells a search engine one URL and a social card another`);
+  }
+});
+
+test('every page has a main landmark and a skip link that points into it', () => {
+  for (const f of listPages()) {
+    const s = read(f);
+    assert.ok(/<main\b/.test(s), `id=${f} has no <main>: the browser's own skip has no target`);
+    const skip = s.match(/<a class="skip" href="#([^"]+)"/);
+    assert.ok(skip, `id=${f} has no skip link`);
+    assert.ok(new RegExp('id="' + skip[1] + '"').test(s),
+      `id=${f} skips to #${skip[1]}, which is not on the page`);
+  }
+});
+
+test('every page carries a description and a card type', () => {
+  for (const f of listPages()) {
+    const s = read(f);
+    if (f.endsWith('404.html')) continue;              // deliberately noindex, and shared by no URL
+    assert.ok(/<meta name="description" content="[^"]{40,}"/.test(s), `id=${f} has no description`);
+    assert.ok(/<meta name="twitter:card"/.test(s), `id=${f} has no twitter:card`);
+    assert.ok(/<meta property="og:image"/.test(s), `id=${f} has no og:image`);
+  }
+});
