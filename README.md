@@ -34,7 +34,7 @@ went stale would be this one.
 ## What to expect from this project
 
 Zoost is **free**, licensed under [Apache-2.0](LICENSE), and built and maintained by one person
-in his spare time - with substantial help from Claude (which I've come to call Claudio) on
+in his spare time - with substantial help from Claudio on
 design, code and wording. The judgement calls, and the responsibility for the result, are mine.
 
 - Issues and pull requests are welcome and are read.

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/crm.html sha256:f5f689b505f5725c -->
+<!-- translated-from: site/crm.html sha256:347a562c470fb3bd -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost CRM - il Deluge sotto Git, e la mappa della tua org</title>
@@ -92,18 +92,17 @@
 <div class="hero">
   <div class="wrap">
     <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
-    <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama cosa, di
-      quale modulo è in relazione con quale, e di quale automazione scatta quando. Tutta la tua org Zoho CRM sul tuo
-      disco, cercabile in un colpo solo - e non chiama nessun endpoint che crei, modifichi o cancelli qualcosa al suo interno.</p>
+    <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama chi, di quali moduli si tengono per mano, e di quale automazione scatta e quando. Tutta la tua org Zoho CRM sul tuo disco, da cercare in un colpo solo - e senza che venga chiamato
+      un solo endpoint capace di crearci, modificarci o cancellarci qualcosa.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
       <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" data-it-only style="margin-top:22px">Questa pagina è in italiano, e così la guida e la privacy policy.
-      <b>L'estensione, invece, è in inglese</b>: i nomi dei
-      comandi che leggi qui (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli che troverai nel pannello,
-      non traduzioni. La versione inglese di questa pagina è <a href="/crm" hreflang="en">qui</a>.</p>
+    <p class="note" data-it-only style="margin-top:22px">Questa pagina è in italiano, e lo sono anche la guida e la privacy policy.
+      <b>L'estensione invece è in inglese</b>, e i nomi dei comandi che trovi scritti qui
+      (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli veri del pannello, non una loro
+      traduzione. La versione inglese di questa pagina è <a href="/crm" hreflang="en">qui</a>.</p>
   </div>
 </div>
 
@@ -113,37 +112,38 @@
     <div class="why">
       <div>
         <h3>Una storia per tutto quello che scarichi</h3>
-        <p>Lo storico delle versioni di Zoho CRM copre una <em>funzione</em>, una per volta, dentro Zoho.
+        <p>Lo storico che Zoho CRM tiene copre una <em>funzione</em> per volta, e solo dentro Zoho.
           Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow,
           schedulazioni, connessioni - arriva sul tuo disco come file che si leggono con un editor qualsiasi
-          (sorgente, JSON). Con Git una storia ce l'ha anche quella parte, e un unico diff risponde a
-          <em>cosa è cambiato in quest'org il mese scorso</em> su tutti i tipi insieme, invece che una
-          funzione per volta. <b>Git è facoltativo</b>: senza, quei file restano lì, e li puoi cercare e
-          condividere lo stesso.</p>
+          (sorgenti, JSON). Mettici Git sopra e uno storico ce l'ha anche tutto il resto: un solo diff ti dice
+          <em>cos'è cambiato in quest'org il mese scorso</em>, su ogni tipo insieme, invece che una
+          funzione alla volta. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì, e li
+          cerchi e li passi a un collega comunque.</p>
       </div>
       <div>
         <h3>Tutta l'org in un colpo solo</h3>
-        <p>Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un unico posto navigabile, e in
-          un unico documento da condividere con chi l'estensione non ce l'ha.</p>
+        <p>Funzioni, moduli, relazioni, workflow, schedulazioni e connessioni in un posto solo dove puoi
+          muoverti, e in un documento solo da girare a chi l'estensione non ce l'ha.</p>
       </div>
       <div>
         <h3>Non è un editor, per scelta</h3>
         <p>Zoost non sostituisce l'editor di Zoho. Continui a scrivere dove Zoho compila e valida.
-          Zoost è l'altra metà: navigazione, riferimenti incrociati, la mappa e l'audit per cui l'editor non ha spazio - e, con Git, una storia delle parti che Zoho non versiona.</p>
+          Zoost è l'altra metà: muoversi, incrociare i riferimenti, la mappa e il controllo di salute per cui
+          nell'editor non c'è spazio - e, con Git, uno storico delle parti che Zoho non versiona.</p>
       </div>
       <div>
         <h3>Un grep su tutta l'org</h3>
-        <p>Ricerca full-text su <b>tutte</b> le funzioni Deluge insieme - la cosa che Zoho non ha mai avuto. Trova
-          ogni punto in cui un campo, un modulo, un endpoint o un id scritto a mano è referenziato, prima di
-          cambiarlo.</p>
+        <p>Ricerca full-text su <b>tutte</b> le funzioni Deluge insieme: la cosa che a Zoho è sempre mancata.
+          Ti mostra ogni punto in cui compaiono un campo, un modulo, un endpoint o un id scritto a mano,
+          prima che tu ci metta le mani.</p>
       </div>
       <div>
-        <h3>I nomi delle relazioni che continui a perdere</h3>
+        <h3>Quei nomi che tocca sempre ripescare</h3>
         <p>L'API name di una related list non è l'API&nbsp;name di nessuno dei due moduli - ed è quello che
-          <code>getRelatedRecords()</code> pretende. Zoost cataloga ogni relazione con la chiamata pronta da copiare.</p>
+          <code>getRelatedRecords()</code> pretende. Zoost le cataloga tutte, con la chiamata già pronta da copiare.</p>
       </div>
     </div>
-    <p class="note">Costruito e mantenuto da una persona sola, con un aiuto importante da Claude - "Claudio", per me -
+    <p class="note">Lo costruisce e lo mantiene una persona sola, con un aiuto tutt'altro che secondario da Claudio
       su design, codice e testi. Le decisioni, e la responsabilità, sono mie.</p>
   </div>
 </section>
@@ -156,19 +156,18 @@
       <div class="card">
         <h3>Ogni funzione, come file</h3>
         <ul>
-          <li>Sorgente Deluge in cartelle per namespace, pronto per Git. Salvi in Zoho e il file locale segue.</li>
-          <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> - la cosa più vicina a un
+          <li>Sorgente Deluge in cartelle per namespace, pronto per Git. Salvi in Zoho e il file sul disco si aggiorna da solo.</li>
+          <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> - quanto di più simile a un
             <code>grep</code> sulla tua org, e qualcosa che Zoho non offre.</li>
-          <li>Ognuna porta la sua dimensione, le sue chiamate API in uscita, chi l'ha modificata per ultimo e le
-            connessioni che usa.</li>
+          <li>Ognuna si porta dietro la sua lunghezza, le chiamate API che fa, chi l'ha toccata per ultimo e le
+        connessioni che usa.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>La mappa</h3>
         <ul>
-          <li><span class="k">Graph</span>: chi chiama una funzione, e cosa chiama lei. Ci cammini
-            dentro cliccando.</li>
+          <li><span class="k">Graph</span>: chi chiama una funzione, e cosa chiama lei. Ci cammini dentro a forza di clic.</li>
           <li><span class="k">Diagramma ER</span>: moduli come tabelle, lookup come frecce. Ne metti uno a fuoco,
             ti allontani, lo stampi grande quanto una parete.</li>
           <li>Nel codice, le chiamate ad altre funzioni sono cliccabili: salti alla definizione e torni indietro.</li>
@@ -180,7 +179,7 @@
         <ul>
           <li>Una riga per related list, con il suo API name e la chiamata
             <code>getRelatedRecords()</code> pronta da copiare.</li>
-          <li>Il campo lookup o il modulo di collegamento che ci sta dietro, così vedi com'è agganciata.</li>
+          <li>Il campo lookup o il modulo di collegamento che ci sta dietro, così vedi da dove nasce.</li>
           <li>Ogni campo con il suo tipo, e una matrice che mostra su quale layout compare.</li>
         </ul>
       </div>
@@ -191,8 +190,7 @@
           <li>Workflow con trigger, criteri e le funzioni che invocano; schedulazioni con frequenza e stato.</li>
           <li><span class="k">Quali regole non scattano subito</span>, quanto aspettano, e quando ognuna è stata
             eseguita l'ultima volta.</li>
-          <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna - così sai cosa è sicuro
-            cancellare.</li>
+          <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna - così sai cosa puoi cancellare senza pentirtene.</li>
         </ul>
       </div>
 
@@ -208,9 +206,9 @@
       <div class="card">
         <h3>Export, e un assistente opzionale</h3>
         <ul>
-          <li>Tutta l'org come un unico file HTML autoconsistente, o in Markdown per uno strumento AI.</li>
-          <li>Una finestra decide cosa può lasciare la tua macchina, sezione per sezione. Il codice sorgente va
-            incluso apposta.</li>
+          <li>Tutta l'org come un unico file HTML che sta in piedi da solo, o in Markdown per darlo in pasto a un'AI.</li>
+          <li>Una finestra dove decidi tu, sezione per sezione, cosa può uscire dalla tua macchina. Il codice
+        sorgente lo devi includere apposta.</li>
           <li>Con una chiave tua, un assistente che legge <em>la tua</em> org invece di tirare a indovinare - e che
             può essere protetto da una passphrase.</li>
         </ul>
@@ -226,11 +224,11 @@
     <ol class="steps">
       <li>Installa dal <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Chrome Web Store</a> e apri il pannello laterale.</li>
       <li>In <b>Settings</b>, scegli una <b>cartella di lavoro</b> - dedicata e vuota. Ogni workspace vivrà lì dentro.</li>
-      <li>Apri una scheda Zoho CRM e premi <b>+</b>. Zoost crea il workspace per quell'org.</li>
+      <li>Apri una scheda Zoho CRM e premi <b>+</b>. Zoost ti prepara il workspace per quell'org.</li>
       <li>Premi <b>Pull all</b> per rispecchiare funzioni, moduli, layout, relazioni, workflow, schedulazioni e connessioni.</li>
-      <li><b>Facoltativo:</b> <code>git init</code> nella cartella, e da qui in poi hai la storia di tutta
-        l'org. Tutto il resto funziona anche senza.</li>
-      <li>Esplora: segui una chiamata, apri il grafo, lancia l'audit di salute, oppure esporta tutto.</li>
+      <li><b>Se vuoi:</b> <code>git init</code> nella cartella, e da lì in avanti hai lo storico dell'org
+        intera. Tutto il resto funziona anche senza.</li>
+      <li>Poi gira: segui una chiamata, apri il grafo, lancia il controllo di salute, o esporta tutto.</li>
     </ol>
     <p class="note"><b>Oppure premi <span class="k">+ Sample</span> e salti tutto.</b> Scrive nella cartella
       di lavoro un workspace di dati inventati, così apri l'albero, i diagrammi e gli export prima di puntare
@@ -240,11 +238,11 @@
       <a href="/it/docs-crm"><b>Come si usa Zoost CRM</b></a>.</p>
     <p class="note">Su cosa si regge, cosa si rifiuta di fare, e come verificarlo:
       <a href="/it/nerd">la pagina nerd</a>.</p>
-    <p class="note">Devi essere autenticato a Zoho CRM nello stesso browser. Zoost usa la tua sessione e i tuoi
+    <p class="note">Ti serve una sessione Zoho CRM aperta nello stesso browser. Zoost usa la tua sessione e i tuoi
       permessi esistenti - vede esattamente quello che vedi tu, e niente di più.</p>
     <p class="note warn">L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del
-      workspace che gli serve, sorgente Deluge compreso, va al provider che configuri. Verifica che sia accettabile
-      nella tua organizzazione prima di attivarlo. Tutto il resto resta locale.</p>
+      workspace che gli serve, sorgente Deluge compreso, va al provider che configuri. Prima di accenderlo, assicurati che nella tua azienda sia una cosa ammessa. Tutto il resto non si
+      muove da lì.</p>
   </div>
 </section>
 
