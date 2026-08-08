@@ -35,6 +35,7 @@ python3 tools/sitecheck.py | tail -1
 python3 tools/namecheck.py | tail -1
 python3 tools/featurecheck.py | tail -1
 python3 tools/htmlcheck.py | tail -1
+python3 tools/sitemap.py --check | tail -1
 
 echo
 echo "── build ──"

@@ -30,6 +30,7 @@ import whatsnew            # noqa: E402
 import htmlcheck            # noqa: E402
 import featurecheck         # noqa: E402
 import namecheck            # noqa: E402
+import sitemap              # noqa: E402
 
 
 class BareNames(unittest.TestCase):
@@ -954,6 +955,47 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
                             f'{c[1]} {c[2]} is in the ledger with no release notes at '
                             f'store/{c[1]}/whatsnew/{c[2]}.md')
         self.assertTrue(rows, 'no ledger row was checked — the parse or the floors are wrong')
+
+
+class SitemapIsDerived(unittest.TestCase):
+    """Every field in the sitemap was typed by hand, and the dates had drifted three days behind.
+
+    Google uses `<lastmod>` "if it's consistently and verifiably accurate (for example by comparing
+    to the last modification of the page)" — so stale dates do not cost one row, they cost the field
+    across the file. Ours were wrong at the one moment it mattered: the canonical fix had just
+    rewritten every page and the sitemap still said nothing had changed.
+    """
+
+    def test_the_committed_file_is_what_the_site_derives(self):
+        out = subprocess.run([sys.executable, str(ROOT / 'tools/sitemap.py'), '--check'],
+                             capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stdout)
+
+    def test_the_url_is_the_served_one_not_the_file_name(self):
+        self.assertEqual(sitemap.url_of('crm.html'), 'https://zoost.it/crm')
+        self.assertEqual(sitemap.url_of('it/crm.html'), 'https://zoost.it/it/crm')
+        self.assertEqual(sitemap.url_of('index.html'), 'https://zoost.it/')
+        self.assertEqual(sitemap.url_of('it/index.html'), 'https://zoost.it/it/')
+        self.assertEqual(sitemap.url_of('llms.txt'), 'https://zoost.it/llms.txt')
+
+    def test_it_writes_no_field_google_ignores(self):
+        xml = sitemap.build()
+        self.assertNotIn('<priority>', xml, 'Google ignores priority; a field nobody reads only rots')
+        self.assertNotIn('<changefreq>', xml)
+
+    def test_every_lastmod_is_a_date(self):
+        self.assertTrue(re.fullmatch(r'\d{4}-\d{2}-\d{2}', sitemap.lastmod('crm.html')))
+
+    def test_the_home_comes_first(self):
+        self.assertEqual(sitemap.pages()[0], 'index.html')
+
+    def test_a_page_with_no_translation_carries_no_alternates(self):
+        # Deriving the pair from the twin's existence is what stops a new page shipping without it -
+        # and what stops one being claimed where there is nothing to point at.
+        xml = sitemap.build()
+        block = [b for b in xml.split('<url>') if '<loc>https://zoost.it/llms.txt</loc>' in b]
+        self.assertEqual(len(block), 1, xml[:400])
+        self.assertNotIn('hreflang', block[0])
 
 
 class DeployStateIsPartOfTheAudit(unittest.TestCase):

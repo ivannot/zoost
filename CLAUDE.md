@@ -83,7 +83,27 @@ notice and hard to name. It was reported by the user, which is the failure. **A 
 python3 tools/sitecheck.py           # header and footer must have one shape across all pages
 python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
+python3 tools/sitemap.py --check     # the sitemap is derived from the site, never typed
 ```
+
+**A URL is what the platform serves, not what the file is called, and every check here derived it
+from the file.** Cloudflare serves `crm.html` at `/crm` and 307s the `.html` form to it, so each page
+declared a canonical pointing at a redirect while `/crm` — the URL that answers 200 — announced
+itself as an alternative of it. Google indexed **neither**: Search Console reported «alternative page
+with proper canonical tag» and the product pages were invisible for as long as they had existed. The
+site was internally consistent the whole time, which is why nothing caught it; `auditcheck.py` had
+the right rule in `published_path()` and `sitecheck.py` had a different one four files away, and
+nobody had ever compared the two. `canonicals_answer_without_redirecting()` now asks the site rather
+than the repository: every canonical and alternate must answer **200 with no redirect**.
+
+**And the sitemap was hand-typed, which is the same defect with a slower fuse.** Its `lastmod` had
+drifted three days behind on 15 of 17 URLs and two carried none at all — at the exact moment the
+canonical fix had rewritten every page and we needed a recrawl. Google's documentation is explicit
+that it uses `<lastmod>` *"if it's consistently and verifiably accurate"*, so dates that fail that
+comparison cost the field across the whole file, not one row. `tools/sitemap.py` derives all of it —
+URL by the served rule, `lastmod` from the last commit touching that file, the `hreflang` pair from
+whether the translation exists — and writes **no `<priority>` or `<changefreq>`, because Google says
+plainly it ignores both** and a hand-maintained field nobody reads can only ever be wrong.
 
 **There is a third reader, and the site had no page for them: whoever has to *approve* the install.**
 The IT lead, the DPO, the manager who receives «can I install an extension that reads the CRM?».
