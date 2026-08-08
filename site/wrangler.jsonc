@@ -31,6 +31,6 @@
     // Worker is what 301s `/docs` and `/docs.html`. **`zoost.it/docs.html` is compiled into Zoost for
     // Zoho CRM 1.9.0**, the version the Store is serving, so those two must keep redirecting: they run
     // the script first and the 404 stays the fallback for everything else.
-    "run_worker_first": ["/llms.txt", "/robots.txt", "/docs", "/docs.html"]
+    "run_worker_first": ["/api/*", "/llms.txt", "/robots.txt", "/docs", "/docs.html"]
   }
 }
