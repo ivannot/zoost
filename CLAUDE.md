@@ -2023,6 +2023,27 @@ at and never has to shrink to a bare mark, which is one fewer place the name can
 break is declared per page rather than achieved with a margin trick, so `sitecheck`'s nav-shape
 comparison sees it and a page missing it is reported.
 
+**The nav carries the short product names at every width, and the full ones were costing an
+overflow nobody had measured.** `.wrap` is 900px; with `Zoost - workbench for Zoho CRM` and its
+sibling the bar came to **874px**, so the header ran **87px outside** the column every other element
+respects, and **300px past where the prose ends** - reported by the author as «le voci di menu vanno
+molto a destra, fuori dall'ingombro del testo». It predates the AI pill, which added ~46px and made
+it visible. Two fixes were tried and measured before the third: letting `.wrap` wrap gives a **100px**
+sticky header, and letting the *nav itself* wrap gives **140px** once the Italian labels need a second
+line. The short form brings the bar to **584px** (620 in Italian) - one line, 61px, at every width in
+both languages, with room for a third product. `Zoost CRM` is the manifest's own `short_name`, not a
+fourth form invented to fit, and the full name stays in `aria-label`, in every `<title>`, in the
+footer and as each product page's `h1`. `header .wrap` keeps `flex-wrap:wrap` at all widths anyway:
+it costs nothing now and makes the overflow structurally impossible if a label ever grows. The auto
+margin moved from the nav to the brand, so a wrapped bar starts at the column's left edge instead of
+being shoved right.
+
+**And the stylesheet was cached while I measured it, again.** Three iframe sweeps reported a wrap
+that was not applying, because `?cb=` busts the *page* and the stylesheet is a separate request. The
+computed `flex-wrap` said `nowrap` while the file said `wrap`. Force the linked sheet to reload
+inside the frame before believing any measurement of a CSS change - this is the third time it has
+cost a wrong reading in this repository.
+
 **The language switch shortens to `IT` / `EN` below 400px, and a flag was refused.** A flag is a
 country, not a language - which one for English? - and on Windows the country-flag emoji is not in
 the system font at all, so browsers fall back to printing the two letters, which means the width
@@ -2382,6 +2403,12 @@ not a generated-with line, nothing. The repository's first 136 commits have none
 a single session without being asked for, and they are on GitHub. The default the tooling suggests is
 overridden here and stays overridden — **only Ivan decides what goes in a commit message.** Ask if you
 think there is a reason; do not infer one.
+
+**`b.ui` was defined in four inline copies and is now in `site.css` once.** It is the chip that
+names a control - `Clear`, `Pull all` - and both guides in both languages carried their own copy, so
+the first page outside the guides to use it rendered it as ordinary bold text. Exactly the `.k` /
+`.card` / `.note` history repeating, and this time `classes_defined` caught it on the same day rather
+than after months. It is `.doc`-scoped, so no landing page changes.
 
 **A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
 minor for features. Propose the commit message; do not batch unrelated work into one commit.

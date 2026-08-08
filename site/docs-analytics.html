@@ -26,10 +26,8 @@
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#be2a6b;--sel-soft:#3a1226}
   /* docs-specific - shared base & content typography are in site.css */
-  b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
   /* The same marks the toolbar draws, at the same weight - a guide that names a control the panel
      no longer spells out is a guide the reader has to translate. */
-  b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -402,6 +400,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of
     query-over-query. You can read exactly what it is told in <b class="ui">⚙ Settings</b>. What it writes
     is a draft for you to paste, never something Zoost has checked.</p>
+  <h3>Keeping the conversation - and the bill - under control</h3>
+  <p><b class="ui">Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
+    thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
+    subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever -
+    it caps how many explore-then-answer rounds the agent may take before it must reply.</p>
+
   <p class="box warn">Using the assistant sends the parts of your workspace it needs - view and column
     names, relations, and the SQL of your query tables - from your browser straight to the provider you
     chose. It never sends the rows inside your tables, because Zoost does not read them. Nothing goes to

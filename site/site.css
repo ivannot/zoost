@@ -30,7 +30,13 @@ a{color:var(--teal)}
 
 /* ---- header (identical on every page) ---- */
 header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(13,18,28,.92);backdrop-filter:blur(8px);z-index:5}
-header .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
+/* The header wraps at every width, not only on a phone. `.wrap` is 900px and the bar was allowed to
+   overflow it: measured at 1280px the nav ended at x=1177 against a column ending at 1090 - 87px of
+   chrome hanging outside the box every other element respects, and 300px past where the prose ends.
+   It predates the AI pill (which added ~46px and made it visible), and it was never a phone problem,
+   which is why the wrap rule that existed only below 760px never touched it. Wrapping costs nothing
+   while everything fits on one line and is the only thing that makes overflow impossible. */
+header .wrap{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 22px}
 /* The marks are inline SVG, not images: three 192x192 PNGs were being downloaded on every page and
    drawn at 22-38px, six times the pixels needed, and each one paid a revalidation round trip because
    the platform serves assets with `max-age=0, must-revalidate`. Inline they cost no request at all
@@ -40,7 +46,12 @@ header img,header .bpic{width:26px;height:26px;border-radius:6px}
 header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
 header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
 header .brand:hover{opacity:.85}
-header nav{margin-left:auto;display:flex;gap:16px;align-items:center;font-size:13.5px}
+header nav{display:flex;gap:16px;align-items:center;font-size:13.5px}
+/* The brand pushes, the nav does not pull. With `margin-left:auto` on the nav it was still
+   shoved to the right edge once it wrapped, so it hung under the brand ending 209px past the
+   prose; with the auto margin on the brand instead, a wrapped nav starts at the column's own
+   left edge, in line with the h1 and the paragraphs. Same result on one line. */
+header .brand{margin-right:auto}
 header nav a{color:var(--muted);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;min-height:24px}
 /* Where the navigation breaks, decided rather than left to the wrap.
    Seven touch-sized targets do not fit 375px in one row, so it wrapped - and it wrapped wherever the
@@ -60,17 +71,19 @@ header nav a.ncrm:hover{background:#3b7cf0;color:#fff}
 header nav a.nana{background:#be2a6b}
 header nav a.nana:hover{background:#d43b7d;color:#fff}
 header nav a.nprod[aria-current="page"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px currentColor}
-/* Three widths, three forms of the same name — never a truncation and never a bare "CRM".
-   Wide: "Zoost for Zoho CRM". Narrower: "Zoost CRM", the short form, always carrying Zoost.
-   Narrowest: the product's own icon alone, which is the one thing that stays legible at any size.
-   aria-label holds the full name throughout, so the accessible name never shrinks with the layout. */
+/* The nav carries the short form at every width, and that was a measurement rather than a taste.
+   With both full names the bar was 874px inside a 900px column and the header overflowed it by 87px
+   on a 1280px screen - chrome hanging outside the box every other element respects, 300px past
+   where the prose ends. Wrapping fixed the overflow and cost a 100px sticky header, then 140px once
+   the Italian labels needed two lines of their own. The short form brings the bar to 584px (620 in
+   Italian): one line, 61px, at every width in both languages, with room left for a third product.
+   `Zoost CRM` is a declared form of the name, not a truncation invented to fit - the full one is in
+   `aria-label`, in every page title, in the footer and as each product page's own h1. The icon-only
+   tier stays for the narrowest widths. */
 header nav a.nprod{display:inline-flex;align-items:center;gap:7px}
 header nav a.nprod .npic{width:18px;height:18px;border-radius:5px;display:none}
-header nav a.nprod .nshort{display:none}
-@media (max-width:1240px){
-  header nav a.nprod .nfull{display:none}
-  header nav a.nprod .nshort{display:inline}
-}
+header nav a.nprod .nfull{display:none}
+header nav a.nprod .nshort{display:inline}
 /* Touch sizing, asked of the input rather than guessed from the width.
    `pointer:coarse` is the browser answering "is this being touched or pointed at", which is the
    actual question - a width can only ever be a proxy for it, and it gets tablets and phones held
@@ -190,6 +203,14 @@ header nav a.ncta .lshort{display:none}
   header nav a.ncta .lshort{display:inline}
 }
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
+
+/* The name of a control in the panel, set as a chip so a guide reads as pointing at a button
+   rather than emphasising a word. It lived in four inline copies - both guides in both languages -
+   which is the shape this repository has already had to unpick for `.k`, `.card` and `.note`: the
+   fifth page to use it renders it as ordinary bold text and nothing looks broken. It is here once
+   now, and `.doc`-scoped so no landing page changes. */
+.doc b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
+.doc b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
 
 /* ---- content pages (docs, privacy) ----
    Scoped to `.doc`, not to `main`. It was `main` for a long time and that read as a tidy scope, but

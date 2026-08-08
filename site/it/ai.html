@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/ai.html sha256:c523dc24a7cd7bd4 -->
+<!-- translated-from: site/ai.html sha256:30b8250a78687f36 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI e Zoost - cosa aggiunge, e quando non serve</title>
-<meta name="description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non vale una chiave.">
+<meta name="description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non serve una API key.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zoost">
 <meta property="og:locale" content="it_IT">
 <meta property="og:url" content="https://zoost.it/it/ai">
 <meta property="og:title" content="AI e Zoost - cosa aggiunge, e quando non serve">
-<meta property="og:description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non vale una chiave.">
+<meta property="og:description" content="Zoost funziona senza nessun modello. Cosa dà già a un assistente l'export Markdown, cosa aggiunge quello integrato, e quando non serve una API key.">
 <meta property="og:image" content="https://zoost.it/icon-512.png">
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://zoost.it/it/ai">
@@ -54,10 +54,10 @@
 <div class="wrap">
 
   <h1>AI e Zoost</h1>
-  <p class="sub">Il workbench è finito anche senza un modello, e la maggior parte delle volte si usa
-    così. Questa pagina parla dell'altra metà: cosa può fare un assistente con quello che Zoost ha
+  <p class="sub">Il workbench è completo anche senza un modello AI, e la maggior parte delle volte si
+    usa così. Questa pagina parla dell'altra metà: cosa può fare un assistente con quello che Zoost ha
     già scritto su disco, cosa aggiunge quello integrato che un file non può dare, e a che punto
-    smette di valere una chiave API.</p>
+    non serve più una API key.</p>
   <p class="note" data-it-only>I nomi dei controlli restano in inglese, perché l'estensione è in
     inglese: <b>Export</b>, <b>Settings</b>, <b>Forget</b> sono i pulsanti che troverai davvero.</p>
 
@@ -68,7 +68,7 @@
       <li><a href="#due-export-due-lettori">Due export, due lettori</a></li>
       <li><a href="#la-strada-che-non-costa-niente">La strada che non costa niente</a></li>
       <li><a href="#cosa-aggiunge-l-assistente-integrato">Cosa aggiunge l'assistente integrato</a></li>
-      <li><a href="#quando-vale-una-chiave">Quando vale una chiave</a></li>
+      <li><a href="#quando-serve-una-api-key">Quando serve una API key</a></li>
       <li><a href="#perche-una-chiave-tua">Perché una chiave tua</a></li>
       <li><a href="#come-ottenere-una-chiave">Come ottenere una chiave</a></li>
       <li><a href="#cosa-non-fa">Cosa non fa</a></li>
@@ -160,7 +160,7 @@
     scriverebbe il contesto: cliccherà una scheda, oppure chiederà a un collega. Un file sul disco
     quel problema non lo risolve; una scheda sì.</p>
 
-  <h2 id="quando-vale-una-chiave">Quando vale una chiave</h2>
+  <h2 id="quando-serve-una-api-key">Quando serve una API key</h2>
   <p>Questa è la versione onesta, ed è più stretta di come di solito viene raccontata questa categoria
     di funzioni.</p>
   <table>
@@ -237,6 +237,16 @@
     strumento serve una risposta. Le risposte degli strumenti sono limitate e ti dicono come restringere
     la domanda invece di restituire novecento righe. Il limite di spesa impostalo: quella parte non è
     una stima.</p>
+  <p>C'è un terzo fattore ed è quello che sfugge, perché il controllo che lo governa sembra pulizia.
+    <b>Tutta la conversazione viene rimandata a ogni messaggio</b> - le tue domande, le risposte, e
+    ogni funzione, vista o file SQL che l'agente ha aperto strada facendo. Niente la sfoltisce. Quindi
+    la decima domanda di un thread costa più della prima, e costa di più per materiale che con quella
+    domanda non c'entra niente.</p>
+  <p><b class="ui">Clear</b> è quello che governa questa cosa. Non serve a ripulire il riquadro: è il
+    controllo che hai su quanta storia ti stai portando dietro a pagamento, e svuotarlo quando cambi
+    argomento ti compra due cose insieme - una chiamata più economica e una risposta più a fuoco,
+    perché il modello smette di leggere intorno a un'indagine precedente per arrivare alla tua domanda.
+    Anche cambiare workspace lo svuota, per un motivo diverso: quel thread parlava di un'altra org.</p>
 
   <h3>Proteggere la chiave</h3>
   <p>Di base la chiave è salvata in chiaro nel profilo del tuo browser. Chrome non dà alle estensioni

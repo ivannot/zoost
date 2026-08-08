@@ -57,10 +57,13 @@ b1f6daca7f08580d  site/ai.html: It is the only limit here that does not depend o
 75243c3194cb00c5  site/ai.html: Markdown - for a model The same content in the shape a language model reads without effort: headings, tables, code fences, nothing to see through.
 790757ab076bf9da  site/ai.html: No key, no configuration, nothing switched on inside Zoost.
 30b31263a2df5645  site/ai.html: Nothing passes through me, and there is nothing of mine for it to pass through: no backend, no account, no log.
+f4bd35a1827e3dc5  site/ai.html: Nothing trims it.
 c39d9bd830dc99bf  site/ai.html: On this page It works without any of it Two exports, two readers The route that costs nothing What the built-in assistant adds When it is worth a key Why your own key Getting a key What it will not do It works without any of it Zoost mirrors what you built inside Zoho CRM or Zoho Analytics to plain files on your own machine, and then gives you the things the platform does not: a tree of everything at once, diagrams you can focus and print, text search across every file, a health audit that names what nothing references any more, and two exports.
+b6eb9e0418feb059  site/ai.html: So the tenth question in a thread costs more than the first, and it costs more because of material that has nothing to do with it.
 c81b8cee26428efe  site/ai.html: That is the intended behaviour and it is also a real difference in capability - the engine in use is shown as a badge in the chat header, so you always know which one you are talking to.
 d1afdee5e5bb4fef  site/ai.html: The org never has to fit anywhere.
 f6d29ba587222ef2  site/ai.html: The route that costs nothing Take the Markdown file to whichever assistant you already use - Claude, ChatGPT, Gemini, Copilot - and ask your question there.
+8a57995da0bddb1d  site/ai.html: The whole conversation is re-sent with every message - your questions, the answers, and every function, view or SQL file the agent opened along the way.
 a61d96dad2374744  site/ai.html: This is the case it was written for You would rather nothing left the machine without you watching The export - and read the file before you paste it The claim worth making is smaller than "it has AI in it", and it is the one that survives being checked: the built-in assistant buys retrieval and proximity, not knowledge.
 3699501f03217e43  site/ai.html: This page is about the other part: what an assistant can do with what Zoost has already written to disk, what the built-in one adds that a file cannot, and where it stops being worth a key.
 c78d61d24b99f7ec  site/ai.html: Turn it off, never configure it, and the workbench is the same workbench.
@@ -243,7 +246,7 @@ dcef1d689c7eb370  site/it/ai.html: C'è un limite strutturale, ed è quello che 
 ba1792338839f68a  site/it/ai.html: HTML - per le persone Un unico file autonomo, con indice, sezioni e tabelle.
 4032493165012359  site/it/ai.html: Il nome è di Anthropic ed è un avvertimento legittimo: vuol dire che in mezzo non c'è nessun server, che è esattamente la proprietà scelta qui.
 b7d3fe4e1023cf04  site/it/ai.html: In nessuna delle due estensioni esiste una strada di scrittura, né per l'AI né per il resto.
-c4e3ffab09422518  site/it/ai.html: In questa pagina Funziona senza niente di tutto questo Due export, due lettori La strada che non costa niente Cosa aggiunge l'assistente integrato Quando vale una chiave Perché una chiave tua Come ottenere una chiave Cosa non fa Funziona senza niente di tutto questo Zoost rispecchia in file di testo sulla tua macchina quello che hai costruito dentro Zoho CRM o Zoho Analytics, e poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi che puoi mettere a fuoco e stampare, la ricerca testuale su ogni file, un audit che ti dice cosa non è più referenziato da niente, e due export.
+6f1fb7777ad2c420  site/it/ai.html: In questa pagina Funziona senza niente di tutto questo Due export, due lettori La strada che non costa niente Cosa aggiunge l'assistente integrato Quando serve una API key Perché una chiave tua Come ottenere una chiave Cosa non fa Funziona senza niente di tutto questo Zoost rispecchia in file di testo sulla tua macchina quello che hai costruito dentro Zoho CRM o Zoho Analytics, e poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi che puoi mettere a fuoco e stampare, la ricerca testuale su ogni file, un audit che ti dice cosa non è più referenziato da niente, e due export.
 b88a5fcee6e25cf5  site/it/ai.html: L'export costa meno e la finestra di chat è più grande L'org è abbastanza grande da doverti chiedere se ci sta L'assistente integrato, che va a prendere invece di ricevere tutto "Cosa si rompe se cambio questo?", seguito su tutta l'org L'assistente integrato con Anthropic, che la traccia può seguirla da solo Chi fa la domanda non è chi saprebbe costruire un export L'assistente integrato.
 95aa0b2fc10d460b  site/it/ai.html: L'org di esempio che Zoost porta con sé - 143 oggetti, sorgenti Deluge compresi - sta in circa 200 KB di testo, che rientrano comodamente in quello che un modello di oggi tiene tutto insieme.
 4bbc5a2b966e89b2  site/it/ai.html: L'org non deve entrare da nessuna parte.
@@ -253,6 +256,7 @@ c5903d96afe9feb6  site/it/ai.html: Markdown - per un modello Lo stesso contenuto
 f00279d5c4002261  site/it/ai.html: Nessun fatto sulla tua org è raggiungibile da uno dei due e non dall'altro: lo specchio è lo stesso specchio.
 4cda41d1335b0539  site/it/ai.html: Nessuna chiave, nessuna configurazione, niente da accendere dentro Zoost.
 618edd28242ca9dd  site/it/ai.html: Niente di tutto questo passa da un modello, da una chiave o da un account.
+e08b000c135bee66  site/it/ai.html: Niente la sfoltisce.
 b14413a97de30c05  site/it/ai.html: Non c'è nessuna fotografia da rifare dopo il prossimo pull.
 2fd79f85d20840fc  site/it/ai.html: Non è una condizione di niente.
 60430bdf21fa9cca  site/it/ai.html: Ogni strumento legge lo specchio che hai sul disco.
@@ -260,10 +264,12 @@ b14413a97de30c05  site/it/ai.html: Non c'è nessuna fotografia da rifare dopo il
 7688a2abe972fe06  site/it/ai.html: Quello che c'è invece è una passphrase che hai solo tu: la chiave viene cifrata con quella, la digiti una volta per sessione del browser, e non esiste recupero - nessun suggerimento, nessun reset, nessun deposito.
 84fabd9086957fa5  site/it/ai.html: Quello che decide i tuoi è l'indice, che viaggia con ogni messaggio e di cui il pannello ti mostra la dimensione, più quanti passi di strumento serve una risposta.
 e60f1da4fbb2607c  site/it/ai.html: Quello che viaggia con ogni messaggio è l'indice dei nomi, limitato a 72.000 caratteri per impostazione predefinita e regolabile; il pannello scrive sotto il titolo della chat la dimensione reale per il workspace che hai aperto, in caratteri e token approssimativi, così la manopola e la sua conseguenza stanno nella stessa frase.
+aac1c1a4f6caeec7  site/it/ai.html: Quindi la decima domanda di un thread costa più della prima, e costa di più per materiale che con quella domanda non c'entra niente.
 b2128a67ca2d02f1  site/it/ai.html: Se la perdi, il pulsante Forget di ciascun fornitore cancella quella chiave così puoi incollarne una nuova, e Remove the protection toglie tutto con un controllo solo.
 c1db9d78d256e145  site/it/ai.html: Se non apri mai l'assistente non ti manca nulla: è stato aggiunto a un workbench che già funzionava.
 db8e9b865b5fba02  site/it/ai.html: Si apre in qualsiasi browser, si stampa, e chi lo legge non deve installare niente e non deve avere accesso alla tua org.
 84f5d8424f5b8c7c  site/it/ai.html: Spegnilo, non configurarlo mai, e il workbench resta lo stesso workbench.
+8c364cb6193953a6  site/it/ai.html: Tutta la conversazione viene rimandata a ogni messaggio - le tue domande, le risposte, e ogni funzione, vista o file SQL che l'agente ha aperto strada facendo.
 b36727d0cd405188  site/it/ai.html: Zoost - workbench for Zoho CRM list_functions get_function who_calls get_callees search_code get_module get_workflow list_workflows get_connection Zoost - workbench for Zoho Analytics list_views get_view get_structure get_sql search_sql search_columns get_relations who_uses orphans Ogni chiamata che fa viene scritta nella chat mentre succede, così quello che ha letto è una cosa che vedi invece di una cosa che dichiara.
 4ab09dc53d4d54c5  site/it/ai.html: Zoost non esegue, non valida e non distribuisce niente, SQL che l'assistente di Zoho Analytics ti scrive volentieri compreso.
 dae4a2ef755c22ac  site/it/ai.html: È disattivata di default e la cosa è detta invece che decisa: su una macchina personale una passphrase a sessione vale poco, su una condivisa vale molto, e nessuno tranne te può valutarlo.
@@ -502,7 +508,7 @@ e0e6002ea5da7e44  site/it/index.html: Gratis, aperti, tuoi da forkare Apache-2.0
 7f1a61fc7df1a59d  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
 d9f4f6b767ca61a8  site/it/index.html: Installala dal Chrome Web Store: ci sono tutte e due.
 c6d18549d4b2235f  site/it/index.html: L'unica eccezione Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria.
-145f824164d08b4c  site/it/index.html: L'unica eccezione è l'assistente AI, che è facoltativo e resta spento finché non gli dai una chiave tua - cosa aggiunge, e quando non ne vale una .
+048ae3803922f2a9  site/it/index.html: L'unica eccezione è l'assistente AI, che è facoltativo e resta spento finché non gli dai una chiave tua - cosa aggiunge, e quando non serve .
 a1ee46619266380e  site/it/index.html: Mai i dati veri e propri : in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.
 758b14f7abd8da70  site/it/index.html: Nessun server, nessun account, nessuna telemetria.
 ac41dd8fe645f1af  site/it/index.html: Ogni Zoost ci si crea la sua sottocartella, così ne basta una per tutti senza che si pestino i piedi.

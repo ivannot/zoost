@@ -102,6 +102,11 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   sensitive part. Sections whose data is older than the rest are unticked, with the date and reason.
 - "Find": searches names, or the full text of every function at once - the thing Zoho CRM has no way
   of doing. Useful before changing a field: it finds every function that mentions it.
+- "Clear" in this chat: empties the conversation, and that is not housekeeping. The whole thread is
+  re-sent with every message - the questions, the answers, and everything the assistant opened along
+  the way - and nothing trims it, so a long conversation costs more per question and drags old
+  context into new answers. Clearing it when the subject changes buys a cheaper call and a sharper
+  reply. Changing workspace clears it too, because the old thread was about another org.
 - "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
   Clearing the field goes back to it.

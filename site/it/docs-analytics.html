@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:40872063b9840251 -->
+<!-- translated-from: site/docs-analytics.html sha256:68a0aa81634b9495 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -27,10 +27,8 @@
      Same mechanism as the panels: one token, everything else derives from it. */
   :root{--sel:#be2a6b;--sel-soft:#3a1226}
   /* docs-specific - shared base & content typography are in site.css */
-  b.ui{color:var(--ink);background:#22304a;border:1px solid var(--border);border-radius:5px;padding:1px 7px;font:12.5px var(--sans);font-weight:600;white-space:nowrap}
   /* The same marks the toolbar draws, at the same weight - a guide that names a control the panel
      no longer spells out is a guide the reader has to translate. */
-  b.ui .mk{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -423,6 +421,13 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>
+  <h3>Tenere sotto controllo la conversazione - e il conto</h3>
+  <p><b class="ui">Clear</b> non è un vezzo. Tutta la conversazione viene rimandata a ogni messaggio, quindi
+    un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
+    Svuotala quando cambi argomento: ottieni chiamate più economiche e risposte più a fuoco. Con Claude,
+    <b>Max tool steps</b> è l'altra leva - limita quanti giri di esplora-poi-rispondi può fare l'agente prima
+    di dover rispondere.</p>
+
   <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono - nomi di viste e
     colonne, relazioni, e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
