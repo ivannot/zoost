@@ -26,7 +26,13 @@
   header .v{font:12px var(--mono);color:var(--muted)}
   section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
   section h2{font-size:14px;margin:0 0 4px}
-  section .sub{font-size:12px;color:var(--muted);margin:0 0 14px;max-width:62ch}
+  /* No measure cap. It was `max-width:62ch`, written to hold a line near 62 characters, and `ch` is
+     the width of a "0" - in a proportional font the lowercase letters are far narrower, so the rule
+     produced 80 characters inside 64% of the column and left the rest empty. It did not even buy the
+     measure it was written for, and it made the paragraph narrower than the heading directly above
+     it inside the same box, which is what reads as broken. Two overrides had already been added for
+     single cases (`.keynote`, `.lockhint`) instead of fixing the rule - the usual sign. */
+  section .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
   label{display:block;margin:10px 0}
   label .lt{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
   input[type=text],input[type=password],input[type=number],select{
@@ -67,8 +73,8 @@
   .conflict .cfb button{padding:3px 10px;font-size:12px}
   .keyprot{margin:14px 0 0;padding:12px 14px;border:1px solid var(--border);border-radius:9px;background:#0f1826}
   .lockrow{margin-top:10px;display:flex;flex-direction:column;gap:8px}
-  .keynote{margin:10px 0 0;max-width:none}
-  .lockhint{margin:2px 0 0;max-width:none}
+  .keynote{margin:10px 0 0}
+  .lockhint{margin:2px 0 0}
   .lockhint button{margin-left:6px;font-size:11px;padding:2px 8px}
   .lockhint.bad{color:#f4b8b8}
 </style>
