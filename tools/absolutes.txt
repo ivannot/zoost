@@ -60,7 +60,7 @@ ff208410a7fb84a2  site/analytics.html: The SQL, as files One .sql per query tabl
 f690eee4ea0c680a  site/analytics.html: The endpoints that return cell values exist, and are deliberately not called - which is also why the AI assistant can never tell you what is in the data.
 1d5da17392a87ca2  site/analytics.html: The only thing that ever leaves your machine is what you choose to send to an AI provider, and never the rows in your tables.
 d8816b3bf795f3b4  site/analytics.html: The panel takes the workspace from the tab you are on; there is nothing to configure and nothing to pick wrong.
-24b7ac8b8befbd05  site/analytics.html: Then the ER diagram, what reads from what - and an honest list of what nothing reads any more.
+2c3386115d0cf852  site/analytics.html: Then the ER diagram, what reads from what - and the list of what nothing seems to read any more, with what that list cannot see written beside it.
 e086a0abcf55d402  site/analytics.html: What nothing depends on Zoho Analytics' own dependency answer, asked once for everything instead of one view at a time.
 8d83e61eaf40e616  site/analytics.html: What that is worth, and how to evaluate it that way → What it rests on, the two endpoints it deliberately never calls, and how to check any of it: the nerd page .
 fbe79589c7c194d9  site/analytics.html: What the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
@@ -212,7 +212,7 @@ f1bb58292cbc1041  site/index.html: Nothing leaves the machine No server, no acco
 5c40e24f59e6d692  site/index.html: The workbenches What every Zoost has in common Free · Apache-2.0 · no account The workbenches Zoost - workbench for Zoho CRM on the Chrome Web Store Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
 468ad9a55a40758b  site/index.html: Then, and only then, the parts it needs go to Anthropic or OpenAI.
 7b8a966d5bc6b5f4  site/index.html: What every Zoost has in common It only reads No Zoost calls an endpoint that creates, edits or deletes anything in Zoho.
-fe497585afb6dfec  site/index.html: What it does → How to use it → Install ↗ Zoost - workbench for Zoho Analytics on the Chrome Web Store Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and an honest list of what nothing depends on any more.
+4c399bc8a8f8b5b0  site/index.html: What it does → How to use it → Install ↗ Zoost - workbench for Zoho Analytics on the Chrome Web Store Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and the list of what nothing seems to depend on any more.
 482b466bb7f7447b  site/index.html: What it reads Configuration only: code, field definitions, automations, the structure of a workspace.
 454b40a487034f93  site/index.html: What it writes To Zoho, nothing.
 8bb925dceb5a87f4  site/index.html: Zoost copies all of it to plain files on your own disk, then draws you the map: what calls what, what depends on what, what nothing uses any more.
@@ -241,7 +241,7 @@ ef05256e2247d8d0  site/it/analytics.html: Ogni prodotto ci si crea la sua sottoc
 c22ba2b32341584a  site/it/analytics.html: Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella, e l'SQL dietro ogni query table come file su cui puoi fare un diff.
 dbba75d94d757891  site/it/analytics.html: Per ogni vista: cosa legge, chi la legge, e su quali dashboard compare.
 76c442dd0ca93439  site/it/analytics.html: Perché conta, e come valutarlo così → Su cosa si regge, i due endpoint che deliberatamente non chiama mai, e come verificarlo: la pagina nerd .
-6bde034a4f1e9476  site/it/analytics.html: Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che non legge più nessuno.
+02a057b5e61a0a07  site/it/analytics.html: Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che sembra non leggere più nessuno, con accanto scritto cosa quell'elenco non riesce a vedere.
 5b68c02eb7b3e572  site/it/analytics.html: Prima di cancellare qualcosa Chiedere a Zoho Analytics da cosa dipende una vista, trecento volte a mano, è il modo in cui quella domanda non viene mai fatta.
 5851b5825ff9367b  site/it/analytics.html: Quello che scrive l'assistente è una bozza; l'unica cosa che può dirti se compila è Zoho Analytics.
 1c1a09589f236158  site/it/analytics.html: Una storia per tutto quello che hai scaricato Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una relazione e lo stato precedente non esiste più.
@@ -436,12 +436,13 @@ c8edf3ee22bc1e8a  site/it/docs-crm.html: È tutto disattivato O non c'è nessuna
 cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa ↗ Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un colpo solo, la struttura di una tabella con le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, l'elenco di quello da cui non dipende più niente, gli export e l'assistente AI.
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
 4bd2a0ffb11f67f9  site/it/index.html: Accanto a ogni cifra c'è scritto di cosa non tiene conto.
+2d439fb62be6f16c  site/it/index.html: Come verificarlo Il sorgente sono una ventina di file di JavaScript in chiaro - nessun bundler, nessun minificatore, quindi quello che leggi è quello che gira.
 7075499851f47f5a  site/it/index.html: Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.
-ed400c7f9f88cd9a  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost - workbench for Zoho Analytics sul Chrome Web Store Ogni vista di un workspace con il suo tipo, la cartella e le date, le colonne e le chiavi esterne di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme, e l'elenco di quello da cui non dipende più niente.
-83f216df7db3c7bd  site/it/index.html: Cosa hanno in comune tutti gli Zoost Nessuno scrive su Zoho Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa dentro Zoho.
-a33def896db50ee5  site/it/index.html: Cosa scrive Su Zoho niente: non chiama un solo endpoint che crei, modifichi o cancelli qualcosa.
+78e0a0659ad4433b  site/it/index.html: Cosa fa → Come si usa → Installa ↗ Zoost - workbench for Zoho Analytics sul Chrome Web Store Ogni vista di un workspace con il suo tipo, la cartella e le date, le colonne e le chiavi esterne di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme, e l'elenco di quello da cui sembra non dipendere più niente.
+7dc1ee7b8071427e  site/it/index.html: Cosa hanno in comune tutti gli Zoost Leggono e basta Nessuna estensione Zoost chiama un endpoint che crea, modifica o cancella qualcosa dentro Zoho.
+7484efe1d1261339  site/it/index.html: Cosa scrive Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.
 b2fef69cd7a5a239  site/it/index.html: Dalla tua macchina non esce niente Nessun server, nessun account da creare, nessuna telemetria.
-f50ddd306d8cadb7  site/it/index.html: E da oggi con Zoost puoi vederlo tutto insieme.
+e8c5467deb460f00  site/it/index.html: E con Zoost puoi vederlo tutto insieme.
 e0e6002ea5da7e44  site/it/index.html: Gratis, aperti, tuoi da forkare Apache-2.0, nessun passaggio di build, nessuna dipendenza.
 7f1a61fc7df1a59d  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
 d9f4f6b767ca61a8  site/it/index.html: Installala dal Chrome Web Store: ci sono tutte e due.
@@ -458,7 +459,7 @@ cee6466af7993ab2  site/it/index.html: Sta tutto sulla pagina nerd , che è dove 
 e4f975e66b3052ac  site/it/index.html: Tutto insieme, in un colpo solo Cerchi ovunque in una volta sola, segui un nome fin dove viene usato davvero, e passi tutto quanto a un collega sotto forma di un documento unico.
 ab72e2a92c36f1ba  site/it/index.html: Tutto quello che hai costruito dentro Zoho è tuo.
 5828651b41d4e8f8  site/it/index.html: Una cartella di lavoro contiene una sottocartella per prodotto e, dentro, una per org o per workspace - così un consulente tiene rispecchiati tutti i clienti insieme, ognuno legato all'org, all'host e all'istanza da cui è arrivato.
-ceda8e8504bafd97  site/it/index.html: Una funzione da quattrocento righe può benissimo essere una tabella di conversione scritta bene, e quali siano le tue lo sai soltanto tu: per questo non troverai niente valutato, messo in classifica o colorato di rosso.
+3e69c11ce95fffd9  site/it/index.html: Una funzione da quattrocento righe può benissimo essere una tabella di mappatura scritta bene, e quali siano le tue lo sai soltanto tu: per questo non troverai niente valutato, messo in classifica o colorato di rosso.
 d00bf0d5eae23f16  site/it/index.html: Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.
 d95110bc7ce6bfea  site/it/index.html: Zoost - workbench for Zoho CRM sul Chrome Web Store Le funzioni Deluge come file da mettere sotto Git, la ricerca full-text su tutte in una volta, il grafo di chi chiama chi, lo schema dei moduli con i layout, gli API name delle related list che tocca sempre andare a ripescare, i workflow, le schedulazioni e il catalogo delle connessioni.
 9b7f5b022f7d5bb5  site/it/index.html: Zoost la porta tutta sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa: chi chiama chi, chi dipende da chi, e cosa non serve più a nessuno.
@@ -544,6 +545,7 @@ d4df21cfb34db8fb  site/it/privacy.html: chrome.storage.session Soltanto la chiav
 07add6ba9b51ad4d  site/it/privacy.html: tabs - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics, appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato per sbaglio contro una sandbox.
 101df12639f67e0d  site/it/try.html: A cosa risponde invece è a ogni domanda sul comportamento - che poi sono quelle che decidono se una cosa si può installare tranquillamente.
 e0bca0509f3c1890  site/it/try.html: Cosa vale mentre un sample è aperto: Non viene chiesto niente a nessuno.
+e0128f0ce945a31f  site/it/try.html: Dietro un sample non c'è nessuna org, quindi non c'è niente da aprire.
 3221510e4621b433  site/it/try.html: Il flag sample: true nella configurazione del workspace è tutto il meccanismo.
 418cbf4df0072cb1  site/it/try.html: Il generatore è sample-org.js dentro ogni estensione, e viaggia dentro il pacchetto - quindi è leggibile nel codice che installi, ed è lo stesso file che scrive i dati su cui girano i test.
 717fd28e85ee7a79  site/it/try.html: Installi l'estensione, premi un pulsante, e hai davanti il prodotto intero - l'albero, la ricerca, i diagrammi, l'audit, gli export, l'assistente - che gira su un workspace che non è mai passato vicino alla tua azienda.
@@ -558,15 +560,16 @@ d3ce6be5193e1f79  site/it/try.html: Non ti blocca - un sample non corrisponderà
 5dc37ec412d9169d  site/it/try.html: Ogni altra pagina di questo sito sostiene che Zoost meriti fiducia.
 c795b28c21c3227a  site/it/try.html: Perché questo è un argomento di sicurezza, non una comodità Un workspace di prova è l'unico modo di rispondere alla domanda «ma questa cosa qui che fa?» senza prima averle dato qualcosa da leggere.
 df1257fec65eb5a9  site/it/try.html: Provalo su dati inventati Tutte e due le estensioni sanno scrivere un workspace di dati inventati in una cartella che scegli tu, e poi lavorarci esattamente come farebbero su uno vero.
-14bd71dd3923c46b  site/it/try.html: Pull, aggiornamento del singolo elemento, «aprilo in Zoho»: tutti disattivati, con il motivo scritto invece che lasciato da dedurre.
 0ca84ee44a09f798  site/it/try.html: Se ne esiste già uno il pulsante diventa Open sample workspace e apre quello che c'è - e finché Chrome non ha dato al pannello l'accesso alla cartella non dice né una cosa né l'altra, perché in quel momento non ha guardato e nessuna delle due affermazioni sarebbe giustificata.
 7518e6e7c0aa2e5a  site/it/try.html: Se sei tu ad autorizzare l'installazione Puoi fare tutta la valutazione da solo, su una macchina senza nessuna sessione Zoho aperta, e rispondere alle domande che di solito vanno prese per buone: cosa legge, cosa scrive, dove finiscono i file, cosa esce dalla macchina, cosa contengono gli export, cosa viene detto all'assistente.
 dbd3accc5621b358  site/it/try.html: Su una macchina senza nessun tab di Zoho aperto lo stesso pulsante è sulla schermata iniziale del pannello, perché è esattamente lì che si trova chi ha appena installato l'estensione.
-a88ca8ea5f132633  site/it/try.html: Tutto ciò che tocca la piattaforma è rifiutato , in un solo punto del codice invece che con un controllo ripetuto a ogni pulsante - guardOk() , che ognuna di quelle azioni interroga già.
+cab82c9ec9ca1db8  site/it/try.html: Tutto quello che arriverebbe a Zoho interroga quel flag prima di agire: i pulsanti che scaricano sono disattivati, quelli che aprirebbero una pagina Zoho si rifiutano e dicono perché.
+23afc54473c85106  site/it/try.html: Un flag solo, e lo legge tutto il prodotto.
 9261056107c03204  site/it/try.html: Una cosa da avere chiara prima di cominciare: l'assistente AI facoltativo è l'unica funzione che manda qualcosa da qualche parte, e resta spento finché non inserisci una tua chiave API.
 cf2b0bf9998e6e6c  site/it/try.html: Una volta che i file sono sul disco, li legge lo stesso codice di sempre, li elenca la stessa lista, li esporta lo stesso export.
 6999f11dc419bf04  site/it/try.html: Usalo: funziona tutto.
 bd2c2a4afcca1748  site/it/try.html: Zoost CRM 293 file 120 funzioni Deluge con vere catene di chiamate fra loro, nei cinque namespace che Zoho CRM ha davvero 18 moduli campi, layout, related list, lookup che puntano gli uni agli altri 10 workflow alcuni con azioni che partono dopo un ritardo 7 schedule ognuno con la funzione che esegue 6 connessioni una non usata da nessuno, così l'audit ha qualcosa da trovare Zoost Analytics 13 file 39 viste 17 tabelle, 8 query table, 7 grafici, 3 pivot, 4 dashboard 14 relazioni join fra tabelle, con le colonne da una parte e dall'altra 8 file SQL uno per query table, ed è quello che rende leggibile un diff I nomi sono parole comuni del linguaggio aziendale - buildInvoice , calcTax , Contacts - e i nomi dei moduli sono quelli standard di Zoho.
+e3d5400130a765bc  site/it/try.html: sample: true nella configurazione del workspace è tutto il meccanismo: non esiste una modalità demo, non c'è un secondo percorso nel codice, non c'è niente che tratti i dati inventati in modo speciale.
 3f2535e50663bd5f  site/it/try.html: È costruita apposta per contenere un esemplare di ogni cosa - compresi gli stati scomodi, come un modulo che Zoho si rifiuta di descrivere - quindi quello che vedi è il prodotto in tutta la sua complessità e non una versione ripulita, ma la complessità non è la scala.
 dfdd70b3074c396d  site/llms.txt: ## What none of that proves - Google repackages and re-signs every extension, so what the Chrome Web Store serves is not byte-identical to what was uploaded.
 47c1f7fb88428335  site/llms.txt: - **"Unused" is a candidate, never a verdict.** Both products state the coverage gap next to the number: a connection may be used by Zoho Flow or a widget, a view by a shared link or an API consumer, and neither platform reports that.
@@ -655,16 +658,17 @@ b65c6155ad052c27  site/privacy.html: tabs - to detect which Zoho CRM org, or whi
 08e2ef5430e859e5  site/try.html: Chrome asks for permission on that folder and on nothing else.
 b3214e36a311cb05  site/try.html: Every other page here argues that Zoost is worth trusting.
 cb2aa50475ed8f75  site/try.html: Every part of the product works: search across all the sources, the call graph and the entity-relationship diagram, the health audit with its stated coverage gaps, and both exports.
-43266509a2c9152c  site/try.html: Everything platform-bound is refused , in one place in the code rather than by a check repeated at each button - guardOk() , which every such action already asks.
 c03f7701bc5b8bd4  site/try.html: It does not block you - a sample will never match any organisation, so blocking would make it unusable - but it will not let you forget.
 7d47019fcdec4f16  site/try.html: Nothing is downloaded, because there is nothing to download from.
 196d851d1338f926  site/try.html: One thing to have straight before you start: the optional AI assistant is the only feature that sends anything anywhere, and it stays off until you enter your own API key.
 428499f2659c064d  site/try.html: That order is usually the wrong way round: you install, you grant access to the org, and only then do you find out.
+28ecff8296fb9abe  site/try.html: There is no org behind a sample, so there is nothing for them to open.
 6c6f896b1c2e8492  site/try.html: Two consumers, one description, which is why the sample cannot drift from the shape a real pull produces.
 a2477e5f56b3cb22  site/try.html: What holds while a sample is open: Nothing is fetched.
 d9ceb2b5b5f714c3  site/try.html: What it does answer is every question about behaviour, and those are the ones that decide whether something is safe to install.
 f01596678fc44c8f  site/try.html: Why this is a security argument, not a convenience A sample workspace is the only way to answer "what does this thing actually do" without first giving it something to read.
 90850baa4409ff82  site/try.html: Zoost CRM 293 files 120 Deluge functions with real call chains between them, in the five namespaces Zoho CRM actually has 18 modules fields, layouts, related lists, lookups pointing at each other 10 workflows some with actions that fire after a delay 7 schedules each pointing at the function it runs 6 connections one of them used by nothing, so the audit has something to find Zoost Analytics 13 files 39 views 17 tables, 8 query tables, 7 charts, 3 pivots, 4 dashboards 14 relations joins between tables, with the columns on each side 8 SQL files one per query table, which is what makes a diff meaningful The names are ordinary business words - buildInvoice , calcTax , Contacts - and Zoho's own module names where a module name is needed.
+d73ad8cda179b9d9  site/try.html: sample: true in the workspace's own config is the entire mechanism - there is no demo mode, no second code path, nothing that treats invented data specially.
 2a7e0b82f00b92af  store/analytics/store-listing.md: - Every view, in one list.
 fd6c294af113d488  store/analytics/store-listing.md: - Foreign keys on every column, and they are links.
 49773b43ee74aff1  store/analytics/store-listing.md: - It never reads the rows in your tables.
