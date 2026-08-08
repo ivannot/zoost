@@ -77,7 +77,7 @@ Zoost calls no endpoint that creates, edits or deletes anything in Zoho CRM. It 
 
 WHO IT'S FOR
 
-Zoho CRM administrators, developers and consultants who want proper code management and a way to understand an org: diffs, history, impact analysis, schema documentation, relation lookup and backups.
+Zoho CRM administrators, developers and consultants who want proper code management and a way to understand an org: diffs, history, impact analysis, schema documentation, relation lookup and backups. The org does not have to be yours - one working folder holds a subfolder per org, so several clients stay mirrored side by side and each workspace is bound to the org it came from.
 
 REQUIREMENTS
 

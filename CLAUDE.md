@@ -125,6 +125,17 @@ nav on every page, in both languages, because burying it in the guides would put
 someone already convinced would look. The counts in it are read from the shipped generator, so they
 cannot drift into decoration.
 
+**«Your org» was the whole framing, and it left out the reader who needs the tool most.** A
+consultant works on orgs that are not theirs - which is exactly why keeping four clients mirrored,
+each bound to its own org, host and instance, matters more to them than to anyone. The capability
+had been there since the beginning and was **named only in `README.md` and in the CRM store
+listing**: on `zoost.it` the words «consultant» and «more than one org» did not appear at all. The
+enumeration trap in its worst form, because the surface that was missing it is the one that sells,
+and the audience that was missing is the one with the strongest need. Both product pages and the
+home now carry it, and the environment guard is stated as what it is for that reader: not a
+precaution but the reason several clients can be open at once without one being pulled into
+another's mirror.
+
 **There is a third reader, and the site had no page for them: whoever has to *approve* the install.**
 The IT lead, the DPO, the manager who receives «can I install an extension that reads the CRM?».
 Everything they need was already written - read-only, no server, which permissions, reproducible

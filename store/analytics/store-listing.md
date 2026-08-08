@@ -63,6 +63,11 @@ WHAT IT DOES
 
 - Optional AI assistant, bring your own key. Anthropic (Claude) or OpenAI (ChatGPT). With Anthropic it runs as an agent with read-only tools over your local mirror - it can read a structure, follow a foreign key, open a query's SQL, search columns, and say what depends on what. It is told what Zoho documents about query-table SQL, so what it writes is a draft you can paste rather than plausible SQL that will not run.
 - Your key, your machine, your choice. The API key is stored locally and sent only to the provider you pick. You can protect it with a passphrase you choose - it is then stored encrypted and asked for once per browser session. Off by default, because on a personal machine it buys little and on a shared one a lot, and the trade-off is explained where the choice is made.
+- Built for more than one workspace. The workspace does not have to be yours: one working folder holds a subfolder per workspace, each bound to the one it came from, so a consultant can keep every client mirrored at the same time. The panel takes the workspace from the tab you are on, so which client you are looking at is answered by the browser rather than by remembering.
+
+WHO IT'S FOR
+
+Zoho Analytics builders, data analysts and consultants who need to understand a workspace rather than only use it: what a report is built on, which tables a query reads, what nothing depends on any more, and what changed since last month.
 
 WHAT IT DOES NOT DO
 
