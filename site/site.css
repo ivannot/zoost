@@ -130,6 +130,18 @@ header nav a.nprod .nshort{display:none}
   header nav a.ncta{padding:0 8px}
 }
 header nav a.ncta{color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 10px}
+/* The language switch carries its name in the language it leads to - «Italiano» on an English page -
+   because that is the one label a reader of either language can recognise, and it is what the W3C
+   recommends. A flag was considered and refused: a flag is a country and not a language (which flag
+   for English?), and on Windows the emoji does not exist in the system font at all, so the browser
+   falls back to printing the two country letters - the width saving is not even reliable.
+   The ISO code is the honest short form, and it appears only where the full word will not fit. The
+   `aria-label` on the link keeps the whole sentence at every width. */
+header nav a.ncta .lshort{display:none}
+@media (max-width:400px){
+  header nav a.ncta .lfull{display:none}
+  header nav a.ncta .lshort{display:inline}
+}
 header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)}
 
 /* ---- content pages (docs, privacy): scoped to main, so the landing page is untouched ---- */

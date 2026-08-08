@@ -1855,6 +1855,14 @@ at and never has to shrink to a bare mark, which is one fewer place the name can
 break is declared per page rather than achieved with a margin trick, so `sitecheck`'s nav-shape
 comparison sees it and a page missing it is reported.
 
+**The language switch shortens to `IT` / `EN` below 400px, and a flag was refused.** A flag is a
+country, not a language - which one for English? - and on Windows the country-flag emoji is not in
+the system font at all, so browsers fall back to printing the two letters, which means the width
+saving is not even reliable. The name of the language written *in* that language is the W3C's
+recommendation and stays the form at every width the word fits. The **`aria-label` carries the whole
+sentence** and had to be added: `title` loses to visible content when a browser computes a link's
+accessible name, so with «IT» on screen the name would have become «IT».
+
 **The Italian nav found the layout bug, as usual.** «Come si usa» against «How to» overflowed the
 second row by about a dozen pixels at 375 and orphaned the switch again; the English page fitted with
 room to spare. Below 430px the horizontal padding gives while the 44px targets do not.
