@@ -1576,6 +1576,14 @@ These all failed **silently**, with no console error. They are the expensive kin
   not "the field for it", it is a prompt with no prompt. The row now states that the key is encrypted
   and offers **Change passphrase**, which is what brings the boxes back. This is the same rule as the
   CRM's "Complete missing" button being `display:none` rather than greyed.
+- **An explanation goes next to the control it explains, and this one had drifted past four of them.**
+  The paragraph describing **Max tool steps** sat *after* the whole passphrase block - the checkbox, the
+  three password fields, the two hints and the sixty-word note on why encryption at rest is not offered -
+  so on screen it read as an explanation of the passphrase, and the number field it belongs to had
+  nothing beside it. Reported. It is the mirror image of the bullet below: that one is about a sentence
+  conditioned on the wrong state, this one about a sentence *positioned* against the wrong control, and
+  neither is visible to a checker because the markup is valid and the words are true. Same defect in
+  both panels, since the section is shared chrome.
 - **A sentence in the UI must derive from the state it describes, not from the control next to it.**
   The same change put "Enter the current passphrase to turn the protection off" under an unticked box
   on a machine where no passphrase had ever been set — correct for the only case it was written for,

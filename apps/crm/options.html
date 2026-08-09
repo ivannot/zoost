@@ -150,6 +150,9 @@
       was not shown one.</p>
 
     <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
+    <p class="note" style="margin-top:6px">How many times the assistant may reach for a tool before it has to
+      answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
+      single question can cost. It is a ceiling, not a target - most answers use two or three.</p>
     <div class="keyprot">
       <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> -
         it is stored encrypted, and you type the passphrase once per browser session</span></label>
@@ -172,9 +175,6 @@
         can read it. A passphrase protects the key at rest - a copied profile, a backup, someone else on this
         machine - not a key already unlocked in a running browser.</p>
     </div>
-    <p class="note" style="margin-top:0">How many times the assistant may reach for a tool before it has to
-      answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
-      single question can cost. It is a ceiling, not a target - most answers use two or three.</p>
     <div class="warnbox">The assistant sends the parts of your workspace it needs - including <b>Deluge source
       code</b> - to the provider you configure. Check that this is acceptable for your organisation before use.</div>
     <div class="row" style="margin-top:14px"><button id="saveAi" class="primary">Save AI settings</button></div>
