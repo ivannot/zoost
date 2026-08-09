@@ -564,6 +564,25 @@ guard into `requirePerm()`, when the counts came out nine against one and the qu
 wrong» was asked instead of making them match. Both panels now share the helper and the wording, and
 a test walks the three entry points by name.
 
+**The environment guard disabled the first Zoho button somebody remembered, not all of them.**
+Reported: on a tab/workspace mismatch `Pull all` goes grey and the per-type `Pull` stays live, then
+fails at the click with a message - two controls that read from Zoho, one guarded. `ZOHO_BTNS`
+already knew there were two; every guard named `pull` by hand. Measured by rendering the panel
+against a non-sample fixture with a tab reporting a different org: before, `pull=OFF pullone=on`;
+after, both off, and both on again when the orgs line up.
+
+**The fixture is a sample workspace, which made the first proof worthless.** `sample: true` means
+`guardOk()` refuses it anyway, so both buttons came out disabled for a reason that had nothing to do
+with the mismatch. The probe patches the config to `sample: false` in memory before loading it -
+without that it cannot tell the two conditions apart, which is the same trap as a metric that cannot
+fail.
+
+**And the check found four more instances than the report did.** A test that refuses any
+`$('pull').disabled =` written by hand turned up the two early returns in `refreshContext` - no Zoho
+tab, and tab not ready - and both «download the missing ones» loops, which held `pull` down while
+they ran and left the per-type `Pull` free to start on top. Those two go through `setPullBusy()` now,
+which owns the state for both buttons and which `pullCurrent()` already consults before starting.
+
 **The environment guard is the most important safety property.** Each workspace is bound to one
 org, host and instance. If the active Zoho tab belongs to a different org, every Zoho-bound action
 is disabled. Do not weaken this for convenience.

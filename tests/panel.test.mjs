@@ -2860,3 +2860,25 @@ test('both panels report a lapsed folder permission in the same words', () => {
   assert.equal(wording[0], wording[1], 'the two panels word the lapsed folder permission differently');
   assert.ok(wording[0].includes('↻'), 'MSG.folder no longer names the ↻ Refresh button that fixes it');
 });
+
+// The environment guard disables every Zoho-bound control, not the first one somebody remembered.
+// Reported: on a tab/workspace mismatch `Pull all` went grey and the per-type `Pull` stayed live,
+// failing at the click with a message instead - two controls that read from Zoho, one of them
+// guarded. `ZOHO_BTNS` already knew there were two; the guard named `pull` by hand. Measured by
+// rendering the panel against a non-sample fixture with a tab reporting a different org:
+// before, `pull=OFF pullone=on`; after, both off, and both on again when the orgs line up.
+test('the mismatch guard drives every Zoho-bound button from one list', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const zoho = src.match(/const ZOHO_BTNS = \[([^\]]*)\]/);
+  assert.ok(zoho, 'id=crm ZOHO_BTNS is gone - the list the guard derives from');
+  assert.ok(/'pull'/.test(zoho[1]) && /'pullone'/.test(zoho[1]),
+    'id=crm ZOHO_BTNS no longer holds both pull buttons');
+  // No line may disable one of them on its own: that is exactly how they came apart.
+  for (const m of src.matchAll(/\$\('(pull|pullone)'\)\.disabled\s*=/g)) {
+    assert.fail(`id=crm $('${m[1]}').disabled is set by hand at index ${m.index} - `
+      + 'drive it from ZOHO_BTNS so the two cannot drift');
+  }
+  // and the one that downloads without being in that list guards at the call instead
+  assert.ok(/async function downloadMissing\(\) \{[\s\S]{0,400}?if \(!zohoReady\(\)\)/.test(src),
+    'id=crm downloadMissing no longer refuses the wrong tab');
+});

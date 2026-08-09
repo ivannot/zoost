@@ -18,6 +18,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
+// Which toolbar controls read from Zoho and which only read the disk. Declared here, above every
+// reader, because `refreshContext` runs on a five-second poll and used to name `pull` by hand while
+// this list already knew there were two: the per-type Pull stayed enabled through an environment
+// mismatch and failed at the click instead, which is the one-of-a-set miss this repository keeps
+// recording. Anything Zoho-bound goes in ZOHO_BTNS and is disabled in one place.
+const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
+const ZOHO_BTNS = ['pull', 'pullone'];
 // A workspace of invented data, written by «+ Sample» rather than pulled. It is an ordinary
 // workspace in every other respect - the same list, the same walks, the same exports - and there is
 // no demo *mode* anywhere: an `if (demo)` branch in rendering code is how invented data eventually
@@ -575,14 +582,14 @@ async function refreshContext() {
     $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
     ctxEl.className = 'offzoho'; who.innerHTML = 'Not on a Zoho tab';
     bnd.innerHTML = bound ? `<span class="rlbl local">Workspace</span>${envOf(bound.base)} «${escHtml(bound.instance || '?')}» org ${escHtml(bound.org)}` : '';
-    document.body.classList.add('zoho-blocked'); $('pull').disabled = true;
+    document.body.classList.add('zoho-blocked'); ZOHO_BTNS.forEach((b) => ($(b).disabled = true));
     return;
   }
   $('offoverlay').classList.remove('show');
   await ensureBridge(activeId);
   const cfid = await crmFrameId(activeId);
   try { const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, { frameId: cfid }); lastCtx = r?.ok ? r : null; } catch { lastCtx = null; }
-  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; document.body.classList.add('zoho-blocked'); $('pull').disabled = true; updateWsButtons(); return; }
+  if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; document.body.classList.add('zoho-blocked'); ZOHO_BTNS.forEach((b) => ($(b).disabled = true)); updateWsButtons(); return; }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
   // side implying a relationship - reported as «switching to the test org leaves ZOHO TAB on the
@@ -623,7 +630,7 @@ async function refreshContext() {
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
   document.body.classList.toggle('zoho-blocked', !zohoReady());
-  $('pull').disabled = pullBusy || !zohoReady() || !dir;   // a pull in progress keeps it disabled even as the 5s refresh runs
+  ZOHO_BTNS.forEach((b) => ($(b).disabled = pullBusy || !zohoReady() || !dir));   // a pull in progress keeps them disabled even as the 5s refresh runs
   updateWsButtons();
 }
 function guardOk() {
@@ -2113,8 +2120,6 @@ async function readJsonIn(h, name) { const fh = await h.getFileHandle(name); ret
 // disk and are fine on a sample workspace; the two that read from Zoho are not, and were left
 // enabled - reported. `pull` is also disabled by refreshContext on every state change, and
 // `pullone` was the one nothing else covered.
-const LOCAL_BTNS = ['graph', 'refresh', 'export', 'exportmd', 'health', 'askai'];
-const ZOHO_BTNS = ['pull', 'pullone'];
 function setEnabled(on) {
   LOCAL_BTNS.forEach((b) => ($(b).disabled = !on));
   ZOHO_BTNS.forEach((b) => ($(b).disabled = !on || isSample()));
@@ -2600,8 +2605,7 @@ function setPullBusy(b) {
   // Both read from Zoho, so both are also off on a sample workspace - and this function is what
   // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
   // already turned it off. A state that is restored somewhere else has to know every reason for it.
-  $('pullone').disabled = b || isSample() || !dir;
-  $('pull').disabled = b || !zohoReady() || !dir;
+  ZOHO_BTNS.forEach((x) => ($(x).disabled = b || !zohoReady() || !dir));
 }
 async function pullCurrent() {
   if (pullBusy) return;
@@ -3082,9 +3086,14 @@ async function downloadOne(entry) {
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissing() {
+  // It downloads, so it is refused on the wrong tab like every other pull. A guard rather than a
+  // disabled button: the button is `display:none` unless something is missing, and disabling it
+  // from `updateMissingButton` would be an assignment on top of the five-second re-render - set
+  // once, never revisited, which measured as «still off after the tab came back into line».
+  if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
   const pending = treeData.filter((e) => !e.downloaded || e.stale);   // stale = older schema (before connections/author); re-fetch to backfill
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
-  $('pull').disabled = true; $('missing').disabled = true;
+  setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
   for (let i = 0; i < pending.length; i++) {
     const e = pending[i];
@@ -3097,7 +3106,7 @@ async function downloadMissing() {
   }
   updateMissingButton();
   setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
-  $('pull').disabled = false; $('missing').disabled = false;
+  setPullBusy(false); $('missing').disabled = false;
 }
 function updateRow(e) {
   const row = document.querySelector(`.f[data-id="${escA((window.CSS && CSS.escape) ? CSS.escape(e.id) : e.id)}"]`); if (!row) return;
@@ -3850,7 +3859,7 @@ async function downloadOneWf(entry) {
 async function downloadMissingWf() {
   const pending = workflowData.filter((e) => !e.downloaded);
   if (!pending.length) { setStatus('All workflows downloaded.', 'ok'); updateMissingButton(); return; }
-  $('pull').disabled = true; $('missing').disabled = true;
+  setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
   for (let i = 0; i < pending.length; i++) {
     const e = pending[i];
@@ -3863,7 +3872,7 @@ async function downloadMissingWf() {
   }
   updateMissingButton();
   setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
-  $('pull').disabled = false; $('missing').disabled = false;
+  setPullBusy(false); $('missing').disabled = false;
 }
 async function pullSchedules() {
   try {
