@@ -125,6 +125,20 @@ nav on every page, in both languages, because burying it in the guides would put
 someone already convinced would look. The counts in it are read from the shipped generator, so they
 cannot drift into decoration.
 
+**And a table of counts invites addition, so the counts have to add up.** It listed 120 functions,
+18 modules, 10 workflows, 7 schedules and 6 connections under a heading saying **293 files** - and
+those five make 161, because they count *objects* while the heading counts *files*. Reported: a
+reader who lacks the detail concludes the arithmetic is broken. The middle column is the file count
+now (241, 38, 11, 1, 1, plus `.zoost.json`), which sums to the heading exactly, and the third says
+why - a function is two files plus an index, a schedule is a row *inside* an index and no file at
+all. That is the shape of the mirror, and the page that invites you to go and look at it is the
+right place to teach it. Every figure comes from running the shipped generator.
+
+**The labelling script assumed a `<th>` row is a column header, and on those two tables it was a
+caption.** So the stacked view read «ZOOST CRM: 120» and «293 FILE: funzioni Deluge» - a label taken
+from the wrong axis. They carry real column headers now and the caption is an `<h3>` above the
+table, which is what it always was.
+
 **The AI had no page, and a subject mentioned in eleven places and owned by none is a subject the
 reader has to assemble.** `/ai.html` (and `it/ai.html`) states the position rather than the feature
 list, and the position is deliberately smaller than the hype: **the workbench is finished without a
