@@ -36,6 +36,7 @@ buildExportMarkdown	b92ec78412bc	27b56f35ee82	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	8fb9b9db38f5	divergent
 buildSchemaGraph	56a3776f4170	fadbbc09dd9e	divergent
+byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	324883324ccc	324883324ccc	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical

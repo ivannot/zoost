@@ -2412,7 +2412,7 @@ async function loadWorkspaces() {
       setStatus(`Could not read \u00ab${root ? root.name : '?'}/${APP_DIR}\u00bb: ${e.message || e}. Click the folder button to grant access again.`, 'warn');
     }
   }
-  wsList.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  wsList.sort(byWsLabel);
   if (!wsList.length) {
     // Workspaces sitting directly in the working folder are the older flat layout. Say so precisely
     // instead of reporting an empty list: the folders are there, Zoost is simply not looking at that
@@ -2465,6 +2465,12 @@ document.addEventListener('click', async (e) => {
  * platform.
  */
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || w.name; }
+/** The workspace list is ordered by what the reader actually sees. Sorting by the derived name
+ *  while displaying the user's own label produces a list that looks unsorted - «Acme» in a folder
+ *  called «zzz-1234» lands at the end - and this bar is where a consultant with four clients open
+ *  spends the day. Numeric, so «Client 2» comes before «Client 10»; base sensitivity, so case and
+ *  accents do not split the order. */
+function byWsLabel(a, b) { return wsOptionText(a).localeCompare(wsOptionText(b), undefined, { numeric: true, sensitivity: 'base' }); }
 function wsOptionTitle(w) {
   const label = ((w.cfg && w.cfg.label) || '').trim();
   return label ? `${label} - folder ${w.name}` : w.name;

@@ -2882,3 +2882,36 @@ test('the mismatch guard drives every Zoho-bound button from one list', () => {
   assert.ok(/async function downloadMissing\(\) \{[\s\S]{0,400}?if \(!zohoReady\(\)\)/.test(src),
     'id=crm downloadMissing no longer refuses the wrong tab');
 });
+
+// The workspace dropdown is ordered by what the reader sees. Reported as unordered, and it was, in
+// two different ways: Analytics did not sort at all, and the CRM sorted by the derived folder name
+// while the option shows the user's own label when there is one - so «Acme» in a folder called
+// «zzz-…» sat at the end. Both panels share one comparator now.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the workspace list sorts by the text the option shows`, () => {
+    const { byWsLabel, wsOptionText } = load([
+      sliceFn(`apps/${app}/sidepanel.js`, 'wsOptionText'),
+      sliceFn(`apps/${app}/sidepanel.js`, 'byWsLabel'),
+    ]);
+    const ws = [
+      { id: '1', folder: 'f', name: 'zzz-9999999999', cfg: { label: 'Acme' } },
+      { id: '2', folder: 'f', name: 'client-10' },
+      { id: '3', folder: 'f', name: 'client-2' },
+      { id: '4', folder: 'f', name: 'Alfa' },
+      { id: '5', folder: 'f', name: 'aaa-1111111111', cfg: { label: 'zeta' } },
+    ];
+    const got = ws.slice().sort(byWsLabel).map(wsOptionText);
+    assert.deepEqual(got.map((x) => x.split(' ')[0]), ['Acme', 'Alfa', 'client-2', 'client-10', 'zeta'],
+      `id=${app} the dropdown is not in the order the reader reads: ` + got.join(' | '));
+  });
+}
+
+// One comparator, byte for byte, on both sides - the bar is shared chrome and a list ordered two
+// ways is exactly the discontinuity the twin rule exists to stop.
+test('both panels order the workspace list with the same comparator', () => {
+  // sliceFn hands back the function and whatever follows it, and what follows differs between the
+  // two by design (wsOptionTitle). The comparator is one line; that is the line to compare.
+  const line = (rel) => sliceFn(rel, 'byWsLabel').trim().split('\n')[0].trim();
+  assert.equal(line('apps/crm/sidepanel.js'), line('apps/analytics/sidepanel.js'),
+    'id=byWsLabel the two panels sort the workspace list differently');
+});

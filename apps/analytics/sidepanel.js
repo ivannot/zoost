@@ -267,7 +267,7 @@ async function refreshWorkspaces() {
   }
   if (!root) { sel.innerHTML = '<option value="">no working folder yet</option>'; dir = null; bound = null; render(); return updateButtons(); }
 
-  const list = await listWorkspaces();
+  const list = (await listWorkspaces()).sort(byWsLabel);
   wsList = list;
   // Folders sitting directly in the working folder are the older flat layout. This is not a
   // compatibility fallback - nothing keeps working the old way - it is an empty state that says
@@ -1921,6 +1921,12 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
  * platform.
  */
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || `${w.name || w.folder} \u00b7 ${w.id}`; }
+/** The workspace list is ordered by what the reader actually sees. Sorting by the derived name
+ *  while displaying the user's own label produces a list that looks unsorted - «Acme» in a folder
+ *  called «zzz-1234» lands at the end - and this bar is where a consultant with four clients open
+ *  spends the day. Numeric, so «Client 2» comes before «Client 10»; base sensitivity, so case and
+ *  accents do not split the order. */
+function byWsLabel(a, b) { return wsOptionText(a).localeCompare(wsOptionText(b), undefined, { numeric: true, sensitivity: 'base' }); }
 function wsOptionTitle(w) {
   const label = ((w.cfg && w.cfg.label) || '').trim();
   return label ? `${label} - folder ${`${w.name || w.folder} \u00b7 ${w.id}`}` : `${w.name || w.folder} \u00b7 ${w.id}`;
