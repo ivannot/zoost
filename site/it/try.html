@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/try.html sha256:938c9b77009785fa -->
+<!-- translated-from: site/try.html sha256:b6e1847eddfa0b79 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Prova Zoost su dati inventati - senza account Zoho</title>
@@ -26,7 +26,11 @@
   .num{border-collapse:collapse;margin:18px 0;font-size:14px}
   .num td,.num th{border-bottom:1px solid var(--border);padding:7px 16px 7px 0;text-align:left;vertical-align:top}
   .num th{font-weight:600;color:var(--muted);font-size:13px}
-  .num td:first-child{white-space:nowrap;font-weight:600}
+  /* The first column used to be a bare figure, so nowrap was free; it now names the thing as well
+     ("120 Deluge functions"), and the middle column is the file count that adds up to the total in
+     the heading above the table. The prose column gets what is left. */
+  .num td:first-child{font-weight:600}
+  .num td:nth-child(2){font-weight:600;color:var(--ink)}
   .steps{padding-left:20px}
   .steps li{margin:10px 0}
 </style>
@@ -72,21 +76,29 @@
   <p>Il pulsante è <span class="k">+ Sample</span>, nella barra dei workspace. Crea una cartella
     dentro la tua cartella di lavoro e la riempie di file nella forma esatta che avrebbe un pull vero. Non scarica niente, perché non c'è niente da cui scaricare.</p>
 
+  <h3>Zoost CRM - 293 file</h3>
   <table data-labelled data-cols="3" class="num">
-    <tr><th>Zoost CRM</th><th>293 file</th><th></th></tr>
-    <tr><td data-label="Zoost CRM">120</td><td data-label="293 file">funzioni Deluge</td><td>con vere catene di chiamate fra loro, nei cinque
-      namespace che Zoho CRM ha davvero</td></tr>
-    <tr><td data-label="Zoost CRM">18</td><td data-label="293 file">moduli</td><td>campi, layout, related list, lookup che puntano gli uni agli altri</td></tr>
-    <tr><td data-label="Zoost CRM">10</td><td data-label="293 file">workflow</td><td>alcuni con azioni che partono dopo un ritardo</td></tr>
-    <tr><td data-label="Zoost CRM">7</td><td data-label="293 file">schedule</td><td>ognuno con la funzione che esegue</td></tr>
-    <tr><td data-label="Zoost CRM">6</td><td data-label="293 file">connessioni</td><td>una non usata da nessuno, così l'audit ha qualcosa da trovare</td></tr>
+    <thead><tr><th>Cosa contiene</th><th>File</th><th>Perché sono tanti</th></tr></thead>
+    <tbody>
+    <tr><td data-label="Cosa contiene">120 funzioni Deluge</td><td data-label="File">241</td><td data-label="Perché sono tanti">il sorgente e i metadati di ognuna, più l'indice - e si chiamano davvero fra loro, nei cinque namespace che Zoho CRM ha per davvero</td></tr>
+    <tr><td data-label="Cosa contiene">18 moduli</td><td data-label="File">38</td><td data-label="Perché sono tanti">un file per modulo e uno per i suoi layout, più due indici - campi, related list e lookup che puntano gli uni agli altri</td></tr>
+    <tr><td data-label="Cosa contiene">10 workflow</td><td data-label="File">11</td><td data-label="Perché sono tanti">un file ciascuno più l'indice; alcuni hanno azioni che partono dopo un ritardo</td></tr>
+    <tr><td data-label="Cosa contiene">7 schedule</td><td data-label="File">1</td><td data-label="Perché sono tanti">stanno nell'indice e non in file propri, ognuna con la funzione che esegue</td></tr>
+    <tr><td data-label="Cosa contiene">6 connessioni</td><td data-label="File">1</td><td data-label="Perché sono tanti">di nuovo l'indice - una non la usa nessuno, così l'audit ha qualcosa da trovare</td></tr>
+    <tr><td data-label="Cosa contiene">la configurazione del workspace</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>.zoost.json</code>, dove sta <code>sample: true</code></td></tr>
+    </tbody>
   </table>
 
+  <h3>Zoost Analytics - 13 file</h3>
   <table data-labelled data-cols="3" class="num">
-    <tr><th>Zoost Analytics</th><th>13 file</th><th></th></tr>
-    <tr><td data-label="Zoost Analytics">39</td><td data-label="13 file">viste</td><td>17 tabelle, 8 query table, 7 grafici, 3 pivot, 4 dashboard</td></tr>
-    <tr><td data-label="Zoost Analytics">14</td><td data-label="13 file">relazioni</td><td>join fra tabelle, con le colonne da una parte e dall'altra</td></tr>
-    <tr><td data-label="Zoost Analytics">8</td><td data-label="13 file">file SQL</td><td>uno per query table, ed è quello che rende leggibile un diff</td></tr>
+    <thead><tr><th>Cosa contiene</th><th>File</th><th>Perché sono tanti</th></tr></thead>
+    <tbody>
+    <tr><td data-label="Cosa contiene">39 viste</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>views.json</code> tiene il censimento: 17 tabelle, 8 query table, 7 grafici, 3 pivot, 4 dashboard</td></tr>
+    <tr><td data-label="Cosa contiene">14 relazioni, e tutte le colonne</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>schema.json</code> - i join fra tabelle, con le colonne da una parte e dall'altra</td></tr>
+    <tr><td data-label="Cosa contiene">8 query table</td><td data-label="File">9</td><td data-label="Perché sono tanti">un file <code>.sql</code> ciascuna più l'indice, ed è quello che rende leggibile un diff</td></tr>
+    <tr><td data-label="Cosa contiene">da cosa dipende cosa</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>lineage.json</code></td></tr>
+    <tr><td data-label="Cosa contiene">la configurazione del workspace</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>.zoost.json</code></td></tr>
+    </tbody>
   </table>
 
   <p>I nomi sono parole comuni del linguaggio aziendale - <code>buildInvoice</code>,

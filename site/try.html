@@ -25,7 +25,11 @@
   .num{border-collapse:collapse;margin:18px 0;font-size:14px}
   .num td,.num th{border-bottom:1px solid var(--border);padding:7px 16px 7px 0;text-align:left;vertical-align:top}
   .num th{font-weight:600;color:var(--muted);font-size:13px}
-  .num td:first-child{white-space:nowrap;font-weight:600}
+  /* The first column used to be a bare figure, so nowrap was free; it now names the thing as well
+     ("120 Deluge functions"), and the middle column is the file count that adds up to the total in
+     the heading above the table. The prose column gets what is left. */
+  .num td:first-child{font-weight:600}
+  .num td:nth-child(2){font-weight:600;color:var(--ink)}
   .steps{padding-left:20px}
   .steps li{margin:10px 0}
 </style>
@@ -70,21 +74,29 @@
     your working folder and fills it with files in the exact shape a real pull produces. Nothing is
     downloaded, because there is nothing to download from.</p>
 
+  <h3>Zoost CRM - 293 files</h3>
   <table data-labelled data-cols="3" class="num">
-    <tr><th>Zoost CRM</th><th>293 files</th><th></th></tr>
-    <tr><td data-label="Zoost CRM">120</td><td data-label="293 files">Deluge functions</td><td>with real call chains between them, in the five
-      namespaces Zoho CRM actually has</td></tr>
-    <tr><td data-label="Zoost CRM">18</td><td data-label="293 files">modules</td><td>fields, layouts, related lists, lookups pointing at each other</td></tr>
-    <tr><td data-label="Zoost CRM">10</td><td data-label="293 files">workflows</td><td>some with actions that fire after a delay</td></tr>
-    <tr><td data-label="Zoost CRM">7</td><td data-label="293 files">schedules</td><td>each pointing at the function it runs</td></tr>
-    <tr><td data-label="Zoost CRM">6</td><td data-label="293 files">connections</td><td>one of them used by nothing, so the audit has something to find</td></tr>
+    <thead><tr><th>What it holds</th><th>Files</th><th>Why that many</th></tr></thead>
+    <tbody>
+    <tr><td data-label="What it holds">120 Deluge functions</td><td data-label="Files">241</td><td data-label="Why that many">the source and the metadata of each one, plus the index - and they call each other for real, in the five namespaces Zoho CRM actually has</td></tr>
+    <tr><td data-label="What it holds">18 modules</td><td data-label="Files">38</td><td data-label="Why that many">one file per module and one for its layouts, plus two indexes - fields, related lists and lookups pointing at each other</td></tr>
+    <tr><td data-label="What it holds">10 workflows</td><td data-label="Files">11</td><td data-label="Why that many">a file each plus the index; some have actions that fire after a delay</td></tr>
+    <tr><td data-label="What it holds">7 schedules</td><td data-label="Files">1</td><td data-label="Why that many">they live in the index rather than in files of their own, each pointing at the function it runs</td></tr>
+    <tr><td data-label="What it holds">6 connections</td><td data-label="Files">1</td><td data-label="Why that many">the index again - one of them used by nothing, so the audit has something to find</td></tr>
+    <tr><td data-label="What it holds">the workspace config</td><td data-label="Files">1</td><td data-label="Why that many"><code>.zoost.json</code>, which is where <code>sample: true</code> lives</td></tr>
+    </tbody>
   </table>
 
+  <h3>Zoost Analytics - 13 files</h3>
   <table data-labelled data-cols="3" class="num">
-    <tr><th>Zoost Analytics</th><th>13 files</th><th></th></tr>
-    <tr><td data-label="Zoost Analytics">39</td><td data-label="13 files">views</td><td>17 tables, 8 query tables, 7 charts, 3 pivots, 4 dashboards</td></tr>
-    <tr><td data-label="Zoost Analytics">14</td><td data-label="13 files">relations</td><td>joins between tables, with the columns on each side</td></tr>
-    <tr><td data-label="Zoost Analytics">8</td><td data-label="13 files">SQL files</td><td>one per query table, which is what makes a diff meaningful</td></tr>
+    <thead><tr><th>What it holds</th><th>Files</th><th>Why that many</th></tr></thead>
+    <tbody>
+    <tr><td data-label="What it holds">39 views</td><td data-label="Files">1</td><td data-label="Why that many"><code>views.json</code> holds the census: 17 tables, 8 query tables, 7 charts, 3 pivots, 4 dashboards</td></tr>
+    <tr><td data-label="What it holds">14 relations, and every column</td><td data-label="Files">1</td><td data-label="Why that many"><code>schema.json</code> - the joins between tables, with the columns on each side</td></tr>
+    <tr><td data-label="What it holds">8 query tables</td><td data-label="Files">9</td><td data-label="Why that many">one <code>.sql</code> file each plus the index, and that is what makes a diff readable</td></tr>
+    <tr><td data-label="What it holds">what depends on what</td><td data-label="Files">1</td><td data-label="Why that many"><code>lineage.json</code></td></tr>
+    <tr><td data-label="What it holds">the workspace config</td><td data-label="Files">1</td><td data-label="Why that many"><code>.zoost.json</code></td></tr>
+    </tbody>
   </table>
 
   <p>The names are ordinary business words - <code>buildInvoice</code>, <code>calcTax</code>,
