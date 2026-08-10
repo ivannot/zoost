@@ -410,7 +410,30 @@
         usage[status] = (u.top_usage || []).reduce((n, x) => n + (Number(x.count) || 0), 0);
       } catch (_) { usage[status] = null; }   // an aggregate we could not read is unknown, never zero
     }
-    return { failures, usage, at: iso(to) };
+    // How often each function actually ran, which is the measured cost the mirror can only guess at
+    // from length and outbound-call counts. It is a **top list**, not the whole org - ten rows in the
+    // capture this was built from - so whatever consumes it has to say so rather than presenting it
+    // as a census.
+    //
+    // `type=function_most_credits` is NOT fetched, and that is a decision rather than an omission:
+    // in the capture it returned **byte-identical** rows to `function_most_used`, so showing both
+    // would put the same number on screen twice under two names and invent a distinction the data
+    // does not support. If Zoho ever makes them differ, this is where to add it.
+    let runs = null;
+    try {
+      const r = await api('/crm/v2/settings/functions/dashboard/top_usage?type=function_most_used'
+        + `&period=past_24_hours&from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to))}`);
+      runs = (r.top_usage || []).map((x) => ({ id: x.function_id ? String(x.function_id) : null,
+                                               name: x.value || '', count: Number(x.count) || 0 }));
+    } catch (_) { runs = null; }   // unknown, never an empty list: an empty one would read as «nothing ran»
+    // The org's own meter for the period: what Zoho counted against the plan, and the ceiling.
+    let credits = null;
+    try {
+      const d = await api('/crm/v2/settings/functions/dashboard?period=past_24_hours');
+      const row = (d.dashboard || [])[0] || {};
+      if (row.count != null || row.used != null) credits = { limit: row.count ?? null, used: row.used ?? null };
+    } catch (_) { credits = null; }
+    return { failures, usage, runs, credits, at: iso(to) };
   }
 
   window.addEventListener('message', (ev) => {

@@ -99,7 +99,11 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   a kind of object): what Zoho reports as having failed - the function, what invoked it (a REST
   call, a workflow, a button, a schedule), the reason with its line number, how many times, and when
   it last failed. Above the list, how many runs and how many failures Zoho counted in the last 24
-  hours. It shows in two places: on the function itself, under its callers, and in the Health view
+  hours, plus how often the busiest functions actually ran and what the org spent against its
+  ceiling - those last two sit in the health view's "Size & calls" tab, beside the static line and
+  outbound-call counts they used to stand in for. Zoho answers with the busiest few, not every
+  function, so a function missing from that list means "not in the top list", never "never ran"; and
+  it reports how often, not how long. It shows in two places: on the function itself, under its callers, and in the Health view
   under Functions, where the whole list is. This is the only thing Zoost reads that is not a
   photograph of a structure: it changes hourly, so every surface says the date it was read rather
   than presenting it as durable.

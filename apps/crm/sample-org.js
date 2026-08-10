@@ -142,6 +142,14 @@
 
   // Failing executions, one per way a function can be invoked, so the list and its filter have
   // something to show. Ordinary business wording, like every other name in this file.
+  // How often each of the busiest ran, in the last 24 hours. The numbers descend steeply on purpose:
+  // a real org has two or three functions doing almost all the work and a long tail doing none, and
+  // a flat list would make the «most run» view look like it says nothing.
+  const RUNS = [
+    ['automation.onOrderCreate', 239], ['standalone.buildInvoice', 172], ['schedule.nightlyDispatch', 22],
+    ['standalone.calcTax', 12], ['standalone.formatMoney', 9], ['button.recalcTotals', 4],
+    ['automation.syncContacts', 2], ['standalone.planShipment', 1],
+  ];
   const FAILURES = [
     ['standalone.buildInvoice', "Custom exception - 'Missing tax rate' at Line Number: 42", 3, 'Rest API', 'standalone'],
     ['automation.onOrderCreate', "Improper Statement Error - null value at Line Number: 17", 2, 'Workflow', 'automation'],
@@ -397,6 +405,14 @@
     J('failures/index.json', {
       at: WHEN,
       usage: { success: 412, failure: 6 },
+      // Zoho answers with a *top* list, not a census, so the sample does too - eight rows out of a
+      // hundred and twenty, which is what makes the «not every function» caveat on screen true.
+      credits: { limit: 500000, used: 418 },
+      runs: RUNS.map(([fn, n], i) => {
+        const [ns, nm] = fn.split('.');
+        const fi = list.findIndex(([a, b]) => a === ns && b === nm);
+        return { id: fi >= 0 ? String(9000 + fi) : null, name: fi >= 0 ? index[fi].display_name : nm, count: n };
+      }),
       failures: FAILURES.map(([fn, reason, count, comp, cat], i) => {
         const [ns, nm] = fn.split('.');
         const fi = list.findIndex(([a, b]) => a === ns && b === nm);

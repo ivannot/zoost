@@ -327,6 +327,11 @@ PANELS = [
         const el = [...document.querySelectorAll('#tree .f')].find((e) => /Build invoice/.test(e.textContent));
         if (el) el.click();
     """),
+    ("crm-runtime", "crm", "crm/sampleorg-1234567890", """
+        // The measured half, beside the static proxies that were the only thing here before.
+        document.getElementById('health').click();
+        setTimeout(() => { const t = [...document.querySelectorAll('.htab')].find((x) => /Size/.test(x.textContent)); if (t) t.click(); }, 900);
+    """),
     ("crm-failures", "crm", "crm/sampleorg-1234567890", """
         // There is no Failures tab - a failure is something that happened to a function, so the list
         // lives in the health view under Functions, next to the other things wrong with them.

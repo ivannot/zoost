@@ -4,6 +4,52 @@
     "success": 412,
     "failure": 6
   },
+  "credits": {
+    "limit": 500000,
+    "used": 418
+  },
+  "runs": [
+    {
+      "id": "9015",
+      "name": "On order create",
+      "count": 239
+    },
+    {
+      "id": "9006",
+      "name": "Build invoice",
+      "count": 172
+    },
+    {
+      "id": "9021",
+      "name": "Nightly dispatch",
+      "count": 22
+    },
+    {
+      "id": "9004",
+      "name": "Calc tax",
+      "count": 12
+    },
+    {
+      "id": "9001",
+      "name": "Format money",
+      "count": 9
+    },
+    {
+      "id": null,
+      "name": "recalcTotals",
+      "count": 4
+    },
+    {
+      "id": null,
+      "name": "syncContacts",
+      "count": 2
+    },
+    {
+      "id": "9009",
+      "name": "Plan shipment",
+      "count": 1
+    }
+  ],
   "failures": [
     {
       "id": "7000",

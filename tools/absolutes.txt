@@ -192,6 +192,7 @@ e5832c2af79f3465  site/docs-crm.html: It is shown instead of the platform's name
 a3e9f35b4ea9f20d  site/docs-crm.html: It is the one place where an empty field means erase - everywhere else an empty key field means "keep what is stored", which is what stops an unrelated save from wiping a key you cannot retype because it is encrypted.
 bbb4881c12a0342f  site/docs-crm.html: It no longer comes and goes with the tab: the window can switch between the two drawings itself, so there is always something for it to open, and only which one follows the tab you are on.
 9564ada47e772afd  site/docs-crm.html: It says what goes and what stays before it acts: the encrypted key is removed and the protection turned off, your model names and every other setting are kept, and you paste the API key in again from your provider's dashboard.
+ac0b9a1e4ccbdcf0  site/docs-crm.html: Length and outbound calls cover every function; the run counts cover the busiest few and come from Zoho.
 3aa746d9cc9ee1c9  site/docs-crm.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: a Zoho CRM instance id is exact without being memorable, and two sandboxes of the same org differ by nothing you would recognise at a glance.
 1c0ca583b59af0f9  site/docs-crm.html: Nobody can decrypt that key without the passphrase, Zoost included - this is the only way out, and it is a button rather than a sequence you have to work out.
 77128ef67a1ead78  site/docs-crm.html: Not every Zoho user may read every one of these.
@@ -209,6 +210,7 @@ cadf7901b8ca4d73  site/docs-crm.html: Pulling again re-asks, which is worth doin
 417d35878ad4de50  site/docs-crm.html: Putting it under Git Nothing is automatic here, on purpose: it is your repository, with your conventions.
 bc92a8be1a457ff0  site/docs-crm.html: Roles are per org: a workspace that refuses an area says nothing about the next one.
 81043876b31aa0af  site/docs-crm.html: Rows highlighted in cream are fields on no layout - API-only.
+4dad49e4614adb4f  site/docs-crm.html: Size & calls used to hold only proxies: how long a function is, how many outbound calls it makes.
 4a2255fbd35b2c3b  site/docs-crm.html: So every area records when it was last read .
 67fd9370d9a74e3c  site/docs-crm.html: That is deliberate - the name is your convenience, the identity is Zoho's, and a list showing only your own words would be one you could not check against Zoho.
 bdd117b5b7baa743  site/docs-crm.html: That module has no ER diagram button and cannot be opened in the diagram window either - there is nothing to draw, and an empty diagram would read as "this relates to nothing".
@@ -224,6 +226,7 @@ ec45862413686797  site/docs-crm.html: The bar at the top of that window carries 
 712a7d336c833b8e  site/docs-crm.html: They are grouped by dimension - Functions holds whatever categories your own functions actually have, Workflows , Schedules and Connections one each, and a kind with nothing in it gets no chip.
 191cefc2a311bbf6  site/docs-crm.html: They look different and are the same fact - the stored key has to be decrypted before it can be written again - and Zoost checks what you type against the stored key before saving anything, so a mistyped passphrase cannot leave you locked out of a key you believe you know.
 becfa6d34e4f50bc  site/docs-crm.html: They steer all three views, so switching Connections off is how you read a diagram without them - the search box narrows the list only.
+36aa3bc7c2a3c1f4  site/docs-crm.html: Those cover every function and cost nothing to compute, but they are a guess at what a function costs.
 e381a6dd705f05ba  site/docs-crm.html: Treat every entry as a candidate to review .
 16620d5094730468  site/docs-crm.html: Turning a tab off clears it, because most tabs are turned off for an area the account cannot read and pulling it then only produces an error - turn it back on if you mirror a type for Git without browsing it.
 f2be60441d80c752  site/docs-crm.html: Usage counts only cover Deluge functions in this workspace .
@@ -234,6 +237,7 @@ a574518fd5886dde  site/docs-crm.html: Which one to choose Anthropic (Claude) Ope
 4842eb3809f5c858  site/docs-crm.html: With Anthropic the assistant runs as an agent with read-only tools: it opens functions, traces callers, reads schemas, looks up a connection and who uses it, and searches code by itself.
 e3a85bca70d7fa00  site/docs-crm.html: Wrong passphrase or none, and nothing is changed - the encrypted key is left exactly as it was rather than discarded.
 2276f78bba443b13  site/docs-crm.html: You can turn it back off at any time , and the way back is symmetrical: Zoost asks for the current passphrase, because storing the key in clear text again means decrypting it first, and only you can do that.
+4d6b5273ddf128c9  site/docs-crm.html: Zoho answers with the busiest few , not every function, so an absent function means «not in the top list», never «never ran».
 86e3c18d08c02012  site/docs-crm.html: Zoho lists them in setup, but never tells you which functions actually use one - so nobody dares delete any.
 f6bba5fbd59303d1  site/docs-crm.html: Zoost only reads from Zoho - it never writes back.
 5eefb0ef5b526b2a  site/docs-crm.html: Zoost takes you to it, but the last click is yours - it never drives the Zoho interface for you.
@@ -434,6 +438,7 @@ cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «c
 6de4ac28e60a23ed  site/it/docs-crm.html: Con Anthropic l'assistente gira come agente con strumenti in sola lettura: apre funzioni, risale i chiamanti, legge schemi, cerca una connessione e chi la usa, e fa ricerche nel codice da sé.
 cdfaa0d9c12ccf03  site/it/docs-crm.html: Conosce anche la dimensione di ogni funzione e i conteggi delle chiamate in uscita, e può usarli per filtrare - così «quante funzioni sono più lunghe di 150 righe?» oppure «quali fanno più di cinque chiamate API?» hanno una risposta presa dai numeri, non stimata.
 1f656fadc8656407  site/it/docs-crm.html: Conteggi, senza nessun verdetto: una funzione che fallisce cinque volte all'ora per come è fatta non sta peggio di una fallita una volta sola.
+af6e9c12d1fb4a66  site/it/docs-crm.html: Coprono tutte le funzioni e non costano niente da calcolare, ma sono una stima di quanto una funzione costa.
 6d9de7f783a4e01e  site/it/docs-crm.html: Cosa sta fallendo davvero L'audit di salute legge lo specchio e trova sospetti strutturali - una funzione che non chiama nessuno, una chiamata che non risolve.
 7dbcfb080eddba2c  site/it/docs-crm.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: l'id di un'istanza Zoho CRM è esatto senza essere memorabile, e due sandbox della stessa org non si distinguono a colpo d'occhio.
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
@@ -464,6 +469,7 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
 e9b082a5ca27517a  site/it/docs-crm.html: Lo stesso filtro dispone il grafo allo stesso modo ogni volta.
+2111218ffad46d2b  site/it/docs-crm.html: Lunghezza e chiamate coprono tutte le funzioni; i conteggi di esecuzione coprono le più attive e vengono da Zoho.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
 19371a5ef726b718  site/it/docs-crm.html: Mostrano cosa c'è a schermo : tutte accese vuol dire tutto, e un clic ne spegne una.
 5e93f984ce642524  site/it/docs-crm.html: Nella vista ♥ Health , sotto Functions: ogni funzione fallita con il motivo e il numero di riga, e sopra quante esecuzioni e quanti fallimenti Zoho ha contato nelle ultime 24 ore.
@@ -529,6 +535,7 @@ cfd0e5362f64bd4d  site/it/docs-crm.html: Una riga per related list, con l'API na
 2cf493887d45c699  site/it/docs-crm.html: Viene calcolato una volta per insieme: tornare sulla scheda è immediato, e cambiare filtro o scope lo ricalcola su quello che resta - le chip non nascondono soltanto dei riquadri, il disegno si richiude intorno a ciò che sopravvive, che è poi il motivo per cui si spegne una categoria.
 4561461d1fa2a39a  site/it/docs-crm.html: Viene mostrato al posto del nome della piattaforma, e il nome della piattaforma non sparisce mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è legata davvero la cartella.
 308cb1c5e6c7d023  site/it/docs-crm.html: Zoho invece lo sa, e Zoost lo legge: Pull all scarica quello che Zoho segnala come fallito, ed è l'unica cosa qui dentro che è la lettura di un runtime invece della fotografia di una struttura.
+0a364c8cd1f8ffbc  site/it/docs-crm.html: Zoho risponde con le più attive , non con tutte, quindi una funzione assente vuol dire «non nell'elenco di testa», mai «non è mai girata».
 9d55274d92d7e698  site/it/docs-crm.html: Zoho te le elenca nel setup, ma non ti dice mai quali funzioni ne usano davvero una - così nessuno osa cancellarne una.
 d30866ac957270d5  site/it/docs-crm.html: Zoost legge soltanto da Zoho - non riscrive mai indietro.
 50890f1ed9c375d7  site/it/docs-crm.html: Zoost ti ci porta, ma l'ultimo click è tuo - non guida mai l'interfaccia di Zoho al posto tuo.

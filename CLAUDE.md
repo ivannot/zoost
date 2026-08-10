@@ -591,6 +591,25 @@ is disabled. Do not weaken this for convenience.
 reads what was written to disk. If a feature needs data that is not in the module JSON, the pull
 has to be extended and the user has to re-pull — say so in the UI rather than failing silently.
 
+**«Size & calls» held only proxies, and Zoho knows the answer.** Length and outbound-call counts are
+a *guess* at what a function costs; `dashboard/top_usage?type=function_most_used` says how many times
+it actually ran, and `functions/dashboard` says what the org spent against its ceiling. Both are
+aggregates - a count and a name, no record, no identifier - which is why this half costs nothing in
+posture. The static rows now carry the measured number beside them, so a function that is long *and*
+runs two hundred times a day reads as one thing rather than two.
+
+Two limits are stated on screen rather than left to be discovered: Zoho answers with the **busiest
+few**, so an absent function means «not in the top list» and never «never ran»; and it reports how
+*often*, not how *long*.
+
+**`type=function_most_credits` is deliberately not fetched.** In the capture it returned **rows
+byte-identical** to `function_most_used`, so showing both would put the same number on screen twice
+under two names and invent a distinction the data does not support. The comment in the bridge says
+where to add it if Zoho ever makes them differ. Two other things in that capture are refused for
+their own reasons: `type=ip_address` is about people, and `getDependencies` is a false friend - it
+returns the fingerprints of Zoho's own IDE bundles, nothing to do with dependencies between
+functions.
+
 **Execution failures have no tab, and that was a level error worth recording.** They shipped as a
 sixth tab beside Functions, Modules, Workflows, Schedules and Connections, and he said it was out of
 scope. The sharper reason: **the tabs are kinds of object, and a failure is not one** - it is an

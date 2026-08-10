@@ -93,6 +93,9 @@ const MSG = {
   // because it carries the «length is verbosity» caveat, which may not be dropped from either.
   hBiggest: 'Largest functions',
   hChattiest: 'Most outbound calls',
+  // Said by both groups that read from the platform: neither can distinguish «nothing to report»
+  // from «never asked», so both refuse to imply the first.
+  notReadYet: 'Nothing has been read yet - run Pull all, and this fills in.',
   hOrphan: 'Orphan candidates',
   hUnresolved: 'Unresolved calls',
   hAmbiguous: 'Ambiguous calls',
@@ -1460,18 +1463,43 @@ async function buildHealth() {
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
   const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
+  // Everything read from the platform rather than computed from the mirror, fetched once: both
+  // groups below need it. It sits above them because moving one of them up put a use of `fx`
+  // before its declaration - a temporal dead zone that `node --check` waves through and only
+  // running the function finds, which is the trap this repository has already recorded twice.
+  const fx = await failuresIndex();
+  // Measured cost, beside the static proxies that were the only thing here before. «180 lines and
+  // five outbound calls» is a guess about what a function costs; «it ran 239 times yesterday» is
+  // what it cost. Both stay: the proxy covers every function, the measurement covers the busiest
+  // few, and neither is a verdict.
+  const runsById = new Map(), runsByName = new Map();
+  (fx.runs || []).forEach((r) => { if (r.id) runsById.set(String(r.id), r.count); if (r.name) runsByName.set(String(r.name).toLowerCase(), r.count); });
+  const runsOf = (n) => runsById.get(String(n.id || ''))
+    ?? [n.display_name, n.name, n.api_name].map((k) => runsByName.get(String(k || '').toLowerCase())).find((v) => v != null);
+  const mostRun = (fx.runs || []).map((r) => {
+    const n = fnById[String(r.id || '')] || fnByName[String(r.name || '').toLowerCase()];
+    const who = n ? fnLink(n) : `<b>${escHtml(r.name || '?')}</b>`;
+    const st = n && n.stats ? ` \u00b7 ${n.stats.lines} lines, ${n.stats.apiCalls} outbound call(s)` : '';
+    return { html: `${who} <span class="meta">${escHtml(String(r.count))} run(s) in 24h${st}</span>` };
+  });
+  const runsDesc = fx.runs
+    ? `The busiest ${fx.runs.length} functions in the 24 hours before ${escHtml(fmtDate(fx.at))}, as Zoho counted them - not every function, and not a ranking of anything but frequency.`
+      + (fx.credits && (fx.credits.used != null || fx.credits.limit != null)
+          ? ` Over the same period Zoho counted ${escHtml(String(fx.credits.used ?? 'unknown'))} against a ceiling of ${escHtml(String(fx.credits.limit ?? 'unknown'))}.` : '')
+      + ' Zoho reports how often, not how long: a function that runs often is not automatically the expensive one.'
+    : MSG.notReadYet;
   // Size and outbound-call counts, shown as plain rankings with no threshold and no verdict: a long
   // function is worth a look, not automatically wrong, and the reader decides what the numbers mean.
   const withStats = nodes.filter((n) => n.stats && n.stats.lines);
+  const ranNote = (n) => { const r = runsOf(n); return r == null ? '' : ` \u00b7 ran ${r}\u00d7 in 24h`; };
   const biggest = withStats.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15)
-    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.lines} lines · ${n.stats.codeLines} code · ${(n.stats.chars / 1024).toFixed(1)} KB</span>` }));
+    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.lines} lines · ${n.stats.codeLines} code · ${(n.stats.chars / 1024).toFixed(1)} KB${ranNote(n)}</span>` }));
   const chattiest = withStats.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15)
-    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
+    .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}${ranNote(n)}</span>` }));
   // What Zoho reports as failing. Unlike every other group here it is not computed from the mirror:
   // it is a reading of a runtime, taken at a moment, so it says the moment. The counts beside it are
   // aggregates - a run count and a failure count for the 24 hours before that reading - and they
   // carry no verdict, like every other number in this view.
-  const fx = await failuresIndex();
   const failing = (fx.all || []).slice().sort((a, b) => b.count - a.count).map((f) => {
     const n = fnByName[String(f.name || '').toLowerCase()];
     const who = n ? fnLink(n) : `<b>${escHtml(f.name || '?')}</b>`;
@@ -1481,8 +1509,9 @@ async function buildHealth() {
     ? `Read from Zoho on ${escHtml(fmtDate(fx.at))}.`
       + (fx.usage ? ` In the 24 hours before that Zoho counted ${escHtml(String(fx.usage.success ?? 'unknown'))} run(s) and ${escHtml(String(fx.usage.failure ?? 'unknown'))} failure(s).` : '')
       + ' This is the only thing here read from the platform rather than computed from the mirror, so it is as old as that date and no older. The input of a failed run stays in Zoho.'
-    : 'Nothing has been read yet - run Pull all, and this fills in.';
+    : MSG.notReadYet;
   const groups = [
+    { id: 'mostrun', tab: 'size', title: 'Most run, measured', desc: runsDesc, bad: false, items: mostRun },
     { id: 'failing', tab: 'functions', title: 'Failing in Zoho', desc: failDesc, bad: true, items: failing },
     { id: 'biggest', tab: 'size', title: MSG.hBiggest, desc: MSG.hBiggestDesc, bad: false, items: biggest },
     { id: 'chattiest', tab: 'size', title: MSG.hChattiest, desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
@@ -1779,7 +1808,7 @@ async function aiSystemPromptB(withTools, cap) {
 const AI_TOOLS = [
   // The one tool that reads a runtime rather than a structure, so its answer carries the date it was
   // read. It cannot return the input of a failed execution: that never reaches the panel.
-  { name: 'list_failures', description: 'What Zoho reports as failing: the function, what invoked it (Rest API, Workflow, Button, Schedule), the reason with its line number, how many times, and when it last failed - plus how many runs and failures Zoho counted in the 24 hours before the reading. Says the date it was read, because this changes hourly. It cannot return the input of a failed execution: Zoost does not read it.', input_schema: { type: 'object', properties: { filter: { type: 'string' } } } },
+  { name: 'list_failures', description: 'What Zoho reports as failing: the function, what invoked it (Rest API, Workflow, Button, Schedule), the reason with its line number, how many times, and when it last failed - plus how many runs and failures Zoho counted in the 24 hours before the reading, how often the busiest functions ran, and what the org spent against its ceiling. The run counts are a top list, not a census: a function absent from it was not in the busiest few, which is not the same as never having run. Says the date it was read, because this changes hourly. It cannot return the input of a failed execution: Zoost does not read it.', input_schema: { type: 'object', properties: { filter: { type: 'string' } } } },
   { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) - use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
   { name: 'get_function', description: 'Full Deluge source and metadata of a function identified by "namespace.name" (or just its name).', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'who_calls', description: 'List functions that call the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
@@ -1827,6 +1856,9 @@ async function aiExecTool(name, input) {
       .sort((a, b) => b.count - a.count);
     const head = `read from Zoho on ${d.at || '(unknown date)'}`
       + (d.usage ? `; in the 24 hours before that: ${d.usage.success ?? 'unknown'} run(s), ${d.usage.failure ?? 'unknown'} failed` : '')
+      + (d.credits ? `; ${d.credits.used ?? 'unknown'} counted against a ceiling of ${d.credits.limit ?? 'unknown'}` : '')
+      + (Array.isArray(d.runs) && d.runs.length
+          ? `. Busiest in that window (a top list, not every function): ${d.runs.slice(0, 8).map((r) => `${r.name} ${r.count}\u00d7`).join(', ')}` : '')
       + '. The input of each failed run stays in Zoho and is not available here.';
     if (!rows.length) return head + '\nNothing matched.';
     return head + '\n' + aiCap(rows.map((f) => `${f.name} \u00b7 ${f.componentType || '?'} \u00b7 ${f.count}\u00d7 \u00b7 last ${f.lastFailedAt || '?'} \u00b7 ${f.reason || ''}`),
@@ -4156,7 +4188,8 @@ async function failuresIndex() {
   if (d && Array.isArray(d.failures)) {
     d.failures.forEach((f) => { const k = String(f.name || '').toLowerCase(); if (k) (byName.get(k) || byName.set(k, []).get(k)).push(f); });
   }
-  failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, byName, all: (d && d.failures) || [] };
+  failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, runs: (d && d.runs) || null,
+                credits: (d && d.credits) || null, byName, all: (d && d.failures) || [] };
   return failIndex;
 }
 
@@ -4181,7 +4214,11 @@ async function pullFailures() {
       throw new Error(MSG.wrongTab);
     setStatus('Reading failures\u2026', 'busy');
     const r = await toBridge({ cmd: 'pullFailures' }); if (!r?.ok) throw new Error(r?.error || 'failures read failed');
-    await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null, failures: r.failures || [] }, null, 2));
+    // One file for everything Zoho knows about how this org *runs*: what failed, how much ran, and
+    // what it cost. It keeps the `failures/` name because that is what a reader looks for, and the
+    // shape says the rest.
+    await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
+      runs: r.runs || null, credits: r.credits || null, failures: r.failures || [] }, null, 2));
     await noteAccess('failures', null);
     // No view of its own: a failure is a property of a function, not a kind of object, so it shows
     // where that dimension belongs - in the function's own detail, and in the health view, which is

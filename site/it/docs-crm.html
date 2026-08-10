@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:39e4990627bc822c -->
+<!-- translated-from: site/docs-crm.html sha256:936061329e491f8f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -479,6 +479,24 @@ git commit -m "baseline"</code></pre>
     <img src="/img/crm-health.webp" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La vista health: i candidati orfani, con la nota di copertura che dice cosa la scansione non vede.">
     <figcaption>Capitolo 9: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.</figcaption>
+  </figure>
+
+  <p><b>Size &amp; calls</b> conteneva solo proxy: quanto è lunga una funzione, quante chiamate in
+    uscita fa. Coprono tutte le funzioni e non costano niente da calcolare, ma sono una stima di
+    quanto una funzione costa. Zoho la risposta ce l'ha, e adesso Zoost gliela chiede: <b>Most run,
+    measured</b> elenca le funzioni più attive con quante volte ciascuna è girata davvero nelle
+    ultime 24 ore, e quanto l'org ha speso rispetto al proprio tetto nello stesso periodo. Le righe
+    statiche portano il numero misurato accanto, così una funzione che è lunga <em>e</em> gira
+    duecento volte al giorno si vede come una cosa sola invece che come due.</p>
+  <p>Due limiti, detti perché cambiano come si legge. Zoho risponde con le <b>più attive</b>, non con
+    tutte, quindi una funzione assente vuol dire «non nell'elenco di testa», mai «non è mai girata».
+    E riporta <em>quante volte</em>, non <em>quanto a lungo</em>: una funzione che gira di continuo
+    non è automaticamente quella costosa.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-runtime.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda Size and calls della health: le funzioni più attive con quante volte ciascuna è girata in 24 ore, sopra i conteggi statici di righe e chiamate.">
+    <figcaption>Capitolo 9: <b>la stima e la misura, affiancate.</b> Lunghezza e chiamate coprono tutte le funzioni; i conteggi di esecuzione coprono le più attive e vengono da Zoho.</figcaption>
   </figure>
 
   <h2 id="failures">9b. Cosa sta fallendo davvero</h2>
