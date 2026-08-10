@@ -436,13 +436,7 @@ async function loadLay() {
 // remembering to add a row here. It is duplicated as a literal rather than imported because the
 // options page and the side panel do not share a module - if they ever do, this is the first thing
 // that should move.
-const TAB_DEFS = [
-  { id: 'functions',   label: 'Functions',   note: 'Deluge functions, namespaces, cross-references' },
-  { id: 'modules',     label: 'Modules',     note: 'fields, layouts, related lists' },
-  { id: 'workflows',   label: 'Workflows',   note: 'rules, triggers, actions' },
-  { id: 'schedules',   label: 'Schedules',   note: 'scheduled functions' },
-  { id: 'connections', label: 'Connections', note: 'the org connection catalogue' },
-];
+const TAB_DEFS = window.ZOOST_TABS;   // one registry, in tabs.js - see the note at the top of it
 const TAB_IDS = TAB_DEFS.map((t) => t.id);
 let tabOrderCur = TAB_IDS.slice();
 let tabHiddenCur = [];

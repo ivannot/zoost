@@ -469,17 +469,11 @@ const patchCfg = async (o) => writeCfg(Object.assign({}, (await readCfg()) || {}
 // `area` is what a pull and a permission verdict are keyed on. It matches the tab id today, and is
 // kept as its own field because the two are different ideas: a tab is a thing you look at, an area
 // is a thing Zoho may refuse.
-const TABS = [
-  { id: 'functions',   label: 'Functions',   names: true, search: true },
-  { id: 'modules',     label: 'Modules',     names: true },
-  { id: 'workflows',   label: 'Workflows' },
-  { id: 'schedules',   label: 'Schedules' },
-  // What a workflow fires: notifications, field updates, tasks, webhooks. One tab and a Kind
-  // filter rather than four tabs, because they answer one question and share one shape - the
-  // same decision the Analytics panel takes for its seven view types.
-  { id: 'actions', label: 'Actions' },
-  { id: 'connections', label: 'Connections' },
-];
+// The registry lives in tabs.js, which the settings page reads too - it was written twice and the
+// second copy did not learn about Actions. Actions is one tab with a Kind filter rather than four,
+// because notifications, field updates, tasks and webhooks answer one question and share one shape:
+// the same decision the Analytics panel takes for its seven view types.
+const TABS = window.ZOOST_TABS;
 const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
 const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
 

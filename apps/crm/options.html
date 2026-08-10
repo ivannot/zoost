@@ -246,18 +246,15 @@
     <div class="row" style="margin-top:12px"><button id="layReset">Restore built-in defaults</button><button id="saveLay" class="primary">Save</button></div>
   </section>
 
-  <section>
-    <h2>About</h2>
-    <p class="sub">Created by <b>Ivan Notaristefano</b> (with the support of Claudio) · <a id="licenceLink" href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>
-    <div class="legal" id="legal"></div>
-    <p class="note">Zoost reads from the Zoho CRM instance you are already signed in to and writes to the
-      working folder above. It has no server of its own. Exports are files you create deliberately -
-      where they go afterwards is your responsibility.</p>
-  </section>
+  <!-- No About section: the panel's own About dialog is where the credits and the licence live, and
+       saying it twice is one more place to keep in step. What may not disappear is the disclaimer -
+       every user-facing surface carries it - so it stays as one line at the foot of the page. -->
+  <p class="legal" id="legal"></p>
 </div>
 <div id="toast"></div>
 <script src="idb.js"></script>
 <script src="keyvault.js"></script>
-<script src="options.js"></script>
+<script src="tabs.js"></script>
+  <script src="options.js"></script>
 </body>
 </html>

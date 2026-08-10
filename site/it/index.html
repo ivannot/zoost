@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:8c2669b910bee525 -->
+<!-- translated-from: site/index.html sha256:8389843c56a3b126 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -266,7 +266,7 @@
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>: i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code>, dove non gira nessuno script nostro e che sta lì solo perché il pannello possa capire a quale org appartiene una scheda Zoho One, e <code>api.anthropic.com</code> / <code>api.openai.com</code>, raggiunti solo se qualcuno accende l'assistente. Il manifest fa fede, ed è lungo quattro schermate.</td></tr>
-<tr><td class="k">Come verificarlo</td><td>Il sorgente sono dodici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics - nessun bundler, nessun minificatore,
+<tr><td class="k">Come verificarlo</td><td>Il sorgente sono tredici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics - nessun bundler, nessun minificatore,
           quindi quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la
           firma, e un comando verifica il file pubblicato.</td></tr>
       </tbody>
