@@ -206,7 +206,7 @@ const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
 // permission system, and a permission system that is not enforced anywhere is theatre.
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'health'];
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'failures', 'health'];
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
 let expScope = Object.assign({}, SCOPE_FULL);
@@ -344,6 +344,7 @@ const AREA_SCOPE = {
   workflows: ['workflows'],
   schedules: ['schedules'],
   connections: ['connections'],
+  failures: ['failures'],
 };
 
 // Sections whose data is behind are cleared when the dialog opens, and why is written next to them.
@@ -445,6 +446,10 @@ const TABS = [
   { id: 'workflows',   label: 'Workflows' },
   { id: 'schedules',   label: 'Schedules' },
   { id: 'connections', label: 'Connections' },
+  // What is actually breaking, which is the one thing the rest of this list cannot tell you: the
+  // others photograph a structure, this reads a runtime. It is a tab like the others so it gets the
+  // segment, the status dot, the per-type Pull, the staleness date and the access verdict for free.
+  { id: 'failures',    label: 'Failures' },
 ];
 const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
 const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
@@ -1703,11 +1708,14 @@ async function aiSystemPromptB(withTools, cap) {
   const seed = await aiBuildSeed(cap);
   const focus = await aiFocus();
   const toolsLine = withTools
-    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.'
+    ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection, list_failures. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
   return `You are an expert assistant for Zoho CRM Deluge scripting and Zoho CRM architecture, working on the user\'s real org.\n${toolsLine}\nBe precise, reference real function/module names, and follow Deluge best practices (avoid API calls in loops, guard null access, avoid hardcoded IDs).\n${productHelp()}${focus}\n# ORG INDEX\n${seed}`;
 }
 const AI_TOOLS = [
+  // The one tool that reads a runtime rather than a structure, so its answer carries the date it was
+  // read. It cannot return the input of a failed execution: that never reaches the panel.
+  { name: 'list_failures', description: 'What Zoho reports as failing: the function, what invoked it (Rest API, Workflow, Button, Schedule), the reason with its line number, how many times, and when it last failed - plus how many runs and failures Zoho counted in the 24 hours before the reading. Says the date it was read, because this changes hourly. It cannot return the input of a failed execution: Zoost does not read it.', input_schema: { type: 'object', properties: { filter: { type: 'string' } } } },
   { name: 'list_functions', description: 'List workspace functions with their size and outbound-call counts. Optionally filter by a substring of "namespace.name", and/or by thresholds (min_lines, min_calls) - use the thresholds to answer "how many functions are longer than N lines" exactly, instead of counting by hand. Sorted by lines, longest first.', input_schema: { type: 'object', properties: { filter: { type: 'string' }, min_lines: { type: 'number' }, min_calls: { type: 'number' } } } },
   { name: 'get_function', description: 'Full Deluge source and metadata of a function identified by "namespace.name" (or just its name).', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'who_calls', description: 'List functions that call the given function.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
@@ -1747,6 +1755,19 @@ async function aiExecTool(name, input) {
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
   if (name === 'get_module') { const mods = await aiLoadModules(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'list_failures') {
+    let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
+    if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
+    const q = String(input.filter || '').toLowerCase();
+    const rows = d.failures.filter((f) => !q || (f.name || '').toLowerCase().includes(q) || (f.reason || '').toLowerCase().includes(q))
+      .sort((a, b) => b.count - a.count);
+    const head = `read from Zoho on ${d.at || '(unknown date)'}`
+      + (d.usage ? `; in the 24 hours before that: ${d.usage.success ?? 'unknown'} run(s), ${d.usage.failure ?? 'unknown'} failed` : '')
+      + '. The input of each failed run stays in Zoho and is not available here.';
+    if (!rows.length) return head + '\nNothing matched.';
+    return head + '\n' + aiCap(rows.map((f) => `${f.name} \u00b7 ${f.componentType || '?'} \u00b7 ${f.count}\u00d7 \u00b7 last ${f.lastFailedAt || '?'} \u00b7 ${f.reason || ''}`),
+      rows.length, 'Pass a filter to narrow by function name or reason.');
+  }
   if (name === 'get_connection') {
     const list = await aiLoadConnections();
     const q = String(input.name || '').toLowerCase();
@@ -2602,7 +2623,7 @@ const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
 const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
   && p !== 'modules/layouts/index.json';
 
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
+async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'failures' ? rebuildFailures() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished - success or error.
@@ -2615,13 +2636,14 @@ function setPullBusy(b) {
 }
 async function pullCurrent() {
   if (pullBusy) return;
-  const label = { functions: 'functions', modules: 'modules', workflows: 'workflows', schedules: 'schedules', connections: 'connections' }[viewMode] || 'functions';
+  const label = tabLabel(viewMode || 'functions').toLowerCase();   // the registry is the only list of these
   setPullBusy(true); setStatus('Pulling ' + label + '\u2026', 'busy');   // immediate feedback (underlying pull sets its own progress next)
   try {
     if (viewMode === 'modules') await pullModules();
     else if (viewMode === 'workflows') await pullWorkflows();
     else if (viewMode === 'schedules') await pullSchedules();
     else if (viewMode === 'connections') await pullConnections();
+    else if (viewMode === 'failures') await pullFailures();
     else await pullAll();
     if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
   } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
@@ -2638,7 +2660,7 @@ async function pullCurrent() {
 async function pullEverything() {
   if (pullBusy) return;
   setPullBusy(true);
-  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, connections: pullConnections };
+  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, connections: pullConnections, failures: pullFailures };
   const skipped = [];
   for (const t of TABS) {
     if (isForbidden(t.id)) continue;
@@ -3207,12 +3229,13 @@ function freshnessLine() {
   return parts.join(' \u00b7 ');
 }
 
-function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
+function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
   conns = scope.connections ? (conns || []) : [];
+  fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const esc = escHtml;
   const ws = bound || {};
   const now = new Date().toLocaleString();
@@ -3466,6 +3489,23 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
   const connHtml = conns.length
     ? `<p class="hxd">The org's connections and the functions that use each - the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
     : '<p class="empty">No connections in this export.</p>';
+  // Failures. A chapter that says *when it was read* in its own heading, because unlike every other
+  // one here it is a reading of a runtime rather than of a structure - a report that presented it as
+  // durable would be claiming something the data cannot support.
+  const failRows = (fails.failures || []).slice().sort((a, b) => (b.count - a.count) || String(b.lastFailedAt || '').localeCompare(String(a.lastFailedAt || '')));
+  const failHtml = failRows.length || fails.usage ? (
+    `<p class="note">Read from Zoho on ${esc(fails.at ? new Date(fails.at).toLocaleString() : 'an unknown date')}. `
+    + (fails.usage
+        ? `In the 24 hours before that: ${esc(String(fails.usage.success ?? 'unknown'))} run(s), ${esc(String(fails.usage.failure ?? 'unknown'))} failed. `
+        : '')
+    + 'The input of each failed execution stays in Zoho - Zoost does not read it.</p>'
+    + (failRows.length
+        ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
+          + failRows.map((f) => `<tr><td>${esc(f.name)}</td><td>${esc(f.componentType || '')}</td><td>${esc(String(f.count))}</td>`
+              + `<td>${esc(f.lastFailedAt ? new Date(f.lastFailedAt).toLocaleString() : '')}</td><td>${esc(f.reason || '')}</td></tr>`).join('')
+          + '</tbody></table>'
+        : '<p class="empty">Nothing had failed when this was read.</p>')
+  ) : '';
   const toc = `<nav class="toc"><h2>Contents</h2>`
     + `<h3 class="toch">Functions (${fns.length})</h3>`
     + `<table class="toctbl"><thead><tr><th>Function</th><th>API name</th><th>Namespace</th><th>REST</th><th>DL</th><th>Uses</th><th>Used by</th><th title="source lines">Lines</th><th title="invokeurl + Zoho service tasks">Calls</th></tr></thead><tbody>${fnRows.join('') || '<tr><td colspan="9" class="none">none</td></tr>'}</tbody></table>`
@@ -3475,6 +3515,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
     + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue - related-list API names for Deluge</a></div>` : '')
     + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue - connectors, status, and which functions use each</a></div>` : '')
+    + (failRows.length ? `<h3 class="toch">Failures (${failRows.length})</h3><div class="tochx"><a href="#failures">What is breaking, as read on ${esc(fails.at ? new Date(fails.at).toLocaleDateString() : 'an unknown date')}</a></div>` : '')
     + (scope.health ? `<h3 class="toch">Health <span class="cnt">${healthTotal}</span></h3><div class="tochx"><a href="#health">Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}</a></div>` : '')
     + `</nav>`;
 
@@ -3486,7 +3527,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope) {
     + `<div class="meta">${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
@@ -3521,16 +3562,21 @@ async function loadExportData() {
   const conns = connCat.map((c) => ({ ...c, uses: (connUse[c.name] || []).slice() }));
   const catNames = new Set(connCat.map((c) => c.name));
   Object.keys(connUse).forEach((name) => { if (!catNames.has(name)) conns.push({ name, label: name, connector: null, connected: null, missing: true, uses: connUse[name].slice() }); });
-  return { fns, mods, g, modRefs, wfs, scheds, conns };
+  // The failures index is one file that says when it was read - not a folder - so it is loaded
+  // whole and carries its own date into the report. `params` is not in it: the bridge never sent it.
+  let fails = { at: null, usage: null, failures: [] };
+  try { const d = JSON.parse(await readFile('failures/index.json')); if (d && Array.isArray(d.failures)) fails = d; } catch (_) {}
+  return { fns, mods, g, modRefs, wfs, scheds, conns, fails };
 }
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
-  let { mods, g, wfs, scheds, conns } = d;
+  let { mods, g, wfs, scheds, conns, fails } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
   conns = scope.connections ? (conns || []) : [];
+  fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const nodes = scope.functions ? ((g && g.nodes) || {}) : {};
   const fnList = Object.values(nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -3640,6 +3686,28 @@ function buildExportMarkdown(d, scope) {
     });
     md += '\n';
   }
+  // Failures, for the reader who has the file and not the panel. It states the date it was read in
+  // the section itself: this is the one chapter that is a reading of a runtime rather than of a
+  // structure, and a report that hid that would be claiming more than the data can carry.
+  const failRows = (fails.failures || []).slice().sort((a, b) => (b.count - a.count));
+  if (failRows.length || fails.usage) {
+    md += '---\n\n## Failures\n\n';
+    md += `Read from Zoho on ${fails.at || 'an unknown date'}.`;
+    if (fails.usage) md += ` In the 24 hours before that: ${fails.usage.success ?? 'unknown'} run(s), ${fails.usage.failure ?? 'unknown'} failed.`;
+    md += ' The input of each failed execution stays in Zoho - Zoost does not read it.\n\n';
+    if (failRows.length) {
+      md += '| function | invoked by | times | last failure | reason |\n|---|---|---|---|---|\n';
+      md += failRows.map((f) => `| ${_mdCell(f.name)} | ${_mdCell(f.componentType)} | ${f.count} | ${_mdCell(f.lastFailedAt)} | ${_mdCell(f.reason)} |`).join('\n') + '\n\n';
+    } else {
+      md += 'Nothing had failed when this was read.\n\n';
+    }
+    md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';
+    conns.slice().sort((a, b) => (b.uses.length - a.uses.length) || byField('name')(a, b)).forEach((c) => {
+      const status = c.missing ? 'not in catalogue' : c.connected === false ? 'not connected' : 'connected';
+      md += `| \`${_mdCell(c.name)}\` | ${_mdCell(c.label || '')} | ${_mdCell(c.connector || '')} | ${status} | ${c.uses.length} | ${_mdCell(c.uses.join(', '))} |\n`;
+    });
+    md += '\n';
+  }
   md += `\n---\n\n## About this file\n\nGenerated by **${PRODUCT_NAME}**${PRODUCT_URL ? ` (${PRODUCT_URL})` : ''}, created by ${PRODUCT_AUTHOR}.\n\n${LEGAL_DISCLAIMER}\n`;
   return md;
 }
@@ -3663,8 +3731,8 @@ async function exportHtml() {
   try {
     await requirePerm(dir);
     setStatus('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds, conns } = await loadExportData();
-    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, scope);
+    const { fns, mods, g, modRefs, wfs, scheds, conns, fails } = await loadExportData();
+    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await writeFile(name, html);
@@ -3991,6 +4059,153 @@ function openConnection(c) {
   $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file, true); }));
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }
+/** A timestamp the reader can act on. The failures endpoint answers with two forms of the same
+ *  moment - `last_failed_time` already localized into the user's own format, and an ISO one beside
+ *  it. Only the ISO is ever parsed: reading a localized date is the same mistake as matching a
+ *  localized button label, and it fails on the first user whose interface is not English. */
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return String(iso || '');
+  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+/** The page that lists failed executions, and where the re-run button lives. Built from the binding
+ *  rather than clicked to, like every other navigation here. */
+async function openFailuresPage() {
+  if (sampleRefuse()) return;
+  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
+  if (!base || !inst) { setStatus(MSG.noTab, 'warn'); return; }
+  const url = `${base}/crm/${inst}/settings/functions?tab=failures`;
+  const id = await zohoTabId();
+  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+}
+
+// ---------- execution failures (and the last 24 hours of run counts) ----------
+//
+// The rest of the mirror is a photograph of a structure that changes rarely, and its point is that
+// `git diff` answers «what changed». This is not that: failures change hourly, and a diff of them is
+// noise rather than history. It is written to disk all the same - so the export, the assistant and
+// an offline read all see it - but as **one file that says when it was read**, not as a folder of
+// items pretending to be durable.
+//
+// `params` - the input of the failed execution - is dropped in the bridge and never arrives here.
+// See the comment there for why: for a REST API failure it carries a real person's name and email,
+// and Zoost says on three surfaces that it does not read records.
+let failureData = [], failureUsage = null, failureAt = null, failureFilter = 'all';
+
+async function pullFailures() {
+  try {
+    pullActive = true;
+    await requirePerm(dir);
+    const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
+    const cfg = await readCfg();
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
+      throw new Error(MSG.wrongTab);
+    setStatus('Reading failures\u2026', 'busy');
+    const r = await toBridge({ cmd: 'pullFailures' }); if (!r?.ok) throw new Error(r?.error || 'failures read failed');
+    await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null, failures: r.failures || [] }, null, 2));
+    await noteAccess('failures', null);
+    if (viewMode === 'failures') await rebuildFailures();
+    else setStatus(`${(r.failures || []).length} failing function(s).`, 'ok');
+  } catch (e) { await notePullFailure('failures', e); }
+  finally { pullActive = false; }
+}
+async function loadFailuresIndex() {
+  try {
+    const d = JSON.parse(await readFile('failures/index.json'));
+    return (d && typeof d === 'object' && Array.isArray(d.failures)) ? d : { at: null, usage: null, failures: [] };
+  } catch (_) { return { at: null, usage: null, failures: [] }; }
+}
+async function rebuildFailures() {
+  if (!dir) return;
+  try {
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const d = await loadFailuresIndex();
+    failureData = d.failures.map((f) => ({ ...f, path: 'failures/' + f.id }));
+    failureUsage = d.usage; failureAt = d.at;
+    renderFailures();
+    setStatus(failureData.length
+      ? `${failureData.length} failing function(s)${failureAt ? ' \u00b7 read ' + fmtDate(failureAt) : ''}.`
+      : (emptyReason() || 'Nothing has failed, or nothing has been read yet - press Pull all.'),
+      failureData.length ? 'warn' : 'ok');
+  } catch (e) { setStatus('Failures error: ' + e.message, 'bad'); }
+  await refreshContext();
+}
+/** The run counts, said as what they are. An aggregate that could not be read is **unknown**, never
+ *  zero - the same rule as a workflow with no scheduled-action count until it is downloaded. */
+function usageLine() {
+  if (!failureUsage) return '';
+  const ok = failureUsage.success, bad = failureUsage.failure;
+  const n = (v) => (v === null || v === undefined ? 'unknown' : String(v));
+  return `<div class="fusage">Last 24 hours: <b>${escHtml(n(ok))}</b> run(s), <b>${escHtml(n(bad))}</b> failed`
+    + (typeof ok === 'number' && typeof bad === 'number' && ok + bad > 0
+        ? ` \u00b7 ${((bad / (ok + bad)) * 100).toFixed(1)}%` : '')
+    + ' \u2014 counts from Zoho, no verdict attached.</div>';
+}
+function renderFailures() {
+  if (viewMode !== 'failures') return;
+  const term = $('find').value.trim().toLowerCase();
+  const pass = (f) => {
+    if (failureFilter !== 'all' && (f.componentType || '') !== failureFilter) return false;
+    return !term || (f.name || '').toLowerCase().includes(term) || (f.reason || '').toLowerCase().includes(term);
+  };
+  const list = failureData.filter(pass).sort((a, b) => (b.count - a.count) || String(b.lastFailedAt || '').localeCompare(String(a.lastFailedAt || '')));
+  const tree = $('tree'); tree.innerHTML = '';
+  const head = usageLine();
+  if (!list.length) {
+    tree.innerHTML = head + '<div class="empty">' + (failureData.length
+      ? '<b>No matches.</b>'
+      : (emptyReason() || '<b>Nothing has failed.</b> Or nothing has been read yet - press <b>Pull all</b>.')) + '</div>';
+    return;
+  }
+  tree.insertAdjacentHTML('beforeend', head);
+  list.forEach((f) => {
+    const el = document.createElement('div'); el.className = 'f'; el.dataset.path = f.path;
+    el.setAttribute('aria-selected', f.path === currentPath);
+    el.innerHTML = `<span class="st st-err" title="${escA('Failed ' + f.count + ' time(s) - click to re-read the failures from Zoho')}">\u27f3</span>`
+      + `<span class="fname">${escHtml(f.name)}</span>`
+      + `<span class="rest rf" title="times it failed">${f.count}\u00d7</span>`
+      + (f.componentType ? `<span class="rest rl" title="what invoked it">${escHtml(f.componentType)}</span>` : '');
+    el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshFailures(); };
+    el.onclick = () => openFailure(f);
+    tree.appendChild(el);
+  });
+}
+async function refreshFailures() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Re-reading failures\u2026', 'busy');
+  await pullFailures();
+}
+function openFailure(f) {
+  currentPath = f.path; pvHist = []; updateBack();
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === f.path));
+  setPvName(f.name, 'failures/index.json');
+  $('pvcallers').className = ''; $('pvcallers').textContent = '';
+  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  let h = '<div class="wfd">'
+    + `<div class="wfrow"><span class="wk">Reason</span> <b>${escHtml(f.reason || '(none given)')}</b></div>`
+    + `<div class="wfrow"><span class="wk">Failed</span> ${escHtml(String(f.count))} time(s)</div>`
+    + (f.componentType ? `<div class="wfrow"><span class="wk">Invoked by</span> ${escHtml(f.componentType)}</div>` : '')
+    + (f.category ? `<div class="wfrow"><span class="wk">Category</span> ${escHtml(f.category)}</div>` : '')
+    + (f.lastFailedAt ? `<div class="wfrow"><span class="wk">Last failure</span> ${escHtml(fmtDate(f.lastFailedAt))}</div>` : '')
+    + (f.firstFailedAt ? `<div class="wfrow"><span class="wk">First seen</span> ${escHtml(fmtDate(f.firstFailedAt))}</div>` : '')
+    + (f.reRunAt ? `<div class="wfrow"><span class="wk">Re-run</span> ${escHtml(f.reRunAt)}</div>` : '')
+    // Zoost does not re-run anything: that makes the platform execute code that writes to records,
+    // which is the first thing this product refuses. It takes you to the page where the button is,
+    // the same way «Find» takes you to the functions list, and the last click is yours.
+    + '<div class="wfrow"><span class="wk">Re-running</span> <span class="wnote">Zoost does not re-run a failed execution - that would write. '
+    + '<a id="pvfailgo" href="#">Open the failures page in Zoho \u2197</a> and the button is there.</span></div>'
+    + '<div class="wfrow"><span class="wk">Input</span> <span class="wnote">Zoho keeps the input of the failed execution. '
+    + 'Zoost does not read it: for a REST API failure it carries the request body and the caller\'s name and email, '
+    + 'and this tool does not read records.</span></div>'
+    + '</div>';
+  $('pvtable').innerHTML = h;
+  const go = $('pvtable').querySelector('#pvfailgo');
+  if (go) go.onclick = (ev) => { ev.preventDefault(); openFailuresPage(); };
+  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+}
+
 async function pullWorkflows() {
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)

@@ -446,6 +446,32 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.</figcaption>
   </figure>
 
+  <h2 id="failures">9b. What is actually failing</h2>
+  <p>The health audit reads the mirror and finds <em>structural</em> suspects - a function nothing calls,
+    a call that resolves to nothing. It cannot tell you what broke this morning. The
+    <b class="ui">Failures</b> tab can: it reads what Zoho reports as having failed, and it is the one
+    thing in Zoost that is a reading of a runtime rather than a photograph of a structure.</p>
+  <p>For each failure: the function, what invoked it - a REST call, a workflow, a button, a schedule -
+    the reason with its line number, how many times it has failed, and when it last did. Above the
+    list, how many runs and how many failures Zoho counted in the last 24 hours. Counts, with no
+    verdict attached: a function that fails five times an hour by design is not worse than one that
+    failed once.</p>
+  <p>Because it changes hourly, the panel says the date it was read rather than presenting it as
+    durable, and so does the export. It is the one chapter of a report that carries its own timestamp.</p>
+  <div class="box warn">
+    <p><b>Two things it does not do, and both are on purpose.</b> It does not re-run a failed
+      execution: that makes Zoho run code that writes to your records, which is the first thing this
+      extension refuses. It offers to open the failures page in Zoho, where the button is, and the
+      click is yours. And it does not read the <em>input</em> of a failed run - Zoho keeps it, and for
+      a REST API failure it holds the request body and the caller's name and email, which are records.</p>
+  </div>
+
+  <figure class="shot">
+    <img src="/img/crm-failures.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The Failures tab: the run counts for the last 24 hours above a list of failing functions, with one open showing its reason and dates.">
+    <figcaption>Chapter 9b: what Zoho reports as failing, with the reason and its line number. The two notes at the bottom of the detail are the two things it will not do.</figcaption>
+  </figure>
+
   <h2 id="export">10. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
     layouts, relations, workflows, schedules, connections, health. The <b>Share-safe</b> preset excludes source

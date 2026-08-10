@@ -30,7 +30,7 @@ If you administer or develop on Zoho CRM you know the gaps: no external editor, 
 
 WHAT IT DOES
 
-- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
+- Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
 - Try it before you connect anything. "+ Sample" writes a workspace of invented data into your working folder - a couple of hundred Deluge functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports without a Zoho tab and without an account. It is generated, never fetched, everything that would talk to Zoho is disabled for it, and it is deleted like any other workspace.
 
@@ -59,6 +59,8 @@ WHAT IT DOES
 - Size and outbound calls. Every function shows its length and how many outbound calls it makes - invokeurl, zoho.crm and the other Zoho service tasks, counted outside comments and string literals - so you can see at a glance where length and API cost concentrate. These are plain counts with no threshold and no verdict: length is verbosity, not complexity, and the interpretation is yours. Computed from the local mirror, with no extra calls to Zoho.
 
 - Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review - never automatic deletions.
+
+- What is actually failing. Zoho reports which functions have failed, and Zoost lists them beside the rest of the org: the function, what invoked it (a REST call, a workflow, a button, a schedule), the reason with its line number, how often, and how many runs and failures Zoho counted in the last 24 hours. Counts, with no verdict attached. It does not re-run a failed execution - that would make Zoho run code that writes to your records - and it does not read the input of the failed run, which stays in Zoho.
 
 - Exports you can hand over. The whole workspace as one self-contained cross-linked HTML file, or as Markdown shaped as context for an external LLM. A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.
 

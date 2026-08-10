@@ -299,6 +299,13 @@
   .wfnote b{color:var(--ink)}
   .wfd{padding:8px 10px;font:12px var(--mono);line-height:1.6}
   .wfrow{margin:2px 0}.wfrow .wk{color:var(--muted);display:inline-block;min-width:66px}
+  /* The failures tab. `.wnote` is a sentence inside a detail row - it has to wrap, where every other
+     value on that row is short enough not to. `.fusage` is the run-count strip above the list: the
+     counts for the last 24 hours, stated as counts and nothing else. */
+  .wnote{display:inline-block;max-width:100%;white-space:normal;color:var(--muted);line-height:1.55;vertical-align:top}
+  .wnote a{color:var(--sel-text);text-decoration:none}.wnote a:hover{text-decoration:underline}
+  .fusage{padding:7px 10px;border-bottom:1px solid var(--line);font:11.5px var(--mono);color:var(--muted)}
+  .fusage b{color:var(--ink)}
   .wfcond{margin:8px 0;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#141b29}
   .wfch{color:#82d2ff;font-size:11px;margin-bottom:4px}
   .wfcrit{color:var(--ink);font-size:11px;margin-bottom:5px}.wfcrit i{color:var(--muted);font-style:normal}
@@ -419,6 +426,7 @@
       <label class="ck"><input type="checkbox" id="sc_workflows"><span><b>Workflows</b> - triggers, criteria, actions</span></label>
       <label class="ck"><input type="checkbox" id="sc_schedules"><span><b>Schedules</b></span></label>
       <label class="ck"><input type="checkbox" id="sc_connections"><span><b>Connections</b> - the org's connection catalogue and which functions use each</span></label>
+      <label class="ck"><input type="checkbox" id="sc_failures"><span><b>Failures</b> - which functions are failing, why, and how often <em>never the input of a failed run</em></span></label>
       <label class="ck"><input type="checkbox" id="sc_health"><span><b>Health</b> - orphans, unresolved calls, broken automations</span></label>
     </div>
     <div id="scstale" class="scstale" style="display:none"></div>

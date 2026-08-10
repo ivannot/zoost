@@ -1,0 +1,65 @@
+{
+  "at": "2026-08-07T10:00:00.000Z",
+  "usage": {
+    "success": 412,
+    "failure": 6
+  },
+  "failures": [
+    {
+      "id": "7000",
+      "name": "buildInvoice",
+      "functionId": "9006",
+      "description": "",
+      "reason": "Custom exception - 'Missing tax rate' at Line Number: 42",
+      "count": 3,
+      "componentType": "Rest API",
+      "category": "standalone",
+      "lastFailedAt": "2026-08-02T01:14:00+02:00",
+      "firstFailedAt": "2026-07-21T01:02:00.000Z",
+      "reRunAt": null,
+      "recordId": null
+    },
+    {
+      "id": "7001",
+      "name": "onOrderCreate",
+      "functionId": "9015",
+      "description": "",
+      "reason": "Improper Statement Error - null value at Line Number: 17",
+      "count": 2,
+      "componentType": "Workflow",
+      "category": "automation",
+      "lastFailedAt": "2026-08-03T02:14:00+02:00",
+      "firstFailedAt": "2026-07-22T02:02:00.000Z",
+      "reRunAt": null,
+      "recordId": null
+    },
+    {
+      "id": "7002",
+      "name": "recalcTotals",
+      "functionId": null,
+      "description": "",
+      "reason": "Runtime error - division by zero at Line Number: 8",
+      "count": 1,
+      "componentType": "Button",
+      "category": "button",
+      "lastFailedAt": "2026-08-04T03:14:00+02:00",
+      "firstFailedAt": "2026-07-23T03:02:00.000Z",
+      "reRunAt": null,
+      "recordId": null
+    },
+    {
+      "id": "7003",
+      "name": "nightlyDispatch",
+      "functionId": "9021",
+      "description": "",
+      "reason": "Connection timed out after 30000 ms",
+      "count": 5,
+      "componentType": "Schedule",
+      "category": "schedule",
+      "lastFailedAt": "2026-08-05T04:14:00+02:00",
+      "firstFailedAt": "2026-07-24T04:02:00.000Z",
+      "reRunAt": null,
+      "recordId": null
+    }
+  ]
+}

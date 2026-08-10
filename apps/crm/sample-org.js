@@ -140,6 +140,14 @@
     return out;
   }
 
+  // Failing executions, one per way a function can be invoked, so the list and its filter have
+  // something to show. Ordinary business wording, like every other name in this file.
+  const FAILURES = [
+    ['standalone.buildInvoice', "Custom exception - 'Missing tax rate' at Line Number: 42", 3, 'Rest API', 'standalone'],
+    ['automation.onOrderCreate', "Improper Statement Error - null value at Line Number: 17", 2, 'Workflow', 'automation'],
+    ['button.recalcTotals', "Runtime error - division by zero at Line Number: 8", 1, 'Button', 'button'],
+    ['schedule.nightlyDispatch', "Connection timed out after 30000 ms", 5, 'Schedule', 'schedule'],
+  ];
   const CONNECTIONS = [
     ['warehouse_api', 'Warehouse API', ['standalone.planShipment', 'standalone.reserveStock']],
     ['payments_gw', 'Payments gateway', ['schedule.syncPayments', 'standalone.reconcilePayments']],
@@ -380,8 +388,28 @@
          connected: true, createdBy: AUTHOR, scopes: ['ZohoCRM.modules.ALL'],
          id: String(2000 + i) })));
 
+    // ---- execution failures ----
+    // A generated org has never run, so strictly it has nothing that failed. It gets a handful all
+    // the same: a tab that is empty for everybody trying the product shows a simpler product than
+    // the one that ships, which is the rule this file already follows for every other state. The
+    // input of each failure - what Zoho calls `params` - is not here because it never crosses the
+    // bridge, so a sample cannot contain something a real workspace does not.
+    J('failures/index.json', {
+      at: WHEN,
+      usage: { success: 412, failure: 6 },
+      failures: FAILURES.map(([fn, reason, count, comp, cat], i) => {
+        const [ns, nm] = fn.split('.');
+        const fi = list.findIndex(([a, b]) => a === ns && b === nm);
+        return { id: String(7000 + i), name: nm, functionId: fi >= 0 ? String(9000 + fi) : null,
+                 description: '', reason, count, componentType: comp, category: cat,
+                 lastFailedAt: '2026-08-0' + (2 + (i % 6)) + 'T0' + (1 + i) + ':14:00+02:00',
+                 firstFailedAt: '2026-07-2' + (1 + i) + 'T0' + (1 + i) + ':02:00.000Z',
+                 reRunAt: null, recordId: null };
+      }),
+    });
+
     const areas = {};
-    ['functions', 'modules', 'workflows', 'schedules', 'connections']
+    ['functions', 'modules', 'workflows', 'schedules', 'connections', 'failures']
       .forEach((a) => (areas[a] = { at: WHEN, pulledAt: WHEN, ok: true }));
     J('.zoost.json', {
       org: ORG, instance: INSTANCE, base: BASE, sandbox: false, label: 'Sample org',

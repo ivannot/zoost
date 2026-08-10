@@ -591,6 +591,33 @@ is disabled. Do not weaken this for convenience.
 reads what was written to disk. If a feature needs data that is not in the module JSON, the pull
 has to be extended and the user has to re-pull — say so in the UI rather than failing silently.
 
+**The Failures tab reads a runtime, and it is the only thing here that does.** Everything else in
+the mirror is a photograph of a structure that changes rarely, and its whole point is that `git diff`
+answers «what changed». Execution failures change hourly: a diff of them is noise, not history. So
+they are written as **one file that states when it was read** - `failures/index.json`, holding `at`,
+the 24-hour run counts and the list - rather than a folder of items pretending to be durable, and
+every surface that shows them carries that date, the export chapter included.
+`GET /crm/v2/settings/functions/failures` and `.../dashboard/top_usage` are both **public `v2`
+paths**, which is the most stable ground anything in this extension stands on, and neither needs a
+host the manifest does not already grant.
+
+**`params` is dropped in the bridge, and that placement is the whole guarantee.** The response
+carries the input of the failed execution: 36 bytes for a Workflow or a Button - a record id - and
+**8-9 KB for a REST API failure**, holding the request body and a `user_info` block with a real
+person's name and email. That is a record, and Zoost says on three surfaces that it does not read
+any. Dropping it at the boundary rather than «not writing it» downstream is the difference between a
+rule and a habit: the panel cannot mirror what it was never handed, and a probe asserts the string
+never reaches the DOM.
+
+**Re-running a failure is a write, so it is not offered.** It makes Zoho execute code that changes
+records - the first non-negotiable. The panel builds the URL of the failures page and the last click
+is the user's, exactly as «Find» does for the functions list.
+
+**And the run counts are aggregates, which is why they cost nothing in posture.** `top_usage` answers
+with a count per hour and nothing else: no record, no identifier. An aggregate that could not be read
+is **unknown**, never zero - the same rule as a workflow with no scheduled-action count until it is
+downloaded.
+
 **A fact already on disk is derived, not re-captured.** «How many workflows have actions that do not
 run immediately» had no answer anywhere: the workflow *list* endpoint does not carry it, so
 `workflows/index.json` does not either — and it was sitting unread in every `workflows/<id>.json`,

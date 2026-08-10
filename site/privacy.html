@@ -108,8 +108,9 @@
       <tr>
         <td class="p" data-label="Where">Local folder<br>(File System Access)<br><span class="k">Zoho CRM</span></td>
         <td data-label="What">Deluge function source and its metadata (including which connections each function uses and who
-          last changed it), module and layout metadata, related lists, workflows, schedules, the org's
-          connections catalogue (names, connectors and OAuth scopes - <b>never</b> connection secrets or
+          last changed it), module and layout metadata, related lists, workflows, schedules, the list of what Zoho reports as failing (the function, what invoked it,
+      the reason and how many times - <b>never</b> the input of a failed execution, which stays
+      in Zoho), the org's connections catalogue (names, connectors and OAuth scopes - <b>never</b> connection secrets or
           tokens), exports, and a small <code>.zoost.json</code> per workspace holding the Zoho org id, host
           and instance name, plus which types Zoho answered for and which it refused, with the date it was
           asked and the date each type was last read, plus a name for the workspace if you have given it

@@ -364,6 +364,55 @@
     return { total: connections.length, connections };
   }
 
+  // Execution failures, and the last 24 hours of run counts. This is the one thing Zoost reads that
+  // is not a photograph of a structure: a mirror says what exists, this says what is *breaking*, and
+  // it changes hourly. Both are `/crm/v2/settings/functions/...`, which is a public v2 path rather
+  // than one of the internal `.do` endpoints the rest of this file leans on - the most stable ground
+  // in the whole extension.
+  //
+  // **`params` is dropped here, in the bridge, and never crosses `chrome.runtime`.** For a Workflow
+  // or a Button failure it is 36 bytes - a record id. For a REST API failure it is the whole inbound
+  // request: headers, the body, and a `user_info` block carrying a real person's name and email. That
+  // is customer data, and Zoost says on three surfaces that it does not read any. Dropping it at the
+  // boundary rather than "not writing it" downstream is the difference between a rule and a habit:
+  // the panel cannot mirror what it was never handed.
+  function failureRow(f) {
+    const fi = f.function_info || {};
+    return {
+      id: String(f.failure_id || f.id || ''),
+      name: fi.name || '(unnamed)', functionId: fi.id ? String(fi.id) : null,
+      description: fi.description || '',
+      reason: f.reason || '', count: Number(f.count) || 0,
+      componentType: f.component_type || null,       // Rest API | Workflow | Button | ...
+      category: f.functionCategory || null,          // the same dimension the graph colours by
+      // `last_failed_time` comes back localized - "04/08/2026 02:05" in the user's own format, with
+      // the timezone in `info`. It is never parsed, exactly as the Analytics dates are not: the ISO
+      // field beside it is the only one that can be sorted or formatted.
+      lastFailedAt: f.last_failed_time_ISO || null,
+      firstFailedAt: Number(f.failed_time) ? new Date(Number(f.failed_time)).toISOString() : null,
+      reRunAt: f.re_run_time && f.re_run_time !== 'null' ? f.re_run_time : null,
+      recordId: (f.entity_info && f.entity_info.id) ? String(f.entity_info.id) : null,
+    };
+  }
+  async function pullFailures() {
+    const j = await api('/crm/v2/settings/functions/failures?language=deluge&start=1&limit=100&componentType=all');
+    const failures = (j.custom_function_failures || []).map(failureRow);
+    // The run counts are aggregates - a count per hour, nothing else - so they carry no record data
+    // at all and are the one half of this that costs nothing in posture.
+    const to = new Date(), from = new Date(to.getTime() - 24 * 3600 * 1000);
+    const iso = (d) => d.toISOString().replace(/\.\d+Z$/, 'Z');
+    const usage = {};
+    for (const status of ['success', 'failure']) {
+      try {
+        const u = await api('/crm/v2/settings/functions/dashboard/top_usage?type=usage_pattern'
+          + `&component_type=functions&status=${status}&period=past_24_hours`
+          + `&from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to))}`);
+        usage[status] = (u.top_usage || []).reduce((n, x) => n + (Number(x.count) || 0), 0);
+      } catch (_) { usage[status] = null; }   // an aggregate we could not read is unknown, never zero
+    }
+    return { failures, usage, at: iso(to) };
+  }
+
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
@@ -391,6 +440,7 @@
     if (msg?.cmd === 'fetchModuleFields') { fetchModuleFields(msg.apiName).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'pullFailures') { pullFailures().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }

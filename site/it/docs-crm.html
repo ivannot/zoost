@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:706519cd671b2e7e -->
+<!-- translated-from: site/docs-crm.html sha256:d457cee455f5fcb8 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -479,6 +479,33 @@ git commit -m "baseline"</code></pre>
     <img src="/img/crm-health.webp" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La vista health: i candidati orfani, con la nota di copertura che dice cosa la scansione non vede.">
     <figcaption>Capitolo 9: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.</figcaption>
+  </figure>
+
+  <h2 id="failures">9b. Cosa sta fallendo davvero</h2>
+  <p>L'audit di salute legge lo specchio e trova sospetti <em>strutturali</em> - una funzione che non
+    chiama nessuno, una chiamata che non risolve. Non può dirti cosa si è rotto stamattina. La scheda
+    <b class="ui">Failures</b> sì: legge quello che Zoho segnala come fallito, ed è l'unica cosa in
+    Zoost che è la lettura di un runtime invece della fotografia di una struttura.</p>
+  <p>Per ogni fallimento: la funzione, cosa l'ha invocata - una chiamata REST, un workflow, un
+    pulsante, una schedulazione - il motivo con il numero di riga, quante volte è fallita e quando è
+    successo l'ultima volta. Sopra l'elenco, quante esecuzioni e quanti fallimenti Zoho ha contato
+    nelle ultime 24 ore. Conteggi, senza nessun verdetto: una funzione che fallisce cinque volte
+    all'ora per come è fatta non sta peggio di una fallita una volta sola.</p>
+  <p>Siccome cambia di ora in ora, il pannello dice la data in cui l'ha letta invece di presentarla
+    come duratura, e lo stesso fa l'export. È l'unico capitolo di un report che porta la propria data.</p>
+  <div class="box warn">
+    <p><b>Due cose che non fa, e sono volute tutt'e due.</b> Non rilancia un'esecuzione fallita:
+      farebbe eseguire a Zoho del codice che scrive sui tuoi record, che è la prima cosa che questa
+      estensione rifiuta. Ti propone di aprire la pagina dei fallimenti in Zoho, dove il pulsante c'è,
+      e il click è tuo. E non legge l'<em>input</em> dell'esecuzione fallita - Zoho lo conserva, e per
+      un fallimento REST contiene il corpo della richiesta e nome ed email di chi ha chiamato, che
+      sono record.</p>
+  </div>
+
+  <figure class="shot">
+    <img src="/img/crm-failures.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda Failures: i conteggi delle ultime 24 ore sopra un elenco di funzioni fallite, con una aperta che mostra motivo e date.">
+    <figcaption>Capitolo 9b: quello che Zoho segnala come fallito, con il motivo e il numero di riga. Le due note in fondo al dettaglio sono le due cose che non farà.</figcaption>
   </figure>
 
   <h2 id="export">10. Gli export</h2>

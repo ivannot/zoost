@@ -327,6 +327,11 @@ PANELS = [
         const el = [...document.querySelectorAll('#tree .f')].find((e) => /Build invoice/.test(e.textContent));
         if (el) el.click();
     """),
+    ("crm-failures", "crm", "crm/sampleorg-1234567890", """
+        const seg = [...document.querySelectorAll('.seg')].find((s) => /Failures/.test(s.textContent));
+        if (seg) seg.click();
+        setTimeout(() => { const el = document.querySelector('#tree .f'); if (el) el.click(); }, 900);
+    """),
     ("crm-search", "crm", "crm/sampleorg-1234567890", """
         // Full-text search across every function at once, which Zoho CRM has no way of doing. The
         // first version of this shot searched *names* - `#smode` is the toggle, not a select - and

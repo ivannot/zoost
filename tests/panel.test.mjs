@@ -2570,7 +2570,9 @@ test('a failed pull records and reports through one helper', () => {
   assert.equal((src.match(pair) || []).length, 0,
     'a pull failure still records and reports by hand - call notePullFailure(area, e)');
   assert.ok(/async function notePullFailure\(area, e\)/.test(src), 'the CRM lost notePullFailure()');
-  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 6,
+  // Seven since the Failures tab: every pull is one of these, and a new one that forgot the helper
+  // would show up here as a count that did not move.
+  assert.equal((src.match(/await notePullFailure\(/g) || []).length, 7,
     'a pull failure site stopped going through notePullFailure()');
   // the helper must keep the order: the verdict is on disk before the sentence is on screen
   const body = src.slice(src.indexOf('async function notePullFailure'), src.indexOf('\n}', src.indexOf('async function notePullFailure')));

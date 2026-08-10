@@ -11,7 +11,7 @@ your browser.
 
 | | What it mirrors | |
 |---|---|---|
-| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
+| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing, execution failures | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
 | **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics) · [guide](https://zoost.it/docs-analytics) |
 
 Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
@@ -78,7 +78,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **Local, Git-friendly version control**
 - Pull all Deluge functions to `.dg` source + `.meta.json` sidecars under `functions/<namespace>/`.
   One folder per kind - `functions/`, `modules/` (with `modules/layouts/` inside it),
-  `workflows/`, `schedules/`, `connections/`, `export/` - each with its own `index.json`.
+  `workflows/`, `schedules/`, `connections/`, `failures/`, `export/` - each with its own `index.json`.
 - **Auto-sync on save**: save a function in Zoho and the local file updates automatically.
 - Deletions in Zoho are pruned locally **on the next pull** (reconciled at pull time, not intercepted
   live like a save), so your repo stays a faithful mirror.
@@ -99,6 +99,10 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it -
   per function (the connections it calls) and org-wide (usage count, unused, disconnected).
   Plus who last changed each function, and when.
+- **Failures**: what Zoho reports as failing - the function, what invoked it, the reason with its
+  line number, how often, and how many runs and failures Zoho counted in the last 24 hours. The one
+  thing here that reads a runtime rather than a structure, so it carries the date it was read. It
+  does not re-run anything (that would write) and it does not read the input of a failed run.
 - **Size and outbound calls**: every function shows its length (lines, code lines, KB) and how many
   outbound calls it makes - `invokeurl`, `zoho.crm.*` and the other Zoho service tasks, counted
   outside comments and string literals. Counts, not a score: length is verbosity, not complexity,

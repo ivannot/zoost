@@ -95,6 +95,16 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Health ♥": a list of things that look wrong - functions nothing calls, calls to functions that do
   not exist, automations pointing at something missing. It states what it cannot see, and it is a
   list of candidates to look at, never a verdict.
+- "Failures" (a tab): what Zoho reports as having failed - the function, what invoked it (a REST
+  call, a workflow, a button, a schedule), the reason with its line number, how many times, and when
+  it last failed. Above the list, how many runs and how many failures Zoho counted in the last 24
+  hours. This is the only thing Zoost reads that is not a photograph of a structure: it changes
+  hourly, so the panel says the date it was read rather than presenting it as durable.
+  Two things it deliberately does not do. It does not re-run a failed execution - that makes Zoho
+  run code that writes to records, which this extension refuses - so it offers to open the failures
+  page in Zoho, where the button is, and the click is the user's. And it does not read the *input*
+  of the failed run: Zoho keeps it, and for a REST API failure it holds the request body and the
+  caller's name and email, which are records. Say so plainly if asked; do not offer to fetch it.
 - "HTML" and "Markdown" (Export): write a single file into the export folder inside the workspace.
   HTML is for reading and sharing - one page containing the whole org, openable in any browser by
   someone who does not have Zoost or Zoho CRM. Markdown is for giving to another AI assistant.
