@@ -1261,6 +1261,15 @@ image whose recorded digest still matches, and `tools/shots.py` skips an app who
 images are current. Nothing changed: **1:35 to 0.5s** for the site set, three minutes to 0.2s for
 the Store set. `--force` on either draws everything anyway.
 
+**A render is not bit-exact, and the digest is the only thing that decides.** The panel does
+asynchronous work and the capture happens on a time budget, so drawing the same commit twice can
+differ by a few dozen bytes on three hundred thousand, with nothing visible to see - measured on
+`crm-health` at 2x, five identical renders and a sixth that was not. Comparing produced bytes
+would therefore republish for ever. The animations are frozen in the shot stub (`.spin` rotates,
+the assistant's dots pulse, a focused search box blinks a caret) because a frame caught mid-
+animation is a picture of a state nobody sits in front of - but that removes one source, not the
+class. What remains is noise in the diff on runs where something genuinely moved.
+
 That flips the cost of being wrong, so the hash had to grow: rendering needlessly costs ten
 seconds, **skipping something that changed publishes a picture of a product that no longer
 exists**. `source_digest()` therefore covers the renderers too - `shots.py` holds the window size,

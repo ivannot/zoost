@@ -104,7 +104,20 @@ SHOTS = [
     """),
 ]
 
-STUB = """window.chrome = {{
+STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+// ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
+// crm-health at 2x - five identical renders and a sixth that was not - which is why the published
+// WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
+// picture: a frame caught mid-transition shows a state the reader never sits in front of.
+(function still() {{
+  const css = '*,*::before,*::after{{animation:none!important;transition:none!important;'
+    + 'caret-color:transparent!important}}';
+  const put = () => {{ const st = document.createElement('style'); st.textContent = css;
+    (document.head || document.documentElement).appendChild(st); }};
+  put();
+  document.addEventListener('DOMContentLoaded', put);
+}})();
+window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: () => {{}} }},
   storage: {{ local: {{ get: async () => ({{ graphData: {data} }}), set: async () => {{}} }} }},
 }};
@@ -158,7 +171,20 @@ def render(shot):
     return dest
 
 
-PANEL_STUB = """window.chrome = {{
+PANEL_STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+// ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
+// crm-health at 2x - five identical renders and a sixth that was not - which is why the published
+// WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
+// picture: a frame caught mid-transition shows a state the reader never sits in front of.
+(function still() {{
+  const css = '*,*::before,*::after{{animation:none!important;transition:none!important;'
+    + 'caret-color:transparent!important}}';
+  const put = () => {{ const st = document.createElement('style'); st.textContent = css;
+    (document.head || document.documentElement).appendChild(st); }};
+  put();
+  document.addEventListener('DOMContentLoaded', put);
+}})();
+window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
               onMessage: {{ addListener: () => {{}} }}, lastError: null, getURL: (p) => p,
               onInstalled: {{ addListener: () => {{}} }} }},
@@ -234,7 +260,20 @@ def render_panel(shot):
 
 
 
-OPTIONS_STUB = """
+OPTIONS_STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+// ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
+// crm-health at 2x - five identical renders and a sixth that was not - which is why the published
+// WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
+// picture: a frame caught mid-transition shows a state the reader never sits in front of.
+(function still() {{
+  const css = '*,*::before,*::after{{animation:none!important;transition:none!important;'
+    + 'caret-color:transparent!important}}';
+  const put = () => {{ const st = document.createElement('style'); st.textContent = css;
+    (document.head || document.documentElement).appendChild(st); }};
+  put();
+  document.addEventListener('DOMContentLoaded', put);
+}})();
+
 window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0', host_permissions: {hosts} }}), id: 'shot',
               openOptionsPage: () => {{}}, sendMessage: async () => ({{ ok: true }}),

@@ -44,6 +44,13 @@ def source_digest(app: str, script: str) -> str:
     change anywhere in it can reach any shot, and pretending otherwise would go quiet exactly when
     the change was broad. It over-reports rather than under-reports.
 
+    The digest is the *only* thing that decides, and it has to be, because a render is not bit-exact:
+    the panel does asynchronous work and the capture happens on a time budget, so drawing the same
+    commit twice can differ by a few dozen bytes on three hundred thousand - measured, and with no
+    visible difference. Comparing the produced bytes would therefore re-publish for ever. What that
+    costs is a diff with a little noise in it on the runs where something genuinely moved; what it
+    buys is that no image is ever skipped because its bytes happened to match.
+
     That direction matters more now that the digest decides what to *re-render* and not only what to
     report: rendering something that did not need it costs ten seconds, and skipping something that
     did publishes a picture of a product that no longer exists. So the renderers themselves are in
