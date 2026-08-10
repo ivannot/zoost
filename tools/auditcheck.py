@@ -30,6 +30,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,6 +70,7 @@ def live_matches_repo(findings: list, notes: list) -> None:
                        and f.name not in ignored
                        and not f.name.startswith('.')
                        and 'functions' not in f.relative_to(SITE).parts)
+    pending = []                 # differences are re-fetched once; see below
     for p in published:
         rel = p.relative_to(SITE).as_posix()
         # the label is the path, not the basename: with a translation directory there are two
@@ -95,19 +97,37 @@ def live_matches_repo(findings: list, notes: list) -> None:
                          f'ours intact')
             continue
         if p.suffix not in ('.html', '.txt', '.css', '.js', '.json', '.xml', '.webmanifest', '.svg'):
-            findings.append(f'{rel}: {url} is not the file in the repository '
-                            f'({len(body)} bytes served, {len(mine)} here)')
+            pending.append((rel, url, p, f'{rel}: {url} is not the file in the repository '
+                                         f'({len(body)} bytes served, {len(mine)} here)'))
             continue
         if not body:
             # An empty body hashed to e3b0c442… and was reported as a content mismatch, which sends
             # you looking for a stale deploy. It is a fetch that returned nothing — usually a 404 or
             # a request that landed mid-deploy — and saying so is the difference between one retry
             # and half an hour.
-            findings.append(f'{rel}: {url} returned an empty body — not a stale page, no page')
+            pending.append((rel, url, p,
+                            f'{rel}: {url} returned an empty body — not a stale page, no page'))
             continue
-        findings.append(f'{rel}: {url} does not contain what the repository holds '
-                        f'(live {hashlib.sha256(body).hexdigest()[:12]}, '
-                        f'repo {hashlib.sha256(mine).hexdigest()[:12]})')
+        pending.append((rel, url, p, f'{rel}: {url} does not contain what the repository holds '
+                                     f'(live {hashlib.sha256(body).hexdigest()[:12]}, '
+                                     f'repo {hashlib.sha256(mine).hexdigest()[:12]})'))
+    # A deploy does not land everywhere at once, and this ran twice within a minute of a push and
+    # reported one file each time - crm-preview.webp, then index.html - each of which matched a
+    # moment later. Reporting propagation as a stale deploy is how a check starts being ignored, and
+    # ignoring a stale deploy is what this check exists to prevent, so the answer is neither: fetch
+    # the ones that differed **once more** and report only what still differs. A file that is
+    # genuinely wrong is still wrong ten seconds later, so nothing real is hidden by the wait.
+    if pending:
+        time.sleep(10)
+        for rel, url, p, message in pending:
+            out = subprocess.run(['curl', '-sS', '--max-time', '20', '-A',
+                                  'zoost auditcheck (+https://zoost.it)', url],
+                                 capture_output=True, timeout=30)
+            if out.returncode == 0 and out.stdout == p.read_bytes():
+                notes.append(f'{rel}: differed on the first fetch and matched on the second - the '
+                             f'deploy was still propagating, not a stale file')
+            else:
+                findings.append(message + ' - and again ten seconds later')
     notes.append(f'{len(published)} published files compared against the live site')
 
 

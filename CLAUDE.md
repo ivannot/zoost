@@ -2664,6 +2664,16 @@ still ended in «0 findings». It is a finding now, and `deploy_state()` reports
 uncommitted tree without needing the network — git knows. **Say "in the repository" until it is
 pushed, and "live" only after `auditcheck` has said so with the network on.**
 
+**A deploy does not land everywhere at once, and `auditcheck` cried wolf twice before that was
+written down.** Run within a minute of a push it reported `crm-preview.webp` once and `index.html`
+the next time - each byte-identical a moment later, each a PoP that had not caught up. The rule this
+file already states («a push is not a publication until `curl` says so») needed its other half:
+**a single file differing seconds after a deploy is propagation, not a stale deploy.** Neither
+answer was acceptable on its own - ignoring it would blind the one check that speaks about zoost.it,
+reporting it would make the release gate noisy - so a difference is now **fetched once more, ten
+seconds later**, and only what still differs is a finding. Nothing real is hidden: a file that is
+genuinely wrong is still wrong on the second fetch, which was proven by making one wrong on purpose.
+
 **An outside review is evidence, not a verdict — check every claim before acting on it.** One arrived
 saying the homepage and `llms.txt` served by zoost.it were still the pre-analysis versions, "not a
 part: all of it", and recommended an edge purge. All five pages were **byte-identical to the

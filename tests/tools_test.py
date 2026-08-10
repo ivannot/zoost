@@ -1178,6 +1178,26 @@ class TheLedgerIsWrittenInThePast(unittest.TestCase):
         self.assertEqual(hits, [], f'RELEASES.md speaks in the present tense: {hits}')
 
 
+class ADeployDoesNotLandEverywhereAtOnce(unittest.TestCase):
+    """A difference found seconds after a push is propagation, not a stale deploy.
+
+    `auditcheck` ran twice within a minute of two pushes and reported one file each time -
+    `crm-preview.webp`, then `index.html` - and both matched a moment later. Reporting that as a
+    stale deploy is how a check stops being read; not reporting a stale deploy is what the check
+    exists for. So a difference is fetched once more before it becomes a finding, and a file that is
+    genuinely wrong is still wrong ten seconds later - nothing real is hidden by the wait.
+    """
+
+    def test_a_difference_is_fetched_twice_before_it_is_reported(self):
+        src = (ROOT / 'tools/auditcheck.py').read_text(encoding='utf-8')
+        self.assertIn('time.sleep(10)', src, 'the second fetch has to wait, or it proves nothing')
+        self.assertIn('and again ten seconds later', src)
+        self.assertIn('still propagating', src)
+        # The point is that no mismatch can reach `findings` without passing the second fetch.
+        self.assertNotIn("findings.append(f'{rel}: {url} does not contain", src)
+        self.assertNotIn("findings.append(f'{rel}: {url} returned an empty body", src)
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 
