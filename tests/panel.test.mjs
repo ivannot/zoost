@@ -421,7 +421,7 @@ test('nothing rebuilds the label of a button whose label is a mark', () => {
   // switch, $('graph').textContent did the same, and updateButtons() blanked #pull's title — which is
   // where a mark's *name* lives, so the control lost its name on the first repaint. The general shape
   // is worth the check: a label that lives in the markup must not be rebuilt by whatever updates state.
-  const marked = ['pull', 'pullone', 'graph', 'dpull', 'dgraph'];
+  const marked = ['pull', 'pullone', 'healthpull', 'graph', 'dpull', 'dgraph'];
   const findings = [];
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
