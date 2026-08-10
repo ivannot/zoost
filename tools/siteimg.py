@@ -84,6 +84,14 @@ def main() -> int:
         total += dest.stat().st_size
         stamp[key] = {"app": shot[1], "from": source_digest(shot[1], shot[-1])}
         print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB")
+    # The 2x renders are working material - what is published is site/img/. Leaving them in dist/
+    # meant a folder of PNGs that look like something to upload and are not.
+    for f in shots.OUT.glob("*.png"):
+        f.unlink()
+    try:
+        shots.OUT.rmdir()
+    except OSError:
+        pass
     LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\n  {len(every)} image(s), {total // 1024} KB published under site/img/")
     print(f"  what each was rendered from is recorded in {LEDGER.relative_to(ROOT)}, so imgcheck can")

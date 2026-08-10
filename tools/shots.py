@@ -484,6 +484,16 @@ def main():
             sys.exit("that is not what the Store accepts - see store/assets.md")
         rendered[shot[0]] = dest
     publish_store_set(rendered)
+    # The 1280x800 PNGs are working material: what is published is dist/store/<app>/, and what the
+    # site publishes is site/img/. Keeping both meant dist/shots/ sat there afterwards looking like
+    # something to upload. A run for one named shot keeps its file - that is what it was asked for.
+    if len(want) > 3:
+        for f in OUT.glob('*.png'):
+            f.unlink()
+        try:
+            OUT.rmdir()
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

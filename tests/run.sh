@@ -40,4 +40,7 @@ python3 tools/sitemap.py --check | tail -1
 
 echo
 echo "── build ──"
+# The archive is the point of the check, not of keeping: a local .zip of a version is the one
+# artefact the release routine says must never be uploaded, so the suite does not leave one.
 ./build.sh crm >/dev/null && ./build.sh analytics >/dev/null && echo "both apps package"
+rm -f dist/zoost-crm-*-store.zip dist/zoost-analytics-*-store.zip

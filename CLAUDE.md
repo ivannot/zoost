@@ -2636,6 +2636,17 @@ guarantee is gone.
 **The zip is never committed** — it is a build artefact, reproducible from the tagged commit, and
 `dist/` is git-ignored. It lives as a Release attachment, nowhere else.
 
+**And it does not survive the check that made it.** `dist/` had grown to **72** local archives,
+one per version ever built here - eleven megabytes of the single file the routine above says must
+never be uploaded, any one of which could be dragged into the dashboard by mistake. `release.sh`
+removes the pair it built once the two hashes match (and keeps them when they do not, which is
+when you need to look at them), and `tests/run.sh` removes what its packaging check produced. The
+proof is the hash; the file is a means. `dist/` holds one thing between runs now:
+`store/<app>/1..5.png`, the set to upload. `tools/shots.py` and `tools/siteimg.py` clear their
+1280x800 working renders after publishing - a folder of PNGs that look like something to upload
+and are not is the same hazard one directory over. A run for a single named shot keeps its file,
+because that is what it was asked for.
+
 **Record what cannot be verified, rather than omitting it.** `RELEASES.md` states that CRM 0.13.8 —
 the version on the Store — predates this repository and has no commit to point at, and that
 Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A

@@ -67,8 +67,15 @@ if [[ "$A" != "$B" ]]; then
   echo "  $A"
   echo "  $B"
   echo "Fix build.sh before tagging: a hash nobody can reproduce is worse than none."
+  echo "The two archives are left in dist/ for you to compare."
   exit 1
 fi
+
+# The proof is the hash, not the file. A local .zip of the version being released is exactly the
+# archive this whole chain says must never be uploaded - so it does not survive the check that
+# produced it. dist/ had grown to 72 of them, one per version ever built here, any one of which
+# could have been dragged into the dashboard by mistake.
+rm -f "$ZIP" "dist/zoost-$APP-$VERSION-unpacked.zip"
 
 git tag -a "$TAG" -m "Zoost for $APP $VERSION
 
