@@ -159,6 +159,12 @@
   .hnone{font-size:11px;color:#54d199}
   .hdiv{margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink)}
   .hdiv .hd2{font-weight:400;color:var(--muted);font-size:10.5px}
+  /* The status line lives inside #belowbar and this view covers it, so anything setStatus()
+     says while the health view is open is written where nobody can see it. A verdict about
+     an action goes beside the control that started it. */
+  #healthmsg{font:11px var(--sans);color:var(--muted)}
+  #healthmsg:empty{display:none}
+  #healthmsg.ok{color:var(--ok)} #healthmsg.warn{color:var(--warn)} #healthmsg.bad{color:var(--bad)}
   .htabs{display:flex;gap:4px;margin-bottom:10px;position:sticky;top:0;background:var(--bg);padding:10px 0 2px;z-index:2}
   .htab{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
   .htab.on{color:var(--ink);border-color:var(--accent);background:#16233a}
@@ -367,7 +373,10 @@
   /* preview (high contrast vs tree) */
   #preview{display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
   #preview.show{display:flex}
-  #pvhead{display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
+  /* The row must not change height as the buttons come and go: with «Records»/«Layouts» or
+     «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
+     module moved everything below it by 7px. The height of the taller state, held. */
+  #pvhead{display:flex;gap:8px;align-items:center;min-height:36px;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
   #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none} #pvhead .back.show{display:inline}
   #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
   /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
@@ -397,9 +406,15 @@
   #offoverlay .t{color:var(--ink);font-size:14px;font-weight:600} #offoverlay .s{color:var(--muted);font-size:12px;max-width:240px}
   /* The strip's right-hand slot. A control that acts on the item belongs beside the tabs, not
      inside one of them - see the comment on #pvtabs. */
-  #pvtabsr{flex:none;display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted)}
+  /* One component, not three things next to the tabs. Loose on the strip, the word «depth», the
+     picklist and the diagram button read as belonging to the buttons beside them - so they are
+     drawn as a single bordered group, centred on the row, with the label inside it. */
+  #pvtabsr{flex:none;display:flex;align-items:center;align-self:center;gap:5px;padding:0 6px;
+           height:24px;border:1px solid var(--border);border-radius:6px;background:#0f1826;
+           font-size:10.5px;color:var(--muted)}
   #pvtabsr:empty{display:none}
-  #pvtabsr .laylocal{margin-left:0}
+  #pvtabsr select{padding:0 4px;font-size:10.5px}   /* no height: a native select clips its value */
+  #pvtabsr .laylocal{margin-left:0;padding:1px 6px;line-height:1}
   .laybar{padding:7px 10px;border-bottom:1px solid var(--border);background:#0f1522;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
   .laybar select,#pvtabsr select{background:var(--tree);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
   .laymod{margin-left:auto;cursor:pointer;color:#9fc4f5;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
@@ -520,7 +535,7 @@
     </div>
   </div>
     <!-- Health lives at the #belowbar level (sibling of #aiview), so it covers the mode tabs too - like the AI panel. -->
-    <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hhr"><button id="healthpull" class="zbtn" title="Re-read what Zoho reports at runtime - what is failing, and how often each function ran. Everything else in this view is computed from the local mirror and needs no call.">Pull runtime</button><span class="hx" id="healthx" title="Close">✕</span></span></div><div id="healthbody"></div></div>
+    <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hhr"><span id="healthmsg"></span><button id="healthpull" class="zbtn" title="Re-read what Zoho reports at runtime - what is failing, and how often each function ran. Everything else in this view is computed from the local mirror and needs no call.">Pull runtime</button><span class="hx" id="healthx" title="Close">✕</span></span></div><div id="healthbody"></div></div>
     <div id="aiview">
       <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
       <div id="aictx" class="aictx"></div>

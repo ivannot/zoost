@@ -1198,6 +1198,45 @@ class ADeployDoesNotLandEverywhereAtOnce(unittest.TestCase):
         self.assertNotIn("findings.append(f'{rel}: {url} returned an empty body", src)
 
 
+class TheStoreScreenshotsAreOrderedAndNumbered(unittest.TestCase):
+    """Five slots, no names, and the order is the argument.
+
+    The Chrome Web Store takes at most five screenshots, shows them in upload order and calls them
+    nothing - so the file name carries the order and nothing else, `crm_1.png` .. `crm_5.png`, and
+    the first is the interface with a workspace open, because that is the thumbnail. The Analytics
+    listing sat on a single image from its first submission because nothing said otherwise.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots
+        self.shots = shots
+        self.keys = {s[0] for s in shots.SHOTS + shots.PANELS + shots.OPTIONS}
+
+    def test_every_published_key_is_a_shot_that_exists(self):
+        for app, keys in self.shots.STORE.items():
+            for k in keys:
+                self.assertIn(k, self.keys, f'{app}: {k} is published and nothing renders it')
+
+    def test_at_most_five_and_the_first_is_the_interface(self):
+        for app, keys in self.shots.STORE.items():
+            self.assertLessEqual(len(keys), 5, f'{app}: the Store takes five')
+            self.assertEqual(len(set(keys)), len(keys), f'{app}: a slot is filled twice')
+            panels = {s[0] for s in self.shots.PANELS}
+            self.assertIn(keys[0], panels,
+                          f'{app}: the first slot is the panel over a workspace, not {keys[0]}')
+
+    def test_the_ledger_says_what_was_uploaded(self):
+        for app in self.shots.STORE:
+            f = ROOT / 'store' / app / 'screenshots.json'
+            self.assertTrue(f.exists(), f'{app}: nothing records which set is on the Store')
+            rec = json.loads(f.read_text(encoding='utf-8'))
+            for k in ('version', 'digest', 'files'):
+                self.assertIn(k, rec, f'{app}: the ledger has no {k}')
+            self.assertEqual(rec['files'],
+                             [f'{app}_{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 

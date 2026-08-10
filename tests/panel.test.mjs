@@ -2627,7 +2627,11 @@ test('sampleRefuse() refuses a sample and lets a real workspace through', () => 
     ['analytics', 'status', 'This is the sample workspace - there is no Zoho Analytics workspace to open.'],
   ]) {
     let said = null, boundState = null;
+    // MSG travels with the function: the CRM's refusal reads its sentence from there now (it has a
+    // second reader, the health view's own line, and a message written twice is the defect the
+    // duplicate check exists for), and without the constant this lift is a ReferenceError.
     const { sampleRefuse } = load([
+      sliceConst(`apps/${app}/sidepanel.js`, 'MSG'),
       sliceConst(`apps/${app}/sidepanel.js`, 'isSample'),
       sliceFn(`apps/${app}/sidepanel.js`, 'sampleRefuse'),
     ], { get bound() { return boundState; }, [say]: (t, c) => { said = [t, c]; } });

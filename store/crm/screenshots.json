@@ -1,0 +1,13 @@
+{
+  "_": "What is on the Store listing right now. Written by hand at submission, like the RELEASES.md row - the upload is a manual step and nothing here can observe it. `python3 tools/shots.py` prints the digest of the current set and says whether it still matches this one.",
+  "version": "unknown",
+  "digest": null,
+  "files": [
+    "crm_1.png",
+    "crm_2.png",
+    "crm_3.png",
+    "crm_4.png",
+    "crm_5.png"
+  ],
+  "note": "The numbered set has never been uploaded: the listings still carry the images from before this convention (four for Zoho CRM, one for Zoho Analytics). Replace all of them at the next submission and record the version and digest here."
+}

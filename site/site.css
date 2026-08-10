@@ -300,8 +300,11 @@ main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
    page: `gh attestation verify <file> --repo ivannot/zoost` inherited it and made the cell **416px
    inside a 331px table**, so the table scrolled sideways and the column beside it was left 93px -
    twelve characters. Code inside a key cell may wrap, and may break inside a token if a single one
-   is still too long; plain-text keys keep the nowrap they were given it for. */
-main td.k code{white-space:normal;overflow-wrap:anywhere}
+   is still too long; plain-text keys keep the nowrap they were given it for.
+   It says `table code` and not `td.k code`, because a *value* cell carries code too: the permissions
+   row on the home names four of them and `api.anthropic.com` took the approver table 8px past its
+   own box at 375px, which is a horizontal scrollbar under six lines of prose. */
+main table code{white-space:normal;overflow-wrap:anywhere}
 /* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
    used the same class names with nothing behind them — so /how-to.html's two product cards and the
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note
@@ -324,7 +327,14 @@ footer a{color:var(--muted)} footer a:hover{color:var(--teal)}
    further up raises them to. Links inside a sentence are exempt from both and are left alone. */
 footer .flinks{margin:0 0 14px}
 footer .flinks a{display:inline-flex;align-items:center;min-height:24px}
-footer .legal{max-width:78ch;line-height:1.65;margin:10px 0 0}
+/* Full width, on purpose. These two paragraphs are boilerplate and they were set to 78ch inside a
+   900px column: 639px used of 900, and the block ran to seven lines under a link row that spans the
+   whole width - it read as a column of text that had lost its place. At 900px the same text is
+   three lines and two: measured at 6.2px per character, so 145 per line against 103. Two columns
+   were tried first and are worse - 414px each puts the longer paragraph on seven lines by itself.
+   Nothing changes below 1096px, where the column is already narrower than 78ch. */
+footer .legal{line-height:1.65;margin:10px 0 0}
+}
 /* Version alignment badge — hidden until site.js has something true to put in it. */
 #vers{display:none}
 /* One block per product: its name on a line of its own, then its three facts beneath it.

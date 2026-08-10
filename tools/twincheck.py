@@ -66,6 +66,8 @@ PRODUCT_ONLY = {
     'crm': {
         'healthpull': 'one group in the CRM health view is read from Zoho at runtime and needs its own '
                       'refresh; the Analytics health view is computed from the mirror end to end',
+        'healthmsg': 'what the CRM health view says about its own Pull, beside it - the status line '
+                     'is inside #belowbar and this view covers it',
         'funcs': 'the functions view',
         'missing': 'per-type "complete missing"; Analytics retries failed items instead',
         'pullone': 'per-type pull; Analytics pulls one view from its detail pane',

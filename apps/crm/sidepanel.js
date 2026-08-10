@@ -38,7 +38,7 @@ const isSample = () => !!(bound && bound.sample);
 // at each site - one sentence, in one place, instead of the same string copied at seven of them.
 function sampleRefuse() {
   if (!isSample()) return false;
-  setStatus('This is the sample workspace - there is no Zoho org to open.', 'warn');
+  setStatus(MSG.sampleNoOrg, 'warn');
   return true;
 }
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
@@ -72,6 +72,7 @@ const MSG = {
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   wrongTab: 'Active Zoho tab does not match this workspace.',
+  sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
   noModuleTarget: 'Unknown module target - pull once, or open Zoho first.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
   notHere: 'Not in workspace - click to download',
@@ -84,6 +85,7 @@ const MSG = {
   graphErr: 'Graph error: ',
   exportErr: 'Export error: ',
   refreshErr: 'Refresh error: ',
+  rereadErr: 'Could not re-read: ',
   namePrefix: 'Name: ',
   openingFns: 'Opening Functions list…',
   findByName: 'Find by name…',
@@ -923,25 +925,39 @@ async function openFile(path, push = false, line = null) {
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
 }
-/** Code or Details, for a function. Everything that is not the source moved behind the second tab:
- *  it had grown to seven blocks stacked above a 400px-wide code view, and the code is what people
- *  open a function for. `Code` is the default for that reason, and the choice is not remembered -
- *  it is one click, and a remembered mode that opens on Details would hide the source. */
-let pvTab = 'code';
+/** Two tabs rather than one long column, for the two kinds of item whose detail is crowded.
+ *
+ *  The first tab is *the thing you opened the item for* - the source of a function, the fields of a
+ *  module - and the second is everything else, which is what had grown to seven blocks stacked above
+ *  a 400px-wide pane. The first tab is therefore also the default, and the choice is not remembered:
+ *  it is one click, and a remembered mode that opens on Details would hide what you came for.
+ *
+ *  Which panes belong to which tab is declared here rather than assigned at each opener, because the
+ *  strip is one control and an opener that forgot half of it is how the module detail ended up
+ *  showing a function's tabs. */
+let pvTab = 'code', pvKind = null;
+const PV_KINDS = {
+  function: { first: 'Code', panes: { code: [['pvbody', 'flex']], info: [['pvcallers', '']] } },
+  module: { first: 'Fields', panes: { code: [['pvfields', '']], info: [['pvdetails', '']] } },
+};
 function setPvTab(which) {
   pvTab = which === 'info' ? 'info' : 'code';
   $('pvtab_code').classList.toggle('active', pvTab === 'code');
   $('pvtab_info').classList.toggle('active', pvTab === 'info');
-  $('pvbody').style.display = pvTab === 'code' ? 'flex' : 'none';
-  $('pvcallers').style.display = pvTab === 'info' ? '' : 'none';
+  const k = PV_KINDS[pvKind]; if (!k) return;
+  Object.entries(k.panes).forEach(([tab, panes]) => panes.forEach(([id, shown]) => {
+    const el = $(id); if (el) el.style.display = tab === pvTab ? shown : 'none';
+  }));
 }
-/** The strip is for functions only, and showing it resets to Code - opening a second function and
- *  landing on the Details of the first one's tab choice is the stale-projection problem in miniature. */
+/** Showing the strip resets it to the first tab - opening a second item and landing on the tab the
+ *  previous one was left on is the stale-projection problem in miniature. Called with anything else
+ *  (a workflow, a schedule, a connection) it takes the strip away: those have one pane and no
+ *  choice to make. `openModule` not calling it at all is what let a module show `Code | Details`. */
 function pvTabsFor(kind) {
-  const on = kind === 'function';
-  $('pvtabs').hidden = !on;
-  $('pvtabsr').innerHTML = '';        // the graph control belongs to the function being left
-  if (on) setPvTab('code');
+  pvKind = PV_KINDS[kind] ? kind : null;
+  $('pvtabs').hidden = !pvKind;
+  $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left
+  if (pvKind) { $('pvtab_code').textContent = PV_KINDS[pvKind].first; setPvTab('code'); }
   else { $('pvcallers').style.display = ''; }
 }
 
@@ -1535,6 +1551,7 @@ async function openHealth() {
   closeAI();   // one panel at a time
   $('healthview').classList.add('show'); $('health').classList.add('on'); document.body.classList.add('health-open');   // lit button + violet frame + covers the tabs, mirroring Ask AI
   $('healthbody').innerHTML = '<div class="hd">Analyzing\u2026</div>';
+  healthSay('');                             // a verdict from the last time this was open is not one about now
   // Health reads the workspace files directly. Chrome lets the folder's File System Access
   // permission lapse after inactivity; without re-requesting it first (like every other file
   // operation does) the reads throw a generic "not allowed" DOMException. This click is a user
@@ -3023,7 +3040,7 @@ async function openModule(path, layoutId) {
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   // Absent, not disabled, and not left to open an empty window: with no fields there is no box to
   // draw and no lookup to follow, so the depth control and the ER button have nothing to act on.
-  const relBar = refusal ? '' : `<div class="laybar">Relations from this module \u00b7 depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
+  const relBar = refusal ? '' : `depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
   const rls = m.related_lists || [];
   const rlBlock = rls.length
     ? `<div class="secttl">Related lists (${rls.length}) <span style="color:var(--muted);font-weight:400">- API name for zoho.crm.getRelatedRecords(); click to copy</span></div>`
@@ -3038,11 +3055,19 @@ async function openModule(path, layoutId) {
   const refBanner = refusal
     ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
     : '';
-  $('pvtable').innerHTML = namesBlock + refBanner + relBar + selector + `<div id="laybody">${renderFieldsTable(m)}</div>` + rlBlock;
+  // Fields on one tab, everything else on the other - the same split as a function's, for the same
+  // reason: this pane held the names, the banner, the relations bar, the layout picker, the fields
+  // table and the related lists, stacked in 400px. The fields are what a module is opened for, so
+  // they are the first tab; the related-list API names are the most valuable thing here and sit at
+  // the top of the second, not at the bottom of a column nobody reaches.
+  $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m)}</div></div>`
+    + `<div id="pvdetails">${refBanner}${namesBlock}${rlBlock}</div>`;
+  pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
+  $('pvtabsr').innerHTML = relBar;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {
     navigator.clipboard.writeText(c.dataset.c).then(() => setStatus(`Copied \u00ab${c.dataset.c}\u00bb`, 'ok')).catch(() => {});
   }));
-  const relOpen = document.getElementById('relopen');
+  const relOpen = $('pvtabsr').querySelector('#relopen');
   if (relOpen) relOpen.onclick = () => openSchemaFocus(m.api_name, parseInt(document.getElementById('reldepth').value, 10) || 2);
   const sel = document.getElementById('laysel');
   if (sel) sel.onchange = async () => {
@@ -4435,19 +4460,26 @@ $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One g
 // existed the only way to refresh that group was «Pull all» - the whole org re-downloaded to update
 // one reading, which he pointed out. It refuses on the wrong tab and on a sample like every other
 // Zoho-bound control, and it rebuilds the view in place rather than closing it.
+/** Beside the control, because #status is inside #belowbar and this view covers it: every
+ *  setStatus() made while the health view is open is written where nobody can see it - which is why
+ *  pressing Pull runtime looked as though nothing happened at all, refusal included. */
+function healthSay(text, cls) { const el = $('healthmsg'); if (el) { el.textContent = text || ''; el.className = cls || ''; } }
 async function pullHealthRuntime() {
   // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
   // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
   // switching tabs to fix something no tab can fix.
-  if (sampleRefuse()) return;
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  if (isSample()) { sampleRefuse(); healthSay(MSG.sampleNoOrg, 'warn'); return; }
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
   const b = $('healthpull'); b.disabled = true;
+  healthSay('Reading from Zoho\u2026');
   try {
     await pullFailures();
     failIndex = null;                       // the file changed under it
     healthData = await buildHealth();
     renderHealthView();
-  } catch (e) { setStatus('Could not re-read: ' + e.message, 'bad'); }
+    const fx = await failuresIndex();
+    healthSay(`${fx.all.length} failing \u00b7 read ${fmtDate(fx.at)}`, 'ok');
+  } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
   finally { b.disabled = false; }
 }
 $('healthpull').onclick = pullHealthRuntime;

@@ -2909,6 +2909,13 @@ What that request means, in order. Do all of it without being asked:
    it said — including the hash — rather than assuming it passed.
 6. **Hand over the link to the Release asset, plus the hash, plus what to paste** into the Store
    dashboard. Never a path into `dist/`.
+6b. **Re-upload the screenshots if they changed.** `python3 tools/shots.py` writes
+   `dist/store/<app>_1.png` .. `_5.png` in the order the Store shows them - the interface first,
+   then the rest of the interface, then the diagrams - and prints the digest of the set against
+   `store/<app>/screenshots.json`, which records what is on the listing. This is part of every
+   release for both products, not an occasional tidy-up: the Zoost Analytics listing sat on one image
+   from its first submission because nothing measured it. The names are numbers on purpose; see
+   `store/assets.md`.
 7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
    date, and commit it.
 

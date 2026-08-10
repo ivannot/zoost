@@ -31,6 +31,23 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 NAME = {"crm": "Zoost - workbench for Zoho CRM",
         "analytics": "Zoost - workbench for Zoho Analytics"}
 
+# What each Store listing publishes, in order. The dashboard takes **at most five**, shows them in
+# the order they are uploaded, and names them nothing - so the file names carry the order and nothing
+# else: `crm_1.png` .. `crm_5.png`. A descriptive name is a name somebody has to keep in step with a
+# slot number, and the slot number is the only thing the Store actually knows about.
+#
+# The order is a rule rather than a preference. **The first is the interface** - the panel with a
+# workspace open, which is what somebody sees the moment the product is working, and it is the image
+# the Store uses as the thumbnail. Then the other screens of the interface, then the diagrams, which
+# are the least self-explanatory and the most impressive once the rest has been understood. Five
+# slots against eighteen renders means choosing: what is left out is the settings page, the exports,
+# the search and the assistant, because none of them is what the product *is*.
+STORE = {
+    'crm': ['crm-panel', 'crm-modules', 'crm-health', 'crm-er', 'crm-graph'],
+    'analytics': ['analytics-panel', 'analytics-columns', 'analytics-lineage', 'analytics-er',
+                  'analytics-health'],
+}
+
 # Each shot: which app, which fixture, and what to do once the page is up. The click scripts run in
 # the page, so they use the same ids the product does - a renamed control breaks the shot, which is
 # the correct direction for it to break in.
@@ -400,8 +417,39 @@ PANELS = [
 ]
 
 
+def publish_store_set(rendered: dict) -> None:
+    """Copy the published subset to dist/store/<app>_<n>.png, in the declared order.
+
+    The numbering is the whole point: the Store has five slots and no names, so a file called
+    `crm-er.png` tells whoever is uploading nothing about which slot it belongs in. It also makes
+    «did the screenshots change» answerable - `store/<app>/screenshots.json` records the sha of the
+    set that was last uploaded, so a release can say «re-upload these» instead of leaving it to
+    memory, which is what left the Analytics listing on one image from its first submission.
+    """
+    dest = ROOT / "dist" / "store"
+    dest.mkdir(parents=True, exist_ok=True)
+    import hashlib
+    for app, keys in STORE.items():
+        if not all(k in rendered for k in keys):
+            continue
+        h = hashlib.sha256()
+        for n, key in enumerate(keys, 1):
+            out = dest / f"{app}_{n}.png"
+            shutil.copy2(rendered[key], out)
+            h.update(out.read_bytes())
+        digest = h.hexdigest()[:16]
+        ledger = ROOT / "store" / app / "screenshots.json"
+        was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
+        state = ("unchanged since the set uploaded for " + was.get("version", "?")
+                 if was.get("digest") == digest else
+                 "CHANGED since " + was.get("version", "the last upload")
+                 + " - upload all five again, in this order")
+        print(f"  {app}: {len(keys)} image(s) -> dist/store/{app}_1..{len(keys)}.png  [{digest}] {state}")
+
+
 def main():
     want = sys.argv[1:] or [s[0] for s in SHOTS + PANELS + OPTIONS]
+    rendered = {}
     if not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
     for shot in SHOTS + PANELS + OPTIONS:
@@ -413,6 +461,8 @@ def main():
         print("{:<16} {}  {}".format(shot[0], "ok " if ok else "BAD", out))
         if not ok:
             sys.exit("that is not what the Store accepts - see store/assets.md")
+        rendered[shot[0]] = dest
+    publish_store_set(rendered)
 
 
 if __name__ == "__main__":

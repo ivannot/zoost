@@ -15,6 +15,37 @@ rejected even when it is fully opaque, so the exact bit depth is worth checking 
 | Marquee promo tile | no | 1400 x 560 | |
 | Promotional video | no | - | A YouTube link. **We do not have one**, and this row exists so that nobody spends an afternoon looking for where to upload a file: there is nowhere, it is a link to a video hosted on YouTube |
 
+## What gets published, and under what name
+
+The dashboard takes **five screenshots**, shows them in the order they were uploaded, and names them
+nothing. So the file names carry the order and nothing else - `crm_1.png` .. `crm_5.png`,
+`analytics_1.png` .. `analytics_5.png` - because a descriptive name is one more thing to keep in step
+with a slot number, and the slot number is all the Store knows.
+
+**The first is the interface**: the panel with a workspace open, which is what somebody sees the
+moment the product works, and which the Store uses as the thumbnail. Then the rest of the interface,
+then the diagrams - the least self-explanatory and the most convincing once the rest is understood.
+Five slots against eighteen renders means choosing, and what is left out is the settings page, the
+exports, the search and the assistant: useful, none of them what the product *is*.
+
+| | Zoost CRM | Zoost Analytics |
+|---|---|---|
+| 1 | the panel, a function open | the panel, the view census |
+| 2 | a module: fields, types, layouts | a table's columns and its foreign keys |
+| 3 | the workspace health audit | what a view is built on |
+| 4 | the ER diagram | the ER diagram |
+| 5 | the call graph | the health audit |
+
+`python3 tools/shots.py` writes them to `dist/store/` and prints a digest of each set.
+`store/<app>/screenshots.json` records the set that is **on the Store**, written by hand at
+submission like the `RELEASES.md` row, because the upload is manual and nothing here can observe it.
+When the digests differ the tool says so, in those words.
+
+**Every release re-uploads the screenshots if they have changed** - both products, every time. This
+is not tidiness: the Zoost Analytics listing carried a single image from its first submission for months
+because nothing was measuring, and a listing that shows a product two versions old is an argument
+against it.
+
 ## Where ours come from
 
 Generated, never captured from a real org. `python3 tools/shots.py` renders the panel and the diagram
