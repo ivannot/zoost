@@ -394,7 +394,15 @@
         a.from_address = i % 3 === 0 ? 'sales@example.com' : 'noreply@example.com';
         a.recipient_count = 1 + (i % 3);
       }
-      if (kind === 'field_updates') a.field = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
+      if (kind === 'field_updates') {
+        // The three shapes a value comes in - a picklist string, a boolean, and none at all, which
+        // means «clear it» and not «unknown». 69 of 97 in a real org write a picklist.
+        a.field = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
+        a.field_label = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
+        a.field_type = ['picklist', 'ownerlookup', 'boolean', 'picklist'][i % 4];
+        a.value = [ 'Won', null, true, 'High' ][i % 4];
+        a.value_kind = a.value === null ? 'cleared' : 'static';
+      }
       if (kind === 'tasks') a.notify = i % 2 === 0;
       if (kind === 'webhooks') { a.method = 'POST'; a.url = 'https://example.com/hooks/warehouse'; }
       actions.push(a);

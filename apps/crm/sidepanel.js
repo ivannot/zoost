@@ -225,9 +225,13 @@ const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
 // permission system, and a permission system that is not enforced anywhere is theatre.
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'connections', 'failures', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, connections: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, connections: true, health: false };
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'addresses', 'connections', 'failures', 'health'];
+// `addresses` is off in both, and that is the one default here that is a decision rather than a
+// convenience: an export is a file you hand to somebody, and an address is the one thing in this
+// mirror that belongs to a person rather than to a configuration. It is one tick away, and the
+// report says how many it withheld so nobody reads a blank as an absence.
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, health: true };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, health: false };
 let expScope = Object.assign({}, SCOPE_FULL);
 // What the dialog is editing right now, and which of its boxes were cleared *for* the user because
 // the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
@@ -365,7 +369,7 @@ const AREA_SCOPE = {
   modules: ['modules', 'layouts', 'relations'],
   workflows: ['workflows'],
   schedules: ['schedules'],
-  actions: ['actions'],
+  actions: ['actions', 'addresses'],
   connections: ['connections'],
   failures: ['failures'],
 };
@@ -3469,12 +3473,13 @@ function freshnessLine() {
   return parts.join(' \u00b7 ');
 }
 
-function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope) {
+function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
   conns = scope.connections ? (conns || []) : [];
+  acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const esc = escHtml;
   const ws = bound || {};
@@ -3726,6 +3731,29 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
     const status = c.missing ? '<span style="color:#b45309">not in catalogue</span>' : c.connected === false ? '<span style="color:#b45309">not connected</span>' : 'connected';
     return `<tr id="${escA(connAnchor(c.name))}"><td class="mono"><b>${esc(c.name)}</b></td><td>${esc(c.label || '')}</td><td class="mono">${esc(c.connector || '')}</td><td class="ct">${status}</td><td class="ct">${c.uses.length}</td><td>${usesLinks}</td></tr>`;
   });
+  // Automation actions. The count of rules that fire each is the column the chapter exists for, and
+  // the sender address is the one field a reader may not be allowed to receive - so it has a scope of
+  // its own, off by default, and what was withheld is stated rather than left blank.
+  const actWithheld = acts.filter((a) => a.from_address).length;
+  const actRows = acts.slice().sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
+    .map((a) => {
+      const users = (actUsers && actUsers.get(a.kind + ':' + String(a.id))) || [];
+      const detail = a.kind === 'email_notifications'
+        ? [a.template ? 'template: ' + esc(a.template.name || a.template.id) : '',
+           a.from_type ? 'from: ' + (scope.addresses && a.from_address ? esc(a.from_address) : esc(a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
+           a.recipient_count != null ? esc(String(a.recipient_count)) + ' recipient(s)' : ''].filter(Boolean).join(' \u00b7 ')
+        : a.kind === 'field_updates' ? (a.field ? esc(a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
+            + ' \u2190 ' + (a.value === null || a.value === undefined ? 'cleared' : esc(String(a.value))) : '')
+        : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
+        : a.notify === true ? 'notifies' : '';
+      return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(a.module || '') + '</td>'
+        + '<td class="num">' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
+    });
+  const actHtml = acts.length
+    ? '<p class="hxd">What a workflow rule fires, and which rules fire it. \u00abFired by\u00bb is read from the rules in this workspace, so a rule that was never pulled cannot appear in it.</p>'
+      + ((actWithheld && !scope.addresses) ? `<p class="note">${actWithheld} sender address(es) withheld - that section was left off. Nothing else about those notifications is missing.</p>` : '')
+      + `<table class="ftbl"><thead><tr><th>Action</th><th>Kind</th><th>Module</th><th>Rules</th><th>Fired by</th><th>Detail</th></tr></thead><tbody>${actRows.join('')}</tbody></table>`
+    : '';
   const connHtml = conns.length
     ? `<p class="hxd">The org's connections and the functions that use each - the join key is the name in <code>invokeurl […connection:"…"]</code>.</p><table class="ftbl"><thead><tr><th>Connection</th><th>Label</th><th>Connector</th><th>Status</th><th>Uses</th><th>Used by functions</th></tr></thead><tbody>${connRows.join('')}</tbody></table>`
     : '<p class="empty">No connections in this export.</p>';
@@ -3754,6 +3782,8 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
     + (wfs.length ? `<h3 class="toch">Workflows (${wfs.length})</h3><table class="toctbl"><thead><tr><th>Workflow</th><th>Module</th><th>Trigger</th><th>Active</th><th>Fn calls</th><th title="Actions that do not run immediately">Scheduled</th><th>Last run</th></tr></thead><tbody>${wfRows.join('')}</tbody></table>` : '')
     + (scheds.length ? `<h3 class="toch">Schedules (${scheds.length})</h3><table class="toctbl"><thead><tr><th>Schedule</th><th>Function</th><th>Frequency</th><th>Status</th></tr></thead><tbody>${schRows.join('')}</tbody></table>` : '')
     + (allRels.length ? `<h3 class="toch">Relations (${allRels.length})</h3><div class="tochx"><a href="#relations">Relation-first catalogue - related-list API names for Deluge</a></div>` : '')
+    + (acts.length ? `<h3 class="toch">Actions (${acts.length})</h3><div class="tochx"><a href="#actions">Notifications, field updates, tasks and webhooks - and which rules fire each</a></div>` : '')
+    + (acts.length ? `<h3 class="toch">Actions (${acts.length})</h3><div class="tochx"><a href="#actions">Notifications, field updates, tasks and webhooks - and which rules fire each</a></div>` : '')
     + (conns.length ? `<h3 class="toch">Connections (${conns.length})</h3><div class="tochx"><a href="#connections">Catalogue - connectors, status, and which functions use each</a></div>` : '')
     + (failRows.length ? `<h3 class="toch">Failures (${failRows.length})</h3><div class="tochx"><a href="#failures">What is breaking, as read on ${esc(fails.at ? new Date(fails.at).toLocaleDateString() : 'an unknown date')}</a></div>` : '')
     + (scope.health ? `<h3 class="toch">Health <span class="cnt">${healthTotal}</span></h3><div class="tochx"><a href="#health">Orphans ${hOrph.length} \u00b7 Unresolved ${hUnres.length} \u00b7 Ambiguous ${hAmbig.length} \u00b7 Broken ${hBroken.length} \u00b7 Missing FK ${hFK.length}</a></div>` : '')
@@ -3767,7 +3797,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
     + `<div class="meta">${ws.label ? `${esc(ws.label)} · ` : ''}${esc(ws.instance || '')} · org ${esc(ws.org || '')} · ${esc(envOf(ws.base))} · ${esc(now)} · ${fns.length} functions · ${mods.length} modules · contents: ${esc(SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing')}${scope.code ? '' : ' · source code excluded'}</div>`
     + `<div class="meta">Data read from Zoho: ${esc(freshnessLine())}</div>`
     + `<input id="q" placeholder="Filter functions & modules…" oninput="filt()"></header>`
-    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
+    + `<main>${toc}<h2 id="functions">Functions</h2>${fnHtml || '<p class="empty">No functions.</p>'}<h2 id="modules">Modules</h2>${modHtml || '<p class="empty">No modules.</p>'}<h2 id="relations">Relations</h2>${relHtml}${wfs.length ? `<h2 id="workflows">Workflows</h2>${wfHtml}` : ''}${scheds.length ? `<h2 id="schedules">Schedules</h2>${schHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${acts.length ? `<h2 id="actions">Actions</h2>${actHtml}` : ''}${conns.length ? `<h2 id="connections">Connections</h2>${connHtml}` : ''}${failHtml ? `<h2 id="failures">Failures</h2>${failHtml}` : ''}${scope.health ? `<h2 id="health">Health</h2>${healthHtml}` : ''}</main>`
     + `<footer><div>Generated by ${PRODUCT_URL ? `<a href="${escA(PRODUCT_URL)}">${esc(PRODUCT_NAME)}</a>` : esc(PRODUCT_NAME)} · Created by ${esc(PRODUCT_AUTHOR)}${SPONSOR_URL ? ` · <a href="${escA(SPONSOR_URL)}">Sponsor</a>` : ''}${KOFI_URL ? ` · <a href="${escA(KOFI_URL)}">\u2615 Ko-fi</a>` : ''}</div><div class="legal">${esc(LEGAL_DISCLAIMER)}</div></footer>`
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
@@ -3806,16 +3836,30 @@ async function loadExportData() {
   // whole and carries its own date into the report. `params` is not in it: the bridge never sent it.
   let fails = { at: null, usage: null, failures: [] };
   try { const d = JSON.parse(await readFile('failures/index.json')); if (d && Array.isArray(d.failures)) fails = d; } catch (_) {}
-  return { fns, mods, g, modRefs, wfs, scheds, conns, fails };
+  // The automation actions, and the map of which rules fire each - built from the rules that were
+  // just read rather than from the panel's cache, because an export must not depend on which tab
+  // the reader happened to open.
+  let acts = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) acts = a; } catch (_) {}
+  const actUsers = new Map();
+  wfs.forEach((w) => ((w.detail && w.detail.conditions) || []).forEach((c) => {
+    const list = [];
+    if (c.instant_actions && c.instant_actions.actions) list.push(...c.instant_actions.actions);
+    (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => list.push(...(sa.actions || [])));
+    list.forEach((a) => { if (!a || !a.type) return; const k = a.type + ':' + String(a.id);
+      if (!actUsers.has(k)) actUsers.set(k, []);
+      if (!actUsers.get(k).some((x) => String(x.id) === String(w.id))) actUsers.get(k).push({ id: w.id, name: w.name }); });
+  }));
+  return { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers };
 }
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
   scope = Object.assign({}, SCOPE_FULL, scope || {});
-  let { mods, g, wfs, scheds, conns, fails } = d;
+  let { mods, g, wfs, scheds, conns, fails, acts } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
   if (!scope.schedules) scheds = [];
   conns = scope.connections ? (conns || []) : [];
+  acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
   const nodes = scope.functions ? ((g && g.nodes) || {}) : {};
   const fnList = Object.values(nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
@@ -3917,6 +3961,27 @@ function buildExportMarkdown(d, scope) {
     });
     md += '\n';
   }
+  // The actions a rule fires, for a reader who has the file and not the panel. This is the chapter
+  // an external model is most likely to be asked about - «what happens when a deal is won» - so the
+  // rules that fire each are in the row rather than a section away.
+  if (acts.length) {
+    const withheld = acts.filter((a) => a.from_address).length;
+    md += '---\n\n## Actions\n\nWhat a workflow rule fires: notifications, field updates, tasks and webhooks. Each exists on its own in Zoho and is reused across rules. "Fired by" is read from the rules in this workspace.\n\n';
+    if (withheld && !scope.addresses) md += `> ${withheld} sender address(es) withheld - that section was left off. Nothing else about those notifications is missing.\n\n`;
+    md += '| Action | Kind | Module | Rules | Fired by | Detail |\n|---|---|---|---|---|---|\n';
+    acts.slice().sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b)).forEach((a) => {
+      const users = (d.actUsers && d.actUsers.get(a.kind + ':' + String(a.id))) || [];
+      const detail = a.kind === 'email_notifications'
+        ? [a.template ? 'template ' + (a.template.name || a.template.id) : '',
+           a.from_type ? 'from ' + ((scope.addresses && a.from_address) || (a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
+           a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
+        : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${a.value === null || a.value === undefined ? 'cleared' : a.value}` : '')
+        : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
+        : a.notify === true ? 'notifies' : '';
+      md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(a.module || '')} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
+    });
+    md += '\n';
+  }
   if (conns.length) {
     md += '---\n\n## Connections\n\nThe org\'s connections and which functions use each. The join key is the name in `invokeurl [...connection:"..."]`.\n\n';
     md += '| Connection | Label | Connector | Status | Uses | Used by |\n|---|---|---|---|---|---|\n';
@@ -3971,8 +4036,8 @@ async function exportHtml() {
   try {
     await requirePerm(dir);
     setStatus('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds, conns, fails } = await loadExportData();
-    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope);
+    const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData();
+    const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await writeFile(name, html);
@@ -4287,8 +4352,13 @@ async function pullActions() {
     // A kind that refused is stated rather than folded into the total: an org without webhooks and
     // an org whose role cannot read them look identical in a count.
     const missed = (r.missed || []).filter((m) => m && m.kind);
-    if (viewMode === 'actions') await rebuildActions();
-    else setStatus(`${(r.actions || []).length} action(s) pulled.` + (missed.length ? ` ${missed.length} kind(s) could not be read.` : ''), missed.length ? 'warn' : 'ok');
+    const capped = r.capped || [];
+    // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
+    // short are two different reasons for a number to be smaller than the org.
+    const note = (missed.length ? ` ${missed.length} kind(s) could not be read.` : '')
+      + (capped.length ? ` ${capped.join(', ')} stopped at 4000 - there are more in Zoho.` : '');
+    if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${(r.actions || []).length} action(s).` + note, 'warn'); }
+    else setStatus(`${(r.actions || []).length} action(s) pulled.` + note, (missed.length || capped.length) ? 'warn' : 'ok');
     await noteAccess('actions', null);
   } catch (e) { await notePullFailure('actions', e); }
 }
@@ -4335,13 +4405,18 @@ function renderActions() {
     }
     const el = document.createElement('div'); el.className = 'f'; el.dataset.path = a.path;
     el.setAttribute('aria-selected', a.path === currentPath);
-    // «Attached to nothing» is the fact this list exists for, so it is the dot - and it is amber,
-    // which in this panel means «there is something to do», not red, which would be a verdict.
-    const dc = a.associated ? 'st-ok' : 'st-stale';
-    const dt = a.associated ? 'Used by at least one rule - click to re-read from Zoho'
-                            : 'No rule uses it, as far as Zoho reports - click to re-read from Zoho';
-    el.innerHTML = `<span class="st ${dc}" title="${escA(dt)}">${a.associated ? '\u25cf' : '\u25d0'}</span>`
+    // The dot is the mirror state and nothing else - «this is on your disk» - because that is what
+    // it means on every other tab: ● here · ○ not here yet · ◐ partial · ⟳ failed · ⊘ refused. It
+    // was ◐ for «no rule uses it», which reads as «downloaded incompletely»: a glyph that means two
+    // things is worse than none, and this panel has already paid for that once with ↺ against ↻.
+    //
+    // «Attached to nothing» is a fact about the object, so it is a badge, and it is a **count** -
+    // the same one the Connections tab shows for the functions using a connection. A number and no
+    // verdict: zero says it by itself, and the filter is how you list them.
+    const used = actionFiredBy(a).length;
+    el.innerHTML = `<span class="st st-ok" title="In the local mirror - click to re-read from Zoho">\u25cf</span>`
       + `<span class="fname">${escHtml(a.name || a.id)}</span>`
+      + `<span class="rest ${used || a.associated ? 'rf' : 'rc'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`
       + (a.module ? `<span class="rest rl" title="module">${escHtml(a.module)}</span>` : '');
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
     el.onclick = () => openAction(a);
@@ -4371,7 +4446,15 @@ function openAction(a) {
     + (a.template ? row('Template', escHtml(a.template.name || a.template.id)) : '')
     + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address') + (a.from_address ? ` \u00b7 <span class="mono">${escHtml(a.from_address)}</span>` : '')) : '')
     + (a.recipient_count != null ? row('Recipients', `${escHtml(String(a.recipient_count))} \u00b7 <span style="color:var(--muted)">a count; Zoost never reads who they are</span>`) : '')
-    + (a.field ? row('Field', `<span class="mono">${escHtml(a.field)}</span>`) : '')
+    + (a.field ? row('Field', `<span class="mono">${escHtml(a.field)}</span>`
+        + (a.field_label && a.field_label !== a.field ? ` \u00b7 ${escHtml(a.field_label)}` : '')
+        + (a.field_type ? ` <span style="color:var(--muted)">${escHtml(a.field_type)}</span>` : '')) : '')
+    // «Set stage to Won» does not say which value, and on a picklist of nine that is the whole
+    // question. An absent value is «clear the field» rather than «we did not read it», so it is
+    // written as that and not as a blank.
+    + (a.field ? row('Writes', a.value === null || a.value === undefined
+        ? '<span style="color:var(--muted)">clears the field</span>'
+        : `<b>${escHtml(String(a.value))}</b>`) : '')
     + (a.method ? row('Method', escHtml(a.method)) : '')
     + (a.url ? row('URL', `<span class="mono">${escHtml(a.url)}</span>`) : '')
     + (a.notify === true ? row('Notify', 'yes') : '')

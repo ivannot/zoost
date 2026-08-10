@@ -32,8 +32,8 @@ asideWidth	e38e10836248	e38e10836248	identical
 askScope	c56407b46772	6df03b6040cd	divergent
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	9f0e463afb6f	0ad5e298b237	divergent
-buildExportMarkdown	859a2db9524e	27b56f35ee82	divergent
+buildExportHtml	76fd1010d33d	0ad5e298b237	divergent
+buildExportMarkdown	e3cd9e7a733f	27b56f35ee82	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
 buildSchemaGraph	56a3776f4170	4de6a12f6e7c	divergent

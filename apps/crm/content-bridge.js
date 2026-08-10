@@ -393,13 +393,24 @@
       row.from_address = (r.from_address && r.from_address.resource) || null;
       row.recipient_count = r.recipient_count != null ? Number(r.recipient_count) : null;
     }
-    if (kind === 'field_updates') row.field = (r.field && (r.field.api_name || r.field.name)) || '';
+    // A field update without the field and the value it writes is a name and nothing else - which is
+    // what «Set stage to Won» tells you when the picklist has nine values. Measured on one org: 97 of
+    // them, 69 writing a picklist, and the value is a string, a boolean or absent (which is «clear
+    // it», not «unknown»). `type` was `static` on all 97; when Zoho starts returning something else,
+    // it is here and the panel can say so.
+    if (kind === 'field_updates') {
+      row.field = (r.field && (r.field.api_name || r.field.name)) || '';
+      row.field_label = (r.field && r.field.field_label) || '';
+      row.field_type = (r.field && r.field.data_type) || '';
+      row.value = r.value === undefined ? null : r.value;
+      row.value_kind = r.value === null || r.value === undefined ? 'cleared' : (r.type || 'static');
+    }
     if (kind === 'tasks') row.notify = r.notify === true;
     if (kind === 'webhooks') { row.method = r.method || ''; row.url = r.url || r.display_url || ''; }
     return row;
   }
   async function pullActions() {
-    const out = [], missed = [];
+    const out = [], missed = [], capped = [];
     for (const k of ACTION_KINDS) {
       let page = 1;
       try {
@@ -410,7 +421,11 @@
           rows.forEach((r) => out.push(actionRow(k.kind, r)));
           const info = resp.info || {};
           if (!info.more_records || rows.length === 0) break;
-          if (++page > 20) break;   // the same bound the workflow list uses, for the same reason
+          // 200 a page, and the org this was measured on has more than that of one kind alone. The
+          // bound is the workflow list's, for the same reason - a runaway loop against somebody
+          // else's pagination is not a thing to ship - and hitting it is **reported**, because a
+          // list that silently stops at four thousand is a census that lies by omission.
+          if (++page > 20) { capped.push(k.kind); break; }
         }
       } catch (e) {
         // One kind refusing is not the area failing: an org may not have the feature, or the role
@@ -418,7 +433,7 @@
         missed.push({ kind: k.kind, error: (e && e.message) || String(e), status: e && e.status, forbidden: !!(e && e.forbidden) });
       }
     }
-    return { total: out.length, actions: out, missed };
+    return { total: out.length, actions: out, missed, capped };
   }
 
   async function pullConnections() {

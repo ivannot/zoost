@@ -131,7 +131,11 @@
     "created_time": "2026-06-01T09:00:00+00:00",
     "modified_time": "2026-07-11T09:00:00+00:00",
     "locked": false,
-    "field": "Stage"
+    "field": "Stage",
+    "field_label": "Stage",
+    "field_type": "picklist",
+    "value": "Won",
+    "value_kind": "static"
   },
   {
     "kind": "field_updates",
@@ -145,7 +149,11 @@
     "created_time": "2026-06-02T09:00:00+00:00",
     "modified_time": "2026-07-12T09:00:00+00:00",
     "locked": false,
-    "field": "Owner"
+    "field": "Owner",
+    "field_label": "Owner",
+    "field_type": "ownerlookup",
+    "value": null,
+    "value_kind": "cleared"
   },
   {
     "kind": "field_updates",
@@ -159,7 +167,11 @@
     "created_time": "2026-06-03T09:00:00+00:00",
     "modified_time": "2026-07-13T09:00:00+00:00",
     "locked": false,
-    "field": "Reviewed"
+    "field": "Reviewed",
+    "field_label": "Reviewed",
+    "field_type": "boolean",
+    "value": true,
+    "value_kind": "static"
   },
   {
     "kind": "field_updates",
@@ -173,7 +185,11 @@
     "created_time": "2026-06-04T09:00:00+00:00",
     "modified_time": "2026-07-14T09:00:00+00:00",
     "locked": false,
-    "field": "Priority"
+    "field": "Priority",
+    "field_label": "Priority",
+    "field_type": "picklist",
+    "value": "High",
+    "value_kind": "static"
   },
   {
     "kind": "tasks",
