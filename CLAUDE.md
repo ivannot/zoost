@@ -1261,6 +1261,13 @@ image whose recorded digest still matches, and `tools/shots.py` skips an app who
 images are current. Nothing changed: **1:35 to 0.5s** for the site set, three minutes to 0.2s for
 the Store set. `--force` on either draws everything anyway.
 
+**Two questions, two answers: whether to *draw*, and whether to *replace*.** The digest decides the
+first - if nothing that can change a pixel has moved, Chrome is never started, which is where the
+1:35 goes to 0.5s. The second is decided by the pixels: the fresh WebP and the published one are
+decoded with `dwebp -ppm` and compared byte for byte, and an image whose picture has not changed
+is left on disk untouched. No threshold, nothing to argue about - identical pixels or not. On a
+forced re-render of all 26, **23 stayed untouched**.
+
 **A render is not bit-exact, and the digest is the only thing that decides.** The panel does
 asynchronous work and the capture happens on a time budget, so drawing the same commit twice can
 differ by a few dozen bytes on three hundred thousand, with nothing visible to see - measured on

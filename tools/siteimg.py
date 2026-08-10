@@ -88,6 +88,30 @@ def render_og_card() -> pathlib.Path:
     return out
 
 
+def same_picture(a: pathlib.Path, b: pathlib.Path, dwebp: str) -> bool:
+    """Do these two WebPs decode to the same pixels?
+
+    A render is not bit-exact - the panel does asynchronous work and the capture happens on a time
+    budget - so re-encoding an unchanged screen produces a file that differs by a few dozen bytes
+    with nothing to see. Published, that is a commit that says an image changed when the picture did
+    not, which is the complaint that led here.
+
+    The digest decides whether to *draw*; this decides whether to *replace*. `dwebp -ppm` writes raw
+    pixels, so the comparison is a byte comparison of two decodes, with no image library and no
+    threshold to argue about: identical pixels or not.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        out = []
+        for f in (a, b):
+            ppm = pathlib.Path(tmp) / (f.stem + f.suffix.replace('.', '_') + '.ppm')
+            r = subprocess.run([dwebp, str(f), '-ppm', '-o', str(ppm), '-quiet'], capture_output=True)
+            if r.returncode != 0 or not ppm.exists():
+                return False                       # undecodable: treat as different and replace
+            out.append(ppm.read_bytes())
+        return out[0] == out[1]
+
+
 def need(binary: str) -> str:
     path = shutil.which(binary)
     if not path:
@@ -96,7 +120,7 @@ def need(binary: str) -> str:
 
 
 def main() -> int:
-    cwebp, sips = need("cwebp"), need("sips")
+    cwebp, sips, dwebp = need("cwebp"), need("sips"), need("dwebp")
     shots.SCALE = 2                       # a retina source; see the module docstring
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
@@ -108,7 +132,7 @@ def main() -> int:
     force = "--force" in sys.argv
     print(f"{'image':22} {'rendered':>13} {'published':>10}")
     every = shots.SHOTS + shots.PANELS + shots.OPTIONS
-    kept = 0
+    kept = unchanged = 0
     for shot in every:
         key = shot[0]
         digest = source_digest(shot[1], shot[-1])
@@ -124,11 +148,19 @@ def main() -> int:
         tmp = png.with_name(key + "-scaled.png")
         subprocess.run([sips, "-Z", str(WIDTH), str(png), "--out", str(tmp)],
                        check=True, capture_output=True)
-        subprocess.run([cwebp, "-q", str(QUALITY), "-quiet", str(tmp), "-o", str(dest)], check=True)
+        fresh = png.with_name(key + "-new.webp")
+        subprocess.run([cwebp, "-q", str(QUALITY), "-quiet", str(tmp), "-o", str(fresh)], check=True)
         tmp.unlink()
+        note = ""
+        if dest.exists() and same_picture(fresh, dest, dwebp):
+            fresh.unlink()                          # same pixels: the file on disk stays untouched
+            note = "  same picture"
+            unchanged += 1
+        else:
+            fresh.replace(dest)
         total += dest.stat().st_size
         stamp[key] = {"app": shot[1], "from": digest}
-        print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB")
+        print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}")
     # The 2x renders are working material - what is published is site/img/. Leaving them in dist/
     # meant a folder of PNGs that look like something to upload and are not.
     for f in shots.OUT.glob("*.png"):
@@ -140,8 +172,8 @@ def main() -> int:
     card = render_og_card()
     print(f"  {'og':20} {card.stat().st_size // 1024:>8} KB (1200x630, the card a link unfurls into)")
     LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"\n  {len(every) - kept} rendered, {kept} already current; "
-          f"{len(every)} image(s), {total // 1024} KB published under site/img/")
+    print(f"\n  {len(every) - kept} rendered ({unchanged} of them the same picture as before, left "
+          f"alone), {kept} not drawn at all; {len(every)} image(s), {total // 1024} KB under site/img/")
     print(f"  what each was rendered from is recorded in {LEDGER.relative_to(ROOT)}, so imgcheck can")
     print("  say when the panel moved and the picture did not.")
     print("  They are lazy-loaded and carry their own width and height, so nothing below them moves.")
