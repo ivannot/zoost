@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:d457cee455f5fcb8 -->
+<!-- translated-from: site/docs-crm.html sha256:39e4990627bc822c -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -483,13 +483,14 @@ git commit -m "baseline"</code></pre>
 
   <h2 id="failures">9b. Cosa sta fallendo davvero</h2>
   <p>L'audit di salute legge lo specchio e trova sospetti <em>strutturali</em> - una funzione che non
-    chiama nessuno, una chiamata che non risolve. Non può dirti cosa si è rotto stamattina. La scheda
-    <b class="ui">Failures</b> sì: legge quello che Zoho segnala come fallito, ed è l'unica cosa in
-    Zoost che è la lettura di un runtime invece della fotografia di una struttura.</p>
-  <p>Per ogni fallimento: la funzione, cosa l'ha invocata - una chiamata REST, un workflow, un
-    pulsante, una schedulazione - il motivo con il numero di riga, quante volte è fallita e quando è
-    successo l'ultima volta. Sopra l'elenco, quante esecuzioni e quanti fallimenti Zoho ha contato
-    nelle ultime 24 ore. Conteggi, senza nessun verdetto: una funzione che fallisce cinque volte
+    chiama nessuno, una chiamata che non risolve. Non può dirti cosa si è rotto stamattina. Zoho invece lo sa, e Zoost lo legge: <b class="ui">Pull all</b> scarica quello che Zoho segnala come
+    fallito, ed è l'unica cosa qui dentro che è la lettura di un runtime invece della fotografia di
+    una struttura.</p>
+  <p>Compare nei due posti a cui un fallimento appartiene, e in nessuna scheda a sé - un fallimento
+    non è un tipo di oggetto, è una cosa successa a una funzione. Sulla <b>funzione stessa</b>, sotto
+    i suoi chiamanti: quante volte è fallita e quando l'ultima volta. Nella vista
+    <b class="ui">♥ Health</b>, sotto Functions: ogni funzione fallita con il motivo e il numero di
+    riga, e sopra quante esecuzioni e quanti fallimenti Zoho ha contato nelle ultime 24 ore. Conteggi, senza nessun verdetto: una funzione che fallisce cinque volte
     all'ora per come è fatta non sta peggio di una fallita una volta sola.</p>
   <p>Siccome cambia di ora in ora, il pannello dice la data in cui l'ha letta invece di presentarla
     come duratura, e lo stesso fa l'export. È l'unico capitolo di un report che porta la propria data.</p>

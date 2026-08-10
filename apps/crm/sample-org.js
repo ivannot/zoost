@@ -400,7 +400,11 @@
       failures: FAILURES.map(([fn, reason, count, comp, cat], i) => {
         const [ns, nm] = fn.split('.');
         const fi = list.findIndex(([a, b]) => a === ns && b === nm);
-        return { id: String(7000 + i), name: nm, functionId: fi >= 0 ? String(9000 + fi) : null,
+        // Zoho's `function_info.name` is the **display** name - «WebHook - Update Student» in a real
+        // response - so the fixture uses the display name too, or the join to the function silently
+        // finds nothing and the panel shows a failure list that matches no function on screen.
+        const disp = fi >= 0 ? index[fi].display_name : nm;
+        return { id: String(7000 + i), name: disp, functionId: fi >= 0 ? String(9000 + fi) : null,
                  description: '', reason, count, componentType: comp, category: cat,
                  lastFailedAt: '2026-08-0' + (2 + (i % 6)) + 'T0' + (1 + i) + ':14:00+02:00',
                  firstFailedAt: '2026-07-2' + (1 + i) + 'T0' + (1 + i) + ':02:00.000Z',

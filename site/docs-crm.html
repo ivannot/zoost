@@ -448,12 +448,14 @@ git commit -m "baseline"</code></pre>
 
   <h2 id="failures">9b. What is actually failing</h2>
   <p>The health audit reads the mirror and finds <em>structural</em> suspects - a function nothing calls,
-    a call that resolves to nothing. It cannot tell you what broke this morning. The
-    <b class="ui">Failures</b> tab can: it reads what Zoho reports as having failed, and it is the one
-    thing in Zoost that is a reading of a runtime rather than a photograph of a structure.</p>
-  <p>For each failure: the function, what invoked it - a REST call, a workflow, a button, a schedule -
-    the reason with its line number, how many times it has failed, and when it last did. Above the
-    list, how many runs and how many failures Zoho counted in the last 24 hours. Counts, with no
+    a call that resolves to nothing. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull all</b> fetches what Zoho reports as having
+    failed, and it is the one thing here that is a reading of a runtime rather than a photograph of a
+    structure.</p>
+  <p>It shows in the two places a failure belongs, and in no tab of its own - a failure is not a kind
+    of object, it is something that happened to a function. On the <b>function itself</b>, under its
+    callers: how many times it has failed and when it last did. In the <b class="ui">♥ Health</b>
+    view, under Functions: every failing function with the reason and its line number, and above them
+    how many runs and how many failures Zoho counted in the last 24 hours. Counts, with no
     verdict attached: a function that fails five times an hour by design is not worse than one that
     failed once.</p>
   <p>Because it changes hourly, the panel says the date it was read rather than presenting it as

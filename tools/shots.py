@@ -328,9 +328,9 @@ PANELS = [
         if (el) el.click();
     """),
     ("crm-failures", "crm", "crm/sampleorg-1234567890", """
-        const seg = [...document.querySelectorAll('.seg')].find((s) => /Failures/.test(s.textContent));
-        if (seg) seg.click();
-        setTimeout(() => { const el = document.querySelector('#tree .f'); if (el) el.click(); }, 900);
+        // There is no Failures tab - a failure is something that happened to a function, so the list
+        // lives in the health view under Functions, next to the other things wrong with them.
+        document.getElementById('health').click();
     """),
     ("crm-search", "crm", "crm/sampleorg-1234567890", """
         // Full-text search across every function at once, which Zoho CRM has no way of doing. The

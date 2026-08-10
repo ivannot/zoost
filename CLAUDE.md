@@ -591,7 +591,23 @@ is disabled. Do not weaken this for convenience.
 reads what was written to disk. If a feature needs data that is not in the module JSON, the pull
 has to be extended and the user has to re-pull — say so in the UI rather than failing silently.
 
-**The Failures tab reads a runtime, and it is the only thing here that does.** Everything else in
+**Execution failures have no tab, and that was a level error worth recording.** They shipped as a
+sixth tab beside Functions, Modules, Workflows, Schedules and Connections, and he said it was out of
+scope. The sharper reason: **the tabs are kinds of object, and a failure is not one** - it is an
+event about a function. Giving it a sibling tab put it a level too high, which is the same dimension
+mistake this file already records twice (a dot coloured by namespace while the chips filtered on
+category; entity chips dressed like category chips). It shows where that dimension belongs: on the
+**function's own detail**, under its callers, and in the **health view** under Functions, which is
+already the place that answers «what is wrong across this org». The pull, the file and the export
+chapter are unchanged - only the level was wrong.
+
+**And the join was on the wrong name.** Zoho's `function_info.name` is the **display** name, so the
+fixture generating a technical one meant the panel found no match and showed nothing on the function
+while the health list was full - a defect that looks like «the feature does not work» and is really
+two names for one thing. The lookup now tries every name a function is known by rather than picking
+one.
+
+**The Failures reading is a runtime, and it is the only thing here that is.** Everything else in
 the mirror is a photograph of a structure that changes rarely, and its whole point is that `git diff`
 answers «what changed». Execution failures change hourly: a diff of them is noise, not history. So
 they are written as **one file that states when it was read** - `failures/index.json`, holding `at`,

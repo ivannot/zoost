@@ -95,11 +95,14 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "Health ♥": a list of things that look wrong - functions nothing calls, calls to functions that do
   not exist, automations pointing at something missing. It states what it cannot see, and it is a
   list of candidates to look at, never a verdict.
-- "Failures" (a tab): what Zoho reports as having failed - the function, what invoked it (a REST
+- Execution failures (no tab of their own - a failure is something that happened to a function, not
+  a kind of object): what Zoho reports as having failed - the function, what invoked it (a REST
   call, a workflow, a button, a schedule), the reason with its line number, how many times, and when
   it last failed. Above the list, how many runs and how many failures Zoho counted in the last 24
-  hours. This is the only thing Zoost reads that is not a photograph of a structure: it changes
-  hourly, so the panel says the date it was read rather than presenting it as durable.
+  hours. It shows in two places: on the function itself, under its callers, and in the Health view
+  under Functions, where the whole list is. This is the only thing Zoost reads that is not a
+  photograph of a structure: it changes hourly, so every surface says the date it was read rather
+  than presenting it as durable.
   Two things it deliberately does not do. It does not re-run a failed execution - that makes Zoho
   run code that writes to records, which this extension refuses - so it offers to open the failures
   page in Zoho, where the button is, and the click is the user's. And it does not read the *input*

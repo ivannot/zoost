@@ -99,7 +99,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it -
   per function (the connections it calls) and org-wide (usage count, unused, disconnected).
   Plus who last changed each function, and when.
-- **Failures**: what Zoho reports as failing - the function, what invoked it, the reason with its
+- **Execution failures**: what Zoho reports as failing - the function, what invoked it, the reason with its
   line number, how often, and how many runs and failures Zoho counted in the last 24 hours. The one
   thing here that reads a runtime rather than a structure, so it carries the date it was read. It
   does not re-run anything (that would write) and it does not read the input of a failed run.

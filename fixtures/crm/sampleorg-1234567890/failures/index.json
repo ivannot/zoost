@@ -7,7 +7,7 @@
   "failures": [
     {
       "id": "7000",
-      "name": "buildInvoice",
+      "name": "Build invoice",
       "functionId": "9006",
       "description": "",
       "reason": "Custom exception - 'Missing tax rate' at Line Number: 42",
@@ -21,7 +21,7 @@
     },
     {
       "id": "7001",
-      "name": "onOrderCreate",
+      "name": "On order create",
       "functionId": "9015",
       "description": "",
       "reason": "Improper Statement Error - null value at Line Number: 17",
@@ -49,7 +49,7 @@
     },
     {
       "id": "7003",
-      "name": "nightlyDispatch",
+      "name": "Nightly dispatch",
       "functionId": "9021",
       "description": "",
       "reason": "Connection timed out after 30000 ms",

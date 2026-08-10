@@ -446,10 +446,6 @@ const TABS = [
   { id: 'workflows',   label: 'Workflows' },
   { id: 'schedules',   label: 'Schedules' },
   { id: 'connections', label: 'Connections' },
-  // What is actually breaking, which is the one thing the rest of this list cannot tell you: the
-  // others photograph a structure, this reads a runtime. It is a tab like the others so it gets the
-  // segment, the status dot, the per-type Pull, the staleness date and the access verdict for free.
-  { id: 'failures',    label: 'Failures' },
 ];
 const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
 const tabLabel = (id) => (TAB[id] ? TAB[id].label : id);
@@ -934,6 +930,25 @@ async function showCallers(path) {
     } else if (!callers.length && !node.rest) {
       html += ' <span class="orphan">\u00b7 no known usage (orphan candidate)</span>';
     }
+    // What Zoho says about this function at runtime, next to what the mirror says about it
+    // statically. Nothing is inferred: if it is not in the last reading, nothing is shown - «no
+    // failures recorded» would be a claim about a measurement that may never have been taken.
+    try {
+      const fx = await failuresIndex();
+      // Zoho reports the display name; the mirror knows three names for the same function and which
+      // one matches is not ours to assume. Try them all rather than picking one and finding nothing.
+      const mine = [node.display_name, node.name, node.api_name]
+        .map((k) => fx.byName.get(String(k || '').toLowerCase())).find((v) => v && v.length) || [];
+      if (mine.length) {
+        const total = mine.reduce((n, f) => n + (f.count || 0), 0);
+        const last = mine.map((f) => f.lastFailedAt).filter(Boolean).sort().pop();
+        html += `<div class="failwrap"><b>Failing in Zoho:</b> ${escHtml(String(total))}\u00d7`
+          + (last ? ` \u00b7 last ${escHtml(fmtDate(last))}` : '')
+          + ` \u00b7 as read on ${escHtml(fmtDate(fx.at))}`
+          + mine.map((f) => `<div class="failrow">${escHtml(f.componentType || '?')} \u00b7 ${escHtml(f.reason || '')}</div>`).join('')
+          + '</div>';
+      }
+    } catch (_) { /* no reading yet: say nothing rather than claim none */ }
     const conns = node.connections || [];
     if (conns.length) {
       html += '<div class="connwrap"><b>Connections (' + conns.length + '):</b> '
@@ -1419,7 +1434,23 @@ async function buildHealth() {
     .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.lines} lines · ${n.stats.codeLines} code · ${(n.stats.chars / 1024).toFixed(1)} KB</span>` }));
   const chattiest = withStats.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15)
     .map((n) => ({ html: `${fnLink(n)} <span class="meta">${n.stats.apiCalls} calls - ${n.stats.invokeurl} invokeurl · ${n.stats.crm} zoho.crm · ${n.stats.zoho} other${n.stats.sendmail ? ' · ' + n.stats.sendmail + ' sendmail' : ''}</span>` }));
+  // What Zoho reports as failing. Unlike every other group here it is not computed from the mirror:
+  // it is a reading of a runtime, taken at a moment, so it says the moment. The counts beside it are
+  // aggregates - a run count and a failure count for the 24 hours before that reading - and they
+  // carry no verdict, like every other number in this view.
+  const fx = await failuresIndex();
+  const failing = (fx.all || []).slice().sort((a, b) => b.count - a.count).map((f) => {
+    const n = fnByName[String(f.name || '').toLowerCase()];
+    const who = n ? fnLink(n) : `<b>${escHtml(f.name || '?')}</b>`;
+    return { html: `${who} <span class="meta">${escHtml(String(f.count))}\u00d7 \u00b7 ${escHtml(f.componentType || '?')} \u00b7 ${escHtml(f.reason || '')}</span>` };
+  });
+  const failDesc = fx.at
+    ? `Read from Zoho on ${escHtml(fmtDate(fx.at))}.`
+      + (fx.usage ? ` In the 24 hours before that Zoho counted ${escHtml(String(fx.usage.success ?? 'unknown'))} run(s) and ${escHtml(String(fx.usage.failure ?? 'unknown'))} failure(s).` : '')
+      + ' This is the only thing here read from the platform rather than computed from the mirror, so it is as old as that date and no older. The input of a failed run stays in Zoho.'
+    : 'Nothing has been read yet - run Pull all, and this fills in.';
   const groups = [
+    { id: 'failing', tab: 'functions', title: 'Failing in Zoho', desc: failDesc, bad: true, items: failing },
     { id: 'biggest', tab: 'size', title: MSG.hBiggest, desc: MSG.hBiggestDesc, bad: false, items: biggest },
     { id: 'chattiest', tab: 'size', title: MSG.hChattiest, desc: 'invokeurl, zoho.crm and other Zoho service tasks, counted outside comments and strings. Each call is work Zoho meters, so this is where execution cost concentrates.', bad: false, items: chattiest },
     { id: 'orphan', tab: 'functions', title: MSG.hOrphan, desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
@@ -2623,7 +2654,7 @@ const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
 const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
   && p !== 'modules/layouts/index.json';
 
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'failures' ? rebuildFailures() : rebuildConnections(); }
+async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished - success or error.
@@ -2643,7 +2674,6 @@ async function pullCurrent() {
     else if (viewMode === 'workflows') await pullWorkflows();
     else if (viewMode === 'schedules') await pullSchedules();
     else if (viewMode === 'connections') await pullConnections();
-    else if (viewMode === 'failures') await pullFailures();
     else await pullAll();
     if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
   } catch (e) { setStatus('Pull error: ' + e.message, 'bad'); }
@@ -4081,6 +4111,23 @@ async function openFailuresPage() {
 
 // ---------- execution failures (and the last 24 hours of run counts) ----------
 //
+// There is no Failures tab. A failure is not a kind of object - the tabs are functions, modules,
+// workflows, schedules, connections - it is an *event about a function*, and giving it a sibling
+// tab put it a level too high. It shows in the two places that dimension belongs: on the function
+// itself, and in the health view, which already answers «what is wrong across this org».
+let failIndex = null;   // {at, usage, byName:Map} - built once per read, dropped when a pull replaces it
+async function failuresIndex() {
+  if (failIndex) return failIndex;
+  let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
+  const byName = new Map();
+  if (d && Array.isArray(d.failures)) {
+    d.failures.forEach((f) => { const k = String(f.name || '').toLowerCase(); if (k) (byName.get(k) || byName.set(k, []).get(k)).push(f); });
+  }
+  failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, byName, all: (d && d.failures) || [] };
+  return failIndex;
+}
+
+//
 // The rest of the mirror is a photograph of a structure that changes rarely, and its point is that
 // `git diff` answers «what changed». This is not that: failures change hourly, and a diff of them is
 // noise rather than history. It is written to disk all the same - so the export, the assistant and
@@ -4090,7 +4137,6 @@ async function openFailuresPage() {
 // `params` - the input of the failed execution - is dropped in the bridge and never arrives here.
 // See the comment there for why: for a REST API failure it carries a real person's name and email,
 // and Zoost says on three surfaces that it does not read records.
-let failureData = [], failureUsage = null, failureAt = null, failureFilter = 'all';
 
 async function pullFailures() {
   try {
@@ -4104,8 +4150,11 @@ async function pullFailures() {
     const r = await toBridge({ cmd: 'pullFailures' }); if (!r?.ok) throw new Error(r?.error || 'failures read failed');
     await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null, failures: r.failures || [] }, null, 2));
     await noteAccess('failures', null);
-    if (viewMode === 'failures') await rebuildFailures();
-    else setStatus(`${(r.failures || []).length} failing function(s).`, 'ok');
+    // No view of its own: a failure is a property of a function, not a kind of object, so it shows
+    // where that dimension belongs - in the function's own detail, and in the health view, which is
+    // already the place that answers «what is wrong across this org».
+    setStatus(`${(r.failures || []).length} failing function(s).`, 'ok');
+    if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
   } catch (e) { await notePullFailure('failures', e); }
   finally { pullActive = false; }
 }
@@ -4114,96 +4163,6 @@ async function loadFailuresIndex() {
     const d = JSON.parse(await readFile('failures/index.json'));
     return (d && typeof d === 'object' && Array.isArray(d.failures)) ? d : { at: null, usage: null, failures: [] };
   } catch (_) { return { at: null, usage: null, failures: [] }; }
-}
-async function rebuildFailures() {
-  if (!dir) return;
-  try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
-    const d = await loadFailuresIndex();
-    failureData = d.failures.map((f) => ({ ...f, path: 'failures/' + f.id }));
-    failureUsage = d.usage; failureAt = d.at;
-    renderFailures();
-    setStatus(failureData.length
-      ? `${failureData.length} failing function(s)${failureAt ? ' \u00b7 read ' + fmtDate(failureAt) : ''}.`
-      : (emptyReason() || 'Nothing has failed, or nothing has been read yet - press Pull all.'),
-      failureData.length ? 'warn' : 'ok');
-  } catch (e) { setStatus('Failures error: ' + e.message, 'bad'); }
-  await refreshContext();
-}
-/** The run counts, said as what they are. An aggregate that could not be read is **unknown**, never
- *  zero - the same rule as a workflow with no scheduled-action count until it is downloaded. */
-function usageLine() {
-  if (!failureUsage) return '';
-  const ok = failureUsage.success, bad = failureUsage.failure;
-  const n = (v) => (v === null || v === undefined ? 'unknown' : String(v));
-  return `<div class="fusage">Last 24 hours: <b>${escHtml(n(ok))}</b> run(s), <b>${escHtml(n(bad))}</b> failed`
-    + (typeof ok === 'number' && typeof bad === 'number' && ok + bad > 0
-        ? ` \u00b7 ${((bad / (ok + bad)) * 100).toFixed(1)}%` : '')
-    + ' \u2014 counts from Zoho, no verdict attached.</div>';
-}
-function renderFailures() {
-  if (viewMode !== 'failures') return;
-  const term = $('find').value.trim().toLowerCase();
-  const pass = (f) => {
-    if (failureFilter !== 'all' && (f.componentType || '') !== failureFilter) return false;
-    return !term || (f.name || '').toLowerCase().includes(term) || (f.reason || '').toLowerCase().includes(term);
-  };
-  const list = failureData.filter(pass).sort((a, b) => (b.count - a.count) || String(b.lastFailedAt || '').localeCompare(String(a.lastFailedAt || '')));
-  const tree = $('tree'); tree.innerHTML = '';
-  const head = usageLine();
-  if (!list.length) {
-    tree.innerHTML = head + '<div class="empty">' + (failureData.length
-      ? '<b>No matches.</b>'
-      : (emptyReason() || '<b>Nothing has failed.</b> Or nothing has been read yet - press <b>Pull all</b>.')) + '</div>';
-    return;
-  }
-  tree.insertAdjacentHTML('beforeend', head);
-  list.forEach((f) => {
-    const el = document.createElement('div'); el.className = 'f'; el.dataset.path = f.path;
-    el.setAttribute('aria-selected', f.path === currentPath);
-    el.innerHTML = `<span class="st st-err" title="${escA('Failed ' + f.count + ' time(s) - click to re-read the failures from Zoho')}">\u27f3</span>`
-      + `<span class="fname">${escHtml(f.name)}</span>`
-      + `<span class="rest rf" title="times it failed">${f.count}\u00d7</span>`
-      + (f.componentType ? `<span class="rest rl" title="what invoked it">${escHtml(f.componentType)}</span>` : '');
-    el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshFailures(); };
-    el.onclick = () => openFailure(f);
-    tree.appendChild(el);
-  });
-}
-async function refreshFailures() {
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus('Re-reading failures\u2026', 'busy');
-  await pullFailures();
-}
-function openFailure(f) {
-  currentPath = f.path; pvHist = []; updateBack();
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === f.path));
-  setPvName(f.name, 'failures/index.json');
-  $('pvcallers').className = ''; $('pvcallers').textContent = '';
-  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
-  let h = '<div class="wfd">'
-    + `<div class="wfrow"><span class="wk">Reason</span> <b>${escHtml(f.reason || '(none given)')}</b></div>`
-    + `<div class="wfrow"><span class="wk">Failed</span> ${escHtml(String(f.count))} time(s)</div>`
-    + (f.componentType ? `<div class="wfrow"><span class="wk">Invoked by</span> ${escHtml(f.componentType)}</div>` : '')
-    + (f.category ? `<div class="wfrow"><span class="wk">Category</span> ${escHtml(f.category)}</div>` : '')
-    + (f.lastFailedAt ? `<div class="wfrow"><span class="wk">Last failure</span> ${escHtml(fmtDate(f.lastFailedAt))}</div>` : '')
-    + (f.firstFailedAt ? `<div class="wfrow"><span class="wk">First seen</span> ${escHtml(fmtDate(f.firstFailedAt))}</div>` : '')
-    + (f.reRunAt ? `<div class="wfrow"><span class="wk">Re-run</span> ${escHtml(f.reRunAt)}</div>` : '')
-    // Zoost does not re-run anything: that makes the platform execute code that writes to records,
-    // which is the first thing this product refuses. It takes you to the page where the button is,
-    // the same way «Find» takes you to the functions list, and the last click is yours.
-    + '<div class="wfrow"><span class="wk">Re-running</span> <span class="wnote">Zoost does not re-run a failed execution - that would write. '
-    + '<a id="pvfailgo" href="#">Open the failures page in Zoho \u2197</a> and the button is there.</span></div>'
-    + '<div class="wfrow"><span class="wk">Input</span> <span class="wnote">Zoho keeps the input of the failed execution. '
-    + 'Zoost does not read it: for a REST API failure it carries the request body and the caller\'s name and email, '
-    + 'and this tool does not read records.</span></div>'
-    + '</div>';
-  $('pvtable').innerHTML = h;
-  const go = $('pvtable').querySelector('#pvfailgo');
-  if (go) go.onclick = (ev) => { ev.preventDefault(); openFailuresPage(); };
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }
 
 async function pullWorkflows() {
