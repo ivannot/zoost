@@ -1155,14 +1155,22 @@ function actionUrl(a) {
   const seg = a && ACTION_PATH[a.kind];
   return (base && inst && seg && a.id) ? `${base}/crm/${inst}/settings/${seg}/${a.id}` : null;
 }
-async function openActionInZoho(a) {
+// The template a notification sends is a page of its own, and the notification only names it -
+// so the name is the link. A query string rather than a path, which is Zoho's shape here and not a
+// pattern to extrapolate from the other three.
+function templateUrl(a) {
+  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
+  const id = a && a.template && a.template.id;
+  return (base && inst && id) ? `${base}/crm/${inst}/settings/templates?type=email&templateId=${encodeURIComponent(id)}` : null;
+}
+async function openZohoAt(url, what) {
   if (sampleRefuse()) return;
-  const url = actionUrl(a);
   if (!url) { setStatus(MSG.noActionTarget, 'warn'); return; }
   const id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
-  setStatus(`Opened \u00ab${a.name || a.id}\u00bb in Zoho.`, 'ok');
+  setStatus(`Opened \u00ab${what}\u00bb in Zoho.`, 'ok');
 }
+async function openActionInZoho(a) { await openZohoAt(actionUrl(a), a.name || a.id); }
 async function openModulePage(genName, navigable, label) {
   if (sampleRefuse()) return;
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
@@ -4557,7 +4565,9 @@ function openAction(a) {
     + row('Used by', fires.length
         ? `<b>${fires.length}</b> rule(s)`
         : (a.associated ? 'Zoho reports it as in use, and no pulled rule names it' : '<span style="color:#f59e0b">no rule uses it</span>'))
-    + (a.template ? row('Template', escHtml(a.template.name || a.template.id)) : '')
+    + (a.template ? row('Template', templateUrl(a)
+        ? `<a class="wf-fn" data-tpl="1" title="${escA('Open this template in Zoho')}">${escHtml(a.template.name || a.template.id)} \u2197</a>`
+        : escHtml(a.template.name || a.template.id)) : '')
     + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address')
         + (a.from_name ? ' \u00b7 ' + escHtml(a.from_name) : ''))
         + (a.from_address ? row('Address', `<span class="mono">${escHtml(a.from_address)}</span>`) : '') : '')
@@ -4593,6 +4603,7 @@ function openAction(a) {
   h += '</div>';
   $('pvtable').innerHTML = h;
   $('pvtable').querySelectorAll('a[data-wf]').forEach((el) => (el.onclick = () => healthOpenWorkflow(el.dataset.wf)));
+  $('pvtable').querySelectorAll('a[data-tpl]').forEach((el) => (el.onclick = () => openZohoAt(templateUrl(a), (a.template && a.template.name) || 'template')));
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }
 
