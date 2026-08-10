@@ -25,12 +25,18 @@
     "https://crm.zoho.com.au/*",
     "https://crm.zoho.jp/*",
     "https://crm.zohocloud.ca/*",
+    "https://crm.zoho.sa/*",
+    "https://crm.zoho.uk/*",
+    "https://crm.zoho.ae/*",
     "https://crmsandbox.zoho.eu/*",
     "https://crmsandbox.zoho.com/*",
     "https://crmsandbox.zoho.in/*",
     "https://crmsandbox.zoho.com.au/*",
     "https://crmsandbox.zoho.jp/*",
     "https://crmsandbox.zohocloud.ca/*",
+    "https://crmsandbox.zoho.sa/*",
+    "https://crmsandbox.zoho.uk/*",
+    "https://crmsandbox.zoho.ae/*",
     "https://api.anthropic.com/*",
     "https://api.openai.com/*",
     "https://one.zoho.eu/*",
@@ -38,7 +44,10 @@
     "https://one.zoho.in/*",
     "https://one.zoho.com.au/*",
     "https://one.zoho.jp/*",
-    "https://one.zohocloud.ca/*"
+    "https://one.zohocloud.ca/*",
+    "https://one.zoho.sa/*",
+    "https://one.zoho.uk/*",
+    "https://one.zoho.ae/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -70,12 +79,18 @@
         "https://crm.zoho.com.au/*",
         "https://crm.zoho.jp/*",
         "https://crm.zohocloud.ca/*",
+        "https://crm.zoho.sa/*",
+        "https://crm.zoho.uk/*",
+        "https://crm.zoho.ae/*",
         "https://crmsandbox.zoho.eu/*",
         "https://crmsandbox.zoho.com/*",
         "https://crmsandbox.zoho.in/*",
         "https://crmsandbox.zoho.com.au/*",
         "https://crmsandbox.zoho.jp/*",
-        "https://crmsandbox.zohocloud.ca/*"
+        "https://crmsandbox.zohocloud.ca/*",
+        "https://crmsandbox.zoho.sa/*",
+        "https://crmsandbox.zoho.uk/*",
+        "https://crmsandbox.zoho.ae/*"
       ],
       "js": [
         "hook.js"
@@ -92,12 +107,18 @@
         "https://crm.zoho.com.au/*",
         "https://crm.zoho.jp/*",
         "https://crm.zohocloud.ca/*",
+        "https://crm.zoho.sa/*",
+        "https://crm.zoho.uk/*",
+        "https://crm.zoho.ae/*",
         "https://crmsandbox.zoho.eu/*",
         "https://crmsandbox.zoho.com/*",
         "https://crmsandbox.zoho.in/*",
         "https://crmsandbox.zoho.com.au/*",
         "https://crmsandbox.zoho.jp/*",
-        "https://crmsandbox.zohocloud.ca/*"
+        "https://crmsandbox.zohocloud.ca/*",
+        "https://crmsandbox.zoho.sa/*",
+        "https://crmsandbox.zoho.uk/*",
+        "https://crmsandbox.zoho.ae/*"
       ],
       "js": [
         "content-bridge.js"

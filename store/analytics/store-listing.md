@@ -147,7 +147,7 @@ It also uses tab access to navigate the current tab to a workspace URL the user 
 ## 9. Host permission justification (max 1000)
 
 ```
-https://analytics.zoho.eu/*, .com, .in, .com.au, .jp and analytics.zohocloud.ca - the Zoho Analytics data centres. The extension reads the workspace's structure from Zoho Analytics' own endpoints on whichever of these the user's account lives on. It cannot know which one in advance, and the set is exactly the list of Zoho Analytics regions, no wider.
+https://analytics.zoho.eu/*, .com, .in, .com.au, .jp, .sa, .uk, .ae and analytics.zohocloud.ca - the Zoho Analytics data centres. The extension reads the workspace's structure from Zoho Analytics' own endpoints on whichever of these the user's account lives on. It cannot know which one in advance, and the set is exactly the list of Zoho Analytics regions, no wider.
 
 https://api.anthropic.com/* and https://api.openai.com/* - used only by the optional AI assistant, and only if the user configures a provider and an API key. Requests go straight from the browser to the provider the user chose. These two are the only AI endpoints supported, because they are the two that are tested; no other endpoint can be configured.
 

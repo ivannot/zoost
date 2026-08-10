@@ -24,7 +24,14 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
-const HOST_RE = /^https:\/\/analytics\.(zoho\.(eu|com|in|com\.au|jp)|zohocloud\.ca)\//;
+// Built from the manifest: the hosts this extension is allowed to read are exactly the hosts it
+// should recognise, and a second list is a list that goes out of date. Zoho has more data centres
+// than the six that were written here - zoho.sa, zoho.uk and zoho.ae, each with a current
+// certificate and a live accounts service.
+const HOST_RE = new RegExp('^(' + (chrome.runtime.getManifest().host_permissions || [])
+  .filter((h) => h.startsWith('https://analytics.'))
+  .map((h) => h.replace(/\/\*$/, '').replace(/\./g, '\\.')).join('|') + ')\\/');
+
 const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
@@ -62,7 +69,11 @@ const PRODUCT_URL = 'https://zoost.it';
 // Zoho's own hosts, with or without a subdomain, and nothing that merely contains the word:
 // `notzoho.com` and `evil.com/zoho.x` are not Zoho, and treating them as such would send them to
 // the Zoho tab where the guard would then complain about a mismatch it did not cause.
-function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho\.[a-z.]+(\/|$)/i.test(String(u || '')); }
+// Zoho's own pages belong in the Zoho tab. It stays a rule about the domain rather than a list of
+// granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
+// blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
+// so those links were opening in a window of their own.
+function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho(cloud)?\.[a-z.]+(\/|$)/i.test(String(u || '')); }
 
 function openExternal(url) {
   try {

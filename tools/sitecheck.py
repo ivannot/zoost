@@ -263,6 +263,41 @@ def hosts_declared(findings: list) -> None:
                                 f'site/privacy.html never names it')
 
 
+WORDS = {6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve'}
+IT_WORDS = {6: 'sei', 7: 'sette', 8: 'otto', 9: 'nove', 10: 'dieci', 11: 'undici', 12: 'dodici'}
+
+
+def data_centre_count_is_derived(findings: list) -> None:
+    """The privacy policy states how many data centres each extension reaches, and the manifests decide.
+
+    A number written into prose is a claim that has to be maintained, and this one moves whenever Zoho
+    opens a data centre - which it does: the six here became nine the day anyone measured. The page may
+    keep the figure, it may not keep a wrong one.
+    """
+    counts = set()
+    for app in sorted(p.name for p in (ROOT / 'apps').iterdir() if p.is_dir()):
+        data = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+        pre = f'https://{"crm" if app == "crm" else app}.'
+        counts.add(len({h[len(pre):].rstrip('/*') for h in data.get('host_permissions', [])
+                        if h.startswith(pre)}))
+    if len(counts) != 1:
+        findings.append(f'the extensions reach a different number of data centres ({sorted(counts)}) - '
+                        f'site/privacy.html says «each», which is then wrong for one of them')
+        return
+    n = counts.pop()
+    for rel, words in (('privacy.html', WORDS), ('it/privacy.html', IT_WORDS)):
+        page = SITE / rel
+        if not page.exists():
+            continue
+        text = page.read_text(encoding='utf-8')
+        said = [w for k, w in words.items() if re.search(rf'<b>{w}</b>', text)]
+        if not said:
+            findings.append(f'site/{rel}: no data-centre count is stated - it was, and a number that '
+                            f'quietly disappears is not a correction')
+        elif said != [words[n]]:
+            findings.append(f'site/{rel}: says {said} data centres, the manifests reach {n} ({words[n]})')
+
+
 # ---------------------------------------------------------------------------------------------------
 # Translations
 # ---------------------------------------------------------------------------------------------------
@@ -791,6 +826,7 @@ def main() -> int:
     nav_marks_the_page_you_are_on(findings)
     txt_served_by_worker(findings)
     hosts_declared(findings)
+    data_centre_count_is_derived(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in
     # site.js, not in any page — and nothing was reading them. The fourth form reappeared there

@@ -30,7 +30,11 @@
   window.__zoostAnalyticsBridge = true;
 
   const BASE = location.origin;
-  const IS_ANALYTICS = /^https:\/\/analytics\.(zoho\.(eu|com|in|com\.au|jp)|zohocloud\.ca)$/.test(BASE);
+  // The manifest already decides where this script runs; recognising a *different* set here
+  // could only ever be wrong in one direction or the other.
+  const IS_ANALYTICS = (chrome.runtime.getManifest().host_permissions || [])
+    .filter((h) => h.startsWith('https://analytics.'))
+    .some((h) => h.replace(/\/\*$/, '') === BASE);
   const PACE = 60;   // ms between per-item calls, so a large workspace does not hammer the host
 
   // /workspace/{id} and /workspace/{id}/edit/{viewId} are the two shapes that carry a workspace.

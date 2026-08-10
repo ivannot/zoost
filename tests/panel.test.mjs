@@ -300,6 +300,12 @@ test('Zoho pages stay in the Zoho tab', () => {
   ['https://crm.zoho.eu/crm/tab/Contacts',
    'https://analytics.zoho.com/workspace/123',
    'https://crmsandbox.zoho.com/crm/x',
+   // The data centres whose domain is not literally «zoho.something» were falling through to a
+   // window of their own, and the three added later were not in the regex at all.
+   'https://crm.zohocloud.ca/crm/x',
+   'https://crm.zoho.sa/crm/x',
+   'https://crmsandbox.zoho.uk/crm/x',
+   'https://one.zoho.ae/',
    'https://zoho.com/crm'].forEach((u) => assert.equal(isZohoUrl(u), true, u));
 });
 

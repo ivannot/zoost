@@ -168,7 +168,7 @@ The extension does not read browsing history, does not enumerate tabs unrelated 
 ```
 Two groups of hosts, both strictly necessary.
 
-1. Zoho CRM domains - crm.zoho.com, .eu, .in, .com.au, .jp, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* - cover every Zoho data centre and their sandboxes. The extension calls the Zoho CRM API on these origins, using the user's existing session, to read their own Deluge functions and configuration metadata. The multiple domains are not a widening of scope: they are the same product, and a user's org lives on exactly one of them. The extension is inert on every other site.
+1. Zoho CRM domains - crm.zoho.com, .eu, .in, .com.au, .jp, .sa, .uk, .ae, zohocloud.ca, the matching crmsandbox.* hosts, and one.zoho.* - cover the Zoho data centres this extension supports, and their sandboxes. The extension calls the Zoho CRM API on these origins, using the user's existing session, to read their own Deluge functions and configuration metadata. The multiple domains are not a widening of scope: they are the same product, and a user's org lives on exactly one of them. The extension is inert on every other site.
 
 2. api.anthropic.com and api.openai.com are needed only by the optional AI assistant, and only after the user enters their own API key for one of them. The request goes directly from the browser to that provider. These two origins are the only AI destinations the extension can reach; no other endpoint is configurable.
 

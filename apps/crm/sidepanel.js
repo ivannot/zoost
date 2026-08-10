@@ -1,14 +1,12 @@
 /*
  * sidepanel.js - IDE orchestrator (multi-workspace).
  */
-const ZOHO_MATCHES = [
-  'https://crm.zoho.eu/*', 'https://crm.zoho.com/*', 'https://crm.zoho.in/*',
-  'https://crm.zoho.com.au/*', 'https://crm.zoho.jp/*', 'https://crm.zohocloud.ca/*',
-  'https://crmsandbox.zoho.eu/*', 'https://crmsandbox.zoho.com/*', 'https://crmsandbox.zoho.in/*',
-  'https://crmsandbox.zoho.com.au/*', 'https://crmsandbox.zoho.jp/*', 'https://crmsandbox.zohocloud.ca/*',
-  'https://one.zoho.eu/*', 'https://one.zoho.com/*', 'https://one.zoho.in/*',
-  'https://one.zoho.com.au/*', 'https://one.zoho.jp/*', 'https://one.zohocloud.ca/*',
-];
+// Which tabs count as Zoho, taken from the manifest rather than copied out of it. It was eighteen
+// patterns typed here as well, so adding a data centre meant remembering this file - and Zoho has
+// more of them than either list had: zoho.sa, zoho.uk and zoho.ae answer exactly as the six did,
+// with current certificates and a live accounts service each.
+const ZOHO_MATCHES = (chrome.runtime.getManifest().host_permissions || [])
+  .filter((h) => /^https:\/\/(crm|crmsandbox|one)\./.test(h));
 const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox)?|one)\.zoho/;
 const envOf = (origin) => /crmsandbox\./.test(origin || '') ? 'sandbox' : 'prod';
 const CFG = '.zoost.json';
@@ -138,7 +136,11 @@ const PRODUCT_URL = 'https://zoost.it';
 // Zoho's own hosts, with or without a subdomain, and nothing that merely contains the word:
 // `notzoho.com` and `evil.com/zoho.x` are not Zoho, and treating them as such would send them to
 // the Zoho tab where the guard would then complain about a mismatch it did not cause.
-function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho\.[a-z.]+(\/|$)/i.test(String(u || '')); }
+// Zoho's own pages belong in the Zoho tab. It stays a rule about the domain rather than a list of
+// granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
+// blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
+// so those links were opening in a window of their own.
+function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho(cloud)?\.[a-z.]+(\/|$)/i.test(String(u || '')); }
 
 function openExternal(url) {
   try {
