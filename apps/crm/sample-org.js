@@ -368,22 +368,30 @@
 
     // ---- workflows ----
     const wfs = [];
-    WORKFLOWS.forEach(([mod, name, fn, sched], i) => {
+    // A rule that fires a function the org does not have is «broken automation» in the health audit,
+    // and the fixture had no such rule: the check ran, found nothing, and looked correct. It is an
+    // edge case, so it goes where the other awkward states go and not in the workspace somebody
+    // opens on their first day.
+    const wfList = WORKFLOWS.concat(o.edgeCases
+      ? [['Orders', 'Order archived', 'standalone.archiveOrderLegacy', false]] : []);
+    wfList.forEach(([mod, name, fn, sched], i) => {
       const wid = String(4000 + i);
-      // `functions`, plural, which is what Zoho returns and what all nine readers filter on -
-      // the fixture said `function` and so the sample workspace had no workflow-to-function
-      // edge at all: not in the graph, not in the health audit's broken automations, not in
-      // the assistant's action counts. Silent, because a filter that matches nothing looks
-      // exactly like an org that has nothing. The rule this file already carries: derive a
-      // shape from the writer, never from what reads well.
-      // Zoho names the function by its own name and gives the id it knows it by; the fixture wrote
-      // «namespace.name» and an id of its own invention, so `resolveFn()` matched on neither and the
-      // sample workspace had no workflow-to-function edge at all - not in the graph, not in the
-      // health audit's broken automations, not in the assistant's action counts. Silent, because a
-      // filter that matches nothing looks exactly like an org that has nothing. The rule this file
-      // already carries, one file over: derive a shape from the writer, never from what reads well.
+      // Three shapes here were invented rather than derived, and each one silently removed a
+      // feature from the sample: the action went in a bare `actions` on the condition where Zoho
+      // puts `instant_actions.actions`; its type was `function` where Zoho writes `functions`; and
+      // it named the target «namespace.name» with an id of its own, so `resolveFn()` matched on
+      // neither. The result was a sample workspace with no workflow-to-function edge at all - not in
+      // the call graph, not in the health audit's broken automations, not in the assistant's action
+      // counts - and nothing failed, because a filter that matches nothing is indistinguishable from
+      // an org that has nothing.
+      //
+      // Both type forms are real: counted in a mirrored org, 149 `functions` against 2 `function`.
+      // A rule naming a function the org does not have keeps its action, because that is the broken
+      // automation the health audit exists to report.
       const target = fn ? index.find((e) => e.name === String(fn).split('.').pop()) : null;
-      const actions = target ? [{ type: 'functions', name: target.name, id: target.id }] : [];
+      const actions = !fn ? [] : [target
+        ? { type: i % 3 === 1 ? 'function' : 'functions', name: target.name, id: target.id }
+        : { type: 'functions', name: String(fn).split('.').pop(), id: String(4500 + i) }];
       // The *rule* object, which is what fetchWorkflow returns and what the file holds - not a
       // wrapper around it. wfScheduled() reads conditions[].scheduled_actions[].execute_after.
       J('workflows/' + wid + '.json', {
@@ -393,7 +401,10 @@
         status: { active: true },
         conditions: [{
           sequence_number: 1, criteria: { field: { api_name: 'Status' }, comparator: 'not_equal', value: '' },
-          actions: sched ? [] : actions,
+          // `instant_actions.actions`, which is where Zoho puts an immediate action and where all
+          // nine readers look. The fixture wrote a bare `actions` on the condition - a key nothing
+          // reads - so only the *scheduled* half of the sample ever had an action at all.
+          instant_actions: { actions: sched ? [] : actions },
           scheduled_actions: sched ? [{ execute_after: { unit: 2, period: 'days' }, actions: actions }] : [],
         }],
         last_executed_time: '2026-07-2' + (i % 9) + 'T11:20:00+00:00',

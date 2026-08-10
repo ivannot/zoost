@@ -23,13 +23,15 @@
         "comparator": "not_equal",
         "value": ""
       },
-      "actions": [
-        {
-          "type": "functions",
-          "name": "onContactMerge",
-          "id": "9018"
-        }
-      ],
+      "instant_actions": {
+        "actions": [
+          {
+            "type": "function",
+            "name": "onContactMerge",
+            "id": "9018"
+          }
+        ]
+      },
       "scheduled_actions": []
     }
   ],

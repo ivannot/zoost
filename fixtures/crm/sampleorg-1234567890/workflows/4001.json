@@ -23,13 +23,15 @@
         "comparator": "not_equal",
         "value": ""
       },
-      "actions": [
-        {
-          "type": "functions",
-          "name": "recalcTotals",
-          "id": "9016"
-        }
-      ],
+      "instant_actions": {
+        "actions": [
+          {
+            "type": "function",
+            "name": "recalcTotals",
+            "id": "9016"
+          }
+        ]
+      },
       "scheduled_actions": []
     }
   ],

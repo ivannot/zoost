@@ -2602,6 +2602,21 @@
       "unresolved": [],
       "ambiguous": []
     },
+    "wf:4010": {
+      "id": "wf:4010",
+      "name": "Order archived",
+      "display_name": "Order archived",
+      "namespace": "Orders",
+      "category": "workflows",
+      "calls": [],
+      "called_by": [],
+      "params": [],
+      "return_type": "",
+      "rest": false,
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
     "sch:5000": {
       "id": "sch:5000",
       "name": "Nightly dispatch",
@@ -2829,7 +2844,7 @@
   "focus": null,
   "depth": 2,
   "counts": {
-    "nodes": 143,
+    "nodes": 144,
     "edges": 127,
     "dead_suspects": 50,
     "unresolved": 2

@@ -23,13 +23,15 @@
         "comparator": "not_equal",
         "value": ""
       },
-      "actions": [
-        {
-          "type": "functions",
-          "name": "trackParcel",
-          "id": "9010"
-        }
-      ],
+      "instant_actions": {
+        "actions": [
+          {
+            "type": "functions",
+            "name": "trackParcel",
+            "id": "9010"
+          }
+        ]
+      },
       "scheduled_actions": []
     }
   ],

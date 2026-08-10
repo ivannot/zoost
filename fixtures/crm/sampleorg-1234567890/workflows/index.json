@@ -98,5 +98,15 @@
     "type": "Record Action",
     "active": true,
     "source": "crm"
+  },
+  {
+    "id": "4010",
+    "name": "Order archived",
+    "description": "",
+    "module": "Orders",
+    "module_id": "6010",
+    "type": "Record Action",
+    "active": true,
+    "source": "crm"
   }
 ]

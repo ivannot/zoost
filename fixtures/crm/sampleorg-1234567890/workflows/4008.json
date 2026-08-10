@@ -23,13 +23,15 @@
         "comparator": "not_equal",
         "value": ""
       },
-      "actions": [
-        {
-          "type": "functions",
-          "name": "checkCreditLimit",
-          "id": "9030"
-        }
-      ],
+      "instant_actions": {
+        "actions": [
+          {
+            "type": "functions",
+            "name": "checkCreditLimit",
+            "id": "9030"
+          }
+        ]
+      },
       "scheduled_actions": []
     }
   ],

@@ -862,7 +862,8 @@ test('the call graph carries what fires the code and what the code reaches', asy
     'workflows/index.json': JSON.stringify([{ id: 501, name: 'Deal won', module: 'Deals' }, { id: 502, name: 'Never pulled' }]),
     'workflows/501.json': JSON.stringify({ conditions: [
       { instant_actions: { actions: [{ type: 'functions', id: 9, name: 'createInvoice' }, { type: 'email' }] } },
-      { scheduled_actions: [{ actions: [{ type: 'functions', name: 'calcTax' }] }] },
+      // `function`, singular: Zoho writes both, and this is the form nine readers used to miss.
+      { scheduled_actions: [{ actions: [{ type: 'function', name: 'calcTax' }] }] },
     ] }),
     'schedules/index.json': JSON.stringify([{ id: 77, name: 'Nightly', function_id: 12, function_name: 'nightly', frequency: 'daily' }]),
     'connections/index.json': JSON.stringify([{ name: 'books', label: 'Zoho Books', service: 'zohobooks' }, { name: 'unused', label: 'Legacy' }]),
@@ -884,6 +885,9 @@ test('the call graph carries what fires the code and what the code reaches', asy
   };
   const { callGraphWithContext } = load([
     sliceConst('apps/crm/sidepanel.js', 'CTX_ID'),
+    // Zoho writes both `functions` and `function`; the predicate travels with the function that
+    // reads it, or the lift is a ReferenceError three lines in - the free-variable trap again.
+    sliceConst('apps/crm/sidepanel.js', 'isFnAction'),
     sliceFn('apps/crm/sidepanel.js', 'ctxNode'),
     sliceFn('apps/crm/sidepanel.js', 'callGraphWithContext')], ctx);
 

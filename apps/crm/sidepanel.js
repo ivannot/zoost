@@ -11,6 +11,13 @@ const ZOHO_HOST_RE = /^https:\/\/(crm(sandbox)?|one)\.zoho/;
 const envOf = (origin) => /crmsandbox\./.test(origin || '') ? 'sandbox' : 'prod';
 const CFG = '.zoost.json';
 const NS = ['standalone', 'automation', 'button', 'schedule', 'validation_rule'];
+// Zoho writes both. Counted in a real org's mirror: 149 actions of type `functions` and **2** of
+// type `function`, same three fields, same meaning - and nine readers here compared against the
+// plural only, so those two fired a function that no graph edge, no «broken automation» and no
+// action count ever knew about. Silent, because a filter that matches nothing is indistinguishable
+// from an org that has nothing. One predicate rather than nine comparisons, so the next form Zoho
+// invents is a one-line change instead of a hunt.
+const isFnAction = (a) => a && (a.type === 'functions' || a.type === 'function');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let dir = null, index = new Map(), bound = null, lastCtx = null;
@@ -1463,7 +1470,7 @@ async function callGraphWithContext() {
       const acts = [];
       if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions);
       (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || [])));
-      acts.filter((a) => a.type === 'functions').forEach((a) => { const fn = resolveFn(a); if (fn) link(node, fn); });
+      acts.filter(isFnAction).forEach((a) => { const fn = resolveFn(a); if (fn) link(node, fn); });
     });
   }
 
@@ -1535,7 +1542,7 @@ async function buildHealth() {
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
   let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
-  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
+  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
   let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
@@ -1971,9 +1978,9 @@ async function aiExecTool(name, input) {
       const fns = []; const instant = [];
       ((det && det.conditions) || []).forEach((c) => {
         const ia = (c.instant_actions && c.instant_actions.actions) || [];
-        ia.forEach((a) => { instant.push(a); if (a.type === 'functions') fns.push(a.name); });
+        ia.forEach((a) => { instant.push(a); if (isFnAction(a)) fns.push(a.name); });
         (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) =>
-          (sa.actions || []).forEach((a) => { if (a.type === 'functions') fns.push(a.name); }));
+          (sa.actions || []).forEach((a) => { if (isFnAction(a)) fns.push(a.name); }));
       });
       rows.push({ w, det, read: !!det, sched: s.count, delays: s.delays, instant: instant.length,
                   fns: [...new Set(fns)], last: (det && det.last_executed_time) || null });
@@ -3477,7 +3484,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
   // workflow <-> function wiring
   const fnById = {}, fnByName = {};
   fns.forEach((f) => { fnById[f.id] = f; if (f.name) fnByName[f.name.toLowerCase()] = f; if (f.display_name) fnByName[f.display_name.toLowerCase()] = f; });
-  const wfFnActions = (w) => { const acts = []; ((w.detail && w.detail.conditions) || []).forEach((c) => ['instant_actions', 'scheduled_actions'].forEach((bk) => { const b = c[bk]; if (b && b.actions) b.actions.forEach((a) => { if (a.type === 'functions') acts.push(a); }); })); return acts; };
+  const wfFnActions = (w) => { const acts = []; ((w.detail && w.detail.conditions) || []).forEach((c) => ['instant_actions', 'scheduled_actions'].forEach((bk) => { const b = c[bk]; if (b && b.actions) b.actions.forEach((a) => { if (isFnAction(a)) acts.push(a); }); })); return acts; };
   const resolveFn = (a) => fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()];
   const triggeredBy = {};
   wfs.forEach((w) => wfFnActions(w).forEach((a) => { const fn = resolveFn(a); if (fn) (triggeredBy[fn.api_name] ||= []).push({ id: w.id, name: w.name }); }));
@@ -3591,7 +3598,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
   const wfOne = (g) => `${(g.field && g.field.api_name) || '?'} ${g.comparator || ''} ${wfValOf(g)}`;
   const wfCrit = (crit) => { if (!crit) return ''; if (crit.group && crit.group.length) { const op = crit.group_operator || 'AND'; return crit.group.map((g) => (g.group ? '(' + wfCrit(g) + ')' : wfOne(g))).join(` ${op} `); } if (crit.comparator) return wfOne(crit); return ''; };
   const wfTiming = (bk) => { const ea = bk.execute_after; return (ea && ea.unit != null) ? `after ${ea.unit} ${ea.period || ''}`.trim() : ''; };
-  const wfActionHtml = (a) => { if (a.type === 'functions') { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fn.api_name)}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
+  const wfActionHtml = (a) => { if (isFnAction(a)) { const fn = resolveFn(a); return fn ? `<a href="#${fnAnchor(fn.api_name)}">\u0192 ${esc(fn.display_name || fn.api_name)}</a>` : `<span class="none">\u0192 ${esc(a.name)}</span>`; } return `<span class="wfact-x">${esc(a.type)}: ${esc(a.name)}</span>`; };
   let wfHtml = '';
   Object.keys(wfByMod).sort().forEach((mod) => {
     wfHtml += `<h3 class="grp">${esc(mod)} <span class="cnt">${wfByMod[mod].length}</span></h3>`;
@@ -3662,7 +3669,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
   const hBig = hStat.slice().sort((a, b) => b.stats.lines - a.stats.lines).slice(0, 15);
   const hChatty = hStat.filter((n) => n.stats.apiCalls > 0).sort((a, b) => b.stats.apiCalls - a.stats.apiCalls).slice(0, 15);
   const hBroken = [];
-  wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => { if (!(hById[String(a.id)] || hByAny[(a.name || '').toLowerCase()])) hBroken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
+  wfs.forEach((w) => { if (!w.detail) return; (w.detail.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(hById[String(a.id)] || hByAny[(a.name || '').toLowerCase()])) hBroken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); });
   scheds.forEach((sc) => { if (!(hById[String(sc.function_id)] || hByAny[(sc.function_name || '').toLowerCase()])) hBroken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const hModSet = new Set(mods.map((m) => m.api_name));
   const hFK = [];
@@ -3802,7 +3809,7 @@ function buildExportMarkdown(d, scope) {
   const inst = (bound && bound.instance) || 'workspace', org = (bound && bound.org) || '?', env = bound ? envOf(bound.base) : '?';
   const first = (t) => (t || '').split('\n')[0].slice(0, 120);
   const params = (n) => '(' + ((n.params || []).map((p) => (p && (p.name || p.param_name)) || p).filter(Boolean).join(', ')) + ')';
-  const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter((a) => a.type === 'functions').forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
+  const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
   md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
@@ -4443,7 +4450,7 @@ function renderWorkflowDetail(rule) {
     }
     return esc(String(t));
   };
-  const actionSpan = (a) => a.type === 'functions'
+  const actionSpan = (a) => isFnAction(a)
     ? `<span class="wf-fn" data-fnid="${escA(a.id)}" data-fnname="${escA(a.name)}" title="Open the function">\u0192 ${esc(a.name)}</span>`
     : `<span class="wfact">${esc(a.type)}: ${esc(a.name)}</span>`;
   const bucketHtml = (bucket, label) => {

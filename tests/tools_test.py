@@ -1376,25 +1376,44 @@ class TheSampleWorkflowsActuallyFireSomething(unittest.TestCase):
         self.assertGreaterEqual(len(fn), 2, 'no workflow in the sample fires a function, so the '
                                             'edge nine readers draw is never exercised')
 
-    def test_the_type_is_the_string_every_reader_filters_on(self):
+    def test_both_forms_zoho_writes_are_recognised(self):
+        # Counted in a real org's mirror: 149 actions of type `functions` and 2 of type `function`,
+        # identical in shape. Nine readers compared against the plural only, so those two fired a
+        # function nothing here ever knew about.
         src = (ROOT / 'apps/crm/sidepanel.js').read_text(encoding='utf-8')
-        self.assertIn("type === 'functions'", src)
-        for a in self.actions():
-            self.assertNotEqual(a.get('type'), 'function',
-                                "the fixture writes `function` where the panel filters `functions`")
+        self.assertIn("const isFnAction = (a) => a && (a.type === 'functions' || a.type === 'function')", src)
+        self.assertEqual(src.count("type === 'functions'"), 1,
+                         'a reader still compares the type by hand instead of asking isFnAction()')
+        kinds = {a.get('type') for a in self.actions()}
+        self.assertIn('functions', kinds)
+        self.assertIn('function', kinds, 'the fixture carries only the form that already worked')
 
-    def test_every_action_resolves_to_a_function_that_exists(self):
+    def test_actions_sit_where_zoho_puts_them(self):
+        # The immediate ones go in `instant_actions.actions`. They were written to a bare `actions`
+        # on the condition - a key nothing reads - so only the scheduled half ever had an action.
+        base = sorted((ROOT / 'fixtures').glob('crm/*/workflows'))[0]
+        seen = 0
+        for f in base.glob('*.json'):
+            if f.name == 'index.json':
+                continue
+            for c in json.loads(f.read_text(encoding='utf-8')).get('conditions') or []:
+                self.assertNotIn('actions', {k for k in c if k == 'actions'},
+                                 f'{f.name}: a bare `actions` on the condition is read by nothing')
+                seen += len((c.get('instant_actions') or {}).get('actions') or [])
+        self.assertGreater(seen, 0, 'no immediate action in the whole fixture')
+
+    def test_exactly_one_action_is_deliberately_unresolvable(self):
+        # Every other action has to resolve, or the graph is drawing edges from a coincidence; and
+        # one has to not, or «broken automations» is a check with nothing to find. resolveFn() tries
+        # the id first and then every name a function answers to.
         base = sorted((ROOT / 'fixtures').glob('crm/*/functions'))[0]
         idx = json.loads((base / 'index.json').read_text(encoding='utf-8'))
         by_id = {str(e.get('id')) for e in idx}
         by_name = {str(e.get(k)).lower() for e in idx for k in ('name', 'api_name', 'display_name') if e.get(k)}
-        for a in self.actions():
-            if a.get('type') != 'functions':
-                continue
-            ok = str(a.get('id')) in by_id or str(a.get('name', '')).lower() in by_name
-            self.assertTrue(ok, f"the action names «{a.get('name')}» and no function answers to it - "
-                                f"resolveFn() tries the id first and then every name a function has")
-
+        fn = [a for a in self.actions() if a.get('type') in ('functions', 'function')]
+        missing = [a.get('name') for a in fn
+                   if str(a.get('id')) not in by_id and str(a.get('name', '')).lower() not in by_name]
+        self.assertEqual(len(missing), 1, f'expected one broken automation, found {missing}')
 
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.

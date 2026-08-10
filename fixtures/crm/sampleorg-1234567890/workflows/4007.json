@@ -23,7 +23,9 @@
         "comparator": "not_equal",
         "value": ""
       },
-      "actions": [],
+      "instant_actions": {
+        "actions": []
+      },
       "scheduled_actions": [
         {
           "execute_after": {

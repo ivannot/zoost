@@ -1,10 +1,10 @@
 {
-  "id": "4009",
-  "name": "Quote accepted",
+  "id": "4010",
+  "name": "Order archived",
   "description": "",
   "module": {
-    "api_name": "Quotes",
-    "id": "6009"
+    "api_name": "Orders",
+    "id": "6010"
   },
   "execute_when": {
     "type": "Record Action",
@@ -27,13 +27,13 @@
         "actions": [
           {
             "type": "functions",
-            "name": "onOrderCreate",
-            "id": "9015"
+            "name": "archiveOrderLegacy",
+            "id": "4510"
           }
         ]
       },
       "scheduled_actions": []
     }
   ],
-  "last_executed_time": "2026-07-20T11:20:00+00:00"
+  "last_executed_time": "2026-07-21T11:20:00+00:00"
 }
