@@ -88,7 +88,7 @@ Stated here rather than buried, because it is the part an assessment needs.
 
 ## Verifying the claims rather than believing them
 
-- [Source](https://github.com/ivannot/zoost) - Apache-2.0. Around twenty files of plain JavaScript
+- [Source](https://github.com/ivannot/zoost) - Apache-2.0. Twelve files of plain JavaScript for Zoho CRM and ten for Zoho Analytics
   and HTML per extension. No bundler, no minifier, no dependencies, so what is published is what is
   in the repository and there is no build step that could add anything.
 - [RELEASES.md](https://github.com/ivannot/zoost/blob/main/RELEASES.md) - every version submitted to

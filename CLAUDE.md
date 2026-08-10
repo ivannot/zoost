@@ -2021,6 +2021,16 @@ both, so the two can be read side by side. **The control names inside a guide st
 a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
 under each guide's title says so.
 
+**English is the version of record; Italian is where the defects are found.** The footer says the
+English governs, and it does - but the author reads the site in Italian, so that is the language a
+problem surfaces in, and «fix it where you saw it» leaves the authoritative version behind while
+every check stays green. `translations_current()` only ever sees the other direction: the English
+moved and the Italian did not. So the rule is **fix the English first, then carry it over**, and
+`translations_have_the_same_shape()` makes the opposite case reported - the two languages must hold
+the same number of content blocks once anything marked `data-it-only` is removed. Counting blocks is
+an approximation and says so: it will not see a paragraph rewritten in one language only, it will see
+one added or removed, which is what a correction usually looks like.
+
 **A translation is structurally its original, and that is what makes it checkable.** Same sections,
 same paragraphs, same order, so blocks pair up by position. `shared_prose_stays_shared()` uses that
 to enforce the twin rule one layer down: prose identical on `crm.html` and `analytics.html` must stay

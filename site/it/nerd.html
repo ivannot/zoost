@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:d158319626e3de69 -->
+<!-- translated-from: site/nerd.html sha256:16d18f89d25e09ca -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -112,7 +112,7 @@
   <h2 id="what-is-never-called">Cosa non viene mai chiamato</h2>
   <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una proprietà di quali endpoint stanno scritti nel sorgente, non di qualcosa che il browser
       imponga - e il
-    sorgente è una ventina di file di JavaScript in chiaro, senza bundler né minificatore fra quello
+    sorgente sono dodici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics, senza bundler né minificatore fra quello
     che è pubblicato e quello che leggi.</p>
   <p>Due endpoint di Zoho Analytics restano deliberatamente intoccati, e per lo stesso motivo tutti e
       due: restituiscono i tuoi dati.</p>
@@ -148,6 +148,13 @@
     <code>-X</code>.</p>
   <p>Ogni GitHub Action è agganciata a un hash di commit, mai a un tag che si può spostare. Una catena
     di fornitura che finisce con «e poi quello che dice quel tag oggi» non è una catena.</p>
+  <p>Che è anche la risposta a una domanda legittima, detta chiaramente invece di lasciarla indovinare:
+    questo codice è stato scritto con l'assistenza pesante di un modello linguistico e riletto riga per
+    riga, ed è anche per quello che la catena qui sopra ha la forma che ha. Dodici file per Zoho CRM e
+    dieci per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su
+    una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto
+    questo ti chiede di fidarti di come il codice è stato prodotto. Chi lo ha battuto è la cosa meno
+    verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.</p>
 
   <h2 id="check-it-yourself">Verificalo tu</h2>
   <table>
@@ -195,6 +202,7 @@
       <a href="/it/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
       <a href="/it/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep" aria-hidden="true">·</span>
+            <a href="https://github.com/ivannot/zoost/releases" title="Tutte le release, con cosa è cambiato e l'hash del pacchetto">Release</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep" aria-hidden="true">·</span>
       <a href="/it/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>

@@ -37,7 +37,7 @@ A workspace that has been alive for a few years is hundreds of views. Some are t
 
 WHAT IT DOES
 
-- Try it before you connect anything. "+ Sample" writes a workspace of invented data into your working folder - tables with their columns and foreign keys, query tables with their SQL, reports and dashboards - so you can open the census, the ER diagram, the lineage and the exports without a Zoho Analytics tab and without an account. It is generated, never fetched, everything that would talk to the platform is disabled for it, and it is deleted like any other workspace.
+- Judge it before you give it access to anything. "+ Sample" writes a workspace of invented data into your working folder - tables with their columns and foreign keys, query tables with their SQL, reports and dashboards - so you can open the census, the ER diagram, the lineage and the exports without a Zoho Analytics tab and without an account. It is generated, never fetched, everything that would talk to the platform is disabled for it, and it is deleted like any other workspace.
 
 - Local mirror, your Git. One pull writes the whole workspace to disk: the view census, the column structure of every table and query table, the relations, and one .sql file per query table. Zoho Analytics keeps no history of anything: change a query table's SQL, a column or a relation and the previous state is gone. Commit the mirror and git diff answers "what changed in this workspace last month".
 

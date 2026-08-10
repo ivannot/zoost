@@ -113,7 +113,7 @@
   <h2 id="what-is-never-called">What is never called</h2>
   <p>Neither extension calls an endpoint that creates, edits or deletes anything. That is a property
     of which endpoints are in the source, not something the browser enforces - and the source is about
-    twenty files of plain JavaScript with no bundler and no minifier between what is published and
+    twelve files of plain JavaScript for Zoho CRM and ten for Zoho Analytics, with no bundler and no minifier between what is published and
     what you read.</p>
   <p>Two Zoho Analytics endpoints are deliberately left alone, and the reason is the same in both cases:
     they return your data.</p>
@@ -147,6 +147,13 @@
     commit's own date, sorts the file list, and passes <code>-X</code>.</p>
   <p>Every GitHub Action is pinned to a commit hash, never to a moving tag. A supply chain that ends
     in "and then whatever that tag says today" is not one.</p>
+  <p>Which is also the answer to a fair question, stated plainly rather than left to be guessed at:
+    this code was written with heavy assistance from a language model and reviewed line by line, and
+    that is part of why the chain above exists in the form it does. Twelve files for Zoho CRM and ten
+    for Zoho Analytics, no bundler and no minifier, a build reproduced twice on a machine that is not
+    mine and signed, a hash you can check in one command - none of it asks you to trust how the code
+    was produced. Who typed it is the least verifiable thing about a program, and the least
+    interesting once the rest can be read.</p>
 
   <h2 id="check-it-yourself">Check it yourself</h2>
   <table>
@@ -193,6 +200,7 @@
       <a href="/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
       <a href="/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
+            <a href="https://github.com/ivannot/zoost/releases" title="Every release, with what changed in it and the hash of the package">Releases</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
       <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>

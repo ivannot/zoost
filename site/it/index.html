@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:a525cbae6f652d74 -->
+<!-- translated-from: site/index.html sha256:71cef848e3931e15 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -266,7 +266,7 @@
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>: i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code>, dove non gira nessuno script nostro e che sta lì solo perché il pannello possa capire a quale org appartiene una scheda Zoho One, e <code>api.anthropic.com</code> / <code>api.openai.com</code>, raggiunti solo se qualcuno accende l'assistente. Il manifest fa fede, ed è lungo quattro schermate.</td></tr>
-<tr><td class="k">Come verificarlo</td><td>Il sorgente sono una ventina di file di JavaScript in chiaro - nessun bundler, nessun minificatore,
+<tr><td class="k">Come verificarlo</td><td>Il sorgente sono dodici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics - nessun bundler, nessun minificatore,
           quindi quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la
           firma, e un comando verifica il file pubblicato.</td></tr>
       </tbody>
@@ -281,7 +281,11 @@
   <div class="wrap">
     <h2>Come si comincia</h2>
     <ol class="steps">
-      <li><b>Scegli il prodotto</b> che ti interessa: <b><a href="/it/crm">Zoost - workbench for Zoho CRM</a></b> oppure
+      <li><b>Provalo senza collegare niente.</b> Installa una delle due e premi <b>+ Sample</b>: scrive un
+        workspace di dati inventati nella tua cartella di lavoro, e l'albero, i diagrammi, l'audit e gli
+        export funzionano tutti su quello - senza una scheda Zoho e senza account. Niente raggiunge la
+        piattaforma, e lo cancelli cancellando la cartella. <a href="/it/try">Cosa c'è dentro</a>.</li>
+<li><b>Scegli il prodotto</b> che ti interessa: <b><a href="/it/crm">Zoost - workbench for Zoho CRM</a></b> oppure
         <b><a href="/it/analytics">Zoost - workbench for Zoho Analytics</a></b>.</li>
       <li><b>Installala</b> dal Chrome Web Store: ci sono tutte e due.</li>
       <li><b>Scegli una cartella di lavoro</b>, una sola. Ogni Zoost ci si crea la sua sottocartella, così
@@ -301,6 +305,7 @@
       <a href="/it/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
       <a href="/it/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Codice su GitHub</a><span class="sep" aria-hidden="true">·</span>
+            <a href="https://github.com/ivannot/zoost/releases" title="Tutte le release, con cosa è cambiato e l'hash del pacchetto">Release</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="Una mappa di questo sito e delle prove dietro le sue affermazioni, scritta per gli assistenti a cui viene chiesto di valutare il prodotto invece di riassumere la pagina">Per gli assistenti AI</a><span class="sep" aria-hidden="true">·</span>
       <a href="/it/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>

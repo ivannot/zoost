@@ -252,7 +252,7 @@
         <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
         <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>: the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, <code>one.zoho.*</code>, where no content script of ours runs at all and which is there only so the panel can tell which org a Zoho One tab belongs to, and <code>api.anthropic.com</code> / <code>api.openai.com</code>, reached only if someone turns the assistant on. The manifest is the authority and it is four screens long.</td></tr>
-<tr><td class="k">How you can check</td><td>The source is about twenty files of plain JavaScript - no bundler, no minifier, so what you read
+<tr><td class="k">How you can check</td><td>The source is twelve files of plain JavaScript for Zoho CRM and ten for Zoho Analytics - no bundler, no minifier, so what you read
           is what runs. Each release is built by GitHub twice over and signed, and one command verifies
           the file that was published.</td></tr>
       </tbody>
@@ -266,7 +266,11 @@
   <div class="wrap">
     <h2>Get started</h2>
     <ol class="steps">
-      <li>Pick the product you want to look at: <b><a href="/crm">Zoost - workbench for Zoho CRM</a></b> or
+      <li><b>Try it without connecting anything.</b> Install either extension and press
+        <b>+ Sample</b>: it writes a workspace of invented data into your working folder, and the tree, the
+        diagrams, the audit and the exports all work on it - with no Zoho tab and no account. Nothing
+        reaches the platform, and you delete it by deleting the folder. <a href="/try">What is in it</a>.</li>
+<li>Pick the product you want to look at: <b><a href="/crm">Zoost - workbench for Zoho CRM</a></b> or
         <b><a href="/analytics">Zoost - workbench for Zoho Analytics</a></b>.</li>
       <li><b>Install the extension</b> from the Chrome Web Store. Both are there.</li>
       <li><b>Choose one working folder.</b> Each Zoost keeps its own subfolder inside it, so a single folder serves
@@ -286,6 +290,7 @@
       <a href="/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
       <a href="/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
+            <a href="https://github.com/ivannot/zoost/releases" title="Every release, with what changed in it and the hash of the package">Releases</a><span class="sep" aria-hidden="true">·</span>
       <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
       <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
       <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>

@@ -267,6 +267,72 @@ WORDS = {6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 1
 IT_WORDS = {6: 'sei', 7: 'sette', 8: 'otto', 9: 'nove', 10: 'dieci', 11: 'undici', 12: 'dodici'}
 
 
+NUM = {8: ('eight', 'otto'), 9: ('nine', 'nove'), 10: ('ten', 'dieci'), 11: ('eleven', 'undici'),
+       12: ('twelve', 'dodici'), 13: ('thirteen', 'tredici'), 14: ('fourteen', 'quattordici'),
+       15: ('fifteen', 'quindici'), 16: ('sixteen', 'sedici'), 17: ('seventeen', 'diciassette'),
+       18: ('eighteen', 'diciotto'), 19: ('nineteen', 'diciannove'), 20: ('twenty', 'venti')}
+
+
+def translations_have_the_same_shape(findings: list) -> None:
+    """The two languages carry the same blocks, once the declared Italian-only ones are removed.
+
+    `translations_current()` catches one direction: the English page moves and the Italian does not.
+    It cannot catch the other, and the other is the one this project actually produces - the author
+    reads the site in Italian, so that is where he finds things, and a sentence fixed only there
+    leaves the authoritative language behind while every check stays green.
+
+    Counting blocks is an approximation and is meant to be: it will not see a paragraph rewritten in
+    one language only. It will see one *added* or removed, which is what a fix normally looks like.
+    A legitimate addition declares itself with `data-it-only`, the same escape hatch the prose check
+    uses - forgetting to declare it makes the page reported, never silently exempt.
+    """
+    for en in sorted(SITE.glob('*.html')):
+        it = SITE / 'it' / en.name
+        if not it.exists():
+            continue
+        def blocks(page):
+            t = page.read_text(encoding='utf-8')
+            t = re.sub(r'<(\w+)[^>]*\bdata-it-only\b[^>]*>.*?</\1>', '', t, flags=re.S)
+            body = t[t.index('<main'):t.index('</main>')] if '<main' in t else t
+            return len(re.findall(r'<(p|li|h2|h3|tr)[ >]', body))
+        a, b = blocks(en), blocks(it)
+        if a != b:
+            findings.append(f'site/it/{en.name} carries {b} content blocks against {a} in English - '
+                            f'one language has gained or lost something the other has not. If the '
+                            f'Italian is right, the English is the version that governs: fix it there '
+                            f'first. If the addition is deliberate, mark it data-it-only.')
+
+
+def file_count_is_derived(findings: list) -> None:
+    """«Twelve files of plain JavaScript for Zoho CRM and ten for Zoho Analytics» - counted, not guessed.
+
+    It read «about twenty» in five places, which was true enough and is the shape of claim that ages in
+    silence: nobody re-counts a number that was approximate on purpose. The pages state the real figure
+    now, so the real figure has to be checked - it is what «you can read all of it in an afternoon»
+    rests on, and it is the sentence an approver is most likely to test.
+    """
+    counts = {a.name: len(list(a.glob('*.js'))) for a in sorted((ROOT / 'apps').iterdir()) if a.is_dir()}
+    for rel in ('index.html', 'nerd.html', 'llms.txt', 'it/index.html', 'it/nerd.html'):
+        page = SITE / rel
+        if not page.exists():
+            continue
+        text = page.read_text(encoding='utf-8')
+        if 'JavaScript' not in text and 'javascript' not in text:
+            continue
+        lang = 1 if rel.startswith('it/') else 0
+        for app, n in counts.items():
+            word = NUM.get(n, (str(n), str(n)))[lang]
+            product = 'Zoho CRM' if app == 'crm' else 'Zoho Analytics'
+            # The number has to sit next to the product it counts, and the sentence in between is
+            # the writer's business: «twelve files of plain JavaScript for Zoho CRM» and «and ten for
+            # Zoho Analytics» are both fine. A checker that demands one phrasing is a checker that
+            # edits prose.
+            near = re.search(rf'\b{word}\b[^.<]{{0,80}}?{re.escape(product)}', text, re.I)
+            if not near:
+                findings.append(f'site/{rel}: {app} ships {n} .js files, and «{word}» does not appear '
+                                f'beside «{product}» - a number in prose is a claim, and it is checkable')
+
+
 def data_centre_count_is_derived(findings: list) -> None:
     """The privacy policy states how many data centres each extension reaches, and the manifests decide.
 
@@ -827,6 +893,8 @@ def main() -> int:
     txt_served_by_worker(findings)
     hosts_declared(findings)
     data_centre_count_is_derived(findings)
+    file_count_is_derived(findings)
+    translations_have_the_same_shape(findings)
 
     # The site's own scripts build visible text — the footer badge's product labels live in
     # site.js, not in any page — and nothing was reading them. The fourth form reappeared there
