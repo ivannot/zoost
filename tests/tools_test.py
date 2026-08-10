@@ -1156,6 +1156,28 @@ class DeployStateIsPartOfTheAudit(unittest.TestCase):
         self.assertIn('are not pushed', src)
 
 
+class TheLedgerIsWrittenInThePast(unittest.TestCase):
+    """A record that is appended to and never revised may not describe the present.
+
+    `RELEASES.md` said «1.0.0 - the version the Store is serving today», which was true the day it
+    was written and false a week later, in the one section that already documents two corrections to
+    itself. The defect is not the sentence, it is the tense: a document nobody re-reads cannot carry
+    a claim that has to be maintained. What is current is on zoost.it, read from the Store's own API.
+
+    Reported by a reader, which is the failure - so it is a check now rather than a resolution.
+    """
+
+    TEMPORAL = ('today', 'currently', 'right now', 'at the moment', 'as of writing', 'these days',
+                'is serving', 'is being served')
+
+    def test_no_sentence_has_to_be_maintained(self):
+        text = (ROOT / 'RELEASES.md').read_text(encoding='utf-8')
+        # Code fences hold commands, where «today» would be part of an example rather than a claim.
+        prose = re.sub(r'```[\s\S]*?```', '', text).lower()
+        hits = [w for w in self.TEMPORAL if w in prose]
+        self.assertEqual(hits, [], f'RELEASES.md speaks in the present tense: {hits}')
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 

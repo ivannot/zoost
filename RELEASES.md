@@ -38,8 +38,14 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 
 **No Zoho CRM version before 1.9.0 is in this table, and the reason differs by version.**
 
-**1.0.0 - the version the Store is serving today - has a tag and buildable source, but no hash.**
-The tag `v1.0.0` points at commit `89422fe`, which carries the whole extension under `src/` with a
+**Nothing in this file is written in the present tense, and that is deliberate.** A ledger is
+appended to and never revised, so a sentence about which version the Store happens to serve is a
+sentence that will be false within the week - and this section has already been corrected twice. Where the
+current state matters, the badge on [zoost.it](https://zoost.it) reads it from the Store's own API
+and from this repository's tags; this file says what happened, with the date it happened on.
+
+**Zoho CRM 1.0.0 has a tag and buildable source, but no hash.** It was the published version until
+1.9.0 replaced it. The tag `v1.0.0` points at commit `89422fe`, which carries the whole extension under `src/` with a
 `src/manifest.json` at version 1.0.0, and `build.sh` at that commit produces `zoost-1.0.0-store.zip`.
 So the source is identified and anyone can rebuild it. What is missing is the hash of the archive
 actually uploaded that day: it was built before the build was deterministic, so no number published
@@ -116,6 +122,13 @@ extension from your Chrome profile and diff its files against the tag - they are
 this is also what settles the one manual step in the chain, since the upload to Google is done by
 hand and no signature covers it.
 
+**Diff against the tag of the version you actually have, not the newest one here.** Google publishes
+days after a submission, not minutes - how many is Google's to decide - so the newest tag in this
+table is routinely ahead of the published one, and a version still in review is not published at all. The
+installed extension states its own version on `chrome://extensions`; `<app>-v<that version>` is the
+tag it has to match. Diffing against the newest tag instead produces a mismatch that means nothing
+except that the release cycle is doing what it does.
+
 **An attestation says who built a file, not that the file is good.** It removes "trust the author's
 laptop" from the chain. It does not remove "read the code", and nothing can.
 
@@ -124,7 +137,7 @@ whatever `zip` is on the system, and a different implementation could in princip
 bytes differently. It is verified on two: Info-ZIP 3.0 on macOS, and whatever `ubuntu-latest` carries
 in CI, where every release is built twice and the run fails if the hashes differ. Each build prints
 the archiver it used, so the log says which. Making the guarantee universal would mean pinning the
-toolchain in a container; that is not done today, and claiming it were would be the kind of
+toolchain in a container; that is not done, and claiming it were would be the kind of
 overstatement this file exists to avoid.
 
 ## Making a release

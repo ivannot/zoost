@@ -170,7 +170,11 @@
   <p>Uploading to the Chrome Web Store is a manual step, so no signature covers it: what is proven is
     how the release archive was built. Google also repackages and re-signs every extension, so what it
     serves is not byte-identical to what was uploaded. Both are settled at the far end, by diffing the
-    installed extension against the tag.</p>
+    installed extension against the tag - the tag of the version <em>you have</em>, which
+    <code>chrome://extensions</code> states. Google publishes days after a submission rather than minutes - how many is Google's to decide - so
+    the newest tag here is routinely ahead of what the Store is serving, and a version still in review
+    is not being served at all; diffing against that one gives a mismatch that says nothing about
+    either file.</p>
   <p>And an attestation says who built a file, never that the file is good. That part is still reading
     the code.</p>
 
