@@ -495,7 +495,34 @@ async function refreshContext() {
 // a workspace id is the CRM's own bug one product over - log out to sign in elsewhere and the button
 // returns you to the account you just left. The host is derived from what is known and the setting
 // is consulted only when nothing is.
-const homeUrl = () => `${(bound && bound.origin) || `https://analytics.${zohoDc}`}/`;
+/** The data centres, and the choice offered where the link is.
+ *
+ *  The destination used to be derived from whichever workspace happened to be open, on the reasoning
+ *  that a data centre is a property of an account and signing out does not move it. True of one
+ *  account, and false for the reader this product is most for: a consultant with clients on .eu,
+ *  .com and .jp cannot have it deduced, because after signing out the next org is a choice nobody
+ *  but them has made yet. Reported, and the earlier reasoning was mine and wrong.
+ *
+ *  So the picklist is beside the button and is always there, offering every data centre rather than
+ *  the ones already mirrored - wanting to open .jp while the default is .eu is exactly the case, and
+ *  a control that only offers what you have been to before cannot serve it. What it opens on is what
+ *  is known: the workspace, then the tab, then the default in Settings. */
+const DCS = ['zoho.com', 'zoho.eu', 'zoho.in', 'zoho.com.au', 'zoho.jp', 'zohocloud.ca'];
+const dcOf = (origin) => (String(origin || '').match(/^https:\/\/[^.]+\.(.+)$/) || [])[1] || null;
+function renderGoDc() {
+  const sel = $('gozohodc'); if (!sel) return;
+  const want = sel.dataset.touched ? sel.value
+    : (dcOf(bound && bound.origin) || dcOf(ctx && ctx.origin) || zohoDc);
+  if (sel.options.length !== DCS.length) {
+    sel.innerHTML = DCS.map((d) => `<option value="${escA(d)}">${esc(d)}</option>`).join('');
+  }
+  sel.value = DCS.includes(want) ? want : DCS[0];
+}
+const homeUrl = () => {
+  const dc = ($('gozohodc') && $('gozohodc').value)
+    || dcOf(bound && bound.origin) || dcOf(ctx && ctx.origin) || zohoDc;
+  return `https://analytics.${dc}/`;
+};
 const workspaceUrl = () => (bound && bound.origin && bound.workspace
   ? `${bound.origin}/workspace/${bound.workspace}` : homeUrl());
 async function switchTab() {
@@ -513,6 +540,7 @@ async function openZohoHome() {
 }
 
 function updateButtons() {
+  renderGoDc();                      // the list it offers is the workspaces, so it moves with them
   // Same rule as the CRM panel, and the same reason. Analytics had no such check at all: it left
   // the button offering to "create" a workspace that already existed, and reopened the same folder.
   // Harmless, and still a control saying it will do something it will not.
@@ -2098,6 +2126,9 @@ async function writeSampleWorkspace() {
 $('wsdel').onclick = delWorkspace;
 $('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
 $('pull').onclick = pullAll;
+// Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
+// workspace change, and a choice that is reset while you are looking at it is not a choice.
+$('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
 $('gozoho').onclick = openZohoHome;
 $('find').oninput = render;
 $('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };

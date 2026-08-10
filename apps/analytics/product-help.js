@@ -102,8 +102,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
   Clearing the field goes back to it.
 - "Settings ⚙": AI engine and key, export defaults, diagram defaults, and the default data centre -
-  which is only used by "Go to Zoho Analytics" when no workspace is open and no Zoho Analytics tab
-  is in reach, since otherwise the data centre is read from one of those.
+  beside "Go to Zoho Analytics" there is a picklist of every data centre: it starts on the one the
+  open workspace or the current tab is on, and otherwise on that default, and the user can change it
+  - after signing out, which account they want next is theirs to say.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there
   too, which asks for the current passphrase, since clear text means decrypting it first. There is no

@@ -2639,6 +2639,13 @@ test('the data centre the form shows is the one the panel would use', () => {
     for (const m of html.matchAll(/<option value="(zoho[^"]*)"/g)) {
       assert.ok(hosts.includes(m[1] + '/'), `id=dc ${app}: ${m[1]} is offered and the manifest cannot reach it`);
     }
+    // The panel builds its own list, next to the link, and the two are one fact in two places.
+    const inPanel = js.match(/const DCS = \[([^\]]+)\]/);
+    assert.ok(inPanel, `id=dc ${app}: the panel has no list of data centres`);
+    const panelList = inPanel[1].split(',').map((x) => x.trim().replace(/'/g, ''));
+    const formList = [...html.matchAll(/<option value="(zoho[^"]*)"/g)].map((m) => m[1]);
+    assert.deepEqual(panelList, formList,
+      `id=dc ${app}: Settings offers ${formList.join(' ')} and the panel offers ${panelList.join(' ')}`);
   }
 });
 

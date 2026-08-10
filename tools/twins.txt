@@ -109,6 +109,7 @@ relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	65b6796a1174	479e5c41dd33	divergent
 renameWorkspace	f40d64d06974	9860a275d6dc	divergent
 render	1f1f526caa02	832b88a8f3a0	divergent
+renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 scopeFromUI	dafd3ba13708	c83939bc53c4	divergent
 scopeToUI	5c7aa71f70a6	13ff88ae9736	divergent

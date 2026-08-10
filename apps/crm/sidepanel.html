@@ -43,8 +43,10 @@
   .ftbl td.pl{white-space:normal}
   .plbtn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font:11px var(--mono);padding:1px 6px;cursor:pointer}
   .plbtn:hover{color:var(--ink);border-color:var(--sel)}
-  .plvals{margin-top:4px;max-height:220px;overflow:auto}
-  .plvals div{padding:1px 0;color:#cbd5e1}
+  .ftbl tr.plrow td{white-space:normal;background:#101827;padding:7px 8px}
+  .plvals{display:flex;flex-wrap:wrap;gap:4px;max-height:180px;overflow:auto}
+  .plv{border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#cbd5e1;background:#16203099;
+       max-width:100%;overflow-wrap:anywhere}
   .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
   button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
@@ -566,7 +568,8 @@
     <div id="offoverlay">
       <div class="t">Not on a Zoho CRM tab</div>
       <div class="s">This workspace talks to Zoho only from a Zoho CRM tab. To try Zoost without signing in anywhere, write the sample workspace instead - invented data, and nothing is fetched.</div>
-      <button class="primary" id="gozoho">Go to Zoho CRM ↗</button>
+      <select id="gozohodc" class="znav" aria-label="Which data centre to open" title="Which data centre to open. It starts on the one this workspace or this tab is on, or on the default in Settings - after signing out, which org you want next is yours to say"></select>
+  <button class="primary" id="gozoho">Go to Zoho CRM ↗</button>
       <button class="znav" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">+ Sample workspace</button>
     </div>
   <div id="pfoot">

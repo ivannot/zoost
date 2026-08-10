@@ -140,8 +140,10 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   so it says neither and reads just "Sample workspace": clicking asks for access and then does
   whichever is right.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults, and the
-  default data centre - which is only used by "Go to Zoho CRM" when no workspace is open and no
-  Zoho tab is in reach, since otherwise the data centre is read from one of those.
+  default data centre. Beside "Go to Zoho CRM" there is a picklist of every data centre: it starts
+  on the one the open workspace or the current tab is on, and otherwise on that default, and the
+  user can change it - after signing out of one org, nothing here can know which org they want next,
+  and it may be one they have never opened from this machine.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there
   too, which asks for the current passphrase, since clear text means decrypting it first. There is no

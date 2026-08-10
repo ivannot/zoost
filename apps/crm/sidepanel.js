@@ -1077,9 +1077,34 @@ function functionsUrl() {
  *  consulted when neither exists, which is a fresh install with nothing pulled: there the old code
  *  guessed `crm.zoho.com`, and a guess about somebody else's data centre is wrong five times out of
  *  six. */
+/** The data centres, and the choice offered where the link is.
+ *
+ *  The destination used to be derived from whichever workspace happened to be open, on the reasoning
+ *  that a data centre is a property of an account and signing out does not move it. True of one
+ *  account, and false for the reader this product is most for: a consultant with clients on .eu,
+ *  .com and .jp cannot have it deduced, because after signing out the next org is a choice nobody
+ *  but them has made yet. Reported, and the earlier reasoning was mine and wrong.
+ *
+ *  So the picklist is beside the button and is always there, offering every data centre rather than
+ *  the ones already mirrored - wanting to open .jp while the default is .eu is exactly the case, and
+ *  a control that only offers what you have been to before cannot serve it. What it opens on is what
+ *  is known: the workspace, then the tab, then the default in Settings. */
+const DCS = ['zoho.com', 'zoho.eu', 'zoho.in', 'zoho.com.au', 'zoho.jp', 'zohocloud.ca'];
+const dcOf = (origin) => (String(origin || '').match(/^https:\/\/[^.]+\.(.+)$/) || [])[1] || null;
+function renderGoDc() {
+  const sel = $('gozohodc'); if (!sel) return;
+  const want = sel.dataset.touched ? sel.value
+    : (dcOf(bound?.base) || dcOf(lastCtx?.origin) || zohoDc);
+  if (sel.options.length !== DCS.length) {
+    sel.innerHTML = DCS.map((d) => `<option value="${escA(d)}">${escHtml(d)}</option>`).join('');
+  }
+  sel.value = DCS.includes(want) ? want : DCS[0];
+}
 function homeUrl() {
-  const base = bound?.base || lastCtx?.origin || `https://crm.${zohoDc}`;
-  return `${base}/crm/ShowHomePage.do`;
+  const dc = ($('gozohodc') && $('gozohodc').value) || dcOf(bound?.base) || dcOf(lastCtx?.origin) || zohoDc;
+  // Production, never the sandbox: this is the way *in*, and a sandbox host is a place you arrive at
+  // from a workspace that already knows it is one.
+  return `https://crm.${dc}/crm/ShowHomePage.do`;
 }
 async function openZohoHome() {
   if (sampleRefuse()) return;
@@ -1154,6 +1179,9 @@ async function openTargetZoho(newTab) {
   return id;
 }
 $('funcs').onclick = () => openTargetZoho(false);
+// Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
+// workspace change, and a choice that is reset while you are looking at it is not a choice.
+$('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
 $('gozoho').onclick = () => openZohoHome();
 $('mmgo').onclick = () => switchTab();   // mismatch: log out current session and land on the workspace's org (current tab)
 async function listReady(id) {
@@ -2508,6 +2536,7 @@ function updateWsButtons() {
   // Both are temporarily unavailable, never permanently: pick a workspace and they work. Analytics
   // has disabled its Remove this way from the start; this side never did, and the two buttons sat
   // beside each other behaving differently.
+  renderGoDc();                      // the list it offers is the workspaces, so it moves with them
   $('wsrename').disabled = !dir || !wsList.length;
   $('wsdel').disabled = !dir || !wsList.length;
   const needsGrant = !!root && !rootGranted;
@@ -2994,8 +3023,21 @@ async function resyncModule(m) {
  *  line. Reported. */
 function pickCell(values) {
   const v = values || []; if (!v.length) return '';
-  return `<button class="plbtn" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values, one per line">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`
-    + `<div class="plvals" hidden>${v.map((x) => `<div>${escHtml(x)}</div>`).join('')}</div>`;
+  return `<button class="plbtn" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`;
+}
+/** The values, in a row of their own that spans the table.
+ *
+ *  They were put inside the picklist cell first, and that was the wrong place twice over: it is the
+ *  last of six columns in a 400px pane, so «WhatsApp/SMS» came out broken across two lines at about
+ *  ninety pixels wide, with a scrollbar inside a scrollbar and no line between one value and the
+ *  next. Reported, with a picture, and the report was that it had become worse than the sideways
+ *  scroll it replaced - which it had. A cell cannot be widened; a row can, so the values get the
+ *  whole width, and each one wears a border because a list of names needs a boundary, not a newline. */
+function pickRow(values, cols) {
+  const v = values || []; if (!v.length) return '';
+  return `<tr class="plrow" hidden><td colspan="${escA(String(cols))}"><div class="plvals">`
+    + v.map((x) => `<span class="plv">${escHtml(x)}</span>`).join('')
+    + '</div></td></tr>';
 }
 /** Every report cuts a long picklist, and none of them said so: twelve values printed and the rest
  *  gone, which makes the report quietly wrong rather than merely shorter. It states what it dropped
@@ -3008,18 +3050,21 @@ function renderFieldsTable(m) {
   const rows = (m.fields || []).map((f) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
     <td class="mono">${escHtml(f.api_name)}</td>
-    <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''}</td>
+    <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''} ${pickCell(f.picklist)}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
     <td class="mono">${f.lookup ? '\u2192 ' + escHtml(typeof f.lookup === 'string' ? f.lookup : (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module)) || '')) : ''}</td>
-    <td class="pl">${pickCell(f.picklist)}</td>
-  </tr>`).join('');
+  </tr>${pickRow(f.picklist, 5)}`).join('');
   if (!rows) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
     // under Related lists put the same sixty words on screen three times.
     return `<div class="empty" style="padding:12px 10px">${m.unreadable ? '<b>No fields were read.</b>'
       : (emptyReason() || '<b>No fields recorded.</b> Press <b>Pull</b> above to read them from Zoho.')}</div>`;
   }
-  return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th><th>Picklist</th></tr></thead><tbody>${rows}</tbody></table>`;
+  // Five columns, not six. The values used to have one of their own, which is what made the table
+  // scroll sideways - and once they moved to a row of their own the column left behind held only the
+  // button that opens it, in the last position, off screen at 400px. It sits in Type, where the word
+  // «picklist» already is and where the reader is already looking.
+  return `<table class="ftbl"><thead><tr><th>Field</th><th>API name</th><th>Type</th><th>Req</th><th>Lookup</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 // Selecting a different item must start the reader at the top of the new content;
 // keeping the previous scroll offset lands you in the middle of an unrelated document.
@@ -4503,7 +4548,7 @@ loadTabPrefs().then(renderTabs);
 // forgets to re-attach - which is how a control ends up dead on the second render only.
 $('pvtable').addEventListener('click', (e) => {
   const b = e.target.closest('.plbtn'); if (!b) return;
-  const box = b.nextElementSibling; if (!box) return;
+  const box = b.closest('tr') && b.closest('tr').nextElementSibling; if (!box || !box.classList.contains('plrow')) return;
   const opening = box.hidden;
   box.hidden = !opening;
   b.setAttribute('aria-expanded', String(opening));
