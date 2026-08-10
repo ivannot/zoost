@@ -2621,31 +2621,24 @@ test('sorting by one field goes through one comparator', () => {
 // arrives when the line executes. Each of these folded a live call site, so a typo in `setStatus`
 // or `noteAccess` would have been a button that silently stopped working.
 
-test('the data centre the form shows is the one the panel would use', () => {
-  // A select with nothing stored shows its first option, and the panel falls back to a constant.
-  // Those are two places holding one fact, so they can disagree - and the first draft did: the form
-  // opened on Europe while the panel would have gone to the United States.
+test('the data centres offered are the hosts the manifest can reach', () => {
+  // Two literal lists - the panel's picklist and the Settings form - were held equal by a test,
+  // which is a checker standing in for a source of truth. Both derive from the manifest now: a host
+  // this extension cannot reach is not a destination it may offer.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/options.html`);
-    const js = read(`apps/${app}/sidepanel.js`);
-    const picked = html.match(/<option value="([^"]+)" selected>/);
-    assert.ok(picked, `id=dc ${app}: no option is marked selected, so the form shows whichever is first`);
-    const fallback = js.match(/let zohoDc = '([^']+)'/);
-    assert.ok(fallback, `id=dc ${app}: the panel has no fallback data centre`);
-    assert.equal(picked[1], fallback[1],
-      `id=dc ${app}: the form opens on ${picked[1]} and the panel would use ${fallback[1]}`);
-    // and every option has to be a host the manifest already allows
-    const hosts = JSON.parse(read(`apps/${app}/manifest.json`)).host_permissions.join(' ');
-    for (const m of html.matchAll(/<option value="(zoho[^"]*)"/g)) {
-      assert.ok(hosts.includes(m[1] + '/'), `id=dc ${app}: ${m[1]} is offered and the manifest cannot reach it`);
+    const host = app === 'crm' ? 'crm' : 'analytics';
+    const hosts = JSON.parse(read(`apps/${app}/manifest.json`)).host_permissions;
+    const want = [...new Set(hosts.map((h) => (h.match(new RegExp(`^https://${host}\\.([^/*]+)/\\*$`)) || [])[1]).filter(Boolean))].sort();
+    assert.ok(want.length >= 5, `id=dc ${app}: only ${want.length} data centre(s) in the manifest`);
+    for (const f of [`apps/${app}/sidepanel.js`, `apps/${app}/options.js`]) {
+      const src = read(f);
+      assert.ok(/getManifest\(\)\.host_permissions/.test(src), `id=dc ${f}: the list is not derived`);
+      assert.ok(!/'zoho\.eu'|"zoho\.eu"/.test(src.replace(/^\s*(\/\/|\s\*).*$/gm, '')),
+        `id=dc ${f}: a data centre is written out in code, so there are two lists again`);
     }
-    // The panel builds its own list, next to the link, and the two are one fact in two places.
-    const inPanel = js.match(/const DCS = \[([^\]]+)\]/);
-    assert.ok(inPanel, `id=dc ${app}: the panel has no list of data centres`);
-    const panelList = inPanel[1].split(',').map((x) => x.trim().replace(/'/g, ''));
-    const formList = [...html.matchAll(/<option value="(zoho[^"]*)"/g)].map((m) => m[1]);
-    assert.deepEqual(panelList, formList,
-      `id=dc ${app}: Settings offers ${formList.join(' ')} and the panel offers ${panelList.join(' ')}`);
+    // and the form no longer carries them in markup either
+    assert.ok(!/<option value="zoho/.test(read(`apps/${app}/options.html`)),
+      `id=dc ${app}: Settings still lists data centres in its markup`);
   }
 });
 

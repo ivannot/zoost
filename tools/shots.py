@@ -26,6 +26,19 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def hosts_of(app: str) -> str:
+    """The app's real host_permissions, for the stubbed getManifest().
+
+    The stub answered with the name and nothing else, so a panel that *derives* anything from its
+    manifest - the data-centre picklist does - rendered empty here and only here. A shim is an
+    approximation and says so; an approximation that silently drops a field the product reads is a
+    picture of a state the product does not have.
+    """
+    import json as _json
+    m = _json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
+    return _json.dumps(m.get('host_permissions', []))
 OUT = ROOT / "dist" / "shots"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 NAME = {"crm": "Zoost - workbench for Zoho CRM",
@@ -92,7 +105,7 @@ SHOTS = [
 ]
 
 STUB = """window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name} }}), sendMessage: () => {{}} }},
+  runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: () => {{}} }},
   storage: {{ local: {{ get: async () => ({{ graphData: {data} }}), set: async () => {{}} }} }},
 }};
 window.addEventListener('load', () => setTimeout(() => {{
@@ -127,7 +140,8 @@ def render(shot):
             if f.is_file():
                 shutil.copy2(f, stage / f.name)
         (stage / "data.js").write_text(
-            STUB.format(name=json.dumps(NAME[app]), data=json.dumps(data), script=script),
+            STUB.format(name=json.dumps(NAME[app]), data=json.dumps(data), script=script,
+                        hosts=hosts_of(app)),
             encoding="utf-8")
         page = stage / "graphview.html"
         html = page.read_text(encoding="utf-8")
@@ -145,7 +159,7 @@ def render(shot):
 
 
 PANEL_STUB = """window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name} }}), sendMessage: (m, cb) => cb && cb(null),
+  runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
               onMessage: {{ addListener: () => {{}} }}, lastError: null, getURL: (p) => p,
               onInstalled: {{ addListener: () => {{}} }} }},
   storage: {{ local: {{ get: async () => ({{}}), set: async () => {{}},
@@ -197,6 +211,7 @@ def render_panel(shot):
         taburl, ctx = PANEL_CTX[app]
         (stage / "shot.js").write_text(
             PANEL_STUB.format(name=json.dumps(NAME[app]), files=json.dumps(files), script=script,
+                              hosts=hosts_of(app),
                               taburl=json.dumps(taburl), ctx=ctx),
             encoding="utf-8")
         page = stage / "sidepanel.html"
@@ -221,7 +236,7 @@ def render_panel(shot):
 
 OPTIONS_STUB = """
 window.chrome = {{
-  runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0' }}), id: 'shot',
+  runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0', host_permissions: {hosts} }}), id: 'shot',
               openOptionsPage: () => {{}}, sendMessage: async () => ({{ ok: true }}),
               onMessage: {{ addListener: () => {{}} }}, lastError: null }},
   storage: {{ local: {{ get: async (k) => ({stored}), set: async () => {{}}, remove: async () => {{}},
@@ -250,7 +265,8 @@ def render_options(shot):
             if f.is_file():
                 shutil.copy2(f, stage / f.name)
         (stage / "shot.js").write_text(
-            OPTIONS_STUB.format(name=json.dumps(NAME[app]), stored=stored, script=script),
+            OPTIONS_STUB.format(name=json.dumps(NAME[app]), stored=stored, script=script,
+                                hosts=hosts_of(app)),
             encoding="utf-8")
         page = stage / "options.html"
         html = page.read_text(encoding="utf-8")

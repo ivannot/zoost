@@ -40,6 +40,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from jstext import strip_js  # noqa: E402 - one scanner, two checkers
+
 ROOT = Path(__file__).resolve().parent.parent
 # This compares the two side panels, and only those: it is a structural diff of one page against
 # its twin, and graphview/options have different shapes rather than shared chrome.
@@ -304,8 +307,7 @@ def functions(js):
     """Top-level function bodies, whitespace-collapsed. A regex over declarations plus a brace walk:
     the panels are plain scripts with no nesting worth chasing, and a parser would be the first
     dependency in a repository whose pitch is that it has none."""
-    src = re.sub(r'/\*.*?\*/', '', js, flags=re.S)
-    src = re.sub(r'^\s*//.*$', '', src, flags=re.M)
+    src = strip_js(js)
     out = {}
     for m in re.finditer(r'^(?:async )?function (\w+)\s*\(', src, re.M):
         i = src.index('{', m.end() - 1)

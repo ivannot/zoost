@@ -507,7 +507,19 @@ async function refreshContext() {
  *  the ones already mirrored - wanting to open .jp while the default is .eu is exactly the case, and
  *  a control that only offers what you have been to before cannot serve it. What it opens on is what
  *  is known: the workspace, then the tab, then the default in Settings. */
-const DCS = ['zoho.com', 'zoho.eu', 'zoho.in', 'zoho.com.au', 'zoho.jp', 'zohocloud.ca'];
+/** The data centres, derived from the manifest instead of typed.
+ *
+ *  It was a literal list in two places - here and the Settings form - held together by a test,
+ *  which is a checker standing in for a source of truth. The manifest already *is* that source:
+ *  a host this extension cannot reach is not a destination it may offer, and one it can reach is.
+ *  Adding a data centre is then one edit, in the file that has to change anyway.
+ *
+ *  Measured while asking whether the list was complete, and it is not: Zoho answers on
+ *  zoho.sa, zoho.uk, zoho.ae and zoho.com.cn with the same shape as the six here, and neither
+ *  manifest grants them. That is a permissions change and is not made in passing. */
+const DCS = [...new Set((chrome.runtime.getManifest().host_permissions || [])
+  .filter((h) => h.startsWith('https://analytics.'))
+  .map((h) => h.slice('https://analytics.'.length).replace(/\/.*$/, '')))].sort();
 const dcOf = (origin) => (String(origin || '').match(/^https:\/\/[^.]+\.(.+)$/) || [])[1] || null;
 function renderGoDc() {
   const sel = $('gozohodc'); if (!sel) return;

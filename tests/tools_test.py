@@ -1237,6 +1237,47 @@ class TheStoreScreenshotsAreOrderedAndNumbered(unittest.TestCase):
                              [f'{app}_{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
 
 
+class ReadingJavaScriptWithoutAParser(unittest.TestCase):
+    """The scanner two checkers depend on, checked against every file they read.
+
+    `re.sub(r'/\\*.*?\\*/', ...)` cannot tell a block comment from the `/*` inside
+    `'https://crm.zoho.eu/*'`, which is line 5 of the CRM panel: 48 of its 217 function declarations
+    were invisible to `twincheck` and to `namecheck`, silently, for as long as both have existed.
+    The replacement was wrong too on its first try - it ended a template literal at the first
+    backtick and this codebase nests them - and that failure was equally silent.
+
+    So the property is asserted rather than the implementation: stripping may not lose a declaration,
+    and may not leave commentary behind. Both bugs are caught by it.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from jstext import strip_js
+        self.strip = strip_js
+
+    def test_no_declaration_is_lost_and_no_comment_survives(self):
+        decl = lambda t: len(re.findall(r'^(?:async )?function (\w+)\s*\(', t, re.M))
+        for f in sorted(ROOT.glob('apps/*/*.js')):
+            js = f.read_text(encoding='utf-8')
+            out = self.strip(js)
+            rel = f.relative_to(ROOT)
+            self.assertEqual(decl(out), decl(js), f'{rel}: stripping lost a function declaration')
+            left = [ln for ln in out.splitlines() if re.match(r'\s*(\*\s|//)', ln)]
+            self.assertEqual(left[:1], [], f'{rel}: commentary survived the strip')
+
+    def test_the_shapes_that_broke_it(self):
+        # each of these was a real defect, in the source or in the scanner
+        cases = [
+            ("const H = ['https://crm.zoho.eu/*'];\nfunction after() {}", 'after'),
+            ("const s = `a ${x ? `b` : ''} c`;\n// Zoho's own\nfunction after() {}", 'after'),
+            ("const r = /^https:\\/\\/crm\\.([^/*]+)$/;\nfunction after() {}", 'after'),
+        ]
+        for src, name in cases:
+            out = self.strip(src)
+            self.assertIn(f'function {name}', out, f'the scanner swallowed code after: {src[:40]}')
+            self.assertNotIn('//', out.replace('https://', ''))
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 

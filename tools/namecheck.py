@@ -26,6 +26,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from jstext import strip_js  # noqa: E402 - one scanner, two checkers
+
 ROOT = Path(__file__).resolve().parent.parent
 APPS = ('crm', 'analytics')
 
@@ -77,8 +80,11 @@ def strip_comments(text: str, is_js: bool) -> str:
     markup, strings and template literals — the things a user can actually read.
     """
     if is_js:
-        text = re.sub(r'/\*.*?\*/', ' ', text, flags=re.S)
-        text = re.sub(r'^\s*//.*$', ' ', text, flags=re.M)
+        # One scan rather than two regexes: `'https://crm.zoho.eu/*'` on line 5 of the CRM panel
+        # made the naive block-comment strip swallow 48 function declarations, so this checker -
+        # written because five naming defects reached the user - was not reading a fifth of the
+        # file it exists to read. See tools/jstext.py.
+        text = strip_js(text)
         text = re.sub(r'(?<![:"\'`])//[^\n"\'`]*$', ' ', text, flags=re.M)
     else:
         text = re.sub(r'<!--.*?-->', ' ', text, flags=re.S)

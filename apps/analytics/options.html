@@ -85,21 +85,15 @@
 
   <section data-section="zohoDc">
     <h2>Data centre</h2>
-    <p class="sub">Where your Zoho Analytics account lives. Zoost reads this from the workspace you have open
-      and from the tab you are on, and asks this only when it knows neither - a fresh install with nothing
-      pulled yet, where <b>Go to Zoho Analytics</b> would otherwise have to guess. If you keep workspaces on more
-      than one data centre, that button offers them instead: which one you want next is a choice, not
-      something to deduce from the one you happen to have open.</p>
+    <p class="sub">Where your Zoho Analytics account lives. It is the starting point for
+      <b>Go to Zoho Analytics</b> on the screen shown when there is no Zoho Analytics tab - that screen carries a
+      picklist of every data centre, because after signing out of one org which one you want next is a
+      choice, not something to deduce from the one you happen to have open. The picklist starts on the
+      workspace's or the tab's data centre when there is one, and on this default when there is not.
+      The list is the manifest's own: a host the extension cannot reach is not one it offers.</p>
     <div class="row">
       <label for="zohoDc">Default</label>
-      <select id="zohoDc">
-        <option value="zoho.com" selected>United States - zoho.com</option>
-        <option value="zoho.eu">Europe - zoho.eu</option>
-        <option value="zoho.in">India - zoho.in</option>
-        <option value="zoho.com.au">Australia - zoho.com.au</option>
-        <option value="zoho.jp">Japan - zoho.jp</option>
-        <option value="zohocloud.ca">Canada - zohocloud.ca</option>
-      </select>
+      <select id="zohoDc">      </select>
     </div>
   </section>
 

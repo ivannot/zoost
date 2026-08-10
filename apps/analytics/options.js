@@ -393,8 +393,17 @@ $('saveAi').onclick = () => saveAi();
 /** The data centre to fall back on. It is a one-value setting that changes a mode, so it saves on
  *  change rather than behind a Save button - the convention this page already follows for a
  *  selector. It is only ever read when the panel knows neither a workspace nor a tab. */
+// Built from the manifest, like the panel's own picklist: the hosts this extension may reach are
+// the data centres it may offer, and a list typed in two places is two lists.
+const DC_DEFAULT = 'zoho.com';
 async function loadDc() {
-  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) $('zohoDc').value = r.zohoDc; } catch (_) {}
+  const dcs = [...new Set((chrome.runtime.getManifest().host_permissions || [])
+    .filter((h) => h.startsWith('https://analytics.'))
+    .map((h) => h.slice('https://analytics.'.length).replace(/\/.*$/, '')))].sort();
+  $('zohoDc').innerHTML = dcs.map((d) => `<option value="${escA(d)}">${escA(d)}</option>`).join('');
+  let want = DC_DEFAULT;
+  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) want = r.zohoDc; } catch (_) {}
+  $('zohoDc').value = dcs.includes(want) ? want : dcs[0];
 }
 $('zohoDc').onchange = async () => {
   markOwn('zohoDc'); dirty.delete('zohoDc'); conflictBox('zohoDc', false);
