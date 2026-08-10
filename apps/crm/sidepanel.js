@@ -940,6 +940,7 @@ function setPvTab(which) {
 function pvTabsFor(kind) {
   const on = kind === 'function';
   $('pvtabs').hidden = !on;
+  $('pvtabsr').innerHTML = '';        // the graph control belongs to the function being left
   if (on) setPvTab('code');
   else { $('pvcallers').style.display = ''; }
 }
@@ -1007,18 +1008,24 @@ async function showCallers(path) {
     if (node.modified_by) modBits.push('by ' + escHtml(node.modified_by));
     if (node.updatedTime) modBits.push(escHtml(String(node.updatedTime).slice(0, 16)));
     if (modBits.length) html += `<div class="modline">Last modified ${modBits.join(' \u00b7 ')}</div>`;
-    // The same control the Modules preview carries, in the same markup, next to the same kind of
-    // fact: the references are listed above it, this draws them. Absent when there is nothing to
-    // draw - a function nobody calls and that calls nothing is a single box and no arrows.
-    const drawable = callers.length || (node.calls || []).length;
-    if (drawable) {
-      html += `<div class="laybar">Calls from this function \u00b7 depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Graph" title="Graph - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button></div>`;
-    }
     box.innerHTML = html;
     box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file, true)));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
-    const callOpen = box.querySelector('#callopen');
-    if (callOpen) callOpen.onclick = () => openCallFocus(node.namespace + '.' + node.name, parseInt(box.querySelector('#calldepth').value, 10) || 2);
+    // The same control the Modules preview carries, next to the same kind of fact: the references
+    // are listed above it, this draws them. Absent when there is nothing to draw - a function
+    // nobody calls and that calls nothing is a single box and no arrows.
+    //
+    // It sits on the tab strip rather than inside Details, and that is the rule the diagram window
+    // already learnt about its focus: a control that acts on the item belongs to the item's chrome,
+    // not to one of the views of it. Behind the second tab it was unreachable from Code - the tab
+    // people open a function for. The depth travels with it, or the tooltip would name a control
+    // that is on the other tab. The Modules preview keeps its own bar, because that detail has no
+    // strip to move to and nothing is hiding it.
+    const slot = $('pvtabsr'); slot.innerHTML = '';
+    if (callers.length || (node.calls || []).length) {
+      slot.innerHTML = `depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Graph" title="Graph - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
+      slot.querySelector('#callopen').onclick = () => openCallFocus(node.namespace + '.' + node.name, parseInt(slot.querySelector('#calldepth').value, 10) || 2);
+    }
   } catch { box.className = ''; }
 }
 $('pvback').onclick = () => { const p = pvHist.pop(); updateBack(); if (p) openFile(p, false); };
