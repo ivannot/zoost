@@ -33,78 +33,78 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "1ed1d639a9a36277"
+    "from": "21676edd39eb31f6"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "d0dd8edf95247853"
+    "from": "41e1da1e3ca06c88"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "93e30473889a56f6"
+    "from": "942b2cfb1118aaa5"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "26b6bce202f964cd"
+    "from": "ef163b70cfe653e8"
   },
   "crm-er": {
     "app": "crm",
-    "from": "842b8d76e9df802e"
+    "from": "d32d09b0be95006b"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "9b938ffcfe0dc6ca"
+    "from": "b458cd631f97e6ca"
   },
   "crm-export": {
     "app": "crm",
-    "from": "fd82d2e45eb54651"
+    "from": "b9ab4885e976d962"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "ff561493d591bca1"
+    "from": "6c217a60ce750706"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "286c417c53948ae7"
+    "from": "ce3ec3f9396dcd5b"
   },
   "crm-health": {
     "app": "crm",
-    "from": "00de2da9987ceb5d"
+    "from": "dc8ad529d8ce830a"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "783471b68941ad1b"
+    "from": "c919f7161beb1494"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "22fd2e085fc08f8b"
+    "from": "5c0ce77b0b2448d5"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "32140c957c740888"
+    "from": "01b7739621ea8400"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "5cdc8041a6200d90"
+    "from": "d6ff9285c3779844"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "25010f6bd9542dd9"
+    "from": "59ba01a090c40c7c"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "7e1892dddd001e65"
+    "from": "48b0cbe29893a721"
   },
   "crm-search": {
     "app": "crm",
-    "from": "c1cb94cef3e453ef"
+    "from": "3fe76c98fd64b1b7"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "cb6a11a250d1b367"
+    "from": "f56919eceb18ee72"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "3f39427cb15fbeaa"
+    "from": "25f97235071a3cc3"
   }
 }

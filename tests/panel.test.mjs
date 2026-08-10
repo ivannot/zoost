@@ -3070,3 +3070,18 @@ test('every Actions sort is offered, and every option sorts by something', () =>
   assert.deepEqual(offered.slice().sort(), keys.slice().sort(),
     `id=crm the picklist offers ${offered} and ACTION_SORTS holds ${keys}`);
 });
+
+// Reported: an action was selected, the assistant said it had no reference, and the line above the
+// chat agreed with it - «No function focused». aiFocus() had no branch for that kind and the label
+// read `.dg` and nothing else, so both halves were wrong in the same direction. They are checked
+// together because a label that contradicts what the prompt carries is worse than one saying nothing.
+test('the chat knows what is focused, whatever kind it is', () => {
+  const src = panelBody('crm');
+  const focus = src.slice(src.indexOf('async function aiFocus()'), src.indexOf('function productHelp()'));
+  const label = src.slice(src.indexOf('function aiFocusLabel()'), src.indexOf('async function aiContextLabel()'));
+  for (const kind of ['workflows/', 'schedules/', 'connections/', 'modules/', 'actions/']) {
+    assert.ok(focus.includes(`p.startsWith('${kind}')`), `id=crm aiFocus sends nothing for ${kind}`);
+    assert.ok(label.includes(`p.startsWith('${kind}')`), `id=crm the context line cannot name ${kind}`);
+  }
+  assert.ok(!/No function focused/.test(src), 'id=crm the label still claims only functions can be focused');
+});

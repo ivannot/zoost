@@ -2336,11 +2336,31 @@ async function aiEngineChrome() {
 // The index is sent with *every* message, so its size is what each question costs before it has been
 // asked. Showing it is the only way the setting that caps it can be a real choice rather than a
 // number in a form: build it once, measure, and say so.
+/** What the line above the chat says is focused. It read `.dg` and nothing else, so with a workflow,
+ *  a module or an action open it announced that nothing was focused while aiFocus() was sending that
+ *  item's detail with every message - the label contradicting the prompt, which is worse than a
+ *  label that says nothing. Same one-of-a-set miss as the branches in aiFocus() itself, one line up.
+ *  The name comes from the list that drew the row, so it is the name on screen. */
+function aiFocusLabel() {
+  const p = currentPath;
+  if (!p) return null;
+  if (p.endsWith('.dg')) return p.split('/').pop();
+  const at = (arr, name) => { const e = (arr || []).find((x) => x.path === p); return e ? `${name} \u00ab${e.name || e.label || e.api_name || e.id}\u00bb` : null; };
+  if (p.startsWith('workflows/')) return at(workflowData, 'workflow');
+  if (p.startsWith('schedules/')) return at(scheduleData, 'schedule');
+  if (p.startsWith('connections/')) return at(connectionData, 'connection');
+  if (p.startsWith('modules/')) return at(moduleData, 'module');
+  if (p.startsWith('actions/')) {
+    const e = actionData.find((x) => x.path === p);
+    return e ? `${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb` : null;
+  }
+  return null;
+}
 async function aiContextLabel() {
   const el = $('aictx'); if (!el) return;
-  const focus = (currentPath && currentPath.endsWith('.dg'))
-    ? 'Focus: ' + currentPath.split('/').pop()
-    : 'No function focused - open one to give code-level context';
+  const what = aiFocusLabel();
+  const focus = what ? 'Focus: ' + what
+    : 'Nothing focused - open a function, a rule or an action to give the assistant its detail';
   let cost = '';
   try {
     const cfg = await aiGetCfg();
