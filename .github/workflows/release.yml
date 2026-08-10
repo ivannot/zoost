@@ -95,6 +95,9 @@ jobs:
       # What changed, ahead of how it was built. The body this workflow writes answers "is this
       # archive what it claims to be"; it never answered "what am I getting", and the Chrome Web
       # Store has no field for that either — so the Release is the only place it can be published.
+      # Two readers, in this order and separated: whoever wants to know what changed reads the notes
+      # and stops at the rule; whoever wants the hash skips to `## Provenance`. Mixed together, each
+      # of them reads the other's half looking for their own.
       # Missing notes fail the run rather than publishing a Release without them: tools/release.sh
       # refuses to tag without the file, so reaching here without one means the tag bypassed it.
       # The whole body is assembled here and handed over as one file. `body` and `body_path` together
@@ -122,6 +125,8 @@ jobs:
           cat >> "$BODY" <<EOF
 
           ---
+
+          ## Provenance
 
           Built by GitHub Actions from \`$COMMIT\`, not on anyone's laptop.
 

@@ -2772,6 +2772,13 @@ They live at **`store/<app>/whatsnew/<version>.md`**, `release.sh` refuses to ta
 workflow puts it at the top of the Release body and fails if it is missing, and `tools_test.py` holds
 every ledger row at or after the version each app adopted the convention.
 
+**The Release body has two readers, so it is composed for them.** The notes from
+`store/<app>/whatsnew/<version>.md` come first - more people want to know what changed than want
+to check a hash - then a rule, then `## Provenance` with the commit, the SHA-256 and the two
+verification commands. Mixed together each reader scans the other's half looking for their own.
+The footer link to them is called **Release notes** and not «Changelog», because that is the word
+GitHub puts on the page it lands on, and a link should say where it goes in the words used there.
+
 **What hid this for 69 commits is worth knowing, because the shape recurs: an automated artefact that
 looks finished.** The workflow already wrote a body — the hash, the commit, the two verification
 commands, the `RELEASES.md` row — so every Release *had* one and nothing looked absent. But that body

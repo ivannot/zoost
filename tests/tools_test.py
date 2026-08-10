@@ -1322,6 +1322,28 @@ class ImagesAreRenderedOnlyWhenSomethingMoved(unittest.TestCase):
                              [f'{n}.png' for n in range(1, len(self.shots.STORE['crm']) + 1)])
 
 
+class TheReleaseBodyHasTwoReaders(unittest.TestCase):
+    """What changed, then how it was built - in that order, with a line between them.
+
+    The body carries two things with different readers: the notes somebody who installed the
+    extension wants, and the hash and commit somebody verifying the archive wants. Mixed, each reads
+    the other's half looking for their own. The notes come first because more people want them, and
+    the second half is under a heading so it can be skipped to.
+    """
+
+    def test_notes_first_then_a_rule_then_provenance(self):
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        i = wf.index('cat "$NOTES" > "$BODY"')          # the notes open the body
+        j = wf.index('---', i)                          # then the rule
+        k = wf.index('## Provenance', j)                # then the half that is about the archive
+        h = wf.index('sha256', k)                       # and the hash is inside it, not above
+        self.assertLess(i, j); self.assertLess(j, k); self.assertLess(k, h)
+
+    def test_the_notes_are_required_rather_than_defaulted(self):
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        self.assertIn('if [ ! -s "$NOTES" ]', wf, 'a Release could be published with no notes')
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 
