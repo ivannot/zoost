@@ -42,6 +42,9 @@ function sampleRefuse() {
   return true;
 }
 let treeData = [], nameMode = 'display', typeFilter = 'all', graphCache = null;
+// The data centre to fall back on when the panel knows neither a workspace nor a tab. It is a
+// display-only copy of a setting, so it is read into a URL and never written from here.
+let zohoDc = 'zoho.com';
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
 let treeSortDir = 'asc';      // 'asc' | 'desc' - defaults per sort: A→Z for names, biggest-first for numbers
@@ -230,6 +233,9 @@ async function loadScope() {
 // because they are two different kinds of fact: what you chose (per install) and what Zoho allows
 // (per org). Reading either must never throw the panel - a missing or malformed value just means
 // "show everything", which is the state a first run is in anyway.
+async function loadZohoDc() {
+  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) zohoDc = r.zohoDc; } catch (_) {}
+}
 async function loadTabPrefs() {
   try {
     const st = await chrome.storage.local.get('tabPrefs');
@@ -1061,9 +1067,19 @@ function functionsUrl() {
   const base = bound?.base || lastCtx?.origin; const inst = bound?.instance || lastCtx?.instance;
   return base && inst ? `${base}/crm/${inst}/settings/functions/myFunctions` : null;
 }
+/** «Go to Zoho CRM» is about the platform, not about this workspace's org - and it was
+ *  `${base}/crm/${instance}/`, which is a claim about which org you will land in. Reported: log out
+ *  of one org to sign into another and the button takes you back to the one you just left.
+ *  `ShowHomePage.do` is the account's own CRM home and resolves to whatever org the session has.
+ *
+ *  The host is still derived from what is known - the open workspace first, then the tab - because a
+ *  data centre is a property of the account and logging out does not move it. The setting is only
+ *  consulted when neither exists, which is a fresh install with nothing pulled: there the old code
+ *  guessed `crm.zoho.com`, and a guess about somebody else's data centre is wrong five times out of
+ *  six. */
 function homeUrl() {
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  return base && inst ? `${base}/crm/${inst}/` : 'https://crm.zoho.com/';
+  const base = bound?.base || lastCtx?.origin || `https://crm.${zohoDc}`;
+  return `${base}/crm/ShowHomePage.do`;
 }
 async function openZohoHome() {
   if (sampleRefuse()) return;
@@ -1705,7 +1721,7 @@ function aiModuleText(m) {
   const ref = moduleRefusal(m.unreadable);
   if (ref) return `Module ${m.api_name}\nNOT DESCRIBED BY ZOHO. ${ref.text}\nDo not infer its fields, layouts or relations from anywhere else - they were never read.\n`;
   let s = `Module ${m.api_name}\n| Field | API name | Type | Lookup | Picklist |\n`;
-  (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${(f.picklist && f.picklist.length) ? f.picklist.slice(0, 15).join(', ') : ''} |\n`; });
+  (m.fields || []).forEach((f) => { s += `| ${f.label || f.api_name} | ${f.api_name} | ${(f.data_type || '') + (f.length ? ' (' + f.length + ')' : '')} | ${f.lookup ? '\u2192 ' + f.lookup : ''} | ${_pick(f.picklist, 15, (x) => x)} |\n`; });
   return s;
 }
 // The org, stated as compactly as it can be, in layers of decreasing importance.
@@ -2971,6 +2987,23 @@ async function resyncModule(m) {
   renderModules(); if (currentPath === m.path) openModule(m.path);
   setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
 }
+/** The values of a picklist, on request and downwards. Laid out on one line - eight of them, then
+ *  «…(+31)» - a module with long options made the fields table scroll sideways with no end, and a
+ *  horizontal scrollbar in a 400px panel hides the columns somebody came for. The count is the
+ *  summary, because a number is a fact and «many» is not, and the list opens under it one value per
+ *  line. Reported. */
+function pickCell(values) {
+  const v = values || []; if (!v.length) return '';
+  return `<button class="plbtn" data-n="${escA(String(v.length))}" aria-expanded="false" title="Show the values, one per line">\u25b8 ${v.length} value${v.length === 1 ? '' : 's'}</button>`
+    + `<div class="plvals" hidden>${v.map((x) => `<div>${escHtml(x)}</div>`).join('')}</div>`;
+}
+/** Every report cuts a long picklist, and none of them said so: twelve values printed and the rest
+ *  gone, which makes the report quietly wrong rather than merely shorter. It states what it dropped
+ *  now, the way the panel always did. */
+function _pick(values, cap, esc) {
+  const v = values || []; if (!v.length) return '';
+  return esc(v.slice(0, cap).join(', ')) + (v.length > cap ? ` \u2026(+${v.length - cap} more)` : '');
+}
 function renderFieldsTable(m) {
   const rows = (m.fields || []).map((f) => `<tr>
     <td>${escHtml(f.label || f.api_name)}${f.custom ? ' <span style="color:#a78bfa">*</span>' : ''}</td>
@@ -2978,7 +3011,7 @@ function renderFieldsTable(m) {
     <td>${escHtml(f.data_type || '')}${f.length ? ` (${f.length})` : ''}</td>
     <td style="text-align:center">${f.mandatory ? '\u25cf' : ''}</td>
     <td class="mono">${f.lookup ? '\u2192 ' + escHtml(typeof f.lookup === 'string' ? f.lookup : (f.lookup.api_name || (f.lookup.module && (f.lookup.module.api_name || f.lookup.module)) || '')) : ''}</td>
-    <td>${f.picklist && f.picklist.length ? escHtml(f.picklist.slice(0, 8).join(', ')) + (f.picklist.length > 8 ? ` \u2026(+${f.picklist.length - 8})` : '') : ''}</td>
+    <td class="pl">${pickCell(f.picklist)}</td>
   </tr>`).join('');
   if (!rows) {
     // The refusal is stated once, in the banner directly above this. Repeating it here and again
@@ -3445,7 +3478,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, scope
     const list = groups[g2]; if (!list.length) continue;
     modHtml += `<h3 class="grp">${g2} <span class="cnt">${list.length}</span></h3>`;
     list.sort(byField('api_name')).forEach((m) => {
-      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${(fl.picklist || []).slice(0, 12).map(esc).join(', ')}</td></tr>`).join('');
+      const rows = (m.fields || []).map((fl) => `<tr><td>${esc(fl.label || fl.api_name)}</td><td class="mono">${esc(fl.api_name)}</td><td>${esc(fl.data_type || '')}${fl.length ? ` (${fl.length})` : ''}</td><td style="text-align:center">${fl.mandatory ? '●' : ''}</td><td class="mono">${fl.lookup ? '→ ' + modLink(fl.lookup) : ''}</td><td>${_pick(fl.picklist, 12, esc)}</td></tr>`).join('');
       const inbound = (modRefs && modRefs[m.api_name]) || [];
       const refBy = inbound.length ? `<div class="refs"><span><b>Referenced by (${inbound.length}):</b> ${inbound.map((r) => `${modLink(r.module)} <span class="none">(${esc(r.field)})</span>`).join(', ')}</span></div>` : '';
       const laySrc = !scope.layouts ? [] : ((m._layouts && m._layouts.length) ? m._layouts : (m.layouts || []));
@@ -3778,7 +3811,7 @@ function buildExportMarkdown(d, scope) {
     const mref = moduleRefusal(m.unreadable);
     if (mref) md += `> **Not described by Zoho.** ${mref.text}\n\n`;
     md += `#### All fields (flat)\n\n| Field | API name | Type | Lookup | Picklist |\n|---|---|---|---|---|\n`;
-    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${(f.picklist && f.picklist.length) ? _mdCell(f.picklist.slice(0, 12).join(', ')) : ''} |\n`; });
+    (m.fields || []).forEach((f) => { md += `| ${_mdCell(f.label || f.api_name)} | \`${_mdCell(f.api_name)}\` | ${_mdCell((f.data_type || '') + (f.length ? ' (' + f.length + ')' : ''))} | ${f.lookup ? '\u2192 ' + _mdCell(f.lookup) : ''} | ${_pick(f.picklist, 12, _mdCell)} |\n`; });
     md += '\n';
     if (scope.relations && (m.related_lists || []).length) {
       md += `#### Related lists (use the API name in zoho.crm.getRelatedRecords)\n\n| API name | Label | Target module | Type |\n|---|---|---|---|\n`;
@@ -4433,6 +4466,7 @@ try {
     if (area !== 'local') return;
     if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
     if (ch.tabPrefs) { await loadTabPrefs(); renderTabs(); }
+    if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
     if (!ch.settingsStamp) return;
     await loadScope();
     aiEngineChrome();
@@ -4459,10 +4493,23 @@ $('pspSafe').onclick = () => { dlgScope = Object.assign({}, SCOPE_SAFE); dlgAuto
 SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.onchange = scopeFromUI; });
 $('scrim').onclick = () => { if ($('expscope').classList.contains('on')) closeScope(false); else closeAbout(); };
 loadScope();
+loadZohoDc();
 // The tab set is a preference plus a per-workspace measurement, so it is built once at start-up and
 // again whenever either can have moved: a workspace opening (different org, different roles) and a
 // pull learning something new both call renderTabs themselves.
 loadTabPrefs().then(renderTabs);
+// One listener for every fields table there will ever be. The picklist cells are rebuilt by each
+// module and again by the layout picker, so a handler attached after an innerHTML is one somebody
+// forgets to re-attach - which is how a control ends up dead on the second render only.
+$('pvtable').addEventListener('click', (e) => {
+  const b = e.target.closest('.plbtn'); if (!b) return;
+  const box = b.nextElementSibling; if (!box) return;
+  const opening = box.hidden;
+  box.hidden = !opening;
+  b.setAttribute('aria-expanded', String(opening));
+  const n = b.dataset.n;
+  b.textContent = `${opening ? '\u25be' : '\u25b8'} ${n} value${n === '1' ? '' : 's'}`;
+});
 document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this
 // existed the only way to refresh that group was «Pull all» - the whole org re-downloaded to update

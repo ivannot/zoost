@@ -29,6 +29,9 @@ const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
 const CFG = '.zoost.json';
+// The data centre to fall back on when the panel knows neither a workspace nor a tab. A
+// display-only copy of a setting: read into a URL, never written from here.
+let zohoDc = 'zoho.com';
 const PULL_SV = 1;                            // pull schema version; bump when new fields are captured
 
 // Every sentence this panel says in more than one place, plus the one it shares with the CRM panel.
@@ -487,11 +490,18 @@ async function refreshContext() {
 
 // Both are a plain navigation to a URL we construct ourselves - no clicking through Zoho's UI, and
 // nothing that depends on what the page happens to look like.
-const homeUrl = () => (bound && bound.origin ? `${bound.origin}/workspace/${bound.workspace}` : 'https://analytics.zoho.eu/');
+// Two intentions, and one helper was serving both. «Switch tab» means *this workspace's* org, where
+// the workspace path is exactly right; «Go to Zoho Analytics» means the platform, and sending it to
+// a workspace id is the CRM's own bug one product over - log out to sign in elsewhere and the button
+// returns you to the account you just left. The host is derived from what is known and the setting
+// is consulted only when nothing is.
+const homeUrl = () => `${(bound && bound.origin) || `https://analytics.${zohoDc}`}/`;
+const workspaceUrl = () => (bound && bound.origin && bound.workspace
+  ? `${bound.origin}/workspace/${bound.workspace}` : homeUrl());
 async function switchTab() {
   if (sampleRefuse()) return;
   const id = await analyticsTabId();
-  const url = homeUrl();
+  const url = workspaceUrl();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 async function openZohoHome() {
@@ -2108,7 +2118,14 @@ $('ainotex').onclick = () => $('ainote').classList.remove('show');
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('aisend').onclick = aiSend;
 $('aiinput').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); aiSend(); } });
-chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.aicfg) aiEngineChrome(); });
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area !== 'local') return;
+  if (ch.aicfg) aiEngineChrome();
+  if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
+});
+async function loadZohoDc() {
+  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) zohoDc = r.zohoDc; } catch (_) {}
+}
 window.addEventListener('focus', () => aiEngineChrome());
 $('healthx').onclick = closeHealth;
 $('expx').onclick = () => closeScope(false);
@@ -2165,6 +2182,6 @@ window.addEventListener('focus', () => refreshContext());
 
 (async () => {
   try { const r = await chrome.storage.local.get('detailH'); if (r && r.detailH) $('detail').style.height = r.detailH; } catch (_) {}
-  await loadScope(); await restoreRoot(); await refreshContext();
+  await loadScope(); await loadZohoDc(); await restoreRoot(); await refreshContext();
 })();
 $('help').href = DOCS_URL;   // set here, not in the markup - same as the CRM panel

@@ -390,7 +390,20 @@ $('saveAi').onclick = () => saveAi();
 //
 // The same mechanism, the same wording and the same markup as the CRM workbench - this is shared
 // chrome, and the two panels must not disagree about what a settings conflict looks like.
+/** The data centre to fall back on. It is a one-value setting that changes a mode, so it saves on
+ *  change rather than behind a Save button - the convention this page already follows for a
+ *  selector. It is only ever read when the panel knows neither a workspace nor a tab. */
+async function loadDc() {
+  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) $('zohoDc').value = r.zohoDc; } catch (_) {}
+}
+$('zohoDc').onchange = async () => {
+  markOwn('zohoDc'); dirty.delete('zohoDc'); conflictBox('zohoDc', false);
+  await chrome.storage.local.set({ zohoDc: $('zohoDc').value });
+  toast('Data centre saved.');
+};
+
 const SECTIONS = {
+  zohoDc: { label: 'Data centre', reload: loadDc },
   aicfg: { label: 'AI assistant', reload: loadAi },
   erParams: { label: 'Diagram layout', reload: loadLay },
 };
@@ -446,6 +459,7 @@ try {
   $('legal').innerHTML = `<b>${esc(m.name)}</b> v${esc(m.version)} · created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)<br><br>${esc(LEGAL_DISCLAIMER)}`;
   loadAi();
   loadLay();
+  loadDc();
 })();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {

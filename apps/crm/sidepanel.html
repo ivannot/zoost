@@ -36,6 +36,15 @@
   .ftbl th{position:sticky;top:0;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
   .ftbl td{padding:5px 8px;border-bottom:1px solid var(--line);color:#cbd5e1;vertical-align:top;white-space:nowrap}
   .ftbl td.mono{color:#82d2ff} .ftbl tr:hover{background:#16263f}
+  /* A picklist of forty options laid out on one line made the fields table scroll sideways
+     for ever, and a horizontal scrollbar in a 400px panel hides the columns that matter. The
+     cell carries the count and opens downwards; ▸/▾ is the pair this panel already uses for
+     a group that folds. */
+  .ftbl td.pl{white-space:normal}
+  .plbtn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font:11px var(--mono);padding:1px 6px;cursor:pointer}
+  .plbtn:hover{color:var(--ink);border-color:var(--sel)}
+  .plvals{margin-top:4px;max-height:220px;overflow:auto}
+  .plvals div{padding:1px 0;color:#cbd5e1}
   .bar{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   button{font:12px var(--sans);background:#22304a;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 10px;cursor:pointer}
   button:hover:not(:disabled){background:#2b3a58} button:disabled{opacity:.5;cursor:default}
@@ -223,9 +232,15 @@
   .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
   .expgroup button{flex:none;white-space:nowrap}
   .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
-  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
+  /* The stacking order of the panel's four overlapping layers, written down because it was
+     wrong: a dialog at 61 opened *under* the off-platform overlay at 70, so pressing About
+     with no Zoho tab did nothing anybody could see. It reads, from the bottom:
+     the views inside the workbench (6-8) · the off-platform overlay (70) · the footer, which
+     stays reachable under that overlay (80) · a dialog's scrim (85) and the dialog (90),
+     which is the only thing that may cover the footer, because it is modal. */
+  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:85;display:none}
   .scrim.on{display:block}
-  .dlg{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dlg{position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .dlg.on{display:flex}
   .dlg.full{left:0;top:0;transform:none;width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0}
   .dlg.full .db{padding:16px 18px}
@@ -390,7 +405,11 @@
   #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b}
   #pvcallers.show{display:block} #pvcallers b{color:var(--ink)} #pvcallers a{color:var(--sel);cursor:pointer}
   #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
-  #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
+  /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
+     Settings, Help and About were unreachable - and Settings is where somebody who has just
+     installed this has business being. The overlay explains why the workbench is idle; it has
+     no reason to take the footer with it. */
+  #pfoot{position:relative;z-index:80;flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
   #pfoot .pfsp{flex:1}
   #pfoot #opts,#pfoot #about,#pfoot #help{cursor:pointer}
   #pfoot #opts:hover,#pfoot #about:hover,#pfoot #help:hover{color:var(--ink)}

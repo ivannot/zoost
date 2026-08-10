@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:baf83c1820a8a664 -->
+<!-- translated-from: site/docs-crm.html sha256:d40f3a2ca96d2b93 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -213,7 +213,7 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>un sorgente <code>.dg</code> e un <code>.meta.json</code> a fianco per ogni funzione Deluge, nel namespace che le dà Zoho</td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>il censimento: ogni funzione con namespace, id e dove è agganciata</td></tr>
-      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>un file per modulo - campi, tipi, moduli di lookup, valori delle picklist. Nel pannello una picklist mostra il <b>numero</b> di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono</td></tr>
       <tr><td class="k"><code>workflows/</code></td><td>un file per regola: trigger, criteri, azioni immediate e differite</td></tr>
       <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>l'elenco delle schedulazioni e il catalogo delle connessioni dell'org</td></tr>
@@ -692,9 +692,17 @@ git commit -m "baseline"</code></pre>
   <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e il workspace che hai selezionato
     appartengono a due org diverse, e tutto quello che parla con Zoho CRM è disattivato finché non si
-    accordano. La barra offre due vie d'uscita: <b class="ui">Go to Zoho CRM ↗</b> apre l'org a cui
-    appartiene il workspace, oppure sposti il workspace su quello della scheda. Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di
+    accordano. La barra offre due vie d'uscita: <b class="ui">Switch tab → «instance» ↗</b> porta la scheda
+    sull'org a cui appartiene il workspace, oppure sposti il workspace su quello della scheda. Niente è disattivato per capriccio - è l'unica protezione che ti impedisce di rispecchiare un'org dentro la cartella di
     un'altra.</p>
+  <p><b>Se non c'è nessuna scheda Zoho CRM</b> il pannello lo dice sopra tutto il workbench e offre
+    <b class="ui">Go to Zoho CRM ↗</b>, che apre la home del tuo Zoho CRM - quella dell'account, non
+    di un'org in particolare, quindi è il tasto giusto dopo essere usciti da un'org per entrare in
+    un'altra. Quale data centre sia lo legge dal workspace che hai aperto, o dalla scheda; quando non
+    c'è né l'uno né l'altra - installazione appena fatta, niente ancora scaricato - lo dici in
+    <b class="ui">⚙ Settings → Data centre</b>, e non serve a nient'altro. Il fondo del pannello resta
+    raggiungibile sotto quella schermata: Settings, Help e About restano a un clic mentre il resto è
+    fermo.</p>
   <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>

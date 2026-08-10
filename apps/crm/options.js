@@ -62,7 +62,7 @@ $('pickRoot').onclick = async () => {
     if (foreign > 6 && !confirm(`«${h.name}» already contains ${foreign} items that are not Zoost workspaces.\n\n`
       + 'Zoost will hold read/write access to everything inside it. A dedicated folder is strongly recommended.\n\nUse this folder anyway?')) return;
     await window.idbHandle.set('rootDir', h);
-    await stamp(); await showRoot();
+    await stamp(); await showRoot(); await loadDc();
     toast('Working folder set. Reopen the side panel to see the workspaces.');
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 };
@@ -553,7 +553,20 @@ $('tabReset').onclick = () => { tabOrderCur = TAB_IDS.slice(); tabHiddenCur = []
 // touched it, nothing is overwritten in either direction: the section says so and offers both ways
 // out. Never resolve this by guessing which side is newer; the user is the only one who knows which
 // they meant.
+/** The data centre to fall back on. It is a one-value setting that changes a mode, so it saves on
+ *  change rather than behind a Save button - the convention this page already follows for a
+ *  selector. It is only ever read when the panel knows neither a workspace nor a tab. */
+async function loadDc() {
+  try { const r = await chrome.storage.local.get('zohoDc'); if (r.zohoDc) $('zohoDc').value = r.zohoDc; } catch (_) {}
+}
+$('zohoDc').onchange = async () => {
+  markOwn('zohoDc'); dirty.delete('zohoDc'); conflictBox('zohoDc', false);
+  await chrome.storage.local.set({ zohoDc: $('zohoDc').value });
+  toast('Data centre saved.');
+};
+
 const SECTIONS = {
+  zohoDc: { label: 'Data centre', reload: loadDc },
   exportScope: { label: 'Export defaults', reload: loadScope },
   tabPrefs: { label: 'Tabs', reload: loadTabs },
   erParams: { label: 'Diagram layout', reload: loadLay },

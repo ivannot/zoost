@@ -31,8 +31,8 @@ applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical
 bfsEgo	daaa4453ccba	daaa4453ccba	identical
 buildChips	9091c2364889	9091c2364889	identical
-buildExportHtml	c5e3ad7a64a4	0ad5e298b237	divergent
-buildExportMarkdown	5131407ece23	27b56f35ee82	divergent
+buildExportHtml	200ac97436eb	0ad5e298b237	divergent
+buildExportMarkdown	1314c58420e0	27b56f35ee82	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	8fb9b9db38f5	divergent
 buildSchemaGraph	56a3776f4170	fadbbc09dd9e	divergent
@@ -83,6 +83,7 @@ layToUI	40e11110c455	40e11110c455	identical
 layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
 linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
 loadAi	118be117cebd	540bb62a7764	divergent
+loadDc	ef7155c8da46	ef7155c8da46	identical
 loadLay	6b705bf0b04c	6b705bf0b04c	identical
 loadScope	f9d55cb5c63b	6e935f4fa63b	divergent
 loseLock	5267c941abee	5267c941abee	identical
@@ -122,7 +123,7 @@ srcBlock	ce0c1c01a453	ce0c1c01a453	identical
 statCounts	87b246d2040f	87b246d2040f	identical
 statOf	4ebf9c260c6b	583f6174f839	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
-switchTab	62fc339158b2	48d9054ab798	divergent
+switchTab	62fc339158b2	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical

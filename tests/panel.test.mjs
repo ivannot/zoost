@@ -2621,6 +2621,27 @@ test('sorting by one field goes through one comparator', () => {
 // arrives when the line executes. Each of these folded a live call site, so a typo in `setStatus`
 // or `noteAccess` would have been a button that silently stopped working.
 
+test('the data centre the form shows is the one the panel would use', () => {
+  // A select with nothing stored shows its first option, and the panel falls back to a constant.
+  // Those are two places holding one fact, so they can disagree - and the first draft did: the form
+  // opened on Europe while the panel would have gone to the United States.
+  for (const app of ['crm', 'analytics']) {
+    const html = read(`apps/${app}/options.html`);
+    const js = read(`apps/${app}/sidepanel.js`);
+    const picked = html.match(/<option value="([^"]+)" selected>/);
+    assert.ok(picked, `id=dc ${app}: no option is marked selected, so the form shows whichever is first`);
+    const fallback = js.match(/let zohoDc = '([^']+)'/);
+    assert.ok(fallback, `id=dc ${app}: the panel has no fallback data centre`);
+    assert.equal(picked[1], fallback[1],
+      `id=dc ${app}: the form opens on ${picked[1]} and the panel would use ${fallback[1]}`);
+    // and every option has to be a host the manifest already allows
+    const hosts = JSON.parse(read(`apps/${app}/manifest.json`)).host_permissions.join(' ');
+    for (const m of html.matchAll(/<option value="(zoho[^"]*)"/g)) {
+      assert.ok(hosts.includes(m[1] + '/'), `id=dc ${app}: ${m[1]} is offered and the manifest cannot reach it`);
+    }
+  }
+});
+
 test('the runtime reading says whose failures those are', () => {
   // «8 failing · read Aug 10, 2026, 02:22 PM» sat next to a Pull button and read as eight failed
   // downloads. It was green, and green did not help: a colour cannot name a subject. Reported.

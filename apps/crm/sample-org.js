@@ -302,6 +302,10 @@
     });
     J('functions/index.json', index);
 
+    // Forty plausible values, composed rather than invented one at a time - the same rule the
+    // function names follow.
+    const LONG_PICKLIST = ['New', 'Qualified', 'Contacted', 'Proposal sent', 'Negotiation', 'On hold']
+      .concat(Array.from({ length: 34 }, (_, k) => `Stage ${k + 1} - awaiting review`));
     // ---- modules ----
     const index2 = [], layIndex = [];
     const modList = MODULES.concat(o.edgeCases ? [[EDGE.refusedModule, 'Ledger', 'custom']] : []);
@@ -310,7 +314,11 @@
       const fields = refused ? [] : FIELD_POOL.slice(0, 6 + (i % 6)).map(([a, t, m], k) =>
         ({ api_name: a, label: a.replace(/_/g, ' '), data_type: t, length: t === 'text' ? 255 : null,
            custom: cat === 'custom', mandatory: m, lookup: null,
-           picklist: t === 'picklist' ? ['One', 'Two', 'Three'] : [], id: String(7000 + i * 20 + k) }));
+           // One picklist per module is long, because a long one is a state of its own: forty
+           // values on a line is what made the fields table scroll sideways with no end, and a
+           // fixture where every picklist has three values shows a product that never meets it.
+           picklist: t !== 'picklist' ? [] : (a === 'Status' ? LONG_PICKLIST : ['One', 'Two', 'Three']),
+           id: String(7000 + i * 20 + k) }));
       if (!refused) {
         (LOOKUPS[api] || []).forEach((t, k) => fields.push(
           { api_name: t.replace(/s$/, '') + '_Ref', label: t.replace(/s$/, ''), data_type: 'lookup',

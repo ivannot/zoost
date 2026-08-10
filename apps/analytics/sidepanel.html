@@ -132,7 +132,11 @@
   body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button{opacity:.32}
   body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel{color:#3c5d62}
 
-  #pfoot{flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
+  /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
+     Settings, Help and About were unreachable - and Settings is where somebody who has just
+     installed this has business being. The overlay explains why the workbench is idle; it has
+     no reason to take the footer with it. */
+  #pfoot{position:relative;z-index:80;flex:0 0 auto;padding:5px 10px;border-top:1px solid var(--line);font-size:10.5px;background:var(--surface);display:flex;align-items:center;gap:4px}
   #pfoot .pfsp{flex:1}
   #pfoot #opts,#pfoot #about,#pfoot #help{cursor:pointer}
   #pfoot #opts:hover,#pfoot #about:hover,#pfoot #help:hover{color:var(--ink)}
@@ -284,9 +288,15 @@
   .empty code{font:11px var(--mono);color:#f0a8c8}
 
   /* ---- dialogs and overlays - same structure and ids as the CRM panel ---- */
-  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:60;display:none}
+  /* The stacking order of the panel's four overlapping layers, written down because it was
+     wrong: a dialog at 61 opened *under* the off-platform overlay at 70, so pressing About
+     with no Zoho tab did nothing anybody could see. It reads, from the bottom:
+     the views inside the workbench (6-8) · the off-platform overlay (70) · the footer, which
+     stays reachable under that overlay (80) · a dialog's scrim (85) and the dialog (90),
+     which is the only thing that may cover the footer, because it is modal. */
+  .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:85;display:none}
   .scrim.on{display:block}
-  .dlg{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dlg{position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .dlg.on{display:flex}
   .dlg.full{left:0;top:0;transform:none;width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0}
   .dlg.full .db{padding:16px 18px}

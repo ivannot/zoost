@@ -101,7 +101,9 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
 - "✎" next to the workspace list: gives this workspace a name of your own, shown instead of the
   folder's. The platform's own name stays visible in the tooltip and in the bar underneath.
   Clearing the field goes back to it.
-- "Settings ⚙": AI engine and key, export defaults, diagram defaults.
+- "Settings ⚙": AI engine and key, export defaults, diagram defaults, and the default data centre -
+  which is only used by "Go to Zoho Analytics" when no workspace is open and no Zoho Analytics tab
+  is in reach, since otherwise the data centre is read from one of those.
   The API key can optionally be protected by a passphrase, chosen there. It is then stored
   encrypted and asked for once per browser session, in this chat. It can be switched back off there
   too, which asks for the current passphrase, since clear text means decrypting it first. There is no

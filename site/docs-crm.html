@@ -195,7 +195,7 @@ git commit -m "baseline"</code></pre>
     <tbody>
       <tr><td class="k"><code>functions/&lt;namespace&gt;/</code></td><td>one <code>.dg</code> source and one <code>.meta.json</code> sidecar per Deluge function, in the namespace Zoho gives it</td></tr>
       <tr><td class="k"><code>functions/index.json</code></td><td>the census: every function with its namespace, id and where it is wired</td></tr>
-      <tr><td class="k"><code>modules/</code></td><td>one file per module - fields, types, lookup targets, picklist values</td></tr>
+      <tr><td class="k"><code>modules/</code></td><td>one file per module - fields, types, lookup targets, picklist values. In the panel a picklist shows its <b>count</b> and opens downwards on a click, one value per line: forty options on one line made the table scroll sideways with no end</td></tr>
       <tr><td class="k"><code>modules/layouts/</code></td><td>one file per module, with the sections and the fields on each layout - under the modules they describe</td></tr>
       <tr><td class="k"><code>workflows/</code></td><td>one file per rule: trigger, criteria, instant and scheduled actions</td></tr>
       <tr><td class="k"><code>schedules/</code>, <code>connections/</code></td><td>the schedule list and the org's connection catalogue</td></tr>
@@ -647,7 +647,14 @@ git commit -m "baseline"</code></pre>
     inside the file, not in the folder name.</p>
 
   <h2 id="goes-wrong">13. When something goes wrong</h2>
-  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Go to Zoho CRM ↗</b> opens the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
+  <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Switch tab → «instance» ↗</b> takes the tab to the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
+  <p><b>With no Zoho CRM tab at all</b> the panel says so over the whole workbench and offers
+    <b class="ui">Go to Zoho CRM ↗</b>, which opens your Zoho CRM home - the account's, not a
+    particular org's, so it is the right button after signing out of one org to sign into another. Which data
+    centre that is comes from the workspace you have open, or from the tab; when there is neither -
+    a fresh install with nothing pulled - <b class="ui">⚙ Settings → Data centre</b> is where you say
+    so, and it is used for nothing else. The footer stays reachable under that screen, so Settings,
+    Help and About are one click away while the rest is idle.</p>
 <table data-labelled data-cols="2">
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
