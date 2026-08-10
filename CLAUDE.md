@@ -1254,6 +1254,21 @@ was `{ ok: false }` against `example.com`, so every Analytics panel image carrie
 Zoho Analytics tab» - the off-platform state, photographed and published. It answers with the
 fixture's own workspace id now, and the bar says what it says in use.
 
+**And they are re-rendered only when something moved.** A full run was three minutes of headless
+Chrome producing, for the most part, the same bytes again. The digest that already answered «is
+this picture still of the product» now decides whether to draw it: `tools/siteimg.py` skips an
+image whose recorded digest still matches, and `tools/shots.py` skips an app whose five published
+images are current. Nothing changed: **1:35 to 0.5s** for the site set, three minutes to 0.2s for
+the Store set. `--force` on either draws everything anyway.
+
+That flips the cost of being wrong, so the hash had to grow: rendering needlessly costs ten
+seconds, **skipping something that changed publishes a picture of a product that no longer
+exists**. `source_digest()` therefore covers the renderers too - `shots.py` holds the window size,
+the scale and the stub the panel is fed through - and the invalidation was proven in five
+directions rather than assumed: a change to the CRM panel invalidates the CRM set alone, the same
+for Analytics, a change to `shots.py` or `fsshim.js` invalidates both, and a change to a fixture
+invalidates the app that fixture belongs to.
+
 **Screenshots are rendered, never captured: `python3 tools/shots.py`.** Headless Chrome writes
 exactly what the Store wants - 1280 x 800, `8-bit/color RGB`, no alpha - so nothing is converted
 afterwards and nothing can quietly re-introduce an alpha channel. The pages are the shipped ones byte

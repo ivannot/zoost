@@ -37,7 +37,11 @@ exports, the search and the assistant: useful, none of them what the product *is
 | 4 | the ER diagram | the ER diagram |
 | 5 | the call graph | the health audit |
 
-`python3 tools/shots.py` writes them to `dist/store/<app>/` and prints a digest of each set.
+`python3 tools/shots.py` writes them to `dist/store/<app>/` and prints a digest of each set. It
+**renders only what has moved**: the set is compared against the digest of what it was drawn from
+last time - the app's shipped files, its fixture, the click script and the renderers - and an app
+whose sources have not changed keeps the images already on disk. A run that changes nothing takes
+a fifth of a second instead of three minutes; `--force` draws them anyway.
 `store/<app>/screenshots.json` records the set that is **on the Store**, written by hand at
 submission like the `RELEASES.md` row, because the upload is manual and nothing here can observe it.
 When the digests differ the tool says so, in those words.
@@ -50,8 +54,10 @@ against it.
 ## Where ours come from
 
 Generated, never captured from a real org. `python3 tools/shots.py` renders the panel and the diagram
-window against the fixture in `fixtures/`, at exactly 1280 x 800, and writes 24-bit PNGs to
-`dist/shots/` (git-ignored, like every other build output). Eleven today, both panels and both
+window against the fixture in `fixtures/`, at exactly 1280 x 800, as 24-bit PNGs. With no argument it
+draws **what the Store takes** - the ten images above - and publishes them; with a shot's name it
+draws that one into `dist/shots/` and leaves it there, which is how a new shot gets looked at before
+it is trusted. Eleven today, both panels and both
 diagram windows: the panel with a function open, the modules list, the sample workspace just after
 it is written, the graph, the custom buttons isolated, the Relations table, the ER diagram - and on
 the other side the view census, a table's columns with its foreign keys, and its ER diagram. **Re-render them whenever there is something new to show** - they are a build output,

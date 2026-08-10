@@ -433,6 +433,15 @@ PANELS = [
 ]
 
 
+ALL = [(s[0], s) for s in SHOTS + PANELS + OPTIONS]
+
+
+# Beside the images, not among them: the folder is opened and its contents uploaded in order,
+# so anything in it that is not one of the five is a file somebody has to know to skip.
+def stamp_file(app: str) -> pathlib.Path:
+    return ROOT / "dist" / "store" / ".stamps" / f"{app}.json"
+
+
 def publish_store_set(rendered: dict) -> None:
     """Copy the published subset to dist/store/<app>_<n>.png, in the declared order.
 
@@ -459,6 +468,10 @@ def publish_store_set(rendered: dict) -> None:
             shutil.copy2(rendered[key], out)
             h.update(out.read_bytes())
         digest = h.hexdigest()[:16]
+        from siteimg import source_digest
+        f = stamp_file(app); f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({k: source_digest(app, dict(ALL)[k][-1]) for k in keys},
+                                indent=2) + "\n", encoding="utf-8")
         ledger = ROOT / "store" / app / "screenshots.json"
         was = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {}
         state = ("unchanged since the set uploaded for " + was.get("version", "?")
@@ -468,10 +481,46 @@ def publish_store_set(rendered: dict) -> None:
         print(f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}")
 
 
+def current(app: str, keys) -> bool:
+    """Is the published set for this app already a picture of what is here?
+
+    The digest is the one `imgstamp` uses - the app's shipped files, its fixture, the click script
+    and the renderers - and the stamp sits beside the images it describes, because that is the pair
+    that has to stay together: a stamp without its files claims a set that is not there, and files
+    without a stamp are a set nobody can date. Missing either means render.
+    """
+    from siteimg import source_digest
+    folder = ROOT / "dist" / "store" / app
+    if not all((folder / f"{n}.png").exists() for n in range(1, len(keys) + 1)):
+        return False
+    try:
+        was = json.loads(stamp_file(app).read_text(encoding="utf-8"))
+    except Exception:                                    # noqa: BLE001 - absent or unreadable: render
+        return False
+    by_key = {k: v for k, v in was.items()}
+    return all(by_key.get(k) == source_digest(app, dict(ALL)[k][-1]) for k in keys)
+
+
 def main():
-    want = sys.argv[1:] or [s[0] for s in SHOTS + PANELS + OPTIONS]
+    """No arguments renders what the Store takes; a name renders that one, to be looked at.
+
+    It used to render all twenty-six every time - about three minutes - and twenty-one of them
+    produce nothing that survives the run, since `dist/shots/` is working material. What the Store
+    needs is ten images, and a set whose sources have not moved is already correct on disk.
+    """
+    global ALL
+    force = "--force" in sys.argv
+    named = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if named:
+        want = named
+    else:
+        want = [k for keys in STORE.values() for k in keys]
+        for app, keys in STORE.items():
+            if not force and current(app, keys):
+                print(f"  {app}: unchanged, the five published images are still what this renders")
+                want = [k for k in want if k not in keys]
     rendered = {}
-    if not pathlib.Path(CHROME).exists():
+    if want and not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
     for shot in SHOTS + PANELS + OPTIONS:
         if shot[0] not in want:
@@ -483,11 +532,12 @@ def main():
         if not ok:
             sys.exit("that is not what the Store accepts - see store/assets.md")
         rendered[shot[0]] = dest
-    publish_store_set(rendered)
+    if not named:
+        publish_store_set(rendered)
     # The 1280x800 PNGs are working material: what is published is dist/store/<app>/, and what the
     # site publishes is site/img/. Keeping both meant dist/shots/ sat there afterwards looking like
     # something to upload. A run for one named shot keeps its file - that is what it was asked for.
-    if len(want) > 3:
+    if not named:
         for f in OUT.glob('*.png'):
             f.unlink()
         try:

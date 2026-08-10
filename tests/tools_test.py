@@ -1281,6 +1281,47 @@ class ReadingJavaScriptWithoutAParser(unittest.TestCase):
             self.assertNotIn('//', out.replace('https://', ''))
 
 
+class ImagesAreRenderedOnlyWhenSomethingMoved(unittest.TestCase):
+    """Re-rendering what has not changed produces the same bytes, slowly.
+
+    A full run was about three minutes of headless Chrome, every time, and most of it redrew images
+    whose sources had not moved. The digest that already answered «is this picture still of the
+    product» now decides whether to draw it at all - which flips the cost of being wrong: rendering
+    something needlessly costs ten seconds, skipping something that changed publishes a picture of a
+    product that no longer exists. So the hash has to cover everything that can change a pixel, the
+    renderers included.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots, siteimg
+        self.shots, self.siteimg = shots, siteimg
+
+    def test_the_click_script_is_part_of_what_a_picture_is_of(self):
+        a = self.siteimg.source_digest('crm', 'el.click();')
+        b = self.siteimg.source_digest('crm', 'el.click(); other.click();')
+        self.assertNotEqual(a, b, 'two shots of the same app would share a digest')
+
+    def test_the_renderers_are_in_the_hash(self):
+        src = (ROOT / 'tools/siteimg.py').read_text(encoding='utf-8')
+        i = src.index('def source_digest')
+        body = src[i:src.index('\ndef ', i + 10)]
+        for f in ('shots.py', 'fsshim.js'):
+            self.assertIn(f, body,
+                          f'{f} decides how a shot is drawn and is not in the digest, so changing it '
+                          f'would leave every image looking current')
+
+    def test_the_upload_folder_holds_the_images_and_nothing_else(self):
+        # The folder is opened and its contents uploaded in order; a stamp file among them is a file
+        # somebody has to know to skip.
+        stamp = self.shots.stamp_file('crm')
+        folder = ROOT / 'dist' / 'store' / 'crm'
+        self.assertNotEqual(stamp.parent, folder, 'the stamp sits among the images')
+        if folder.exists():
+            self.assertEqual(sorted(p.name for p in folder.iterdir()),
+                             [f'{n}.png' for n in range(1, len(self.shots.STORE['crm']) + 1)])
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 

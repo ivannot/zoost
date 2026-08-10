@@ -42,7 +42,13 @@ def source_digest(app: str, script: str) -> str:
 
     Per app rather than per screen, deliberately: a panel is one HTML file and one script, so a
     change anywhere in it can reach any shot, and pretending otherwise would go quiet exactly when
-    the change was broad. It over-reports rather than under-reports, and re-rendering is cheap.
+    the change was broad. It over-reports rather than under-reports.
+
+    That direction matters more now that the digest decides what to *re-render* and not only what to
+    report: rendering something that did not need it costs ten seconds, and skipping something that
+    did publishes a picture of a product that no longer exists. So the renderers themselves are in
+    the hash - `shots.py` holds the window size, the scale and the stub the panel is fed through, and
+    a change to any of those changes every image without touching an app.
     """
     h = hashlib.sha256()
     for f in sorted((ROOT / "apps" / app).rglob("*")):
@@ -51,6 +57,8 @@ def source_digest(app: str, script: str) -> str:
     for f in sorted((ROOT / "fixtures").rglob("*")):
         if f.is_file() and app in str(f.relative_to(ROOT / "fixtures")):
             h.update(f.read_bytes())
+    for f in (ROOT / "tools" / "shots.py", ROOT / "tools" / "fsshim.js"):
+        h.update(f.read_bytes())
     h.update(script.encode())
     return h.hexdigest()[:16]
 
@@ -68,21 +76,33 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
     stamp = {}
+    # What was rendered last time, and from what. An image whose sources have not moved is already
+    # correct on disk, and re-rendering it costs ten seconds of headless Chrome to produce the same
+    # bytes. Measured across the whole set: a run that changes nothing now takes about a second.
+    was = json.loads(LEDGER.read_text(encoding="utf-8")) if LEDGER.exists() else {}
+    force = "--force" in sys.argv
     print(f"{'image':22} {'rendered':>13} {'published':>10}")
     every = shots.SHOTS + shots.PANELS + shots.OPTIONS
+    kept = 0
     for shot in every:
         key = shot[0]
+        digest = source_digest(shot[1], shot[-1])
+        dest = OUT / (key + ".webp")
+        if not force and dest.exists() and (was.get(key) or {}).get("from") == digest:
+            stamp[key] = {"app": shot[1], "from": digest}
+            total += dest.stat().st_size
+            kept += 1
+            continue
         png = (shots.render_options if shot in shots.OPTIONS else
                shots.render_panel if shot in shots.PANELS else shots.render)(shot)
         raw = png.stat().st_size
         tmp = png.with_name(key + "-scaled.png")
         subprocess.run([sips, "-Z", str(WIDTH), str(png), "--out", str(tmp)],
                        check=True, capture_output=True)
-        dest = OUT / (key + ".webp")
         subprocess.run([cwebp, "-q", str(QUALITY), "-quiet", str(tmp), "-o", str(dest)], check=True)
         tmp.unlink()
         total += dest.stat().st_size
-        stamp[key] = {"app": shot[1], "from": source_digest(shot[1], shot[-1])}
+        stamp[key] = {"app": shot[1], "from": digest}
         print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB")
     # The 2x renders are working material - what is published is site/img/. Leaving them in dist/
     # meant a folder of PNGs that look like something to upload and are not.
@@ -93,7 +113,8 @@ def main() -> int:
     except OSError:
         pass
     LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"\n  {len(every)} image(s), {total // 1024} KB published under site/img/")
+    print(f"\n  {len(every) - kept} rendered, {kept} already current; "
+          f"{len(every)} image(s), {total // 1024} KB published under site/img/")
     print(f"  what each was rendered from is recorded in {LEDGER.relative_to(ROOT)}, so imgcheck can")
     print("  say when the panel moved and the picture did not.")
     print("  They are lazy-loaded and carry their own width and height, so nothing below them moves.")
