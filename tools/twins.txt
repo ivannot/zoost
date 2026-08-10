@@ -47,7 +47,7 @@ closeScope	7e880dca67a7	9961035b74ab	divergent
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	ecb43a011b8e	ecb43a011b8e	identical
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
-dropWorkspaceState	1073554f7970	768de73a06e2	divergent
+dropWorkspaceState	3e0b1b4c5eef	768de73a06e2	divergent
 egoStat	7f7641ef6a54	7f7641ef6a54	identical
 emptyReason	295c971dd68f	007841754f81	divergent
 engineIncomplete	54560440576d	54560440576d	identical

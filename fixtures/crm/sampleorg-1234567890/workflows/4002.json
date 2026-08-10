@@ -37,6 +37,11 @@
               "type": "functions",
               "name": "dunningRun",
               "id": "9019"
+            },
+            {
+              "type": "email_notifications",
+              "id": "5002",
+              "name": "Welcome message"
             }
           ]
         }

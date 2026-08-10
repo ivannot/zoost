@@ -29,6 +29,11 @@
             "type": "functions",
             "name": "onDealWon",
             "id": "9017"
+          },
+          {
+            "type": "email_notifications",
+            "id": "5005",
+            "name": "Renewal notice"
           }
         ]
       },

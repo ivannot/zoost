@@ -29,6 +29,11 @@
             "type": "function",
             "name": "recalcTotals",
             "id": "9016"
+          },
+          {
+            "type": "email_notifications",
+            "id": "5001",
+            "name": "Invoice reminder"
           }
         ]
       },

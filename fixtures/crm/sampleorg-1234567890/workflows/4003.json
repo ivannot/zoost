@@ -37,6 +37,11 @@
               "type": "functions",
               "name": "escalateTicket",
               "id": "9011"
+            },
+            {
+              "type": "email_notifications",
+              "id": "5003",
+              "name": "Ticket acknowledged"
             }
           ]
         }

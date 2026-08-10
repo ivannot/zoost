@@ -80,6 +80,7 @@ const MSG = {
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   wrongTab: 'Active Zoho tab does not match this workspace.',
+  lastModified: 'Last modified',
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
   noModuleTarget: 'Unknown module target - pull once, or open Zoho first.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
@@ -224,9 +225,9 @@ const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
 // permission system, and a permission system that is not enforced anywhere is theatre.
-const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'failures', 'health'];
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
+const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'actions', 'connections', 'failures', 'health'];
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, connections: true, health: true };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, connections: true, health: false };
 let expScope = Object.assign({}, SCOPE_FULL);
 // What the dialog is editing right now, and which of its boxes were cleared *for* the user because
 // the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
@@ -364,6 +365,7 @@ const AREA_SCOPE = {
   modules: ['modules', 'layouts', 'relations'],
   workflows: ['workflows'],
   schedules: ['schedules'],
+  actions: ['actions'],
   connections: ['connections'],
   failures: ['failures'],
 };
@@ -466,6 +468,10 @@ const TABS = [
   { id: 'modules',     label: 'Modules',     names: true },
   { id: 'workflows',   label: 'Workflows' },
   { id: 'schedules',   label: 'Schedules' },
+  // What a workflow fires: notifications, field updates, tasks, webhooks. One tab and a Kind
+  // filter rather than four tabs, because they answer one question and share one shape - the
+  // same decision the Analytics panel takes for its seven view types.
+  { id: 'actions', label: 'Actions' },
   { id: 'connections', label: 'Connections' },
 ];
 const TAB = Object.fromEntries(TABS.map((t) => [t.id, t]));
@@ -1285,28 +1291,34 @@ function buildTypeChips() {
     ? [['all', 'All'], ['standard', 'Standard'], ['custom', 'Custom']]
     : viewMode === 'connections'
     ? [['all', 'All'], ['used', 'Used'], ['unused', 'Unused'], ['disconnected', 'Disconnected']]
+    : viewMode === 'actions'
+    // Derived from what is on disk, never a written list: `whatsapp`, `assign_owner` and
+    // `create_record` all turned up in one real org and none of them was in anybody's list. A kind
+    // Zoho adds tomorrow gets a filter without anyone remembering, and a kind with nothing in it
+    // gets none - a value nothing lists is a value nothing can filter.
+    ? [['all', 'All'], ...[...new Set(actionData.map((a) => a.kind))].sort().map((k) => [k, actionKindLabel(k)]), ['unused', 'Attached to nothing']]
     : viewMode === 'workflows'
     ? [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['scheduled', 'Has scheduled actions']]
     : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
-  if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else if (viewMode === 'schedules') scheduleFilter = 'all'; else connCatFilter = 'all';
+  if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else if (viewMode === 'schedules') scheduleFilter = 'all'; else if (viewMode === 'actions') actionFilter = 'all'; else connCatFilter = 'all';
   // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
   // second row, eating vertical space the tree/preview below needs more than the filter does.
   const lbl = document.createElement('span'); lbl.className = 'fsellbl';
-  lbl.textContent = viewMode === 'functions' ? 'Type' : viewMode === 'modules' ? 'Kind' : viewMode === 'connections' ? 'Filter' : 'Status';
+  lbl.textContent = viewMode === 'functions' ? 'Type' : (viewMode === 'modules' || viewMode === 'actions') ? 'Kind' : viewMode === 'connections' ? 'Filter' : 'Status';
   const sel = document.createElement('select'); sel.className = 'filtersel'; sel.setAttribute('aria-label', lbl.textContent + ' filter');
   defs.forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); });
   sel.value = 'all';
   sel.onchange = () => {
     const k = sel.value;
-    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k; else connCatFilter = k;
-    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : renderConnections());
+    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k; else if (viewMode === 'actions') actionFilter = k; else connCatFilter = k;
+    (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : viewMode === 'actions' ? renderActions() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
   // Functions only: the numeric columns are what you sort by, and only functions have them.
   if (viewMode === 'functions') {
     const sl = document.createElement('span'); sl.className = 'fsellbl'; sl.textContent = 'Sort';
     const ss = document.createElement('select'); ss.className = 'filtersel'; ss.setAttribute('aria-label', 'Sort functions');
-    [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', 'Last modified']]
+    [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', MSG.lastModified]]
       .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
     ss.value = treeSort;
     const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
@@ -1351,6 +1363,7 @@ function runSearch() {
   if (viewMode === 'modules') { renderModules(); return; }
   if (viewMode === 'workflows') { renderWorkflows(); return; }
   if (viewMode === 'schedules') { renderSchedules(); return; }
+  if (viewMode === 'actions') { renderActions(); return; }
   if (viewMode === 'connections') { renderConnections(); return; }
   if (searchMode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
   else renderTree();
@@ -2515,7 +2528,7 @@ async function addWorkspaceForTab() {
 function dropWorkspaceState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
-  graphCache = null; aiModCache = null; aiConnCache = null;
+  graphCache = null; aiModCache = null; aiConnCache = null; actionUsers = null; failIndex = null;
   aiRenderMessages();
   return had;
 }
@@ -2809,7 +2822,7 @@ const isModuleFile = (p) => p.startsWith('modules/') && p.endsWith('.json')
 const isLayoutFile = (p) => p.startsWith('modules/layouts/') && p.endsWith('.json')
   && p !== 'modules/layouts/index.json';
 
-async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : rebuildConnections(); }
+async function rebuildActive() { return viewMode === 'functions' ? rebuildTree() : viewMode === 'modules' ? rebuildModules() : viewMode === 'workflows' ? rebuildWorkflows() : viewMode === 'schedules' ? rebuildSchedules() : viewMode === 'actions' ? rebuildActions() : rebuildConnections(); }
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished - success or error.
@@ -2828,6 +2841,7 @@ async function pullCurrent() {
     if (viewMode === 'modules') await pullModules();
     else if (viewMode === 'workflows') await pullWorkflows();
     else if (viewMode === 'schedules') await pullSchedules();
+    else if (viewMode === 'actions') await pullActions();
     else if (viewMode === 'connections') await pullConnections();
     else await pullAll();
     if ($('status').className === 'busy') { try { await rebuildActive(); } catch (_) { setStatus('Pull complete.', 'ok'); } }
@@ -2845,7 +2859,7 @@ async function pullCurrent() {
 async function pullEverything() {
   if (pullBusy) return;
   setPullBusy(true);
-  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, connections: pullConnections, failures: pullFailures };
+  const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
   const skipped = [];
   for (const t of TABS) {
     if (isForbidden(t.id)) continue;
@@ -3373,7 +3387,7 @@ function updateRow(e) {
 }
 function updateMissingButton() {
   const b = $('missing'); if (!b) return;
-  if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections') { b.style.display = 'none'; return; }
+  if (viewMode === 'modules' || viewMode === 'schedules' || viewMode === 'connections' || viewMode === 'actions') { b.style.display = 'none'; return; }
   const arr = viewMode === 'workflows' ? workflowData : treeData;
   const miss = arr.filter((e) => !e.downloaded).length;
   const stale = viewMode === 'functions' ? treeData.filter((e) => e.downloaded && e.stale).length : 0;
@@ -4205,6 +4219,173 @@ async function pullConnections() {
     await noteAccess('connections', null);
   } catch (e) { await notePullFailure('connections', e); }
 }
+// ---------- automation actions (what a workflow fires) ----------
+//
+// Four kinds of object, one list. They are what a workflow rule points at - a notification, a field
+// update, a task, a webhook - and Zoost mirrored the rules while resolving only the function ones,
+// which in a real org is the smaller half: 275 notification actions against 149 function ones.
+//
+// The measurement that pays for the area is `associated`: in that same org, 85 notifications of 200,
+// 50 field updates of 97 and 27 tasks of 56 are attached to nothing. It is the same statement this
+// product already makes about a function nobody calls, on objects nobody ever prunes - and it is a
+// candidate, never a verdict, because Zoho answers for the automations it knows about.
+let actionData = [], actionFilter = 'all', actionUsers = null;
+/** Which rules fire each action, read from the workflow files already on disk.
+ *
+ *  This is the join the whole area rests on, and it costs nothing: `fetchWorkflow` has always
+ *  written `conditions[].instant_actions.actions[]` and `conditions[].scheduled_actions[].actions[]`,
+ *  every one of them carrying `{type, id, name}`. The panel resolved the `functions` ones and threw
+ *  the rest away at the filter, so the id needed to answer «who sends this notification» was on disk
+ *  the whole time. Keyed on kind+id, with the name as a fallback the way resolveFn() does it,
+ *  because Zoho gives an id it knows and a name it displays. */
+async function buildActionUsers() {
+  const map = new Map();
+  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  for (const w of Array.isArray(wfIdx) ? wfIdx : []) {
+    let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
+    if (!d) continue;   // not pulled: it is a rule with no measured actions, never a rule with none
+    (d.conditions || []).forEach((c) => {
+      const acts = [];
+      if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions);
+      (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || [])));
+      acts.forEach((a) => {
+        if (!a || !a.type) return;
+        for (const key of [`${a.type}:${String(a.id)}`, `${a.type}:name:${String(a.name || '').toLowerCase()}`]) {
+          if (!map.has(key)) map.set(key, []);
+          if (!map.get(key).some((x) => String(x.id) === String(w.id))) map.get(key).push({ id: w.id, name: w.name });
+        }
+      });
+    });
+  }
+  return map;
+}
+function actionFiredBy(a) {
+  if (!actionUsers) return [];
+  return actionUsers.get(`${a.kind}:${String(a.id)}`)
+      || actionUsers.get(`${a.kind}:name:${String(a.name || '').toLowerCase()}`) || [];
+}
+const ACTION_LABEL = { email_notifications: 'Email notifications', field_updates: 'Field updates',
+                       tasks: 'Tasks', webhooks: 'Webhooks' };
+// A kind Zoho invents tomorrow gets a readable label without anyone editing this: underscores out,
+// first letter up. Declared ones win, the rest are derived - the same rule the diagram window uses
+// for category colours.
+const actionKindLabel = (k) => ACTION_LABEL[k] || String(k || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+async function loadActionsIndex() {
+  let idx = []; try { idx = JSON.parse(await readFile('actions/index.json')); } catch (_) {}
+  return Array.isArray(idx) ? idx : [];
+}
+async function pullActions() {
+  try {
+    if (!(await ensurePerm(dir))) return;
+    const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
+    const cfg = await readCfg();
+    if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }
+    setStatus('Pulling automation actions\u2026', 'busy');
+    const r = await toBridge({ cmd: 'pullActions' });
+    if (!r?.ok) { setStatus('Actions pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    await writeFile('actions/index.json', JSON.stringify(r.actions || [], null, 2));
+    // A kind that refused is stated rather than folded into the total: an org without webhooks and
+    // an org whose role cannot read them look identical in a count.
+    const missed = (r.missed || []).filter((m) => m && m.kind);
+    if (viewMode === 'actions') await rebuildActions();
+    else setStatus(`${(r.actions || []).length} action(s) pulled.` + (missed.length ? ` ${missed.length} kind(s) could not be read.` : ''), missed.length ? 'warn' : 'ok');
+    await noteAccess('actions', null);
+  } catch (e) { await notePullFailure('actions', e); }
+}
+async function rebuildActions() {
+  if (!dir) return;
+  try {
+    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+    setStatus('Reading automation actions\u2026', 'busy');
+    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const idx = await loadActionsIndex();
+    actionUsers = await buildActionUsers();   // one walk of the rules, not one per item opened
+    actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
+    buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
+    renderActions();
+    setStatus(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason() || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
+  } catch (e) { setStatus('Actions error: ' + e.message, 'bad'); }
+  await refreshContext();
+}
+function renderActions() {
+  if (viewMode !== 'actions') return;
+  const term = $('find').value.trim().toLowerCase();
+  const pass = (a) => {
+    if (actionFilter === 'unused' && a.associated) return false;
+    if (actionFilter !== 'all' && actionFilter !== 'unused' && a.kind !== actionFilter) return false;
+    return !term || (a.name || '').toLowerCase().includes(term) || (a.module || '').toLowerCase().includes(term)
+      || (a.field || '').toLowerCase().includes(term) || ((a.template && a.template.name) || '').toLowerCase().includes(term);
+  };
+  const list = actionData.filter(pass).sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b));
+  const tree = $('tree'); tree.innerHTML = '';
+  if (!list.length) {
+    // Three reasons for an empty list and they are different advice - the rule this panel applies
+    // everywhere: say *the* reason, not *a* reason.
+    tree.innerHTML = '<div class="empty">' + (actionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No automation actions yet.</b> Press <b>Pull all</b> to read them.')) + '</div>';
+    return;
+  }
+  let group = null;
+  list.forEach((a) => {
+    if (a.kind !== group) {
+      group = a.kind;
+      const g = document.createElement('div'); g.className = 'grp';
+      const n = list.filter((x) => x.kind === group).length;
+      g.innerHTML = `<span class="chev">\u25be</span><span>${escHtml(actionKindLabel(group).toUpperCase())}</span><span class="cnt">${n}</span>`;
+      tree.appendChild(g);
+    }
+    const el = document.createElement('div'); el.className = 'f'; el.dataset.path = a.path;
+    el.setAttribute('aria-selected', a.path === currentPath);
+    // «Attached to nothing» is the fact this list exists for, so it is the dot - and it is amber,
+    // which in this panel means «there is something to do», not red, which would be a verdict.
+    const dc = a.associated ? 'st-ok' : 'st-stale';
+    const dt = a.associated ? 'Used by at least one rule - click to re-read from Zoho'
+                            : 'No rule uses it, as far as Zoho reports - click to re-read from Zoho';
+    el.innerHTML = `<span class="st ${dc}" title="${escA(dt)}">${a.associated ? '\u25cf' : '\u25d0'}</span>`
+      + `<span class="fname">${escHtml(a.name || a.id)}</span>`
+      + (a.module ? `<span class="rest rl" title="module">${escHtml(a.module)}</span>` : '');
+    el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
+    el.onclick = () => openAction(a);
+    tree.appendChild(el);
+  });
+}
+async function refreshActions() {
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  setStatus('Refreshing automation actions\u2026', 'busy');
+  await pullActions();
+}
+function openAction(a) {
+  currentPath = a.path; pvHist = []; updateBack();
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === a.path));
+  setPvName(a.name || a.id, 'actions/index.json');
+  $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);
+  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;
+  const fires = actionFiredBy(a);
+  let h = '<div class="wfd">'
+    + row('Kind', escHtml(actionKindLabel(a.kind)))
+    + row('Module', escHtml(a.module_label || a.module))
+    + row('Used by', fires.length
+        ? `<b>${fires.length}</b> rule(s)`
+        : (a.associated ? 'Zoho reports it as in use, and no pulled rule names it' : '<span style="color:#f59e0b">no rule uses it</span>'))
+    + (a.template ? row('Template', escHtml(a.template.name || a.template.id)) : '')
+    + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address') + (a.from_address ? ` \u00b7 <span class="mono">${escHtml(a.from_address)}</span>` : '')) : '')
+    + (a.recipient_count != null ? row('Recipients', `${escHtml(String(a.recipient_count))} \u00b7 <span style="color:var(--muted)">a count; Zoost never reads who they are</span>`) : '')
+    + (a.field ? row('Field', `<span class="mono">${escHtml(a.field)}</span>`) : '')
+    + (a.method ? row('Method', escHtml(a.method)) : '')
+    + (a.url ? row('URL', `<span class="mono">${escHtml(a.url)}</span>`) : '')
+    + (a.notify === true ? row('Notify', 'yes') : '')
+    + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
+    + (a.locked ? row('Locked', 'yes') : '');
+  if (fires.length) {
+    h += '<div class="connfns">' + fires.map((w) => `<a class="wf-fn" data-wf="${escA(String(w.id))}" title="${escA(w.name || '')}">\u2699 ${escHtml(w.name || w.id)}</a>`).join('') + '</div>';
+  }
+  h += '</div>';
+  $('pvtable').innerHTML = h;
+  $('pvtable').querySelectorAll('a[data-wf]').forEach((el) => (el.onclick = () => healthOpenWorkflow(el.dataset.wf)));
+  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+}
+
 // ---------- connections view (org-wide catalogue + usage) ----------
 let connectionData = [], connCatFilter = 'all';
 async function loadConnectionsIndex() {

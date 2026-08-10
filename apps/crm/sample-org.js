@@ -366,6 +366,41 @@
     J('modules/index.json', index2);
     J('modules/layouts/index.json', layIndex);
 
+    // ---- automation actions ----
+    // Four kinds with one shape, and the state that matters is `associated`: in a real org about
+    // half of them are attached to nothing, so a fixture where they all are shows a product with
+    // nothing to find. The workflow rules above name the notification ones by id, which is the join
+    // the panel makes - so the sample has rules that fire something other than a function too.
+    const ACT_KINDS = [
+      ['email_notifications', ['Order confirmation', 'Invoice reminder', 'Welcome message',
+                               'Ticket acknowledged', 'Parcel on its way', 'Renewal notice']],
+      ['field_updates', ['Set stage to Won', 'Clear owner', 'Mark as reviewed', 'Reset priority']],
+      ['tasks', ['Call the customer back', 'Chase the invoice', 'Prepare the handover']],
+      ['webhooks', ['Notify the warehouse']],
+    ];
+    const actions = [];
+    ACT_KINDS.forEach(([kind, names], ki) => names.forEach((nm, i) => {
+      const id = String(5000 + ki * 100 + i);
+      const a = { kind, id, name: nm, module: MODULES[(ki + i) % MODULES.length][0],
+                  module_label: MODULES[(ki + i) % MODULES.length][1],
+                  associated: (ki + i) % 3 !== 2, created_by: AUTHOR, modified_by: AUTHOR,
+                  created_time: '2026-06-0' + ((i % 8) + 1) + 'T09:00:00+00:00',
+                  modified_time: '2026-07-1' + ((i % 9) + 1) + 'T09:00:00+00:00', locked: false };
+      if (kind === 'email_notifications') {
+        a.template = { id: String(5900 + i), name: nm + ' template' };
+        // An organisation address and a user's are two different facts, and the panel says which -
+        // so the fixture has both. Neither is a customer's: they are the org's own senders.
+        a.from_type = i % 3 === 0 ? 'user' : 'organization_email';
+        a.from_address = i % 3 === 0 ? 'sales@example.com' : 'noreply@example.com';
+        a.recipient_count = 1 + (i % 3);
+      }
+      if (kind === 'field_updates') a.field = ['Stage', 'Owner', 'Reviewed', 'Priority'][i % 4];
+      if (kind === 'tasks') a.notify = i % 2 === 0;
+      if (kind === 'webhooks') { a.method = 'POST'; a.url = 'https://example.com/hooks/warehouse'; }
+      actions.push(a);
+    }));
+    J('actions/index.json', actions);
+
     // ---- workflows ----
     const wfs = [];
     // A rule that fires a function the org does not have is «broken automation» in the health audit,
@@ -389,9 +424,14 @@
       // A rule naming a function the org does not have keeps its action, because that is the broken
       // automation the health audit exists to report.
       const target = fn ? index.find((e) => e.name === String(fn).split('.').pop()) : null;
-      const actions = !fn ? [] : [target
+      const fnAct = !fn ? [] : [target
         ? { type: i % 3 === 1 ? 'function' : 'functions', name: target.name, id: target.id }
         : { type: 'functions', name: String(fn).split('.').pop(), id: String(4500 + i) }];
+      // Most rules in a real org fire something that is not a function - 275 notification actions
+      // against 149 function ones in the org this was measured on - so most rules here do too, and
+      // the id is the one the actions index carries, because that join is the point of the area.
+      const other = actions[i % actions.length];
+      const actionList = fnAct.concat(other ? [{ type: other.kind, id: other.id, name: other.name }] : []);
       // The *rule* object, which is what fetchWorkflow returns and what the file holds - not a
       // wrapper around it. wfScheduled() reads conditions[].scheduled_actions[].execute_after.
       J('workflows/' + wid + '.json', {
@@ -404,8 +444,8 @@
           // `instant_actions.actions`, which is where Zoho puts an immediate action and where all
           // nine readers look. The fixture wrote a bare `actions` on the condition - a key nothing
           // reads - so only the *scheduled* half of the sample ever had an action at all.
-          instant_actions: { actions: sched ? [] : actions },
-          scheduled_actions: sched ? [{ execute_after: { unit: 2, period: 'days' }, actions: actions }] : [],
+          instant_actions: { actions: sched ? [] : actionList },
+          scheduled_actions: sched ? [{ execute_after: { unit: 2, period: 'days' }, actions: actionList }] : [],
         }],
         last_executed_time: '2026-07-2' + (i % 9) + 'T11:20:00+00:00',
       });

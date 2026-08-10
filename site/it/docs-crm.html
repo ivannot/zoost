@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:800bb8a6d6db61a7 -->
+<!-- translated-from: site/docs-crm.html sha256:7c80f362925090f4 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -87,12 +87,13 @@
       <li><a href="#read">5. Leggere la tua org</a></li>
       <li><a href="#diagram">6. Il diagramma</a></li>
       <li><a href="#relation-name">7. Trovare il nome di una relazione</a></li>
-      <li><a href="#connections">8. Le connessioni</a></li>
-      <li><a href="#health">9. L'audit di salute</a></li>
-      <li><a href="#export">10. Gli export</a></li>
-      <li><a href="#ai">11. Assistente AI e chiavi API</a></li>
-      <li><a href="#sandbox">12. Produzione e sandbox</a></li>
-      <li><a href="#goes-wrong">13. Quando qualcosa non va</a></li>
+      <li><a href="#actions">8. Actions</a></li>
+      <li><a href="#connections">9. Le connessioni</a></li>
+      <li><a href="#health">10. L'audit di salute</a></li>
+      <li><a href="#export">11. Gli export</a></li>
+      <li><a href="#ai">12. Assistente AI e chiavi API</a></li>
+      <li><a href="#sandbox">13. Produzione e sandbox</a></li>
+      <li><a href="#goes-wrong">14. Quando qualcosa non va</a></li>
     </ul>
   </div>
 
@@ -434,7 +435,30 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 7: la risposta è questa tabella. Una riga per related list, con l'API name che serve alla chiamata - che non è l'api_name di nessuno dei due moduli, ed è il motivo per cui questa tabella esiste.</figcaption>
   </figure>
 
-  <h2 id="connections">8. Le connessioni</h2>
+  <h2 id="actions">8. Actions</h2>
+  <p><b>Cosa fa scattare una regola.</b> Un workflow quasi mai fa il lavoro da sé: punta a qualcosa
+    che in Zoho CRM esiste per conto suo e viene riusato da più regole - una <b>notifica email</b>, un
+    <b>field update</b>, un <b>task</b>, un <b>webhook</b>. Zoost rispecchia quei quattro in un elenco
+    solo, sotto <b class="ui">Actions</b>, con un filtro <b class="ui">Kind</b>, perché rispondono a
+    una domanda sola: cosa succede quando la regola scatta, e quali regole fanno scattare questo.</p>
+  <p>Quello che rende l'elenco utile è un dato che ognuno di questi oggetti porta con sé: se Zoho lo
+    considera <b>in uso</b>. In un'org vera circa la metà non lo è - misurato su una: 85 notifiche su
+    200, 50 field update su 97, 27 task su 56. Sono <b>candidati</b>, esattamente come una funzione
+    orfana: Zoho risponde per le regole che conosce, e qualcosa fatto scattare da altrove sarebbe
+    identico. Il filtro è <b class="ui">Attached to nothing</b>.</p>
+  <p>Aprendone uno vedi di cosa è fatto - il template che usa una notifica, il campo che scrive un
+    update, metodo e URL di un webhook, quanti destinatari - e sotto, <b>quali regole lo fanno
+    scattare</b>. Quel collegamento viene letto dalle regole che hai già sul disco, non scaricato: una
+    regola nomina le sue azioni per id, e finora Zoost risolveva solo quelle che erano funzioni
+    Deluge.</p>
+  <p class="note">Due cose non le legge. Il <b>contenuto</b> di un template email, che è un documento
+    e non una struttura - la notifica lo nomina, e Zoho è il posto dove lo leggi. E <b>chi</b> sono i
+    destinatari: il conteggio torna insieme alla regola, l'elenco delle persone no, e Zoost non lo
+    chiede. L'indirizzo del mittente <em>sì</em>, perché «con quale indirizzo esce questa mail» è la
+    domanda per cui l'elenco esiste - è un indirizzo della tua organizzazione o di un tuo utente, mai
+    di un cliente.</p>
+
+  <h2 id="connections">9. Le connessioni</h2>
   <p>Una connessione è la credenziale, identificata da un nome, che una funzione usa in
     <code>invokeurl […connection:"…"]</code>. Zoho te le elenca nel setup, ma non ti dice mai quali funzioni
     ne usano davvero una - così nessuno osa cancellarne una.</p>
@@ -464,7 +488,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 8: il catalogo, e quali funzioni usano ogni connessione - così quella che non usa nessuno si vede.</figcaption>
   </figure>
 
-  <h2 id="health">9. L'audit di salute</h2>
+  <h2 id="health">10. L'audit di salute</h2>
   <p><b class="ui">Health (♥)</b> elenca i candidati orfani, le chiamate non risolte e ambigue, le
     automazioni rotte e i lookup che puntano a moduli che non sono nel workspace. Ogni sezione dichiara cosa
     analizza <b>e cosa no</b> - i client script e le regole di approvazione, per esempio, sono fuori da
@@ -500,7 +524,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 9: <b>la stima e la misura, affiancate.</b> Lunghezza e chiamate coprono tutte le funzioni; i conteggi di esecuzione coprono le più attive e vengono da Zoho.</figcaption>
   </figure>
 
-  <h2 id="failures">9b. Cosa sta fallendo davvero</h2>
+  <h2 id="failures">10b. Cosa sta fallendo davvero</h2>
   <p>L'audit di salute legge lo specchio e trova sospetti <em>strutturali</em> - una funzione che non
     chiama nessuno, una chiamata che non risolve. Non può dirti cosa si è rotto stamattina. Zoho invece lo sa, e Zoost lo legge: <b class="ui">Pull all</b> scarica quello che Zoho segnala come
     fallito, ed è l'unica cosa qui dentro che è la lettura di un runtime invece della fotografia di
@@ -528,7 +552,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 9b: quello che Zoho segnala come fallito, con il motivo e il numero di riga. Le due note in fondo al dettaglio sono le due cose che non farà.</figcaption>
   </figure>
 
-  <h2 id="export">10. Gli export</h2>
+  <h2 id="export">11. Gli export</h2>
   <p>Entrambi gli export aprono prima una finestra, che chiede cosa può contenere il file: funzioni, codice
     sorgente, schema dei moduli, layout, relazioni, workflow, schedulazioni, connessioni, salute. Il preset
     <b>Share-safe</b> esclude il codice sorgente.</p>
@@ -556,7 +580,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 10: cosa può uscire dalla macchina, deciso una volta e ricordato.</figcaption>
   </figure>
 
-  <h2 id="ai">11. Assistente AI e chiavi API</h2>
+  <h2 id="ai">12. Assistente AI e chiavi API</h2>
   <p><b>Conosce anche questa estensione.</b> Chiedigli «come esporto questo?», «cosa succede se premo
     Health?» oppure «può cambiare qualcosa dentro Zoho CRM?» e risponde dal pannello, senza mandarti da
     nessuna parte. Gli scrivi nella lingua che preferisci e ti risponde in quella. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
@@ -681,7 +705,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Capitolo 11: dove si scelgono motore e chiave. Passphrase, tetto dell'indice e limite dei passi di strumento stanno tutti qui.</figcaption>
   </figure>
 
-  <h2 id="sandbox">12. Produzione e sandbox</h2>
+  <h2 id="sandbox">13. Produzione e sandbox</h2>
   <p>Ogni workspace è legato a una sola org, host e istanza, registrati nel suo <code>.zoost.json</code>. Se
     la scheda Zoho che hai davanti appartiene a un'altra org, Zoost disattiva ogni azione che parla con Zoho
     e mostra una barra che ti offre di cambiare scheda o cambiare workspace. È un attrito voluto: è quello
@@ -689,7 +713,7 @@ git commit -m "baseline"</code></pre>
   <p>Rinominare una cartella, o rinominare il portale in Zoho, non rompe niente - l'identità sta nell'id
     dell'org dentro il file, non nel nome della cartella.</p>
 
-  <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
+  <h2 id="goes-wrong">14. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e il workspace che hai selezionato
     appartengono a due org diverse, e tutto quello che parla con Zoho CRM è disattivato finché non si
     accordano. La barra offre due vie d'uscita: <b class="ui">Switch tab → «instance» ↗</b> porta la scheda

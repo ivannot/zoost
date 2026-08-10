@@ -29,6 +29,11 @@
             "type": "functions",
             "name": "onOrderCreate",
             "id": "9015"
+          },
+          {
+            "type": "email_notifications",
+            "id": "5000",
+            "name": "Order confirmation"
           }
         ]
       },

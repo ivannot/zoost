@@ -32,7 +32,13 @@
             "unit": 2,
             "period": "days"
           },
-          "actions": []
+          "actions": [
+            {
+              "type": "field_updates",
+              "id": "5101",
+              "name": "Clear owner"
+            }
+          ]
         }
       ]
     }

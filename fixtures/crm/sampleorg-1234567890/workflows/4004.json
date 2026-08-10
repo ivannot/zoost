@@ -29,6 +29,11 @@
             "type": "function",
             "name": "onContactMerge",
             "id": "9018"
+          },
+          {
+            "type": "email_notifications",
+            "id": "5004",
+            "name": "Parcel on its way"
           }
         ]
       },

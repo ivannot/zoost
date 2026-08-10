@@ -29,6 +29,11 @@
             "type": "functions",
             "name": "archiveOrderLegacy",
             "id": "4510"
+          },
+          {
+            "type": "tasks",
+            "id": "5200",
+            "name": "Call the customer back"
           }
         ]
       },

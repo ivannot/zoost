@@ -33,74 +33,74 @@
   },
   "crm-ai": {
     "app": "crm",
-    "from": "8246dfb6f2ebf0ce"
+    "from": "5ef20b93dfb62b10"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "1fb7741ca0cbaa26"
+    "from": "ba5e44f9763260d7"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "79ba818e768d9352"
+    "from": "6ebde1f0c0452df4"
   },
   "crm-er": {
     "app": "crm",
-    "from": "7441ebc37098a5c9"
+    "from": "6b2aee01f45be901"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "b3cd2a0f51555071"
+    "from": "68ae06ecdc45b844"
   },
   "crm-export": {
     "app": "crm",
-    "from": "a0b4d45252122f2c"
+    "from": "0fa0f5da0dfd59b8"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "129beacbe145a17a"
+    "from": "c392478d91e506cd"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "6f6ddc2edb6ed3db"
+    "from": "b5347d94cc51e284"
   },
   "crm-health": {
     "app": "crm",
-    "from": "cfb8260de4580f38"
+    "from": "af38ac2efcf30298"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "c6f28e84a288316b"
+    "from": "66bf8ae675b31af8"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "4532f398aba85f9b"
+    "from": "a14a64cf76cd3c5d"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "56b92eb94f281d74"
+    "from": "48eccd55d450cef5"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "90aca8d5ffd0f632"
+    "from": "fadd4adc7a81dcec"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "58cf6477302b6881"
+    "from": "994cc9db73ec864c"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "d0f54f9751c080e2"
+    "from": "736ff25ffa9066f5"
   },
   "crm-search": {
     "app": "crm",
-    "from": "6d909145ab75ca61"
+    "from": "f8fd1d44504fa464"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "8f8acff0e7ce9aa7"
+    "from": "d242a43c36c112a1"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "84169e879f908f0f"
+    "from": "d25fb137d3fc22db"
   }
 }

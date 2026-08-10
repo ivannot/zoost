@@ -29,6 +29,11 @@
             "type": "functions",
             "name": "onOrderCreate",
             "id": "9015"
+          },
+          {
+            "type": "field_updates",
+            "id": "5103",
+            "name": "Reset priority"
           }
         ]
       },

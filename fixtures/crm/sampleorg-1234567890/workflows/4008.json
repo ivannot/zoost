@@ -29,6 +29,11 @@
             "type": "functions",
             "name": "checkCreditLimit",
             "id": "9030"
+          },
+          {
+            "type": "field_updates",
+            "id": "5102",
+            "name": "Mark as reviewed"
           }
         ]
       },

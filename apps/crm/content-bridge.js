@@ -121,6 +121,9 @@
   }
   async function api(path, csrfPrefix, retried) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
+    // 204 is an answer: «this org has none of those». It has no body, so res.json() would throw and
+    // an empty area would arrive as a failure - measured on an org with no webhooks at all.
+    if (res.status === 204) return {};
     if (res.ok) return res.json();
     const { message, code } = await errorDetail(res);
     if (!retried && csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
@@ -349,6 +352,75 @@
   // Connections catalogue: the full list of the org's connections (including ones no function uses).
   // connection.name is the join key with a function's meta.connections[].name (the connectionLinkName
   // used in invokeurl [...connection:"..."]). Same host as everything else; needs the zuid.
+  // ---- automation actions: what a workflow fires, as objects in their own right ---------------
+  //
+  // A workflow's action is not an inline instruction: it points at a *thing* that exists on its own
+  // in Zoho, has its own page, and is reused across rules. Zoost mirrored the rules and resolved
+  // exactly one of the kinds - functions - and threw the rest away at the filter. Counted in one
+  // real org: 275 email notification actions against 149 function ones, so the mirror was resolving
+  // the less common half of the automation surface.
+  //
+  // Four lists, one shape: `id`, `name`, `module`, `associated`, `created_by`, `modified_by` and a
+  // couple of fields of their own. They are pulled as one area and written as one index with a
+  // `kind`, the way schedules and connections are one index each - not four folders, because the
+  // question a reader has is «what fires this rule» and not «show me the field updates».
+  //
+  // `associated` is the fact that pays for the whole thing: in that same org, 85 notifications of
+  // 200, 50 field updates of 97 and 27 tasks of 56 are attached to nothing. That is the measurement
+  // this product already makes for functions and connections, on the objects nobody ever prunes.
+  const ACTION_KINDS = [
+    { kind: 'email_notifications', path: '/crm/v9/settings/automation/email_notifications', key: 'email_notifications' },
+    { kind: 'field_updates', path: '/crm/v9/settings/automation/field_updates', key: 'field_updates' },
+    { kind: 'tasks', path: '/crm/v8/settings/automation/tasks', key: 'tasks' },
+    { kind: 'webhooks', path: '/crm/v8/settings/automation/webhooks', key: 'webhooks' },
+  ];
+  function actionRow(kind, r) {
+    const who = (u) => (u && u.name) || null;
+    const row = {
+      kind, id: String(r.id), name: r.name || '',
+      module: (r.module && (r.module.api_name || r.module.moduleName)) || '',
+      module_label: (r.module && (r.module.plural_label || r.module.singular_label)) || '',
+      associated: r.associated === true,
+      created_by: who(r.created_by), modified_by: who(r.modified_by),
+      created_time: r.created_time || null, modified_time: r.modified_time || null,
+      locked: !!(r.lock_status && r.lock_status.locked),
+    };
+    // Each kind adds the one or two facts that make it that kind, and nothing else. `recipient_count`
+    // is a count and never the recipients; a template is named, never fetched.
+    if (kind === 'email_notifications') {
+      row.template = r.template ? { id: String(r.template.id || ''), name: r.template.name || '' } : null;
+      row.from_type = (r.from_address && r.from_address.type) || null;
+      row.from_address = (r.from_address && r.from_address.resource) || null;
+      row.recipient_count = r.recipient_count != null ? Number(r.recipient_count) : null;
+    }
+    if (kind === 'field_updates') row.field = (r.field && (r.field.api_name || r.field.name)) || '';
+    if (kind === 'tasks') row.notify = r.notify === true;
+    if (kind === 'webhooks') { row.method = r.method || ''; row.url = r.url || r.display_url || ''; }
+    return row;
+  }
+  async function pullActions() {
+    const out = [], missed = [];
+    for (const k of ACTION_KINDS) {
+      let page = 1;
+      try {
+        while (true) {
+          const sep = k.path.includes('?') ? '&' : '?';
+          const resp = await api(`${k.path}${sep}page=${page}&per_page=200&sort_by=modified_time&sort_order=desc`);
+          const rows = resp[k.key] || [];
+          rows.forEach((r) => out.push(actionRow(k.kind, r)));
+          const info = resp.info || {};
+          if (!info.more_records || rows.length === 0) break;
+          if (++page > 20) break;   // the same bound the workflow list uses, for the same reason
+        }
+      } catch (e) {
+        // One kind refusing is not the area failing: an org may not have the feature, or the role
+        // may not reach it. Say which, and keep the others.
+        missed.push({ kind: k.kind, error: (e && e.message) || String(e), status: e && e.status, forbidden: !!(e && e.forbidden) });
+      }
+    }
+    return { total: out.length, actions: out, missed };
+  }
+
   async function pullConnections() {
     const org = orgId(); const zu = zuid();
     if (!org) throw new Error('org id not found on the page');
@@ -464,6 +536,7 @@
     if (msg?.cmd === 'fetchOne') { fetchOne(msg.id, msg.category, msg.source).then((file) => sendResponse({ ok: true, file })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'pullModules') { pullModules().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'pullFailures') { pullFailures().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
+    if (msg?.cmd === 'pullActions') { pullActions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'pullConnections') { pullConnections().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'fillSearch') { sendResponse(fillSearch(msg.name)); return; }
     if (msg?.cmd === 'listReady') { sendResponse({ ready: !!findSearchInput() }); return; }

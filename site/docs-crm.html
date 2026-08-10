@@ -80,12 +80,13 @@
       <li><a href="#read">5. Reading your org</a></li>
       <li><a href="#diagram">6. The diagram</a></li>
       <li><a href="#relation-name">7. Finding a relation name</a></li>
-      <li><a href="#connections">8. Connections</a></li>
-      <li><a href="#health">9. Health audit</a></li>
-      <li><a href="#export">10. Exports</a></li>
-      <li><a href="#ai">11. AI assistant &amp; API keys</a></li>
-      <li><a href="#sandbox">12. Production vs sandbox</a></li>
-      <li><a href="#goes-wrong">13. When something goes wrong</a></li>
+      <li><a href="#actions">8. Actions</a></li>
+      <li><a href="#connections">9. Connections</a></li>
+      <li><a href="#health">10. Health audit</a></li>
+      <li><a href="#export">11. Exports</a></li>
+      <li><a href="#ai">12. AI assistant &amp; API keys</a></li>
+      <li><a href="#sandbox">13. Production vs sandbox</a></li>
+      <li><a href="#goes-wrong">14. When something goes wrong</a></li>
     </ul>
   </div>
 
@@ -405,7 +406,29 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 7: this table is the answer. One row per related list, with the API name the call needs - which is neither module's own api_name, and is the reason this table exists.</figcaption>
   </figure>
 
-  <h2 id="connections">8. Connections</h2>
+  <h2 id="actions">8. Actions</h2>
+  <p><b>What a rule fires.</b> A workflow rule almost never does the work itself: it points at something that exists on its own
+    in Zoho CRM and is reused across rules - an <b>email notification</b>, a <b>field update</b>, a
+    <b>task</b>, a <b>webhook</b>. Zoost mirrors those four as one list under <b class="ui">Actions</b>,
+    with a <b class="ui">Kind</b> filter, because they answer one question: what happens when a rule
+    fires, and which rules fire this.</p>
+  <p>What makes the list worth having is a fact each of them carries: whether Zoho considers it
+    <b>in use</b>. In a real org roughly half are not - measured on one, 85 notifications of 200, 50
+    field updates of 97, 27 tasks of 56. Those are <b>candidates</b>, exactly as an orphan function
+    is: Zoho answers for the rules it knows about, and something fired from elsewhere would look
+    identical. The filter for them is <b class="ui">Attached to nothing</b>.</p>
+  <p>Opening one shows what it is made of - the template a notification uses, the field an update
+    writes, the method and URL of a webhook, how many recipients - and underneath, <b>which rules fire
+    it</b>. That link is read from the rules already on your disk rather than fetched: a rule names
+    its actions by id, and until now Zoost resolved only the ones that were Deluge functions.</p>
+  <p class="note">Two things it does not read. The <b>content</b> of an email template, which is a
+    document rather than a structure - the notification names it, and Zoho is where you read it. And
+    <b>who</b> the recipients are: the count comes back with the rule, the list of people does not,
+    and Zoost never asks for it. The sender's address <em>is</em> captured, because «which address does
+    this go out as» is the question the list exists to answer - it is your organisation's own address
+    or one of your users', never a customer's.</p>
+
+  <h2 id="connections">9. Connections</h2>
   <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists
     them in setup, but never tells you which functions actually use one - so nobody dares delete any.</p>
   <p>The <b class="ui">Connections</b> tab is the org's catalogue, pulled with <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>. One row
@@ -431,7 +454,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.</figcaption>
   </figure>
 
-  <h2 id="health">9. Health audit</h2>
+  <h2 id="health">10. Health audit</h2>
   <p><b class="ui">Health (♥)</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
     lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
     not</b> analyse - client scripts and approval rules, for instance, are outside what Zoho exposes.</p>
@@ -466,7 +489,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 9: <b>the guess and the measurement, side by side.</b> Length and outbound calls cover every function; the run counts cover the busiest few and come from Zoho.</figcaption>
   </figure>
 
-  <h2 id="failures">9b. What is actually failing</h2>
+  <h2 id="failures">10b. What is actually failing</h2>
   <p>The health audit reads the mirror and finds <em>structural</em> suspects - a function nothing calls,
     a call that resolves to nothing. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull all</b> fetches what Zoho reports as having
     failed, and it is the one thing here that is a reading of a runtime rather than a photograph of a
@@ -494,7 +517,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 9b: what Zoho reports as failing, with the reason and its line number. The two notes at the bottom of the detail are the two things it will not do.</figcaption>
   </figure>
 
-  <h2 id="export">10. Exports</h2>
+  <h2 id="export">11. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
     layouts, relations, workflows, schedules, connections, health. The <b>Share-safe</b> preset excludes source
     code.</p>
@@ -520,7 +543,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 10: what may leave the machine, decided once and remembered.</figcaption>
   </figure>
 
-  <h2 id="ai">11. AI assistant &amp; API keys</h2>
+  <h2 id="ai">12. AI assistant &amp; API keys</h2>
   <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho CRM?" and it answers from the panel, without sending you anywhere. Write to it in whatever language you like and it answers in that one. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
   <p>Optional and off until you configure it. Open <b class="ui">⚙ Settings</b> (bottom of the panel) →
     <b>AI assistant</b>. Two providers are supported.</p>
@@ -638,7 +661,7 @@ git commit -m "baseline"</code></pre>
     <figcaption>Chapter 11: where the engine and the key are chosen. The passphrase, the index cap and the tool-step limit are all on this page.</figcaption>
   </figure>
 
-  <h2 id="sandbox">12. Production vs sandbox</h2>
+  <h2 id="sandbox">13. Production vs sandbox</h2>
   <p>Every workspace is bound to one org, host and instance, recorded in its <code>.zoost.json</code>. If the
     Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar
     offering to switch tab or switch workspace. This is deliberate friction: it is what stops a sandbox pull
@@ -646,7 +669,7 @@ git commit -m "baseline"</code></pre>
   <p>Renaming a folder, or renaming the portal in Zoho, does not break anything - identity lives in the org id
     inside the file, not in the folder name.</p>
 
-  <h2 id="goes-wrong">13. When something goes wrong</h2>
+  <h2 id="goes-wrong">14. When something goes wrong</h2>
   <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Switch tab → «instance» ↗</b> takes the tab to the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
   <p><b>With no Zoho CRM tab at all</b> the panel says so over the whole workbench and offers
     <b class="ui">Go to Zoho CRM ↗</b>, which opens your Zoho CRM home - the account's, not a
