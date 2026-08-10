@@ -1,0 +1,98 @@
+{
+  "analytics-ai": {
+    "app": "analytics",
+    "from": "c0cdaea9994d2dd9"
+  },
+  "analytics-columns": {
+    "app": "analytics",
+    "from": "1cf9d037ec95276e"
+  },
+  "analytics-er": {
+    "app": "analytics",
+    "from": "0b903d1e6cc9dc1a"
+  },
+  "analytics-export": {
+    "app": "analytics",
+    "from": "93bc4aa12c75f605"
+  },
+  "analytics-health": {
+    "app": "analytics",
+    "from": "b4a655f216435f95"
+  },
+  "analytics-lineage": {
+    "app": "analytics",
+    "from": "1e63decf8064debf"
+  },
+  "analytics-panel": {
+    "app": "analytics",
+    "from": "ed17c76c26c34af6"
+  },
+  "analytics-settings": {
+    "app": "analytics",
+    "from": "28389477b62863b7"
+  },
+  "crm-ai": {
+    "app": "crm",
+    "from": "14e84aa4a5dc7fff"
+  },
+  "crm-buttons": {
+    "app": "crm",
+    "from": "24dbfcb705d0fa90"
+  },
+  "crm-connections": {
+    "app": "crm",
+    "from": "bed3bea42ecbd57e"
+  },
+  "crm-er": {
+    "app": "crm",
+    "from": "2114c40ec6788622"
+  },
+  "crm-explorer": {
+    "app": "crm",
+    "from": "4e6b556980cbbe84"
+  },
+  "crm-export": {
+    "app": "crm",
+    "from": "02d44f8ba80bd4dc"
+  },
+  "crm-graph": {
+    "app": "crm",
+    "from": "c8a870bc60a74690"
+  },
+  "crm-health": {
+    "app": "crm",
+    "from": "d8e789d68067079a"
+  },
+  "crm-modules": {
+    "app": "crm",
+    "from": "e7ac916541e3730f"
+  },
+  "crm-panel": {
+    "app": "crm",
+    "from": "aec47f5cbc268251"
+  },
+  "crm-preview": {
+    "app": "crm",
+    "from": "a472e1adf3dd6093"
+  },
+  "crm-relations": {
+    "app": "crm",
+    "from": "c5d962d4e7ef2f87"
+  },
+  "crm-sample": {
+    "app": "crm",
+    "from": "f984969f2deea6af"
+  },
+  "crm-search": {
+    "app": "crm",
+    "from": "5635050b5c0d46ab"
+  },
+  "crm-settings": {
+    "app": "crm",
+    "from": "4abff3abfd1808a5"
+  },
+  "crm-workflows": {
+    "app": "crm",
+    "from": "232e5425281fe5f3"
+  }
+}

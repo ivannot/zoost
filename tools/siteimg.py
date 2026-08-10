@@ -18,6 +18,8 @@ Two differences from `tools/shots.py`, and both are about where the image ends u
 accepted for the same reason Chrome is: this runs when somebody publishes images, not when somebody
 builds the extension, and nothing under `apps/` gains a dependency.
 """
+import hashlib
+import json
 import pathlib
 import shutil
 import subprocess
@@ -28,8 +30,29 @@ import shots  # noqa: E402  - the renderers, the fixture wiring and the click sc
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "img"
+LEDGER = ROOT / "tools" / "imgstamp.json"
 WIDTH = 1760      # 2x the 880px the content column reaches at its widest
 QUALITY = 80
+
+
+def source_digest(app: str, script: str) -> str:
+    """What this image is a picture of: the app's shipped files, the fixture it was rendered
+    against, and the click script that drove it. Any of the three moving means the picture may no
+    longer be one of the product - which is the thing nothing could tell you before this existed.
+
+    Per app rather than per screen, deliberately: a panel is one HTML file and one script, so a
+    change anywhere in it can reach any shot, and pretending otherwise would go quiet exactly when
+    the change was broad. It over-reports rather than under-reports, and re-rendering is cheap.
+    """
+    h = hashlib.sha256()
+    for f in sorted((ROOT / "apps" / app).rglob("*")):
+        if f.is_file() and f.suffix in (".html", ".js", ".css", ".json"):
+            h.update(f.name.encode()); h.update(f.read_bytes())
+    for f in sorted((ROOT / "fixtures").rglob("*")):
+        if f.is_file() and app in str(f.relative_to(ROOT / "fixtures")):
+            h.update(f.read_bytes())
+    h.update(script.encode())
+    return h.hexdigest()[:16]
 
 
 def need(binary: str) -> str:
@@ -44,6 +67,7 @@ def main() -> int:
     shots.SCALE = 2                       # a retina source; see the module docstring
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
+    stamp = {}
     print(f"{'image':22} {'rendered':>13} {'published':>10}")
     every = shots.SHOTS + shots.PANELS + shots.OPTIONS
     for shot in every:
@@ -58,8 +82,12 @@ def main() -> int:
         subprocess.run([cwebp, "-q", str(QUALITY), "-quiet", str(tmp), "-o", str(dest)], check=True)
         tmp.unlink()
         total += dest.stat().st_size
+        stamp[key] = {"app": shot[1], "from": source_digest(shot[1], shot[-1])}
         print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB")
+    LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\n  {len(every)} image(s), {total // 1024} KB published under site/img/")
+    print(f"  what each was rendered from is recorded in {LEDGER.relative_to(ROOT)}, so imgcheck can")
+    print("  say when the panel moved and the picture did not.")
     print("  They are lazy-loaded and carry their own width and height, so nothing below them moves.")
     return 0
 

@@ -15,9 +15,17 @@ Five checks, all derived, none holding a list of pages:
   5. a page and its translation carry the **same number** of figures. The twin rule applies to
      pictures too: a reader who switches language and finds one page illustrated and the other bare
      is meeting two different products.
+  6. **the picture is still a picture of the product.** `tools/imgstamp.json` records what each
+     image was rendered from - the app's shipped files, the fixture, and the click script that drove
+     it - so a panel that has moved since is reported rather than left to be noticed. This is the
+     one thing the first version could not do: it checked that images existed and were used, which
+     says nothing about whether they are still true. Per app, not per screen: a panel is one file
+     and a change anywhere in it can reach any shot, so it over-reports rather than going quiet on a
+     broad change. The fix is always the same - run `python3 tools/siteimg.py` again.
 
     python3 tools/imgcheck.py
 """
+import json
 import pathlib
 import re
 import sys
@@ -25,6 +33,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 IMG = SITE / "img"
+STAMP = ROOT / "tools" / "imgstamp.json"
 sys.path.insert(0, str(ROOT / "tools"))
 import shots  # noqa: E402  - the renderer is the authority on which images exist
 
@@ -37,6 +46,27 @@ def main() -> int:
     findings = []
     rendered = {s[0] for s in shots.SHOTS + shots.PANELS + shots.OPTIONS}
     published = {p.stem for p in IMG.glob("*.webp")}
+
+    stamp = json.loads(STAMP.read_text(encoding="utf-8")) if STAMP.exists() else {}
+    if not stamp:
+        findings.append("tools/imgstamp.json is missing - nothing can say whether the images still "
+                        "show the product; run python3 tools/siteimg.py")
+    else:
+        sys.path.insert(0, str(ROOT / "tools"))
+        from siteimg import source_digest
+        seen = set()
+        for shot in shots.SHOTS + shots.PANELS + shots.OPTIONS:
+            key, app = shot[0], shot[1]
+            want = source_digest(app, shot[-1])
+            got = (stamp.get(key) or {}).get("from")
+            if got and got != want:
+                seen.add(app)
+            elif not got:
+                findings.append(f"{key}: nothing records what it was rendered from")
+        for app in sorted(seen):
+            findings.append(f"{app}: the panel or its fixture has changed since these images were "
+                            f"rendered - run python3 tools/siteimg.py so the site shows the product "
+                            f"as it is now")
 
     for key in sorted(rendered - published):
         findings.append(f"{key}: the renderer produces it and site/img/ has no copy - "

@@ -1172,6 +1172,16 @@ carry the same number of figures**, because a reader who switches language and f
 illustrated and the other bare is meeting two products. It found seven rendered-and-never-placed
 images the first time it ran. 24 images, 1.26 MB, across 16 pages.
 
+**And the sixth check is the one that keeps them true.** The first five say the images exist, are
+used, are described and are symmetric across the two languages - none of which says whether a
+picture still shows the product. `tools/imgstamp.json` records what each was rendered from: the
+app's shipped files, the fixture, and the click script that drove it. Change any of the three and
+the check says which app to re-render, in the same differential shape as `tools/twins.txt`. **Per
+app rather than per screen, deliberately**: a panel is one HTML file and one script, so a change
+anywhere in it can reach any shot, and per-screen precision would go quiet exactly when the change
+was broad. It over-reports and re-rendering is cheap. Proven three ways - a line of panel markup, a
+field in the fixture, a comment in a click script - one finding each.
+
 **A click script that agrees with nothing renders the default state, silently.** The full-text search
 shot toggled a `#findscope` that does not exist - the control is `#smode` - so it searched *names*
 and published «No matches» under a caption about searching code. A screenshot that advertises a
