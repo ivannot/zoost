@@ -238,6 +238,7 @@ a574518fd5886dde  site/docs-crm.html: Which one to choose Anthropic (Claude) Ope
 e3a85bca70d7fa00  site/docs-crm.html: Wrong passphrase or none, and nothing is changed - the encrypted key is left exactly as it was rather than discarded.
 2276f78bba443b13  site/docs-crm.html: You can turn it back off at any time , and the way back is symmetrical: Zoost asks for the current passphrase, because storing the key in clear text again means decrypting it first, and only you can do that.
 4d6b5273ddf128c9  site/docs-crm.html: Zoho answers with the busiest few , not every function, so an absent function means «not in the top list», never «never ran».
+44707451a08e8efa  site/docs-crm.html: Zoho knows the answer, and Zoost now asks: Pull runtime at the top of the view re-reads only that - what is failing and how often things ran - instead of Pull all , which would fetch the whole org again to refresh one reading.
 86e3c18d08c02012  site/docs-crm.html: Zoho lists them in setup, but never tells you which functions actually use one - so nobody dares delete any.
 f6bba5fbd59303d1  site/docs-crm.html: Zoost only reads from Zoho - it never writes back.
 5eefb0ef5b526b2a  site/docs-crm.html: Zoost takes you to it, but the last click is yours - it never drives the Zoho interface for you.

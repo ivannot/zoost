@@ -1794,6 +1794,28 @@ test('every element the diagram window reaches for is in its own markup', () => 
   }
 });
 
+test('every element the side panel reaches for is in its own markup', () => {
+  // The same check as the one above, on the file it was never pointed at. It earned that immediately:
+  // a `$('healthpull').onclick = …` was added at the top level while the markup for it had failed to
+  // be written, so the assignment threw, **the whole panel stopped evaluating there**, and the panel
+  // came up saying «No workspace.» over a fixture that was right in front of it. `node --check` is
+  // happy with all of that; only running it, or this, finds it.
+  // Named rather than pattern-matched, so adding one is a decision - the same rule as the diagram
+  // window's list above. Five are built into innerHTML by the module detail pane and wired straight
+  // after; `pvfailgo` is the same shape in the failures block; and `q` is not in this document at
+  // all - it is the search box of the **exported HTML report**, written into a <script> string for a
+  // file that opens somewhere else entirely.
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q']);
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
+    const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+    const used = new Set([...js.matchAll(/\$\('([^']+)'\)/g), ...js.matchAll(/getElementById\('([^']+)'\)/g)]
+      .map((m) => m[1]));
+    const missing = [...used].filter((id) => !have.has(id) && !RUNTIME.has(id)).sort();
+    assert.deepEqual(missing, [], `${app}: sidepanel.js reaches for ids that no longer exist`);
+  }
+});
+
 test('the Visual view is gone from Analytics too, and the shared machinery is not', () => {
   // It went from the CRM when it turned out to be a weaker drawing of what the boxed diagram already
   // shows. Leaving it on one side made the twins two different products in the window they share.

@@ -4424,7 +4424,27 @@ loadScope();
 // pull learning something new both call renderTabs themselves.
 loadTabPrefs().then(renderTabs);
 document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
-$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
+$('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One group in the health view is read from Zoho; the rest is computed from the mirror. Before this
+// existed the only way to refresh that group was «Pull all» - the whole org re-downloaded to update
+// one reading, which he pointed out. It refuses on the wrong tab and on a sample like every other
+// Zoho-bound control, and it rebuilds the view in place rather than closing it.
+async function pullHealthRuntime() {
+  // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
+  // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
+  // switching tabs to fix something no tab can fix.
+  if (sampleRefuse()) return;
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  const b = $('healthpull'); b.disabled = true;
+  try {
+    await pullFailures();
+    failIndex = null;                       // the file changed under it
+    healthData = await buildHealth();
+    renderHealthView();
+  } catch (e) { setStatus('Could not re-read: ' + e.message, 'bad'); }
+  finally { b.disabled = false; }
+}
+$('healthpull').onclick = pullHealthRuntime;
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;

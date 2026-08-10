@@ -64,6 +64,8 @@ EQUIV = {
 # Elements that exist in one product because the other has no such concept. Each owes a reason.
 PRODUCT_ONLY = {
     'crm': {
+        'healthpull': 'one group in the CRM health view is read from Zoho at runtime and needs its own '
+                      'refresh; the Analytics health view is computed from the mirror end to end',
         'funcs': 'the functions view',
         'missing': 'per-type "complete missing"; Analytics retries failed items instead',
         'pullone': 'per-type pull; Analytics pulls one view from its detail pane',
@@ -116,6 +118,8 @@ EXPECTED = {
     ('#healthbody', 'line-height'): 'ditto',
 }
 EXPECTED_SOLO = {
+    '#healthview .hhr': 'the row holding the CRM health view own Pull, which Analytics has no reason '
+                        'for - nothing in its health view is read from the platform',
     '.bar': 'the CRM has a per-mode button row; Analytics has no modes',
     '.dtab:disabled': 'Analytics disables a detail tab when the selection cannot be projected into '
                       'it; the CRM has two - Code and Details - and both always apply to a function',
