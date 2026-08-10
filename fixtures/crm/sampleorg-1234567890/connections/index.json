@@ -16,7 +16,7 @@
     "label": "Payments gateway",
     "connector": "custom",
     "connectorLabel": "Custom service",
-    "connected": true,
+    "connected": false,
     "createdBy": "Sample User",
     "scopes": [
       "ZohoCRM.modules.ALL"

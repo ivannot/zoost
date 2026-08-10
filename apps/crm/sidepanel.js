@@ -4699,11 +4699,22 @@ function renderConnections() {
   list.forEach((c) => {
     const el = document.createElement('div'); el.className = 'f'; el.dataset.path = c.path;
     el.setAttribute('aria-selected', c.path === currentPath);
-    const dc = c.missing ? 'st-err' : c.connected === false ? 'st-stale' : 'st-ok';
-    const dch = c.missing ? '⟳' : c.connected === false ? '◐' : '●';
-    const dt = (c.missing ? 'Used by a function but not in the pulled catalogue' : c.connected === false ? 'Configured but not connected' : 'Connected') + ' - click to refresh connections from Zoho';
-    el.innerHTML = `<span class="st ${dc}" title="${escA(dt)}">${dch}</span><span class="fname">${escHtml(c.label || c.name)}</span>`
-      + `<span class="rest rf" title="functions using it">${c.uses.length}×</span>`
+    // The dot is the mirror state, here as everywhere else: ● here · ○ not here yet · ◐ partial ·
+    // ⟳ failed · ⊘ refused. It was carrying the *connection's* own status - ◐ for «configured but
+    // not connected» - which reads as «downloaded incompletely», and that is the same collision the
+    // Actions list had. Reported, and it is the older of the two.
+    //
+    // A fact about the connection is a badge, beside the count of functions that use it. «Not in the
+    // catalogue» stays amber, because that one is worth acting on: a function names a connection the
+    // org does not have.
+    const inMirror = !c.missing;
+    const dt = (inMirror ? 'In the local mirror' : 'Named by a function and not in the pulled catalogue')
+      + ' - click to re-read the catalogue from Zoho';
+    el.innerHTML = `<span class="st ${inMirror ? 'st-ok' : 'st-no'}" title="${escA(dt)}">${inMirror ? '●' : '○'}</span>`
+      + `<span class="fname">${escHtml(c.label || c.name)}</span>`
+      + `<span class="rest ${c.uses.length ? 'rf' : 'rc'}" title="functions using it">${c.uses.length}×</span>`
+      + (c.missing ? '<span class="rest rc" title="a function names it and the pulled catalogue does not have it">not in catalogue</span>'
+         : c.connected === false ? '<span class="rest rc" title="configured in Zoho but not connected">not connected</span>' : '')
       + (c.connector ? `<span class="rest rl" style="color:#a78bfa" title="connector">${escHtml(c.connector)}</span>` : '');
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshConnections(); };   // the status dot acts, like every other tab's does (here: re-pull the catalogue)
     el.onclick = () => openConnection(c);

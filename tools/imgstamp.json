@@ -33,78 +33,78 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "b672ef39063ca153"
+    "from": "1ed1d639a9a36277"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "34d72b2d3b090d6c"
+    "from": "d0dd8edf95247853"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "1b544ee6ad276563"
+    "from": "93e30473889a56f6"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "f1a44b76689d6f2a"
+    "from": "26b6bce202f964cd"
   },
   "crm-er": {
     "app": "crm",
-    "from": "e0328ea6e1e6fc4c"
+    "from": "842b8d76e9df802e"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "6db80daf320f2725"
+    "from": "9b938ffcfe0dc6ca"
   },
   "crm-export": {
     "app": "crm",
-    "from": "550362f2f8c3f024"
+    "from": "fd82d2e45eb54651"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "2e95b407fa7e62be"
+    "from": "ff561493d591bca1"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "057e01cd768ad5b3"
+    "from": "286c417c53948ae7"
   },
   "crm-health": {
     "app": "crm",
-    "from": "e75696a72ea8b285"
+    "from": "00de2da9987ceb5d"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "740b86d18ed759aa"
+    "from": "783471b68941ad1b"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "ee7f744b90558b08"
+    "from": "22fd2e085fc08f8b"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "05b4f4239e82d6b6"
+    "from": "32140c957c740888"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "9a92861cccd5df48"
+    "from": "5cdc8041a6200d90"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "348b8e4528457f96"
+    "from": "25010f6bd9542dd9"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "511e05bd8949715f"
+    "from": "7e1892dddd001e65"
   },
   "crm-search": {
     "app": "crm",
-    "from": "ebd1257107ad73a3"
+    "from": "c1cb94cef3e453ef"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "96266a48ba32356d"
+    "from": "cb6a11a250d1b367"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "5ad60f4971725798"
+    "from": "3f39427cb15fbeaa"
   }
 }

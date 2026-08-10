@@ -496,9 +496,11 @@
                frequency: r, next: '2026-08-08T02:00:00+00:00',
                last: '2026-08-0' + (1 + (i % 7)) + 'T02:00:00+00:00' };
     }));
+    // One connection configured and not connected, because that is a state the list draws and the
+    // fixture had none of: every one was connected, so the badge that says so was never rendered.
     J('connections/index.json', CONNECTIONS.map(([c, lbl], i) =>
       ({ name: c, label: lbl, connector: 'custom', connectorLabel: 'Custom service',
-         connected: true, createdBy: AUTHOR, scopes: ['ZohoCRM.modules.ALL'],
+         connected: !(o.edgeCases && i === 1), createdBy: AUTHOR, scopes: ['ZohoCRM.modules.ALL'],
          id: String(2000 + i) })));
 
     // ---- execution failures ----
