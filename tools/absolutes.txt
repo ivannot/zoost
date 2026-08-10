@@ -69,13 +69,16 @@ f6d29ba587222ef2  site/ai.html: The route that costs nothing Take the Markdown f
 a61d96dad2374744  site/ai.html: This is the case it was written for You would rather nothing left the machine without you watching The export - and read the file before you paste it The claim worth making is smaller than "it has AI in it", and it is the one that survives being checked: the built-in assistant buys retrieval and proximity, not knowledge.
 3699501f03217e43  site/ai.html: This page is about the other part: what an assistant can do with what Zoost has already written to disk, what the built-in one adds that a file cannot, and where it stops being worth a key.
 c78d61d24b99f7ec  site/ai.html: Turn it off, never configure it, and the workbench is the same workbench.
+53fea2cd59f0e279  site/ai.html: Under the title is the size of the index that travels with every message, in characters and tokens - the knob and its cost in the same place.
 6cfff38e2d3484a0  site/ai.html: What decides yours is the index, which travels with every message and whose size the panel shows you, plus however many tool steps an answer takes.
 9483f2cc167a1600  site/ai.html: What is offered instead is a passphrase only you hold: the key is encrypted with it, you type it once per browser session, and there is no recovery - no hint, no reset, no escrow.
 3c6086a81f26cd31  site/ai.html: When an org is too large to name in full, what gets dropped is decided rather than arbitrary - the function list, or the data objects in Zoho Analytics, are never dropped, because they are the vocabulary everything else refers to - and whatever is left out is stated as left out, so it does not conclude that something does not exist because it was not shown it.
 da8093c9efd2f438  site/ai.html: Zoost - workbench for Zoho CRM list_functions get_function who_calls get_callees search_code get_module get_workflow list_workflows get_connection Zoost - workbench for Zoho Analytics list_views get_view get_structure get_sql search_sql search_columns get_relations who_uses orphans Every call it makes is printed in the chat as it happens, so what it read is something you can see rather than something it claims.
 4d9f5653bba65f93  site/ai.html: Zoost never runs, validates or deploys anything - including the SQL the Zoho Analytics assistant will happily write for you.
 b47a8ce53f79f7fc  site/analytics.html: Before you delete anything Asking Zoho Analytics what depends on a view, three hundred times by hand, is how the question never gets asked.
+5e45beb3911ae875  site/analytics.html: Candidates to review, never a verdict.
 7f17ad5c6f83a005  site/analytics.html: Candidates, never a verdict - a shared link or a scheduled export is invisible to that graph, and the number says so.
+e92bce7d0cb8fe11  site/analytics.html: Every join written the way Zoho Analytics writes it, not re-rendered in my words - focus one table and walk out from it.
 a2f4a27fc1aa173c  site/analytics.html: Every view with its type and dates, the columns and foreign keys of every table, and the SQL behind each query table as a file you can diff.
 0450916252dde313  site/analytics.html: Exports, and an optional assistant The whole workspace as one HTML file, or as Markdown - which carries the constraints of Zoho Analytics' SQL dialect, so an assistant does not write queries that cannot run.
 34d0256cce032b73  site/analytics.html: Foreign keys on every column, both ways : what it points at, and what points at it.
@@ -89,6 +92,7 @@ f690eee4ea0c680a  site/analytics.html: The endpoints that return cell values exi
 d8816b3bf795f3b4  site/analytics.html: The panel takes the workspace from the tab you are on; there is nothing to configure and nothing to pick wrong.
 2c3386115d0cf852  site/analytics.html: Then the ER diagram, what reads from what - and the list of what nothing seems to read any more, with what that list cannot see written beside it.
 e086a0abcf55d402  site/analytics.html: What nothing depends on Zoho Analytics' own dependency answer, asked once for everything instead of one view at a time.
+a64eb75b3e8c6000  site/analytics.html: What nothing depends on any more - and, next to the number, what the scan cannot see: a shared link, a scheduled export, an API consumer.
 8d83e61eaf40e616  site/analytics.html: What that is worth, and how to evaluate it that way → What it rests on, the two endpoints it deliberately never calls, and how to check any of it: the nerd page .
 fbe79589c7c194d9  site/analytics.html: What the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
 d2a8aead229f1846  site/analytics.html: What you built, and what Zoho put there Half the tables in a connected workspace arrived by sync and were never yours.
@@ -274,6 +278,7 @@ aac1c1a4f6caeec7  site/it/ai.html: Quindi la decima domanda di un thread costa p
 b2128a67ca2d02f1  site/it/ai.html: Se la perdi, il pulsante Forget di ciascun fornitore cancella quella chiave così puoi incollarne una nuova, e Remove the protection toglie tutto con un controllo solo.
 c1db9d78d256e145  site/it/ai.html: Se non apri mai l'assistente non ti manca nulla: è stato aggiunto a un workbench che già funzionava.
 db8e9b865b5fba02  site/it/ai.html: Si apre in qualsiasi browser, si stampa, e chi lo legge non deve installare niente e non deve avere accesso alla tua org.
+999fb86ef5ed6b1c  site/it/ai.html: Sotto il titolo c'è la dimensione dell'indice che viaggia con ogni messaggio, in caratteri e token: la manopola e il suo costo nello stesso posto.
 84f5d8424f5b8c7c  site/it/ai.html: Spegnilo, non configurarlo mai, e il workbench resta lo stesso workbench.
 8c364cb6193953a6  site/it/ai.html: Tutta la conversazione viene rimandata a ogni messaggio - le tue domande, le risposte, e ogni funzione, vista o file SQL che l'agente ha aperto strada facendo.
 b36727d0cd405188  site/it/ai.html: Zoost - workbench for Zoho CRM list_functions get_function who_calls get_callees search_code get_module get_workflow list_workflows get_connection Zoost - workbench for Zoho Analytics list_views get_view get_structure get_sql search_sql search_columns get_relations who_uses orphans Ogni chiamata che fa viene scritta nella chat mentre succede, così quello che ha letto è una cosa che vedi invece di una cosa che dichiara.
@@ -283,6 +288,7 @@ dae4a2ef755c22ac  site/it/ai.html: È disattivata di default e la cosa è detta 
 3593dc1bc90c5c34  site/it/ai.html: È il comportamento previsto ed è anche una differenza reale di capacità: il motore in uso è scritto come badge nell'intestazione della chat, così sai sempre con quale dei due stai parlando.
 a840e6ed5656ec2e  site/it/ai.html: È l'unico limite di questa pagina che non dipende da una stima.
 9b6c34ea17891718  site/it/ai.html: È sempre aggiornato.
+14f9b1cf5a700a9b  site/it/analytics.html: Candidati da guardare, mai un verdetto.
 d147951a6b256523  site/it/analytics.html: Candidati, mai un verdetto - un link condiviso o un export schedulato sono invisibili a quel grafo, e il numero lo dice.
 66c5c687afc857a5  site/it/analytics.html: Cerchi dentro tutte le query in una volta sola.
 04f6cb0ace53613e  site/it/analytics.html: Con una chiave tua, un assistente che esplora il tuo workspace - e mai le tue righe, perché Zoost non le legge.
@@ -302,6 +308,7 @@ dccb86ccec2921d2  site/it/analytics.html: L'SQL, come file Un .sql per query tab
 328053f4854f969f  site/it/analytics.html: Le chiavi esterne di ogni colonna, in tutte e due le direzioni : dove punta lei, e chi punta a lei.
 d928e81e1ecdc427  site/it/analytics.html: Non legge mai le tue righe Solo struttura, relazioni, SQL e metadati.
 b1d4f838c0f076e7  site/it/analytics.html: Non valida l'SQL Zoost non esegue, non controlla e non fa il deploy di nessuna query.
+4510ada4862e0773  site/it/analytics.html: Ogni join scritto come lo scrive Zoho Analytics, non riscritto con parole mie - metti a fuoco una tabella e cammina da lì.
 d94d3269adba85cf  site/it/analytics.html: Ogni nome è cliccabile.
 ef05256e2247d8d0  site/it/analytics.html: Ogni prodotto ci si crea la sua sottocartella.
 c22ba2b32341584a  site/it/analytics.html: Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella, e l'SQL dietro ogni query table come file su cui puoi fare un diff.
@@ -310,6 +317,8 @@ dbba75d94d757891  site/it/analytics.html: Per ogni vista: cosa legge, chi la leg
 02a057b5e61a0a07  site/it/analytics.html: Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che sembra non leggere più nessuno, con accanto scritto cosa quell'elenco non riesce a vedere.
 5b68c02eb7b3e572  site/it/analytics.html: Prima di cancellare qualcosa Chiedere a Zoho Analytics da cosa dipende una vista, trecento volte a mano, è il modo in cui quella domanda non viene mai fatta.
 5851b5825ff9367b  site/it/analytics.html: Quello che scrive l'assistente è una bozza; l'unica cosa che può dirti se compila è Zoho Analytics.
+ceab243558092b16  site/it/analytics.html: Quello da cui non dipende più niente - e accanto al numero, cosa la scansione non vede: un link condiviso, un export schedulato, un consumatore via API.
+12eb61e56dfb7329  site/it/analytics.html: Tutto il workspace in un elenco - tipo, cartella, numero di colonne e le due date - con sotto l'SQL di quello che selezioni.
 1c1a09589f236158  site/it/analytics.html: Una storia per tutto quello che hai scaricato Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una relazione e lo stato precedente non esiste più.
 2406f504eef06362  site/it/analytics.html: Zoost Analytics Zoost - workbench for Zoho Analytics Centinaia di viste, e nessun modo di vederne la forma.
 2c57a6f2d6f4661e  site/it/analytics.html: Zoost la fa una volta sola per tutto - e chiama la risposta un candidato , perché un link condiviso o un export schedulato quel grafo non li vede.

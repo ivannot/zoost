@@ -208,7 +208,11 @@ PANEL_CTX = {
             "{ ok: true, org: '1234567890', instance: 'sampleorg', origin: 'https://crm.zoho.eu', zuid: '0' }"),
     # No tab for the Analytics shots: a sample workspace needs none, the overlay is suppressed for
     # it, and the picture is then of the panel rather than of the bar explaining a discrepancy.
-    "analytics": ("https://example.com/", "{ ok: false }"),
+    "analytics": ("https://analytics.zoho.eu/workspace/99000001",
+                  "{ ok: true, workspace: '99000001', origin: 'https://analytics.zoho.eu' }"),
+    # It used to be `{ ok: false }` against example.com, so every Analytics panel shot carried an
+    # amber «Not on a Zoho Analytics tab» - the off-platform state, photographed and published to the
+    # Store. The workspace id is the fixture's own, so the bar now says what it says in use.
 }
 
 PANELS = [
@@ -249,6 +253,54 @@ PANELS = [
         setTimeout(() => {
           const el = [...document.querySelectorAll('#list tbody tr')].find((e) => /Order_Lines/.test(e.textContent));
           if (el) el.click();
+        }, 1400);
+    """),
+
+    # --- the screens the site describes and had no picture of -----------------------------------
+    # «Copertura visiva totale delle feature» - every capability the pages claim should be visible
+    # somewhere, not only described. tools/coverage.py holds the map and reports what is missing.
+    ("crm-search", "crm", "crm/sampleorg-1234567890", """
+        // Full-text search across every function at once, which Zoho CRM has no way of doing. The
+        // first version of this shot searched *names* - `#smode` is the toggle, not a select - and
+        // rendered «No matches» under a caption about searching code. A screenshot that advertises
+        // a feature by showing it finding nothing is worse than no screenshot.
+        document.getElementById('smode').click();          // in: names -> in: code
+        const f = document.getElementById('find');
+        f.value = 'planShipment'; f.dispatchEvent(new Event('input'));
+    """),
+    ("crm-health", "crm", "crm/sampleorg-1234567890", """
+        document.getElementById('health').click();
+    """),
+    ("crm-export", "crm", "crm/sampleorg-1234567890", """
+        document.getElementById('export').click();   // the dialog that decides what may leave
+    """),
+    ("crm-ai", "crm", "crm/sampleorg-1234567890", """
+        document.getElementById('askai').click();
+    """),
+    ("crm-workflows", "crm", "crm/sampleorg-1234567890", """
+        const seg = [...document.querySelectorAll('.seg')].find((s) => /Workflows/.test(s.textContent));
+        if (seg) seg.click();
+        setTimeout(() => { const el = document.querySelector('#tree .f'); if (el) el.click(); }, 900);
+    """),
+    ("crm-connections", "crm", "crm/sampleorg-1234567890", """
+        const seg = [...document.querySelectorAll('.seg')].find((s) => /Connections/.test(s.textContent));
+        if (seg) seg.click();
+        setTimeout(() => { const el = document.querySelector('#tree .f'); if (el) el.click(); }, 900);
+    """),
+    ("analytics-health", "analytics", "analytics/sample-workspace", """
+        setTimeout(() => document.getElementById('health').click(), 1400);
+    """),
+    ("analytics-export", "analytics", "analytics/sample-workspace", """
+        setTimeout(() => document.getElementById('export').click(), 1400);
+    """),
+    ("analytics-ai", "analytics", "analytics/sample-workspace", """
+        setTimeout(() => document.getElementById('askai').click(), 1400);
+    """),
+    ("analytics-lineage", "analytics", "analytics/sample-workspace", """
+        setTimeout(() => {
+          const el = [...document.querySelectorAll('#list tbody tr')].find((e) => /Revenue_By_Region/.test(e.textContent));
+          if (el) el.click();
+          setTimeout(() => { const t = [...document.querySelectorAll('.dtab')].find((x) => /Used|Lineage|Depend/i.test(x.textContent)); if (t) t.click(); }, 700);
         }, 1400);
     """),
 ]

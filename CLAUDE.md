@@ -1156,6 +1156,24 @@ empty reference graph and the panel said «no known usage (orphan candidate)» a
 plainly calls four things. A test now holds every fixture function in a real namespace, and holds the
 namespace and the category apart - the mismatch this file has already recorded twice.
 
+**The site shows the product, and `tools/siteimg.py` renders those images from the same generator.**
+Most readers do not read - they look at a picture and decide in two seconds whether a feature is for
+them, which is the one thing a well-written page cannot do for them. Same renderers as the Store
+shots, so a control that does not exist cannot appear in one; rendered at **2x** (`shots.SCALE`) and
+published as **WebP at 1760 wide**, twice the widest the content column reaches. Measured on the
+busiest shot: 115 KB as the 1x PNG, 284 KB as a 1760 PNG, **45-90 KB as WebP** - the format does the
+work, not the resizing. Lazy-loaded, each carrying its own width and height so nothing below moves.
+
+**A click script that agrees with nothing renders the default state, silently.** The full-text search
+shot toggled a `#findscope` that does not exist - the control is `#smode` - so it searched *names*
+and published «No matches» under a caption about searching code. A screenshot that advertises a
+feature by showing it finding nothing is worse than none. Look at every new shot before trusting it.
+
+**And that is how the Analytics Store screenshots were found to be wrong.** `PANEL_CTX['analytics']`
+was `{ ok: false }` against `example.com`, so every Analytics panel image carried the amber «Not on a
+Zoho Analytics tab» - the off-platform state, photographed and published. It answers with the
+fixture's own workspace id now, and the bar says what it says in use.
+
 **Screenshots are rendered, never captured: `python3 tools/shots.py`.** Headless Chrome writes
 exactly what the Store wants - 1280 x 800, `8-bit/color RGB`, no alpha - so nothing is converted
 afterwards and nothing can quietly re-introduce an alpha channel. The pages are the shipped ones byte
