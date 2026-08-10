@@ -368,17 +368,29 @@
   // `associated` is the fact that pays for the whole thing: in that same org, 85 notifications of
   // 200, 50 field updates of 97 and 27 tasks of 56 are attached to nothing. That is the measurement
   // this product already makes for functions and connections, on the objects nobody ever prunes.
+  //
+  // `include_inner_details` is not decoration: without it Zoho answers with the thin form of each
+  // row - a notification's `from_address` arrives with a type and no resource, so the sender came
+  // out as «an organisation address» and nothing else, which is a category rather than an answer.
+  // Reported twice before the cause was found, because the field was *there*, only empty. Each list
+  // asks for exactly what Zoho's own page asks for, read off the requests it makes rather than
+  // guessed: the notification's sender, the module labels, a field's label and data type, a task's
+  // rendered values, a webhook's display URL.
   const ACTION_KINDS = [
-    { kind: 'email_notifications', path: '/crm/v9/settings/automation/email_notifications', key: 'email_notifications' },
-    { kind: 'field_updates', path: '/crm/v9/settings/automation/field_updates', key: 'field_updates' },
-    { kind: 'tasks', path: '/crm/v8/settings/automation/tasks', key: 'tasks' },
-    { kind: 'webhooks', path: '/crm/v8/settings/automation/webhooks', key: 'webhooks' },
+    { kind: 'email_notifications', path: '/crm/v9/settings/automation/email_notifications', key: 'email_notifications',
+      detail: 'from_address.field_label,related_module.plural_label,module.plural_label' },
+    { kind: 'field_updates', path: '/crm/v9/settings/automation/field_updates', key: 'field_updates',
+      detail: 'module.plural_label,related_module.plural_label,display_value,field.field_label,field.data_type,dependent_field.display_value' },
+    { kind: 'tasks', path: '/crm/v8/settings/automation/tasks', key: 'tasks',
+      detail: 'module.plural_label,related_module.plural_label,display_value,module.singular_label' },
+    { kind: 'webhooks', path: '/crm/v8/settings/automation/webhooks', key: 'webhooks',
+      detail: 'display_url,related_module.plural_label,module.plural_label' },
   ];
   // Bumped when this starts capturing a field it did not before, exactly as `toFile()` does for a
   // function's meta: a row written by an older pull is missing the field rather than reporting it
   // empty, and those are different sentences. Without it, a field update pulled before `value`
   // existed read as «clears the field» - which is a statement about the org, and it was ours.
-  const ACT_SV = 3;   // 3: mappings kept structurally, and a task's reminder from its own detail
+  const ACT_SV = 4;   // 4: include_inner_details, without which Zoho answers with the thin form
   // One mapping, kept as configuration rather than as a sentence. `value` is language-neutral;
   // `display` is Zoho's own words and is the fallback for a shape nobody here has seen yet.
   function mapping(m) {
@@ -454,7 +466,8 @@
       try {
         while (true) {
           const sep = k.path.includes('?') ? '&' : '?';
-          const resp = await api(`${k.path}${sep}page=${page}&per_page=200&sort_by=modified_time&sort_order=desc`);
+          const resp = await api(`${k.path}${sep}page=${page}&per_page=200&sort_by=modified_time&sort_order=desc`
+            + (k.detail ? `&include_inner_details=${encodeURIComponent(k.detail)}` : ''));
           const rows = resp[k.key] || [];
           rows.forEach((r) => out.push(actionRow(k.kind, r)));
           const info = resp.info || {};
@@ -473,7 +486,8 @@
           const mine = out.filter((a) => a.kind === 'tasks');
           for (let i = 0; i < mine.length && i < 500; i++) {
             try {
-              const one = await api(`${k.path}/${mine[i].id}`);
+              const one = await api(`${k.path}/${mine[i].id}`
+                + (k.detail ? `?include_inner_details=${encodeURIComponent(k.detail)}` : ''));
               const t = (one[k.key] || [])[0];
               if (t && t.field_mappings) mine[i].mappings = t.field_mappings.map(mapping).filter((m) => m.field);
             } catch (_) { /* one task that will not answer is not the area failing */ }

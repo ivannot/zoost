@@ -33,78 +33,78 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "df5525ca836f8c00"
+    "from": "b672ef39063ca153"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "0a99659e8cdc74ce"
+    "from": "34d72b2d3b090d6c"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "3b9f890ef2b01471"
+    "from": "1b544ee6ad276563"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "5e38df0c4bdf7f7d"
+    "from": "f1a44b76689d6f2a"
   },
   "crm-er": {
     "app": "crm",
-    "from": "058a249a2aad7e08"
+    "from": "e0328ea6e1e6fc4c"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "89502cbf77278280"
+    "from": "6db80daf320f2725"
   },
   "crm-export": {
     "app": "crm",
-    "from": "d31a5606dcd4c3f0"
+    "from": "550362f2f8c3f024"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "df8bd688e73ee056"
+    "from": "2e95b407fa7e62be"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "cdea86dbaa679b0a"
+    "from": "057e01cd768ad5b3"
   },
   "crm-health": {
     "app": "crm",
-    "from": "ad3e6c7d3a558baa"
+    "from": "e75696a72ea8b285"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "0eb24686ed5793ed"
+    "from": "740b86d18ed759aa"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "b3b14e292711a066"
+    "from": "ee7f744b90558b08"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "faf97fa3091d9b05"
+    "from": "05b4f4239e82d6b6"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "136b1e7e673fa7c6"
+    "from": "9a92861cccd5df48"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "00e2a3fac3a9d036"
+    "from": "348b8e4528457f96"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "1df7a6fe78f02407"
+    "from": "511e05bd8949715f"
   },
   "crm-search": {
     "app": "crm",
-    "from": "198bb0d6d110f590"
+    "from": "ebd1257107ad73a3"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "c42d8b4bde66b790"
+    "from": "96266a48ba32356d"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "d02980b46f4dd9e5"
+    "from": "5ad60f4971725798"
   }
 }

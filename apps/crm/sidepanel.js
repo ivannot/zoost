@@ -4417,7 +4417,7 @@ let actionData = [], actionFilter = 'all', actionUsers = null;
 // existed - the field a rule writes and the value it writes were added after the first version -
 // and «this pull did not read it» is not «Zoho says it is empty». Same mechanism, and same reason,
 // as META_SV on a function's meta.
-const ACT_SV = 3;
+const ACT_SV = 4;
 const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 /** Which rules fire each action, read from the workflow files already on disk.
  *

@@ -381,7 +381,7 @@
     const actions = [];
     ACT_KINDS.forEach(([kind, names], ki) => names.forEach((nm, i) => {
       const id = String(5000 + ki * 100 + i);
-      const a = { kind, id, name: nm, sv: 3, module: MODULES[(ki + i) % MODULES.length][0],
+      const a = { kind, id, name: nm, sv: 4, module: MODULES[(ki + i) % MODULES.length][0],
                   module_label: MODULES[(ki + i) % MODULES.length][1],
                   associated: (ki + i) % 3 !== 2, created_by: AUTHOR, modified_by: AUTHOR,
                   created_time: '2026-06-0' + ((i % 8) + 1) + 'T09:00:00+00:00',

@@ -2649,6 +2649,30 @@ test('every settings section is filled when the page opens', () => {
   }
 });
 
+test('every automation list asks Zoho for the details its rows need', () => {
+  // Without `include_inner_details` Zoho answers with the thin form: a notification's from_address
+  // arrives with a type and no resource, so the sender read «an organisation address» and nothing
+  // else. The field was there and empty, which is why it took two reports to find. Each list asks
+  // for what Zoho's own page asks for, read off its requests.
+  const src = read('apps/crm/content-bridge.js');
+  const block = src.slice(src.indexOf('const ACTION_KINDS = ['), src.indexOf('];', src.indexOf('const ACTION_KINDS = [')));
+  for (const [kind, needs] of [
+    ['email_notifications', ['from_address.field_label']],
+    ['field_updates', ['field.field_label', 'field.data_type']],
+    ['tasks', ['display_value']],
+    ['webhooks', ['display_url']],
+  ]) {
+    const i = block.indexOf(`kind: '${kind}'`);
+    assert.ok(i > 0, `id=inner ${kind}: not in the registry`);
+    const entry = block.slice(i, block.indexOf('}', i));
+    for (const n of needs) {
+      assert.ok(entry.includes(n), `id=inner ${kind}: does not ask for ${n}, so its rows arrive thin`);
+    }
+  }
+  assert.ok(/include_inner_details=\$\{encodeURIComponent\(k\.detail\)\}/.test(src),
+    'id=inner: the list call does not send what the registry declares');
+});
+
 test('the data centres offered are the hosts the manifest can reach', () => {
   // Two literal lists - the panel's picklist and the Settings form - were held equal by a test,
   // which is a checker standing in for a source of truth. Both derive from the manifest now: a host
