@@ -62,7 +62,7 @@ $('pickRoot').onclick = async () => {
     if (foreign > 6 && !confirm(`«${h.name}» already contains ${foreign} items that are not Zoost workspaces.\n\n`
       + 'Zoost will hold read/write access to everything inside it. A dedicated folder is strongly recommended.\n\nUse this folder anyway?')) return;
     await window.idbHandle.set('rootDir', h);
-    await stamp(); await showRoot(); await loadDc();
+    await stamp(); await showRoot();
     toast('Working folder set. Reopen the side panel to see the workspaces.');
   } catch (e) { if (e?.name !== 'AbortError') toast(e.message, true); }
 };
@@ -632,7 +632,7 @@ try {
 (async function init() {
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   $('legal').textContent = LEGAL_DISCLAIMER;
-  await showRoot(); await loadAi(); await loadScope(); await loadLay(); await loadTabs();
+  await showRoot(); await loadDc(); await loadAi(); await loadScope(); await loadLay(); await loadTabs();
 })();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {

@@ -83,6 +83,7 @@ const MSG = {
   lastModified: 'Last modified',
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
   noModuleTarget: 'Unknown module target - pull once, or open Zoho first.',
+  noActionTarget: 'Zoho has no page for this kind that Zoost knows of - open it from the automation list.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
   notHere: 'Not in workspace - click to download',
   hereRepull: 'In workspace - click to re-download from Zoho',
@@ -1143,6 +1144,25 @@ async function openZohoHome() {
   let id = await zohoTabId();
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
+// Zoho's own page for one automation action. The paths were read off the address bar rather than
+// guessed - `settings/alerts/<id>` for a notification, `settings/field-updates/<id>`,
+// `settings/tasks/<id>` - which is the only way this project is allowed to build a URL: a certain
+// path or nothing. **Webhooks are deliberately absent**: nobody has shown me one, and a button that
+// opens a page which may not exist is worse than no button. When one turns up it is one line here.
+const ACTION_PATH = { email_notifications: 'alerts', field_updates: 'field-updates', tasks: 'tasks' };
+function actionUrl(a) {
+  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
+  const seg = a && ACTION_PATH[a.kind];
+  return (base && inst && seg && a.id) ? `${base}/crm/${inst}/settings/${seg}/${a.id}` : null;
+}
+async function openActionInZoho(a) {
+  if (sampleRefuse()) return;
+  const url = actionUrl(a);
+  if (!url) { setStatus(MSG.noActionTarget, 'warn'); return; }
+  const id = await zohoTabId();
+  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
+  setStatus(`Opened \u00ab${a.name || a.id}\u00bb in Zoho.`, 'ok');
+}
 async function openModulePage(genName, navigable, label) {
   if (sampleRefuse()) return;
   if (navigable === false) { setStatus(`\u00ab${label || genName}\u00bb has no records tab (linking/subform or no access).`, 'warn'); return; }
@@ -1275,6 +1295,7 @@ async function reveal(fn) {
 }
 async function revealFromPreview(action) {
   if (currentPath && currentPath.startsWith('workflows/')) { await openWorkflowInZoho(currentPath.split('/').pop().replace(/\.json$/, '')); return; }
+  if (currentPath && currentPath.startsWith('actions/')) { const a = actionData.find((x) => x.path === currentPath); if (a) await openActionInZoho(a); return; }
   if (currentPath && currentPath.startsWith('modules/')) {
     const m = moduleData.find((x) => x.path === currentPath); if (!m) return; if (action === 'filter') await openModuleLayouts(m.gen); else await openModulePage(m.gen, m.navigable, m.label); return;
   }
@@ -4357,7 +4378,7 @@ let actionData = [], actionFilter = 'all', actionUsers = null;
 // existed - the field a rule writes and the value it writes were added after the first version -
 // and «this pull did not read it» is not «Zoho says it is empty». Same mechanism, and same reason,
 // as META_SV on a function's meta.
-const ACT_SV = 1;
+const ACT_SV = 2;
 const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 /** Which rules fire each action, read from the workflow files already on disk.
  *
@@ -4498,7 +4519,14 @@ function openAction(a) {
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === a.path));
   setPvName(a.name || a.id, 'actions/index.json');
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);
-  $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
+  // Absent rather than disabled, which is this panel's rule: for a webhook there is no page anyone
+  // has shown me, and a greyed button says «there is something here you cannot have» about a page
+  // that may not exist.
+  const canOpen = !!actionUrl(a);
+  $('pvreveal').style.display = canOpen ? '' : 'none';
+  $('pvreveal').textContent = 'Open in Zoho \u2197';
+  $('pvreveal').title = 'Open this ' + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
+  $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;
   const fires = actionFiredBy(a);
@@ -4509,7 +4537,9 @@ function openAction(a) {
         ? `<b>${fires.length}</b> rule(s)`
         : (a.associated ? 'Zoho reports it as in use, and no pulled rule names it' : '<span style="color:#f59e0b">no rule uses it</span>'))
     + (a.template ? row('Template', escHtml(a.template.name || a.template.id)) : '')
-    + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address') + (a.from_address ? ` \u00b7 <span class="mono">${escHtml(a.from_address)}</span>` : '')) : '')
+    + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address')
+        + (a.from_name ? ' \u00b7 ' + escHtml(a.from_name) : ''))
+        + (a.from_address ? row('Address', `<span class="mono">${escHtml(a.from_address)}</span>`) : '') : '')
     + (a.recipient_count != null ? row('Recipients', `${escHtml(String(a.recipient_count))} \u00b7 <span style="color:var(--muted)">a count; Zoost never reads who they are</span>`) : '')
     + (a.field ? row('Field', `<span class="mono">${escHtml(a.field)}</span>`
         + (a.field_label && a.field_label !== a.field ? ` \u00b7 ${escHtml(a.field_label)}` : '')
@@ -4526,6 +4556,13 @@ function openAction(a) {
           : `<b>${escHtml(String(a.value))}</b>`) : '')
     + (a.method ? row('Method', escHtml(a.method)) : '')
     + (a.url ? row('URL', `<span class="mono">${escHtml(a.url)}</span>`) : '')
+    // Zoho's own rendering of each mapped field, verbatim: «Due date: Data trigger più 7 giorni»
+    // is what the rule will do, in the language the org is administered in. Parsing it would be the
+    // localized-date mistake this project already records.
+    + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '),
+        escHtml(m.display || '') + (m.type && m.type !== 'static' ? ` <span style="color:var(--muted)">${escHtml(m.type.replace(/_/g, ' '))}</span>` : ''))).join(''))
+    + (a.kind === 'tasks' && !(a.mappings || []).length && actStale(a)
+        ? row('Detail', '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull to read it</span>') : '')
     + (a.notify === true ? row('Notify', 'yes') : '')
     + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
     + (a.locked ? row('Locked', 'yes') : '');

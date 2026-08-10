@@ -3,7 +3,7 @@
     "kind": "email_notifications",
     "id": "5000",
     "name": "Order confirmation",
-    "sv": 1,
+    "sv": 2,
     "module": "Accounts",
     "module_label": "Accounts",
     "associated": true,
@@ -17,6 +17,7 @@
       "name": "Order confirmation template"
     },
     "from_type": "user",
+    "from_name": "Sample User",
     "from_address": "sales@example.com",
     "recipient_count": 1
   },
@@ -24,7 +25,7 @@
     "kind": "email_notifications",
     "id": "5001",
     "name": "Invoice reminder",
-    "sv": 1,
+    "sv": 2,
     "module": "Contacts",
     "module_label": "Contacts",
     "associated": true,
@@ -38,6 +39,7 @@
       "name": "Invoice reminder template"
     },
     "from_type": "organization_email",
+    "from_name": "Sample Org",
     "from_address": "noreply@example.com",
     "recipient_count": 2
   },
@@ -45,7 +47,7 @@
     "kind": "email_notifications",
     "id": "5002",
     "name": "Welcome message",
-    "sv": 1,
+    "sv": 2,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -59,6 +61,7 @@
       "name": "Welcome message template"
     },
     "from_type": "organization_email",
+    "from_name": "Sample Org",
     "from_address": "noreply@example.com",
     "recipient_count": 3
   },
@@ -66,7 +69,7 @@
     "kind": "email_notifications",
     "id": "5003",
     "name": "Ticket acknowledged",
-    "sv": 1,
+    "sv": 2,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -80,6 +83,7 @@
       "name": "Ticket acknowledged template"
     },
     "from_type": "user",
+    "from_name": "Sample User",
     "from_address": "sales@example.com",
     "recipient_count": 1
   },
@@ -87,7 +91,7 @@
     "kind": "email_notifications",
     "id": "5004",
     "name": "Parcel on its way",
-    "sv": 1,
+    "sv": 2,
     "module": "Products",
     "module_label": "Products",
     "associated": true,
@@ -101,6 +105,7 @@
       "name": "Parcel on its way template"
     },
     "from_type": "organization_email",
+    "from_name": "Sample Org",
     "from_address": "noreply@example.com",
     "recipient_count": 2
   },
@@ -108,7 +113,7 @@
     "kind": "email_notifications",
     "id": "5005",
     "name": "Renewal notice",
-    "sv": 1,
+    "sv": 2,
     "module": "Quotes",
     "module_label": "Quotes",
     "associated": false,
@@ -122,6 +127,7 @@
       "name": "Renewal notice template"
     },
     "from_type": "organization_email",
+    "from_name": "Sample Org",
     "from_address": "noreply@example.com",
     "recipient_count": 3
   },
@@ -129,7 +135,7 @@
     "kind": "field_updates",
     "id": "5100",
     "name": "Set stage to Won",
-    "sv": 1,
+    "sv": 2,
     "module": "Contacts",
     "module_label": "Contacts",
     "associated": true,
@@ -148,7 +154,7 @@
     "kind": "field_updates",
     "id": "5101",
     "name": "Clear owner",
-    "sv": 1,
+    "sv": 2,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -167,7 +173,7 @@
     "kind": "field_updates",
     "id": "5102",
     "name": "Mark as reviewed",
-    "sv": 1,
+    "sv": 2,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -202,7 +208,7 @@
     "kind": "tasks",
     "id": "5200",
     "name": "Call the customer back",
-    "sv": 1,
+    "sv": 2,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -211,13 +217,40 @@
     "created_time": "2026-06-01T09:00:00+00:00",
     "modified_time": "2026-07-11T09:00:00+00:00",
     "locked": false,
-    "notify": true
+    "notify": true,
+    "mappings": [
+      {
+        "field": "Subject",
+        "type": "merge_field",
+        "display": "Call the customer back for ${Contact.Name}"
+      },
+      {
+        "field": "Due_Date",
+        "type": "execution_time",
+        "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Status",
+        "type": "static",
+        "display": "Not started"
+      },
+      {
+        "field": "Priority",
+        "type": "static",
+        "display": "High"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "display": "Sample User"
+      }
+    ]
   },
   {
     "kind": "tasks",
     "id": "5201",
     "name": "Chase the invoice",
-    "sv": 1,
+    "sv": 2,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -226,13 +259,40 @@
     "created_time": "2026-06-02T09:00:00+00:00",
     "modified_time": "2026-07-12T09:00:00+00:00",
     "locked": false,
-    "notify": false
+    "notify": false,
+    "mappings": [
+      {
+        "field": "Subject",
+        "type": "merge_field",
+        "display": "Chase the invoice for ${Contact.Name}"
+      },
+      {
+        "field": "Due_Date",
+        "type": "execution_time",
+        "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Status",
+        "type": "static",
+        "display": "Not started"
+      },
+      {
+        "field": "Priority",
+        "type": "static",
+        "display": "Normal"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "display": "Sample User"
+      }
+    ]
   },
   {
     "kind": "tasks",
     "id": "5202",
     "name": "Prepare the handover",
-    "sv": 1,
+    "sv": 2,
     "module": "Products",
     "module_label": "Products",
     "associated": true,
@@ -241,13 +301,40 @@
     "created_time": "2026-06-03T09:00:00+00:00",
     "modified_time": "2026-07-13T09:00:00+00:00",
     "locked": false,
-    "notify": true
+    "notify": true,
+    "mappings": [
+      {
+        "field": "Subject",
+        "type": "merge_field",
+        "display": "Prepare the handover for ${Contact.Name}"
+      },
+      {
+        "field": "Due_Date",
+        "type": "execution_time",
+        "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Status",
+        "type": "static",
+        "display": "Not started"
+      },
+      {
+        "field": "Priority",
+        "type": "static",
+        "display": "Low"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "display": "Sample User"
+      }
+    ]
   },
   {
     "kind": "webhooks",
     "id": "5300",
     "name": "Notify the warehouse",
-    "sv": 1,
+    "sv": 2,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,

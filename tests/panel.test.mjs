@@ -2631,6 +2631,24 @@ test('sorting by one field goes through one comparator', () => {
 // arrives when the line executes. Each of these folded a live call site, so a typo in `setStatus`
 // or `noteAccess` would have been a button that silently stopped working.
 
+test('every settings section is filled when the page opens', () => {
+  // The data-centre picklist was built by a call that had landed on the *folder picker*, so the
+  // select was empty until you chose a folder - which is not when a form fills itself. Reported
+  // from a real install. The page's own start-up loads every section, and that is the list.
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/options.js`);
+    // The two pages boot differently - one awaits a line of loaders, the other calls them from an
+    // IIFE - so the check is «is loadDc() reached from the same place loadLay() is», not a shape.
+    const near = (fn) => {
+      const i = src.indexOf(fn + '();');
+      return i > 0 ? src.slice(Math.max(0, i - 400), i + 400) : '';
+    };
+    assert.ok(near('loadLay').includes('loadDc();'),
+      `${app}: loadDc() is not called where the other sections are loaded, so the picklist is empty ` +
+      'until something else happens to call it');
+  }
+});
+
 test('the data centres offered are the hosts the manifest can reach', () => {
   // Two literal lists - the panel's picklist and the Settings form - were held equal by a test,
   // which is a checker standing in for a source of truth. Both derive from the manifest now: a host

@@ -378,7 +378,7 @@
   // function's meta: a row written by an older pull is missing the field rather than reporting it
   // empty, and those are different sentences. Without it, a field update pulled before `value`
   // existed read as «clears the field» - which is a statement about the org, and it was ours.
-  const ACT_SV = 1;
+  const ACT_SV = 2;   // 2: a task's field mappings - subject, due date, status, priority, owner
   function actionRow(kind, r) {
     const who = (u) => (u && u.name) || null;
     const row = {
@@ -394,8 +394,15 @@
     // is a count and never the recipients; a template is named, never fetched.
     if (kind === 'email_notifications') {
       row.template = r.template ? { id: String(r.template.id || ''), name: r.template.name || '' } : null;
+      // `resource` is an object - {name, email, id} - not a string. Written out whole it became
+      // «[object Object]» on screen, which is the shape of bug that only a real org produces: the
+      // capture said `dict(resource,type)` and nobody looked inside. The name is the display name of
+      // the mailbox or the user; the address is the address, and it is the one field that travels
+      // only if the reader turns it on.
+      const res = (r.from_address && r.from_address.resource) || null;
       row.from_type = (r.from_address && r.from_address.type) || null;
-      row.from_address = (r.from_address && r.from_address.resource) || null;
+      row.from_name = res ? (typeof res === 'string' ? null : res.name || null) : null;
+      row.from_address = res ? (typeof res === 'string' ? res : res.email || null) : null;
       row.recipient_count = r.recipient_count != null ? Number(r.recipient_count) : null;
     }
     // A field update without the field and the value it writes is a name and nothing else - which is
@@ -410,7 +417,20 @@
       row.value = r.value === undefined ? null : r.value;
       row.value_kind = r.value === null || r.value === undefined ? 'cleared' : (r.type || 'static');
     }
-    if (kind === 'tasks') row.notify = r.notify === true;
+    if (kind === 'tasks') {
+      row.notify = r.notify === true;
+      // What the task will actually say. Zoho answers with one mapping per field and a
+      // `display_value` it has already rendered - «Data trigger più 7 giorni», «Non iniziato» - in
+      // the user's own language. That string is shown verbatim and never parsed, which is the rule
+      // this project already applies to Analytics' localized dates: reading a rendered date is the
+      // same mistake as matching a localized button label. `type` says where the value comes from -
+      // static, execution_time, merge_field - and that is a fact worth keeping beside it.
+      row.mappings = (r.field_mappings || []).map((m) => ({
+        field: (m.field && m.field.api_name) || '',
+        type: m.type || '',
+        display: m.display_value == null ? '' : String(m.display_value),
+      })).filter((m) => m.field);
+    }
     if (kind === 'webhooks') { row.method = r.method || ''; row.url = r.url || r.display_url || ''; }
     return row;
   }
