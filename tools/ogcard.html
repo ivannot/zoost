@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<!--
+  The card a link to zoost.it unfurls into, rendered at 1200x630 by tools/ogcard.py.
+
+  It was `icon-512.png` with `twitter:card: summary`, so a link pasted into LinkedIn - where this
+  project is actually shared - came out as a small square icon beside two lines of text, while the
+  one thing that sells the product is a picture of it. The screenshot inside this card is the same
+  render the site publishes, so the card cannot show an interface that does not exist.
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{background:#0d121c;color:#e7edf6;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       display:flex;flex-direction:column;justify-content:space-between;padding:52px 56px 0}
+  .top{display:flex;align-items:center;gap:16px}
+  .z{flex:none}
+  h1{font-size:40px;font-weight:700;letter-spacing:-.4px}
+  p{font-size:22px;color:#9fb0c8;margin-top:14px;max-width:44ch}
+  .shot{margin-top:34px;border:1px solid #223049;border-top-left-radius:12px;border-top-right-radius:12px;
+        overflow:hidden;box-shadow:0 -2px 60px rgba(37,99,235,.18)}
+  .shot img{display:block;width:1088px}
+</style>
+<div class="top">
+  <svg class="z" width="54" height="54" viewBox="0 0 128 128" aria-hidden="true">
+    <rect width="128" height="128" rx="26" fill="#2563eb"/>
+    <path d="M 33 36 L 95 36 L 33 92 L 95 92" fill="none" stroke="#fff" stroke-width="18"
+          stroke-linecap="square" stroke-linejoin="round"/>
+  </svg>
+  <h1>Zoost</h1>
+</div>
+<p>You built it inside Zoho. This mirrors it to plain files on your own machine - and draws you the map.</p>
+<div class="shot"><img src="../site/img/crm-preview.webp" alt=""></div>

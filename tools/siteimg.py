@@ -70,6 +70,24 @@ def source_digest(app: str, script: str) -> str:
     return h.hexdigest()[:16]
 
 
+def render_og_card() -> pathlib.Path:
+    """The 1200x630 card a link unfurls into, drawn from tools/ogcard.html.
+
+    Every page declared `icon-512.png` with `twitter:card: summary`, so a link pasted anywhere - and
+    this project is shared on LinkedIn - came out as a small square icon. The card is rendered the
+    same way everything else here is, through Chrome against files in this repository, and it embeds
+    the screenshot the site already publishes, so it cannot advertise an interface that does not
+    exist. PNG rather than WebP: a scraper that cannot decode the image shows nothing at all, and
+    what a given scraper supports is not something this repository can check.
+    """
+    out = OUT / "og.png"
+    subprocess.run([shots.CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                    "--window-size=1200,630", "--force-device-scale-factor=1",
+                    "--virtual-time-budget=4000", "--screenshot=" + str(out),
+                    (ROOT / "tools" / "ogcard.html").as_uri()], check=True, capture_output=True)
+    return out
+
+
 def need(binary: str) -> str:
     path = shutil.which(binary)
     if not path:
@@ -119,6 +137,8 @@ def main() -> int:
         shots.OUT.rmdir()
     except OSError:
         pass
+    card = render_og_card()
+    print(f"  {'og':20} {card.stat().st_size // 1024:>8} KB (1200x630, the card a link unfurls into)")
     LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\n  {len(every) - kept} rendered, {kept} already current; "
           f"{len(every)} image(s), {total // 1024} KB published under site/img/")

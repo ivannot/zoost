@@ -11,8 +11,8 @@
 <meta property="og:url" content="https://zoost.it/ai">
 <meta property="og:title" content="AI and Zoost - what it adds, and when it does not">
 <meta property="og:description" content="Zoost works with no model at all. What the Markdown export already gives an assistant, what the built-in one adds, and when it is not worth a key.">
-<meta property="og:image" content="https://zoost.it/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://zoost.it/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/ai">
 <link rel="alternate" hreflang="en" href="https://zoost.it/ai">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/ai">
@@ -196,6 +196,9 @@
     here than found it out later.</p>
 
   <h2 id="why-your-own-key">Why your own key</h2>
+  <p>Because there is no Zoost server. The request goes from your browser straight to Anthropic or
+    OpenAI, carrying your key and billed to your account. Nothing passes through me, and there is
+    nothing of mine for it to pass through: no backend, no account, no log.</p>
   <div class="box">
     <h3>What an API key is, since the rest of this page assumes it</h3>
     <p>Anthropic and OpenAI sell two different things. One is the chat you already talk to -
@@ -210,9 +213,6 @@
       me. <b>A Claude.ai or ChatGPT Plus subscription is neither one of these nor does it include
       one</b>; that catches most people out, and it is the reason the steps below say it twice.</p>
   </div>
-  <p>Because there is no Zoost server. The request goes from your browser straight to Anthropic or
-    OpenAI, carrying your key and billed to your account. Nothing passes through me, and there is
-    nothing of mine for it to pass through: no backend, no account, no log.</p>
   <p>The alternative is the common one - the extension talks to a service the author runs, which
     holds a key and relays the questions. That is more convenient, it is a subscription, and it means
     the structure of your org crossing a machine you do not control. Given the whole posture of this

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:1261613a1f4e7703 -->
+<!-- translated-from: site/docs-analytics.html sha256:b77347e096b5f198 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -12,8 +12,8 @@
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
 <meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
-<meta property="og:image" content="https://zoost.it/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://zoost.it/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics">
@@ -436,6 +436,9 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     il titolo della chat, così il numero non è una stima. <b class="ui">Max tool steps</b> limita quante volte
     può ricorrere a uno strumento prima di rispondere; 20 è il default e la maggior parte delle risposte ne
     usa due o tre.</p>
+  <p><b class="ui">Clear</b> non è un vezzo. Tutta la conversazione viene rimandata a ogni messaggio, quindi
+    un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
+    Svuotala quando cambi argomento: ottieni chiamate più economiche e risposte più a fuoco.</p>
   <p>Quando un workspace è troppo grande per essere descritto per intero, cosa viene lasciato fuori è deciso
     invece che arbitrario: tabelle e query table non vengono mai lasciate fuori, perché sono il vocabolario
     che serve per scrivere una query o seguire una chiave esterna, e i report vanno per primi perché
@@ -445,13 +448,6 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     fra virgolette doppie, niente sotto-query correlate, CTE non ricorsive fino a tre, tre livelli di query
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>
-  <h3>Tenere sotto controllo la conversazione - e il conto</h3>
-  <p><b class="ui">Clear</b> non è un vezzo. Tutta la conversazione viene rimandata a ogni messaggio, quindi
-    un thread lungo costa di più per domanda e trascina contesto vecchio e irrilevante dentro risposte nuove.
-    Svuotala quando cambi argomento: ottieni chiamate più economiche e risposte più a fuoco. Con Claude,
-    <b>Max tool steps</b> è l'altra leva - limita quanti giri di esplora-poi-rispondi può fare l'agente prima
-    di dover rispondere.</p>
-
   <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono - nomi di viste e
     colonne, relazioni, e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va

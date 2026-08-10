@@ -11,8 +11,8 @@
 <meta property="og:url" content="https://zoost.it/docs-analytics">
 <meta property="og:title" content="How to use Zoost Analytics">
 <meta property="og:description" content="Guide to Zoost Analytics: workspaces, pull, a table's structure, its foreign keys, the SQL as files, exports and the assistant.">
-<meta property="og:image" content="https://zoost.it/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://zoost.it/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
 <link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-analytics">
@@ -415,6 +415,9 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     and it is billed each time. The panel prints the real figure for the workspace you have open, under the
     chat title, so the number is not a guess. <b class="ui">Max tool steps</b> caps how many times it may
     reach for a tool before answering; 20 is the default and most answers use two or three.</p>
+  <p><b class="ui">Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
+    thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
+    subject: you get cheaper calls and sharper replies.</p>
   <p>When a workspace is too large to describe in full, what gets dropped is decided rather than arbitrary:
     tables and query tables are never dropped, because they are the vocabulary needed to write a query or
     follow a foreign key, and reports go first because the assistant can still find those by name. Whatever
@@ -424,12 +427,6 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of
     query-over-query. You can read exactly what it is told in <b class="ui">⚙ Settings</b>. What it writes
     is a draft for you to paste, never something Zoost has checked.</p>
-  <h3>Keeping the conversation - and the bill - under control</h3>
-  <p><b class="ui">Clear</b> is not cosmetic. The whole conversation is re-sent with every message, so a long
-    thread costs more per question and drags old, irrelevant context into new answers. Clear it when you change
-    subject: you get cheaper calls and sharper replies. With Claude, <b>Max tool steps</b> is the other lever -
-    it caps how many explore-then-answer rounds the agent may take before it must reply.</p>
-
   <p class="box warn">Using the assistant sends the parts of your workspace it needs - view and column
     names, relations, and the SQL of your query tables - from your browser straight to the provider you
     chose. It never sends the rows inside your tables, because Zoost does not read them. Nothing goes to

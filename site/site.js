@@ -67,7 +67,12 @@
     var v = el.querySelector('.dv');
     var t = el.querySelector('.dd');
     var ver = (d[app] && d[app].repo) || (app === 'crm' ? d.repo : null);
-    if (v && ver) v.textContent = ver;
+    // What the guide documents is the version in the repository - documentation ships with the code
+    // that changed it. But between a submission and its publication the Store is serving something
+    // older (three or four days for Zoho CRM, longer here), and a reader installing today would be
+    // reading about features their copy does not have. So when the two differ, the line says both.
+    var store = d[app] && d[app].store;
+    if (v && ver) v.textContent = (store && store !== ver) ? ver + ' (the Store is serving ' + store + ')' : ver;
     var when = el.getAttribute('data-updated-key') === 'analytics' ? d.docsAnalyticsUpdated : d.docsUpdated;
     if (t && when) { var f = fmtDate(when, true); if (f) t.textContent = f; }
   }
