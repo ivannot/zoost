@@ -20,5 +20,10 @@
 /*.svg
   Cache-Control: public, max-age=604800
 
+# Screenshots. Same reasoning as the icons: rendered by tools/siteimg.py, and a UI change that alters
+# one is a deliberate act that can rename it if the cache ever gets in the way.
+/img/*
+  Cache-Control: public, max-age=604800
+
 /site.webmanifest
   Cache-Control: public, max-age=86400

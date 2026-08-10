@@ -242,6 +242,18 @@ header nav a.ncta:hover{border-color:var(--ink);background:rgba(255,255,255,.05)
 .hero .eyebrow span{color:var(--muted)}
 .hero .eyebrow span::before{content:"\00b7";margin-right:10px;color:var(--border)}
 
+/* Screenshots. Most readers do not read - they look, and decide in two seconds whether a feature is
+   for them. So a picture sits next to the paragraph that describes it rather than in a gallery of its
+   own, where it would answer a question nobody is asking yet.
+   `loading="lazy"` and an explicit width/height on every one: the aspect ratio is known before the
+   bytes arrive, so nothing below the image moves when it lands. They are rendered from the sample
+   org by tools/siteimg.py - the shipped panel, invented data - so a control that does not exist
+   cannot appear in one. ~54 KB each in WebP, against 115 as a 1x PNG. */
+figure.shot{margin:22px 0;max-width:100%}
+figure.shot img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:10px;background:var(--tree)}
+figure.shot figcaption{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.5}
+@media (max-width:760px){figure.shot{margin:18px -4px}}
+
 /* ---- content pages (docs, privacy) ----
    Scoped to `.doc`, not to `main`. It was `main` for a long time and that read as a tidy scope, but
    `main` was standing in for "this is a document page" - a structural proxy for an editorial fact,

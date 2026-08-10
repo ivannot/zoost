@@ -84,6 +84,13 @@ window.addEventListener('load', () => setTimeout(() => {{
 """
 
 
+# Device pixels per CSS pixel. The Store wants 1280x800 exactly, so this stays 1 here; tools that
+# want a retina source for the website set it to 2 before calling, which renders the same layout at
+# 2560x1600. It is a variable rather than an argument because both renderers need it and neither
+# takes options.
+SCALE = 1
+
+
 def files_under(base: pathlib.Path, prefix: str):
     """The fixture workspace as {path: text}, the way the shim wants it."""
     out = {}
@@ -114,7 +121,7 @@ def render(shot):
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--window-size=1280,800", "--force-device-scale-factor=1",
+                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
                         "--virtual-time-budget=9000", "--screenshot=" + str(dest),
                         page.as_uri()], check=True, capture_output=True)
     return dest
@@ -188,7 +195,7 @@ def render_panel(shot):
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--window-size=1280,800", "--force-device-scale-factor=1",
+                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
                         "--virtual-time-budget=12000", "--screenshot=" + str(dest),
                         page.as_uri()], check=True, capture_output=True)
     return dest
