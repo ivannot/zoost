@@ -450,6 +450,7 @@ cc458a7d5cde6744  site/it/docs-crm.html: Chiedigli «come esporto questo?», «c
 885f1eba51027648  site/it/docs-crm.html: Cifrarla con un segreto tenuto lì accanto sembrerebbe protezione e non ne offrirebbe nessuna.
 508eeb9f3218d23a  site/it/docs-crm.html: Clicca Refresh outdated nella barra dei pulsanti sopra l'elenco per completarle - senza riscaricare tutto.
 84b20be5c8cc2e97  site/it/docs-crm.html: Clicca un arco per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce, e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.
+c984d6d3984f9952  site/it/docs-crm.html: Come nell'elenco delle funzioni, qualsiasi ordinamento diverso dal default toglie le intestazioni di gruppo e mostra una lista piatta, con il tipo che si sposta su ogni riga.
 80fad819b84e1629  site/it/docs-crm.html: Compare nei due posti a cui un fallimento appartiene, e in nessuna scheda a sé - un fallimento non è un tipo di oggetto, è una cosa successa a una funzione.
 6de4ac28e60a23ed  site/it/docs-crm.html: Con Anthropic l'assistente gira come agente con strumenti in sola lettura: apre funzioni, risale i chiamanti, legge schemi, cerca una connessione e chi la usa, e fa ricerche nel codice da sé.
 cdfaa0d9c12ccf03  site/it/docs-crm.html: Conosce anche la dimensione di ogni funzione e i conteggi delle chiamate in uscita, e può usarli per filtrare - così «quante funzioni sono più lunghe di 150 righe?» oppure «quali fanno più di cinque chiamate API?» hanno una risposta presa dai numeri, non stimata.
@@ -484,6 +485,7 @@ f8fa508ad6fb1514  site/it/docs-crm.html: La barra in alto di quella finestra por
 8f28b0569b3318b3  site/it/docs-crm.html: La scheda Connections ribalta la prospettiva: tutto il catalogo, a livello di org - vedi la sezione 8, Le connessioni .
 5855b8d54b120c94  site/it/docs-crm.html: La stessa azione è sulla schermata Not on a Zoho tab , come + Sample workspace : un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
 54b824cebd26d9df  site/it/docs-crm.html: La stessa pagina è dove scegli quali schede mostrare e in che ordine - il pannello è stretto, e un tipo che non guardi mai è solo d'intralcio.
+edf89822fede6619  site/it/docs-crm.html: Le colonne sono incolonnate lungo tutto l'elenco - il modulo a cui appartiene l'azione e quante regole la fanno scattare - e Sort riordina per Kind, then name (il default), Rules that fire it , Module o Last modified ; il pulsante ↑/↓ accanto inverte la direzione.
 a047ff6280741751  site/it/docs-crm.html: Le funzioni non ancora scaricate non hanno numeri, quindi in ogni caso restano in fondo.
 a2f8bf9ff7561d4b  site/it/docs-crm.html: Le righe evidenziate in crema sono campi che non stanno su nessun layout - solo API.
 e9b082a5ca27517a  site/it/docs-crm.html: Lo stesso filtro dispone il grafo allo stesso modo ogni volta.
