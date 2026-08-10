@@ -3,11 +3,12 @@
   "version": "unknown",
   "digest": null,
   "files": [
-    "crm_1.png",
-    "crm_2.png",
-    "crm_3.png",
-    "crm_4.png",
-    "crm_5.png"
+    "1.png",
+    "2.png",
+    "3.png",
+    "4.png",
+    "5.png"
   ],
-  "note": "The numbered set has never been uploaded: the listings still carry the images from before this convention (four for Zoho CRM, one for Zoho Analytics). Replace all of them at the next submission and record the version and digest here."
+  "note": "The numbered set has never been uploaded: the listings still carry the images from before this convention (four for Zoho CRM, one for Zoho Analytics). Replace all of them at the next submission and record the version and digest here.",
+  "folder": "dist/store/crm/"
 }

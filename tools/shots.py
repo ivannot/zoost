@@ -442,15 +442,20 @@ def publish_store_set(rendered: dict) -> None:
     set that was last uploaded, so a release can say «re-upload these» instead of leaving it to
     memory, which is what left the Analytics listing on one image from its first submission.
     """
-    dest = ROOT / "dist" / "store"
-    dest.mkdir(parents=True, exist_ok=True)
     import hashlib
     for app, keys in STORE.items():
         if not all(k in rendered for k in keys):
             continue
+        # A folder per product, and the files called nothing but their slot number. Uploading means
+        # opening one folder and taking what is in it in order; a shared folder of `crm_3.png` and
+        # `analytics_3.png` is a folder you can pick the wrong five from.
+        dest = ROOT / "dist" / "store" / app
+        dest.mkdir(parents=True, exist_ok=True)
+        for stale in dest.glob("*.png"):
+            stale.unlink()
         h = hashlib.sha256()
         for n, key in enumerate(keys, 1):
-            out = dest / f"{app}_{n}.png"
+            out = dest / f"{n}.png"
             shutil.copy2(rendered[key], out)
             h.update(out.read_bytes())
         digest = h.hexdigest()[:16]
@@ -460,7 +465,7 @@ def publish_store_set(rendered: dict) -> None:
                  if was.get("digest") == digest else
                  "CHANGED since " + was.get("version", "the last upload")
                  + " - upload all five again, in this order")
-        print(f"  {app}: {len(keys)} image(s) -> dist/store/{app}_1..{len(keys)}.png  [{digest}] {state}")
+        print(f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}")
 
 
 def main():

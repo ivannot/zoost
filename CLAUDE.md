@@ -2641,6 +2641,14 @@ the version on the Store — predates this repository and has no commit to point
 Analytics 1.0.0 was submitted before the build was deterministic so no hash is published for it. A
 verifiable record that quietly papered over its first entries would be worth less than none.
 
+**A justification says *why*, and the manifest says *what*.** The host justification enumerated every
+data centre - so adding one meant editing the manifest and then remembering a paragraph in the store
+copy, which is the duplication this file spends its length fighting, in the one place I had not
+looked. Google already has the list: it is in the manifest inside the package being reviewed. The
+field exists to explain *why the extension needs to reach them at all*, and that argument does not
+change when Zoho opens a region. Reported by the author, and both listings now name the families
+(`crm.*`, `crmsandbox.*`, `one.*`, the two AI hosts) and argue from there.
+
 **Every store field states its own ceiling, and `sitecheck.py` counts.** The CRM's storage
 justification had been over 1000 characters for an unknown length of time and nothing was measuring —
 it was found by counting while editing it, which is luck, not process. The limit lives in the section
@@ -2910,7 +2918,8 @@ What that request means, in order. Do all of it without being asked:
 6. **Hand over the link to the Release asset, plus the hash, plus what to paste** into the Store
    dashboard. Never a path into `dist/`.
 6b. **Re-upload the screenshots if they changed.** `python3 tools/shots.py` writes
-   `dist/store/<app>_1.png` .. `_5.png` in the order the Store shows them - the interface first,
+   `dist/store/<app>/1.png` .. `5.png` - a folder per product, the file named by its slot and nothing
+   else, so uploading is opening one folder and taking what is in it - in the order the Store shows them - the interface first,
    then the rest of the interface, then the diagrams - and prints the digest of the set against
    `store/<app>/screenshots.json`, which records what is on the listing. This is part of every
    release for both products, not an occasional tidy-up: the Zoost Analytics listing sat on one image

@@ -1233,8 +1233,11 @@ class TheStoreScreenshotsAreOrderedAndNumbered(unittest.TestCase):
             rec = json.loads(f.read_text(encoding='utf-8'))
             for k in ('version', 'digest', 'files'):
                 self.assertIn(k, rec, f'{app}: the ledger has no {k}')
+            # A folder per product, the files named by slot only: uploading is opening one folder
+            # and taking what is in it, in order.
             self.assertEqual(rec['files'],
-                             [f'{app}_{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
+                             [f'{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
+            self.assertEqual(rec['folder'], f'dist/store/{app}/')
 
 
 class ReadingJavaScriptWithoutAParser(unittest.TestCase):

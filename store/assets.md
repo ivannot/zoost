@@ -18,9 +18,10 @@ rejected even when it is fully opaque, so the exact bit depth is worth checking 
 ## What gets published, and under what name
 
 The dashboard takes **five screenshots**, shows them in the order they were uploaded, and names them
-nothing. So the file names carry the order and nothing else - `crm_1.png` .. `crm_5.png`,
-`analytics_1.png` .. `analytics_5.png` - because a descriptive name is one more thing to keep in step
-with a slot number, and the slot number is all the Store knows.
+nothing. So the files carry the order and nothing else: a folder per product, and inside it
+`1.png` .. `5.png`. A descriptive name is one more thing to keep in step with a slot number, and the
+slot number is all the Store knows - and one folder per product means uploading is opening a folder
+and taking what is in it, rather than picking five files out of ten that differ by a prefix.
 
 **The first is the interface**: the panel with a workspace open, which is what somebody sees the
 moment the product works, and which the Store uses as the thumbnail. Then the rest of the interface,
@@ -36,7 +37,7 @@ exports, the search and the assistant: useful, none of them what the product *is
 | 4 | the ER diagram | the ER diagram |
 | 5 | the call graph | the health audit |
 
-`python3 tools/shots.py` writes them to `dist/store/` and prints a digest of each set.
+`python3 tools/shots.py` writes them to `dist/store/<app>/` and prints a digest of each set.
 `store/<app>/screenshots.json` records the set that is **on the Store**, written by hand at
 submission like the `RELEASES.md` row, because the upload is manual and nothing here can observe it.
 When the digests differ the tool says so, in those words.
