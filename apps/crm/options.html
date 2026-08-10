@@ -164,6 +164,7 @@
       was not shown one.</p>
 
     <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
+    <label class="ck" style="margin-top:10px"><input type="checkbox" id="ai_addr"><span><b>Let the assistant see sender addresses</b> - the address each email notification goes out as. Off by default: the mirror keeps it either way, this decides whether it leaves your machine with a question. The same choice exists per file in the export dialog.</span></label>
     <p class="note" style="margin-top:6px">How many times the assistant may reach for a tool before it has to
       answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
       single question can cost. It is a ceiling, not a target - most answers use two or three.</p>

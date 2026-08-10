@@ -40,8 +40,8 @@
             },
             {
               "type": "email_notifications",
-              "id": "5003",
-              "name": "Ticket acknowledged"
+              "id": "5004",
+              "name": "Parcel on its way"
             }
           ]
         }

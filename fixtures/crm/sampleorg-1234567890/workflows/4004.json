@@ -31,9 +31,9 @@
             "id": "9018"
           },
           {
-            "type": "email_notifications",
-            "id": "5004",
-            "name": "Parcel on its way"
+            "type": "field_updates",
+            "id": "5100",
+            "name": "Set stage to Won"
           }
         ]
       },

@@ -1483,7 +1483,8 @@ async function pullAll() {
 // Everything it adds is already on disk. Nothing is fetched, and nothing is inferred: a workflow
 // fires a function because its own JSON says so, a schedule because its index row names it, a
 // connection because the function's captured meta lists it.
-const CTX_ID = { wf: (id) => 'wf:' + id, sch: (id) => 'sch:' + id, conn: (name) => 'conn:' + name };
+const CTX_ID = { wf: (id) => 'wf:' + id, sch: (id) => 'sch:' + id, conn: (name) => 'conn:' + name,
+                 act: (kind, id) => 'act:' + kind + ':' + id };
 function ctxNode(id, name, category, namespace, file, extra) {
   return Object.assign({
     id, name, api_name: name, display_name: name, namespace: namespace || '', category,
@@ -1505,6 +1506,13 @@ async function callGraphWithContext() {
   const link = (from, to) => { if (!from.calls.includes(to.id)) from.calls.push(to.id); if (!to.called_by.includes(from.id)) to.called_by.push(from.id); };
   const resolveFn = (a) => byId[String(a.id)] || byName[String(a.name || '').toLowerCase()] || null;
 
+  // The actions index, so a rule can be linked to the thing it fires rather than to a name.
+  const actIndex = new Map();
+  try {
+    const rows = JSON.parse(await readFile('actions/index.json'));
+    if (Array.isArray(rows)) rows.forEach((r) => actIndex.set(r.kind + ':' + String(r.id), r));
+  } catch (_) { /* not pulled: the rules still draw, with fewer edges */ }
+
   // ---- workflows: their own file says which functions each condition fires -------------------
   let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) {
@@ -1518,6 +1526,18 @@ async function callGraphWithContext() {
       if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions);
       (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || [])));
       acts.filter(isFnAction).forEach((a) => { const fn = resolveFn(a); if (fn) link(node, fn); });
+      // What else the rule fires. Until now the chain stopped at Deluge, which in a real org is the
+      // smaller half - 275 notification actions against 149 function ones - so a diagram of «what
+      // happens when this fires» was missing most of what happens. The nodes come from the actions
+      // index, so an action nobody pulled is not invented here.
+      acts.filter((a) => a && a.type && !isFnAction(a)).forEach((a) => {
+        const row = actIndex.get(a.type + ':' + String(a.id));
+        if (!row) return;
+        const id = CTX_ID.act(row.kind, row.id);
+        if (!nodes[id]) nodes[id] = ctxNode(id, row.name || String(row.id), 'actions', row.module || '',
+          'actions/index.json', { _kind: row.kind });
+        link(node, nodes[id]);
+      });
     });
   }
 
@@ -1645,6 +1665,21 @@ async function buildHealth() {
       + (fx.usage ? ` In the 24 hours before that Zoho counted ${escHtml(String(fx.usage.success ?? 'unknown'))} run(s) and ${escHtml(String(fx.usage.failure ?? 'unknown'))} failure(s).` : '')
       + ' This is the only thing here read from the platform rather than computed from the mirror, so it is as old as that date and no older. The input of a failed run stays in Zoho.'
     : MSG.notReadYet;
+  // Automation actions nothing fires. The same statement this view already makes about a function
+  // nobody calls, on the objects nobody ever prunes - and the same care: it is a **candidate**.
+  // Two sources disagree politely and both are shown: Zoho's own «in use» flag, and whether any rule
+  // in this workspace names it. A rule that was never pulled cannot name anything, so «no rule here
+  // names it» is not «nothing uses it», and the description says which is which.
+  let actIdx = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) actIdx = a; } catch (_) {}
+  const actUse = actionUsers || await buildActionUsers();
+  const unattached = actIdx
+    .filter((a) => !a.associated && !(actUse.get(a.kind + ':' + String(a.id)) || []).length)
+    .sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
+    .map((a) => ({ html: `<b>${escHtml(a.name || a.id)}</b> <span class="meta">${escHtml(actionKindLabel(a.kind))}${a.module ? ' \u00b7 ' + escHtml(a.module) : ''}</span>` }));
+  const actDesc = actIdx.length
+    ? 'Zoho reports these as attached to no rule, and no rule in this workspace names them either. A candidate to review, not a verdict: a rule that has not been pulled cannot name anything, and Zoho answers only for the automations it knows about.'
+    : MSG.notReadYet;
+
   const groups = [
     { id: 'mostrun', tab: 'size', title: 'Most run, measured', desc: runsDesc, bad: false, items: mostRun },
     { id: 'failing', tab: 'functions', title: 'Failing in Zoho', desc: failDesc, bad: true, items: failing },
@@ -1653,6 +1688,7 @@ async function buildHealth() {
     { id: 'orphan', tab: 'functions', title: MSG.hOrphan, desc: 'No caller in code, not exposed as REST, and no associated_place.', bad: false, items: orphan },
     { id: 'unresolved', tab: 'functions', title: MSG.hUnresolved, desc: 'Calls a function that does not resolve to anything in this workspace.', bad: true, items: unresolved },
     { id: 'ambiguous', tab: 'functions', title: MSG.hAmbiguous, desc: 'A call matches more than one function (name collision across namespaces).', bad: false, items: ambiguous },
+    { id: 'unattached', tab: 'wiring', title: 'Automation actions nothing fires', desc: actDesc, bad: false, items: unattached },
     { id: 'broken', tab: 'wiring', title: MSG.hBroken, desc: 'A workflow or schedule references a function not in this workspace.', bad: true, items: brokenItems },
     { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs, desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
   ];

@@ -416,7 +416,8 @@ git commit -m "baseline"</code></pre>
     <b>in use</b>. In a real org roughly half are not - measured on one, 85 notifications of 200, 50
     field updates of 97, 27 tasks of 56. Those are <b>candidates</b>, exactly as an orphan function
     is: Zoho answers for the rules it knows about, and something fired from elsewhere would look
-    identical. The filter for them is <b class="ui">Attached to nothing</b>.</p>
+    identical. The filter for them is <b class="ui">Attached to nothing</b>, and the same list
+    appears in the health audit under <b>Wiring</b>.</p>
   <p>Opening one shows what it is made of - the template a notification uses, the field an update
     writes, the method and URL of a webhook, how many recipients - and underneath, <b>which rules fire
     it</b>. That link is read from the rules already on your disk rather than fetched: a rule names
@@ -426,7 +427,16 @@ git commit -m "baseline"</code></pre>
     <b>who</b> the recipients are: the count comes back with the rule, the list of people does not,
     and Zoost never asks for it. The sender's address <em>is</em> captured, because «which address does
     this go out as» is the question the list exists to answer - it is your organisation's own address
-    or one of your users', never a customer's.</p>
+    or one of your users', never a customer's. Whether that address travels is yours to decide, in two
+    places and separately: the export dialog has <b class="ui">Sender addresses</b>, off by default, and
+    Settings has <b class="ui">Let the assistant see sender addresses</b>, also off. The mirror on your
+    disk keeps it either way - what these decide is whether it leaves the machine.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-actions.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The Actions tab: notifications, field updates, tasks and webhooks grouped by kind, with one open showing its template, sender and the rule that fires it.">
+    <figcaption>Chapter 8: the four kinds in one list, the count of rules beside each, and what one of them actually sends.</figcaption>
+  </figure>
 
   <h2 id="connections">9. Connections</h2>
   <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists

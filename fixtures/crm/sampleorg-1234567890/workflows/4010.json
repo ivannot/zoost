@@ -31,9 +31,9 @@
             "id": "4510"
           },
           {
-            "type": "tasks",
-            "id": "5200",
-            "name": "Call the customer back"
+            "type": "email_notifications",
+            "id": "5000",
+            "name": "Order confirmation"
           }
         ]
       },

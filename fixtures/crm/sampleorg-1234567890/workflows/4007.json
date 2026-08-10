@@ -34,9 +34,9 @@
           },
           "actions": [
             {
-              "type": "field_updates",
-              "id": "5101",
-              "name": "Clear owner"
+              "type": "tasks",
+              "id": "5201",
+              "name": "Chase the invoice"
             }
           ]
         }

@@ -139,6 +139,13 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   Before Chrome has given the panel access to the working folder it cannot tell whether one exists,
   so it says neither and reads just "Sample workspace": clicking asks for access and then does
   whichever is right.
+- Tab "Actions": what a workflow rule fires - email notifications, field updates, tasks and webhooks -
+  as objects in their own right, with a Kind filter and "Attached to nothing". Each row shows how many
+  rules fire it, read from the rules already on disk. A notification names its template and the address
+  it goes out as; a field update says which field it writes and what value; a task carries its subject,
+  due date, status, priority, owner and reminder; a webhook its method and URL. Zoost does not read the
+  content of an email template, and never who the recipients are - the count comes back with the rule,
+  the list of people does not.
 - "Settings ⚙": AI engine and key, export defaults, which tabs to show, diagram defaults, and the
   default data centre. Beside "Go to Zoho CRM" there is a picklist of every data centre: it starts
   on the one the open workspace or the current tab is on, and otherwise on that default, and the

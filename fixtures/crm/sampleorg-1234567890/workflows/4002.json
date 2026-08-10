@@ -40,8 +40,8 @@
             },
             {
               "type": "email_notifications",
-              "id": "5002",
-              "name": "Welcome message"
+              "id": "5003",
+              "name": "Ticket acknowledged"
             }
           ]
         }

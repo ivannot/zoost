@@ -31,9 +31,9 @@
             "id": "9017"
           },
           {
-            "type": "email_notifications",
-            "id": "5005",
-            "name": "Renewal notice"
+            "type": "field_updates",
+            "id": "5102",
+            "name": "Mark as reviewed"
           }
         ]
       },

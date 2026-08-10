@@ -359,6 +359,16 @@ PANELS = [
           }, 2500);
         }, 400));
     """),
+    ("crm-actions", "crm", "crm/sampleorg-1234567890", """
+        // What a rule fires, with one open: the kinds grouped, the count of rules beside each row,
+        // and the detail showing what the notification sends and which rule sends it.
+        const seg = [...document.querySelectorAll('.mseg,#modebar button')].find((b) => /Actions/.test(b.textContent));
+        if (seg) seg.click();
+        setTimeout(() => {
+          const el = [...document.querySelectorAll('#tree .f')].find((e) => /Invoice reminder/.test(e.textContent));
+          if (el) el.click();
+        }, 1200);
+    """),
     ("crm-panel", "crm", "crm/sampleorg-1234567890", """
         // The tree is already drawn; open one function so the preview has something in it.
         // The pattern used to be /uild.nvoice/, which asks for ONE character between «uild» and

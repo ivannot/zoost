@@ -60,6 +60,8 @@ WHAT IT DOES
 
 - Health audit. Orphan candidates, unresolved and ambiguous calls, broken automations, lookups pointing at modules that are not there. Every check states what it does and does not analyse. Candidates to review - never automatic deletions.
 
+- What a rule fires. A workflow almost never does the work itself: it points at an email notification, a field update, a task or a webhook, each of which exists on its own in Zoho and is reused across rules. Zoost lists all four with a kind filter, says how many rules fire each - read from the rules already on your disk - and what each one does: the template and the address a notification goes out as, the field and value an update writes, a task's subject, due date, owner and reminder, a webhook's method and URL. About half of them are attached to nothing in a real org; that is a candidate to review, never a verdict. It does not read the content of an email template, and never who the recipients are.
+
 - What is actually failing. Zoho reports which functions have failed, and Zoost lists them beside the rest of the org: the function, what invoked it (a REST call, a workflow, a button, a schedule), the reason with its line number, how often, and how many runs and failures Zoho counted in the last 24 hours. Counts, with no verdict attached. It does not re-run a failed execution - that would make Zoho run code that writes to your records - and it does not read the input of the failed run, which stays in Zoho.
 
 - Exports you can hand over. The whole workspace as one self-contained cross-linked HTML file, or as Markdown shaped as context for an external LLM. A dialog decides section by section what the file may contain; source code is opt-in and flagged every time.

@@ -32,8 +32,8 @@
           },
           {
             "type": "field_updates",
-            "id": "5100",
-            "name": "Set stage to Won"
+            "id": "5103",
+            "name": "Reset priority"
           }
         ]
       },

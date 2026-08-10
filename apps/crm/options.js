@@ -259,6 +259,7 @@ async function loadAi() {
     anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}),
     openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}),
     maxIter: c.maxIter || 20,
+    shareAddresses: c.shareAddresses === true,
     seedCap: c.seedCap || 72000,
   };
   // Fields first, state second. syncLockRow() and markEngineOptions() both read the *form* - which is
@@ -268,6 +269,7 @@ async function loadAi() {
   $('ai_a_model').value = cfg.anthropic.model; $('ai_a_key').value = cfg.anthropic.apiKey;
   $('ai_o_model').value = cfg.openai.model; $('ai_o_key').value = cfg.openai.apiKey;
   $('ai_maxiter').value = cfg.maxIter;
+  $('ai_addr').checked = !!cfg.shareAddresses;
   $('ai_seedcap').value = cfg.seedCap;
   // A key already protected shows as protected, with the field left empty: the passphrase is not
   // stored, so there is nothing to put back in it.
@@ -313,6 +315,9 @@ $('saveAi').onclick = async () => {
     anthropic: { model: $('ai_a_model').value.trim(), apiKey: $('ai_a_key').value.trim() },
     openai: { model: $('ai_o_model').value.trim(), apiKey: $('ai_o_key').value.trim() },
     maxIter: Math.max(1, Math.min(40, parseInt($('ai_maxiter').value, 10) || 20)),
+    // Off unless the reader says otherwise, and the mirror keeps the address either way: what is
+    // at stake here is whether it travels to a provider, not whether it is on disk.
+    shareAddresses: $('ai_addr').checked,
     seedCap: Math.max(4000, Math.min(400000, parseInt($('ai_seedcap').value, 10) || 72000)),
   };
   const prev = await currentAi();

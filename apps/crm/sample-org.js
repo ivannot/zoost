@@ -459,7 +459,11 @@
       // Most rules in a real org fire something that is not a function - 275 notification actions
       // against 149 function ones in the org this was measured on - so most rules here do too, and
       // the id is the one the actions index carries, because that join is the point of the area.
-      const other = actions[i % actions.length];
+      // Only actions Zoho reports as in use are fired by a rule here, so the two sources agree and
+      // «attached to nothing» has something to find: an action that is unassociated *and* named by
+      // a rule would be a contradiction the fixture invented.
+      const usable = actions.filter((x) => x.associated);
+      const other = usable[i % usable.length];
       const actionList = fnAct.concat(other ? [{ type: other.kind, id: other.id, name: other.name }] : []);
       // The *rule* object, which is what fetchWorkflow returns and what the file holds - not a
       // wrapper around it. wfScheduled() reads conditions[].scheduled_actions[].execute_after.

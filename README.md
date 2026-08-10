@@ -11,7 +11,7 @@ your browser.
 
 | | What it mirrors | |
 |---|---|---|
-| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing at runtime | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
+| **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows and what they fire, schedules, connections, and what Zoho reports as failing at runtime | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) |
 | **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics) · [guide](https://zoost.it/docs-analytics) |
 
 Neither replaces Zoho's editor. You keep writing and saving where Zoho compiles and validates; these
@@ -60,7 +60,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   connections - arrives on your disk as plain files, so with Git it gets a history too, and one diff
   answers what changed across every kind at once rather than one function at a time. Git is optional:
   without it the mirror is still ordinary files.
-- **The whole org at once.** Functions, modules, workflows, schedules, connections and their relationships,
+- **The whole org at once.** Functions, modules, workflows and the actions they fire, schedules, connections and their relationships,
   in one navigable place and one shareable document.
 - **Not an editor, on purpose.** No editor overlay to maintain, no false validation. Zoho compiles
   server-side and versions a function, one at a time; Zoost adds comprehension, an audit, a history
@@ -99,6 +99,12 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 - **Connections**: the org's connection catalogue cross-referenced with the functions that use it -
   per function (the connections it calls) and org-wide (usage count, unused, disconnected).
   Plus who last changed each function, and when.
+- **What a rule fires**: email notifications, field updates, tasks and webhooks, each an object of its
+  own in Zoho and reused across rules. One list with a kind filter, how many rules fire each - read
+  from the rules already on disk - and what each one does: the template and sender of a notification,
+  the field and value of an update, a task's subject, due date, owner and reminder, a webhook's method
+  and URL. About half of them are attached to nothing in a real org, and that is a candidate to review
+  rather than a verdict. Zoost never reads a template's content, nor who the recipients are.
 - **Execution failures**: what Zoho reports as failing - the function, what invoked it, the reason with its
   line number, how often, and how many runs and failures Zoho counted in the last 24 hours. The one
   thing here that reads a runtime rather than a structure, so it carries the date it was read. It
@@ -118,7 +124,7 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 
 **Exports - human-friendly and AI-friendly**
 - **Export → HTML**: the entire workspace - functions (highlighted, cross-linked), modules,
-  workflows, schedules, connections, and the health report - as one self-contained, navigable HTML file.
+  workflows, the actions they fire, schedules, connections, and the health report - as one self-contained, navigable HTML file.
 - **Export → Markdown**: the whole org as a single `.md` (index + full sources + schemas + connections),
   ready to drop into any external LLM. Work inside the extension *and* outside it.
 
