@@ -487,7 +487,11 @@
         missed.push({ kind: k.kind, error: (e && e.message) || String(e), status: e && e.status, forbidden: !!(e && e.forbidden) });
       }
     }
-    return { total: out.length, actions: out, missed, capped };
+    // The bridge says which schema it can write. Reloading the extension does not reload the script
+    // already injected into an open Zoho tab, so a pull can run the *previous* version and write
+    // rows the panel then reports as «not read by the pull that wrote this» - which is true, and
+    // reads as a bug in the panel. With this, the panel can say whose copy is old.
+    return { total: out.length, actions: out, missed, capped, sv: ACT_SV };
   }
 
   async function pullConnections() {

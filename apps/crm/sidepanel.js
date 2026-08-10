@@ -84,6 +84,7 @@ const MSG = {
   sampleNoOrg: 'This is the sample workspace - there is no Zoho org to open.',
   noModuleTarget: 'Unknown module target - pull once, or open Zoho first.',
   noActionTarget: 'Zoho has no page for this kind that Zoost knows of - open it from the automation list.',
+  staleBridge: 'The Zoho tab is still running an older copy of this extension - reload that tab, then pull again.',
   // The three status-dot tooltips, which say what a click will do rather than what the mark is.
   notHere: 'Not in workspace - click to download',
   hereRepull: 'In workspace - click to re-download from Zoho',
@@ -4446,6 +4447,16 @@ async function pullActions() {
     // an org whose role cannot read them look identical in a count.
     const missed = (r.missed || []).filter((m) => m && m.kind);
     const capped = r.capped || [];
+    // The tab keeps the content script it was loaded with: reloading the extension does not replace
+    // it. So a pull can be answered by the previous version, write rows without the newest fields,
+    // and the panel then says «not read by the pull that wrote this» about a pull that just ran -
+    // true, and impossible to act on unless somebody says which copy is old.
+    if ((Number(r.sv) || 0) < ACT_SV) {
+      setStatus(MSG.staleBridge, 'warn');
+      await writeFile('actions/index.json', JSON.stringify(r.actions || [], null, 2));
+      if (viewMode === 'actions') await rebuildActions();
+      return;
+    }
     // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
     // short are two different reasons for a number to be smaller than the org.
     const note = (missed.length ? ` ${missed.length} kind(s) could not be read.` : '')
