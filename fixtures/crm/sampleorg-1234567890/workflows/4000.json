@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "automation.onOrderCreate",
-          "id": "4500"
+          "type": "functions",
+          "name": "onOrderCreate",
+          "id": "9015"
         }
       ],
       "scheduled_actions": []

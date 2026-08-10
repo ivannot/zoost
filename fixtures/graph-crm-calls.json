@@ -296,8 +296,7 @@
         "standalone.log"
       ],
       "called_by": [
-        "schedule.nightlyDispatch",
-        "wf:4006"
+        "schedule.nightlyDispatch"
       ],
       "params": [
         {
@@ -323,8 +322,7 @@
         "conn:mail_relay"
       ],
       "called_by": [
-        "schedule.closeStaleTickets",
-        "wf:4003"
+        "schedule.closeStaleTickets"
       ],
       "params": [
         {
@@ -430,10 +428,7 @@
         "standalone.reserveStock",
         "automation.recalcTotals"
       ],
-      "called_by": [
-        "wf:4000",
-        "wf:4009"
-      ],
+      "called_by": [],
       "params": [
         {
           "name": "orderId",
@@ -442,7 +437,7 @@
       ],
       "return_type": "map",
       "rest": false,
-      "dead_suspect": false,
+      "dead_suspect": true,
       "unresolved": [],
       "ambiguous": []
     },
@@ -459,8 +454,7 @@
       ],
       "called_by": [
         "automation.onOrderCreate",
-        "button.recalcOrder",
-        "wf:4001"
+        "button.recalcOrder"
       ],
       "params": [
         {
@@ -484,9 +478,7 @@
       "calls": [
         "standalone.buildInvoice"
       ],
-      "called_by": [
-        "wf:4005"
-      ],
+      "called_by": [],
       "params": [
         {
           "name": "dealId",
@@ -495,7 +487,7 @@
       ],
       "return_type": "map",
       "rest": false,
-      "dead_suspect": false,
+      "dead_suspect": true,
       "unresolved": [],
       "ambiguous": []
     },
@@ -510,8 +502,7 @@
         "standalone.log"
       ],
       "called_by": [
-        "automation.refreshTickets",
-        "wf:4004"
+        "automation.refreshTickets"
       ],
       "params": [
         {
@@ -537,7 +528,6 @@
         "standalone.log"
       ],
       "called_by": [
-        "wf:4002",
         "sch:5001"
       ],
       "params": [],
@@ -803,9 +793,7 @@
       "calls": [
         "standalone.log"
       ],
-      "called_by": [
-        "wf:4008"
-      ],
+      "called_by": [],
       "params": [
         {
           "name": "accountId",
@@ -814,7 +802,7 @@
       ],
       "return_type": "map",
       "rest": false,
-      "dead_suspect": false,
+      "dead_suspect": true,
       "unresolved": [],
       "ambiguous": []
     },
@@ -2470,9 +2458,7 @@
       "display_name": "New order received",
       "namespace": "Orders",
       "category": "workflows",
-      "calls": [
-        "automation.onOrderCreate"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2487,9 +2473,7 @@
       "display_name": "Order amount changed",
       "namespace": "Orders",
       "category": "workflows",
-      "calls": [
-        "automation.recalcTotals"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2504,9 +2488,7 @@
       "display_name": "Invoice overdue",
       "namespace": "Invoices",
       "category": "workflows",
-      "calls": [
-        "schedule.dunningRun"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2521,9 +2503,7 @@
       "display_name": "Ticket unanswered",
       "namespace": "Tickets",
       "category": "workflows",
-      "calls": [
-        "standalone.escalateTicket"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2538,9 +2518,7 @@
       "display_name": "Contact merged",
       "namespace": "Contacts",
       "category": "workflows",
-      "calls": [
-        "automation.onContactMerge"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2555,9 +2533,7 @@
       "display_name": "Deal won",
       "namespace": "Deals",
       "category": "workflows",
-      "calls": [
-        "automation.onDealWon"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2572,9 +2548,7 @@
       "display_name": "Shipment dispatched",
       "namespace": "Shipments",
       "category": "workflows",
-      "calls": [
-        "standalone.trackParcel"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2604,9 +2578,7 @@
       "display_name": "Credit limit changed",
       "namespace": "Accounts",
       "category": "workflows",
-      "calls": [
-        "validation_rule.checkCreditLimit"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2621,9 +2593,7 @@
       "display_name": "Quote accepted",
       "namespace": "Quotes",
       "category": "workflows",
-      "calls": [
-        "automation.onOrderCreate"
-      ],
+      "calls": [],
       "called_by": [],
       "params": [],
       "return_type": "",
@@ -2860,8 +2830,8 @@
   "depth": 2,
   "counts": {
     "nodes": 143,
-    "edges": 136,
-    "dead_suspects": 47,
+    "edges": 127,
+    "dead_suspects": 50,
     "unresolved": 2
   },
   "workspace": {

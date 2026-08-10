@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "automation.onContactMerge",
-          "id": "4504"
+          "type": "functions",
+          "name": "onContactMerge",
+          "id": "9018"
         }
       ],
       "scheduled_actions": []

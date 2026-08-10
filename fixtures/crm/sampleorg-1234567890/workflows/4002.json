@@ -32,9 +32,9 @@
           },
           "actions": [
             {
-              "type": "function",
-              "name": "schedule.dunningRun",
-              "id": "4502"
+              "type": "functions",
+              "name": "dunningRun",
+              "id": "9019"
             }
           ]
         }

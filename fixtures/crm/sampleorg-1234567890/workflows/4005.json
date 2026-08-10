@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "automation.onDealWon",
-          "id": "4505"
+          "type": "functions",
+          "name": "onDealWon",
+          "id": "9017"
         }
       ],
       "scheduled_actions": []

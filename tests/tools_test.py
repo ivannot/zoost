@@ -1344,6 +1344,58 @@ class TheReleaseBodyHasTwoReaders(unittest.TestCase):
         self.assertIn('if [ ! -s "$NOTES" ]', wf, 'a Release could be published with no notes')
 
 
+class TheSampleWorkflowsActuallyFireSomething(unittest.TestCase):
+    """A workflow action in the fixture has to resolve the way a real one does.
+
+    It wrote `type: 'function'` where Zoho writes `functions`, and named the target
+    «namespace.name» with an id of its own invention - so `resolveFn()` matched on neither and the
+    sample workspace had **no workflow-to-function edge at all**: not in the call graph, not in the
+    health audit's broken automations, not in the assistant's action counts. Nothing failed, because
+    a filter that matches nothing looks exactly like an org that has nothing.
+
+    Measured before and after through the panel: 0 workflows linked to a function, then 2.
+    """
+
+    def actions(self):
+        base = sorted((ROOT / 'fixtures').glob('crm/*/workflows'))[0]
+        idx = json.loads((base / 'index.json').read_text(encoding='utf-8'))
+        out = []
+        for row in idx:
+            f = base / f"{row['id']}.json"
+            if not f.exists():
+                continue
+            rule = json.loads(f.read_text(encoding='utf-8'))
+            for c in rule.get('conditions') or []:
+                out += ((c.get('instant_actions') or {}).get('actions') or [])
+                for sa in c.get('scheduled_actions') or []:
+                    out += sa.get('actions') or []
+        return out
+
+    def test_at_least_one_workflow_fires_a_function(self):
+        fn = [a for a in self.actions() if a.get('type') == 'functions']
+        self.assertGreaterEqual(len(fn), 2, 'no workflow in the sample fires a function, so the '
+                                            'edge nine readers draw is never exercised')
+
+    def test_the_type_is_the_string_every_reader_filters_on(self):
+        src = (ROOT / 'apps/crm/sidepanel.js').read_text(encoding='utf-8')
+        self.assertIn("type === 'functions'", src)
+        for a in self.actions():
+            self.assertNotEqual(a.get('type'), 'function',
+                                "the fixture writes `function` where the panel filters `functions`")
+
+    def test_every_action_resolves_to_a_function_that_exists(self):
+        base = sorted((ROOT / 'fixtures').glob('crm/*/functions'))[0]
+        idx = json.loads((base / 'index.json').read_text(encoding='utf-8'))
+        by_id = {str(e.get('id')) for e in idx}
+        by_name = {str(e.get(k)).lower() for e in idx for k in ('name', 'api_name', 'display_name') if e.get(k)}
+        for a in self.actions():
+            if a.get('type') != 'functions':
+                continue
+            ok = str(a.get('id')) in by_id or str(a.get('name', '')).lower() in by_name
+            self.assertTrue(ok, f"the action names «{a.get('name')}» and no function answers to it - "
+                                f"resolveFn() tries the id first and then every name a function has")
+
+
 class TheSuiteRunsEverythingInIt(unittest.TestCase):
     """A test defined after `unittest.main()` is never run, and the suite still says OK.
 

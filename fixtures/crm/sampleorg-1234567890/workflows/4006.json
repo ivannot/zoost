@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "standalone.trackParcel",
-          "id": "4506"
+          "type": "functions",
+          "name": "trackParcel",
+          "id": "9010"
         }
       ],
       "scheduled_actions": []

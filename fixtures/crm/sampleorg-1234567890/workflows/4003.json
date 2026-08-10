@@ -32,9 +32,9 @@
           },
           "actions": [
             {
-              "type": "function",
-              "name": "standalone.escalateTicket",
-              "id": "4503"
+              "type": "functions",
+              "name": "escalateTicket",
+              "id": "9011"
             }
           ]
         }

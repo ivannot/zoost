@@ -370,7 +370,20 @@
     const wfs = [];
     WORKFLOWS.forEach(([mod, name, fn, sched], i) => {
       const wid = String(4000 + i);
-      const actions = fn ? [{ type: 'function', name: fn, id: String(4500 + i) }] : [];
+      // `functions`, plural, which is what Zoho returns and what all nine readers filter on -
+      // the fixture said `function` and so the sample workspace had no workflow-to-function
+      // edge at all: not in the graph, not in the health audit's broken automations, not in
+      // the assistant's action counts. Silent, because a filter that matches nothing looks
+      // exactly like an org that has nothing. The rule this file already carries: derive a
+      // shape from the writer, never from what reads well.
+      // Zoho names the function by its own name and gives the id it knows it by; the fixture wrote
+      // «namespace.name» and an id of its own invention, so `resolveFn()` matched on neither and the
+      // sample workspace had no workflow-to-function edge at all - not in the graph, not in the
+      // health audit's broken automations, not in the assistant's action counts. Silent, because a
+      // filter that matches nothing looks exactly like an org that has nothing. The rule this file
+      // already carries, one file over: derive a shape from the writer, never from what reads well.
+      const target = fn ? index.find((e) => e.name === String(fn).split('.').pop()) : null;
+      const actions = target ? [{ type: 'functions', name: target.name, id: target.id }] : [];
       // The *rule* object, which is what fetchWorkflow returns and what the file holds - not a
       // wrapper around it. wfScheduled() reads conditions[].scheduled_actions[].execute_after.
       J('workflows/' + wid + '.json', {

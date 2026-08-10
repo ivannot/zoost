@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "validation_rule.checkCreditLimit",
-          "id": "4508"
+          "type": "functions",
+          "name": "checkCreditLimit",
+          "id": "9030"
         }
       ],
       "scheduled_actions": []

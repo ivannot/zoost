@@ -25,9 +25,9 @@
       },
       "actions": [
         {
-          "type": "function",
-          "name": "automation.recalcTotals",
-          "id": "4501"
+          "type": "functions",
+          "name": "recalcTotals",
+          "id": "9016"
         }
       ],
       "scheduled_actions": []
