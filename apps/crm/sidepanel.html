@@ -582,6 +582,12 @@
   <button class="primary" id="gozoho">Go to Zoho CRM ↗</button>
       <button class="znav" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">+ Sample workspace</button>
     </div>
+  </div>
+  <!-- Outside #belowbar on purpose, and the same shape as the Analytics panel. #aiview and
+       #healthview are absolute/inset:0 inside that container, so a footer *inside* it is covered by
+       them - it was held on top with z-index:80, which then painted the footer over the chat's own
+       textarea and Send button. The footer is chrome for the whole panel, not for the area a view
+       covers, so it sits beside it and the overlays end where it begins. -->
   <div id="pfoot">
     <a id="opts" title="Working folder, AI engines, export and diagram defaults">⚙ Settings</a> <span class="sep">·</span>
     <a id="about" title="Credits, licence and legal notice">About</a> <span class="sep">·</span>
@@ -589,7 +595,6 @@
     <span class="pfsp"></span>
     <a href="https://github.com/sponsors/ivannot" target="_blank" rel="noopener" title="Support development on GitHub Sponsors (0% fees, needs a GitHub account)">Sponsor</a> <span class="sep">·</span>
     <a href="https://ko-fi.com/ivannot" target="_blank" rel="noopener" title="Buy me a coffee on Ko-fi (no account needed)">☕ Ko-fi</a>
-  </div>
   </div>
   <script src="sample-org.js"></script>
   <script src="idb.js"></script>

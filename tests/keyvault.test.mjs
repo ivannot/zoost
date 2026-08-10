@@ -443,6 +443,22 @@ test('the CRM status bar is under the AI overlay, which is why the above matters
   assert.match(html, /#aiview\{[^}]*inset:0/, 'and the overlay still covers its whole container');
 });
 
+test('the footer is outside the container the AI view covers', () => {
+  // Reported with a screenshot: the chat's textarea and Send button had the footer drawn across
+  // them. #pfoot was inside #belowbar, which #aiview covers at inset:0, and was held visible with
+  // z-index:80 - so it was on top of the composer rather than beside it. The Analytics panel has
+  // always had the footer as a sibling; this is the CRM catching up, and the assertion is here so a
+  // future tidy-up does not put it back inside.
+  for (const app of ['crm', 'analytics']) {
+    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const body = html.slice(html.indexOf('<body'));
+    const view = app === 'crm' ? 'id="belowbar"' : 'id="main"';
+    const seg = body.slice(body.indexOf(view), body.indexOf('id="pfoot"'));
+    const depth = (seg.match(/<div\b/g) || []).length - (seg.match(/<\/div>/g) || []).length;
+    assert.ok(depth <= 0, `${app}: #pfoot is inside the container the AI and Health views cover`);
+  }
+});
+
 // ---------- the lapsed folder permission ----------
 
 /** friendlyError() lifted out of a panel. Pure string in, string out.

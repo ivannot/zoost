@@ -1990,6 +1990,28 @@ async function aiFocus() {
       const e = connectionData.find((x) => x.path === p);
       if (e) return block(`the connection «${e.label || e.name || '?'}»`, aiTrunc(JSON.stringify(e, null, 2), 3000));
     }
+    // The «one of a set» miss, again: every other kind had a branch here and this one did not, so
+    // selecting an action and asking «what does this do?» got «I have no reference» while the same
+    // question about a function worked. What fires it is the half of the answer that is not in the
+    // row itself, so it travels with it.
+    if (p.startsWith('actions/')) {
+      const e = actionData.find((x) => x.path === p);
+      if (e) {
+        if (!actionUsers) actionUsers = await buildActionUsers();   // the chat may be the first thing opened
+        const fired = actionFiredBy(e);
+        // The sender address obeys the same setting here as in the index and in both exports. A
+        // focus block that carried it regardless would let the address out through the one door
+        // nobody thought to close - and the whole point of that switch is that it has one meaning.
+        const { addresses } = await aiLoadActions();
+        const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
+        if (!addresses && shown.from_address) shown.from_address = '(withheld - Settings can let the assistant see sender addresses)';
+        return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
+          aiTrunc(JSON.stringify(shown, null, 2), 4000))
+          + (fired.length ? '' : (e.associated
+            ? '\nZoho reports it as in use, but no rule on disk names it - the rule that uses it may not have been pulled.\n'
+            : '\nNo workflow rule on disk fires this action.\n'));
+      }
+    }
     if (p.startsWith('modules/')) {
       const e = moduleData.find((x) => x.path === p);
       if (e) {
