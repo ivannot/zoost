@@ -1164,6 +1164,14 @@ published as **WebP at 1760 wide**, twice the widest the content column reaches.
 busiest shot: 115 KB as the 1x PNG, 284 KB as a 1760 PNG, **45-90 KB as WebP** - the format does the
 work, not the resizing. Lazy-loaded, each carrying its own width and height so nothing below moves.
 
+**Coverage is checked, not intended - `tools/imgcheck.py`.** «Copertura visiva totale delle feature»
+is a wish until something measures it. Five derived checks, no list of pages: every image the
+renderer produces is published; every image published is used by a page; every `<img>` points at a
+file that exists, carries alt text, and declares width and height; and **a page and its translation
+carry the same number of figures**, because a reader who switches language and finds one side
+illustrated and the other bare is meeting two products. It found seven rendered-and-never-placed
+images the first time it ran. 24 images, 1.26 MB, across 16 pages.
+
 **A click script that agrees with nothing renders the default state, silently.** The full-text search
 shot toggled a `#findscope` that does not exist - the control is `#smode` - so it searched *names*
 and published «No matches» under a caption about searching code. A screenshot that advertises a

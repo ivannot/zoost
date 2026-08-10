@@ -201,13 +201,72 @@ def render_panel(shot):
     return dest
 
 
+
+OPTIONS_STUB = """
+window.chrome = {{
+  runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0' }}), id: 'shot',
+              openOptionsPage: () => {{}}, sendMessage: async () => ({{ ok: true }}),
+              onMessage: {{ addListener: () => {{}} }}, lastError: null }},
+  storage: {{ local: {{ get: async (k) => ({stored}), set: async () => {{}}, remove: async () => {{}},
+                        onChanged: {{ addListener: () => {{}} }} }},
+              session: {{ get: async () => ({{}}), set: async () => {{}} }},
+              onChanged: {{ addListener: () => {{}} }} }},
+  tabs: {{ query: async () => [], create: () => {{}}, onUpdated: {{ addListener: () => {{}} }} }},
+  windows: {{ getAll: async () => [], create: () => {{}} }},
+}};
+window.idbHandle = {{ get: async () => null, set: async () => {{}} }};
+window.addEventListener('load', () => setTimeout(() => {{
+  try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}
+}}, 700));
+"""
+
+
+def render_options(shot):
+    """The settings page. It needs no folder and no Zoho tab - only `chrome.storage` for what it
+    shows and `idbHandle` for the working-folder row, both stubbed here rather than through the file
+    shim, because nothing on this page reads the mirror."""
+    key, app, stored, script = shot
+    src = ROOT / "apps" / app
+    with tempfile.TemporaryDirectory() as tmp:
+        stage = pathlib.Path(tmp)
+        for f in src.iterdir():
+            if f.is_file():
+                shutil.copy2(f, stage / f.name)
+        (stage / "shot.js").write_text(
+            OPTIONS_STUB.format(name=json.dumps(NAME[app]), stored=stored, script=script),
+            encoding="utf-8")
+        page = stage / "options.html"
+        html = page.read_text(encoding="utf-8")
+        first = '<script src="options.js"></script>'
+        assert first in html, key + ": the settings page does not load options.js where this expects"
+        page.write_text(html.replace(first, '<script src="shot.js"></script>\n  ' + first, 1),
+                        encoding="utf-8")
+        OUT.mkdir(parents=True, exist_ok=True)
+        dest = OUT / (key + ".png")
+        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
+                        "--virtual-time-budget=12000", "--screenshot=" + str(dest),
+                        page.as_uri()], check=True, capture_output=True)
+    return dest
+
+
+# The settings page, which is where the AI engine, the key and the passphrase are chosen - the one
+# screen the site describes at length and had no picture of. `stored` is what chrome.storage answers,
+# so the shot shows a configured install rather than an empty form.
+OPTIONS = [
+    ("crm-settings", "crm",
+     "{ aicfg: { engine: 'anthropic', anthropic: { model: 'claude-sonnet-4-5', apiKey: 'sk-ant-...' },"
+     " openai: { model: '', apiKey: '' }, maxIter: 20, seedCap: 72000 } }", ""),
+    ("analytics-settings", "analytics",
+     "{ aicfg: { engine: 'anthropic', anthropic: { model: 'claude-sonnet-4-5', apiKey: 'sk-ant-...' },"
+     " openai: { model: '', apiKey: '' }, maxIter: 20, seedCap: 72000 } }", ""),
+]
+
 PANEL_CTX = {
     # What the bridge answers for `context`. Without a matching one the environment guard fires and
     # covers the panel - correct behaviour, and a photograph of nothing.
     "crm": ("https://crm.zoho.eu/crm/sampleorg/tab/Home",
             "{ ok: true, org: '1234567890', instance: 'sampleorg', origin: 'https://crm.zoho.eu', zuid: '0' }"),
-    # No tab for the Analytics shots: a sample workspace needs none, the overlay is suppressed for
-    # it, and the picture is then of the panel rather than of the bar explaining a discrepancy.
     "analytics": ("https://analytics.zoho.eu/workspace/99000001",
                   "{ ok: true, workspace: '99000001', origin: 'https://analytics.zoho.eu' }"),
     # It used to be `{ ok: false }` against example.com, so every Analytics panel shot carried an
@@ -229,8 +288,11 @@ PANELS = [
         }, 400));
     """),
     ("crm-panel", "crm", "crm/sampleorg-1234567890", """
-        // the tree is already drawn; open one function so the preview has something in it
-        const el = [...document.querySelectorAll('#tree .f')].find((e) => /uild.nvoice/.test(e.textContent));
+        // The tree is already drawn; open one function so the preview has something in it.
+        // The pattern used to be /uild.nvoice/, which asks for ONE character between «uild» and
+        // «nvoice» where the display name «Build invoice» has two - so it matched nothing, silently,
+        // and this shot went to the Store as a picture of a list with no selection.
+        const el = [...document.querySelectorAll('#tree .f')].find((e) => /Build invoice/.test(e.textContent));
         if (el) el.click();
     """),
     ("crm-modules", "crm", "crm/sampleorg-1234567890", """
@@ -259,6 +321,12 @@ PANELS = [
     # --- the screens the site describes and had no picture of -----------------------------------
     # «Copertura visiva totale delle feature» - every capability the pages claim should be visible
     # somewhere, not only described. tools/coverage.py holds the map and reports what is missing.
+    ("crm-preview", "crm", "crm/sampleorg-1234567890", """
+        // A function open in the preview: its source, and the calls in it clickable. The list shot
+        // above shows the catalogue; this one shows what you get when you pick something out of it.
+        const el = [...document.querySelectorAll('#tree .f')].find((e) => /Build invoice/.test(e.textContent));
+        if (el) el.click();
+    """),
     ("crm-search", "crm", "crm/sampleorg-1234567890", """
         // Full-text search across every function at once, which Zoho CRM has no way of doing. The
         // first version of this shot searched *names* - `#smode` is the toggle, not a select - and
@@ -307,13 +375,13 @@ PANELS = [
 
 
 def main():
-    want = sys.argv[1:] or [s[0] for s in SHOTS + PANELS]
+    want = sys.argv[1:] or [s[0] for s in SHOTS + PANELS + OPTIONS]
     if not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
-    for shot in SHOTS + PANELS:
+    for shot in SHOTS + PANELS + OPTIONS:
         if shot[0] not in want:
             continue
-        dest = (render_panel if shot in PANELS else render)(shot)
+        dest = (render_options if shot in OPTIONS else render_panel if shot in PANELS else render)(shot)
         out = subprocess.run(["file", "-b", str(dest)], capture_output=True, text=True).stdout.strip()
         ok = "1280 x 800" in out and "RGB" in out and "RGBA" not in out
         print("{:<16} {}  {}".format(shot[0], "ok " if ok else "BAD", out))

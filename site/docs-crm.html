@@ -110,6 +110,12 @@
   </table>
   <p>Zoost is not an editor. You keep writing Deluge in Zoho, where it compiles and validates. Zoost gives you the map, the audit, and - with Git - a history of the parts Zoho does not version.</p>
 
+  <figure class="shot">
+    <img src="/img/crm-modules.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The Modules tab: a module selected, with its fields, types and layouts in the pane below.">
+    <figcaption>The mirror is one folder per kind. Here the Modules tab, with a module's fields and layouts under it.</figcaption>
+  </figure>
+
   <h2 id="first-run">2. First run</h2>
   <ol>
     <li>Open a Zoho CRM tab and open the Zoost side panel (the extension icon).</li>
@@ -171,6 +177,12 @@
   </ul>
   <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull</b> in Modules mode. If the layout matrix or the
     relation catalogue looks empty, that workspace was pulled with an older build - pull again.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-workflows.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The Workflows tab: rules with their triggers, and which of them have actions that wait.">
+    <figcaption>Chapter 3 pulls these too. A workflow carries its trigger, its criteria and - where it has them - the actions that fire after a delay.</figcaption>
+  </figure>
 
   <h2 id="git">4. Putting it under Git</h2>
   <p>Nothing is automatic here, on purpose: it is your repository, with your conventions.</p>
@@ -259,6 +271,12 @@ git commit -m "baseline"</code></pre>
       amber dot means it is required there. Rows highlighted in cream are fields on <b>no</b> layout - API-only.</li>
   </ul>
 
+  <figure class="shot">
+    <img src="/img/crm-search.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The panel searching the full text of every function at once, showing four matches in two files.">
+    <figcaption>Chapter 5: <b>in: code</b> turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.</figcaption>
+  </figure>
+
   <h2 id="diagram">6. The diagram</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> (in Functions mode) opens which function calls which; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
@@ -341,6 +359,30 @@ git commit -m "baseline"</code></pre>
     stays on the focus.
     The <b>Explorer</b> and a focused <b>Graph</b> stay fast at any org size; use a focus and a small depth.</p>
 
+  <figure class="shot">
+    <img src="/img/crm-graph.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The call graph window: functions, workflows, schedules and connections as boxes joined by arrows.">
+    <figcaption>Chapter 6: the diagram window. The chips at the top are the filter and the colour key at once, and they steer all three views.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-er.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The ER diagram: modules as boxes listing their fields, joined by their lookups.">
+    <figcaption>The other drawing in the same window: modules as tables, lookups as arrows, focusable and printable wall-size.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-explorer.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The diagram window's Explorer list beside the drawing, with a function selected.">
+    <figcaption>The Explorer column lists what the drawing contains, and selecting there moves the focus in the diagram.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-buttons.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The diagram window with one category switched off, redrawing the graph rather than hiding pieces.">
+    <figcaption>The chips do not hide boxes, they rebuild the drawing - so switching a kind off actually makes a large graph readable.</figcaption>
+  </figure>
+
   <h2 id="relation-name">7. Finding a relation name</h2>
   <div class="box">
     <p>The API name of a related list is <b>not</b> the API&nbsp;name of either module. It is a third string,
@@ -354,6 +396,12 @@ git commit -m "baseline"</code></pre>
       field or linking module behind it, and the full call. Filter chips hide the system related lists
       (Notes, Attachments, Tasks…) so only your own relations remain.</li>
   </ul>
+
+  <figure class="shot">
+    <img src="/img/crm-relations.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The Relations table: one row per related list with the API name that getRelatedRecords needs.">
+    <figcaption>Chapter 7: this table is the answer. One row per related list, with the API name the call needs - which is neither module's own api_name, and is the reason this table exists.</figcaption>
+  </figure>
 
   <h2 id="connections">8. Connections</h2>
   <p>A connection is the named credential a function uses in <code>invokeurl […connection:"…"]</code>. Zoho lists
@@ -375,6 +423,12 @@ git commit -m "baseline"</code></pre>
       "unused by your functions", a candidate to review, not a verdict.</p>
   </div>
 
+  <figure class="shot">
+    <img src="/img/crm-connections.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The connections tab: the org's connection catalogue with the functions that use each one.">
+    <figcaption>Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.</figcaption>
+  </figure>
+
   <h2 id="health">9. Health audit</h2>
   <p><b class="ui">Health (♥)</b> lists orphan candidates, unresolved and ambiguous calls, broken automations, and
     lookups pointing at modules that are not in the workspace. Each section states what it does <b>and does
@@ -385,6 +439,12 @@ git commit -m "baseline"</code></pre>
     outbound calls. There is no threshold and no verdict attached: a long function is worth a look, not
     necessarily a problem, and a short one can still be the dangerous one. The counts are there so you can
     see where length and API cost concentrate - the reading is yours.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-health.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The health view: orphan candidates, with the coverage note stating what the scan cannot see.">
+    <figcaption>Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.</figcaption>
+  </figure>
 
   <h2 id="export">10. Exports</h2>
   <p>Both exports open a dialog first, asking what the file may contain: functions, source code, module schema,
@@ -405,6 +465,12 @@ git commit -m "baseline"</code></pre>
       business logic and any credentials someone hardcoded in a function. Decide deliberately, every time.</p>
   </div>
   <p>Files are written to <code>export/</code> inside the workspace, named <code>zoost-instance-timestamp</code>.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-export.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The export dialog with a checkbox per section and the source code marked as the sensitive one.">
+    <figcaption>Chapter 10: what may leave the machine, decided once and remembered.</figcaption>
+  </figure>
 
   <h2 id="ai">11. AI assistant &amp; API keys</h2>
   <p><b>It also knows this extension.</b> Ask it "how do I export this?", "what happens when I press Health?" or "can this change anything in Zoho CRM?" and it answers from the panel, without sending you anywhere. Write to it in whatever language you like and it answers in that one. It is told what the buttons do and what the extension will not do; if it does not know, it says so and points at this page rather than inventing a step.</p>
@@ -517,6 +583,12 @@ git commit -m "baseline"</code></pre>
       workflow definitions go to the provider you configure, under their terms. If your organisation restricts
       sending source code to third-party AI services, leave it off. Everything else in Zoost is local.</p>
   </div>
+
+  <figure class="shot">
+    <img src="/img/crm-settings.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="The settings page: the engine selector, the Anthropic model and key, and the OpenAI fields left empty.">
+    <figcaption>Chapter 11: where the engine and the key are chosen. The passphrase, the index cap and the tool-step limit are all on this page.</figcaption>
+  </figure>
 
   <h2 id="sandbox">12. Production vs sandbox</h2>
   <p>Every workspace is bound to one org, host and instance, recorded in its <code>.zoost.json</code>. If the

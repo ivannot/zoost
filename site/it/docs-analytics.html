@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:8a8e83b828642545 -->
+<!-- translated-from: site/docs-analytics.html sha256:64e52a2435445be6 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -236,6 +236,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     collegata invece che costruite da te. Il modello ER di Zoho Analytics sa quali sono; l'elenco delle
     viste no.</p>
 
+  <figure class="shot">
+    <img src="/img/analytics-lineage.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
+    <figcaption>Lineage: per una query table, quali colonne legge e da quale vista - la catena che Zoho Analytics non disegna.</figcaption>
+  </figure>
+
   <h2 id="structure">6. Struttura e chiavi esterne</h2>
   <p>Clicca una riga qualsiasi per aprire il pannello di dettaglio. Trascina la barra sopra per
     ridimensionarlo; l'altezza viene ricordata.</p>
@@ -293,6 +299,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p>La finestra ha anche una scheda <b>Relations</b>: una riga per join, cercabile per tabella, colonna o
     join, e ogni join si può copiare.</p>
 
+  <figure class="shot">
+    <img src="/img/analytics-er.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="Il diagramma ER del workspace, le tabelle unite dalle loro relazioni.">
+    <figcaption>Il diagramma ER: metti a fuoco una tabella e cammina da lì.</figcaption>
+  </figure>
+
   <h2 id="sql">8. L'SQL delle query table</h2>
   <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
     le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - ed è quello che permette di rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
@@ -310,6 +322,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     incorporato o un consumatore via API sono invisibili a quel grafo. Prendi l'elenco come un punto da cui
     cominciare a chiedere, non come una coda di cancellazione.</p>
 
+  <figure class="shot">
+    <img src="/img/analytics-health.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La vista health con le viste da cui non dipende niente, accanto a cosa la scansione non vede.">
+    <figcaption>Quello da cui non dipende più niente - con il buco di copertura dichiarato accanto al numero.</figcaption>
+  </figure>
+
   <h2 id="health">10. Salute</h2>
   <p><b class="ui">♥</b> apre l'audit nel pannello: viste da cui non dipende niente, tabelle che non compaiono in nessuna relazione, tabelle che ci ha messo Zoho invece di te, viste senza descrizione, e tutto quello che non è
     stato possibile leggere nell'ultimo pull.</p>
@@ -326,6 +344,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <code>zoost-&lt;workspace&gt;-&lt;timestamp&gt;</code>, così una cartella piena di export si ordina da sé nell'ordine in cui li hai presi.</p>
   <p>Il Markdown si porta dietro una cosa che l'HTML non ha: <b>i vincoli del dialetto SQL di Zoho
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
+
+  <figure class="shot">
+    <img src="/img/analytics-export.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La finestra dell'export per un workspace Zoho Analytics.">
+    <figcaption>Cosa può uscire dalla macchina, sezione per sezione.</figcaption>
+  </figure>
 
   <h2 id="ai">12. Assistente AI e chiavi API</h2>
   <p><b>Conosce anche questa estensione.</b> Chiedigli «come esporto questo?», «cosa succede se premo
@@ -432,6 +456,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     colonne, relazioni, e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
+
+  <figure class="shot">
+    <img src="/img/analytics-settings.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La pagina impostazioni con il motore AI, il modello e la chiave.">
+    <figcaption>Dove si scelgono motore e chiave.</figcaption>
+  </figure>
 
   <h2 id="goes-wrong">13. Quando qualcosa non va</h2>
   <p>Se la barra sotto la toolbar è ambra, la scheda su cui sei e la cartella del workspace che hai

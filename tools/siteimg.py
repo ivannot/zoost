@@ -45,10 +45,11 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
     print(f"{'image':22} {'rendered':>13} {'published':>10}")
-    every = shots.SHOTS + shots.PANELS
+    every = shots.SHOTS + shots.PANELS + shots.OPTIONS
     for shot in every:
         key = shot[0]
-        png = (shots.render_panel if shot in shots.PANELS else shots.render)(shot)
+        png = (shots.render_options if shot in shots.OPTIONS else
+               shots.render_panel if shot in shots.PANELS else shots.render)(shot)
         raw = png.stat().st_size
         tmp = png.with_name(key + "-scaled.png")
         subprocess.run([sips, "-Z", str(WIDTH), str(png), "--out", str(tmp)],

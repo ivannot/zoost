@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:b4700a488f24b1df -->
+<!-- translated-from: site/docs-crm.html sha256:4e6d97a735555a05 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -118,6 +118,12 @@
   <p>Zoost non è un editor. Il Deluge continui a scriverlo in Zoho, dove compila e viene validato. Zoost ti
     dà la mappa, l'audit e - con Git - una storia delle parti che Zoho non versiona.</p>
 
+  <figure class="shot">
+    <img src="/img/crm-modules.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda Modules: un modulo selezionato, con campi, tipi e layout nel pannello sotto.">
+    <figcaption>Lo specchio è una cartella per tipo. Qui la scheda Modules, con i campi e i layout di un modulo sotto.</figcaption>
+  </figure>
+
   <h2 id="first-run">2. Primo avvio</h2>
   <ol>
     <li>Apri una scheda di Zoho CRM e apri il pannello laterale di Zoost (l'icona dell'estensione).</li>
@@ -189,6 +195,12 @@
   <p>Layout e related list arrivano con <b>Pull all</b> o con <b>Pull</b> in modalità Modules. Se la matrice
     dei layout o il catalogo delle relazioni sembra vuoto, quel workspace è stato scaricato con una versione
     più vecchia - rifai il pull.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-workflows.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda Workflows: le regole con i loro trigger, e quali hanno azioni che aspettano.">
+    <figcaption>Il capitolo 3 scarica anche questi. Un workflow porta il trigger, i criteri e - dove ci sono - le azioni che partono dopo un ritardo.</figcaption>
+  </figure>
 
   <h2 id="git">4. Metterlo sotto Git</h2>
   <p>Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.</p>
@@ -284,6 +296,12 @@ git commit -m "baseline"</code></pre>
       quel layout, un pallino ambra che lì è obbligatorio. Le righe evidenziate in crema sono campi che non stanno su <b>nessun</b> layout - solo API.</li>
   </ul>
 
+  <figure class="shot">
+    <img src="/img/crm-search.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="Il pannello che cerca nel testo di tutte le funzioni insieme, con quattro corrispondenze in due file.">
+    <figcaption>Capitolo 5: <b>in: code</b> trasforma la casella in una ricerca dentro il sorgente di ogni funzione - qui quattro corrispondenze in due file, con la riga in cui stanno.</figcaption>
+  </figure>
+
   <h2 id="diagram">6. Il diagramma</h2>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> (in modalità Functions) apre quale funzione chiama quale;
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in modalità Modules) apre i moduli e le loro relazioni.
@@ -370,6 +388,30 @@ git commit -m "baseline"</code></pre>
     sul fuoco. <b>Explorer</b> e un <b>Graph</b> centrato restano veloci a qualsiasi dimensione di org; usa un
     fuoco e una profondità piccola.</p>
 
+  <figure class="shot">
+    <img src="/img/crm-graph.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La finestra del grafo delle chiamate: funzioni, workflow, schedulazioni e connessioni come riquadri uniti da frecce.">
+    <figcaption>Capitolo 6: la finestra del diagramma. I chip in alto sono insieme il filtro e la legenda dei colori, e comandano tutte e tre le viste.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-er.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="Il diagramma ER: i moduli come riquadri con i loro campi, uniti dai lookup.">
+    <figcaption>L'altro disegno nella stessa finestra: i moduli come tabelle, i lookup come frecce, focalizzabile e stampabile a parete.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-explorer.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="L'elenco Explorer della finestra del diagramma accanto al disegno, con una funzione selezionata.">
+    <figcaption>La colonna Explorer elenca cosa contiene il disegno, e selezionare lì sposta il fuoco nel diagramma.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <img src="/img/crm-buttons.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La finestra del diagramma con una categoria spenta, che ridisegna il grafo invece di nascondere pezzi.">
+    <figcaption>I chip non nascondono i riquadri, ridisegnano: spegnere un tipo rende davvero leggibile un grafo grande.</figcaption>
+  </figure>
+
   <h2 id="relation-name">7. Trovare il nome di una relazione</h2>
   <div class="box">
     <p>L'API name di una related list <b>non</b> è l'API&nbsp;name di nessuno dei due moduli. È una terza
@@ -384,6 +426,12 @@ git commit -m "baseline"</code></pre>
       destinazione, il campo lookup o il modulo di collegamento che ci sta dietro, e la chiamata completa. I
       filtri nascondono le related list di sistema (Notes, Attachments, Tasks…) così restano solo le tue.</li>
   </ul>
+
+  <figure class="shot">
+    <img src="/img/crm-relations.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La tabella Relations: una riga per related list con l'API name che serve a getRelatedRecords.">
+    <figcaption>Capitolo 7: la risposta è questa tabella. Una riga per related list, con l'API name che serve alla chiamata - che non è l'api_name di nessuno dei due moduli, ed è il motivo per cui questa tabella esiste.</figcaption>
+  </figure>
 
   <h2 id="connections">8. Le connessioni</h2>
   <p>Una connessione è la credenziale, identificata da un nome, che una funzione usa in
@@ -409,6 +457,12 @@ git commit -m "baseline"</code></pre>
       verdetto.</p>
   </div>
 
+  <figure class="shot">
+    <img src="/img/crm-connections.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La scheda connessioni: il catalogo delle connessioni dell'org con le funzioni che usano ciascuna.">
+    <figcaption>Capitolo 8: il catalogo, e quali funzioni usano ogni connessione - così quella che non usa nessuno si vede.</figcaption>
+  </figure>
+
   <h2 id="health">9. L'audit di salute</h2>
   <p><b class="ui">Health (♥)</b> elenca i candidati orfani, le chiamate non risolte e ambigue, le
     automazioni rotte e i lookup che puntano a moduli che non sono nel workspace. Ogni sezione dichiara cosa
@@ -420,6 +474,12 @@ git commit -m "baseline"</code></pre>
     merita un'occhiata, non è necessariamente un problema, e una corta può benissimo essere quella
     pericolosa. I conteggi ci sono perché tu possa vedere dove si concentrano lunghezza e costo API - la
     lettura è tua.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-health.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La vista health: i candidati orfani, con la nota di copertura che dice cosa la scansione non vede.">
+    <figcaption>Capitolo 9: candidati da guardare, mai un verdetto - e la nota sulla copertura sta sopra l'elenco, non in fondo.</figcaption>
+  </figure>
 
   <h2 id="export">10. Gli export</h2>
   <p>Entrambi gli export aprono prima una finestra, che chiede cosa può contenere il file: funzioni, codice
@@ -442,6 +502,12 @@ git commit -m "baseline"</code></pre>
   </div>
   <p>I file vengono scritti in <code>export/</code> dentro il workspace, con nome
     <code>zoost-instance-timestamp</code>.</p>
+
+  <figure class="shot">
+    <img src="/img/crm-export.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La finestra dell'export con una casella per sezione e il sorgente segnalato come la parte sensibile.">
+    <figcaption>Capitolo 10: cosa può uscire dalla macchina, deciso una volta e ricordato.</figcaption>
+  </figure>
 
   <h2 id="ai">11. Assistente AI e chiavi API</h2>
   <p><b>Conosce anche questa estensione.</b> Chiedigli «come esporto questo?», «cosa succede se premo
@@ -561,6 +627,12 @@ git commit -m "baseline"</code></pre>
       organizzazione limita l'invio di codice sorgente a servizi AI di terze parti, lascialo spento. Tutto il
       resto di Zoost è locale.</p>
   </div>
+
+  <figure class="shot">
+    <img src="/img/crm-settings.webp" width="1760" height="1100" loading="lazy" decoding="async"
+         alt="La pagina impostazioni: il selettore del motore, il modello e la chiave Anthropic, i campi OpenAI vuoti.">
+    <figcaption>Capitolo 11: dove si scelgono motore e chiave. Passphrase, tetto dell'indice e limite dei passi di strumento stanno tutti qui.</figcaption>
+  </figure>
 
   <h2 id="sandbox">12. Produzione e sandbox</h2>
   <p>Ogni workspace è legato a una sola org, host e istanza, registrati nel suo <code>.zoost.json</code>. Se
