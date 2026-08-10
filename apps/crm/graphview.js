@@ -276,7 +276,9 @@ function passKind(n) {
 }
 function pass(n, q) {
   if (!passKind(n)) return false;
-  return !q || n.name.toLowerCase().includes(q) || (n.display_name || '').toLowerCase().includes(q);
+  // Three names, not two - see the panel's FN_NAMES. `api_name` was missing here, so the same
+  // search behaved differently in the two windows, which is worse than either being wrong.
+  return !q || [n.name, n.display_name, n.api_name].some((x) => String(x || '').toLowerCase().includes(q));
 }
 // The chips choose what the window is looking at, so all four views follow them. The search box
 // narrows the *list* only: hiding the diagram down to one node as you type would be a different

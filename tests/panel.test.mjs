@@ -2917,3 +2917,25 @@ test('both panels order the workspace list with the same comparator', () => {
   assert.equal(line('apps/crm/sidepanel.js'), line('apps/analytics/sidepanel.js'),
     'id=byWsLabel the two panels sort the workspace list differently');
 });
+
+// A function answers to three names and Zoho means a different thing by each: display_name, the
+// lowercased api_name slug, and `name` - the CamelCase one you write in Deluge. The tree filter
+// checked two of them, so searching for the name copied out of a call found nothing; the graph
+// window checked a different two. Reported. Which name is *shown* is the reader's choice; which are
+// *searched* is not one.
+test('the function search accepts every name a function answers to', () => {
+  const src = panelBody('crm');
+  const m = src.match(/const FN_NAMES = \[([^\]]*)\]/);
+  assert.ok(m, 'id=crm FN_NAMES is gone - the list the search derives from');
+  for (const k of ['api_name', 'display_name', 'name']) {
+    assert.ok(m[1].includes(`'${k}'`), `id=crm FN_NAMES no longer holds ${k}`);
+  }
+  assert.ok(/FN_NAMES\.some\(/.test(src), 'id=crm the tree filter stopped deriving from FN_NAMES');
+  // and the diagram window has to agree, or the same box behaves differently in two places
+  const gv = read('apps/crm/graphview.js');
+  const line = gv.split('\n').find((l) => /return !q \|\|/.test(l));
+  assert.ok(line, 'id=graphview the node search is gone');
+  for (const k of ['n.name', 'n.display_name', 'n.api_name']) {
+    assert.ok(line.includes(k), `id=graphview the node search no longer looks at ${k}`);
+  }
+});

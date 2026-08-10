@@ -18,6 +18,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let dir = null, index = new Map(), bound = null, lastCtx = null;
 let wsList = [], activeWsId = null;
 const zohoReady = () => !!(lastCtx && guardOk());
+const FN_NAMES = ['api_name', 'display_name', 'name'];   // every name a function answers to
 // Which toolbar controls read from Zoho and which only read the disk. Declared here, above every
 // reader, because `refreshContext` runs on a five-second poll and used to name `pull` by hand while
 // this list already knew there were two: the per-type Pull stayed enabled through an environment
@@ -695,7 +696,13 @@ function renderTree() {
   const shown = treeData
     .filter((e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter))
     .filter((e) => !connFilterSet || connFilterSet.has(e.path))
-    .filter((e) => !term || (e.api_name || '').toLowerCase().includes(term) || (e.display_name || '').toLowerCase().includes(term));
+  // A function carries **three** names and Zoho means a different thing by each: `display_name`
+  // («LearningObjects - Upsert User DELETE»), `api_name` (a lowercased slug), and `name` - the
+  // CamelCase one you actually write in Deluge as `namespace.Name(...)`. The filter checked two of
+  // them, so searching for the name you had just copied out of a call found nothing. Reported.
+  // Which one is *shown* is the reader's choice (Name: display / api); which ones are *searched* is
+  // not a choice at all - all of them, or the box lies about what is in the workspace.
+    .filter((e) => !term || FN_NAMES.some((k) => String(e[k] || '').toLowerCase().includes(term)));
   const tree = $('tree'); tree.innerHTML = '';
   if (connectionFilter) {
     const b = document.createElement('div'); b.className = 'connbanner';
@@ -898,9 +905,10 @@ async function openFile(path, push = false, line = null) {
   if (push && currentPath && currentPath !== path) pvHist.push(currentPath);
   currentPath = path; updateBack(); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
-  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvbody').style.display = 'flex'; $('pvtable').style.display = 'none';
+  $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
+  pvTabsFor('function');
   let code; try { code = await readFile(path); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
   const lines = code.split('\n').length;
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
@@ -912,6 +920,27 @@ async function openFile(path, push = false, line = null) {
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
 }
+/** Code or Details, for a function. Everything that is not the source moved behind the second tab:
+ *  it had grown to seven blocks stacked above a 400px-wide code view, and the code is what people
+ *  open a function for. `Code` is the default for that reason, and the choice is not remembered -
+ *  it is one click, and a remembered mode that opens on Details would hide the source. */
+let pvTab = 'code';
+function setPvTab(which) {
+  pvTab = which === 'info' ? 'info' : 'code';
+  $('pvtab_code').classList.toggle('active', pvTab === 'code');
+  $('pvtab_info').classList.toggle('active', pvTab === 'info');
+  $('pvbody').style.display = pvTab === 'code' ? 'flex' : 'none';
+  $('pvcallers').style.display = pvTab === 'info' ? '' : 'none';
+}
+/** The strip is for functions only, and showing it resets to Code - opening a second function and
+ *  landing on the Details of the first one's tab choice is the stale-projection problem in miniature. */
+function pvTabsFor(kind) {
+  const on = kind === 'function';
+  $('pvtabs').hidden = !on;
+  if (on) setPvTab('code');
+  else { $('pvcallers').style.display = ''; }
+}
+
 async function showCallers(path) {
   const box = $('pvcallers'); box.textContent = 'computing references…'; box.className = 'show';
   try {
@@ -945,7 +974,11 @@ async function showCallers(path) {
         html += `<div class="failwrap"><b>Failing in Zoho:</b> ${escHtml(String(total))}\u00d7`
           + (last ? ` \u00b7 last ${escHtml(fmtDate(last))}` : '')
           + ` \u00b7 as read on ${escHtml(fmtDate(fx.at))}`
-          + mine.map((f) => `<div class="failrow">${escHtml(f.componentType || '?')} \u00b7 ${escHtml(f.reason || '')}</div>`).join('')
+          // One line per distinct reason. Zoho returns a row per failing invocation, so a function
+          // that broke the same way twice came back with the same sentence printed twice - which
+          // reads as two problems and is one. The count above already says how many times.
+          + [...new Map(mine.map((f) => [`${f.componentType}|${f.reason}`, f])).values()]
+              .map((f) => `<div class="failrow">${escHtml(f.componentType || '?')} \u00b7 ${escHtml(f.reason || '')}</div>`).join('')
           + '</div>';
       }
     } catch (_) { /* no reading yet: say nothing rather than claim none */ }
@@ -3826,7 +3859,7 @@ async function openSchedule(e) {
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);
-  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
+  $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const fnLink = `<span class="wf-fn" data-fnid="${escA(e.function_id || '')}" data-fnname="${escA(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
@@ -4070,7 +4103,7 @@ function openConnection(c) {
   currentPath = c.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
   setPvName(c.label || c.name, c.path);
-  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
+  $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
@@ -4202,7 +4235,7 @@ async function openWorkflow(e) {
   currentPath = e.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);
-  $('pvcallers').className = ''; $('pvcallers').textContent = '';   // else the last function's callers/connections bar lingers
+  $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = 'Go to \u2197'; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
@@ -4353,6 +4386,7 @@ loadScope();
 // again whenever either can have moved: a workspace opening (different org, different roles) and a
 // pull learning something new both call renderTabs themselves.
 loadTabPrefs().then(renderTabs);
+document.querySelectorAll('#pvtabs .dtab').forEach((b) => (b.onclick = () => setPvTab(b.dataset.pv)));
 $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };

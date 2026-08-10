@@ -117,6 +117,8 @@ EXPECTED = {
 }
 EXPECTED_SOLO = {
     '.bar': 'the CRM has a per-mode button row; Analytics has no modes',
+    '.dtab:disabled': 'Analytics disables a detail tab when the selection cannot be projected into '
+                      'it; the CRM has two - Code and Details - and both always apply to a function',
     '.ck b': 'the Analytics export dialog bolds the section name inside each label',
     '.empty': 'Analytics renders empty states as .empty blocks; the CRM uses its own markup',
     '.empty b': 'ditto',
