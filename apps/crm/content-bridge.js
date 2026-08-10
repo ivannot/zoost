@@ -374,10 +374,15 @@
     { kind: 'tasks', path: '/crm/v8/settings/automation/tasks', key: 'tasks' },
     { kind: 'webhooks', path: '/crm/v8/settings/automation/webhooks', key: 'webhooks' },
   ];
+  // Bumped when this starts capturing a field it did not before, exactly as `toFile()` does for a
+  // function's meta: a row written by an older pull is missing the field rather than reporting it
+  // empty, and those are different sentences. Without it, a field update pulled before `value`
+  // existed read as «clears the field» - which is a statement about the org, and it was ours.
+  const ACT_SV = 1;
   function actionRow(kind, r) {
     const who = (u) => (u && u.name) || null;
     const row = {
-      kind, id: String(r.id), name: r.name || '',
+      kind, id: String(r.id), name: r.name || '', sv: ACT_SV,
       module: (r.module && (r.module.api_name || r.module.moduleName)) || '',
       module_label: (r.module && (r.module.plural_label || r.module.singular_label)) || '',
       associated: r.associated === true,

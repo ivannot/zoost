@@ -381,7 +381,7 @@
     const actions = [];
     ACT_KINDS.forEach(([kind, names], ki) => names.forEach((nm, i) => {
       const id = String(5000 + ki * 100 + i);
-      const a = { kind, id, name: nm, module: MODULES[(ki + i) % MODULES.length][0],
+      const a = { kind, id, name: nm, sv: 1, module: MODULES[(ki + i) % MODULES.length][0],
                   module_label: MODULES[(ki + i) % MODULES.length][1],
                   associated: (ki + i) % 3 !== 2, created_by: AUTHOR, modified_by: AUTHOR,
                   created_time: '2026-06-0' + ((i % 8) + 1) + 'T09:00:00+00:00',
@@ -405,6 +405,10 @@
       }
       if (kind === 'tasks') a.notify = i % 2 === 0;
       if (kind === 'webhooks') { a.method = 'POST'; a.url = 'https://example.com/hooks/warehouse'; }
+      // One row written by an older pull, so «this pull did not read it» has something to render:
+      // it is the state every row was in the day the field was added, and it looked like an org
+      // where nothing writes anything.
+      if (o.edgeCases && kind === 'field_updates' && i === 3) { delete a.sv; delete a.value; delete a.field_type; }
       actions.push(a);
     }));
     J('actions/index.json', actions);

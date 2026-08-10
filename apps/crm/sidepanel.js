@@ -1769,6 +1769,22 @@ async function aiLoadModules() {
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
 // Connections tab: meta.connections[].name, the string in invokeurl [...connection:"..."]).
+let aiActCache = null;
+/** The automation actions and who fires them, for the assistant.
+ *
+ *  `addresses` decides whether the sender address travels with the answer, and it is a *setting*
+ *  rather than a scope tick, because a chat has no dialog to tick: the export asks per file, this
+ *  asks once. Off unless the user turned it on - the mirror keeps the address either way, and what
+ *  is at stake here is whether it leaves the machine. */
+async function aiLoadActions() {
+  if (aiActCache) return aiActCache;
+  let list = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) list = a; } catch (_) {}
+  const users = actionUsers || await buildActionUsers();
+  let addresses = false;
+  try { const c = await chrome.storage.local.get('aicfg'); addresses = !!(c.aicfg && c.aicfg.shareAddresses); } catch (_) {}
+  aiActCache = { list, users, addresses };
+  return aiActCache;
+}
 async function aiLoadConnections() {
   if (aiConnCache) return aiConnCache;
   let cat = []; try { cat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
@@ -1820,9 +1836,24 @@ async function aiBuildSeed(cap) {
     ? `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} \u00b7 used by ${c.uses.length} function(s)${c.connected === false ? ' \u00b7 NOT CONNECTED' : ''}${c.missing ? ' \u00b7 not in catalogue' : ''}`).join('\n') + '\n'
     : '';
 
+  // The actions are a vocabulary too: without their names the model cannot answer «which rule sends
+  // the renewal notice» except by opening rules one at a time. Counts by kind, not the whole list -
+  // an org can have hundreds, and `list_actions` is one call away.
+  const acts = await aiLoadActions();
+  const byKind = {};
+  acts.list.forEach((a) => (byKind[a.kind] = (byKind[a.kind] || 0) + 1));
+  const unattached = acts.list.filter((a) => !a.associated && !(acts.users.get(a.kind + ':' + String(a.id)) || []).length).length;
+  const actions = acts.list.length
+    ? `\n## Automation actions (${acts.list.length})\n`
+      + Object.keys(byKind).sort().map((k) => `- ${actionKindLabel(k)}: ${byKind[k]}`).join('\n')
+      + (unattached ? `\n- attached to no rule: ${unattached} (a candidate, not a verdict - Zoho answers for the rules it knows)` : '')
+      + '\nUse `list_actions` for names, what each writes or sends, and which rules fire it.\n'
+    : '';
+
   const omitted = [];
   let out = funcs;
   if (out.length + modules.length <= cap) out += modules; else omitted.push(`the ${mk.length} module names`);
+  if (out.length + actions.length <= cap) out += actions; else if (actions) omitted.push(`the ${acts.list.length} automation actions`);
   if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(`the ${conns.length} connections`);
   aiSeedOmitted = omitted;
   if (out.length > cap) {                 // even the function list alone overflows
@@ -1923,6 +1954,7 @@ const AI_TOOLS = [
   { name: 'get_module', description: 'Field schema of a module by api_name.', input_schema: { type: 'object', properties: { api_name: { type: 'string' } }, required: ['api_name'] } },
   { name: 'get_connection', description: 'A connection by name (the string used in invokeurl [...connection:"..."]): its connector, status, scopes, and every function that uses it.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'get_workflow', description: 'A workflow by id or name: trigger, status, last execution, how many instant and scheduled actions it has and after how long, and the functions it calls.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'list_actions', description: 'List what workflow rules fire: email notifications, field updates, tasks and webhooks. Each is an object of its own in Zoho, reused across rules. Filter by kind, by module, and by unused - use unused to answer "what is attached to nothing" exactly, which is the question this list exists for. A field update says which field it writes and what value.', input_schema: { type: 'object', properties: { kind: { type: 'string' }, module: { type: 'string' }, unused: { type: 'boolean' } } } },
   { name: 'list_workflows', description: 'List workflow rules with their instant/scheduled action counts and last execution. Filter by module, by active, and by has_scheduled_actions - use that last one to answer "which and how many workflows have actions that do not run immediately" exactly, instead of opening them one by one.', input_schema: { type: 'object', properties: { module: { type: 'string' }, active: { type: 'boolean' }, has_scheduled_actions: { type: 'boolean' } } } },
 ];
 // A tool that answers with nine hundred lines has not answered. Cap the list, say how many there
@@ -2035,6 +2067,32 @@ async function aiExecTool(name, input) {
       + ` - ${r.sched} scheduled${r.sched && r.delays.length ? ' (' + r.delays.join(', ') + ')' : ''}`
       + `, ${r.instant} instant${r.last ? ', last run ' + String(r.last).slice(0, 16) : ''}`);
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
+  }
+  if (name === 'list_actions') {
+    const acts = await aiLoadActions();
+    if (!acts.list.length) return 'No automation actions in this workspace - they are pulled with «Pull all» or from the Actions tab.';
+    const kind = String(input.kind || '').toLowerCase().replace(/[\s-]/g, '_');
+    let sel = acts.list;
+    if (kind) sel = sel.filter((a) => a.kind === kind || actionKindLabel(a.kind).toLowerCase() === String(input.kind).toLowerCase());
+    if (input.module) sel = sel.filter((a) => (a.module || '').toLowerCase() === String(input.module).toLowerCase());
+    if (input.unused === true) sel = sel.filter((a) => !(acts.users.get(a.kind + ':' + String(a.id)) || []).length && !a.associated);
+    if (input.unused === false) sel = sel.filter((a) => (acts.users.get(a.kind + ':' + String(a.id)) || []).length || a.associated);
+    const crit = [kind ? 'kind ' + kind : '', input.module ? 'module ' + input.module : '',
+                  input.unused === true ? 'attached to nothing' : input.unused === false ? 'in use' : ''].filter(Boolean).join(', ') || 'all';
+    const head = `${sel.length} action(s) match (${crit}); ${acts.list.length} in the workspace.`;
+    if (!sel.length) return head;
+    // The sender address is deliberately absent unless the user turned it on: this text is sent to a
+    // provider, and «which address» is a fact about a person in a way «a user address» is not.
+    const lines = sel.map((a) => {
+      const users = acts.users.get(a.kind + ':' + String(a.id)) || [];
+      const extra = a.kind === 'field_updates'
+        ? ` writes ${a.field || '?'} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}`
+        : a.kind === 'email_notifications'
+          ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
+          : a.kind === 'webhooks' ? ` ${a.method || ''} ${a.url || ''}` : '';
+      return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
+    });
+    return head + '\n' + aiCap(lines, sel.length, 'Narrow with `kind`, `module` or `unused`.');
   }
   return 'Unknown tool: ' + name;
 }
@@ -2532,7 +2590,7 @@ async function addWorkspaceForTab() {
 function dropWorkspaceState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
-  graphCache = null; aiModCache = null; aiConnCache = null; actionUsers = null; failIndex = null;
+  graphCache = null; aiModCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
   aiRenderMessages();
   return had;
 }
@@ -3743,7 +3801,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
            a.from_type ? 'from: ' + (scope.addresses && a.from_address ? esc(a.from_address) : esc(a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
            a.recipient_count != null ? esc(String(a.recipient_count)) + ' recipient(s)' : ''].filter(Boolean).join(' \u00b7 ')
         : a.kind === 'field_updates' ? (a.field ? esc(a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
-            + ' \u2190 ' + (a.value === null || a.value === undefined ? 'cleared' : esc(String(a.value))) : '')
+            + ' \u2190 ' + (actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : esc(String(a.value))) : '')
         : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
         : a.notify === true ? 'notifies' : '';
       return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(a.module || '') + '</td>'
@@ -3975,7 +4033,7 @@ function buildExportMarkdown(d, scope) {
         ? [a.template ? 'template ' + (a.template.name || a.template.id) : '',
            a.from_type ? 'from ' + ((scope.addresses && a.from_address) || (a.from_type === 'user' ? 'a user address' : 'an organisation address')) : '',
            a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
-        : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${a.value === null || a.value === undefined ? 'cleared' : a.value}` : '')
+        : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
         : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
         : a.notify === true ? 'notifies' : '';
       md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(a.module || '')} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
@@ -4295,6 +4353,12 @@ async function pullConnections() {
 // product already makes about a function nobody calls, on objects nobody ever prunes - and it is a
 // candidate, never a verdict, because Zoho answers for the automations it knows about.
 let actionData = [], actionFilter = 'all', actionUsers = null;
+// The schema version the bridge writes. A row below it was captured before some of the fields
+// existed - the field a rule writes and the value it writes were added after the first version -
+// and «this pull did not read it» is not «Zoho says it is empty». Same mechanism, and same reason,
+// as META_SV on a function's meta.
+const ACT_SV = 1;
+const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 /** Which rules fire each action, read from the workflow files already on disk.
  *
  *  This is the join the whole area rests on, and it costs nothing: `fetchWorkflow` has always
@@ -4417,6 +4481,7 @@ function renderActions() {
     el.innerHTML = `<span class="st st-ok" title="In the local mirror - click to re-read from Zoho">\u25cf</span>`
       + `<span class="fname">${escHtml(a.name || a.id)}</span>`
       + `<span class="rest ${used || a.associated ? 'rf' : 'rc'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`
+      + (actStale(a) ? `<span class="rest rc" title="${escA('Pulled before this version captured everything about it - press Pull to complete it')}">\u25d0</span>` : '')
       + (a.module ? `<span class="rest rl" title="module">${escHtml(a.module)}</span>` : '');
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
     el.onclick = () => openAction(a);
@@ -4450,11 +4515,15 @@ function openAction(a) {
         + (a.field_label && a.field_label !== a.field ? ` \u00b7 ${escHtml(a.field_label)}` : '')
         + (a.field_type ? ` <span style="color:var(--muted)">${escHtml(a.field_type)}</span>` : '')) : '')
     // «Set stage to Won» does not say which value, and on a picklist of nine that is the whole
-    // question. An absent value is «clear the field» rather than «we did not read it», so it is
-    // written as that and not as a blank.
-    + (a.field ? row('Writes', a.value === null || a.value === undefined
-        ? '<span style="color:var(--muted)">clears the field</span>'
-        : `<b>${escHtml(String(a.value))}</b>`) : '')
+    // question. Three states, not two: a value, «clears the field» when Zoho answered with none,
+    // and «this pull did not read it» when the row predates the field - which is what every row
+    // looked like after the first version shipped, and it read as an org where nothing writes
+    // anything.
+    + (a.kind === 'field_updates' ? row('Writes', actStale(a)
+        ? '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull to read it</span>'
+        : (a.value === null || a.value === undefined)
+          ? '<span style="color:var(--muted)">clears the field</span>'
+          : `<b>${escHtml(String(a.value))}</b>`) : '')
     + (a.method ? row('Method', escHtml(a.method)) : '')
     + (a.url ? row('URL', `<span class="mono">${escHtml(a.url)}</span>`) : '')
     + (a.notify === true ? row('Notify', 'yes') : '')
