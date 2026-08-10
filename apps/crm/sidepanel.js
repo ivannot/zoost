@@ -4236,6 +4236,14 @@ async function failuresIndex() {
 // See the comment there for why: for a REST API failure it carries a real person's name and email,
 // and Zoost says on three surfaces that it does not read records.
 
+/** «8 failing» beside a Pull reads as eight failed downloads - the opposite of what it means, since
+ *  the pull worked and the number is functions Zoho reports failing at *runtime*. Reported, and the
+ *  green did not save it: a colour cannot name a subject. One sentence for both readers of it, the
+ *  status line and the health view's own line, so the two cannot drift. */
+function runtimeSummary(n) {
+  return n ? `Read from Zoho \u00b7 ${n} function(s) failing there`
+           : 'Read from Zoho \u00b7 nothing failing there';
+}
 async function pullFailures() {
   try {
     pullActive = true;
@@ -4255,7 +4263,7 @@ async function pullFailures() {
     // No view of its own: a failure is a property of a function, not a kind of object, so it shows
     // where that dimension belongs - in the function's own detail, and in the health view, which is
     // already the place that answers «what is wrong across this org».
-    setStatus(`${(r.failures || []).length} failing function(s).`, 'ok');
+    setStatus(runtimeSummary((r.failures || []).length), 'ok');
     if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
   } catch (e) { await notePullFailure('failures', e); }
   finally { pullActive = false; }
@@ -4478,7 +4486,7 @@ async function pullHealthRuntime() {
     healthData = await buildHealth();
     renderHealthView();
     const fx = await failuresIndex();
-    healthSay(`${fx.all.length} failing \u00b7 read ${fmtDate(fx.at)}`, 'ok');
+    healthSay(runtimeSummary(fx.all.length), 'ok');
   } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
   finally { b.disabled = false; }
 }

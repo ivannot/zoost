@@ -2621,6 +2621,20 @@ test('sorting by one field goes through one comparator', () => {
 // arrives when the line executes. Each of these folded a live call site, so a typo in `setStatus`
 // or `noteAccess` would have been a button that silently stopped working.
 
+test('the runtime reading says whose failures those are', () => {
+  // «8 failing · read Aug 10, 2026, 02:22 PM» sat next to a Pull button and read as eight failed
+  // downloads. It was green, and green did not help: a colour cannot name a subject. Reported.
+  const { runtimeSummary } = load([sliceFn('apps/crm/sidepanel.js', 'runtimeSummary')], {});
+  for (const n of [0, 1, 8]) {
+    const said = runtimeSummary(n);
+    assert.match(said, /^Read from Zoho/, `id=runtime n=${n}: it must say what was read first`);
+    assert.ok(!/^\d/.test(said), `id=runtime n=${n}: a count first reads as a count of failures`);
+    assert.match(said, /failing there|nothing failing/, `id=runtime n=${n}: the subject is not named`);
+  }
+  assert.match(runtimeSummary(8), /8 function\(s\)/, 'id=runtime: the count lost its noun');
+  assert.ok(!/\d/.test(runtimeSummary(0)), 'id=runtime: «0 functions failing» is a count nobody asked for');
+});
+
 test('sampleRefuse() refuses a sample and lets a real workspace through', () => {
   for (const [app, say, msg] of [
     ['crm', 'setStatus', 'This is the sample workspace - there is no Zoho org to open.'],
