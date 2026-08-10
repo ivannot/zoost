@@ -207,6 +207,14 @@
   .f .rest.rn{margin-left:6px;min-width:26px;text-align:right;color:#6b7688}
   .f .rest.rfl{margin-left:8px;min-width:34px;text-align:right}
   .f .rest.rc{margin-left:6px;min-width:30px;text-align:right;color:#e0a86b}
+  /* Actions rows: same discipline, their own classes rather than widening the four above, which
+     Modules and Connections also draw. The module is a name and not a number, so it is bounded and
+     clipped instead of being allowed to push the counts around. */
+  .f .rest.rm{min-width:78px;max-width:78px;text-align:right;color:#a78bfa;overflow:hidden;text-overflow:ellipsis}
+  .f .rest.rs{margin-left:6px;min-width:10px;text-align:right;color:#f59e0b}
+  .f .rest.rk{margin-left:6px;min-width:46px;text-align:right;color:#6b7688}
+  .f .rest.ru{margin-left:6px;min-width:26px;text-align:right}
+  .f .rest.ru.none{color:#e0a86b}
   /* A module Zoho would not describe. Its own class rather than widening .rf/.rl, which the
      Connections rows also use - see the note in CLAUDE.md about the badge classes. */
   .f .rest.rx{margin-left:0;color:var(--muted);font-weight:600}

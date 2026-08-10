@@ -1342,26 +1342,41 @@ function buildTypeChips() {
     (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : viewMode === 'actions' ? renderActions() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
-  // Functions only: the numeric columns are what you sort by, and only functions have them.
-  if (viewMode === 'functions') {
+  // Two lists have columns worth sorting by, and they get the same control - one built here rather
+  // than a second one written beside it, or the two would drift the way every duplicated thing in
+  // this panel has. What differs is the keys and the state each list keeps.
+  if (viewMode === 'functions' || viewMode === 'actions') {
+    const acts = viewMode === 'actions';
     const sl = document.createElement('span'); sl.className = 'fsellbl'; sl.textContent = 'Sort';
-    const ss = document.createElement('select'); ss.className = 'filtersel'; ss.setAttribute('aria-label', 'Sort functions');
-    [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', MSG.lastModified]]
+    const ss = document.createElement('select'); ss.className = 'filtersel';
+    ss.setAttribute('aria-label', acts ? 'Sort actions' : 'Sort functions');
+    (acts
+      ? [['name', 'Kind, then name'], ['rules', 'Rules that fire it'], ['module', 'Module'], ['modified', MSG.lastModified]]
+      : [['name', 'Name (grouped)'], ['lines', 'Lines'], ['calls', 'API calls'], ['size', 'Size'], ['modified', MSG.lastModified]])
       .forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; ss.appendChild(o); });
-    ss.value = treeSort;
+    ss.value = acts ? actionSort : treeSort;
     const dirBtn = document.createElement('button'); dirBtn.className = 'sortdir';
     const paintDir = () => {
-      const asc = treeSortDir === 'asc';
+      const asc = (acts ? actionSortDir : treeSortDir) === 'asc';
       dirBtn.textContent = asc ? '↑' : '↓';
-      dirBtn.title = treeSort === 'name'
+      const byName = acts ? (actionSort === 'name' || actionSort === 'module') : treeSort === 'name';
+      dirBtn.title = byName
         ? (asc ? 'A to Z - click for Z to A' : 'Z to A - click for A to Z')
         : (asc ? 'Lowest first - click for highest first' : 'Highest first - click for lowest first');
       dirBtn.setAttribute('aria-label', dirBtn.title);
     };
     // Changing what you sort by resets the direction to the one that is almost always wanted:
     // names read A→Z, numbers read biggest-first.
-    ss.onchange = () => { treeSort = ss.value; treeSortDir = treeSort === 'name' ? 'asc' : 'desc'; paintDir(); renderTree(); };
-    dirBtn.onclick = () => { treeSortDir = treeSortDir === 'asc' ? 'desc' : 'asc'; paintDir(); renderTree(); };
+    ss.onchange = () => {
+      if (acts) { actionSort = ss.value; actionSortDir = (actionSort === 'name' || actionSort === 'module') ? 'asc' : 'desc'; }
+      else { treeSort = ss.value; treeSortDir = treeSort === 'name' ? 'asc' : 'desc'; }
+      paintDir(); (acts ? renderActions() : renderTree());
+    };
+    dirBtn.onclick = () => {
+      if (acts) actionSortDir = actionSortDir === 'asc' ? 'desc' : 'asc';
+      else treeSortDir = treeSortDir === 'asc' ? 'desc' : 'asc';
+      paintDir(); (acts ? renderActions() : renderTree());
+    };
     paintDir();
     wrap.appendChild(sl); wrap.appendChild(ss); wrap.appendChild(dirBtn);
   }
@@ -4413,6 +4428,15 @@ async function pullConnections() {
 // product already makes about a function nobody calls, on objects nobody ever prunes - and it is a
 // candidate, never a verdict, because Zoho answers for the automations it knows about.
 let actionData = [], actionFilter = 'all', actionUsers = null;
+let actionSort = 'name', actionSortDir = 'asc';
+// `null` means «nothing measured», never zero: an action whose module Zoho does not report is not an
+// action in a module called nothing, and it sorts to the bottom rather than to the top of A-Z.
+const ACTION_SORTS = {
+  name: null,                       // the default: grouped by kind, names inside it
+  rules: { label: 'rules that fire it', get: (a) => actionFiredBy(a).length },
+  module: { label: 'module', get: (a) => a.module || null },
+  modified: { label: MSG.lastModified, get: (a) => (a.modified_time ? (Date.parse(String(a.modified_time)) || null) : null) },
+};
 // The schema version the bridge writes. A row below it was captured before some of the fields
 // existed - the field a rule writes and the value it writes were added after the first version -
 // and «this pull did not read it» is not «Zoho says it is empty». Same mechanism, and same reason,
@@ -4459,6 +4483,11 @@ const ACTION_LABEL = { email_notifications: 'Email notifications', field_updates
 // first letter up. Declared ones win, the rest are derived - the same rule the diagram window uses
 // for category colours.
 const actionKindLabel = (k) => ACTION_LABEL[k] || String(k || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+// The column form, for the flat sorts where the group headers are gone. Cutting the label to four
+// characters - which is what the functions rows do to a namespace - gave «Emai», «Fiel», «Webh»:
+// a namespace truncates into something still recognisable and a sentence does not.
+const ACTION_SHORT = { email_notifications: 'Email', field_updates: 'Field', tasks: 'Task', webhooks: 'Webhook' };
+const actionKindShort = (k) => ACTION_SHORT[k] || actionKindLabel(k).split(' ')[0];
 async function loadActionsIndex() {
   let idx = []; try { idx = JSON.parse(await readFile('actions/index.json')); } catch (_) {}
   return Array.isArray(idx) ? idx : [];
@@ -4520,7 +4549,22 @@ function renderActions() {
     return !term || (a.name || '').toLowerCase().includes(term) || (a.module || '').toLowerCase().includes(term)
       || (a.field || '').toLowerCase().includes(term) || ((a.template && a.template.name) || '').toLowerCase().includes(term);
   };
-  const list = actionData.filter(pass).sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b));
+  // Sorting by a column answers a different question from browsing by kind, so - exactly as the
+  // functions list does - any sort other than the default drops the group headers and goes flat,
+  // with the sorted value carried on each row instead.
+  const sorter = ACTION_SORTS[actionSort];
+  const dir = actionSortDir === 'asc' ? 1 : -1;
+  const list = actionData.filter(pass).sort(sorter
+    ? (a, b) => {
+      const va = sorter.get(a), vb = sorter.get(b);
+      // A row with nothing measured stays at the bottom whichever way we sort: an ascending list
+      // must not open with the actions we know least about.
+      if ((va === null) !== (vb === null)) return va === null ? 1 : -1;
+      if (va === null) return byField('name')(a, b);
+      if (va !== vb) return dir * (typeof va === 'string' ? String(va).localeCompare(String(vb)) : va - vb);
+      return byField('name')(a, b);
+    }
+    : (a, b) => (a.kind || '').localeCompare(b.kind || '') || dir * byField('name')(a, b));
   const tree = $('tree'); tree.innerHTML = '';
   if (!list.length) {
     // Three reasons for an empty list and they are different advice - the rule this panel applies
@@ -4528,9 +4572,17 @@ function renderActions() {
     tree.innerHTML = '<div class="empty">' + (actionData.length ? '<b>No matches.</b>' : (emptyReason() || '<b>No automation actions yet.</b> Press <b>Pull all</b> to read them.')) + '</div>';
     return;
   }
+  if (sorter) {
+    const noData = list.filter((a) => sorter.get(a) === null).length;
+    const hdr = document.createElement('div'); hdr.className = 'srhdr';
+    hdr.textContent = `${list.length} action(s) by ${sorter.label}, ${actionSortDir === 'asc' ? 'lowest' : 'highest'} first`
+      + (noData ? ` \u00b7 ${noData} without one` : '');
+    tree.appendChild(hdr);
+  }
   let group = null;
   list.forEach((a) => {
-    if (a.kind !== group) {
+    if (sorter) group = a.kind;   // flat: no headers, and the kind rides on the row instead
+    else if (a.kind !== group) {
       group = a.kind;
       const g = document.createElement('div'); g.className = 'grp';
       const n = list.filter((x) => x.kind === group).length;
@@ -4548,11 +4600,16 @@ function renderActions() {
     // the same one the Connections tab shows for the functions using a connection. A number and no
     // verdict: zero says it by itself, and the filter is how you list them.
     const used = actionFiredBy(a).length;
+    // Every trailing slot is always emitted, empty when it has nothing to say - the same rule as the
+    // functions rows, and for the same reason: a slot that disappears lets the next one slide into
+    // its place and the columns stop lining up down the list.
+    const kindSlot = sorter ? `<span class="rest rk" title="${escA(actionKindLabel(a.kind))}">${escHtml(actionKindShort(a.kind))}</span>` : '';
     el.innerHTML = `<span class="st st-ok" title="In the local mirror - click to re-read from Zoho">\u25cf</span>`
       + `<span class="fname">${escHtml(a.name || a.id)}</span>`
-      + `<span class="rest ${used || a.associated ? 'rf' : 'rc'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`
-      + (actStale(a) ? `<span class="rest rc" title="${escA('Pulled before this version captured everything about it - press Pull to complete it')}">\u25d0</span>` : '')
-      + (a.module ? `<span class="rest rl" title="module">${escHtml(a.module)}</span>` : '');
+      + `<span class="rest rm" title="${escA(a.module_label || a.module || 'no module')}">${escHtml(a.module || '')}</span>`
+      + kindSlot
+      + `<span class="rest rs" title="${escA('Pulled before this version captured everything about it - press Pull to complete it')}">${actStale(a) ? '\u25d0' : ''}</span>`
+      + `<span class="rest ru${used || a.associated ? '' : ' none'}" title="${escA(used ? 'rules that fire it, read from the rules on disk' : a.associated ? 'Zoho reports it as in use; no rule on disk names it' : 'no rule uses it, as far as Zoho reports')}">${used}\u00d7</span>`;
     el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); refreshActions(); };
     el.onclick = () => openAction(a);
     tree.appendChild(el);

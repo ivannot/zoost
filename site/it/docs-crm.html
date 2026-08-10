@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:d726ddeebd0bc3e3 -->
+<!-- translated-from: site/docs-crm.html sha256:439159968e32f42c -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -447,6 +447,12 @@ git commit -m "baseline"</code></pre>
     orfana: Zoho risponde per le regole che conosce, e qualcosa fatto scattare da altrove sarebbe
     identico. Il filtro è <b class="ui">Attached to nothing</b>, e lo stesso elenco compare
     nell'audit di salute sotto <b>Wiring</b>.</p>
+  <p>Le colonne sono incolonnate lungo tutto l'elenco - il modulo a cui appartiene l'azione e quante
+    regole la fanno scattare - e <b class="ui">Sort</b> riordina per <b>Kind, then name</b> (il
+    default), <b>Rules that fire it</b>, <b>Module</b> o <b>Last modified</b>; il pulsante
+    <b class="ui">↑/↓</b> accanto inverte la direzione. Come nell'elenco delle funzioni, qualsiasi
+    ordinamento diverso dal default toglie le intestazioni di gruppo e mostra una lista piatta, con il
+    tipo che si sposta su ogni riga.</p>
   <p>Aprendone uno vedi di cosa è fatto - il template che usa una notifica, il campo che scrive un
     update, metodo e URL di un webhook, quanti destinatari - e sotto, <b>quali regole lo fanno
     scattare</b>. Quel collegamento viene letto dalle regole che hai già sul disco, non scaricato: una

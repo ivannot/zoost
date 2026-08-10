@@ -418,6 +418,11 @@ git commit -m "baseline"</code></pre>
     is: Zoho answers for the rules it knows about, and something fired from elsewhere would look
     identical. The filter for them is <b class="ui">Attached to nothing</b>, and the same list
     appears in the health audit under <b>Wiring</b>.</p>
+  <p>The columns line up down the list - the module it belongs to, and how many rules fire it - and
+    <b class="ui">Sort</b> reorders by <b>Kind, then name</b> (the default), <b>Rules that fire it</b>,
+    <b>Module</b> or <b>Last modified</b>, with the <b class="ui">↑/↓</b> button beside it flipping the
+    direction. As on the functions list, any sort other than the default drops the group headers and
+    goes flat, with the kind moving onto each row.</p>
   <p>Opening one shows what it is made of - the template a notification uses, the field an update
     writes, the method and URL of a webhook, how many recipients - and underneath, <b>which rules fire
     it</b>. That link is read from the rules already on your disk rather than fetched: a rule names

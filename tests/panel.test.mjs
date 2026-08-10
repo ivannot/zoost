@@ -3052,3 +3052,21 @@ test('the function search accepts every name a function answers to', () => {
     assert.ok(line.includes(k), `id=graphview the node search no longer looks at ${k}`);
   }
 });
+
+// The picklist is written out as literal pairs on purpose - `featurecheck.py` reads them, and a
+// derived list would take four named capabilities out of its sight, which is the coverage regression
+// this project has already paid for once. The cost of the literal is that it can drift from the map
+// it is offering, so that is what this holds: the same trap as KIND_FILTERS being derived from
+// FILTERS rather than repeated - add a sort, forget the other list, and the option selects nothing.
+test('every Actions sort is offered, and every option sorts by something', () => {
+  const src = panelBody('crm');
+  const map = src.slice(src.indexOf('const ACTION_SORTS = {'));
+  const keys = [...map.slice(0, map.indexOf('\n};')).matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+  assert.ok(keys.length >= 4, 'id=crm ACTION_SORTS no longer parses');
+  const at = src.indexOf("[['name', 'Kind, then name']");
+  assert.ok(at > 0, 'id=crm the Actions sort picklist is gone or has been rewritten');
+  const list = src.slice(at, src.indexOf('\n', at));
+  const offered = [...list.matchAll(/\['(\w+)',/g)].map((x) => x[1]);
+  assert.deepEqual(offered.slice().sort(), keys.slice().sort(),
+    `id=crm the picklist offers ${offered} and ACTION_SORTS holds ${keys}`);
+});
