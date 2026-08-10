@@ -381,7 +381,7 @@
     const actions = [];
     ACT_KINDS.forEach(([kind, names], ki) => names.forEach((nm, i) => {
       const id = String(5000 + ki * 100 + i);
-      const a = { kind, id, name: nm, sv: 2, module: MODULES[(ki + i) % MODULES.length][0],
+      const a = { kind, id, name: nm, sv: 3, module: MODULES[(ki + i) % MODULES.length][0],
                   module_label: MODULES[(ki + i) % MODULES.length][1],
                   associated: (ki + i) % 3 !== 2, created_by: AUTHOR, modified_by: AUTHOR,
                   created_time: '2026-06-0' + ((i % 8) + 1) + 'T09:00:00+00:00',
@@ -408,12 +408,17 @@
         a.notify = i % 2 === 0;
         // The three kinds of mapping Zoho returns, with the string it has already rendered: a
         // static value, one computed from the trigger, and one merged from a field.
+        // Both forms, as Zoho sends them: the configuration in `value` and the org-language
+        // rendering in `display`. One mapping deliberately carries only the rendered string, so the
+        // fallback for a shape this code has not met is a state something actually draws.
         a.mappings = [
-          { field: 'Subject', type: 'merge_field', display: nm + ' for ${Contact.Name}' },
-          { field: 'Due_Date', type: 'execution_time', display: 'Trigger date plus 7 days' },
-          { field: 'Status', type: 'static', display: 'Not started' },
-          { field: 'Priority', type: 'static', display: ['High', 'Normal', 'Low'][i % 3] },
-          { field: 'Owner', type: 'static', display: AUTHOR },
+          { field: 'Subject', type: 'merge_field', value: nm + ' for ${Contact.Name}', display: nm + ' for the contact' },
+          { field: 'Due_Date', type: 'execution_time', value: { sign: 'plus', unit: '7', period: 'days', trigger_field: '${CURRENTTIME}' }, display: 'Trigger date plus 7 days' },
+          { field: 'Owner', type: 'static', value: { id: '9001', name: AUTHOR }, display: AUTHOR },
+          { field: 'Status', type: 'static', value: 'Not Started', display: 'Not started' },
+          { field: 'Priority', type: 'static', value: ['High', 'Normal', 'Low'][i % 3], display: ['High', 'Normal', 'Low'][i % 3] },
+          { field: 'Remind_At', type: 'execution_time', value: { sign: 'minus', unit: '2', period: 'days', trigger_field: '${!Tasks.Due_Date}', time: '12:00', notify_type: 'emailandpopup' }, display: '2 days before' },
+          { field: 'Description', type: 'static', value: null, display: 'a shape this code has not met' },
         ];
       }
       if (kind === 'webhooks') { a.method = 'POST'; a.url = 'https://example.com/hooks/warehouse'; }

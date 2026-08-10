@@ -1145,11 +1145,11 @@ async function openZohoHome() {
   if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url, active: true });
 }
 // Zoho's own page for one automation action. The paths were read off the address bar rather than
-// guessed - `settings/alerts/<id>` for a notification, `settings/field-updates/<id>`,
-// `settings/tasks/<id>` - which is the only way this project is allowed to build a URL: a certain
-// path or nothing. **Webhooks are deliberately absent**: nobody has shown me one, and a button that
-// opens a page which may not exist is worse than no button. When one turns up it is one line here.
-const ACTION_PATH = { email_notifications: 'alerts', field_updates: 'field-updates', tasks: 'tasks' };
+// guessed - `settings/alerts/<id>`, `settings/field-updates/<id>`, `settings/tasks/<id>`,
+// `settings/webhooks/<id>` - which is the only way this project is allowed to build a URL: a
+// certain path or nothing. The webhook one arrived last and was absent until it did, rather than
+// being guessed from the pattern of the other three.
+const ACTION_PATH = { email_notifications: 'alerts', field_updates: 'field-updates', tasks: 'tasks', webhooks: 'webhooks' };
 function actionUrl(a) {
   const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
   const seg = a && ACTION_PATH[a.kind];
@@ -4378,7 +4378,7 @@ let actionData = [], actionFilter = 'all', actionUsers = null;
 // existed - the field a rule writes and the value it writes were added after the first version -
 // and «this pull did not read it» is not «Zoho says it is empty». Same mechanism, and same reason,
 // as META_SV on a function's meta.
-const ACT_SV = 2;
+const ACT_SV = 3;
 const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 /** Which rules fire each action, read from the workflow files already on disk.
  *
@@ -4514,6 +4514,27 @@ async function refreshActions() {
   setStatus('Refreshing automation actions\u2026', 'busy');
   await pullActions();
 }
+/** One mapped field of a task, rendered from what it is rather than from what Zoho called it.
+ *
+ *  `value` is the configuration and is language-neutral: 'Not Started', 'High', {id,name} for an
+ *  owner, {sign, unit, period, trigger_field} for a date, plus {time, notify_type} for a reminder.
+ *  `display` is Zoho's own rendering in the org's language and is used only where the structure is a
+ *  shape nobody here has seen - which is the honest fallback, and it says so by staying in italics. */
+function mappingHtml(m) {
+  const v = m && m.value;
+  const rel = (o) => `${escHtml(String(o.unit || '?'))} ${escHtml(String(o.period || ''))} `
+    + `${o.sign === 'minus' ? 'before' : 'after'} <span class="mono">${escHtml(prettyTrigger(o.trigger_field))}</span>`
+    + (o.time ? ` at ${escHtml(String(o.time))}` : '')
+    + (o.notify_type ? ` <span style="color:var(--muted)">by ${escHtml(String(o.notify_type).replace(/and/g, ' and '))}</span>` : '');
+  if (v && typeof v === 'object' && (v.sign || v.period || v.unit)) return rel(v);
+  if (v && typeof v === 'object' && (v.name || v.id)) return escHtml(v.name || v.id);
+  if (typeof v === 'string' && v !== '') return escHtml(v);
+  if (typeof v === 'boolean' || typeof v === 'number') return escHtml(String(v));
+  return m && m.display ? `<i>${escHtml(m.display)}</i>` : '';
+}
+// `${CURRENTTIME}` and `${!Tasks.Due_Date}` are how Zoho names what a delay is measured from. They
+// are shown as they are, minus the punctuation that only means «this is a placeholder».
+const prettyTrigger = (t) => String(t || '').replace(/^\$\{!?/, '').replace(/\}$/, '') || 'the trigger';
 function openAction(a) {
   currentPath = a.path; pvHist = []; updateBack();
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === a.path));
@@ -4556,11 +4577,11 @@ function openAction(a) {
           : `<b>${escHtml(String(a.value))}</b>`) : '')
     + (a.method ? row('Method', escHtml(a.method)) : '')
     + (a.url ? row('URL', `<span class="mono">${escHtml(a.url)}</span>`) : '')
-    // Zoho's own rendering of each mapped field, verbatim: «Due date: Data trigger più 7 giorni»
-    // is what the rule will do, in the language the org is administered in. Parsing it would be the
-    // localized-date mistake this project already records.
-    + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '),
-        escHtml(m.display || '') + (m.type && m.type !== 'static' ? ` <span style="color:var(--muted)">${escHtml(m.type.replace(/_/g, ' '))}</span>` : ''))).join(''))
+    // Built from the configuration rather than from Zoho's rendered sentence: «Data trigger più 7
+    // giorni» is the same rule as «7 days after the trigger», in the language of whoever pulled it,
+    // and a mirror that changes with the reader's locale is not a mirror. Zoho's own words are the
+    // fallback for a shape this code has not met.
+    + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '), mappingHtml(m))).join(''))
     + (a.kind === 'tasks' && !(a.mappings || []).length && actStale(a)
         ? row('Detail', '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull to read it</span>') : '')
     + (a.notify === true ? row('Notify', 'yes') : '')

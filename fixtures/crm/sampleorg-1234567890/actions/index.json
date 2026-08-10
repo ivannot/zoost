@@ -3,7 +3,7 @@
     "kind": "email_notifications",
     "id": "5000",
     "name": "Order confirmation",
-    "sv": 2,
+    "sv": 3,
     "module": "Accounts",
     "module_label": "Accounts",
     "associated": true,
@@ -25,7 +25,7 @@
     "kind": "email_notifications",
     "id": "5001",
     "name": "Invoice reminder",
-    "sv": 2,
+    "sv": 3,
     "module": "Contacts",
     "module_label": "Contacts",
     "associated": true,
@@ -47,7 +47,7 @@
     "kind": "email_notifications",
     "id": "5002",
     "name": "Welcome message",
-    "sv": 2,
+    "sv": 3,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -69,7 +69,7 @@
     "kind": "email_notifications",
     "id": "5003",
     "name": "Ticket acknowledged",
-    "sv": 2,
+    "sv": 3,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -91,7 +91,7 @@
     "kind": "email_notifications",
     "id": "5004",
     "name": "Parcel on its way",
-    "sv": 2,
+    "sv": 3,
     "module": "Products",
     "module_label": "Products",
     "associated": true,
@@ -113,7 +113,7 @@
     "kind": "email_notifications",
     "id": "5005",
     "name": "Renewal notice",
-    "sv": 2,
+    "sv": 3,
     "module": "Quotes",
     "module_label": "Quotes",
     "associated": false,
@@ -135,7 +135,7 @@
     "kind": "field_updates",
     "id": "5100",
     "name": "Set stage to Won",
-    "sv": 2,
+    "sv": 3,
     "module": "Contacts",
     "module_label": "Contacts",
     "associated": true,
@@ -154,7 +154,7 @@
     "kind": "field_updates",
     "id": "5101",
     "name": "Clear owner",
-    "sv": 2,
+    "sv": 3,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -173,7 +173,7 @@
     "kind": "field_updates",
     "id": "5102",
     "name": "Mark as reviewed",
-    "sv": 2,
+    "sv": 3,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -208,7 +208,7 @@
     "kind": "tasks",
     "id": "5200",
     "name": "Call the customer back",
-    "sv": 2,
+    "sv": 3,
     "module": "Leads",
     "module_label": "Leads",
     "associated": false,
@@ -222,27 +222,59 @@
       {
         "field": "Subject",
         "type": "merge_field",
-        "display": "Call the customer back for ${Contact.Name}"
+        "value": "Call the customer back for ${Contact.Name}",
+        "display": "Call the customer back for the contact"
       },
       {
         "field": "Due_Date",
         "type": "execution_time",
+        "value": {
+          "sign": "plus",
+          "unit": "7",
+          "period": "days",
+          "trigger_field": "${CURRENTTIME}"
+        },
         "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "value": {
+          "id": "9001",
+          "name": "Sample User"
+        },
+        "display": "Sample User"
       },
       {
         "field": "Status",
         "type": "static",
+        "value": "Not Started",
         "display": "Not started"
       },
       {
         "field": "Priority",
         "type": "static",
+        "value": "High",
         "display": "High"
       },
       {
-        "field": "Owner",
+        "field": "Remind_At",
+        "type": "execution_time",
+        "value": {
+          "sign": "minus",
+          "unit": "2",
+          "period": "days",
+          "trigger_field": "${!Tasks.Due_Date}",
+          "time": "12:00",
+          "notify_type": "emailandpopup"
+        },
+        "display": "2 days before"
+      },
+      {
+        "field": "Description",
         "type": "static",
-        "display": "Sample User"
+        "value": null,
+        "display": "a shape this code has not met"
       }
     ]
   },
@@ -250,7 +282,7 @@
     "kind": "tasks",
     "id": "5201",
     "name": "Chase the invoice",
-    "sv": 2,
+    "sv": 3,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,
@@ -264,27 +296,59 @@
       {
         "field": "Subject",
         "type": "merge_field",
-        "display": "Chase the invoice for ${Contact.Name}"
+        "value": "Chase the invoice for ${Contact.Name}",
+        "display": "Chase the invoice for the contact"
       },
       {
         "field": "Due_Date",
         "type": "execution_time",
+        "value": {
+          "sign": "plus",
+          "unit": "7",
+          "period": "days",
+          "trigger_field": "${CURRENTTIME}"
+        },
         "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "value": {
+          "id": "9001",
+          "name": "Sample User"
+        },
+        "display": "Sample User"
       },
       {
         "field": "Status",
         "type": "static",
+        "value": "Not Started",
         "display": "Not started"
       },
       {
         "field": "Priority",
         "type": "static",
+        "value": "Normal",
         "display": "Normal"
       },
       {
-        "field": "Owner",
+        "field": "Remind_At",
+        "type": "execution_time",
+        "value": {
+          "sign": "minus",
+          "unit": "2",
+          "period": "days",
+          "trigger_field": "${!Tasks.Due_Date}",
+          "time": "12:00",
+          "notify_type": "emailandpopup"
+        },
+        "display": "2 days before"
+      },
+      {
+        "field": "Description",
         "type": "static",
-        "display": "Sample User"
+        "value": null,
+        "display": "a shape this code has not met"
       }
     ]
   },
@@ -292,7 +356,7 @@
     "kind": "tasks",
     "id": "5202",
     "name": "Prepare the handover",
-    "sv": 2,
+    "sv": 3,
     "module": "Products",
     "module_label": "Products",
     "associated": true,
@@ -306,27 +370,59 @@
       {
         "field": "Subject",
         "type": "merge_field",
-        "display": "Prepare the handover for ${Contact.Name}"
+        "value": "Prepare the handover for ${Contact.Name}",
+        "display": "Prepare the handover for the contact"
       },
       {
         "field": "Due_Date",
         "type": "execution_time",
+        "value": {
+          "sign": "plus",
+          "unit": "7",
+          "period": "days",
+          "trigger_field": "${CURRENTTIME}"
+        },
         "display": "Trigger date plus 7 days"
+      },
+      {
+        "field": "Owner",
+        "type": "static",
+        "value": {
+          "id": "9001",
+          "name": "Sample User"
+        },
+        "display": "Sample User"
       },
       {
         "field": "Status",
         "type": "static",
+        "value": "Not Started",
         "display": "Not started"
       },
       {
         "field": "Priority",
         "type": "static",
+        "value": "Low",
         "display": "Low"
       },
       {
-        "field": "Owner",
+        "field": "Remind_At",
+        "type": "execution_time",
+        "value": {
+          "sign": "minus",
+          "unit": "2",
+          "period": "days",
+          "trigger_field": "${!Tasks.Due_Date}",
+          "time": "12:00",
+          "notify_type": "emailandpopup"
+        },
+        "display": "2 days before"
+      },
+      {
+        "field": "Description",
         "type": "static",
-        "display": "Sample User"
+        "value": null,
+        "display": "a shape this code has not met"
       }
     ]
   },
@@ -334,7 +430,7 @@
     "kind": "webhooks",
     "id": "5300",
     "name": "Notify the warehouse",
-    "sv": 2,
+    "sv": 3,
     "module": "Deals",
     "module_label": "Deals",
     "associated": true,

@@ -378,7 +378,17 @@
   // function's meta: a row written by an older pull is missing the field rather than reporting it
   // empty, and those are different sentences. Without it, a field update pulled before `value`
   // existed read as «clears the field» - which is a statement about the org, and it was ours.
-  const ACT_SV = 2;   // 2: a task's field mappings - subject, due date, status, priority, owner
+  const ACT_SV = 3;   // 3: mappings kept structurally, and a task's reminder from its own detail
+  // One mapping, kept as configuration rather than as a sentence. `value` is language-neutral;
+  // `display` is Zoho's own words and is the fallback for a shape nobody here has seen yet.
+  function mapping(m) {
+    return {
+      field: (m.field && m.field.api_name) || '',
+      type: m.type || '',
+      value: m.value === undefined ? null : m.value,
+      display: m.display_value == null ? '' : String(m.display_value),
+    };
+  }
   function actionRow(kind, r) {
     const who = (u) => (u && u.name) || null;
     const row = {
@@ -419,19 +429,22 @@
     }
     if (kind === 'tasks') {
       row.notify = r.notify === true;
-      // What the task will actually say. Zoho answers with one mapping per field and a
-      // `display_value` it has already rendered - «Data trigger più 7 giorni», «Non iniziato» - in
-      // the user's own language. That string is shown verbatim and never parsed, which is the rule
-      // this project already applies to Analytics' localized dates: reading a rendered date is the
-      // same mistake as matching a localized button label. `type` says where the value comes from -
-      // static, execution_time, merge_field - and that is a fact worth keeping beside it.
-      row.mappings = (r.field_mappings || []).map((m) => ({
-        field: (m.field && m.field.api_name) || '',
-        type: m.type || '',
-        display: m.display_value == null ? '' : String(m.display_value),
-      })).filter((m) => m.field);
+      // What the task will actually say. Zoho answers with one mapping per field, and each carries
+      // **both** forms: `display_value`, already rendered in the language the org is administered in
+      // («Data trigger più 7 giorni», «Non iniziato»), and `value`, which is the configuration -
+      // 'Not Started', 'High', or {sign, unit, period, trigger_field}. The structure is what is kept
+      // and what the panel renders, because a mirror of a configuration should not depend on the
+      // language of the person who happened to pull it. The rendered string is kept beside it and
+      // shown only where the structure is a shape this code does not know.
+      row.mappings = (r.field_mappings || []).map(mapping).filter((m) => m.field);
     }
-    if (kind === 'webhooks') { row.method = r.method || ''; row.url = r.url || r.display_url || ''; }
+    // `http_method`, which is what the API calls it - `method` was a guess, and a guess that reads
+    // as «this webhook has no method» rather than as a mistake.
+    if (kind === 'webhooks') {
+      row.method = r.http_method || r.method || '';
+      row.url = r.url || r.display_url || '';
+      row.description = r.description || '';
+    }
     return row;
   }
   async function pullActions() {
@@ -451,6 +464,22 @@
           // else's pagination is not a thing to ship - and hitting it is **reported**, because a
           // list that silently stops at four thousand is a census that lies by omission.
           if (++page > 20) { capped.push(k.kind); break; }
+        }
+        // The task list carries five of the six mappings - the reminder is only in the task's own
+        // detail, counted on a real org: 56 tasks, Subject/Due_Date/Status/Priority on every one,
+        // Owner on 54, Remind_At on none. So each task is read once more, paced, exactly as the
+        // workflow rules are: a list plus a detail per item. Bounded, and the bound is reported.
+        if (k.kind === 'tasks') {
+          const mine = out.filter((a) => a.kind === 'tasks');
+          for (let i = 0; i < mine.length && i < 500; i++) {
+            try {
+              const one = await api(`${k.path}/${mine[i].id}`);
+              const t = (one[k.key] || [])[0];
+              if (t && t.field_mappings) mine[i].mappings = t.field_mappings.map(mapping).filter((m) => m.field);
+            } catch (_) { /* one task that will not answer is not the area failing */ }
+            await new Promise((res) => setTimeout(res, 40));
+          }
+          if (mine.length > 500) capped.push('tasks (detail)');
         }
       } catch (e) {
         // One kind refusing is not the area failing: an org may not have the feature, or the role
