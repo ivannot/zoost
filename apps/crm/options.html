@@ -91,6 +91,8 @@
   .lockhint{margin:2px 0 0}
   .lockhint button{margin-left:6px;font-size:11px;padding:2px 8px}
   .lockhint.bad{color:#f4b8b8}
+  .ctl{margin-top:12px}
+  .ctl > .note{margin-top:6px}
 </style>
 </head>
 <body>
@@ -107,10 +109,12 @@
       <button id="pickRoot" class="primary">Choose folder…</button>
       <button id="clearRoot" class="danger">Forget</button>
     </div>
-    <div class="warnbox">Granting access gives Zoost read/write over <b>everything inside that folder</b>, for as
-      long as the permission lasts. Use a dedicated folder, not your home or Documents.</div>
-    <p class="note">Chrome may ask the side panel to confirm this permission again the first time it
-      writes. That prompt is expected and appears once per session at most.</p>
+    <div class="ctl">
+  <div class="warnbox">Granting access gives Zoost read/write over <b>everything inside that folder</b>, for as
+        long as the permission lasts. Use a dedicated folder, not your home or Documents.</div>
+      <p class="note">Chrome may ask the side panel to confirm this permission again the first time it
+        writes. That prompt is expected and appears once per session at most.</p>
+    </div>
   </section>
 
   <section data-section="zohoDc">
@@ -152,22 +156,36 @@
         <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
       </div>
     </div>
-    <label><span class="lt">Org index sent with each message</span><input type="number" id="ai_seedcap" min="4000" max="400000" step="1000"></label>
-    <p class="note" style="margin-top:0">Characters. The assistant is given an index of the org with
-      <em>every</em> message, so this is what a question costs before you have asked anything - roughly one
-      token per four characters. The panel shows the real figure for the workspace you have open, under the
-      chat title.</p>
-    <p class="note" style="margin-top:6px">When an org does not fit, the order is decided rather than
-      arbitrary: <b>the function list is never dropped</b> - it is the vocabulary everything else refers to -
-      and module and connection names go first, because the assistant can still fetch those by name with its
-      tools. Whatever is left out is named as left out, so it never assumes something is absent because it
-      was not shown one.</p>
+    <div class="ctl">
+  <label><span class="lt">Org index sent with each message</span><input type="number" id="ai_seedcap" min="4000" max="400000" step="1000"></label>
+      <p class="note" style="margin-top:0">Characters. The assistant is given an index of the org with
+        <em>every</em> message, so this is what a question costs before you have asked anything - roughly one
+        token per four characters. The panel shows the real figure for the workspace you have open, under the
+        chat title.</p>
+      <p class="note" style="margin-top:6px">When an org does not fit, the order is decided rather than
+        arbitrary: <b>the function list is never dropped</b> - it is the vocabulary everything else refers to -
+        and module and connection names go first, because the assistant can still fetch those by name with its
+        tools. Whatever is left out is named as left out, so it never assumes something is absent because it
+        was not shown one.</p>
+    </div>
 
-    <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
-    <label class="ck" style="margin-top:10px"><input type="checkbox" id="ai_addr"><span><b>Let the assistant see sender addresses</b> - the address each email notification goes out as. Off by default: the mirror keeps it either way, this decides whether it leaves your machine with a question. The same choice exists per file in the export dialog.</span></label>
-    <p class="note" style="margin-top:6px">How many times the assistant may reach for a tool before it has to
-      answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
-      single question can cost. It is a ceiling, not a target - most answers use two or three.</p>
+    <!-- A control and the sentence that explains it are one block, not two neighbours. This page has
+         now twice had a note drift onto the wrong control simply because something was inserted
+         between them - which is invisible in the markup and obvious on screen. Inside .ctl it cannot
+         happen: anything added lands before or after the pair, never through it. -->
+    <div class="ctl">
+      <label><span class="lt">Max tool steps (agent)</span><input type="number" id="ai_maxiter" min="1" max="40"></label>
+      <p class="note">How many times the assistant may reach for a tool before it has to
+        answer. 20 is the default. Raise it for questions that span the whole org; lower it to cap what a
+        single question can cost. It is a ceiling, not a target - most answers use two or three.</p>
+    </div>
+    <div class="ctl">
+      <label class="ck"><input type="checkbox" id="ai_addr"><span><b>Let the assistant see sender addresses</b> -
+        the address each email notification goes out as</span></label>
+      <p class="note">Off by default. The mirror keeps the address either way; this decides whether it leaves
+        your machine with a question. The export dialog asks the same thing per file, because a file you hand
+        over and a chat you have are two different decisions.</p>
+    </div>
     <div class="keyprot">
       <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> -
         it is stored encrypted, and you type the passphrase once per browser session</span></label>

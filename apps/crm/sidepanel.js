@@ -4609,9 +4609,19 @@ function openAction(a) {
     + (a.template ? row('Template', templateUrl(a)
         ? `<a class="wf-fn" data-tpl="1" title="${escA('Open this template in Zoho')}">${escHtml(a.template.name || a.template.id)} \u2197</a>`
         : escHtml(a.template.name || a.template.id)) : '')
-    + (a.from_type ? row('From', escHtml(a.from_type === 'user' ? 'a user\u2019s address' : 'an organisation address')
-        + (a.from_name ? ' \u00b7 ' + escHtml(a.from_name) : ''))
-        + (a.from_address ? row('Address', `<span class="mono">${escHtml(a.from_address)}</span>`) : '') : '')
+    // The sender, not a category. «From: a user's address» answers a question nobody asked - and
+    // withholding it *here* makes no sense at all: the mirror is on this machine, and the two
+    // switches are about what leaves it, in an export or in a chat. Reported, and the reasoning is
+    // his: sharing a fact with a model while hiding it from the reader is the wrong way round.
+    // The kind stays, muted and second, because «is this a person or the org» is worth a glance.
+    + (a.from_address || a.from_name || a.from_type
+        ? row('From', [a.from_name ? `<b>${escHtml(a.from_name)}</b>` : '',
+                       a.from_address ? `<span class="mono">${escHtml(a.from_address)}</span>` : '',
+                       a.from_type ? `<span style="color:var(--muted)">${escHtml(a.from_type === 'user' ? 'a user' : 'an organisation address')}</span>` : '']
+              .filter(Boolean).join(' \u00b7 ')
+            + (!a.from_address && actStale(a)
+                ? ' <span style="color:var(--warn)">- the address was not read by the pull that wrote this</span>' : ''))
+        : '')
     + (a.recipient_count != null ? row('Recipients', `${escHtml(String(a.recipient_count))} \u00b7 <span style="color:var(--muted)">a count; Zoost never reads who they are</span>`) : '')
     + (a.field ? row('Field', `<span class="mono">${escHtml(a.field)}</span>`
         + (a.field_label && a.field_label !== a.field ? ` \u00b7 ${escHtml(a.field_label)}` : '')

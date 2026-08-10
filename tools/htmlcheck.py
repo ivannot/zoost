@@ -153,6 +153,37 @@ def duplicate_attributes(path) -> list:
     return out
 
 
+def notes_belong_to_a_control(findings: list) -> None:
+    """On a settings page, an explanation lives inside the block of the control it explains.
+
+    Twice now a `<p class="note">` has ended up under the wrong control, because something was
+    inserted between the input and the sentence about it - invisible in the markup, obvious on
+    screen, and reported by the author both times. The fix is structural rather than careful: the
+    pair lives in one `.ctl`, so anything added lands before or after it and never through it.
+
+    `.sub` is exempt: it explains a whole section and sits under its heading by design.
+    """
+    for page in sorted(ROOT.glob('apps/*/options.html')):
+        html = page.read_text(encoding='utf-8')
+        rel = page.relative_to(ROOT)
+        for m in re.finditer(r'<p class="note"[^>]*>', html):
+            before = html[:m.start()]
+            # the note is fine if the nearest unclosed block is a .ctl
+            opens = [x.start() for x in re.finditer(r'<div class="ctl">', before)]
+            if not opens:
+                findings.append(f'{rel}: a note at line {before.count(chr(10)) + 1} is not inside a '
+                                f'.ctl block, so whatever is inserted above it can steal it')
+                continue
+            # Depth, not a count of closing tags: a `.ctl` may contain a div of its own - the folder
+            # warning is one - and the first version read that block's own `</div>` as the end of the
+            # `.ctl`. A checker that reports correct markup is a checker that gets switched off.
+            tail = before[opens[-1]:]
+            depth = tail.count('<div') - tail.count('</div>')
+            if depth <= 0:
+                findings.append(f'{rel}: the note at line {before.count(chr(10)) + 1} sits outside the '
+                                f'.ctl it should belong to - a control and its explanation are one block')
+
+
 def main() -> int:
     findings = []
     for path in FILES:
@@ -169,6 +200,7 @@ def main() -> int:
     for path in pages:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in display_override(path)]
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in duplicate_attributes(path)]
+    notes_belong_to_a_control(findings)
 
     print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')
     for f in findings:

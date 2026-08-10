@@ -3,13 +3,13 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://zoost.it/</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/"/>
   </url>
   <url>
     <loc>https://zoost.it/it/</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/"/>
   </url>
@@ -63,13 +63,13 @@
   </url>
   <url>
     <loc>https://zoost.it/docs-crm</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/docs-crm"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-crm"/>
   </url>
   <url>
     <loc>https://zoost.it/it/docs-crm</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/docs-crm"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-crm"/>
   </url>
@@ -87,13 +87,13 @@
   </url>
   <url>
     <loc>https://zoost.it/nerd</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/nerd"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/nerd"/>
   </url>
   <url>
     <loc>https://zoost.it/it/nerd</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/nerd"/>
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/nerd"/>
   </url>
@@ -123,6 +123,6 @@
   </url>
   <url>
     <loc>https://zoost.it/llms.txt</loc>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
   </url>
 </urlset>
