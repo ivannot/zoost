@@ -93,6 +93,19 @@ def main() -> int:
                 findings.append(f"{rel}: /img/{m.group(1)}.webp has no explicit width and height, "
                                 f"so the page moves under the reader when it loads")
 
+    # Two names for one picture. `crm-preview` and `crm-panel` came out byte-identical when the
+    # detail pane grew tabs and the preview shot stopped opening one - each still existed, each was
+    # still used, so every check above stayed quiet while the home page carried a caption about
+    # callers and a size over a screenshot of the source. A hash is the only thing that sees it.
+    import hashlib
+    seen = {}
+    for f in sorted(IMG.glob("*.webp")):
+        seen.setdefault(hashlib.sha256(f.read_bytes()).hexdigest(), []).append(f.stem)
+    for names in seen.values():
+        if len(names) > 1:
+            findings.append(", ".join(names) + " are byte-identical - one picture published under "
+                            "several names, and their captions cannot both be about it")
+
     for key in sorted(published - used):
         findings.append(f"{key}.webp is published and no page uses it - either place it or stop "
                         f"publishing it, because it is weight nobody sees")

@@ -115,6 +115,7 @@ EXPECTED = {
     ('#healthbody', 'flex'): 'the Analytics health view is a flex column and its body must fill it',
     ('#healthbody', 'color'): 'base typography, which the CRM inherits from elsewhere',
     ('#healthbody', 'font-size'): 'ditto',
+    ('#healthbody', 'padding'): 'the CRM health view has a sticky tab row inside this box, so the top padding had to move onto the row itself or the coverage line scrolls up into the gap above it; the Analytics health view has nothing sticky in it',
     ('#healthbody', 'line-height'): 'ditto',
 }
 EXPECTED_SOLO = {

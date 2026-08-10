@@ -143,7 +143,10 @@
   #healthview .hhr{display:flex;align-items:center;gap:9px}
   #healthpull{font-size:10.5px;padding:2px 8px}
   #healthview .hx{cursor:pointer;color:var(--muted)}
-  #healthbody{overflow:auto;padding:10px 12px}
+  /* No padding above the sticky tab row, or it parks below the gap and the coverage line
+     scrolls up into the strip over it - the trap this project has already hit once with a
+     table header. The 10px lives on the sticky row itself, which paints over what passes. */
+  #healthbody{overflow:auto;padding:0 12px 10px}
   .hcov{font-size:11px;color:var(--muted);line-height:1.5;background:#141b29;border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:12px}
   .hsec{margin-bottom:14px}
   .hsec .ht{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;margin-bottom:6px}
@@ -156,7 +159,7 @@
   .hnone{font-size:11px;color:#54d199}
   .hdiv{margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink)}
   .hdiv .hd2{font-weight:400;color:var(--muted);font-size:10.5px}
-  .htabs{display:flex;gap:4px;margin-bottom:10px;position:sticky;top:0;background:var(--bg);padding-bottom:2px;z-index:2}
+  .htabs{display:flex;gap:4px;margin-bottom:10px;position:sticky;top:0;background:var(--bg);padding:10px 0 2px;z-index:2}
   .htab{background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
   .htab.on{color:var(--ink);border-color:var(--accent);background:#16233a}
   .htab .htn{font:10px var(--mono);background:var(--bg);border-radius:9px;padding:0 6px;color:var(--muted)}

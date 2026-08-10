@@ -322,10 +322,13 @@ PANELS = [
     # «Copertura visiva totale delle feature» - every capability the pages claim should be visible
     # somewhere, not only described. tools/coverage.py holds the map and reports what is missing.
     ("crm-preview", "crm", "crm/sampleorg-1234567890", """
-        // A function open in the preview: its source, and the calls in it clickable. The list shot
-        // above shows the catalogue; this one shows what you get when you pick something out of it.
+        // A function open, on its Details tab: who calls it, where it is used, what is failing in
+        // Zoho, how big it is. Until the tabs landed this clicked the function and stopped, which
+        // rendered the Code tab - byte for byte the same image as crm-panel, published twice under
+        // two captions, one of which promised callers and a size the picture no longer showed.
         const el = [...document.querySelectorAll('#tree .f')].find((e) => /Build invoice/.test(e.textContent));
         if (el) el.click();
+        setTimeout(() => document.getElementById('pvtab_info').click(), 2000);
     """),
     ("crm-runtime", "crm", "crm/sampleorg-1234567890", """
         // The measured half, beside the static proxies that were the only thing here before.
@@ -334,8 +337,21 @@ PANELS = [
     """),
     ("crm-failures", "crm", "crm/sampleorg-1234567890", """
         // There is no Failures tab - a failure is something that happened to a function, so the list
-        // lives in the health view under Functions, next to the other things wrong with them.
+        // lives in the health view under Functions, next to the other things wrong with them. Which
+        // means this shot and crm-health open the same screen, and until the section was scrolled to
+        // they were byte-identical: two figures in the guide, one picture, two captions.
         document.getElementById('health').click();
+        setTimeout(() => {
+          const sec = [...document.querySelectorAll('#healthbody .hsec')]
+            .find((x) => /Failing in Zoho/.test(x.textContent));
+          // Land the section's title just under the sticky tab row. Computed from where the two
+          // actually are rather than from offsetTop and a guessed margin: the first attempt put the
+          // heading behind the sticky row, which is a screenshot of a control overlapping a title.
+          const body = document.getElementById('healthbody');
+          const tabs = document.querySelector('#healthbody .htabs');
+          if (sec && tabs) body.scrollTop += sec.getBoundingClientRect().top
+            - tabs.getBoundingClientRect().bottom - 8;
+        }, 900);
     """),
     ("crm-search", "crm", "crm/sampleorg-1234567890", """
         // Full-text search across every function at once, which Zoho CRM has no way of doing. The
