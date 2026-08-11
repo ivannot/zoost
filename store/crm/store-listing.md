@@ -2,6 +2,8 @@
 
 `auditcheck.py` compares the item name and the short description below against `apps/crm/manifest.json` on every run, and `sitecheck.py` counts every section against the ceiling its own heading declares. No version or date is written here: a number typed once goes stale in silence, which is what the two lines that used to sit here did.
 
+**Before the next Zoho CRM submission: §9 has to be pasted again, and `tools/submitted.py crm` must not run until it has been.** The host justification was rewritten after 1.39.0 went in (`2ddf111`, on 11 August: it argues why the extension needs those hosts instead of enumerating the data centres, which the manifest already does), so what Google is reviewing is the previous text. Nothing has ever been recorded as submitted for this app - `store/crm/listing.json` does not exist and `python3 tools/storecopy.py crm --changed` treats every field as new - so the first run of `submitted.py` writes the baseline from this file as it stands. Run it early and every section becomes "already submitted", §9 included, and `--changed` will say there is nothing to paste for ever. Delete this paragraph once §9 is actually in the dashboard.
+
 `short_name` and the toolbar tooltip are browser-UI fields and do not appear on the Store listing,
 so changing them does not touch anything below.
 
