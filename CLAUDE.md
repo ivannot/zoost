@@ -3084,6 +3084,9 @@ over.
 
 What that request means, in order. Do all of it without being asked:
 
+0. **`bash tools/prepare.sh`** — renders what has moved, stamps the pages and the asset URLs, moves
+   the translation markers, rebuilds the sitemap, runs the battery and the image checks, and stops at
+   the first finding. It was five commands in an order that mattered, run by hand every time.
 1. **Check the release is actually warranted and complete.** Run "Definition of done" over the change
    — docs, site, store copy, `manifest.json` description — before anything is tagged. A tag is a
    public ref; fixing a premature one costs more than waiting.
@@ -3093,9 +3096,11 @@ What that request means, in order. Do all of it without being asked:
    material; the file is written for somebody who has the extension installed and has never read a
    commit. `release.sh` **refuses to tag without it** and so does the workflow, because this is the
    one thing in the release that cannot be added afterwards by anyone but the author.
-3. **`tools/release.sh <app>`** — verifies the tree, builds twice locally and compares (fast
-   feedback: a non-reproducible build must fail *before* the tag exists), then creates
-   `<app>-v<version>`.
+3. **`tools/release.sh <app>`** — runs the battery and `auditcheck --offline` and refuses on any
+   finding (it used to refuse a dirty tree and nothing else, so a red suite could be tagged: the one
+   step that is public and irreversible was the one that checked least), verifies the tree, builds
+   twice locally and compares (fast feedback: a non-reproducible build must fail *before* the tag
+   exists), then creates `<app>-v<version>`.
 4. **`git push --follow-tags`** — this, and nothing else, starts the public build. GitHub checks out
    the tag, builds it twice, prints `unzip -l` into the public log, signs a provenance attestation
    and publishes the Release.
@@ -3111,8 +3116,14 @@ What that request means, in order. Do all of it without being asked:
    release for both products, not an occasional tidy-up: the Zoost Analytics listing sat on one image
    from its first submission because nothing measured it. The names are numbers on purpose; see
    `store/assets.md`.
-7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
-   date, and commit it. The Release body prints the row ready to paste, with the date left blank -
+6c. **Actions → «store upload» → the tag.** The CI downloads that Release's asset and puts it on the
+   item **as a draft**; it never publishes, and it refuses if Google already has a revision in review.
+   The listing fields and the screenshots cannot be set through the API, so the dashboard is still
+   where a submission is finished - which is the right place for the decision to be taken.
+7. **After submission: `python3 tools/submitted.py <app>`.** It takes the `RELEASES.md` row from the
+   published Release - the commit and the hash GitHub signed, not ones recomputed here - and records
+   which screenshots the listing now carries. Running it is the one thing it takes on trust: nothing
+   can observe the click. The Release body prints the row ready to paste, with the date left blank -
    it is the one figure nobody else holds, since the Store API reports which state a revision is in
    and never when it entered it. Nothing on the site derives from that column any more; the row is
    the provenance record - which commit, which hash - and that is why it is still part of a release.

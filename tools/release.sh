@@ -33,6 +33,8 @@ ZIP="dist/zoost-$APP-$VERSION-store.zip"
 git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && {
   echo "Tag $TAG already exists — bump the version in apps/$APP/manifest.json first."; exit 1; }
 
+
+
 # The release notes, and the release stops without them.
 #
 # `release.yml` already writes a body — the hash, the commit, the verification commands — and that
@@ -57,6 +59,20 @@ if [[ ! -s "$NOTES" ]]; then
 fi
 
 # Fail here rather than in CI: a non-reproducible build makes every published hash meaningless, and
+# The battery, before the tag rather than beside it.
+#
+# This refused a dirty tree and nothing else, so a red suite could be tagged: the one step that is
+# public and irreversible was the one step that checked least. `auditcheck` runs with --offline
+# because the live comparison says nothing until the commit is pushed, which is the step after this
+# one — what it does check here is that the store copy still matches the manifests and that no
+# absolute claim has gone out unread.
+echo "== the battery, before anything public happens"
+bash tests/run.sh >/dev/null || { echo "The suite is red. A tag is public; fix it first."; exit 1; }
+python3 tools/auditcheck.py --offline >/dev/null || {
+  echo "auditcheck has findings. Run: python3 tools/auditcheck.py --offline"; exit 1; }
+echo "   suite and checkers pass"
+
+# The build has to be deterministic, and this is where that is proven cheaply:
 # finding that out after the tag is pushed means an orphaned tag to clean up.
 ./build.sh "$APP" >/dev/null
 A=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
