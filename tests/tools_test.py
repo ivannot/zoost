@@ -1758,6 +1758,35 @@ class TheNotesAreOneIndexedSet(unittest.TestCase):
             self.assertGreater(len(why), 40, f'"{why}" does not say when to open the file')
 
 
+class TheMapNamesTheWholeRepository(unittest.TestCase):
+    """The tree at the top of docs/layout.md named four of the eight directories, and `store/crm/`
+    described itself as "per app" while `store/analytics/` appeared nowhere.
+
+    Found by the author, reading it. Both rules it broke are written down at length here - the twins
+    must not diverge, and a part enumerated once is enumerated everywhere its siblings are - and the
+    file that broke them is the map of the repository. So the list is derived from disk rather than
+    remembered: a directory that appears tomorrow has to be named there, and so does the second
+    product's copy of anything under apps/ or store/.
+    """
+
+    def block(self):
+        src = (ROOT / 'docs' / 'layout.md').read_text(encoding='utf-8')
+        return src.split('```')[1]
+
+    def test_every_directory_is_named(self):
+        block = self.block()
+        for d in sorted(p for p in ROOT.iterdir() if p.is_dir() and not p.name.startswith('.')):
+            self.assertIn(f'{d.name}/', block,
+                          f'{d.name}/ exists and the map of the repository does not name it')
+
+    def test_both_products_are_named_wherever_one_is(self):
+        block = self.block()
+        for parent in ('apps', 'store'):
+            for child in sorted(p for p in (ROOT / parent).iterdir() if p.is_dir()):
+                self.assertIn(f'{parent}/{child.name}/', block,
+                              f'{parent}/{child.name}/ is missing from the map while its twin is in it')
+
+
 class NothingHerePublishes(unittest.TestCase):
     """The upload path stops at the draft, and that is a property worth holding by test.
 

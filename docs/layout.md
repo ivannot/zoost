@@ -13,9 +13,21 @@ apps/crm/        the Zoho CRM extension. Exactly what ships. Nothing else lives 
 apps/analytics/  the Zoho Analytics extension
 site/            zoost.it — deployed by Cloudflare on push to main (root directory: site)
 site/_worker.js  the Worker script (see the Cloudflare notes further down)
-store/crm/       Chrome Web Store listing copy and permission justifications, per app
+store/crm/       Chrome Web Store listing copy, permission justifications, release notes
+store/analytics/ the same for the other product — both are published, and reviewed separately
+docs/            these notes, opened when the area they cover is about to be touched
+tools/           the checkers, the renderers and the release chain — everything derived or verified
+tests/           node's own runner and Python's unittest; `bash tests/run.sh` is all of it
+fixtures/        the sample org as data, and the graph fixtures the panel itself produces
 dist/            build output, git-ignored
 ```
+
+**This block named four of the repository's eight directories, and `store/crm/` alone described
+itself as "per app".** Reported by the author, reading it. The twin rule and the enumeration trap are
+both stated at length in this repository, and the map of the repository broke both - which is what
+makes it worth a check rather than a correction: `tests/tools_test.py` derives the directory list
+from disk, and from `apps/` and `store/` the per-product subdirectories, so the next one that appears
+has to be named here or the suite says so.
 
 Each app carries its **own `manifest.json` and its own version number** — they do not move in step.
 `./build.sh crm` and `./build.sh analytics` package them separately.
