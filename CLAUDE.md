@@ -3382,6 +3382,15 @@ exactly right about two smaller things, and both are fixed.
   reader still gets a payload up to an hour old, which is the case the idea was for. The two real
   levers are the ones already here: bump `CACHE_KEY`, or lower the TTL and pay for it in requests to
   Google.
+- **The TTL is ten minutes, and the number came from counting.** It was an hour, which is the
+  difference between submitting a version and seeing the footer say so. A miss costs **9 upstream
+  requests** - 4 GitHub Atom feeds, 2 raw manifests, 2 `fetchStatus`, 1 token mint - so 600s is 54 an
+  hour against 9, **per PoP**: Cloudflare caches per data centre, and the total is that times however
+  many are warm, which is the term nobody here has a number for. Neither is Google's quota on the
+  Store API, and those 2 of the 9 are what to watch if this is ever shortened again. `TTL_PARTIAL`
+  stays at 60. **Changing it means bumping `CACHE_KEY`**: entries written under the old key carry the
+  old `max-age` and would outlive the change by an hour - which is the second reason to bump it that
+  this file already records, met for the first time.
 - **The edge cache will hide your deploy.** `/api/versions` is cached for an hour and the Worker
   checks the cache before doing anything, so new code can run and still return the old body — no
   error, no 404, just a value that will not change. The key ignores the query string on purpose (so

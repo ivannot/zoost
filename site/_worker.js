@@ -31,7 +31,14 @@ const EXT_ID = {
   crm: 'flffecjpbmjfonhoojaiemgjanbjkmpj',
   analytics: 'gmelnigbgklfjgceldicakkomhgplgge',
 };
-const TTL = 3600;                       // seconds, when every source answered
+// Ten minutes, not an hour. The badge is a live status - what the Store is serving, what it has in
+// the queue - and an hour of it was the difference between submitting and seeing it. Measured rather
+// than guessed: a miss costs **9 upstream requests** (4 GitHub Atom feeds, 2 raw manifests, 2
+// fetchStatus, 1 token mint), so this is 54 an hour per PoP against 9 - and «per PoP» is the term
+// that matters, since Cloudflare caches per data centre and the total is that times however many are
+// warm. The one number nobody here has is Google's quota on the Store API, which is the 2 of the 9
+// worth watching if this is ever shortened further.
+const TTL = 600;                        // seconds, when every source answered
 const TTL_PARTIAL = 60;                 // …and when one did not, so an outage expires with the outage
 const UA = 'zoost.it version badge (+https://zoost.it)';
 const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not a version
@@ -217,7 +224,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=19';  // bumped: siteUpdated is the deployment, not the commit
+const CACHE_KEY = '/api/versions?v=20';  // bumped: the TTL changed, so the entries written under v=19 would outlive it by an hour
 
 // Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
 // with a 404 page configured, a request that matches no asset stops reaching the Worker, and
