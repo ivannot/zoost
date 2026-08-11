@@ -773,10 +773,16 @@ What that request means, in order. Do all of it without being asked:
    release for both products, not an occasional tidy-up: the Zoost Analytics listing sat on one image
    from its first submission because nothing measured it. The names are numbers on purpose; see
    `store/assets.md`.
-6c. **Actions → «store upload» → the tag.** The CI downloads that Release's asset and puts it on the
-   item **as a draft**; it never publishes, and it refuses if Google already has a revision in review.
-   The listing fields and the screenshots cannot be set through the API, so the dashboard is still
-   where a submission is finished - which is the right place for the decision to be taken.
+6c. **Nothing: «store upload» runs itself** once step 5's workflow finishes. It downloads that
+   Release's asset and puts it on the item **as a draft**, never publishes, and when Google already
+   has a revision in review it says so and stops at 0 - that is the normal state of the week after a
+   submission, not a failure, and it is staged by dispatching the workflow by hand once the review
+   clears. This used to be a by-hand step on the argument that «putting a package in front of Google
+   is a decision»; by the boundary this file states, that argument was in the wrong place. A draft is
+   reversible, invisible to users and cannot touch the listing fields, so once the tag exists there is
+   no judgement left in it. **The decision is Submit for review**, it is in the dashboard, and it stays
+   yours - the listing fields and the screenshots cannot be set through the API anyway, so you open
+   the dashboard regardless, with the package already there.
 7. **After submission: `python3 tools/submitted.py <app>`.** It takes the `RELEASES.md` row from the
    published Release - the commit and the hash GitHub signed, not ones recomputed here - and records
    which screenshots the listing now carries. Running it is the one thing it takes on trust: nothing

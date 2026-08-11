@@ -25,9 +25,16 @@ import cws  # noqa: E402
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
+    argv = [a for a in sys.argv[1:] if a != '--if-clear']
+    # Now that this runs itself after every release, a review in progress is not a defect - it is the
+    # normal state of the week after a submission, and a red mark that means "normal" is how a
+    # notification stops being read. `--if-clear` says so and stops at 0. Asked directly it still
+    # refuses, because a tool that reports success over an upload it never made is the failure this
+    # repository spends its length preventing.
+    if_clear = '--if-clear' in sys.argv
+    if len(argv) != 2:
         sys.exit(__doc__.strip().splitlines()[0])
-    app, zip_path = sys.argv[1], pathlib.Path(sys.argv[2])
+    app, zip_path = argv[0], pathlib.Path(argv[1])
     if not zip_path.is_file():
         sys.exit(f'{zip_path} does not exist - download the asset from the Release, never build here')
     key = cws.key_from_env()
@@ -37,9 +44,13 @@ def main() -> int:
     before = cws.status(tok, app)
     pending = (before.get('submittedItemRevisionStatus') or {}).get('state')
     if pending == 'PENDING_REVIEW':
-        sys.exit(f'{app}: Google already has a revision in review. Wait for it, or cancel that '
-                 f'submission in the dashboard first - uploading over one is a state nobody here '
-                 f'has measured.')
+        said = (f'{app}: not staged. Google already has a revision in review, so this package waits: '
+                f'run this workflow by hand once that clears, or cancel the submission in the '
+                f'dashboard first - uploading over one is a state nobody here has measured.')
+        if if_clear:
+            print(said)
+            return 0
+        sys.exit(said)
 
     print(f'{app}: uploading {zip_path.name} ({zip_path.stat().st_size} bytes) to item {item}')
     out = cws.call(tok, 'POST',

@@ -30,11 +30,40 @@ Tags are per product (`crm-v1.8.1`), and `RELEASES.md` is part of the release, n
 If anything user-facing changed, regenerate `store/<app>/store-listing.md` and say which dashboard
 fields move alongside the package — they are reviewed together.
 
-**The upload can be automated; the listing cannot, and publishing is not automated on purpose.**
-`.github/workflows/store-upload.yml` is started by hand with a tag, downloads that Release's asset,
-and puts it on the Store **as a draft** - `tools/cwsupload.py`, which reads the publisher and the item
-ids out of `site/_worker.js` rather than keeping a second copy. It closes the one gap `RELEASES.md`
-admits in writing: run from CI, the thing that uploads is the thing that built and signed it.
+**The upload is automated; the listing cannot be, and publishing is not, on purpose.**
+`.github/workflows/store-upload.yml` runs itself when the release workflow finishes, downloads that
+Release's asset, and puts it on the Store **as a draft** - `tools/cwsupload.py`, which reads the
+publisher and the item ids out of `site/_worker.js` rather than keeping a second copy. It closes the
+one gap `RELEASES.md` admits in writing: run from CI, the thing that uploads is the thing that built
+and signed it.
+
+**It was a by-hand step, and the argument for that was in the wrong place.** «Putting a package in
+front of Google is a decision» is true of **Submit for review** - public, irreversible, and not called
+from here at all. It is not true of staging a draft, which is reversible, invisible to users, refuses
+over a review in progress and cannot touch the listing fields: once the tag exists there is no
+judgement left in it, so by this project's own boundary - derivations automated, decisions not - it
+belonged on the automated side the whole time.
+
+**`workflow_run`, and not `on: release`, for a reason that would have been invisible.** The Release is
+created by an action using `GITHUB_TOKEN`, and events raised by that token deliberately do not start
+other workflows - so an `on: release` trigger here would have been a thing that never fires, with
+nothing to distinguish it from one that had no work to do. It is the same shape as the tag gate that
+refused every run: written, plausible, never exercised. The tag arrives as
+`github.event.workflow_run.head_branch`, which is what GitHub puts there for a run started by a tag
+push, and the download reads that rather than `inputs.tag` - which an automatic run does not have.
+
+**And a review in progress is a skip, not a failure.** It is the normal state of the week after a
+submission; painting it red on every release cut in that week would teach whoever sees it to ignore
+this workflow, which is the one notification that must not be ignored. `--if-clear` says so and stops
+at 0, and the by-hand dispatch is how the package gets staged once the review clears. Asked directly,
+without that flag, it still refuses - a soft exit is by request, never a habit, the same shape as
+`tools/totest.sh --auto`.
+
+**Unproven end to end until the next release**, and said rather than assumed: `workflow_run` has never
+fired here, because the trigger was added after the last tag. What has been checked is everything that
+can be checked without cutting one - the YAML parses, the triggers are the two intended, the tag is
+read from the field an automatic run actually has, and three cases hold the difference between the
+automatic path and the by-hand one.
 
 Three properties held by test, because each is one line away from being lost. **`:publish` appears in
 nothing that can run on its own** - the token has the scope, so the only thing stopping it is that

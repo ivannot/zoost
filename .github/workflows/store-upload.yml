@@ -1,10 +1,20 @@
 # Take a published Release asset to the Chrome Web Store, as a draft.
 #
-# Started by hand, never by a tag. Building and signing happen on a tag because they are derivations;
-# putting a package in front of Google is a decision, and this repository automates the first kind
-# and not the second. It stops at the draft: `:publish` is never called, and the listing fields and
-# screenshots cannot be set through the API anyway, so somebody opens the dashboard regardless -
-# which is the right moment to press Submit.
+# It runs itself, once the release workflow has finished. That used to be a by-hand step, on the
+# argument that "putting a package in front of Google is a decision" - and by this repository's own
+# boundary that argument was in the wrong place. Staging a *draft* is reversible, invisible to users,
+# refuses over a review in progress and cannot touch the listing fields; given the tag exists, there
+# is no judgement left in it. The decision is **Submit for review**, which is in the dashboard, is
+# never called from here, and stays with the author. `:publish` is not in this repository and a test
+# holds that.
+#
+# `workflow_run`, not `on: release`. The Release is created by an action using GITHUB_TOKEN, and
+# events raised by that token deliberately do not start other workflows - so an `on: release` trigger
+# here would be a thing that never fires, which nobody would notice for months. `workflow_run` fires
+# on the *run* completing, whatever raised it.
+#
+# The listing fields and the screenshots cannot be set through the API, so somebody opens the
+# dashboard regardless - which is the right moment to press Submit, with the package already there.
 #
 # What it buys is the sentence `RELEASES.md` has had to carry: "uploading it to the Store is a manual
 # step, so nothing here cryptographically proves the file Google received is that one". Run from here,
@@ -12,6 +22,9 @@
 name: store upload
 
 on:
+  workflow_run:
+    workflows: ['release']
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -25,22 +38,32 @@ permissions:
 jobs:
   upload:
     runs-on: ubuntu-latest
+    # A release that failed has no asset to stage. Nothing here checks the *shape* of the tag: the
+    # release workflow runs on `crm-v*` and `analytics-v*` and nothing else, so a second list of the
+    # products in this file would be one more place to forget when a third one arrives - and the tag
+    # step below validates it against `apps/` anyway.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
 
       # The app and the version come out of the tag, so there is nothing to type twice and no way to
-      # upload one product's package to the other's listing.
+      # upload one product's package to the other's listing. On a workflow_run the tag arrives as
+      # `head_branch` - that is what GitHub puts there for a run started by a tag push, and it is the
+      # one field in this file that is a property of the platform rather than of us.
       - name: Read the tag
         id: tag
         run: |
           set -euo pipefail
-          TAG='${{ inputs.tag }}'
+          TAG='${{ inputs.tag || github.event.workflow_run.head_branch }}'
           APP="${TAG%%-v*}"
           VERSION="${TAG##*-v}"
           [ "$APP" != "$TAG" ] || { echo "::error::$TAG is not <app>-v<version>"; exit 1; }
           [ -d "apps/$APP" ] || { echo "::error::there is no apps/$APP"; exit 1; }
           echo "app=$APP" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       # The Release asset, never a build made here: that is the whole point of the chain.
       - name: Download the asset from the Release
@@ -48,14 +71,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release download '${{ inputs.tag }}' --repo '${{ github.repository }}' \
+          gh release download '${{ steps.tag.outputs.tag }}' --repo '${{ github.repository }}' \
              --pattern '*-store.zip' --dir dist
           ls -l dist
 
+      # `--if-clear` when this ran itself: Google having a revision in review is not a defect, it is
+      # the normal state of the week after a submission, and painting it red would teach whoever sees
+      # it to ignore this workflow. It says so in the run summary instead, and the dispatch above is
+      # how it gets staged once the review clears. Asked directly it still refuses, loudly - the same
+      # shape as `tools/totest.sh --auto`: a soft exit is by request, never a habit.
       - name: Upload it as a draft
         env:
           CWS_SERVICE_ACCOUNT: ${{ secrets.CWS_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
           python3 tools/cwsupload.py '${{ steps.tag.outputs.app }}' \
-            "dist/zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip"
+            "dist/zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip" \
+            ${{ github.event_name == 'workflow_run' && '--if-clear' || '' }} \
+            | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1956,11 +1956,31 @@ class NothingHerePublishes(unittest.TestCase):
             text = f.read_text(encoding='utf-8')
             self.assertNotIn('f3724a09', text, f'{f.relative_to(ROOT)} carries its own publisher id')
 
-    def test_the_workflow_is_started_by_hand(self):
+    def test_the_workflow_stages_but_is_never_started_by_a_push(self):
+        # It runs itself once the release workflow has finished - staging a draft is reversible and
+        # has no judgement left in it once the tag exists. What must not happen is a *push* putting a
+        # package in front of Google: the tag is the decision, and it is checked and built first.
         wf = (ROOT / '.github' / 'workflows' / 'store-upload.yml').read_text(encoding='utf-8')
-        self.assertIn('workflow_dispatch:', wf)
+        self.assertIn('workflow_dispatch:', wf, 'the by-hand retry is gone')
+        self.assertIn('workflow_run:', wf, 'nothing stages the package after a release any more')
         self.assertNotIn('\n  push:', wf, 'a push must not put a package in front of Google')
-        self.assertNotIn('\n  release:', wf, 'a release must not put a package in front of Google')
+        self.assertNotIn('\n  release:', wf,
+                         'on: release is raised by GITHUB_TOKEN and would never fire - use workflow_run')
+
+    def test_a_review_in_progress_is_a_skip_only_when_asked(self):
+        src = (ROOT / 'tools' / 'cwsupload.py').read_text(encoding='utf-8')
+        after = src.split('PENDING_REVIEW')[1][:600]
+        self.assertIn('if if_clear:', after, 'the automatic path fails over a normal state')
+        self.assertIn('return 0', after)
+        self.assertIn('sys.exit(said)', after, 'asked directly it no longer refuses')
+
+    def test_the_tag_is_read_from_the_run_that_built_it(self):
+        # On a workflow_run there is no `inputs.tag`; GitHub puts the tag in head_branch. Reading
+        # inputs.tag alone would make every automatic run try to download a Release called "".
+        wf = (ROOT / '.github' / 'workflows' / 'store-upload.yml').read_text(encoding='utf-8')
+        self.assertIn('github.event.workflow_run.head_branch', wf)
+        self.assertNotIn("gh release download '${{ inputs.tag }}'", wf,
+                         'the download still reads an input that an automatic run does not have')
 
 
 if __name__ == '__main__':
