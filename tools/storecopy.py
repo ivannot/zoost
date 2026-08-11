@@ -14,6 +14,8 @@ The numbering is the file's own (`## 9. Host permission justification`), not the
 the dashboard numbers nothing and its order is not ours to guess. It also prints the character count
 against the limit written in the heading: a submission that stops at the form costs two or three days.
 """
+import hashlib
+import json
 import pathlib
 import re
 import subprocess
@@ -31,10 +33,45 @@ def sections(app: str):
             for m in SECTION.finditer(f.read_text(encoding='utf-8'))]
 
 
+def digests(app: str) -> dict:
+    """Each section's text, hashed. Recorded at submission and compared before the next one."""
+    return {str(n): hashlib.sha256(body.encode()).hexdigest()[:12] for n, _, _, body in sections(app)}
+
+
+def changed(app: str) -> int:
+    """Which boxes in the dashboard actually need touching this time.
+
+    The upload of a package can be automated and the *listing* cannot - Google exposes no endpoint
+    for the description, the justifications or the screenshots, so somebody retypes them by hand. The
+    tedium is not the pasting, though: it is opening nine boxes to find out which two moved. That
+    part is derivable, so it is derived - `store/<app>/listing.json` records what each section looked
+    like when it was last submitted.
+    """
+    led = ROOT / 'store' / app / 'listing.json'
+    was = json.loads(led.read_text(encoding='utf-8')).get('sections', {}) if led.exists() else {}
+    if not was:
+        print(f'{app}: nothing recorded as submitted yet - every field is unknown, treat all as new.')
+        print(f'  after the next submission: python3 tools/submitted.py {app}')
+        return 0
+    moved = [(n, name, cap, body) for n, name, cap, body in sections(app)
+             if was.get(str(n)) != hashlib.sha256(body.encode()).hexdigest()[:12]]
+    if not moved:
+        print(f'{app}: every store field is what was submitted for {json.loads(led.read_text(encoding="utf-8")).get("version", "?")} - nothing to paste.')
+    for n, name, cap, _ in moved:
+        print(f'  §{n} {name} - changed. python3 tools/storecopy.py {app} {n} --copy')
+    shots = ROOT / 'store' / app / 'screenshots.json'
+    if shots.exists():
+        j = json.loads(shots.read_text(encoding='utf-8'))
+        print(f'  screenshots: recorded for {j.get("version", "?")} - run tools/shots.py to see if they moved')
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         sys.exit(__doc__.strip().splitlines()[0])
     app = sys.argv[1]
+    if '--changed' in sys.argv:
+        return changed(app)
     found = sections(app)
     if len(sys.argv) < 3:
         for n, name, cap, body in found:

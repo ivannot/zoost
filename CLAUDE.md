@@ -3170,6 +3170,18 @@ What the API cannot do at all: the Store listing. Description, screenshots, perm
 and the privacy fields are dashboard-only, which Google's documentation states plainly - so somebody
 opens it anyway, and that is the right moment to press Submit.
 
+**Driving the dashboard with a browser script is refused, and it is the same rule as everywhere
+else.** It would be synthetic clicks into a DOM this project does not own, against localized labels,
+holding a path that can publish - three of the things the first non-negotiable names in one place. A
+listing half-submitted by a script that met a changed page is worse than any amount of typing.
+
+**What *is* derivable is which boxes to touch, and that is most of the tedium.** The pasting is not
+the work; opening nine fields to find the two that moved is. `store/<app>/listing.json` records what
+each section said when it was last submitted, so `python3 tools/storecopy.py <app> --changed` names
+them - and `tools/shots.py` already says whether the five images still match the set on the listing.
+Both are written by `tools/submitted.py`, in the one moment a person is confirming a submission
+anyway.
+
 **Publishing itself is not on this list, and is not yours to initiate.** Releases go to the Store in
 batches, when there is something solid; cut a tag when asked, not when a version looks ready.
 

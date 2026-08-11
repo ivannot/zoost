@@ -57,6 +57,19 @@ def shots_ledger(app: str, version: str) -> str:
     return f'  screenshots: {len(pngs)} file(s), digest {digest}, recorded for {version}'
 
 
+def listing_ledger(app: str, version: str) -> str:
+    """What each store field said when it was last submitted, so the next release can name the two
+    boxes that moved instead of leaving nine to be opened and compared by eye."""
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import storecopy
+    (ROOT / 'store' / app / 'listing.json').write_text(json.dumps({
+        '_': 'Each store field as submitted, hashed. `python3 tools/storecopy.py <app> --changed` '
+             'compares against it and says which boxes need pasting.',
+        'version': version, 'sections': storecopy.digests(app),
+    }, indent=2) + '\n', encoding='utf-8')
+    return f'  listing: {len(storecopy.digests(app))} field(s) recorded as submitted for {version}'
+
+
 def main() -> int:
     if len(sys.argv) != 2 or not (ROOT / 'apps' / sys.argv[1]).is_dir():
         sys.exit('usage: python3 tools/submitted.py <crm|analytics>')
@@ -76,6 +89,7 @@ def main() -> int:
         ledger.write_text(text, encoding='utf-8')
         print(f'  RELEASES.md: {row}')
     print(shots_ledger(app, version))
+    print(listing_ledger(app, version))
     return 0
 
 
