@@ -1625,7 +1625,9 @@ async function buildHealth() {
   const missingFK = []; const modApis = new Set(); const modObjs = [];
   for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
-  const fkItems = missingFK.map((r) => ({ html: `<b>${escHtml(r.module)}</b>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
+  // The module named here *is* in the workspace - it is its lookup's target that is not - so it
+  // opens, and the target stays plain text because there is nothing to open.
+  const fkItems = missingFK.map((r) => ({ html: `<a data-kind="module" data-id="${escA(r.module)}">${escHtml(r.module)}</a>.<span>${escHtml(r.field)}</span> <span class="meta">\u2192 ${escHtml(r.target)} (not in workspace)</span>` }));
   const coverage = `<b>Coverage.</b> Analyzed: function\u2192function calls, workflows, schedules, and each function's <i>associated_place</i> (blueprint, button, \u2026). <b>Not</b> analyzed: custom client scripts, approval/assignment/scoring rules, and anything Zoho doesn't report. Every item is a <b>candidate to review</b> - never an automatic deletion. <b>Size &amp; calls</b> are plain counts with no threshold and no verdict: they show where length and outbound calls concentrate, and you decide what that means. Based on ${nodes.length} functions, ${modObjs.length} modules in this workspace.`;
   // Everything read from the platform rather than computed from the mirror, fetched once: both
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
@@ -1684,7 +1686,8 @@ async function buildHealth() {
   const unattached = actIdx
     .filter((a) => !a.associated && !(actUse.get(a.kind + ':' + String(a.id)) || []).length)
     .sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
-    .map((a) => ({ html: `<b>${escHtml(a.name || a.id)}</b> <span class="meta">${escHtml(actionKindLabel(a.kind))}${a.module ? ' \u00b7 ' + escHtml(a.module) : ''}</span>` }));
+    .map((a) => ({ html: `<a data-kind="action" data-id="${escA(a.kind + ':' + a.id)}">${escHtml(a.name || a.id)}</a>`
+      + ` <span class="meta">${escHtml(actionKindLabel(a.kind))}${a.module ? ' \u00b7 ' + escHtml(a.module) : ''}</span>` }));
   const actDesc = actIdx.length
     ? 'Zoho reports these as attached to no rule, and no rule in this workspace names them either. A candidate to review, not a verdict: a rule that has not been pulled cannot name anything, and Zoho answers only for the automations it knows about.'
     : MSG.notReadYet;
@@ -1736,11 +1739,33 @@ function renderHealthView() {
   $('healthbody').innerHTML = html;
   $('healthbody').querySelectorAll('.htab').forEach((b) => (b.onclick = () => { healthTab = b.dataset.tab; renderHealthView(); }));
   $('healthbody').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => healthOpenFn(a.dataset.file, a.dataset.line ? parseInt(a.dataset.line, 10) : null)));
-  $('healthbody').querySelectorAll('a[data-kind]').forEach((a) => (a.onclick = () => (a.dataset.kind === 'workflow' ? healthOpenWorkflow(a.dataset.id) : healthOpenSchedule(a.dataset.id))));
+  // A map, not a ternary. Two kinds fitted in a conditional and the third and fourth did not: the
+  // «Automation actions nothing fires» list rendered as plain text for exactly as long as it has
+  // existed, because adding a row to a health group and adding a way to open it were two separate
+  // things to remember. Reported. Now the finding names its kind and the opener is looked up.
+  $('healthbody').querySelectorAll('a[data-kind]').forEach((a) => (a.onclick = () => {
+    const open = HEALTH_OPEN[a.dataset.kind];
+    if (open) open(a.dataset.id); else setStatus(`Nothing to open for a ${a.dataset.kind}.`, 'warn');
+  }));
 }
 function healthOpenFn(file, line) { closeHealth(); if (viewMode !== 'functions') { setMode('functions'); } openFile(file, true, line || null); }
+async function healthOpenAction(key) {
+  closeHealth(); setMode('actions'); await rebuildActions();
+  const [kind, ...rest] = String(key).split(':'); const id = rest.join(':');
+  const e = actionData.find((a) => a.kind === kind && String(a.id) === id);
+  if (e) openAction(e); else setStatus('Action not found in this workspace.', 'warn');
+}
+async function healthOpenModule(api) {
+  closeHealth(); setMode('modules'); await rebuildModules();
+  const e = moduleData.find((m) => m.api_name === api);
+  if (e) openModule(e.path); else setStatus('Module not found in this workspace.', 'warn');
+}
 async function healthOpenWorkflow(id) { closeHealth(); setMode('workflows'); await rebuildWorkflows(); const e = workflowData.find((w) => String(w.id) === String(id)); if (e) openWorkflow(e); else setStatus('Workflow not found in this workspace.', 'warn'); }
 async function healthOpenSchedule(id) { closeHealth(); setMode('schedules'); await rebuildSchedules(); const e = scheduleData.find((x) => String(x.id) === String(id)); if (e) openSchedule(e); else setStatus('Schedule not found in this workspace.', 'warn'); }
+// Which finding opens what. One entry per kind a health row can name, so a group that starts
+// naming a new kind gets its opener here rather than silently rendering an unclickable name.
+const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule,
+                      action: healthOpenAction, module: healthOpenModule };
 function toggleHealth() { if ($('healthview').classList.contains('show')) closeHealth(); else openHealth(); }
 function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }
 
@@ -2708,8 +2733,32 @@ function dropWorkspaceState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
   graphCache = null; aiModCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
+  healthData = null;   // an audit is about one workspace, and it was the one thing left off this list
   aiRenderMessages();
   return had;
+}
+/** What is on *screen* when a different workspace is opened - the other half of the above.
+ *
+ *  Reported: switch workspace while the Health view is open and nothing changes, because rebuilding
+ *  «the active view» rebuilds the list under an overlay covering it. The same is true of everything
+ *  else that outlives a switch: a search term typed for one org silently filters another, and the
+ *  connection filter is a set of *file paths* from the workspace being left, so the functions list
+ *  can come back empty for a reason nothing on screen explains.
+ *
+ *  Two functions rather than one, and the split is not cosmetic: `dropWorkspaceState()` is what
+ *  **Clear** in the chat calls, and Clear must not close the reader's preview or empty their search
+ *  box. Data belongs to the workspace; the view belongs to the reader - until the workspace changes
+ *  underneath it, which is this. */
+function resetView() {
+  $('find').value = '';
+  connectionFilter = null; connFilterSet = null;
+  currentPath = null; pvHist = []; updateBack();
+  $('preview').classList.remove('show'); $('resizer').classList.remove('show');
+  // An overlay is a view of the workspace too. Health is rebuilt rather than closed, because
+  // closing it would answer «what is wrong here» by taking the question away; the assistant's
+  // context line is re-measured, since the index it reports is the new org's.
+  if ($('healthview').classList.contains('show')) openHealth();
+  if ($('aiview').classList.contains('show')) aiContextLabel();
 }
 
 async function activate(w, viaGesture) {
@@ -2723,7 +2772,11 @@ async function activate(w, viaGesture) {
   oldLayout = await hasOldLayout(w.handle);
   // Not on a re-activation of the workspace already open - regranting a folder must not throw
   // away a conversation about the org you are still in.
-  if (!sameWs) { const n = dropWorkspaceState(); if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn'); }
+  if (!sameWs) {
+    const n = dropWorkspaceState();
+    resetView();
+    if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn');
+  }
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
   // Carrying the previous org's answers over would hide a tab in an org that grants it - the same

@@ -325,6 +325,20 @@ function dropWorkspaceState() {
   aiRenderMessages();
   return had;
 }
+/** What is on *screen* when a different workspace is opened - the other half of the above.
+ *
+ *  Reported on the CRM panel and true here for the same reason: switch workspace with the Health
+ *  view open and nothing changes, because what the switch rebuilds is the list underneath an overlay
+ *  covering it. A search term typed for one workspace silently narrows the next one too.
+ *
+ *  Two functions rather than one, and the split is not cosmetic: `dropWorkspaceState()` is what
+ *  **Clear** in the chat calls, and Clear must not empty the reader's search box. The selection and
+ *  the detail pane are not here because `loadFromDisk()` already drops them on every load. */
+function resetView() {
+  $('find').value = '';
+  if ($('healthview').classList.contains('show')) renderHealth();
+  if ($('aiview').classList.contains('show')) aiContextLabel();
+}
 
 async function selectWorkspace(w) {
   const sameWs = bound && bound.workspace === w.id;
@@ -333,8 +347,12 @@ async function selectWorkspace(w) {
   await window.idbHandle.set('activeWsAnalytics', w.id);
   // Not on a re-selection of the workspace already open - regranting a folder must not throw
   // away a conversation about the workspace you are still in.
-  if (!sameWs) { const n = dropWorkspaceState(); if (n) status(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn'); }
+  if (!sameWs) {
+    const n = dropWorkspaceState();
+    if (n) status(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn');
+  }
   await loadFromDisk();
+  if (!sameWs) resetView();   // after the load: Health is rendered from what is now in memory
   await refreshContext();
 }
 

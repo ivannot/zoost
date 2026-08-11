@@ -568,6 +568,24 @@ Analytics had no `patchCfg` at all and its pull replaced the file twice over. Bo
 lesson is the one already in this file and it keeps costing: **every writer of a shared file merges,
 and the moment a new field lands there, the writers that predate it are wrong.**
 
+**Leaving a workspace drops its data *and* resets what is on screen - two functions, deliberately.**
+Reported: with the Health view open, switching workspace changed nothing, because what the switch
+rebuilds is the list *underneath* an overlay covering it. The same held for a search term typed for
+one org and still narrowing the next, and for the connection filter, which is a set of **file paths**
+from the workspace being left - so the functions list could come back empty for a reason nothing on
+screen explained. `dropWorkspaceState()` drops the data (and `healthData`, which was the one thing
+left off that list); `resetView()` puts the interface back and rebuilds any overlay that is open. The
+split is not cosmetic: **`dropWorkspaceState()` is what Clear in the chat calls**, and Clear must not
+close the reader's preview or empty their search box. Both panels have both.
+
+**A health finding that names something must open it, and a ternary is how two of four got left out.**
+«Automation actions nothing fires» rendered a plain list for as long as it existed, because the click
+handler was `kind === 'workflow' ? … : …` - two kinds fitted, the third and fourth did not, and
+adding a group and adding a way to open it were two separate things to remember. `HEALTH_OPEN` is a
+map from the kind a row declares to the function that opens it, and a test walks every `data-kind` in
+the panel against it. The module in a broken-lookup row opens; its *target* stays plain text, because
+that one is genuinely not in the workspace - which is the finding.
+
 **Everything belonging to a workspace is dropped when you leave it, in one function.** Reported by
 the user: the AI conversation survived a workspace switch, so replies naming the previous org's
 functions sat above a question about the new one — and the whole thread is re-sent with every

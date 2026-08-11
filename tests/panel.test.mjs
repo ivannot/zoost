@@ -1521,8 +1521,18 @@ test('both panels drop the conversation when the workspace changes', () => {
     const src = read(`apps/${app}/sidepanel.js`);
     assert.match(src, /function dropWorkspaceState\(\)/, `${app} has no dropWorkspaceState`);
     assert.match(src, /aiMessages = \[\]; aiSeedWarned = false;/, `${app} does not reset both`);
-    assert.match(src, /if \(!sameWs\) \{ const n = dropWorkspaceState\(\)/,
+    assert.ok(/if \(!sameWs\) \{\s*const n = dropWorkspaceState\(\)/.test(src),
       `${app} does not call it when the workspace changes`);
+    // ...and the interface goes with the data. Reported: with Health open, switching workspace
+    // changed nothing on screen - the switch rebuilds the list under an overlay covering it - and a
+    // search term typed for one org went on narrowing the next. Two functions on purpose: Clear in
+    // the chat calls the first and must not empty the reader's search box.
+    assert.ok(/function resetView\(\)/.test(src), `${app} has no resetView`);
+    assert.ok(/if \(!sameWs\)[\s\S]{0,200}resetView\(\)/.test(src),
+      `${app} does not reset the interface when the workspace changes`);
+    for (const part of [/\$\('find'\)\.value = ''/, /healthview'\)\.classList\.contains\('show'\)/]) {
+      assert.ok(part.test(src.slice(src.indexOf('function resetView()'))), `${app}: resetView leaves ${part} behind`);
+    }
   }
 });
 
@@ -3119,4 +3129,27 @@ test('the segment row is tightened only as far as it has to be', () => {
   b.classList.add('tight', 'tighter');
   fitTabs();
   assert.equal(b.className, '', 'id=crm tightening never comes off, so the panel stays small for ever');
+});
+
+// Reported: in Health, «Automation actions nothing fires» rendered a plain list while the function
+// findings beside it were links. The cause is the shape rather than the omission - two kinds fitted
+// in a ternary and the third and fourth did not - so what is asserted is that the openers are a map
+// and that every kind a finding can name has one. A health row that names something and cannot open
+// it is a dead end in the one view whose whole purpose is to send you somewhere.
+test('every kind of health finding has a way to open it', () => {
+  const src = panelBody('crm');
+  const map = src.slice(src.indexOf('const HEALTH_OPEN = {'), src.indexOf('};', src.indexOf('const HEALTH_OPEN = {')));
+  assert.ok(map, 'id=crm HEALTH_OPEN is gone - the openers are a conditional again');
+  // The literal ones. The workflow/schedule pair is written `data-kind="${escA(b.kind)}"` - one
+  // attribute carrying two kinds - so it is asserted by name below rather than found here.
+  const named = [...src.matchAll(/data-kind="(\w+)"/g)].map((m) => m[1]);
+  assert.ok(named.length >= 2, `id=crm only ${named.length} kinds of finding are linked at all`);
+  for (const k of new Set(named)) {
+    assert.ok(new RegExp(`\\b${k}:`).test(map), `id=crm a finding names a ${k} and nothing opens one`);
+  }
+  // ...and the interpolated kinds are covered too: `data-kind="${escA(b.kind)}"` is the workflow and
+  // schedule pair, which the map has to keep.
+  for (const k of ['workflow', 'schedule']) {
+    assert.ok(new RegExp(`\\b${k}:`).test(map), `id=crm nothing opens a ${k}`);
+  }
 });
