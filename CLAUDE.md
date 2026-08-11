@@ -593,6 +593,9 @@ not do.
 a property of one machine - so a path committed here is one that is wrong on the next machine while
 looking perfectly right on this one. `ZOOST_TEST_DIR` lives in **`tools/machine.env`**, which is
 git-ignored and is the single place any such value goes; every tracked file says the placeholder.
+**The values belong to a machine, the schema does not**: `tools/machine.env.example` is tracked,
+lists every key with what happens when it is unset, and a test derives the keys from the tools that
+read them - so a new machine has something to read, and a key added tomorrow cannot be invisible.
 `tests/tools_test.py` reads the values out of that file and fails if one has leaked into something
 tracked, and it also refuses machine-shaped absolute paths anywhere in the tree - because the first
 copy of this rule I wrote checked `tools/` and `tests/run.sh` only, and I put the path in **this

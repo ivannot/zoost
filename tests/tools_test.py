@@ -1844,6 +1844,37 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
         self.assertIn('ENV_DEST', sh, 'the shell side is back to letting the file win')
 
+    def test_every_key_the_tools_read_is_in_the_example(self):
+        # The values belong to a machine; **which keys exist does not**, and that half was being lost
+        # with the untracked file. A new machine had nothing to read: the schema lived in comments
+        # inside three separate tools. Derived from the code, so a key added tomorrow cannot be
+        # invisible - that is the difference between an example file and a list somebody maintains.
+        used = set()
+        for f in sorted((ROOT / 'tools').glob('*')):
+            if f.name in ('machine.py', 'machine.env', 'machine.env.example') or not f.is_file():
+                continue
+            try:
+                text = f.read_text(encoding='utf-8')
+            except (UnicodeDecodeError, IsADirectoryError):
+                continue
+            used |= set(re.findall(r"machine\.get\(['\"]([A-Z][A-Z0-9_]*)['\"]", text))
+            used |= set(re.findall(r"\$\{([A-Z][A-Z0-9_]*):-", text))
+        self.assertTrue(used, 'no key found in any tool - the pattern has stopped matching')
+        example = (ROOT / 'tools' / 'machine.env.example').read_text(encoding='utf-8')
+        declared = set(re.findall(r'^([A-Z][A-Z0-9_]*)=', example, re.M))
+        missing = sorted(used - declared)
+        self.assertEqual(missing, [],
+                         f'{missing} read by a tool and absent from tools/machine.env.example, so a '
+                         f'new machine has no way to know it exists')
+
+    def test_the_example_is_tracked_and_the_real_one_is_not(self):
+        tracked = subprocess.run(['git', '-C', str(ROOT), 'ls-files', 'tools/machine.env',
+                                  'tools/machine.env.example'], capture_output=True, text=True)
+        listed = tracked.stdout.split()
+        self.assertIn('tools/machine.env.example', listed, 'the schema is not in the repository')
+        self.assertNotIn('tools/machine.env', listed,
+                         'this machine\'s own values are about to be pushed')
+
     def test_the_loader_never_prints_a_value(self):
         # It runs in a terminal somebody may be sharing, and the names are what you need to see.
         src = (ROOT / 'tools' / 'machine.py').read_text(encoding='utf-8')
