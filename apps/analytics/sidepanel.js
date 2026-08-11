@@ -1223,7 +1223,11 @@ function buildSchemaGraph() {
   return {
     kind: 'schema', nodes, edges, focus: null, depth: null,
     counts: { nodes: Object.keys(nodes).length, edges: edges.length, dead_suspects: Object.values(nodes).filter((n) => n.dead_suspect).length, unresolved: 0 },
-    workspace: { instance: bound ? (bound.name || bound.workspace) : null, org: bound ? bound.workspace : null },
+    // `label` travels too: without it the window has nothing to show and falls back to the derived
+    // name, which is exactly the case the label exists for - Zoho Analytics calls the first
+    // workspace of every account the same thing.
+    workspace: { instance: bound ? (bound.name || bound.workspace) : null, org: bound ? bound.workspace : null,
+                 label: (bound && bound.label) || null },
   };
 }
 

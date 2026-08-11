@@ -27,6 +27,25 @@ const label = (n) => (!n ? '' : nameMode === 'internal'
 // dot came out the fallback grey. `pass()` had the same confusion and compared the chip against
 // `namespace` too, which means those five filters only ever worked in an org where Zoho returns no
 // namespace at all. One accessor now decides both, so they cannot drift apart again.
+/** The workspace this window is drawing, as the header states it.
+ *
+ *  The name the user gave it, if there is one, and never *instead of* the platform's: a header
+ *  showing only our own words would be one nobody could check against Zoho, which is the reason the
+ *  panel keeps both too. It was inline in each window and Analytics simply did not draw the label -
+ *  its payload never carried one - so the same workspace was «Contabilita 2026» in the panel and an
+ *  id in the diagram opened from it.
+ */
+function wsLine(ws) {
+  if (!ws || !(ws.instance || ws.org)) return '';
+  const inst = esc(ws.instance || '?'), org = esc(ws.org || '?');
+  // A label the same as the derived name is not a label: printing both would say the one word
+  // twice, which is what a sample workspace does by construction and what a user is free to do by
+  // hand.
+  const label = ws.label && ws.label !== ws.instance ? esc(ws.label) : null;
+  return label
+    ? `\u00b7 <b>${label}</b> \u00b7 ${inst} \u00b7 org ${org}`
+    : `\u00b7 <b>${inst}</b> \u00b7 org ${org}`;
+}
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
 // A declared hue where there is one, and a fallback where there is not - because the set of kinds is
 // the platform's to decide, not ours.
@@ -90,8 +109,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdMinus').onclick = () => setDepth(egoDepth - 1);
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
-  const ws = DATA.workspace || {};
-  $('s-ws').innerHTML = (ws.instance || ws.org) ? `· <b>${esc(ws.instance || '?')}</b> · org ${esc(ws.org || '?')}` : '';
+  $('s-ws').innerHTML = wsLine(DATA.workspace);
   buildChips(); render(); initPositions(); graphStat(); updateScopeUI();
   if (DATA.kind === 'schema' && DATA.focus) {
     curFocus = DATA.focus; computeMaxDepth();

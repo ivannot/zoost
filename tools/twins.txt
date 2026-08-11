@@ -36,7 +36,7 @@ buildExportHtml	5ed86923de23	0ad5e298b237	divergent
 buildExportMarkdown	692fcd00372c	27b56f35ee82	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
-buildSchemaGraph	56a3776f4170	4de6a12f6e7c	divergent
+buildSchemaGraph	56a3776f4170	ee1997168a94	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	324883324ccc	324883324ccc	identical
@@ -159,5 +159,6 @@ wireForget	aec6f1b54698	aec6f1b54698	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 writeFile	63a3801c7dea	63a3801c7dea	identical
 writeSampleWorkspace	af9f7648decc	5a7d8829ecce	divergent
+wsLine	f5ef6e5dc8e9	f5ef6e5dc8e9	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent
 wsOptionTitle	71c68d9469b5	ec5f3ef6335a	divergent

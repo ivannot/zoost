@@ -1881,7 +1881,8 @@
     }
   },
   "workspace": {
-    "instance": "Sample workspace",
+    "instance": "Default Workspace",
+    "label": "Sample workspace",
     "org": "99000001"
   }
 }

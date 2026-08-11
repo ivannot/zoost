@@ -18,7 +18,11 @@
   const WS = '99000001';
   const WHEN = '2026-08-07T10:00:00.000Z';
   const AUTHOR = 'Sample User';        // the one name every generated view is attributed to
-  const WS_NAME = 'Sample workspace';  // the derived name and the user label, identical for a sample
+  const WS_NAME = 'Default Workspace';   // what Zoho Analytics calls the first workspace of every account
+  // ...and what the user renamed it to. The two were identical, which made the label invisible: the
+  // fixture could not show the one thing it exists for, and a window that had stopped carrying it at
+  // all looked correct in every screenshot. The folder name does not follow either of them.
+  const WS_LABEL = 'Sample workspace';
 
   // name -> columns. The joins below reference these by name, so the two cannot drift.
   const TABLES = [
@@ -207,7 +211,7 @@
     J('lineage.json', { workspace: WS, deps: deps, failed: failed });
     J('sql/index.json', sqlindex);
     J('.zoost.json', {
-      workspace: WS, name: WS_NAME, label: WS_NAME,
+      workspace: WS, name: WS_NAME, label: WS_LABEL,
       origin: 'https://analytics.zoho.eu', sv: 1,
       // The one field that makes this a sample rather than a mirror.
       sample: true, sampleAt: WHEN, lastPull: WHEN,

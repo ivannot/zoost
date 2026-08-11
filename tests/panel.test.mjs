@@ -723,11 +723,25 @@ test('nothing user-facing prints a raw node id', () => {
 test('the workspace bar carries the name the user gave it, next to the platform\'s', () => {
   // A list showing only our own words would be one nobody could check against Zoho - the reason the
   // panel keeps both - and the diagram window was showing only the platform's.
+  //
+  // Both windows now, and that is the half this used to miss: it read the CRM alone, so Analytics
+  // could hand its diagram a workspace with no label in it at all - and did, for as long as it has
+  // had one. Reported. The line itself is one function in both files, so a fix on one side is a fix
+  // on the other by construction rather than by anyone remembering.
   const js = read('apps/crm/sidepanel.js');
   const w = [...js.matchAll(/workspace = \{[^}]*\}/g)].map((m) => m[0]);
   assert.ok(w.length >= 3, 'the graph stopped carrying its workspace');
   for (const one of w) assert.match(one, /label: bound\?\.label/, `a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
-  assert.match(read('apps/crm/graphview.js'), /ws\.label \?/, 'the window ignores it');
+  const an = read('apps/analytics/sidepanel.js');
+  const aw = [...an.matchAll(/workspace: \{[^}]*\}/g)].map((m) => m[0]).filter((x) => /instance:/.test(x));
+  assert.ok(aw.length >= 1, 'id=analytics the graph stopped carrying its workspace');
+  for (const one of aw) assert.ok(/label:/.test(one), `id=analytics a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
+  for (const app of ['crm', 'analytics']) {
+    const gv = read(`apps/${app}/graphview.js`);
+    assert.ok(/function wsLine\(ws\)/.test(gv), `${app}: the header line is not the shared function`);
+    assert.ok(/ws\.label && ws\.label !== ws\.instance/.test(gv),
+      `${app}: the window either ignores the label or prints it beside an identical name`);
+  }
 });
 
 test('the chips show what is on screen and are switched off, not on', () => {

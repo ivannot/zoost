@@ -63,6 +63,25 @@ function entityBreakdown() {
 const NOUN = () => (DATA.kind === 'schema'
   ? { n: 'modules', e: 'lookups', dead: 'unreferenced', all: 'All modules', box: 'table' }
   : { n: 'nodes', e: 'links', dead: 'nothing calls them', all: 'Everything', box: 'node' });
+/** The workspace this window is drawing, as the header states it.
+ *
+ *  The name the user gave it, if there is one, and never *instead of* the platform's: a header
+ *  showing only our own words would be one nobody could check against Zoho, which is the reason the
+ *  panel keeps both too. It was inline in each window and Analytics simply did not draw the label -
+ *  its payload never carried one - so the same workspace was «Contabilita 2026» in the panel and an
+ *  id in the diagram opened from it.
+ */
+function wsLine(ws) {
+  if (!ws || !(ws.instance || ws.org)) return '';
+  const inst = esc(ws.instance || '?'), org = esc(ws.org || '?');
+  // A label the same as the derived name is not a label: printing both would say the one word
+  // twice, which is what a sample workspace does by construction and what a user is free to do by
+  // hand.
+  const label = ws.label && ws.label !== ws.instance ? esc(ws.label) : null;
+  return label
+    ? `\u00b7 <b>${label}</b> \u00b7 ${inst} \u00b7 org ${org}`
+    : `\u00b7 <b>${inst}</b> \u00b7 org ${org}`;
+}
 const KINDOF = (n) => (DATA.kind === 'schema' ? n.namespace : n.category) || '';
 // A declared hue where there is one, and a fallback where there is not - because the set of kinds is
 // the platform's to decide, not ours.
@@ -139,13 +158,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     $('erdPlus').onclick = () => setDepth(egoDepth + 1);
   }
   graphStat();
-  const ws = DATA.workspace || {};
-  // The name the user gave the workspace, if there is one, and never *instead of* the platform's:
-  // a header showing only our own words would be one nobody could check against Zoho, which is the
-  // reason the panel keeps both too.
-  $('s-ws').innerHTML = (ws.instance || ws.org)
-    ? `\u00b7 ${ws.label ? `<b>${esc(ws.label)}</b> \u00b7 ` : ''}${ws.label ? '' : '<b>'}${esc(ws.instance || '?')}${ws.label ? '' : '</b>'} \u00b7 org ${esc(ws.org || '?')}`
-    : '';
+  $('s-ws').innerHTML = wsLine(DATA.workspace);
   // The box searches whatever this window is drawing, and it stopped being only functions the day
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
