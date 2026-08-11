@@ -1530,6 +1530,43 @@ class TheLiveComparisonCoversEverythingPublished(unittest.TestCase):
         self.assertIn('is not the file in the repository', src)
 
 
+class TheNotesAreOneIndexedSet(unittest.TestCase):
+    """CLAUDE.md was 280k against a 150k limit, so half of it was not read and nobody could say which
+    half - the failure this repository is built to prevent, happening to the file that describes the
+    preventing. It was split, not cut. What holds the split together is the index, and what makes the
+    index trustworthy is that a file cannot be added or dropped without it being reported: a
+    reference to a file that is not there is a dead end, and a file nobody references is a file that
+    quietly stops being true, which is the more expensive of the two.
+    """
+
+    def setUp(self):
+        self.main = (ROOT / 'CLAUDE.md').read_text(encoding='utf-8')
+        self.docs = sorted((ROOT / 'docs').glob('*.md'))
+
+    def test_it_is_under_the_limit_with_room(self):
+        n = len(self.main)
+        self.assertLess(n, 150_000, f'CLAUDE.md is {n} characters and stops being read at 150,000')
+
+    def test_every_file_is_named_by_the_index(self):
+        for f in self.docs:
+            self.assertIn(f'docs/{f.name}', self.main,
+                          f'docs/{f.name} exists and nothing points at it - it will go stale unread')
+
+    def test_the_index_points_at_files_that_exist(self):
+        for name in re.findall(r'\(docs/([\w.-]+\.md)\)', self.main):
+            self.assertTrue((ROOT / 'docs' / name).is_file(), f'CLAUDE.md points at docs/{name}, which is not there')
+
+    def test_each_entry_says_when_to_open_it(self):
+        # A list of titles is a table of contents; what makes this an index is the second column,
+        # which says what you must be about to do for the file to be worth opening.
+        rows = re.findall(r'^\| \[`docs/[\w.-]+\.md`\]\(docs/[\w.-]+\.md\) \| (.+?) \|$',
+                          self.main, re.M)
+        self.assertEqual(len(rows), len(self.docs),
+                         'the index and docs/ disagree about how many notes there are')
+        for why in rows:
+            self.assertGreater(len(why), 40, f'"{why}" does not say when to open the file')
+
+
 class NothingHerePublishes(unittest.TestCase):
     """The upload path stops at the draft, and that is a property worth holding by test.
 
