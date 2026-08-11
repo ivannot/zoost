@@ -1511,6 +1511,18 @@ class OnlyWhatGoesInTheDashboardIsAPublicClaim(unittest.TestCase):
             self.assertIn(self.CLAIM, ' '.join(self.auditcheck.sentences(f)),
                           'an unfenced dashboard field is no longer read')
 
+    def test_a_blockquote_marker_is_markup_and_not_prose(self):
+        # The justification under §10's checkboxes is a blockquote, and its `> ` used to land inside
+        # the sentence - the ledger held «the rows > inside tables are never sent», so the marker was
+        # part of the key of a real promise.
+        with tempfile.TemporaryDirectory() as tmp:
+            f = self.listing(tmp, '# Title\n\n## 10. Data disclosures\n\n| a | b |\n|---|---|\n\n'
+                                  '> Nothing is sent to the developer, and the rows\n'
+                                  '> inside tables are never sent.\n')
+            read = ' '.join(self.auditcheck.sentences(f))
+            self.assertIn('the rows inside tables are never sent', read)
+            self.assertNotIn('>', read, 'the blockquote markup is being read as prose')
+
     def test_the_real_listings_still_parse(self):
         # The guard above is worth nothing if the pattern stops matching the files it exists for.
         for app in ('crm', 'analytics'):

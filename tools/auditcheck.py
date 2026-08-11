@@ -334,7 +334,11 @@ def sentences(path: Path) -> list:
             body = m.group(0)
             fenced = storecopy.SECTION.search(body)
             out.append(fenced.group('body') if fenced else m.group('body'))
-        s = '\n\n'.join(out)
+        # A blockquote is markdown for "this is the justification under the checkboxes", and its
+        # `> ` is markup rather than prose. Left in, it lands *inside* the sentence - the ledger
+        # held «the rows > inside tables are never sent» - so it became part of the key of a real
+        # claim, and a reader met a promise with a stray character through the middle of it.
+        s = re.sub(r'^[ \t]*>[ \t]?', '', '\n\n'.join(out), flags=re.M)
     elif path.suffix == '.html':
         s = re.sub(r'<(script|style)[\s\S]*?</\1>', ' ', s)
         # A stamp is a date or a version written by tools/stamp.py, and it moves whenever the page
