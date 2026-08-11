@@ -3039,11 +3039,38 @@ either did not run or failed, and only the **Builds** page says which — the de
 And the lesson that keeps being re-learnt: a push is not a publication until `curl` says so.
 Documentation has to be correct at commit time, but it becomes visible only when a build succeeds.
 
-The site is static plus one edge function: `site/functions/api/versions.js` reports the Web Store
-version, the newest git tag and when `site/` last changed, so the footer shows whether the three are
-in step. It reads the **tags** rather than GitHub Releases, because the routine above always creates
-a tag while attaching a Release is a manual step that may not happen. Tags are semver-sorted here
-rather than trusting the API's unspecified order.
+The site is static plus one endpoint - `/api/versions`, answered by `site/_worker.js` - and the
+footer shows whether four facts are in step, each from the source that actually holds it: what the
+Chrome Web Store serves and what it has in the queue, from the Store API; the newest **tag** and the
+`manifest.json` on `main`, from GitHub; and when the site went live, from the runtime. It reads tags
+rather than GitHub Releases, because the routine above always creates a tag while attaching a Release
+is a manual step that may not happen, and they are semver-sorted here rather than trusting the API's
+unspecified order.
+
+**«When the site was updated» is a deployment, and it was a commit.** `lastChanged('site')` reads the
+newest commit touching `site/` - derived, nothing typed - but a commit is a *proxy*: it exists whether
+or not a build ever ran, which is precisely the state this file records from 3 August, when the watch
+paths were wrong, builds stopped being queued, and the previous deploy went on being served with no
+error anywhere. On that day the badge would have dated the site by a commit nobody could read.
+Cloudflare's REST API answers it - `GET /accounts/{id}/workers/scripts/{name}/deployments` carries
+`created_on` - and costs an account-wide **Workers Scripts Read** token for a date in a footer. The
+**version metadata binding** answers the same question from inside: `version_metadata` in
+`wrangler.jsonc`, and `env.CF_VERSION.timestamp` is the creation time of the version serving the
+request. No token, no account id, no request that can fail. Measured on a preview before it landed:
+the commit was `07:53:23Z` and the value came back `07:53:48.4495Z` - twenty-five seconds later and
+with sub-second precision, which the commits feed never has, so the two are telling apart rather than
+being assumed to.
+
+**The per-path dates stay on GitHub, and that is the opposite argument holding.** A guide must not
+claim to have been updated because the homepage moved, which is exactly what a deployment date would
+say. Site-wide: when did this go live. Per page: when did this content change. Different questions,
+different sources, and neither answer is available from the other.
+
+**A binding read but never declared is undefined for ever** - no error, no log, a footer that quietly
+stops dating itself. `tests/tools_test.py` compares every `env.X` the Worker reads against what
+`wrangler.jsonc` declares, with the secrets named separately because a secret must never be in a
+committed config. It is also the reason the config must stay a **superset** of Cloudflare's generated
+one: `version_metadata` is ours, added deliberately, and the generated file has no idea it exists.
 
 **zoost.it is a Cloudflare *Worker* with static assets, not a Pages project.** Worker name
 `zoost-it`, deploy `npx wrangler deploy`, root directory `site` — so `site/wrangler.jsonc` is the
