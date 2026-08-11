@@ -38,6 +38,7 @@ python3 tools/htmlcheck.py | tail -1
 python3 tools/imgcheck.py | tail -1
 python3 tools/sitemap.py --check | tail -1
 python3 tools/stamp.py --check | tail -1
+python3 tools/notescheck.py | tail -1
 
 echo
 echo "── build ──"

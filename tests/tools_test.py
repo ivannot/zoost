@@ -1706,12 +1706,37 @@ class TheNotesAreOneIndexedSet(unittest.TestCase):
     """
 
     def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import notescheck
+        self.notescheck = notescheck
         self.main = (ROOT / 'CLAUDE.md').read_text(encoding='utf-8')
         self.docs = sorted((ROOT / 'docs').glob('*.md'))
 
     def test_it_is_under_the_limit_with_room(self):
+        # This asserted `< 150_000` - the limit itself - under this very name, so it would have gone
+        # red at the moment content had already been dropped, which is no warning at all. The file it
+        # guards did not stop at the limit either: it reached 280,013, nearly double, because nothing
+        # measured. The budget is where we stop; the limit is where the harness does.
         n = len(self.main)
-        self.assertLess(n, 150_000, f'CLAUDE.md is {n} characters and stops being read at 150,000')
+        self.assertLess(n, self.notescheck.BUDGET,
+                        f'CLAUDE.md is {n:,} characters against a budget of '
+                        f'{self.notescheck.BUDGET:,} - lift a topic into docs/ and index it')
+
+    def test_the_budget_leaves_room_to_act_in(self):
+        # A red run is fixed by moving a topic out, which takes judgement and an hour. Raising the
+        # budget instead would be the one-line fix, and it would put this check back where it was.
+        self.assertLessEqual(self.notescheck.BUDGET, self.notescheck.LIMIT * 3 // 4,
+                             'the budget has crept up towards the limit, so there is no longer room '
+                             'to split the file calmly when it fires')
+
+    def test_the_number_is_printed_whether_or_not_it_is_breached(self):
+        # A threshold that speaks only when breached says nothing about the direction of travel, and
+        # this file grows by about a thousand characters every time it is touched.
+        run = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        self.assertIn('notescheck.py', run, 'the size is measured by nothing that runs on its own')
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'notescheck.py')],
+                             capture_output=True, text=True, cwd=ROOT)
+        self.assertIn('to spare', out.stdout, 'a passing run does not say how much room is left')
 
     def test_every_file_is_named_by_the_index(self):
         for f in self.docs:

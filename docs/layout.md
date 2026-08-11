@@ -100,7 +100,29 @@ python3 tools/stamp.py --check       # ...and report them if they have drifted (
 python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
 python3 tools/sitemap.py --check     # the sitemap is derived from the site, never typed
+python3 tools/notescheck.py          # how much room CLAUDE.md has left, printed whether or not it is short
 ```
+
+**The last one exists because the notes themselves failed the way everything else here can.**
+CLAUDE.md reached **280,013 characters against a limit of 150,000**, so nearly half of it was not
+read and nobody could say which half - and the part worth keeping is that it did not stop at the
+limit, it went on to nearly double it. Nothing measured, so there was no signal at any point along
+the way; it was reported by Claude Code itself, on the first session opened on another machine.
+
+There *was* a test, and it was worse than none: `test_it_is_under_the_limit_with_room` asserted
+`< 150_000`, which is the limit itself. Under that name it would have gone red at the moment content
+had already been dropped in silence - no room, and a name that said otherwise. The budget is now
+**100,000, two thirds of the limit**, because the remedy is not a one-line fix: a topic has to be
+lifted into a note, given an index row that says when to open it, and left readable in both places.
+A gate has to fire while there is time to do that with judgement. A second case holds the budget
+under three quarters of the limit, so the tempting fix - raise the number until the run goes green -
+puts the check back where it was and is caught. And the figure is **printed on every run even when
+nothing is wrong**, because a threshold that speaks only when breached says nothing about the
+direction of travel, and this file grows by about a thousand characters each time it is touched.
+
+`docs/*.md` is measured and deliberately not judged: those are read on demand rather than loaded into
+every session, so there is no limit to breach - only the cost of a long read, which is the author's to
+weigh. An empty one *is* a finding, because the index promises it.
 
 **A URL is what the platform serves, not what the file is called, and every check here derived it
 from the file.** Cloudflare serves `crm.html` at `/crm` and 307s the `.html` form to it, so each page

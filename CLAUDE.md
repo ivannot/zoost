@@ -20,6 +20,19 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | [`docs/naming.md`](docs/naming.md) | before writing anything a user or a reviewer can read: the product names, the site, the translations, and the checks that hold them |
 | [`docs/releases.md`](docs/releases.md) | when something in the chain misbehaves - Cloudflare, the Store API, the workflows, the attestations. The routine itself is below, in this file |
 
+**Before adding anything here, ask which of the two it is.** A rule that binds every change - a
+non-negotiable, a step of the definition of done, how to work with me - belongs in this file. A rule
+about *one area* belongs in that area's note, where it will be read by whoever opens it and by nobody
+else. Writing it here because it is fresh is how the file got to 280k: nothing is ever wrong in the
+moment it is added, and the cost lands on a session months later that reads half a file.
+
+**The room left is printed on every run: `python3 tools/notescheck.py`, and it is in `tests/run.sh`.**
+The budget is 100,000 characters, two thirds of the 150,000 at which this file stops being read. It
+fires early on purpose - splitting a topic out and giving it an index row takes judgement, and a gate
+at the limit itself would fire only after content had already been dropped in silence. **When it goes
+red, move a topic into `docs/`; never raise the budget.** That is the one-line fix that would put this
+back where it was, and a test holds the budget under three quarters of the limit so it cannot creep.
+
 ---
 
 ## What Zoost is
