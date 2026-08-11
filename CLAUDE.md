@@ -87,8 +87,34 @@ different *shape* on two of six pages — a `<span>` holding two sub-links where
 notice and hard to name. It was reported by the user, which is the failure. **A contextual
 *target* is fine and invisible; a contextual *shape* is not.**
 
+**No date a reader can see is typed, anywhere.** The argument is the author's and it is the general
+form of everything else here: a date written into a file is unverifiable by construction and free to
+disagree with the record it claims to describe - *«potrei per assurdo inserire una data diversa da
+quella registrata»*. Every system involved already holds its own: **GitHub** timestamps every commit
+and tag, **Google** reports the state of a submission, **Cloudflare** reports when the site went live.
+So `tools/stamp.py` *writes* the version and date on every page - the version from the app's
+`manifest.json`, the date from the last commit touching the page - and `sitecheck.py` reports a date
+anywhere in outward prose that is not inside a `data-stamp` element. The criterion is structural, not
+a list of permitted values: declaring a stamp is done where it lives, forgetting is reported.
+
+Three consequences worth keeping. **`RELEASES.md` lost its Submitted column**, because that is the
+one date no system holds - the Store API reports which state a revision is in and never when it
+entered it - so it could only ever have been a number I typed; the tag is timestamped by GitHub and
+the state is on `zoost.it`, from Google. **A translation is dated by its original**, read from the
+`translated-from` marker it already carries, which is also what the runtime does, so the two cannot
+disagree. And **editing a page bumps its date**, including the privacy policy's, since git is being
+asked when the file changed and it did - which over-reports rather than under-reports, and that is
+the safe direction for a document a reader is meant to re-read.
+
+The first version of that check stripped four-space-indented lines as Markdown code and applied it to
+HTML too, where nearly every line is indented: it blanked most of every page and reported **zero
+across the whole site**. Found by mutating a page and getting nothing back. A checker that goes quiet
+is the failure this file keeps naming, and the only way to know is to break the thing on purpose.
+
 ```bash
 python3 tools/sitecheck.py           # header and footer must have one shape across all pages
+python3 tools/stamp.py               # write the dates and versions the pages print
+python3 tools/stamp.py --check       # ...and report them if they have drifted (the suite runs this)
 python3 tools/namecheck.py           # no shipped file may name, link to or identify as the other product
 python3 tools/featurecheck.py        # every control a panel offers must be named somewhere on the site
 python3 tools/sitemap.py --check     # the sitemap is derived from the site, never typed

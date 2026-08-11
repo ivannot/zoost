@@ -1110,6 +1110,47 @@ class InlineStylesStayTwins(unittest.TestCase):
         self.assertNotEqual(en, it)
 
 
+class DatesAreDerived(unittest.TestCase):
+    """No date a reader sees may be a keystroke.
+
+    A typed date is unverifiable by construction and free to disagree with the record it describes,
+    which is the whole reason `RELEASES.md` no longer carries a Submitted column: GitHub timestamps
+    the tag, Google reports the state, Cloudflare reports the deployment, and «when I clicked Submit»
+    is held by nothing. What is printed is written by `tools/stamp.py` inside a `data-stamp` element;
+    everything else is reported.
+    """
+
+    def find(self, name, text):
+        findings = []
+        f = ROOT / 'site' / name if name.endswith('.html') else ROOT / name
+        orig = f.read_text(encoding='utf-8')
+        try:
+            f.write_text(text, encoding='utf-8')
+            sitecheck.no_date_is_typed(findings)
+        finally:
+            f.write_text(orig, encoding='utf-8')
+        return [x for x in findings if name in x]
+
+    def test_a_typed_date_is_reported(self):
+        self.assertTrue(self.find('404.html', '<p>Updated 4 March 2026</p>'))
+        self.assertTrue(self.find('404.html', '<p>2026-03-04</p>'))
+
+    def test_a_stamped_date_is_not(self):
+        self.assertFalse(self.find('404.html', '<p><span data-stamp="updated">4 March 2026</span></p>'))
+
+    def test_indented_markup_is_still_read(self):
+        # The first version stripped four-space-indented lines as Markdown code blocks, and applied
+        # that to HTML too - where nearly every line is indented. It blanked most of every page and
+        # reported zero across the whole site. Found by mutating a page and getting nothing back,
+        # which is the only way this class of silence is ever found.
+        self.assertTrue(self.find('404.html', '<div>\n    <div>\n        <p>4 March 2026</p>\n    </div>\n</div>'))
+
+    def test_a_value_in_code_is_not_a_claim(self):
+        # `anthropic-version: 2023-06-01` is a constant, not an assertion about when anything happened.
+        self.assertFalse(self.find('404.html', '<pre>2026-03-04</pre>'))
+        self.assertFalse(self.find('404.html', '<p><code>4 March 2026</code></p>'))
+
+
 class SitemapIsDerived(unittest.TestCase):
     """Every field in the sitemap was typed by hand, and the dates had drifted three days behind.
 

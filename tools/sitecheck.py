@@ -732,42 +732,64 @@ MONTHS = {'en': ['January', 'February', 'March', 'April', 'May', 'June', 'July',
                  'settembre', 'ottobre', 'novembre', 'dicembre']}
 
 
-def docs_stamp_is_current(findings: list) -> None:
-    """The guides' "Covers Zoost X · updated <date>" line, as it is *written*.
+DATE = re.compile(
+    r'\b\d{4}-\d{2}-\d{2}\b'
+    r'|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November'
+    r'|December|gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre'
+    r'|dicembre)\s+\d{4}\b')
 
-    `site.js` fills both spans from /api/versions, so a browser always sees the truth and the markup
-    is only the fallback. That is the defect already removed from the store badge, one page over: the
-    reader this site is built for does not run scripts. It read «Covers Zoost CRM 1.6.1» on a page
-    whose own section describes 1.13 as past - which semver says cannot both be true - and a date
-    three days behind the edits it was stamping.
 
-    Two criteria, both derived: the version is the app's manifest, and the date is not older than the
-    last commit that touched the page.
+def no_date_is_typed(findings: list) -> None:
+    """A date a reader can see must come from the system that holds it, never from a keystroke.
+
+    The author's argument, and it is the stronger form of everything else in this file: a date typed
+    into a file is unverifiable by construction, and free to disagree with the record it claims to
+    describe - «potrei per assurdo inserire una data diversa da quella registrata». GitHub timestamps
+    every commit and tag, Google reports the state of a submission, Cloudflare reports when the site
+    went live. Anything else is someone's memory of an event, written down.
+
+    So: no date in outward prose, unless it is inside a `data-stamp` element - which `tools/stamp.py`
+    rewrites from the manifest and from git, and which therefore cannot drift without being reported.
+    The criterion is structural rather than a list of permitted values: a new stamp is declared where
+    it lives, and forgetting to declare one is what gets reported.
+
+    Exempt, and each for a reason rather than by being listed: code and `<pre>`, where a date is a
+    value (`anthropic-version: 2023-06-01`) rather than a claim; `sitemap.xml`, whose every `lastmod`
+    is derived by `tools/sitemap.py`; and comments, which no reader sees - outward it never bends,
+    between us it can.
     """
-    for f in sorted(SITE.glob('docs-*.html')) + sorted((SITE / 'it').glob('docs-*.html')):
-        html = f.read_text(encoding='utf-8')
-        m = re.search(r'<p class="upd"[^>]*data-app="(\w+)"[^>]*>.*?<span class="dv">([^<]*)</span>'
-                      r'.*?<span class="dd">([^<]*)</span>', html, re.S)
-        if not m:
-            findings.append(f'{f.relative_to(SITE.parent)}: no version stamp to check')
-            continue
-        app, ver, when = m.group(1), m.group(2).strip(), m.group(3).strip()
-        mf = json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))['version']
-        if ver != mf:
-            findings.append(f'{f.relative_to(SITE.parent)}: the stamp says {ver}, the {app} manifest says {mf} '
-                            f'— a reader who does not run scripts sees only what is written here')
-        lang = 'it' if f.parent.name == 'it' else 'en'
-        d = re.match(r'(\d{1,2})\s+(\S+)\s+(\d{4})', when)
-        if not d or d.group(2) not in MONTHS[lang]:
-            findings.append(f'{f.relative_to(SITE.parent)}: cannot read the date {when!r}')
-            continue
-        stamped = f'{d.group(3)}-{MONTHS[lang].index(d.group(2)) + 1:02d}-{int(d.group(1)):02d}'
-        out = subprocess.run(['git', 'log', '-1', '--format=%cs', '--', str(f.relative_to(ROOT))],
-                             cwd=ROOT, capture_output=True, text=True)
-        last = out.stdout.strip()
-        if last and stamped < last:
-            findings.append(f'{f.relative_to(SITE.parent)}: stamped {stamped}, last changed {last} '
-                            f'— the page says it is older than it is')
+    scan = [(f'site/{p.relative_to(SITE)}', p) for p in sorted(SITE.rglob('*.html'))]
+    scan += [(str(p.relative_to(ROOT)), p) for p in
+             sorted((ROOT / 'store').rglob('*.md')) + [ROOT / 'RELEASES.md', ROOT / 'README.md']]
+    for rel, f in scan:
+        t = f.read_text(encoding='utf-8')
+        t = re.sub(r'<!--.*?-->|<script\b.*?</script>|<code>.*?</code>|<pre>.*?</pre>', ' ', t, flags=re.S)
+        if f.suffix == '.md':
+            # Markdown code: inline, and indented by four. Applied to HTML this blanked most of every
+            # page - markup is indented - so the check went silent on the whole site while reporting
+            # zero, which is the failure mode this project treats as worse than having no check. It
+            # was found by mutating a page and getting nothing back.
+            t = re.sub(r'`[^`]*`|^\s{4}.*$', ' ', t, flags=re.M)
+        t = re.sub(r'<(\w+)[^>]*\bdata-stamp="[^"]*"[^>]*>.*?</\1>', ' ', t, flags=re.S)
+        for m in DATE.finditer(t):
+            findings.append(f'{rel}: the date "{m.group(0)}" is typed, not derived - it must come '
+                            f'from git, from the Store API or from the deployment, inside a '
+                            f'data-stamp element that tools/stamp.py writes')
+
+
+def stamps_are_derived(findings: list) -> None:
+    """The version and date printed on a page, checked by re-deriving them.
+
+    This used to be a reader here: it parsed the guides' "Covers Zoost X · updated <date>" line and
+    compared the two halves against the manifest and against git. It is now `tools/stamp.py` that
+    *writes* them, so checking them anywhere else would be a second opinion free to disagree with the
+    generator - the duplication this project spends its length removing. One call, one criterion, and
+    it covers the privacy policy's date too, which nothing here ever looked at.
+    """
+    out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'stamp.py'), '--check'],
+                         cwd=ROOT, capture_output=True, text=True)
+    if out.returncode:
+        findings.extend(line.strip() for line in out.stdout.splitlines()[1:] if line.strip())
 
 
 def nav_targets_match_across_languages(findings: list) -> None:
@@ -887,7 +909,8 @@ def main() -> int:
     canonical_and_alternates(findings)
     translations_current(findings)
     trademark_disclaimer_is_one_sentence(findings)
-    docs_stamp_is_current(findings)
+    stamps_are_derived(findings)
+    no_date_is_typed(findings)
     nav_targets_match_across_languages(findings)
     nav_marks_the_page_you_are_on(findings)
     txt_served_by_worker(findings)

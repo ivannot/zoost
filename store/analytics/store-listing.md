@@ -1,11 +1,11 @@
 # Zoost - workbench for Zoho Analytics - Chrome Web Store submission copy
 
-Last verified against `apps/analytics/manifest.json` at version **1.0.0** · 3 August 2026
+`auditcheck.py` compares §1 and §2 against `apps/analytics/manifest.json` on every run, so this file cannot fall behind it - which is why no version or date is written here: a number typed once is a claim that goes stale in silence, and the check does not.
 
 `short_name` and the toolbar tooltip are browser-UI fields and do not appear on the Store listing,
 so changing them does not touch anything below.
 
-**Submitted 3 August 2026.** Extension id `gmelnigbgklfjgceldicakkomhgplgge`, listing at
+Extension id `gmelnigbgklfjgceldicakkomhgplgge`, listing at
 <https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge>.
 
 Before every resubmission: re-read §2 against the manifest `description` (they must be identical,

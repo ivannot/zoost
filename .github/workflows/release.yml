@@ -156,7 +156,7 @@ jobs:
           The row for \`RELEASES.md\`:
 
           \`\`\`
-          | $APP | $VERSION | \`$REF\` | \`$COMMIT\` | \`$SHA256\` | (date submitted) |
+          | $APP | $VERSION | \`$REF\` | \`$COMMIT\` | \`$SHA256\` |
           \`\`\`
           EOF
           echo "path=$BODY" >> "$GITHUB_OUTPUT"

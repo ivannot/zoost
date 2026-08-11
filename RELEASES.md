@@ -3,6 +3,13 @@
 Every version submitted to the Chrome Web Store, with the commit it was built from and the SHA-256
 of the package that was uploaded.
 
+**There is no date column, deliberately.** Each row's tag is timestamped by GitHub and its Release
+carries the build's log, so *when* it was built is a fact anyone can read from the system that holds
+it. When the package was handed to Google is not recorded by anything - the Store API reports which
+state a revision is in and never when it entered that state - so a date here would be a number I
+typed, unverifiable by construction and free to disagree with the record it sits beside. What state a
+submission is in is on `zoost.it`, from Google.
+
 The point is that **you do not have to take my word for how the release asset was built.** The build
 is reproducible: the same commit produces the same bytes, because every file is stamped with the
 commit's own date, the file list is sorted before it reaches `zip`, and machine-specific attributes
@@ -26,14 +33,14 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 
 <!-- release rows are appended below the header, newest last -->
 
-| App | Version | Tag | Commit | SHA-256 of the uploaded `.zip` | Submitted |
-|---|---|---|---|---|---|
-| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible - see below* | 2026-08-03 |
-| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` | 2026-08-04 |
-| analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` | 2026-08-05 |
-| crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `5818741130e1b683b9e784402b591493e03803fb9f086204391b808ddc4e1045` | 2026-08-07 |
-| analytics | 1.22.4 | `analytics-v1.22.4` | `3d03074` | `a6c8d4c0935c44851e706d8b809c01eb8be0489e4a259e5f7dcf04ce81181781` | 2026-08-09 |
-| crm | 1.39.0 | `crm-v1.39.0` | `5d101c8` | `07b2eeab2d36f1db349907f9de747406805a3fa27950331d5be4f4411a625bc2` | 2026-08-10 |
+| App | Version | Tag | Commit | SHA-256 of the uploaded `.zip` |
+|---|---|---|---|---|
+| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible - see below* |
+| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` |
+| analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` |
+| crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `5818741130e1b683b9e784402b591493e03803fb9f086204391b808ddc4e1045` |
+| analytics | 1.22.4 | `analytics-v1.22.4` | `3d03074` | `a6c8d4c0935c44851e706d8b809c01eb8be0489e4a259e5f7dcf04ce81181781` |
+| crm | 1.39.0 | `crm-v1.39.0` | `5d101c8` | `07b2eeab2d36f1db349907f9de747406805a3fa27950331d5be4f4411a625bc2` |
 
 ## What this table cannot tell you, and why
 
@@ -67,8 +74,8 @@ listing was read truncated, `src/` sits below `site/` alphabetically, and the co
 from the part that had been cut off. It was reported by an outside reader. Of everything in this
 file, this is the section that had least business being inaccurate.
 
-**Zoost for Zoho Analytics 1.0.0** was submitted on 3 August 2026 from commit `b3db394`, before the
-build was made reproducible. Its tag exists and points at the right source, but no hash is recorded
+**Zoost for Zoho Analytics 1.0.0** was built from commit `b3db394`, before the build was made
+reproducible. Its tag exists and points at the right source, but no hash is recorded
 for it: the file uploaded that day was built by the old, non-deterministic script, so any number published now would be one nobody could reproduce.
 
 **A hash proves what was built, not what was reviewed.** Google re-signs and repackages what it
