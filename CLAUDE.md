@@ -2985,7 +2985,10 @@ What that request means, in order. Do all of it without being asked:
    from its first submission because nothing measured it. The names are numbers on purpose; see
    `store/assets.md`.
 7. **After submission: append the `RELEASES.md` row** from the Release body, with the real submission
-   date, and commit it.
+   date, and commit it. The Release body prints the row ready to paste, with the date left blank -
+   it is the one figure nobody else holds, since the Store API reports which state a revision is in
+   and never when it entered it. Nothing on the site derives from that column any more; the row is
+   the provenance record - which commit, which hash - and that is why it is still part of a release.
 
 **The Release title comes from the manifest, and two earlier versions of that line invented one
 instead.** First it took the *directory* name and published "Zoost for crm 1.9.0". The fix for that
@@ -3189,10 +3192,28 @@ exactly right about two smaller things, and both are fixed.
   It read *Web Store 1.0.0 · latest release 1.11.0 not submitted yet* for Zoho CRM while 1.9.0 had been
   submitted the day before and was still being reviewed. Every word was true and the page was wrong,
   because the submission was looked up **by the newest tag** — so tagging something and not submitting
-  it erases the release that is genuinely pending. Each product now carries `pending`, the newest
-  version `RELEASES.md` records as submitted, independent of what is tagged; the footer states it only
-  when it adds a fact. Versions there are compared **numerically**: 1.10.0 sorts before 1.9.0 as text,
-  and the ledger will reach 1.10 long before anyone looks.
+  it erases the release that is genuinely pending. Each product carries `pending` - the version Google
+  reports as submitted, and its state - independent of what is tagged; the footer states it only when
+  it adds a fact. Versions are compared **numerically**: 1.10.0 sorts before 1.9.0 as text.
+
+  **And then the same defect arrived from the other side, with the API already in place.** The live
+  footer read *latest release 1.39.0 not submitted yet* while `/api/versions` was reporting that exact
+  version as `PENDING_REVIEW`. The state came from Google and the **date** from `RELEASES.md`, and the
+  release line read the row alone: no row typed yet, so it announced the opposite of the one source
+  that knows. The «in review» line was suppressed at the same moment, on the reasoning that the
+  release line above already said it - two mechanisms each deferring to the other, and something false
+  stated in the gap. **A hand-kept copy of a fact the platform reports can only ever fall behind it**,
+  so the ledger is out of the badge entirely on the author's call: `pickSubmissions()`, the fetch of
+  `RELEASES.md` and `submitted` in the payload are gone, and how many days a package has been in the
+  queue is not worth knowing - «submitted» is. `RELEASES.md` keeps its dates as the human record of
+  what was uploaded; nothing derives from them.
+
+  What that costs is one state that has to be **admitted rather than guessed**: with no answer from
+  the Store API, «nothing is in review» and «nobody could ask» look identical, so `releaseState()`
+  takes `cws === 'ok'` and says nothing at all when it is not - «not submitted yet» would be inventing
+  a measurement. It is a named function precisely so the tests can *run* it against the payload that
+  produced the bug: every earlier check here read the source with a regex, and a regex agrees with the
+  wrong version of this logic as readily as with the right one.
 - **A failed source must not be cached for as long as a good answer.** One fetch to
   `raw.githubusercontent.com` timed out and both submission dates read "unknown" — correctly, and then
   **for an hour after the source had come back**, because the failure was stored under the same TTL as

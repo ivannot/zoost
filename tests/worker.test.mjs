@@ -18,11 +18,10 @@ const listPages = () => ['', 'it/'].flatMap((d) =>
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
 // tests. The tests do not get to reshape the project.
-const { pickLatestTag, pickStatus, pickSubmissions } = load([
+const { pickLatestTag, pickStatus } = load([
   sliceConst('site/_worker.js', 'IS_VERSION'),
   sliceFn('site/_worker.js', 'pickLatestTag'),
   sliceFn('site/_worker.js', 'pickStatus'),
-  sliceFn('site/_worker.js', 'pickSubmissions'),
 ]);
 
 const entry = (tag, title) =>
@@ -157,39 +156,10 @@ test('a tag shaped unexpectedly falls back to its own name rather than showing n
   assert.equal(verOf('v1.0.0'), null);   // the caller falls back to the tag itself
 });
 
-// ---------- what has actually been submitted, read from RELEASES.md ----------
-
-test('a submitted version is read with its date', () => {
-  // "submission pending" would assert something never measured — a tag can exist and never have
-  // been sent to Google. The date is in RELEASES.md, so the badge states a fact with a source and
-  // the reader can go and check the row.
-  const md = [
-    '| App | Version | Tag | Commit | SHA-256 | Submitted |',
-    '|---|---|---|---|---|---|',
-    '| analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible* | 2026-08-03 |',
-    '| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce` | 2026-08-04 |',
-  ].join('\n');
-  const subs = pickSubmissions(md);
-  assert.equal(subs.crm['1.9.0'], '2026-08-04');
-  assert.equal(subs.analytics['1.0.0'], '2026-08-03');
-});
-
-test('a row whose date is a placeholder is not read as a submission', () => {
-  const md = '| crm | 2.0.0 | `crm-v2.0.0` | `abc1234` | `hash` | (date submitted) |';
-  // Object.keys rather than deepEqual: the object is created inside the vm context, so its
-  // prototype is from another realm and a strict deep comparison fails on that alone.
-  assert.equal(Object.keys(pickSubmissions(md)).length, 0);
-});
-
-test('prose around the table is not mistaken for rows', () => {
-  const md = 'Every version submitted to the Chrome Web Store, with the commit it was built from.';
-  assert.equal(Object.keys(pickSubmissions(md)).length, 0);
-});
-
-test('a tagged version with no row has not been submitted, and is not claimed to be', () => {
-  const subs = pickSubmissions('| crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce` | 2026-08-04 |');
-  assert.equal(subs.crm['1.9.2'], undefined);
-});
+// The ledger is no longer read by the Worker at all. `pickSubmissions` and the four cases that
+// covered it are gone with it: the badge rests on what Google reports, and a parser nothing calls
+// is cover for code that is not there. The dates stay in RELEASES.md, where they are the human
+// record of what was uploaded and nothing derives from them.
 
 test('the in-development number links to what is in it, not to where it is stored', () => {
   // A compare against the latest release answers "what would I get beyond the download", which is
@@ -251,32 +221,8 @@ test('the cache key carries a marker that can be moved', () => {
 //
 // This used to be derived from RELEASES.md - the newest version recorded as submitted - which
 // answered by proxy: a row typed after clicking Submit. `fetchStatus` answers directly and carries
-// a *state*, so those cases moved up to pickStatus. What stays here is the date, which the API does
-// not report: it says which state a revision is in, never when it entered it.
-
-test('the submission date still comes from the ledger, because the API has none', () => {
-  const subs = pickSubmissions([
-    '| App | Version | Tag | Commit | SHA-256 | Submitted |',
-    '|---|---|---|---|---|---|',
-    '| crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `abc` | 2026-08-07 |',
-  ].join('\n'));
-  assert.equal(subs.crm['1.38.4'], '2026-08-07');
-});
-
-
-test('a malformed row in the ledger is skipped, not read', () => {
-  // The guard moved with the code: ranking submissions is Google's job now, but the ledger is still
-  // parsed for the date and a row that is not a row must not become one.
-  const subs = pickSubmissions([
-    '| crm | not-a-version | `t` | `c` | `s` | 2026-01-01 |',
-    '| crm | 1.2.3 | `t` | `c` | `s` | not-a-date |',
-    '| crm | 1.2.4 | `t` | `c` | `s` | 2026-02-02 |',
-  ].join('\n'));
-  // Compared key by key: the sliced function builds its object in another realm, so a strict deep
-  // comparison fails on the prototype rather than on the content.
-  assert.deepEqual(Object.keys(subs.crm), ['1.2.4']);
-  assert.equal(subs.crm['1.2.4'], '2026-02-02');
-});
+// a *state*, so those cases live in pickStatus above. The date went with the ledger: the API never
+// reported it, and how long a package has been in the queue is not worth a hand-kept copy of a fact.
 
 // Reported from the live footer: «On the Web Store 1.38.4 · Latest release 1.39.0 not submitted
 // yet» about a version that was in Google's review queue at that moment - /api/versions said
@@ -284,27 +230,28 @@ test('a malformed row in the ledger is skipped, not read', () => {
 // line read the row alone: with no row typed yet it announced the opposite of what the one
 // authoritative source said. Run rather than grepped - a regex over the source would have agreed
 // with every version of this logic, including the wrong one.
-test('the release line takes the state from Google and only the date from the ledger', () => {
+test('the release line says what Google says, and nothing when Google could not be asked', () => {
   const { releaseState } = load([
     sliceFn('site/site.js', 'verOf'),
     sliceFn('site/site.js', 'newer'),
     sliceFn('site/site.js', 'releaseState'),
   ]);
-  const p = (version, state, date) => ({ version, state, date: date || null });
-  // the reported case: in the queue, no row in the ledger yet
-  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'PENDING_REVIEW') }), 'awaiting');
-  // the ledger alone still answers when the API could not be reached
-  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: '2026-08-10', pending: null }), 'awaiting');
-  // genuinely not submitted: nothing in the queue and no row
-  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: null }), 'notSubmitted');
-  // refused, and the row says it was submitted: the state wins, and the line above says which
-  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: '2026-08-10', pending: p('1.39.0', 'REJECTED') }), 'quiet');
+  const p = (version, state) => ({ version, state });
+  const crm = (tag, pending) => ({ tag: tag, store: '1.38.4', pending: pending || null });
+  // the reported case: Google has it in the queue
+  assert.equal(releaseState(crm('crm-v1.39.0', p('1.39.0', 'PENDING_REVIEW')), true), 'awaiting');
+  // genuinely not submitted: the API answered and has nothing
+  assert.equal(releaseState(crm('crm-v1.39.0'), true), 'notSubmitted');
+  // ...and the same payload when nobody could ask says nothing, rather than inventing a measurement
+  assert.equal(releaseState(crm('crm-v1.39.0'), false), 'quiet');
+  // refused: the line above says which, and «awaiting review» beside it would contradict it
+  assert.equal(releaseState(crm('crm-v1.39.0', p('1.39.0', 'REJECTED')), true), 'quiet');
   // an older version is the one in the queue - that is the other line's subject
-  assert.equal(releaseState({ tag: 'crm-v1.40.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'PENDING_REVIEW') }), 'quiet');
+  assert.equal(releaseState(crm('crm-v1.40.0', p('1.39.0', 'PENDING_REVIEW')), true), 'quiet');
   // nothing to say at all: the tag is what the Store already serves
-  assert.equal(releaseState({ tag: 'crm-v1.38.4', store: '1.38.4', submitted: null, pending: null }), 'quiet');
+  assert.equal(releaseState(crm('crm-v1.38.4'), true), 'quiet');
   // a state nobody here recognises is not folded into «awaiting»
-  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'SOMETHING_NEW') }), 'quiet');
+  assert.equal(releaseState(crm('crm-v1.39.0', p('1.39.0', 'SOMETHING_NEW')), true), 'quiet');
 });
 
 test('the footer says what is in review only when it adds a fact', () => {

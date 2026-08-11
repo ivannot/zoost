@@ -178,33 +178,6 @@ export function pickStatus(d) {
   return { published, submitted, takenDown: !!(d && d.takenDown) };
 }
 
-// When a version was submitted to the Store, read from RELEASES.md — the same record a reader can
-// check. Deriving this is the difference between "submission pending", which asserts something we
-// have not measured, and "submitted on 4 August", which is a fact with a source. A tag can exist
-// without ever having been submitted, so the two must not be conflated.
-async function submissions() {
-  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/RELEASES.md`, {
-    headers: { 'user-agent': UA }, signal: timeout(6000),
-  });
-  if (!r.ok) return {};
-  return pickSubmissions(await r.text());
-}
-
-export function pickSubmissions(md) {
-  const out = {};
-  for (const line of md.split('\n')) {
-    const c = line.split('|').map((x) => x.trim().replace(/^`|`$/g, ''));
-    // | app | version | tag | commit | sha | submitted |
-    if (c.length < 7) continue;
-    const [, app, version, , , , when] = c;
-    if (!/^(crm|analytics)$/.test(app) || !IS_VERSION.test(version)) continue;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) continue;      // shape guard: a real date or nothing
-    out[app] = out[app] || {};
-    out[app][version] = when;
-  }
-  return out;
-}
-
 // The version the code is at right now, straight from the manifest on the default branch. This is
 // deliberately not the same thing as the tag: it is what is built, not what has been released, and
 // the badge labels it "in development" so nobody reads it as something they can install.
@@ -240,7 +213,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=17';  // bumped: a 404 body got cached under v=16 - see below
+const CACHE_KEY = '/api/versions?v=18';  // bumped: the payload no longer carries submission dates
 
 // Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
 // with a 404 page configured, a request that matches no asset stops reaching the Worker, and
@@ -261,12 +234,11 @@ async function versions(request, env, ctx) {
 
   const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
   const token = auth.token;
-  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, subs, updated, docsUpd, docsAnUpd] =
+  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, updated, docsUpd, docsAnUpd] =
     await Promise.all([
       settled(cwsStatus(token, 'crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
       settled(cwsStatus(token, 'analytics')), settled(repoVersion('analytics')),
       settled(latestTag('analytics')),
-      settled(submissions()),
       settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
@@ -275,24 +247,22 @@ async function versions(request, env, ctx) {
   const anStore = ok(anCws) && anCws.published ? anCws.published.version : null;
   const cwsWhy = auth.why !== 'ok' ? auth.why
     : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok';
-  const sub = (app, tag) => {
-    const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
-    return (m && subs && subs[app] && subs[app][m[1]]) || null;
-  };
-
   /* What is in review, and now with a *state* rather than an inference.
    *
    * This used to be the newest version RELEASES.md recorded as submitted, which answered the
    * question by proxy: a row I typed after clicking Submit. Google answers it directly, and answers
    * one thing the ledger never could — a submission that was **refused**. Without a state, a
    * rejected version is indistinguishable from one still queued, and the badge would have gone on
-   * saying "awaiting review" for ever. The date still comes from RELEASES.md, because the API
-   * reports what state a revision is in and not when it entered it. */
-  const inReview = (app, cws) => {
+   * saying "awaiting review" for ever.
+   *
+   * It used to carry a date as well, read from RELEASES.md, because the API reports which state a
+   * revision is in and never when it entered it. That is gone on the author's call: how many days a
+   * package has been in the queue is not worth knowing, and it was the one figure here typed by hand
+   * - so the badge now rests on Google alone and there is nothing left to keep in step. */
+  const inReview = (cws) => {
     const s = ok(cws) && cws.submitted;
     if (!s || !s.version) return null;
-    return { version: s.version, state: s.state,
-             date: (subs && subs[app] && subs[app][s.version]) || null };
+    return { version: s.version, state: s.state };
   };
 
   // A source that failed is cached for a minute, not an hour. `settled()` turns a blip into null and
@@ -300,7 +270,7 @@ async function versions(request, env, ctx) {
   // for an hour after the source came back. This happened: one fetch to raw.githubusercontent failed,
   // and both submission dates read "unknown" long after the file was serving fine. Caching is there so
   // a blip is invisible; caching the blip itself is the opposite of that.
-  const complete = [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, subs, updated].every((v) => v != null);
+  const complete = [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, updated].every((v) => v != null);
   const ttl = complete ? TTL : TTL_PARTIAL;
 
   const res = new Response(JSON.stringify({
@@ -310,10 +280,11 @@ async function versions(request, env, ctx) {
     store: crmStore, repo: crmRepo, tag: crmTag,
     // The listing URL comes from here rather than being written again in site.js: the extension
     // ids already live in this file, and a second copy is a second thing to go stale.
-    // `submitted` answers "was this tag submitted"; `pending` answers "is anything in review", which
-    // is a different question the moment a later tag exists that was not submitted.
-    crm: { store: crmStore, repo: crmRepo, tag: crmTag, submitted: sub('crm', crmTag), pending: inReview('crm', crmCws), url: listing('crm') },
-    analytics: { store: anStore, repo: anRepo, tag: anTag, submitted: sub('analytics', anTag), pending: inReview('analytics', anCws), url: listing('analytics') },
+    // `pending` is the whole answer about a submission: which version Google has, and in which
+    // state. `cws` says whether that answer could be obtained at all - without it, "nothing is in
+    // review" and "nobody could ask" look identical, and only one of them is a fact.
+    crm: { store: crmStore, repo: crmRepo, tag: crmTag, pending: inReview(crmCws), url: listing('crm') },
+    analytics: { store: anStore, repo: anRepo, tag: anTag, pending: inReview(anCws), url: listing('analytics') },
     cws: cwsWhy,
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
