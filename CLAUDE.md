@@ -527,6 +527,19 @@ goes in a short paragraph after the list, not woven through it. Store review tak
 while we iterate hourly, so a submission redone because a step was buried is expensive out of all
 proportion to the change.
 
+**Two machines, and only one of them runs anything.** The work happens on an always-on Windows PC,
+inside WSL2, where the repository lives at `~/zoost` and a Claude Code session is kept alive by a
+systemd user service - so it is reachable from a phone or a browser through Remote Control, and keeps
+going while nobody is at a desk. The **repository is never in a synced folder**: git written file by
+file with no ordering is a repository that goes wrong, and the machine doing the work is the one that
+pays for it.
+
+What the other machine needs is not the repository - it is `apps/<app>/`, which is what Chrome reads
+when you load an unpacked extension. `bash tools/totest.sh` copies exactly those two directories into
+the synced folder, one direction, and the Mac loads the extension from there. **Run it when the user
+says they want to try something**: testing what is still on the working tree is the whole reason a
+`git pull` on the other side would not do.
+
 **Every command says which shell it goes in.** The work now spans a Mac and a Windows PC, and on the
 PC there are three prompts that look alike and are not: **PowerShell**, **cmd**, and the **Ubuntu
 shell** inside WSL. `wsl --shutdown` belongs to Windows and fails inside Ubuntu; `systemctl` is the
