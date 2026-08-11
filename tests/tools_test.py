@@ -16,6 +16,7 @@ Every test below plants a defect that actually reached the user and asserts it i
 import contextlib
 import io
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -1756,6 +1757,50 @@ class TheNotesAreOneIndexedSet(unittest.TestCase):
                          'the index and docs/ disagree about how many notes there are')
         for why in rows:
             self.assertGreater(len(why), 40, f'"{why}" does not say when to open the file')
+
+
+class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
+    """The repository is on one machine and the browser that loads the extensions is on another, so
+    `apps/<app>/` is mirrored into a synced folder. That copy depended on somebody remembering to ask
+    for it - a rule living only as prose, which is the kind this repository has established gets
+    broken - so `tests/run.sh` does it, first thing, on every run.
+
+    First and not last, because a red suite is exactly when you want to look at the thing in a
+    browser and `set -e` would never reach the end of the file.
+    """
+
+    def test_the_suite_mirrors_before_it_tests(self):
+        run = (ROOT / 'tests' / 'run.sh').read_text(encoding='utf-8')
+        self.assertIn('tools/totest.sh --auto', run, 'nothing copies the apps where they are loaded')
+        self.assertLess(run.index('totest.sh'), run.index('unit: node'),
+                        'the copy is after the tests, so a red run never reaches it')
+
+    def test_it_cannot_fail_the_battery(self):
+        # A cloud drive that is offline is not a defect in this repository.
+        out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
+                             capture_output=True, text=True, cwd=ROOT,
+                             env={**os.environ, 'ZOOST_TEST_DIR': '/nonexistent/place/zoost-test'})
+        self.assertEqual(out.returncode, 0, f'--auto failed where the folder is absent: {out.stderr}')
+        self.assertEqual(out.stdout.strip(), '', 'it is meant to be silent when there is nothing to do')
+
+    def test_asked_directly_it_says_it_did_nothing(self):
+        # A copy that reports success over a folder it never wrote to is the failure this repository
+        # keeps naming; --auto is silence by request, not silence as a habit.
+        out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')],
+                             capture_output=True, text=True, cwd=ROOT,
+                             env={**os.environ, 'ZOOST_TEST_DIR': '/nonexistent/place/zoost-test'})
+        self.assertEqual(out.returncode, 1)
+        self.assertIn('does not exist', out.stdout)
+
+    def test_the_destination_is_written_in_one_place(self):
+        # Two copies of the path is one careless edit from mirroring into the void, with both files
+        # looking right.
+        hits = [f.relative_to(ROOT) for f in (ROOT / 'tools').glob('*') if f.is_file()
+                and 'zoost-test' in f.read_text(encoding='utf-8', errors='ignore')]
+        hits += [Path('tests/run.sh')] if 'zoost-test' in (ROOT / 'tests' / 'run.sh').read_text(
+            encoding='utf-8') else []
+        self.assertEqual([str(h) for h in hits], ['tools/totest.sh'],
+                         'the default destination is written in more than one file')
 
 
 class TheGateOnTheTagCanBePassed(unittest.TestCase):

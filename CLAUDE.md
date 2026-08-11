@@ -584,9 +584,17 @@ pays for it.
 
 What the other machine needs is not the repository - it is `apps/<app>/`, which is what Chrome reads
 when you load an unpacked extension. `bash tools/totest.sh` copies exactly those two directories into
-the synced folder, one direction, and the Mac loads the extension from there. **Run it when the user
-says they want to try something**: testing what is still on the working tree is the whole reason a
-`git pull` on the other side would not do.
+the synced folder (`/mnt/g/My Drive/zoost-test`, or `ZOOST_TEST_DIR`), one direction, `--delete`, and
+the other machine loads the extension from there. Testing what is still on the working tree is the
+whole reason a `git pull` on the other side would not do.
+
+**It is not something to remember: `tests/run.sh` does it first thing, on every run.** "Run it when
+the user asks" was a rule, and this file has just finished establishing that a rule living only as
+prose is one that will be broken - so it was mechanised the same day, which is the second step that
+rule demands. First and not last, because a red suite is exactly when you want to look at the thing
+in a browser and `set -e` would never reach the end of the file. It is a no-op where that folder is
+not mounted, it can never fail the battery, and asked directly rather than by the suite it *says* so
+instead of reporting success over a folder it never wrote to.
 
 **Every command says which shell it goes in.** The work now spans a Mac and a Windows PC, and on the
 PC there are three prompts that look alike and are not: **PowerShell**, **cmd**, and the **Ubuntu

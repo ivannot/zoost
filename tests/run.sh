@@ -21,6 +21,22 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The machine that runs this is not the machine the extensions are loaded on: Chrome there reads
+# `apps/<app>/` out of a synced folder. That copy used to depend on somebody remembering to ask for
+# it, which is a rule, and rules that live only as prose get broken - so it happens here instead.
+#
+# **First, not last**, and deliberately: a red suite is exactly when you want to look at the thing in
+# a browser, and `set -e` would never reach the end of this file. It is a no-op wherever that folder
+# is not mounted, and it may never fail the battery - a cloud drive that is offline is not a defect
+# in this repository.
+echo "── to the test folder ──"
+if out=$(bash tools/totest.sh --auto 2>&1) && [ -n "$out" ]; then
+  echo "$out" | sed 's/^/  /'
+else
+  echo "  not mirrored${out:+ - $out}"
+fi
+
+echo
 echo "── unit: node ──"
 node --test --test-reporter=spec tests/*.test.mjs
 
