@@ -1060,7 +1060,7 @@ async function showCallers(path) {
     // strip to move to and nothing is hiding it.
     const slot = $('pvtabsr'); slot.innerHTML = '';
     if (callers.length || (node.calls || []).length) {
-      slot.innerHTML = `depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Graph" title="Graph - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
+      slot.innerHTML = `depth <select id="calldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="callopen" class="laylocal icon" aria-label="Wiring" title="Wiring - opened on this function at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
       slot.querySelector('#callopen').onclick = () => openCallFocus(node.namespace + '.' + node.name, parseInt(slot.querySelector('#calldepth').value, 10) || 2);
     }
   } catch { box.className = ''; }
@@ -1493,7 +1493,16 @@ async function pullAll() {
 // fires a function because its own JSON says so, a schedule because its index row names it, a
 // connection because the function's captured meta lists it.
 const CTX_ID = { wf: (id) => 'wf:' + id, sch: (id) => 'sch:' + id, conn: (name) => 'conn:' + name,
-                 act: (kind, id) => 'act:' + kind + ':' + id };
+                 act: (kind, id) => 'act:' + kind + ':' + id, mod: (api) => 'mod:' + api };
+/** A node that is not a Deluge function.
+ *
+ *  `entity` is what kind of *thing* it is and `category` is what kind of that thing: a function is
+ *  `functions` + its Deluge category, an action is `actions` + `email_notifications`. The two were
+ *  one field while every non-function entity had exactly one category, and the moment actions
+ *  arrived - four kinds under one entity - the graph window's chips put them among the Deluge
+ *  categories, which is a dimension error of the sort this file already records twice. Splitting the
+ *  field is what lets the chips have an Actions box with four chips in it, the same shape as the
+ *  Functions box, without anything being enumerated in the window. */
 function ctxNode(id, name, category, namespace, file, extra) {
   return Object.assign({
     id, name, api_name: name, display_name: name, namespace: namespace || '', category,
@@ -1506,7 +1515,7 @@ async function callGraphWithContext() {
   const g = await ensureGraph();
   const nodes = {};
   for (const [id, n] of Object.entries(g.nodes)) {
-    nodes[id] = Object.assign({}, n, { calls: n.calls.slice(), called_by: n.called_by.slice(), entity: 'function' });
+    nodes[id] = Object.assign({}, n, { calls: n.calls.slice(), called_by: n.called_by.slice(), entity: 'functions' });
   }
   // The same resolution the health audit uses, and for the same reason: an action names a function
   // by id when Zoho gives one and by name when it does not.
@@ -1517,18 +1526,50 @@ async function callGraphWithContext() {
 
   // The actions index, so a rule can be linked to the thing it fires rather than to a name.
   const actIndex = new Map();
+  let actRows = [];
   try {
     const rows = JSON.parse(await readFile('actions/index.json'));
-    if (Array.isArray(rows)) rows.forEach((r) => actIndex.set(r.kind + ':' + String(r.id), r));
+    if (Array.isArray(rows)) { actRows = rows; rows.forEach((r) => actIndex.set(r.kind + ':' + String(r.id), r)); }
   } catch (_) { /* not pulled: the rules still draw, with fewer edges */ }
+
+  // A module is a node only when something names it - a workflow it fires on, an action that writes
+  // to it. Drawing every module in the mirror would put forty boxes with no arrow into a diagram
+  // whose whole subject is what connects to what, and «nothing automates this module» is a
+  // measurement the health view already makes. The label comes from the modules index when it is on
+  // disk; without it the API name is what there is, and that is what it says.
+  let modIdx = []; try { modIdx = JSON.parse(await readFile('modules/index.json')); } catch (_) {}
+  const modLabel = {};
+  (Array.isArray(modIdx) ? modIdx : []).forEach((m) => { if (m && m.api_name) modLabel[m.api_name] = m.plural_label || m.label || m.api_name; });
+  const modOf = (api) => {
+    if (!api) return null;
+    const id = CTX_ID.mod(api);
+    if (!nodes[id]) nodes[id] = ctxNode(id, modLabel[api] || api, 'modules', '', 'modules/index.json',
+      { entity: 'modules', api_name: api });
+    return nodes[id];
+  };
+
+  // Every action, not only the ones a rule was found to fire. Measured on a real org, roughly half
+  // are attached to nothing - and an action nothing fires is exactly the kind of thing a diagram of
+  // the wiring should show as a box on its own, rather than leave out and call the picture complete.
+  actRows.forEach((r) => {
+    if (!r || !r.kind) return;
+    const id = CTX_ID.act(r.kind, r.id);
+    if (!nodes[id]) nodes[id] = ctxNode(id, r.name || String(r.id), r.kind, '', 'actions/index.json',
+      { entity: 'actions', _kind: r.kind });
+    const m = modOf(r.module);
+    if (m) link(nodes[id], m);
+  });
 
   // ---- workflows: their own file says which functions each condition fires -------------------
   let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) {
     let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
     const node = ctxNode(CTX_ID.wf(w.id), w.name || String(w.id), 'workflows', w.module || '',
-      `workflows/${w.id}.json`, { _downloaded: !!d, _active: w.status !== 'inactive' });
+      `workflows/${w.id}.json`, { entity: 'workflows', _downloaded: !!d, _active: w.status !== 'inactive' });
     nodes[node.id] = node;
+    // The module a rule fires on is a different fact from the module an action writes to, and both
+    // are drawn: this one is «records of this kind are what set it off».
+    { const m = modOf(w.module); if (m) link(node, m); }
     if (!d) continue;   // not pulled yet: it is a node with no measured actions, never a node with none
     (d.conditions || []).forEach((c) => {
       const acts = [];
@@ -1543,8 +1584,8 @@ async function callGraphWithContext() {
         const row = actIndex.get(a.type + ':' + String(a.id));
         if (!row) return;
         const id = CTX_ID.act(row.kind, row.id);
-        if (!nodes[id]) nodes[id] = ctxNode(id, row.name || String(row.id), 'actions', row.module || '',
-          'actions/index.json', { _kind: row.kind });
+        if (!nodes[id]) nodes[id] = ctxNode(id, row.name || String(row.id), row.kind, '',
+          'actions/index.json', { entity: 'actions', _kind: row.kind });
         link(node, nodes[id]);
       });
     });
@@ -1554,7 +1595,7 @@ async function callGraphWithContext() {
   let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => {
     const node = ctxNode(CTX_ID.sch(sc.id), sc.name || String(sc.id), 'schedules', sc.frequency || '',
-      'schedules/index.json', { _active: sc.status !== 'inactive' });
+      'schedules/index.json', { entity: 'schedules', _active: sc.status !== 'inactive' });
     nodes[node.id] = node;
     const fn = resolveFn({ id: sc.function_id, name: sc.function_name });
     if (fn) link(node, fn);
@@ -1565,12 +1606,12 @@ async function callGraphWithContext() {
   const conn = {};
   const ensureConn = (name, meta) => {
     const id = CTX_ID.conn(name);
-    if (!conn[id]) { conn[id] = ctxNode(id, (meta && meta.label) || name, 'connections', (meta && meta.service) || '', 'connections/index.json'); nodes[id] = conn[id]; }
+    if (!conn[id]) { conn[id] = ctxNode(id, (meta && meta.label) || name, 'connections', (meta && meta.service) || '', 'connections/index.json', { entity: 'connections' }); nodes[id] = conn[id]; }
     return conn[id];
   };
   cat.forEach((c) => { if (c && c.name) ensureConn(c.name, c); });
   Object.values(nodes).forEach((n) => {
-    if (n.entity !== 'function') return;
+    if (n.entity !== 'functions') return;
     (n.connections || []).forEach((c) => { if (c && c.name) link(n, ensureConn(c.name, c)); });
   });
 
@@ -3007,13 +3048,16 @@ function setMode(mode) {
   // The mark stays; only what it opens changes. Writing textContent here wiped it on the first
   // mode switch - the same defect as #pullone, and the general shape: a control whose label lives
   // in the markup must not have that label rebuilt by whatever updates its state.
-  // Two names, because two different drawings: functions are a call graph, modules are an ER model.
-  // Everything else that opens this window uses one of these two and no third word - «Schema»,
-  // «Graph ↗» and «Open ER» were four names for one thing and the author could not keep them apart.
-  $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Graph');
+  // Two names, because two different drawings: one is how the org is wired, the other is how it is
+  // shaped. Everything else that opens this window uses one of these two and no third word -
+  // «Schema», «Graph ↗» and «Open ER» were four names for one thing and the author could not keep
+  // them apart. It was «Graph» until that drawing stopped being only functions: it holds workflows,
+  // schedules, connections, every automation action and the modules they touch, and a name that
+  // says «functions» about a picture of six kinds of thing is the label lying about its subject.
+  $('graph').setAttribute('aria-label', mode === 'modules' ? 'ER diagram' : 'Wiring');
   $('graph').title = mode === 'modules'
     ? 'ER diagram - modules and the relations between them, in its own window'
-    : 'Graph - what fires each function, what it calls, and what it reaches, in its own window';
+    : 'Wiring - what fires what across the org: functions, workflows, schedules, actions, connections and the modules they touch, in its own window';
   $('nameToggle').textContent = MSG.namePrefix + (mode === 'functions' ? nameMode : moduleNameMode);
   currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();

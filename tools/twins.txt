@@ -47,12 +47,13 @@ closeScope	7e880dca67a7	9961035b74ab	divergent
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	ecb43a011b8e	ecb43a011b8e	identical
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
-dropWorkspaceState	2105421df914	768de73a06e2	divergent
+dropWorkspaceState	d8ed5ac69a44	768de73a06e2	divergent
 egoStat	7f7641ef6a54	7f7641ef6a54	identical
 emptyReason	295c971dd68f	007841754f81	divergent
 engineIncomplete	54560440576d	54560440576d	identical
 ensureBridge	712bc0fdc4d2	e7f9159cd83c	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
+entitiesPresent	59df72b07997	59df72b07997	identical
 erApply	033f07f3793c	033f07f3793c	identical
 erApplyParams	855ddbf1dd6a	657eff579e44	divergent
 erBoxSize	8c14e5e7a495	526fb395f85a	divergent
@@ -83,7 +84,7 @@ hueFor	14a512e6b267	14a512e6b267	identical
 initPositions	523e3eabcde3	523e3eabcde3	identical
 isZohoUrl	15ad746f7516	15ad746f7516	identical
 jitter	5fedc5f24739	5fedc5f24739	identical
-kindGroups	69f64c9b0225	ba334ce58ca2	divergent
+kindGroups	a1c66b47c0ce	531c4dd794d1	divergent
 knownSample	459c41b78d33	e5b6c71b1533	divergent
 layToUI	40e11110c455	40e11110c455	identical
 layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
@@ -122,6 +123,7 @@ renameWorkspace	e0685ddb2452	31b53c1010c7	divergent
 render	1f1f526caa02	832b88a8f3a0	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 requirePerm	8477c2cb408e	8477c2cb408e	identical
+resetView	962f31f75f7d	f67417c0398c	divergent
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
 scopeFromUI	3a730daf94e4	c83939bc53c4	divergent

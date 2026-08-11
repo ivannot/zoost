@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:d1f2612405ebb739 -->
+<!-- translated-from: site/docs-crm.html sha256:d5bffdf19a36eb68 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -156,7 +156,7 @@
       copia fuori dalla macchina.</p>
     <p class="note">Tre comandi della toolbar sono disegnati come simboli invece che a parole -
       <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>, <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> e il pulsante del diagramma,
-      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> in modalità Functions e <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in
+      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> in modalità Functions e <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> in
       Modules. Il nome non è sparito: è il tooltip, ed è quello che annuncia uno screen reader. Questa guida
       mostra sempre il simbolo accanto al nome.</p>
   </div>
@@ -304,7 +304,7 @@ git commit -m "baseline"</code></pre>
   </figure>
 
   <h2 id="diagram">6. Il diagramma</h2>
-  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b> (in modalità Functions) apre quale funzione chiama quale;
+  <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> (in modalità Functions) apre com'è cablata l'org - cosa fa scattare cosa;
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in modalità Modules) apre i moduli e le loro relazioni.
     Dall'anteprima di un modulo, lo stesso pulsante apre il diagramma entità-relazioni centrato su quel
     modulo.</p>
@@ -341,11 +341,24 @@ git commit -m "baseline"</code></pre>
       sempre qualcosa da aprire, e a seguire la scheda è solo quale dei due.</li>
     <li>La barra in alto di quella finestra porta il nome che hai dato al workspace, se gliene hai dato
       uno - accanto all'istanza e all'org della piattaforma, mai al posto loro.</li>
-    <li>La coppia <b class="ui">Functions</b> / <b class="ui">Modules</b> accanto al titolo dice quale dei due
+    <li>La coppia <b class="ui">Wiring</b> / <b class="ui">Schema</b> accanto al titolo dice quale dei due
       disegni è a schermo, e passa all'altro senza tornare al pannello. È il pannello a costruirlo - questa
       finestra alla tua cartella non ha accesso, per scelta - quindi il pannello dev'essere aperto e la
       cartella concessa; se non lo è, il passaggio si ferma e dice quale delle due cose manca.</li>
-    <li>Tre schede. <b>Explorer</b> è un elenco più un pannello di dettaglio; <b>Graph</b> è il disegno -
+    <li><b>Wiring non è solo le funzioni</b>, ed è per questo che non si chiama così. Un workflow o uno
+      schedule che fa scattare una funzione è un nodo per conto suo; lo è ogni connection che una
+      funzione usa; lo è ogni automation action - notifiche, field update, task, webhook, <em>comprese
+      quelle che nessuna regola fa scattare</em>, che sono quelle che vale la pena vedere; e lo è ogni
+      modulo che quelle regole e quelle action toccano. Le chip sopra le schede li raggruppano:
+      <b>Functions</b> per categoria Deluge, <b>Actions</b> per tipo, poi una chip ciascuno per
+      <b>Workflows</b>, <b>Schedules</b>, <b>Connections</b> e <b>Modules</b>. Spegni un gruppo e il
+      disegno, l'elenco e Relations si restringono insieme.</li>
+    <li class="note">Cosa <b>non</b> c'è dentro: l'accesso ai record che fa la funzione stessa. Qui
+      nessuno legge il Deluge per capire quali moduli una funzione tocca, quindi una funzione non viene
+      mai unita a un modulo - i moduli in questo disegno sono quelli che una <em>regola</em> o una
+      <em>action</em> nomina. E un modulo che nessuna automazione tocca non c'è: è un'altra domanda, a
+      cui risponde l'audit <b>Health</b>.</li>
+    <li>Tre schede. <b>Explorer</b> è un elenco più un pannello di dettaglio; <b>Wiring</b> è il disegno -
       riquadri e frecce, e ogni riquadro elenca che cosa chiama quella funzione o che cosa contiene quel
       modulo; <b>Relations</b> mette al primo posto il legame invece della cosa, una riga per chiamata o
       per related list, cercabile e filtrabile. Selezionare qualcosa in <b>Explorer</b> ricentra le altre
@@ -353,7 +366,7 @@ git commit -m "baseline"</code></pre>
       e lo dice sopra la tabella, ed <b class="ui">Everything</b> nel gruppo Focus è ciò che la
       riallarga.</li>
     <li>Sotto i riferimenti di una funzione ci sono una profondità e un pulsante
-      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Graph</b>,
+      <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b>,
       che apre quella finestra centrata su questa funzione - la stessa coppia che l'anteprima dei moduli
       ha per il diagramma ER. Non c'è per una funzione che non chiama niente e che nessuno chiama: un
       riquadro solo e nessuna freccia non è un diagramma.</li>
@@ -362,7 +375,7 @@ git commit -m "baseline"</code></pre>
       <b class="ui">▸ Show the list</b> lo riporta indietro. <b>Trascina lo stesso bordo</b> per allargarlo o
       stringerlo invece che ripiegarlo. Valgono per quella finestra, non vengono ricordati, ed esistono
       solo lì: le altre tre viste l'elenco non ce l'hanno.</li>
-    <li>Il primo passaggio a <b>Graph</b> calcola il layout, che su un'org grande ci mette un momento e lo
+    <li>Il primo passaggio a <b>Wiring</b> calcola il layout, che su un'org grande ci mette un momento e lo
       dice con uno spinner e il numero di nodi. Viene calcolato una volta per insieme: tornare sulla
       scheda è immediato, e cambiare filtro o scope lo ricalcola su quello che resta - le chip non
       nascondono soltanto dei riquadri, il disegno si richiude intorno a ciò che sopravvive, che è poi
@@ -386,7 +399,7 @@ git commit -m "baseline"</code></pre>
   </ul>
   <p><b>Cosa non fa:</b> sopra 1200 nodi il layout libero non viene nemmeno tentato - calcolarlo
     bloccherebbe la finestra - quindi <b class="ui">Everything</b> lo dice invece di piantarsi, e resta
-    sul fuoco. <b>Explorer</b> e un <b>Graph</b> centrato restano veloci a qualsiasi dimensione di org; usa un
+    sul fuoco. <b>Explorer</b> e un <b>Wiring</b> centrato restano veloci a qualsiasi dimensione di org; usa un
     fuoco e una profondità piccola.</p>
 
   <figure class="shot">

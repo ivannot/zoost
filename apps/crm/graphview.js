@@ -32,18 +32,32 @@ const label = (n) => (nameMode === 'internal'
 // functions and calling them that would be counting the wrong thing. The breakdown is stated rather
 // than summarised: «3 functions · 1 workflow · 1 schedule · 2 connections» is a fact, «7 nodes» is a
 // shrug - and this window exists to answer what is there, not how much of it.
-const ENTITY_WORD = { workflows: 'workflow', schedules: 'schedule', connections: 'connection' };
+// What kinds of thing this window knows about, in the order they read in: what runs, what it
+// fires, what fires it, what it reaches, what it all touches. Declared for the order and the
+// capital letter only - an entity that is not here still gets its own group and its own count,
+// because the set comes from the nodes and never from this list.
+const ENTITY_LABEL = { functions: 'Functions', actions: 'Actions', workflows: 'Workflows',
+                       schedules: 'Schedules', connections: 'Connections', modules: 'Modules' };
+const entityOf = (n) => n.entity || 'functions';
+const entityWord = (e) => e.replace(/s$/, '');
+// A declaration rather than an arrow, so `tests/slice.mjs` can lift it: that helper ends a `const`
+// at the first semicolon closing a line, which inside a multi-line body is not the end of anything.
+function entitiesPresent() {
+  const seen = new Set(Object.values(N).map(entityOf));
+  return Object.keys(ENTITY_LABEL).filter((e) => seen.has(e))
+    .concat([...seen].filter((e) => !(e in ENTITY_LABEL)).sort());
+}
 function entityBreakdown() {
   const c = {}, all = {};
   Object.values(N).forEach((n) => {
-    const k = ENTITY_WORD[n.category] || 'function';
+    const k = entityOf(n);
     all[k] = (all[k] || 0) + 1;
     if (passKind(n)) c[k] = (c[k] || 0) + 1;
   });
-  return ['function', 'workflow', 'schedule', 'connection'].filter((k) => all[k]).map((k) => {
+  return entitiesPresent().map((k) => {
     const shown = c[k] || 0;
     const of = shown !== all[k] ? ` <span style="color:#94a3b8">of ${all[k]}</span>` : '';
-    return `<b>${shown}</b>${of} ${k}${all[k] === 1 ? '' : 's'}`;
+    return `<b>${shown}</b>${of} ${entityWord(k)}${all[k] === 1 ? '' : 's'}`;
   }).join(' \u00b7 ');
 }
 const NOUN = () => (DATA.kind === 'schema'
@@ -101,7 +115,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   document.title = PRODUCT_NAME;
   { const h = $('gtitle'); if (h) h.textContent = PRODUCT_NAME; }
   // The boxed diagram is the same drawing in both cases, so it is the same tab - under the name the
-  // project already gives each one: "ER diagram" for modules and tables, "Graph" for functions.
+  // project already gives each one: "ER diagram" for modules and tables, "Wiring" for the rest.
   // Two names, never a third.
   //
   // It was "Call graph" and it stayed "Call graph" through a rename, because the markup said Graph
@@ -111,7 +125,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // do is disagree with the button in the panel that opens it, which now says Graph too.
   {
     $('ertab').style.display = '';
-    $('ertab').textContent = _schema ? 'ER diagram' : 'Graph';
+    $('ertab').textContent = _schema ? 'ER diagram' : 'Wiring';
     $('reltab').style.display = ''; buildRelChips();
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
@@ -171,18 +185,35 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 //
 // So the kinds come from the nodes. A category Zoho invents tomorrow gets a chip without anyone
 // remembering, and nothing can be switched off that the filter does not know about.
-const ENTITY_KINDS = [['workflows', 'Workflows'], ['schedules', 'Schedules'], ['connections', 'Connections']];
+// One group per entity, and inside it one chip per kind of that entity - so the four kinds of
+// action sit in an Actions box exactly as the five Deluge categories sit in a Functions box, and
+// «switch the field updates off» is a question this window can now be asked.
+//
+// It used to be a hand-written list of which kinds were entities rather than categories, with
+// everything else swept into a box called Functions. The moment actions arrived they landed in
+// there - four action kinds among the Deluge categories, one dimension pretending to be another,
+// which is the mistake this repository has already recorded twice. Both levels come off the nodes
+// now: an entity Zoho invents tomorrow gets a group and a kind gets a chip, without anyone
+// remembering.
 function kindGroups() {
   // The empty string is a kind too. A function Zoho gave no category for is a fact about the org,
   // and filtering it out of this set left it with no chip - so it could not be switched off, and
   // «None» left it on screen, which is exactly the defect one layer down.
-  const seen = new Set(Object.values(N).map((n) => KINDOF(n)));
-  const entity = ENTITY_KINDS.filter(([k]) => seen.has(k));
-  entity.forEach(([k]) => seen.delete(k));
-  const rest = [...seen].sort();
-  const title = DATA.kind === 'schema' ? 'Modules' : 'Functions';
-  return (rest.length ? [[title, rest.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])]] : [])
-    .concat(entity.map(([k, l]) => [l, [[k, null]]]));
+  if (DATA.kind === 'schema') {
+    const seen = [...new Set(Object.values(N).map((n) => KINDOF(n)))].sort();
+    return seen.length ? [['Modules', seen.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])]] : [];
+  }
+  const byEnt = new Map();
+  Object.values(N).forEach((n) => {
+    const e = entityOf(n);
+    if (!byEnt.has(e)) byEnt.set(e, new Set());
+    byEnt.get(e).add(KINDOF(n));
+  });
+  return entitiesPresent().map((e) => {
+    const ks = [...byEnt.get(e)].sort();
+    return [ENTITY_LABEL[e] || (e.charAt(0).toUpperCase() + e.slice(1)),
+            ks.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])];
+  });
 }
 // Function-only, all three of them, which is the other half of why they cannot sit among the kinds:
 // «REST» and «unresolved» say nothing about a workflow or a connection.

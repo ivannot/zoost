@@ -130,18 +130,34 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 // remembering, and nothing can be switched off that the filter does not know about.
 // Zoho Analytics has one vocabulary here - what kind of view a node is - so there is no second
 // dimension of entity chips the way the CRM has workflows, schedules and connections.
-const ENTITY_KINDS = [];
+// One group per entity, and inside it one chip per kind of that entity. This workspace has one
+// entity - a view is a view - so it draws one group called Views and looks exactly as it did. The
+// machinery is here anyway because it is the CRM's, byte for byte: that panel grew a second entity
+// (four kinds of automation action beside five Deluge categories) and the shape that answers it is
+// shared chrome, not a CRM feature. A second entity here would get its own group without anyone
+// touching this.
+const ENTITY_LABEL = { views: 'Views' };
+const entityOf = (n) => n.entity || 'views';
+function entitiesPresent() {
+  const seen = new Set(Object.values(N).map(entityOf));
+  return Object.keys(ENTITY_LABEL).filter((e) => seen.has(e))
+    .concat([...seen].filter((e) => !(e in ENTITY_LABEL)).sort());
+}
 function kindGroups() {
-  // The empty string is a kind too. A function Zoho gave no category for is a fact about the org,
-  // and filtering it out of this set left it with no chip - so it could not be switched off, and
-  // «None» left it on screen, which is exactly the defect one layer down.
-  const seen = new Set(Object.values(N).map((n) => KINDOF(n)));
-  const entity = ENTITY_KINDS.filter(([k]) => seen.has(k));
-  entity.forEach(([k]) => seen.delete(k));
-  const rest = [...seen].sort();
-  const title = 'Views';
-  return (rest.length ? [[title, rest.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])]] : [])
-    .concat(entity.map(([k, l]) => [l, [[k, null]]]));
+  // The empty string is a kind too. A view Zoho Analytics gave no kind for is a fact about the
+  // workspace, and filtering it out of this set left it with no chip - so it could not be switched
+  // off, and «None» left it on screen, which is exactly the defect one layer down.
+  const byEnt = new Map();
+  Object.values(N).forEach((n) => {
+    const e = entityOf(n);
+    if (!byEnt.has(e)) byEnt.set(e, new Set());
+    byEnt.get(e).add(KINDOF(n));
+  });
+  return entitiesPresent().map((e) => {
+    const ks = [...byEnt.get(e)].sort();
+    return [ENTITY_LABEL[e] || (e.charAt(0).toUpperCase() + e.slice(1)),
+            ks.map((k) => [k, k ? k.replace(/_/g, ' ') : 'no category'])];
+  });
 }
 // «System» belongs here and not among the kinds: it is something true *about* a table, the way
 // «hub» is, not a kind of thing - so it gets no hue and it starts off. Zoho Analytics flags it

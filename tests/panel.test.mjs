@@ -509,16 +509,24 @@ test('the kinds are read off the graph, never listed in the code', () => {
     b: { id: 'b', name: 'b', namespace: 'validation_rule', category: 'crmfundamentals' },
     c: { id: 'c', name: 'c', namespace: 'standalone', category: 'standalone' },
     d: { id: 'd', name: 'd', namespace: 'x', category: '' },
-    e: { id: 'e', name: 'Deal won', namespace: 'Deals', category: 'workflows' },
+    e: { id: 'e', name: 'Deal won', namespace: 'Deals', category: 'workflows', entity: 'workflows' },
+    // Two kinds of one entity, which is what the second level exists for: they must land in an
+    // Actions box together and never among the Deluge categories.
+    f: { id: 'f', name: 'Chase it', category: 'tasks', entity: 'actions' },
+    g: { id: 'g', name: 'Notify', category: 'email_notifications', entity: 'actions' },
   };
-  const ctx = { N, DATA: { kind: 'calls' }, Object, Set };
+  const ctx = { N, DATA: { kind: 'calls' }, Object, Set, Map };
   const api = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                    sliceConst('apps/crm/graphview.js', 'ENTITY_KINDS'),
+                    sliceConst('apps/crm/graphview.js', 'ENTITY_LABEL'),
+                    sliceConst('apps/crm/graphview.js', 'entityOf'),
+                    sliceFn('apps/crm/graphview.js', 'entitiesPresent'),
                     sliceFn('apps/crm/graphview.js', 'kindGroups'),
                     sliceConst('apps/crm/graphview.js', 'allKinds')], ctx);
   const groups = api.kindGroups();
-  assert.equal(groups.map(([t]) => t).join(' '), 'Functions Workflows',
-    'the groups are not the kinds actually present');
+  assert.equal(groups.map(([t]) => t).join(' '), 'Functions Actions Workflows',
+    'the groups are not the entities actually present, in their declared order');
+  assert.equal(groups[1][1].map(([k]) => k).join(','), 'email_notifications,tasks',
+    'the two kinds of action are not both chips inside the Actions group');
   assert.equal(groups[0][1].map(([k]) => k).join(','), ',crmfundamentals,scheduler,standalone',
     'the categories are not read off the nodes');
   // ...including the one Zoho gave no category for, or it can never be switched off
@@ -1782,8 +1790,8 @@ test('the functions drawing has one name, and the code does not write the old on
   // that live in the markup and are rebuilt by the code that updates state. It reached the user
   // twice, which is the failure.
   const js = read('apps/crm/graphview.js');
-  assert.ok(/\$\('ertab'\)\.textContent = _schema \? 'ER diagram' : 'Graph'/.test(js),
-    'the tab is still labelled Call graph from code');
+  assert.ok(/\$\('ertab'\)\.textContent = _schema \? 'ER diagram' : 'Wiring'/.test(js),
+    'the tab is not labelled from code with the name the panel opens it under');
   // and nowhere a control is named may the old name survive - a third name is worse than either
   for (const f of ['apps/crm/graphview.html', 'apps/crm/sidepanel.html', 'apps/crm/sidepanel.js',
                    'apps/crm/product-help.js', 'apps/crm/graphview.js']) {
@@ -2130,7 +2138,10 @@ test('the sample org speaks Deluge, so the reference graph can find its calls', 
   const core = read('apps/crm/graph-core.js');
   const NS = core.match(/const NS = \[([^\]]+)\]/)[1].split(',').map((s) => s.trim().replace(/'/g, ''));
   const calls = JSON.parse(read('fixtures/graph-crm-calls.json'));
-  const fns = Object.values(calls.nodes).filter((n) => !/^(wf|sch|conn):/.test(n.id));
+  // By entity, not by the shape of the id: the prefixes were a list to keep in step, and it fell
+  // behind the moment actions and modules became nodes - `act:` ids were read as functions and
+  // reported for having no Deluge namespace, which they correctly do not.
+  const fns = Object.values(calls.nodes).filter((n) => (n.entity || 'functions') === 'functions');
   for (const n of fns) {
     assert.ok(NS.includes(n.namespace),
       `${n.id} is in namespace «${n.namespace}», which CALL_RE cannot match - Zoho has only ${NS.join(', ')}`);

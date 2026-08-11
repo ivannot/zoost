@@ -934,6 +934,45 @@ needs a user gesture a message handler does not have. And the window **reloads**
 the data in place: every global in `graphview.js` is derived from the graph being replaced, and
 re-deriving them one at a time is precisely the half-migrated state this file keeps recording.
 
+**The first drawing is called «Wiring» because it stopped being about functions.** The switch beside
+the title read `Functions | Modules` while that side already held workflows, schedules and
+connections - reported - and actions and modules then made it plainly false: six kinds of thing under
+a label naming one. It is **`Wiring | Schema`**, the view tab is **`Wiring`**, and the panel's button
+says the same. «Wiring» is not a new word here: it is what the health view has always called the
+group that answers what fires what and what references what. Two names for two drawings, and the ban
+on a third still stands - what changed is which two.
+
+**Everything in the org that runs is in it, and the modules it touches.** Every automation action is
+a node, **including the ones no rule fires** - roughly half of them in a real org, and precisely the
+ones worth seeing as a box on their own rather than leaving out. A module is a node **only when
+something names it**: a rule that fires on it, an action that writes to it. Drawing all thirty-eight
+would put boxes with no arrow into a diagram whose subject is what connects to what, and «no
+automation touches this module» is a measurement the health view already makes.
+
+**`entity` and `category` are two fields because they are two questions.** What kind of *thing* it is
+- function, action, workflow, schedule, connection, module - and what kind of *that* it is: a Deluge
+category, or `email_notifications`. They were one field while every non-function entity had exactly
+one category, and the moment four kinds of action arrived under one entity they landed among the
+Deluge categories in the chips: one dimension wearing another's clothes, which is the mistake this
+file already records twice. `kindGroups()` now derives **both** levels from the nodes, so an entity
+Zoho invents tomorrow gets its own group and each of its kinds gets a chip, with nothing enumerated
+in the window. Ported to Analytics unchanged, where it collapses to one group and looks exactly as it
+did - the shape is shared chrome, not a CRM feature.
+
+**What is not in it, said rather than left to be discovered:** a function's own record access. Nothing
+parses `zoho.crm.getRecords("Contacts")`, so a function is never joined to a module - the modules
+drawn are the ones a *rule* or an *action* names. The guide says so in a note, in both languages.
+
+**The diagram fixtures are produced by the panel now - `tools/graphdata.py`.** `tools/fixtures.mjs`
+built them itself «from the same files, so the two cannot describe different orgs», and they described
+different orgs anyway: its workflow reader looked for `conditions[].actions`, the key the pull stopped
+writing when it started writing `instant_actions.actions`, so **every workflow-to-function edge was
+missing from the fixture** while the panel drew nine. Both files parsed, both produced a graph, and
+the screenshots were of a graph the product does not build. The payload is now taken from the shipped
+`callGraphWithContext()` / `buildSchemaGraph()` through `tools/fsshim.js` - the same technique as the
+screenshots - and the sources are stripped afterwards, because they are already on disk beside it. It
+needs Chrome, which is why it is a separate tool: `fixtures.mjs` writes the tree and stays pure node.
+
 **The call chain no longer stops at functions, and `callGraphWithContext()` is a separate function
 for a reason.** The graph now carries what *starts* the code and what it *reaches*: a workflow or a
 schedule that fires a function is a node, and so is every connection a function uses. Everything is

@@ -56,10 +56,15 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   clock and the count, and the tooltip says how long the delay is. The workflow's own panel shows
   "Last run", the same words the Schedules tab uses for the same fact.
 - The circular arrow: re-reads from the folder on disk. It never contacts Zoho CRM.
-- "Graph" (in Functions mode) / "ER diagram" (in Modules): opens a diagram in its own window - which
-  function calls which, or how the modules relate. The graph also shows what *starts* the code and
-  what it reaches: a workflow or a schedule that fires a function is a node of its own, and so is
-  every connection a function uses.
+- "Wiring" (in Functions mode) / "ER diagram" (in Modules): opens a diagram in its own window - how
+  the org is wired, or how the modules relate. Wiring is not only functions, which is why it is not
+  called that: a workflow or a schedule that fires a function is a node of its own, so is every
+  connection a function uses, so is every automation action - email notifications, field updates,
+  tasks and webhooks, including the ones no rule fires - and so is every module those rules and
+  actions touch. The chips group them: Functions by Deluge category, Actions by kind, then one chip
+  each for Workflows, Schedules, Connections and Modules. What is *not* in it: a Deluge function's
+  own record access. Nothing here parses a function's own zoho.crm calls, so a function is never
+  linked to a module.
   All of it from what is already on disk - nothing extra is fetched. The chips in that window's header show
   what is on screen, grouped by dimension: all lit means everything, and one click switches a kind
   off - "Connections" off is how you read the diagram without them. The dashed "Only" group narrows
@@ -80,14 +85,14 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   It sits with the tabs because it belongs to the window and not to one view: Explorer sets it, and
   both the diagram and Relations follow it. "Everything" pauses the focus rather than dropping it, so the name
   stays on screen and one click picks it up again.
-  That window has three views of one thing: Explorer (a list and a detail pane), Graph or ER diagram
+  That window has three views of one thing: Explorer (a list and a detail pane), Wiring or ER diagram
   (boxes and arrows - each box lists what that function calls, or what that module holds), and
   Relations, which puts the link first instead of the thing: one row per call on a graph - who calls
   whom, with the call copyable complete with its parameter names - and one row per related list on a
   schema. Selecting anything in Explorer re-centres all three on it, Relations included: it then
   lists the links around that item and says so beside the count; "Everything" in the Focus group is
   what widens it back.
-- The references bar under a function also carries a depth and a "Graph" button, which opens
+- The references bar under a function also carries a depth and a "Wiring" button, which opens
   that window centred on this function. The Modules preview has the same pair for the ER diagram.
   In that window's Explorer tab, the small tab on the edge of the list folds it away so the detail
   gets the whole width; the same tab brings it back, and dragging that edge resizes the list

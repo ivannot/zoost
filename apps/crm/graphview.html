@@ -29,6 +29,16 @@
      so one dimension and one hue each. The plural is what keeps `schedules` (the Zoho object)
      apart from `schedule` (the Deluge category of a function that one runs). */
   --n-workflows:#e11d48; --n-schedules:#0891b2; --n-connections:#ca8a04;
+  /* The four kinds of action, and the modules they act on. Declared rather than left to the hashed
+     fallback because these five are known: the fallback exists for a kind Zoho invents, not for the
+     ones we can name. With fourteen kinds on one drawing two pairs are near neighbours - fuchsia
+     beside rose, orange beside amber - which is stated rather than pretended away: the box writes
+     its kind next to the colour, and the chips are grouped by entity, so the hue is never the only
+     thing carrying the answer.
+     `modules` is deliberately the one that is not a hue. A module does not run: it is what the
+     things that run touch, and a neutral grey among the saturated ones says that without a word. */
+  --n-email_notifications:#d946ef; --n-field_updates:#14b8a6; --n-tasks:#84cc16; --n-webhooks:#f97316;
+  --n-modules:#94a3b8;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -312,13 +322,13 @@
   <header>
     <div class="hrow">
       <h1 id="gtitle">Zoost</h1>
-      <div class="subj" id="subj" role="tablist" aria-label="What this window is drawing"><span data-k="calls" role="tab">Functions</span><span data-k="schema" role="tab">Modules</span></div>
+      <div class="subj" id="subj" role="tablist" aria-label="What this window is drawing"><span data-k="calls" role="tab">Wiring</span><span data-k="schema" role="tab">Schema</span></div>
       <span class="stat" id="statline"><b id="s-nodes">0</b> functions · <b id="s-edges">0</b> calls · <b id="s-dead">0</b> no-caller · <b id="s-unres">0</b> unresolved</span>
       <span class="stat" id="s-ws"></span>
     </div>
     <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
     <div class="tabrow">
-      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none">Graph</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none">Wiring</span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
       <!-- The focus is the whole window's context - all three views project it - so it is
            chrome, beside the tabs, and not a button inside one of the views. Its own group,
            the same shape the chips use, because it answers its own question. -->
