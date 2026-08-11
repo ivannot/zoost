@@ -19,9 +19,15 @@ cd "$(dirname "$0")/.."
 DEST="${1:-${ZOOST_TEST_DIR:-/mnt/g/My Drive/zoost-test}}"
 mkdir -p "$DEST/apps"
 
-# `rsync` is in the WSL image and on macOS; `cp -R` is the fallback that keeps this working anywhere.
-if command -v rsync >/dev/null; then
-  rsync -a --delete apps/crm apps/analytics "$DEST/apps/"
+# The destination is very likely a cloud-sync filesystem, and those are not ordinary ones: Google
+# Drive's virtual drive refuses `chgrp` and refuses the temporary files rsync writes before renaming
+# them into place. So no attributes are preserved (`-rlt` and not `-a`) and the write is `--inplace`.
+# `cp -R` is the fallback for a machine with no rsync, and also for the day a destination refuses
+# something else - a copy that works beats a copy that is clever.
+if command -v rsync >/dev/null &&
+   rsync -rlt --delete --no-perms --no-owner --no-group --inplace \
+         apps/crm apps/analytics "$DEST/apps/" 2>/dev/null; then
+  :
 else
   rm -rf "$DEST/apps/crm" "$DEST/apps/analytics"
   cp -R apps/crm apps/analytics "$DEST/apps/"
