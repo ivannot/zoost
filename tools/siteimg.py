@@ -14,9 +14,11 @@ Two differences from `tools/shots.py`, and both are about where the image ends u
     on the busiest shot: 115 KB as the 1x PNG, 284 KB as a 1760 PNG, **and 45-60 KB as WebP**. The
     format is doing the work here, not the resizing.
 
-`cwebp` and `sips` are both required. That is one more binary than this repository likes, and it is
-accepted for the same reason Chrome is: this runs when somebody publishes images, not when somebody
-builds the extension, and nothing under `apps/` gains a dependency.
+`cwebp` and `dwebp` are required, and they are the whole list. It used to be three: `sips` did the
+resizing, which is macOS-only and was the one thing keeping these tools on one operating system -
+`cwebp -resize W 0` does the same job inside the encode, so a step and a dependency disappeared
+together. They are accepted for the same reason Chrome is: this runs when somebody publishes images,
+not when somebody builds the extension, and nothing under `apps/` gains a dependency.
 """
 import hashlib
 import json
@@ -122,7 +124,7 @@ def need(binary: str) -> str:
 
 
 def main() -> int:
-    cwebp, sips, dwebp = need("cwebp"), need("sips"), need("dwebp")
+    cwebp, dwebp = need("cwebp"), need("dwebp")
     shots.SCALE = 2                       # a retina source; see the module docstring
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
@@ -147,12 +149,11 @@ def main() -> int:
         png = (shots.render_options if shot in shots.OPTIONS else
                shots.render_panel if shot in shots.PANELS else shots.render)(shot)
         raw = png.stat().st_size
-        tmp = png.with_name(key + "-scaled.png")
-        subprocess.run([sips, "-Z", str(WIDTH), str(png), "--out", str(tmp)],
-                       check=True, capture_output=True)
+        # One pass: cwebp resizes and encodes. The 2x render is landscape, so a width is the whole
+        # constraint and the height follows - which is what `-resize W 0` means.
         fresh = png.with_name(key + "-new.webp")
-        subprocess.run([cwebp, "-q", str(QUALITY), "-quiet", str(tmp), "-o", str(fresh)], check=True)
-        tmp.unlink()
+        subprocess.run([cwebp, "-q", str(QUALITY), "-resize", str(WIDTH), "0", "-quiet",
+                        str(png), "-o", str(fresh)], check=True)
         note = ""
         if dest.exists() and same_picture(fresh, dest, dwebp):
             fresh.unlink()                          # same pixels: the file on disk stays untouched

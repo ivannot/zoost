@@ -14,6 +14,10 @@
 # identical-in-principle is not the same as the artifact anyone can trace, and only one of the two
 # has GitHub's signature on it.
 set -euo pipefail
+
+# macOS ships `shasum`, most Linux ships `sha256sum`, and WSL has both only sometimes. The hash is
+# the thing this whole chain rests on, so it must not depend on which of the two is installed.
+sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$1"; else sha256sum "$1"; fi; }
 cd "$(dirname "$0")/.."
 
 APP="${1:-}"
@@ -75,9 +79,9 @@ echo "   suite and checkers pass"
 # The build has to be deterministic, and this is where that is proven cheaply:
 # finding that out after the tag is pushed means an orphaned tag to clean up.
 ./build.sh "$APP" >/dev/null
-A=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
+A=$(sha256 "$ZIP" | cut -d' ' -f1)
 ./build.sh "$APP" >/dev/null
-B=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
+B=$(sha256 "$ZIP" | cut -d' ' -f1)
 if [[ "$A" != "$B" ]]; then
   echo "The build is not reproducible on this machine — two runs of the same commit differ:"
   echo "  $A"

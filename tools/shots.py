@@ -19,6 +19,7 @@ was taken against the org this is developed on and then blurred, and a blurred s
 advertisement for a tool whose whole subject is reading clearly.
 """
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -40,7 +41,24 @@ def hosts_of(app: str) -> str:
     m = _json.loads((ROOT / 'apps' / app / 'manifest.json').read_text(encoding='utf-8'))
     return _json.dumps(m.get('host_permissions', []))
 OUT = ROOT / "dist" / "shots"
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+def _chrome() -> str:
+    """Where Chrome is. It was one macOS path, which is the whole of what stopped these tools
+    running anywhere else - the renders, the graph payloads and every headless probe go through it.
+    CHROME in the environment wins, so a machine with it somewhere odd needs no edit here."""
+    import shutil
+    if os.environ.get("CHROME"):
+        return os.environ["CHROME"]
+    mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    if pathlib.Path(mac).is_file():
+        return mac
+    for exe in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        found = shutil.which(exe)
+        if found:
+            return found
+    sys.exit("no Chrome found - install one, or set CHROME to its path")
+
+
+CHROME = _chrome()
 NAME = {"crm": "Zoost - workbench for Zoho CRM",
         "analytics": "Zoost - workbench for Zoho Analytics"}
 

@@ -25,6 +25,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SECTION = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?\n\n```\n(.*?)\n```', re.S | re.M)
 
 
+def clipboard() -> list:
+    """pbcopy on macOS, clip.exe under WSL, xclip or wl-copy on Linux. One field at a time is pasted
+    into a browser form, so the clipboard is the point of the tool and not a convenience."""
+    import shutil
+    for cmd in (['pbcopy'], ['clip.exe'], ['xclip', '-selection', 'clipboard'], ['wl-copy']):
+        if shutil.which(cmd[0]):
+            return cmd
+    sys.exit('no clipboard tool found - drop --copy and pipe the output yourself')
+
+
 def sections(app: str):
     f = ROOT / 'store' / app / 'store-listing.md'
     if not f.exists():
@@ -84,7 +94,7 @@ def main() -> int:
         if n != want:
             continue
         if '--copy' in sys.argv:
-            subprocess.run(['pbcopy'], input=body, text=True, check=True)
+            subprocess.run(clipboard(), input=body, text=True, check=True)
             print(f'{name}: {len(body)} chars on the clipboard'
                   + (f' (max {cap})' if cap else ''))
         else:

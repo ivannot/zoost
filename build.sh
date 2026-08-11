@@ -30,6 +30,10 @@
 # and compare against RELEASES.md.
 # ---------------------------------------------------------------------------------------------
 set -euo pipefail
+
+# macOS ships `shasum`, most Linux ships `sha256sum`, and WSL has both only sometimes. The hash is
+# the thing this whole chain rests on, so it must not depend on which of the two is installed.
+sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$1"; else sha256sum "$1"; fi; }
 cd "$(dirname "$0")"
 export TZ=UTC                        # zip writes local time into the archive; pin it
 
@@ -76,5 +80,5 @@ echo "  timestamps: $SOURCE"
 # Which archiver produced this. Determinism is verified on Info-ZIP 3.0 (macOS) and on ubuntu-latest
 # in CI, not asserted for every zip implementation in existence, so the log has to say which one ran.
 echo "  archiver:   $(zip -v 2>/dev/null | sed -n '2p' | cut -d, -f1)"
-echo "  sha256:     $(shasum -a 256 "$OUT" | cut -d' ' -f1)"
+echo "  sha256:     $(sha256 "$OUT" | cut -d' ' -f1)"
 unzip -l "$OUT" | tail -3
