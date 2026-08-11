@@ -27,6 +27,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import shots  # noqa: E402  - the renderers, the fixture wiring and the click scripts all live there
@@ -74,7 +75,44 @@ def source_digest(app: str, script: str) -> str:
     return h.hexdigest()[:16]
 
 
-def render_og_card() -> pathlib.Path:
+OG_KEY = "og"     # its slot in the ledger, beside the screenshots
+
+
+def og_sources() -> list:
+    """The files the card is composed from: the template, and whatever it embeds.
+
+    Derived from the template rather than listed here, because the pairing is the part that rots:
+    point `ogcard.html` at another screenshot and a written-down `crm-preview.webp` would go on
+    watching a file the card no longer contains, reporting current while the card went stale. The
+    same argument as everywhere else - the set is read from the thing itself, so there is no second
+    place to remember.
+    """
+    card = ROOT / "tools" / "ogcard.html"
+    out = [card]
+    for src in re.findall(r'<img[^>]+\bsrc="([^"]+)"', card.read_text(encoding="utf-8")):
+        out.append((card.parent / src).resolve())
+    return out
+
+
+def og_digest() -> str:
+    """What the card is a picture of, in the same shape as `source_digest()` for the screenshots.
+
+    The card was the one published image outside all of this: not a WebP, not inside an `<img>` -
+    it lives in a `<meta og:image>` - so nothing recorded what it was drawn from and nothing
+    compared it against its sources. Its bytes changed under nobody's eye, and the only reason it
+    was noticed at all is that the digest in every page's URL changed with them.
+
+    A missing embed is hashed as its absence rather than skipped, so a card whose screenshot has
+    been renamed away is redrawn instead of quietly keeping the old picture; `imgcheck` names it.
+    """
+    h = hashlib.sha256()
+    for f in og_sources():
+        h.update(f.name.encode())
+        h.update(f.read_bytes() if f.exists() else b"(missing)")
+    return h.hexdigest()[:16]
+
+
+def render_og_card(dest: pathlib.Path) -> pathlib.Path:
     """The 1200x630 card a link unfurls into, drawn from tools/ogcard.html.
 
     Every page declared `icon-512.png` with `twitter:card: summary`, so a link pasted anywhere - and
@@ -84,12 +122,11 @@ def render_og_card() -> pathlib.Path:
     exist. PNG rather than WebP: a scraper that cannot decode the image shows nothing at all, and
     what a given scraper supports is not something this repository can check.
     """
-    out = OUT / "og.png"
     subprocess.run([shots.CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
                     "--window-size=1200,630", "--force-device-scale-factor=1",
-                    "--virtual-time-budget=4000", "--screenshot=" + str(out),
+                    "--virtual-time-budget=4000", "--screenshot=" + str(dest),
                     (ROOT / "tools" / "ogcard.html").as_uri()], check=True, capture_output=True)
-    return out
+    return dest
 
 
 def same_picture(a: pathlib.Path, b: pathlib.Path, dwebp: str) -> bool:
@@ -104,7 +141,6 @@ def same_picture(a: pathlib.Path, b: pathlib.Path, dwebp: str) -> bool:
     pixels, so the comparison is a byte comparison of two decodes, with no image library and no
     threshold to argue about: identical pixels or not.
     """
-    import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         out = []
         for f in (a, b):
@@ -164,6 +200,34 @@ def main() -> int:
         total += dest.stat().st_size
         stamp[key] = {"app": shot[1], "from": digest}
         print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}")
+    # The card, under the guard the screenshots are under. It was rendered unconditionally on every
+    # run - four seconds of Chrome to produce, most of the time, the same picture - and because
+    # `--screenshot=` writes the file whatever comes out, a run that changed nothing could still
+    # replace its bytes and restamp its URL on all 21 pages.
+    #
+    # After the loop and before the stamping, and both halves of that are load-bearing: the card
+    # embeds a screenshot this run may just have redrawn, so its digest is only final once the loop
+    # is done - and the pages carry the card's *own* bytes in `og:image`, so stamping it before it
+    # is drawn writes last run's digest. That was the order until now, and it held together only
+    # because prepare.sh happens to stamp again afterwards; run on its own, `siteimg.py` left the
+    # pages pointing at a card that no longer existed.
+    card, digest, note = OUT / "og.png", og_digest(), ""
+    if not force and card.exists() and (was.get(OG_KEY) or {}).get("from") == digest:
+        note = "  not drawn"
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            fresh = render_og_card(pathlib.Path(tmp) / "og.png")
+            # Whether to draw is the digest's question; whether to replace is the bytes'. The same
+            # pair as `same_picture()` one loop up, and a byte comparison is all it needs: this
+            # render is static HTML against a local image, and two consecutive runs were measured
+            # identical to the byte, where a panel shot is not.
+            if card.exists() and fresh.read_bytes() == card.read_bytes():
+                note = "  same picture"
+            else:
+                shutil.copyfile(fresh, card)
+    print(f"  {'og':20} {card.stat().st_size // 1024:>8} KB (1200x630, the card a link "
+          f"unfurls into){note}")
+    stamp[OG_KEY] = {"from": digest}
     # The 2x renders are working material - what is published is site/img/. Leaving them in dist/
     # meant a folder of PNGs that look like something to upload and are not.
     # One implementation, in the tool that owns everything a page prints and is derived. A picture
@@ -178,11 +242,10 @@ def main() -> int:
         shots.OUT.rmdir()
     except OSError:
         pass
-    card = render_og_card()
-    print(f"  {'og':20} {card.stat().st_size // 1024:>8} KB (1200x630, the card a link unfurls into)")
     LEDGER.write_text(json.dumps(stamp, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\n  {len(every) - kept} rendered ({unchanged} of them the same picture as before, left "
-          f"alone), {kept} not drawn at all; {len(every)} image(s), {total // 1024} KB under site/img/")
+          f"alone), {kept} not drawn at all; {len(every)} screenshot(s) and the card, "
+          f"{(total + card.stat().st_size) // 1024} KB under site/img/")
     print(f"  what each was rendered from is recorded in {LEDGER.relative_to(ROOT)}, so imgcheck can")
     print("  say when the panel moved and the picture did not.")
     print("  They are lazy-loaded and carry their own width and height, so nothing below them moves.")

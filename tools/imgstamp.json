@@ -106,5 +106,8 @@
   "crm-workflows": {
     "app": "crm",
     "from": "93407ddf36b74113"
+  },
+  "og": {
+    "from": "6cc71ecf9e052799"
   }
 }

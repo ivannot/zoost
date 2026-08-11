@@ -5,7 +5,7 @@
 built so that a capability which exists in the panel and is described nowhere makes `featurecheck.py`
 speak; this is the same rule one dimension over - a screen that exists and is *shown* nowhere.
 
-Five checks, all derived, none holding a list of pages:
+Seven checks, all derived, none holding a list of pages:
 
   1. every image the renderer produces is published under site/img/
   2. every image published is used by at least one page - an unused one is weight nobody sees
@@ -22,6 +22,14 @@ Five checks, all derived, none holding a list of pages:
      says nothing about whether they are still true. Per app, not per screen: a panel is one file
      and a change anywhere in it can reach any shot, so it over-reports rather than going quiet on a
      broad change. The fix is always the same - run `python3 tools/siteimg.py` again.
+  7. **the card a link unfurls into is one of the images.** `site/img/og.png` sat outside every
+     check above, and not by anyone's decision: check 1 asks the renderer which images exist and
+     the card is not one of its shots, checks 2 to 5 read `<img>` tags and the card lives in a
+     `<meta property="og:image">`, and every set in here is globbed as `*.webp` while the card is
+     a PNG. Four independent reasons to be skipped, so removing one would have changed nothing -
+     which is why it was invisible rather than merely missed. Its bytes changed between two
+     machines and the only thing that said so was `git status`. It is stamped like the rest now,
+     from `tools/ogcard.html` and the screenshot that template embeds.
 
     python3 tools/imgcheck.py
 """
@@ -68,6 +76,31 @@ def main() -> int:
             findings.append(f"{app}: the panel or its fixture has changed since these images were "
                             f"rendered - run python3 tools/siteimg.py so the site shows the product "
                             f"as it is now")
+
+    # The card gets a block of its own rather than a row in the loop above, because it is not a shot
+    # of a panel: it has no app, no click script, and what it is a picture of is a template plus the
+    # screenshot that template embeds. That the URL on each page carries the card's own digest is
+    # `tools/stamp.py`'s job and is not repeated here - one fact, one checker.
+    from siteimg import OG_KEY, og_digest, og_sources
+    card, template = IMG / "og.png", ROOT / "tools" / "ogcard.html"
+    if not template.exists():
+        findings.append("tools/ogcard.html is gone, so the card on every link to zoost.it can no "
+                        "longer be redrawn from anything")
+    else:
+        if not card.exists():
+            findings.append("img/og.png is missing and every page's og:image points at it - a link "
+                            "to zoost.it would unfurl with nothing in it; run python3 tools/siteimg.py")
+        for src in og_sources():
+            if not src.exists():
+                findings.append(f"tools/ogcard.html embeds {src.name}, which does not exist - the "
+                                f"card is drawn with a hole where the screenshot goes")
+        got = (stamp.get(OG_KEY) or {}).get("from")
+        if stamp and not got:
+            findings.append("og.png: nothing records what the card was rendered from - "
+                            "run python3 tools/siteimg.py")
+        elif got and got != og_digest():
+            findings.append("og.png: the card's template or the screenshot inside it has moved since "
+                            "the card was drawn - run python3 tools/siteimg.py")
 
     for key in sorted(rendered - published):
         findings.append(f"{key}: the renderer produces it and site/img/ has no copy - "
@@ -130,8 +163,9 @@ def main() -> int:
 
     for f in findings:
         print("  " + f)
-    total = sum(p.stat().st_size for p in IMG.glob("*.webp"))
-    print(f"\n{len(findings)} finding(s). {len(published)} image(s), {total // 1024} KB, "
+    total = sum(p.stat().st_size for p in IMG.glob("*.webp")) + (card.stat().st_size if card.exists() else 0)
+    print(f"\n{len(findings)} finding(s). {len(published)} screenshot(s)"
+          f"{' and the card' if card.exists() else ''}, {total // 1024} KB, "
           f"used across {sum(1 for v in per_page.values() if v)} page(s).")
     return 1 if findings else 0
 

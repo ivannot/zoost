@@ -817,7 +817,7 @@ renderer produces is published; every image published is used by a page; every `
 file that exists, carries alt text, and declares width and height; and **a page and its translation
 carry the same number of figures**, because a reader who switches language and finds one side
 illustrated and the other bare is meeting two products. It found seven rendered-and-never-placed
-images the first time it ran. 24 images, 1.26 MB, across 16 pages.
+images the first time it ran. 27 screenshots and the card, 1.55 MB, across 16 pages.
 
 **And the sixth check is the one that keeps them true.** The first five say the images exist, are
 used, are described and are symmetric across the two languages - none of which says whether a
@@ -869,6 +869,39 @@ the scale and the stub the panel is fed through - and the invalidation was prove
 directions rather than assumed: a change to the CRM panel invalidates the CRM set alone, the same
 for Analytics, a change to `shots.py` or `fsshim.js` invalidates both, and a change to a fixture
 invalidates the app that fixture belongs to.
+
+**And every word of that was true of the screenshots and of nothing else: the card a link unfurls
+into was outside all of it.** `site/img/og.png` had no row in the ledger, was drawn unconditionally
+at the end of every run, and appeared in none of `imgcheck`'s six checks. Not by anyone's decision -
+by **four independent accidents**, which is why it was invisible rather than merely missed and why
+removing any one of them would have changed nothing: check 1 asks the renderer which images exist
+and the card is not one of its shots; checks 2 to 5 read `<img>` tags and the card lives in a
+`<meta property="og:image">`; every set in the checker is globbed as `*.webp` and the card is a PNG;
+and nothing recorded what it was drawn from, so check 6 had nothing to compare. It changed by 800
+bytes between a macOS render and a WSL one and **the only thing in this repository that said so was
+`git status`** - noticed while reading a diff, which is luck, not process. A checker whose set is
+derived from one glob is blind to everything outside that glob, and being derived is exactly what
+makes the blindness look like coverage.
+
+It has a stamp of its own now, in the same ledger and under the same two questions. What the card is
+a picture of is `tools/ogcard.html` plus **the screenshot that template embeds**, and which
+screenshot that is comes from parsing the `<img src>` out of the template rather than being written
+down beside it: point the card at another shot and a hardcoded `crm-preview.webp` would go on
+watching a file the card no longer contains, reporting current for ever. The digest decides whether
+to draw - a run that changes nothing no longer starts Chrome for it - and the bytes decide whether to
+replace, as with the WebPs. The card's render *is* bit-exact, unlike a panel shot: static HTML
+against a local image, measured identical across consecutive runs.
+
+**The order it sits in is load-bearing in both directions, and it was wrong.** The card embeds a
+screenshot the same run may have just redrawn, so its digest is only final once the loop is done; and
+every page carries the card's own bytes in its `og:image` URL, so stamping before the card is drawn
+writes last run's digest onto 21 pages. The card was rendered *after* `stamp_assets()`, which held
+together only because `prepare.sh` happens to stamp again afterwards - run on its own, `siteimg.py`
+left every page pointing at a card that no longer existed. Drawn between the loop and the stamping
+now, and two consecutive runs of `siteimg.py` alone produce no diff at all, which is the property
+that was being borrowed from `prepare.sh` before. Proven in both directions - a byte moved in the
+template, and the embedded screenshot replaced with another - one finding each, green again after
+each restore.
 
 **Screenshots are rendered, never captured: `python3 tools/shots.py`.** Headless Chrome writes
 exactly what the Store wants - 1280 x 800, `8-bit/color RGB`, no alpha - so nothing is converted

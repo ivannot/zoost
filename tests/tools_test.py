@@ -13,6 +13,8 @@ Every test below plants a defect that actually reached the user and asserts it i
 
     python3 -m unittest discover -s tests -p 'tools_test.py'
 """
+import contextlib
+import io
 import json
 import pathlib
 import re
@@ -1377,6 +1379,84 @@ class ImagesAreRenderedOnlyWhenSomethingMoved(unittest.TestCase):
         if folder.exists():
             self.assertEqual(sorted(p.name for p in folder.iterdir()),
                              [f'{n}.png' for n in range(1, len(self.shots.STORE['crm']) + 1)])
+
+
+class TheCardIsOneOfTheImages(unittest.TestCase):
+    """`site/img/og.png` was outside every check that exists for the images, and not by decision.
+
+    Four independent reasons, which is why removing any one of them would have changed nothing:
+    `imgcheck` asks the renderer which images exist and the card is not one of its shots; the
+    remaining checks read `<img>` tags and the card lives in a `<meta property="og:image">`; every
+    set in the checker is globbed as `*.webp` and the card is a PNG; and `siteimg.py` rendered it
+    unconditionally at the end of every run, so nothing recorded what it was drawn from. Its bytes
+    changed between two machines and the only thing that noticed was `git status`.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import siteimg
+        self.siteimg = siteimg
+
+    def test_the_card_knows_what_it_is_made_of(self):
+        # Derived from the template, not written down: point the card at another screenshot and a
+        # hardcoded pairing would go on watching a file the card no longer contains.
+        got = [p.name for p in self.siteimg.og_sources()]
+        self.assertIn('ogcard.html', got)
+        self.assertIn('crm-preview.webp', got, 'the screenshot the card embeds is not in its sources')
+        for p in self.siteimg.og_sources():
+            self.assertTrue(p.exists(), f'the card is composed from {p.name}, which does not exist')
+
+    def test_the_screenshot_inside_the_card_is_part_of_its_digest(self):
+        # The template alone would say the card is current while the picture inside it had changed.
+        with tempfile.TemporaryDirectory() as tmp:
+            shot = Path(tmp) / 'crm-preview.webp'
+            shot.write_bytes(b'one')
+            keep = self.siteimg.og_sources
+            try:
+                self.siteimg.og_sources = lambda: [shot]
+                a = self.siteimg.og_digest()
+                shot.write_bytes(b'two')
+                b = self.siteimg.og_digest()
+            finally:
+                self.siteimg.og_sources = keep
+        self.assertNotEqual(a, b, 'the embedded screenshot can change without the digest moving')
+
+    def test_the_card_is_not_drawn_when_nothing_moved(self):
+        src = (ROOT / 'tools/siteimg.py').read_text(encoding='utf-8')
+        i = src.index('def main(')
+        body = src[i:]
+        guard = body.index('OG_KEY')
+        self.assertLess(guard, body.index('render_og_card('),
+                        'the card is drawn before the ledger is consulted, so it is drawn every run')
+
+    def test_the_card_is_drawn_before_the_pages_are_stamped(self):
+        # Each page carries the card's own bytes in og:image. Stamping first writes last run's
+        # digest, and the run ends with every page pointing at a card that no longer exists.
+        src = (ROOT / 'tools/siteimg.py').read_text(encoding='utf-8')
+        body = src[src.index('def main('):]
+        self.assertLess(body.index('render_og_card('), body.index('stamp_assets()'),
+                        'the pages are stamped before the card they point at is drawn')
+
+    def test_a_stale_card_is_a_finding(self):
+        # The whole point: a card whose sources have moved must be reported rather than left for
+        # `git status` to show. Only the card's row is broken, so nothing else in the run goes red.
+        import imgcheck
+        ledger = json.loads((ROOT / 'tools/imgstamp.json').read_text(encoding='utf-8'))
+        self.assertIn(self.siteimg.OG_KEY, ledger, 'the card has no row in the ledger')
+        ledger[self.siteimg.OG_KEY] = {'from': 'a1b2c3d4e5f60718'}
+        with tempfile.TemporaryDirectory() as tmp:
+            broken = Path(tmp) / 'imgstamp.json'
+            broken.write_text(json.dumps(ledger), encoding='utf-8')
+            keep, out = imgcheck.STAMP, io.StringIO()
+            try:
+                imgcheck.STAMP = broken
+                with contextlib.redirect_stdout(out):
+                    code = imgcheck.main()
+            finally:
+                imgcheck.STAMP = keep
+        said = [l for l in out.getvalue().splitlines() if 'og.png' in l]
+        self.assertEqual(code, 1, f'a stale card passed the check: {out.getvalue()}')
+        self.assertTrue(said, f'the check went red about something else: {out.getvalue()}')
 
 
 class TheReleaseBodyHasTwoReaders(unittest.TestCase):

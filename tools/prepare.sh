@@ -31,7 +31,7 @@ python3 tools/sitemap.py
 step 'the battery'
 bash tests/run.sh
 
-step 'images again — the five derived checks, now that the pages are stamped'
+step 'images again — the derived checks, now that the pages are stamped'
 python3 tools/imgcheck.py
 
 printf '\n\033[1mReady to commit.\033[0m auditcheck runs after the push, and release.sh runs it for you.\n'
