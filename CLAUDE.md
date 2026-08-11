@@ -527,6 +527,13 @@ goes in a short paragraph after the list, not woven through it. Store review tak
 while we iterate hourly, so a submission redone because a step was buried is expensive out of all
 proportion to the change.
 
+**Every command says which shell it goes in.** The work now spans a Mac and a Windows PC, and on the
+PC there are three prompts that look alike and are not: **PowerShell**, **cmd**, and the **Ubuntu
+shell** inside WSL. `wsl --shutdown` belongs to Windows and fails inside Ubuntu; `systemctl` is the
+other way round; a path is `G:\My Drive` on one side and `/mnt/g/My Drive` on the other. Say which,
+every time - a command pasted into the wrong prompt costs a round trip and reads as the instruction
+being wrong.
+
 **One step at a time when I am learning something new.** If I am on unfamiliar ground — git, ssh,
 a dashboard I have never opened — give me one instruction, wait for the output, then the next. Ten
 steps at once is how people get lost and blame themselves for it.
