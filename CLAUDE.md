@@ -493,8 +493,21 @@ is inside a folder, and `chrome://extensions` wants the folder.
   — a claim about another vendor's product that nothing here could check, which is the class this
   file already flags as the one where reading the documentation is the only method. **V2 exists**:
   `publishers.items.fetchStatus` reports the published revision and the submitted one, each with a
-  state, read through a service account scoped to `chromewebstore.readonly` — a credential that can
-  read our items' status and do nothing else to them. Three gains, and the third was invisible until
+  state, read through a service account and a token minted for `chromewebstore.readonly`.
+
+  **That used to read «a credential that can read our items' status and do nothing else to them», and
+  it was false.** Google links a service account to a publisher to «manage items owned by your
+  publisher account» - one per publisher, no narrower grant offered - and the scope is chosen when the
+  token is minted, so read-only is a property of **what this Worker asks for** and not of what the key
+  may do. Measured rather than argued: `python3 tools/cwsscope.py <key.json>` mints a token for the
+  full `chromewebstore` scope from that same key and the API answers with the item. **Every key of
+  that service account is a publishing credential**, the one in Cloudflare included. The account is
+  called `zoost-store-reader`, which is a label and not a permission - and only one service account
+  may be linked per publisher, so that slot is spent and the name stays.
+
+  It also took two passes to correct, which is the part worth keeping: the fix reached
+  `site/_worker.js` and not this file, and was reported as done. **Grep the claim, not the paragraph**
+  - already written here, about a different claim. Three gains, and the third was invisible until
   the API made it expressible: the DOM contract is gone, «in review» is Google saying so instead of a
   row typed into `RELEASES.md` after clicking Submit, and a **rejected** submission can be stated at
   all. Without a state a refusal is indistinguishable from a queue, so the badge would have promised
@@ -3276,8 +3289,8 @@ exactly right about two smaller things, and both are fixed.
   network and the live site, and a suite that fails because DNS was slow is a suite nobody believes.
 - **The Worker holds one credential, and its scope is the whole safety argument.**
   `CWS_SERVICE_ACCOUNT` is a Cloudflare **secret** holding the service account's JSON key, and the
-  token it mints carries `https://www.googleapis.com/auth/chromewebstore.readonly` — it can read our
-  items' status and cannot publish, edit, or take anything down. Setting it up has one step that is
+  token it mints asks for `https://www.googleapis.com/auth/chromewebstore.readonly`, which is what
+  this code requests and not a limit on the key - see the correction above. Setting it up has one step that is
   not in Google's documentation and cost an irreversible mistake: the field is on the **publisher's**
   account page, the one whose text says the service account «will be able to access all items through
   public APIs». It is **not** «Create a new publisher» on the developer profile page, which looks
