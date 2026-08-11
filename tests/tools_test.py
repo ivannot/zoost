@@ -1803,6 +1803,54 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             except UnicodeDecodeError:
                 continue
 
+    def test_one_file_is_readable_from_both_sides(self):
+        # It was sourced by shell and invisible to Python, so CHROME had to be exported into every
+        # session and a port was written into two files. One file for these values was the point.
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import machine
+        self.assertEqual(machine.values(), machine.values(), 'values() is not stable')
+        self.assertIn('tools/totest.sh', str(
+            [rel for rel, t in self.tracked() if 'machine.env' in t]),
+            'the shell side no longer reads the one file')
+        # Run it rather than grep for it: the first version asserted the word "machine" appeared in
+        # shots.py, which it does in a comment, so deleting the import left the check green over a
+        # module that would raise on import.
+        import shots
+        self.assertTrue(shots.CHROME, 'shots.py resolves no browser')
+        # icons-receive.py serves on import, so it is read rather than run - but read for the call,
+        # not for a word that occurs in prose.
+        src = (ROOT / 'tools' / 'icons-receive.py').read_text(encoding='utf-8')
+        self.assertIn("machine.get('ZOOST_ICONS_PORT'", src, 'the port is not configurable')
+        self.assertIn('HTTPServer((\'127.0.0.1\', PORT)', src, 'the server still binds a fixed port')
+
+    def test_the_environment_beats_the_file_on_both_sides(self):
+        # A value passed on purpose - by a test, a one-off run, CI - must not be replaced by whatever
+        # this machine usually does. The shell side got this backwards first.
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import machine
+        key = 'ZOOST_TEST_DIR'
+        if key not in machine.values():
+            self.skipTest('nothing configured on this machine to override')
+        keep = os.environ.get(key)
+        try:
+            os.environ[key] = '/tmp/from-the-environment'
+            self.assertEqual(machine.get(key), '/tmp/from-the-environment')
+            os.environ.pop(key)
+            self.assertEqual(machine.get(key), machine.values()[key])
+        finally:
+            os.environ.pop(key, None)
+            if keep is not None:
+                os.environ[key] = keep
+        sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+        self.assertIn('ENV_DEST', sh, 'the shell side is back to letting the file win')
+
+    def test_the_loader_never_prints_a_value(self):
+        # It runs in a terminal somebody may be sharing, and the names are what you need to see.
+        src = (ROOT / 'tools' / 'machine.py').read_text(encoding='utf-8')
+        main = src[src.index("__name__ == '__main__'"):]
+        self.assertNotIn('found[k]', main)
+        self.assertNotIn('values()[k]', main)
+
     def test_no_machine_value_has_leaked_into_a_tracked_file(self):
         # Derived from the config itself: whatever this machine has configured must appear in no file
         # anyone else will check out. Silent where there is no config, because then there is nothing

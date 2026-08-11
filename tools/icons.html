@@ -7,9 +7,12 @@
   one - a build step for six icons a year is not worth the first dependency - so the browser is the
   renderer. The multi-size favicon.ico is assembled from the PNGs afterwards.
 
-      python3 -m http.server 8798          # from the repository root
-      open http://localhost:8798/tools/icons.html
+      python3 tools/icons-receive.py      # it prints the URL to open, and writes the PNGs in place
       then run generate() from the console, or click the button.
+
+  No port is named here on purpose: it was written in this file and in that one, which is two places
+  to change and one to forget. The tool prints it, and `ZOOST_ICONS_PORT` in `tools/machine.env`
+  moves it when something else on this machine is already listening.
 -->
 <style>body{background:#0d121c;color:#e7edf6;font:14px system-ui;padding:24px}
 canvas{display:none}button{font:14px system-ui;padding:8px 14px}pre{color:#8ea0bb}</style>

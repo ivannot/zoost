@@ -337,7 +337,8 @@ planted defect, and green on the state it is actually meant to allow. `auditchec
 that state, and four cases hold the difference between it and `--offline`.
 
 **Any code change → nothing to package.** Local testing runs straight off the repository:
-`chrome://extensions` → *Load unpacked* → `~/Developer/zoost/apps/<app>`, then hit reload after edits.
+`chrome://extensions` → *Load unpacked* → `<the checkout>/apps/<app>`, or the synced copy `tools/totest.sh`
+writes if the browser is on the other machine. Then hit reload after edits.
 No zip, no reinstall. Just tell me what to look at and what should have changed.
 
 **Commit messages carry no co-author trailer, and no attribution of any kind.** Not `Co-Authored-By`,

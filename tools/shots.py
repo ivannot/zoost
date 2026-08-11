@@ -44,10 +44,14 @@ OUT = ROOT / "dist" / "shots"
 def _chrome() -> str:
     """Where Chrome is. It was one macOS path, which is the whole of what stopped these tools
     running anywhere else - the renders, the graph payloads and every headless probe go through it.
-    CHROME in the environment wins, so a machine with it somewhere odd needs no edit here."""
+    `CHROME` wins, from the environment or from `tools/machine.env`, so a machine with it somewhere
+    odd records that once in the one file this repository keeps such values in, rather than exporting
+    it into every session. The macOS location below is a probe guarded by `is_file()`, not an
+    assumption."""
     import shutil
-    if os.environ.get("CHROME"):
-        return os.environ["CHROME"]
+    import machine
+    if machine.get("CHROME"):
+        return machine.get("CHROME")
     mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     if pathlib.Path(mac).is_file():
         return mac
