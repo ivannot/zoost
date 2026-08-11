@@ -580,10 +580,17 @@ def main() -> int:
         for f in findings:
             print('  ' + f)
     print()
+    # The clean line has to say what was actually looked at. `--before-tag` can now end in «0
+    # findings», which `--offline` never could, and the sentence it inherited opened by asserting
+    # that what is served matches the repository - about a run that did not fetch a single page.
+    # A summary is a claim like any other on the way out of this file.
     print(f'{len(findings)} finding(s). A release should not be tagged over these.'
           if findings else
-          '0 findings. What is served is what is in the repository, the store copy matches the '
-          'manifests, and every absolute claim has been read.')
+          ('0 findings. The store copy matches the manifests and every absolute claim has been read. '
+           'The live site was not looked at: run this without a flag once the push has landed.'
+           if offline else
+           '0 findings. What is served is what is in the repository, the store copy matches the '
+           'manifests, and every absolute claim has been read.'))
     return 1 if findings else 0
 
 

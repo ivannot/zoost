@@ -1827,6 +1827,17 @@ class TheGateOnTheTagCanBePassed(unittest.TestCase):
         self.assertTrue(any('not committed' in f for f in findings),
                         'the gate would tag a tree nobody else can see')
 
+    def test_a_clean_run_says_what_it_actually_looked_at(self):
+        # --before-tag can end in «0 findings», which --offline never could, so it inherited a
+        # sentence opening «What is served is what is in the repository» from a run that fetched
+        # nothing. A summary is a claim like any other.
+        src = (ROOT / 'tools' / 'auditcheck.py').read_text(encoding='utf-8')
+        tail = src[src.index("print(f'{len(findings)} finding(s)"):]
+        i, j = tail.index('0 findings.'), tail.index('What is served')
+        self.assertLess(i, j, 'the clean line asserts the live comparison unconditionally')
+        self.assertIn('live site was not looked at', tail[i:j],
+                      'a run that skipped the site can still claim the site matches')
+
     def test_release_runs_the_gate_that_can_pass(self):
         src = (ROOT / 'tools' / 'release.sh').read_text(encoding='utf-8')
         self.assertIn('auditcheck.py --before-tag', src)
