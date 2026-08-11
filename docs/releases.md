@@ -165,6 +165,40 @@ a new "never" or "only" has to be read once, deliberately, before it ships — p
 run would be the checker nobody reads. `--accept` records them; `--offline` skips the network. Like
 `reachcheck.sh` it is **not** in `tests/run.sh`: it needs the live site.
 
+**A store listing is a working document, and the ledger used to read all of it.** These files wrap
+the fields that get pasted into Google's dashboard in prose addressed to us: a paragraph naming which
+checks read the file, a "Notes before submitting" list, and - the day this was found - a note saying
+§9 has to be pasted again at the next submission. Read whole, those sentences land on a ledger of
+**public claims**, and the note had to be reworded to avoid the word "every" so that a release gate
+would go quiet. That is the tail wagging the dog: nothing we write to ourselves is a claim to anyone.
+
+**The boundary is the numbered section, and "the fenced block" was the wrong answer by one section.**
+Nine of them are a fenced block, which is what `storecopy.SECTION` copies to the clipboard one field
+at a time - so reusing that pattern looks like the whole job. But `## 10. Data disclosures` is a
+table and a blockquote rather than a paste field, because it is a set of dashboard checkboxes with a
+justification under them, and that justification is where **"Nothing is sent to the developer"** and
+**"the rows inside tables are never sent"** are promised. Reading fenced blocks alone would have
+dropped the strongest claims in the file, in silence. `sitecheck` once made the mirror-image mistake
+on these same files - it *stripped* the fences and passed on prose it had never read - so the rule is
+now: everything under a `## <n>.` heading is outward, everything else in the file is ours. The fenced
+body is preferred where there is one, and `storecopy.SECTION` is imported rather than restated.
+
+**Narrowing a checker's input is the moment it can go quiet and call it clean.** Only *additions* are
+reported, by design, so claims that disappear are invisible by construction: if a heading is
+reformatted the pattern matches nothing, the listing contributes nothing, and the run says «0 new» -
+the right answer to the wrong question. A listing that parses to no section is therefore a finding of
+its own. The first version of that guard read `not lines` and would never have fired, because
+splitting an empty string yields `['']`, a list of one; the test caught it, which is the argument for
+writing the test before trusting the guard.
+
+**The count moved from 915 to 909, and the six that left are all ours** - two file-title paragraphs,
+"Before every resubmission: re-read §2…", two "Notes before submitting" bullets, and a note about
+what the "WHAT IT DOES NOT DO" lines promise. Eight more were *re-keyed* rather than removed, which
+exposed a second defect nobody had reported: a section's first sentence had its own heading and the
+opening backticks glued to the front of it, because there is no full stop between them. So what the
+ledger held was never the sentence as published, and renaming a heading - or changing a `max` - put a
+real claim back on the ledger as unread. Both are fixed by the same change.
+
 **It reads `site/it/` too, and the Italian words are in `ABSOLUTE` for the same reason the English
 ones are** — «non scrive mai su Zoho» is exactly the sentence that fell to one POST, and a page
 nobody's ledger reads is a page where an overstatement ships unread. It earned that immediately: the

@@ -1459,6 +1459,80 @@ class TheCardIsOneOfTheImages(unittest.TestCase):
         self.assertTrue(said, f'the check went red about something else: {out.getvalue()}')
 
 
+class OnlyWhatGoesInTheDashboardIsAPublicClaim(unittest.TestCase):
+    """A store listing is a working document wrapped around the fields that get pasted into Google's
+    dashboard, and the absolutes ledger used to read it whole. So a note we wrote to ourselves - one
+    added the same day, about pasting §9 again - landed on a ledger of public claims and had to be
+    reworded to avoid the word "every". The tail wagging the dog.
+
+    The boundary is the numbered section, and getting that wrong has a precedent on these same files:
+    `sitecheck` once *stripped* the fenced blocks and passed on prose it had never read. Narrowing to
+    the fences alone would have made the mirror-image mistake, because `## 10. Data disclosures` is a
+    table and a blockquote rather than a paste field - and that blockquote is where "Nothing is sent
+    to the developer" is promised.
+    """
+
+    CLAIM = 'It never sends anything anywhere, in every case.'
+
+    def listing(self, tmp, body):
+        d = Path(tmp) / 'store' / 'example'
+        d.mkdir(parents=True)
+        f = d / 'store-listing.md'
+        f.write_text(body, encoding='utf-8')
+        return f
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import auditcheck
+        self.auditcheck = auditcheck
+
+    def test_a_claim_inside_a_numbered_section_is_read(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = self.listing(tmp, f'# Title\n\n## 1. Item name\n\n```\n{self.CLAIM}\n```\n')
+            self.assertIn(self.CLAIM, self.auditcheck.sentences(f),
+                          'a claim in the copy that gets pasted is not being read')
+
+    def test_the_same_claim_outside_the_sections_is_not(self):
+        # Verbatim the same sentence, above the first section and in the trailing notes: neither is
+        # something Google is ever shown.
+        with tempfile.TemporaryDirectory() as tmp:
+            f = self.listing(tmp, f'# Title\n\n{self.CLAIM}\n\n## 1. Item name\n\n```\nZoost.\n```\n\n'
+                                  f'## Notes before submitting\n\n- {self.CLAIM}\n')
+            read = ' '.join(self.auditcheck.sentences(f))
+            self.assertNotIn('never sends anything', read,
+                             'a note written to ourselves is being held as a public claim')
+
+    def test_a_section_with_no_fence_is_still_outward(self):
+        # §10 is checkboxes and a justification, not a paste field. Reading fenced blocks only would
+        # have dropped it in silence, which is the whole failure mode being guarded against.
+        with tempfile.TemporaryDirectory() as tmp:
+            f = self.listing(tmp, f'# Title\n\n## 10. Data disclosures\n\n| a | b |\n|---|---|\n\n'
+                                  f'> {self.CLAIM}\n')
+            self.assertIn(self.CLAIM, ' '.join(self.auditcheck.sentences(f)),
+                          'an unfenced dashboard field is no longer read')
+
+    def test_the_real_listings_still_parse(self):
+        # The guard above is worth nothing if the pattern stops matching the files it exists for.
+        for app in ('crm', 'analytics'):
+            f = ROOT / 'store' / app / 'store-listing.md'
+            n = len(self.auditcheck.NUMBERED.findall(f.read_text(encoding='utf-8')))
+            self.assertGreaterEqual(n, 9, f'{app}: {n} numbered section(s) parsed out of the listing')
+
+    def test_a_listing_that_parses_to_nothing_is_a_finding(self):
+        # Narrowing the input is the moment a checker can start reporting nothing and calling it
+        # clean: only additions are reported, so claims that vanish are invisible by construction.
+        with tempfile.TemporaryDirectory() as tmp:
+            self.listing(tmp, '# Title\n\nNo numbered section anywhere in this file.\n')
+            keep = self.auditcheck.ROOT
+            try:
+                self.auditcheck.ROOT = Path(tmp)
+                _, quiet = self.auditcheck.absolutes()
+            finally:
+                self.auditcheck.ROOT = keep
+        self.assertTrue(quiet, 'a listing nothing could be read out of passed as clean')
+        self.assertIn('store-listing.md', quiet[0])
+
+
 class TheReleaseBodyHasTwoReaders(unittest.TestCase):
     """What changed, then how it was built - in that order, with a line between them.
 

@@ -287,6 +287,11 @@ ABSOLUTE = re.compile(r'\b(never|always|cannot|nothing|no one|every|only|all of'
                       r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
                       r'|\bread-only\b|\bsola lettura\b', re.I)
 OUTWARD = ['site/*.html', 'site/*.txt', 'site/it/*.html', 'README.md', 'store/*/store-listing.md']
+# A dashboard field, fenced or not. The numbering is the file's own, the same one `storecopy.SECTION`
+# reads - this matches the heading and stops at the next one, so a section with no fence (the data
+# disclosures: a table and a blockquote) is still outward prose. Anything not under a numbered
+# heading is a note to ourselves.
+NUMBERED = re.compile(r'^## \d+\.[^\n]*\n(?P<body>.*?)(?=^## |\Z)', re.S | re.M)
 
 
 def sentences(path: Path) -> list:
@@ -299,9 +304,38 @@ def sentences(path: Path) -> list:
     being read, which is the failure mode this file exists to avoid. The header and footer are
     identical everywhere and `sitecheck` already compares them; what belongs here is what each page
     actually asserts.
+
+    A store listing is the same problem with a sharper boundary. The file is a working document -
+    a paragraph about which checks read it, a "Notes before submitting" list, sometimes a note to
+    whoever submits next - wrapped around the fields that are actually pasted into the dashboard.
+    Read whole, a sentence we wrote to ourselves lands on a ledger of public claims: a note added
+    today had to be reworded to avoid the word "every", which is the tail wagging the dog.
+
+    **The boundary is the numbered section, not the fence.** Nine of them are a fenced block and
+    `storecopy` copies those to the clipboard one at a time; `## 10. Data disclosures` is a table and
+    a blockquote, because it is a set of dashboard checkboxes and their justification rather than a
+    paste field - and that blockquote says "Nothing is sent to the developer" and "the rows inside
+    tables are never sent", which is exactly the kind of claim this ledger exists to hold. Reading
+    fenced blocks alone would have dropped it silently. `sitecheck` once made the mirror-image
+    mistake on these same files - it *stripped* the fences and passed on prose it had never read -
+    so the rule is: everything under a `## <n>.` heading is outward, everything else in the file is
+    ours. The fenced body is preferred where there is one, which drops the heading and the backticks
+    from the first sentence of each section; `storecopy.SECTION` is imported rather than restated,
+    because two copies of the pattern that decides what is published would drift.
+
+    A listing yielding no numbered section at all is a finding rather than an empty list - see
+    `absolutes()`.
     """
     s = path.read_text(encoding='utf-8')
-    if path.suffix == '.html':
+    if path.name == 'store-listing.md':
+        import storecopy                     # tools/ is on sys.path: this file lives in it
+        out = []
+        for m in NUMBERED.finditer(s):
+            body = m.group(0)
+            fenced = storecopy.SECTION.search(body)
+            out.append(fenced.group('body') if fenced else m.group('body'))
+        s = '\n\n'.join(out)
+    elif path.suffix == '.html':
         s = re.sub(r'<(script|style)[\s\S]*?</\1>', ' ', s)
         # A stamp is a date or a version written by tools/stamp.py, and it moves whenever the page
         # does. Left in, it becomes part of the key of whatever sentence it sits in, so an unchanged
@@ -316,14 +350,30 @@ def sentences(path: Path) -> list:
     return [' '.join(x.split()) for x in re.split(r'(?<=[.!?])\s+', ' '.join(s.split()))]
 
 
-def absolutes() -> dict:
-    out = {}
+def absolutes() -> tuple:
+    """Every absolute in outward prose, keyed by the sentence, plus the files that went quiet.
+
+    Narrowing a checker's input is the moment it can start reporting nothing and calling it clean:
+    if a heading is reformatted or a fence loses a backtick, `SECTION` matches nothing, the listing
+    contributes no sentences, and a differential ledger says «0 new» - the correct answer to the
+    wrong question. Disappearing claims are invisible here by construction, because only additions
+    are reported. So an empty parse is a finding of its own.
+    """
+    out, quiet = {}, []
     for pattern in OUTWARD:
         for p in sorted(ROOT.glob(pattern)):
-            for line in sentences(p):
+            lines = sentences(p)
+            # `not lines` is the wrong test and looked like the right one: splitting an empty string
+            # yields [''], a list of one, which is truthy - so the guard would have stayed silent in
+            # precisely the case it exists for. Found by the test, not by reading.
+            if p.name == 'store-listing.md' and not any(l.strip() for l in lines):
+                quiet.append(f'{p.relative_to(ROOT)}: no fenced section parsed out of it, so none of '
+                             f'the copy that gets pasted into the dashboard was read - a heading or a '
+                             f'fence has moved away from what tools/storecopy.py matches')
+            for line in lines:
                 if len(line) > 8 and ABSOLUTE.search(line):
                     out[hashlib.sha256(line.encode()).hexdigest()[:16]] = f'{p.relative_to(ROOT)}: {line}'
-    return out
+    return out, quiet
 
 
 def absolutes_reviewed(findings: list, notes: list, accept: bool) -> None:
@@ -335,7 +385,8 @@ def absolutes_reviewed(findings: list, notes: list, accept: bool) -> None:
     what is **new since the last time they were accepted**, and fails until someone accepts. That is
     the whole mechanism — a new absolute gets read once, deliberately, before it ships.
     """
-    now = absolutes()
+    now, quiet = absolutes()
+    findings.extend(quiet)      # before the branch: a file that was not read must not be accepted either
     if accept:
         BASELINE.write_text('\n'.join(f'{k}  {v}' for k, v in sorted(now.items(), key=lambda kv: kv[1])) + '\n',
                             encoding='utf-8')

@@ -22,7 +22,10 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SECTION = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?\n\n```\n(.*?)\n```', re.S | re.M)
+# The fenced body is named because a second reader depends on it: `auditcheck` reads absolute claims
+# out of `(?P<body>...)` and nothing else in these files, so the fence is the boundary between what is
+# published and what we write to ourselves. A name is additive - it is still group 4 to the code below.
+SECTION = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?\n\n```\n(?P<body>.*?)\n```', re.S | re.M)
 
 
 def clipboard() -> list:
