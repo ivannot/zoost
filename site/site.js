@@ -40,14 +40,16 @@
       store: 'On the Web Store', release: 'Latest release', dev: 'In development',
       review: 'Awaiting review', updated: 'Site updated',
       rejected: 'Rejected', staged: 'Approved, not yet published',
-      submitted: 'submitted ', awaiting: ', awaiting review', notSubmitted: 'not submitted yet',
+      submitted: 'submitted ', awaiting: ', awaiting review', awaitingOnly: 'awaiting review',
+      notSubmitted: 'not submitted yet',
       none: 'none yet', unknown: 'unknown',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
       review: 'In revisione', updated: 'Sito aggiornato',
       rejected: 'Rifiutata', staged: 'Approvata, non ancora pubblicata',
-      submitted: 'inviata il ', awaiting: ', in attesa di revisione', notSubmitted: 'non ancora inviata',
+      submitted: 'inviata il ', awaiting: ', in attesa di revisione', awaitingOnly: 'in attesa di revisione',
+      notSubmitted: 'non ancora inviata',
       none: 'nessuna', unknown: 'sconosciuta',
     },
   };
@@ -129,12 +131,12 @@
         // is ahead of the Store but has no such row has *not* been submitted as far as anyone can
         // tell, and saying "submission pending" there would be asserting something we never
         // measured - the same shape as every claim this project has had to walk back.
-        var ahead = '';
-        if (newer(verOf(v.tag), v.store)) {
-          ahead = v.submitted
-            ? ' <i>' + t('submitted') + esc(fmtDate(v.submitted) || v.submitted) + t('awaiting') + '</i>'
-            : ' <i>' + t('notSubmitted') + '</i>';
-        }
+        var p = v.pending;
+        var when = v.submitted || (p && p.date);
+        var stamp = when ? t('submitted') + esc(fmtDate(when) || when) : '';
+        var state = releaseState(v);
+        var ahead = state === 'awaiting' ? ' <i>' + (stamp ? stamp + t('awaiting') : t('awaitingOnly')) + '</i>'
+          : state === 'notSubmitted' ? ' <i>' + t('notSubmitted') + '</i>' : '';
         // What is actually in review, when that is not the newest tag. Without this the page said
         // "latest release 1.11.0 not submitted yet" and gave no sign that 1.9.0 was in review - every
         // word true, the reader misled. Shown only when it adds a fact: newer than the Store, and
@@ -145,7 +147,6 @@
         // version Google had already turned down, indefinitely. An unknown state is not rendered
         // rather than being folded into the nearest one we recognise.
         var review = '';
-        var p = v.pending;
         var LBL = { PENDING_REVIEW: 'review', REJECTED: 'rejected', STAGED: 'staged' };
         // Said only when it adds a fact. The release line above already reads "1.38.4, submitted 7
         // Aug, awaiting review" when the newest tag is the one in the queue, and repeating it is how
@@ -156,8 +157,8 @@
         if (p && p.version && LBL[p.state] && newer(p.version, v.store) && !repeats) {
           // The date is the one thing the API does not report — it says which state a revision is
           // in, never when it entered it — so it is stated only when RELEASES.md has recorded it.
-          var when = p.date ? ' <i>' + t('submitted') + esc(fmtDate(p.date) || p.date) + '</i>' : '';
-          review = '<span class="vitem"><b>' + t(LBL[p.state]) + '</b> ' + esc(p.version) + when + '</span>';
+          var dated = p.date ? ' <i>' + t('submitted') + esc(fmtDate(p.date) || p.date) + '</i>' : '';
+          review = '<span class="vitem"><b>' + t(LBL[p.state]) + '</b> ' + esc(p.version) + dated + '</span>';
         }
         bits.push(
           '<div class="vrow">' +
@@ -203,6 +204,27 @@
 
   // A tag is `<app>-v1.9.0`; the version is what follows the -v. Compared numerically, because
   // "1.10.0" sorts before "1.9.0" as text and the badge would then claim a release is behind.
+  /** What the release line may say about a tag that is ahead of the Store.
+   *
+   *  Google is the authority on the *state*, `RELEASES.md` on the *date*, and neither can stand in
+   *  for the other. This read the row alone, so with 1.39.0 sitting in the review queue - which the
+   *  API said in as many words - the page announced «not submitted yet» because nobody had typed
+   *  the row yet. Two mechanisms each deferring to the other, and the badge ending up asserting the
+   *  opposite of the one source that knows.
+   *
+   *  'quiet' is a real answer and not a shrug: a rejected or approved-not-yet-published revision is
+   *  stated by the line above, and «awaiting review» beside it would be the badge contradicting
+   *  itself - which is the same defect one state over. */
+  function releaseState(v) {
+    var tag = verOf(v.tag);
+    if (!newer(tag, v.store)) return 'quiet';
+    var p = v.pending;
+    var mine = p && p.version === tag ? p.state : null;    // what Google says about *this* version
+    if (mine) return mine === 'PENDING_REVIEW' ? 'awaiting' : 'quiet';
+    if (v.submitted) return 'awaiting';
+    if (p && p.version && newer(p.version, v.store)) return 'quiet';   // something else is in the queue
+    return 'notSubmitted';
+  }
   function verOf(tag) { var m = /-v(\d+\.\d+\.\d+)$/.exec(tag || ''); return m ? m[1] : null; }
   function newer(a, b) {
     if (!a) return false;

@@ -33,6 +33,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` | 2026-08-05 |
 | crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `5818741130e1b683b9e784402b591493e03803fb9f086204391b808ddc4e1045` | 2026-08-07 |
 | analytics | 1.22.4 | `analytics-v1.22.4` | `3d03074` | `a6c8d4c0935c44851e706d8b809c01eb8be0489e4a259e5f7dcf04ce81181781` | 2026-08-09 |
+| crm | 1.39.0 | `crm-v1.39.0` | `5d101c8` | `07b2eeab2d36f1db349907f9de747406805a3fa27950331d5be4f4411a625bc2` | 2026-08-10 |
 
 ## What this table cannot tell you, and why
 

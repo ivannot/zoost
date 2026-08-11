@@ -278,6 +278,35 @@ test('a malformed row in the ledger is skipped, not read', () => {
   assert.equal(subs.crm['1.2.4'], '2026-02-02');
 });
 
+// Reported from the live footer: «On the Web Store 1.38.4 · Latest release 1.39.0 not submitted
+// yet» about a version that was in Google's review queue at that moment - /api/versions said
+// PENDING_REVIEW in as many words. The state came from the API, the date from RELEASES.md, and the
+// line read the row alone: with no row typed yet it announced the opposite of what the one
+// authoritative source said. Run rather than grepped - a regex over the source would have agreed
+// with every version of this logic, including the wrong one.
+test('the release line takes the state from Google and only the date from the ledger', () => {
+  const { releaseState } = load([
+    sliceFn('site/site.js', 'verOf'),
+    sliceFn('site/site.js', 'newer'),
+    sliceFn('site/site.js', 'releaseState'),
+  ]);
+  const p = (version, state, date) => ({ version, state, date: date || null });
+  // the reported case: in the queue, no row in the ledger yet
+  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'PENDING_REVIEW') }), 'awaiting');
+  // the ledger alone still answers when the API could not be reached
+  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: '2026-08-10', pending: null }), 'awaiting');
+  // genuinely not submitted: nothing in the queue and no row
+  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: null }), 'notSubmitted');
+  // refused, and the row says it was submitted: the state wins, and the line above says which
+  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: '2026-08-10', pending: p('1.39.0', 'REJECTED') }), 'quiet');
+  // an older version is the one in the queue - that is the other line's subject
+  assert.equal(releaseState({ tag: 'crm-v1.40.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'PENDING_REVIEW') }), 'quiet');
+  // nothing to say at all: the tag is what the Store already serves
+  assert.equal(releaseState({ tag: 'crm-v1.38.4', store: '1.38.4', submitted: null, pending: null }), 'quiet');
+  // a state nobody here recognises is not folded into «awaiting»
+  assert.equal(releaseState({ tag: 'crm-v1.39.0', store: '1.38.4', submitted: null, pending: p('1.39.0', 'SOMETHING_NEW') }), 'quiet');
+});
+
 test('the footer says what is in review only when it adds a fact', () => {
   const src = read('site/site.js');
   assert.ok(/var repeats = p && p\.state === 'PENDING_REVIEW' && p\.version === verOf\(v\.tag\)/.test(src),
