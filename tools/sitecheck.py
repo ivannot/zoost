@@ -371,9 +371,19 @@ def data_centre_count_is_derived(findings: list) -> None:
 TRANSLATED_FROM = re.compile(r'<!--\s*translated-from:\s*(\S+)\s*sha256:([0-9a-f]{8,64})\s*-->')
 
 
+# The cache-busting token on an asset URL, which `tools/siteimg.py` writes from the asset's own
+# bytes. It is not prose: re-rendering a screenshot must not report every translation as behind.
+STAMPED_URL = re.compile(r'(\.(?:webp|png|css|js))\?v=[0-9a-f]+')
+
+
 def source_digest(path: pathlib.Path) -> str:
-    """A short digest of the English page's bytes."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    """A short digest of the English page, with the asset stamps normalised out.
+
+    They were in it, and the first re-render after they arrived reported every translated page as
+    stale - a finding with nothing behind it, in the one check whose value is that its findings are
+    real. A token changing is a picture changing, which is not a reason to re-read a translation."""
+    return hashlib.sha256(STAMPED_URL.sub(r'\1', path.read_text(encoding='utf-8'))
+                          .encode('utf-8')).hexdigest()[:16]
 
 
 def translations_current(findings: list) -> None:

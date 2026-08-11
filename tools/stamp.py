@@ -31,6 +31,7 @@ Two rules that are not arbitrary:
 """
 import argparse
 import datetime
+import hashlib
 import pathlib
 import re
 import subprocess
@@ -111,6 +112,44 @@ def stamped(rel: str) -> tuple:
     return STAMP.sub(one, html), changes
 
 
+# Assets are cached for a week and their names carry no hash, so the same URL served different
+# bytes: a reader who had seen a page before the diagram window was renamed went on being shown
+# «Functions» where it now says «Wiring», for up to seven days. Reported. The token is the asset's
+# **own digest**, per asset - a release number would leave anything that changed between releases
+# serving the old copy, which is this bug again with a slower fuse.
+#
+# A query string rather than a new filename: the browser keys on the whole URL, so it busts, while
+# the file keeps one name - nothing accumulates orphans and `og:image` stays a clean URL. And it is
+# what lets `site.css` and `site.js` be cached at all: they were deliberately left on a short cache
+# because a returning reader could otherwise pair new HTML with an old stylesheet.
+ASSET = re.compile(r'(?:src|href)="/((?:img/)?[\w.-]+\.(?:webp|png|css|js))(\?v=[0-9a-f]+)?"')
+
+
+def asset_token(rel: str) -> str:
+    f = SITE / rel
+    return hashlib.sha256(f.read_bytes()).hexdigest()[:10] if f.exists() else ''
+
+
+def stamp_assets(check: bool = False) -> list:
+    """Rewrite every asset URL on every page with that asset's digest. Returns what was behind."""
+    behind = []
+    for page in sorted(SITE.rglob('*.html')):
+        html = page.read_text(encoding='utf-8')
+
+        def one(m):
+            rel, had, tok = m.group(1), m.group(2) or '', asset_token(m.group(1))
+            if not tok or had == f'?v={tok}':
+                return m.group(0)
+            behind.append(f'site/{page.relative_to(SITE)}: /{rel} is stamped {had[3:] or "(not at all)"}, '
+                          f'its bytes hash to {tok}')
+            return m.group(0).replace(m.group(1) + had, f'{rel}?v={tok}')
+
+        out = ASSET.sub(one, html)
+        if out != html and not check:
+            page.write_text(out, encoding='utf-8')
+    return behind
+
+
 def pages() -> list:
     return sorted(str(p.relative_to(SITE)) for p in SITE.rglob('*.html')
                   if 'data-stamp="' in p.read_text(encoding='utf-8'))
@@ -121,6 +160,7 @@ def main() -> int:
     ap.add_argument('--check', action='store_true', help='report drift instead of writing')
     args = ap.parse_args()
 
+    assets = stamp_assets(check=args.check)
     found = pages()
     if not found:
         print('no stamped element anywhere under site/ - has data-stamp been renamed?')
@@ -137,14 +177,18 @@ def main() -> int:
 
     n = sum(1 for rel in found for _ in STAMP.finditer((SITE / rel).read_text(encoding='utf-8')))
     if args.check:
-        if not drift:
-            print(f'{n} stamp(s) across {len(found)} page(s) are what the systems say they are')
+        if not drift and not assets:
+            print(f'{n} stamp(s) across {len(found)} page(s) are what the systems say they are, '
+                  f'and every asset URL carries its own digest')
             return 0
+        for a in assets:
+            print(f'  {a} - run: python3 tools/stamp.py')
         print(f'{len(drift)} stamp(s) not derived - run: python3 tools/stamp.py')
         for rel, kind, was, now in drift:
             print(f'  site/{rel}: {kind} says "{was}", it is "{now}"')
         return 1
-    print(f'{n} stamp(s) across {len(found)} page(s); {written} page(s) rewritten')
+    print(f'{n} stamp(s) across {len(found)} page(s); {written} page(s) rewritten; '
+          f'{len(assets)} asset URL(s) restamped')
     return 0
 
 

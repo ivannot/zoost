@@ -20,6 +20,7 @@ builds the extension, and nothing under `apps/` gains a dependency.
 """
 import hashlib
 import json
+import re
 import pathlib
 import shutil
 import subprocess
@@ -29,6 +30,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import shots  # noqa: E402  - the renderers, the fixture wiring and the click scripts all live there
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+SITE = ROOT / "site"
 OUT = ROOT / "site" / "img"
 LEDGER = ROOT / "tools" / "imgstamp.json"
 WIDTH = 1760      # 2x the 880px the content column reaches at its widest
@@ -163,6 +165,12 @@ def main() -> int:
         print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}")
     # The 2x renders are working material - what is published is site/img/. Leaving them in dist/
     # meant a folder of PNGs that look like something to upload and are not.
+    # One implementation, in the tool that owns everything a page prints and is derived. A picture
+    # that changed is a URL that changed, so a week's cache cannot serve last week's screenshot.
+    import stamp as stamptool
+    moved = stamptool.stamp_assets()
+    if moved:
+        print(f"  {len(moved)} asset URL(s) restamped")
     for f in shots.OUT.glob("*.png"):
         f.unlink()
     try:

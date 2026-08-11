@@ -25,5 +25,16 @@
 /img/*
   Cache-Control: public, max-age=604800
 
+# site.css and site.js were deliberately left on the short default: their names carry no hash, so a
+# week's cache would let a returning reader pair new HTML with an old stylesheet and see a broken
+# page until it expired. That trade needed versioned URLs first - which is what `?v=<digest>` is, so
+# they can have the week now. The token is written by tools/stamp.py from each file's own bytes, and
+# tools/imgcheck.py fails if any page carries one that is not its asset's.
+/site.css
+  Cache-Control: public, max-age=604800
+
+/site.js
+  Cache-Control: public, max-age=604800
+
 /site.webmanifest
   Cache-Control: public, max-age=86400

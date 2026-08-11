@@ -25,6 +25,7 @@ Five checks, all derived, none holding a list of pages:
 
     python3 tools/imgcheck.py
 """
+import hashlib
 import json
 import pathlib
 import re
@@ -79,12 +80,22 @@ def main() -> int:
         figs = re.findall(r"<figure class=\"shot\">([\s\S]*?)</figure>", html)
         per_page[rel] = len(figs)
         for tag in re.findall(r"<img\b[^>]*>", html):
-            m = re.search(r'src="/img/([^"]+)\.webp"', tag)
+            m = re.search(r'src="/img/([\w-]+)\.webp(\?v=([0-9a-f]+))?"', tag)
             if not m:
                 continue
             used.add(m.group(1))
             if m.group(1) not in published:
                 findings.append(f"{rel}: uses /img/{m.group(1)}.webp, which does not exist")
+            else:
+                # The token is the image's own digest, and a wrong one is worse than none: the URL
+                # stops changing when the picture does, and a week's cache goes on serving the copy
+                # a reader already has. That is the defect this replaced, so it is what is checked -
+                # not that a token exists, but that it is *this* file's.
+                want = hashlib.sha256((IMG / f"{m.group(1)}.webp").read_bytes()).hexdigest()[:10]
+                if m.group(3) != want:
+                    findings.append(f"{rel}: /img/{m.group(1)}.webp is stamped "
+                                    f"{m.group(3) or '(not at all)'} and its bytes hash to {want} - "
+                                    f"run python3 tools/siteimg.py")
             alt = re.search(r'alt="([^"]*)"', tag)
             if not alt or not alt.group(1).strip():
                 findings.append(f"{rel}: /img/{m.group(1)}.webp has no alt text - it is the only "
@@ -97,7 +108,6 @@ def main() -> int:
     # detail pane grew tabs and the preview shot stopped opening one - each still existed, each was
     # still used, so every check above stayed quiet while the home page carried a caption about
     # callers and a size over a screenshot of the source. A hash is the only thing that sees it.
-    import hashlib
     seen = {}
     for f in sorted(IMG.glob("*.webp")):
         seen.setdefault(hashlib.sha256(f.read_bytes()).hexdigest(), []).append(f.stem)

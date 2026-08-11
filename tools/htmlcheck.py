@@ -120,6 +120,10 @@ def display_override(path) -> list:
         return []
     css = ' '.join(m.group(1) for m in STYLE_BLOCK.finditer(src))
     for href in re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', src):
+        # `?v=<digest>` is a cache-busting token, not part of the path: with it left on, the sheet
+        # was never found and this went quiet about every page that links one - which is the whole
+        # site, and the reason this check was widened in the first place.
+        href = href.split('?', 1)[0]
         sheet = (ROOT / 'site' / href.lstrip('/')) if href.startswith('/') else (path.parent / href)
         if sheet.is_file():
             css += ' ' + sheet.read_text(encoding='utf-8')
