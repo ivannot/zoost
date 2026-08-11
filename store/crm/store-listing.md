@@ -1,6 +1,6 @@
 # Zoost - Chrome Web Store submission copy
 
-`auditcheck.py` compares §1 and §2 against `apps/crm/manifest.json` on every run, so this file cannot fall behind it - which is why no version or date is written here: a number typed once is a claim that goes stale in silence, and the check does not.
+`auditcheck.py` compares the item name and the short description below against `apps/crm/manifest.json` on every run, and `sitecheck.py` counts every section against the ceiling its own heading declares. No version or date is written here: a number typed once goes stale in silence, which is what the two lines that used to sit here did.
 
 `short_name` and the toolbar tooltip are browser-UI fields and do not appear on the Store listing,
 so changing them does not touch anything below.

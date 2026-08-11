@@ -303,6 +303,11 @@ def sentences(path: Path) -> list:
     s = path.read_text(encoding='utf-8')
     if path.suffix == '.html':
         s = re.sub(r'<(script|style)[\s\S]*?</\1>', ' ', s)
+        # A stamp is a date or a version written by tools/stamp.py, and it moves whenever the page
+        # does. Left in, it becomes part of the key of whatever sentence it sits in, so an unchanged
+        # claim re-enters this ledger as new every time the file is touched - noise, in the one check
+        # whose whole value is that its findings are rare enough to be read.
+        s = re.sub(r'<(\w+)[^>]*\bdata-stamp="[^"]*"[^>]*>.*?</\1>', ' ', s, flags=re.S)
         s = re.sub(r'<(header|footer)\b[\s\S]*?</\1>', ' ', s)
         m = re.search(r'<main\b[^>]*>([\s\S]*?)</main>', s)
         if m:
