@@ -1758,6 +1758,82 @@ class TheNotesAreOneIndexedSet(unittest.TestCase):
             self.assertGreater(len(why), 40, f'"{why}" does not say when to open the file')
 
 
+class TheGateOnTheTagCanBePassed(unittest.TestCase):
+    """`tools/release.sh` ran `auditcheck --offline`, which reports the skipped live comparison as a
+    finding on purpose - so the gate could never pass, over a line nobody can act on.
+
+    It refused every run from the hour it landed, an hour after the last tag, until somebody tried to
+    cut a release. Nothing was wrong on screen, because nobody ran it: a gate is exercised once per
+    release and this repository had not had one since. Proving a check can *fail* is half of it, and
+    this file says so in several places; the other half is proving it can *pass*, and that half was
+    missing everywhere it is written down.
+
+    Two things are structurally true at tag time and are notes rather than refusals there: the bump
+    commit is not pushed yet (the routine pushes the commit and the tag together, after this), and
+    the site cannot serve a release that does not exist. A dirty tree is not one of them.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import auditcheck
+        self.auditcheck = auditcheck
+
+    def repo(self, tmp):
+        """A real repository, one commit ahead of its upstream, so the state is not simulated."""
+        d, bare = Path(tmp) / 'work', Path(tmp) / 'origin.git'
+        d.mkdir()
+        run = lambda *a: subprocess.run(['git', '-C', str(d), *a], capture_output=True, check=True)
+        subprocess.run(['git', 'init', '--bare', '-q', str(bare)], check=True, capture_output=True)
+        subprocess.run(['git', 'init', '-q', '-b', 'main', str(d)], check=True, capture_output=True)
+        run('config', 'user.email', 'x@example.com'); run('config', 'user.name', 'x')
+        (d / 'a.txt').write_text('one\n')
+        run('add', '-A'); run('commit', '-qm', 'one')
+        run('remote', 'add', 'origin', str(bare))
+        run('push', '-q', '-u', 'origin', 'main')
+        (d / 'a.txt').write_text('two\n')                 # the bump commit, committed and unpushed
+        run('add', '-A'); run('commit', '-qm', 'two')
+        return d
+
+    def state(self, root, **kw):
+        findings, notes = [], []
+        keep = self.auditcheck.ROOT
+        try:
+            self.auditcheck.ROOT = root
+            self.auditcheck.deploy_state(findings, notes, **kw)
+        finally:
+            self.auditcheck.ROOT = keep
+        return findings, notes
+
+    def test_at_tag_time_what_cannot_be_acted_on_is_a_note(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            findings, notes = self.state(self.repo(tmp), offline=True, before_tag=True)
+        self.assertEqual(findings, [], f'the gate refuses over something nobody can fix: {findings}')
+        said = ' '.join(notes)
+        self.assertIn('not pushed', said, 'the gate stopped saying the commit is unpushed at all')
+        self.assertIn('live site was not looked at', said, 'the gate no longer says what it skipped')
+
+    def test_interactively_the_same_two_still_refuse(self):
+        # The reason they exist: four commits sat unpushed while the fix in them was reported as
+        # done. --offline must keep its teeth, or that comes back.
+        with tempfile.TemporaryDirectory() as tmp:
+            findings, _ = self.state(self.repo(tmp), offline=True, before_tag=False)
+        self.assertEqual(len(findings), 2, f'--offline has stopped refusing: {findings}')
+
+    def test_a_dirty_tree_is_a_finding_in_both(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self.repo(tmp)
+            (d / 'a.txt').write_text('three\n')
+            findings, _ = self.state(d, offline=True, before_tag=True)
+        self.assertTrue(any('not committed' in f for f in findings),
+                        'the gate would tag a tree nobody else can see')
+
+    def test_release_runs_the_gate_that_can_pass(self):
+        src = (ROOT / 'tools' / 'release.sh').read_text(encoding='utf-8')
+        self.assertIn('auditcheck.py --before-tag', src)
+        self.assertNotIn('auditcheck.py --offline', src,
+                         'release.sh is back on the mode that refuses over the skip itself')
+
+
 class TheMapNamesTheWholeRepository(unittest.TestCase):
     """The tree at the top of docs/layout.md named four of the eight directories, and `store/crm/`
     described itself as "per app" while `store/analytics/` appeared nowhere.

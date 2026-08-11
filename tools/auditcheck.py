@@ -15,9 +15,16 @@ llms.txt served by zoost.it were still an earlier generation, "not a part: all o
 five pages against the repository refuted it in thirty seconds. That comparison is now section 1, so
 the next time the answer takes no argument at all.
 
-    python3 tools/auditcheck.py            # everything, needs the network
-    python3 tools/auditcheck.py --offline  # skip the live comparison
-    python3 tools/auditcheck.py --accept   # record today's absolute claims as read
+    python3 tools/auditcheck.py             # everything, needs the network
+    python3 tools/auditcheck.py --offline   # skip the live comparison, and say so as a finding
+    python3 tools/auditcheck.py --before-tag  # the gate release.sh runs; see deploy_state()
+    python3 tools/auditcheck.py --accept    # record today's absolute claims as read
+
+`--offline` and `--before-tag` skip the same section and differ in one thing: whether the skip, and
+an unpushed commit, are refusals or notes. Interactively they are refusals, because reporting a fix
+as live when nothing has been deployed is the failure that put them there. At tag time they are
+structurally true and cannot be acted on, so a gate that refused over them could never pass - and
+did not, for the whole hour between it landing and somebody trying to use it.
 
 **Not part of tests/run.sh**, for the same reason `reachcheck.sh` is not: it needs the network and
 the live site, and a suite that fails because DNS was slow is a suite people stop believing. Run it
@@ -436,7 +443,7 @@ def description_repeats_the_name(findings: list, notes: list) -> None:
     notes.append('short descriptions checked against their item name')
 
 
-def deploy_state(findings: list, notes: list, offline: bool) -> None:
+def deploy_state(findings: list, notes: list, offline: bool, before_tag: bool = False) -> None:
     """Is what the repository says even *capable* of being what the site serves?
 
     This exists because of a specific failure, not a hypothetical one. Four commits sat unpushed
@@ -457,20 +464,32 @@ def deploy_state(findings: list, notes: list, offline: bool) -> None:
         except Exception:                                        # noqa: BLE001 — reported, not raised
             return None
 
+    # `--before-tag` is the gate `tools/release.sh` runs, and it exists because the two findings
+    # below are *structurally* true at that moment: the version bump has been committed and not yet
+    # pushed (the routine pushes the commit and the tag together, afterwards), and the site cannot
+    # already serve a release that does not exist. Reported as findings there, the gate could never
+    # pass - which is exactly what it did: the check landed in release.sh an hour after the last tag
+    # and refused every run, unfixably, until somebody tried to cut a release. They are still said
+    # out loud, as notes, because the thing they guard against - claiming "fixed" about a page nobody
+    # has deployed - is real. What changes is only whether they can be acted on.
+    say = notes.append if before_tag else findings.append
+
     ahead = git('rev-list', '--count', '@{upstream}..HEAD')
     if ahead is None:
         notes.append('deploy state unknown: no upstream, or git could not be asked')
     elif ahead != '0':
-        findings.append(f'{ahead} commit(s) are not pushed. The site is built from what GitHub has, '
-                        f'so nothing here can be true of zoost.it until they are — say "in the '
-                        f'repository", not "fixed", until this is 0.')
+        say(f'{ahead} commit(s) are not pushed. The site is built from what GitHub has, '
+            f'so nothing here can be true of zoost.it until they are — say "in the '
+            f'repository", not "fixed", until this is 0.')
     dirty = git('status', '--porcelain')
     if dirty:
+        # Not softened by --before-tag: release.sh refuses a dirty tree before it gets here, so a
+        # dirty tree at this point is a real finding in any mode.
         findings.append(f'{len(dirty.splitlines())} file(s) changed and not committed — the '
                         f'comparison below is against a tree nobody else can see')
     if offline:
-        findings.append('--offline: the live site was not looked at. This run says what the '
-                        'repository holds, and nothing whatever about what zoost.it serves.')
+        say('the live site was not looked at. This run says what the repository holds, and nothing '
+            'whatever about what zoost.it serves.')
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -535,12 +554,16 @@ def published_state_is_stated(findings: list, notes: list) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--offline', action='store_true', help='skip the comparison against the live site')
+    ap.add_argument('--before-tag', action='store_true',
+                    help='the gate release.sh runs: everything the repository can be held to, with '
+                         'what cannot yet be true said as a note rather than refused')
     ap.add_argument('--accept', action='store_true', help='record today’s absolute claims as read')
     args = ap.parse_args()
+    offline = args.offline or args.before_tag
 
     findings, notes = [], []
-    deploy_state(findings, notes, args.offline)
-    if not args.offline:
+    deploy_state(findings, notes, offline, args.before_tag)
+    if not offline:
         live_matches_repo(findings, notes)
         canonicals_answer_without_redirecting(findings, notes)
         worker_routes_answer(findings, notes)

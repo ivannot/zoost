@@ -326,6 +326,16 @@ never typing the command.
 filter that dropped annotated tags — and confirm red, then restore. A suite that has never failed is
 a claim.
 
+**And prove it can pass, which is the half that was missing everywhere this was written.** A gate
+that always refuses is not strict, it is broken, and it looks identical to a strict one until
+somebody needs it. `release.sh` ran `auditcheck --offline`, which reports the skipped live comparison
+as a *finding* by design — so the one step that is public and irreversible refused every run, over a
+line nobody can act on, from the hour it landed until somebody tried to cut a release. It was never
+noticed because a release gate is exercised once per release and there had not been one since. The
+rule is mechanical: **a check that runs rarely gets both proofs on the day it is written** — red on a
+planted defect, and green on the state it is actually meant to allow. `auditcheck --before-tag` is
+that state, and four cases hold the difference between it and `--offline`.
+
 **Any code change → nothing to package.** Local testing runs straight off the repository:
 `chrome://extensions` → *Load unpacked* → `~/Developer/zoost/apps/<app>`, then hit reload after edits.
 No zip, no reinstall. Just tell me what to look at and what should have changed.
@@ -518,6 +528,27 @@ decision would not save work; it would move it somewhere nobody is watching.
 argument in its first version and wrote *both* products down as uploaded when one had been - a
 hand-edited file replaced by an automatic lie, which is worse than what it replaced.
 
+**A rule that is only written down is a rule that will be broken. Writing it is the first of two
+steps.** This file and the nine notes beside it are ~300,000 characters of rules, and the record is
+not ambiguous: **every rule with a checker behind it has held, and every rule that lives only as
+prose has been broken at least once** - several of them by the session that had just read them. The
+reason is not carelessness. A rule is recalled by resemblance to its own *wording*, and a violation
+happens while attention is on something that does not resemble it: the size test asserted the limit
+itself while the rule about a checker firing too late sat two files away, filed under «checkers».
+Volume makes it worse, so answering a broken rule by writing another one is the mechanism that took
+this file to 280k.
+
+So the second step is a question, asked every time: **can this be derived or verified?** If it can,
+the check *is* the rule and the prose is only its explanation - and it goes in on the same day, not
+«later». If it genuinely cannot - when to tag, whether a claim is worth making - then it is attached
+to the **moment** it applies rather than filed by topic: a step in the routine, a line in the tool
+that prints at that moment, a note at the top of the file that will be open when it matters. That is
+why the reminder about §9 sits in `store/crm/store-listing.md` and not in a list of pending things.
+
+**And write the class, not the incident.** A rule written the day after has the shape of that day:
+«grep the claim, not the paragraph» was true of a claim, and did not fire for a claim about a scope,
+or for a block that enumerated directories. Say what the class is, then the instance as evidence.
+
 **Give unsolicited critical opinion.** When I share something — a design, a name, a piece of copy,
 a licence choice — say what is weak about it, what objection someone will raise, what reads badly.
 Do this alongside doing the task, not instead of it. The most valuable moments here have been the
@@ -700,11 +731,25 @@ What that request means, in order. Do all of it without being asked:
    material; the file is written for somebody who has the extension installed and has never read a
    commit. `release.sh` **refuses to tag without it** and so does the workflow, because this is the
    one thing in the release that cannot be added afterwards by anyone but the author.
-3. **`tools/release.sh <app>`** — runs the battery and `auditcheck --offline` and refuses on any
-   finding (it used to refuse a dirty tree and nothing else, so a red suite could be tagged: the one
-   step that is public and irreversible was the one that checked least), verifies the tree, builds
-   twice locally and compares (fast feedback: a non-reproducible build must fail *before* the tag
-   exists), then creates `<app>-v<version>`.
+3. **`tools/release.sh <app>`** — it used to refuse a dirty tree and nothing else, so a red suite
+   could be tagged: the one step that is public and irreversible was the one that checked least. It
+   now refuses on exactly six things, and knowing them beforehand is the difference between a
+   two-minute release and an afternoon:
+
+   | it stops if | fix |
+   |---|---|
+   | the tree is dirty | commit or stash - a release has to be a commit someone else can check out |
+   | `<app>-v<version>` already exists | bump `version` in `apps/<app>/manifest.json` |
+   | `store/<app>/whatsnew/<version>.md` is missing | write it; `python3 tools/whatsnew.py <app>` gathers the material |
+   | `bash tests/run.sh` is red | fix it; a tag is public |
+   | `python3 tools/auditcheck.py --before-tag` has a finding | **most often an unread absolute claim**: read them, then `--accept` |
+   | two local builds of the same commit differ | the build is not reproducible - stop, that guarantee is load-bearing |
+
+   The fifth is the one that surprises, because it fails for something written weeks earlier and
+   nowhere near the release: `--accept` is all-or-nothing, so a single unread claim means reading
+   every pending one. **Run `python3 tools/auditcheck.py` when you finish a piece of work, not when
+   you want to tag.** Then it builds twice and compares - a non-reproducible build must fail *before*
+   the tag exists - and creates `<app>-v<version>`.
 4. **`git push --follow-tags`** — this, and nothing else, starts the public build. GitHub checks out
    the tag, builds it twice, prints `unzip -l` into the public log, signs a provenance attestation
    and publishes the Release.

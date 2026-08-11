@@ -66,14 +66,18 @@ fi
 # The battery, before the tag rather than beside it.
 #
 # This refused a dirty tree and nothing else, so a red suite could be tagged: the one step that is
-# public and irreversible was the one step that checked least. `auditcheck` runs with --offline
-# because the live comparison says nothing until the commit is pushed, which is the step after this
-# one — what it does check here is that the store copy still matches the manifests and that no
-# absolute claim has gone out unread.
+# public and irreversible was the one step that checked least. What it checks here is that the store
+# copy still matches the manifests and that no absolute claim has gone out unread.
+#
+# `--before-tag`, not `--offline`: the live comparison says nothing until the commit is pushed, which
+# is the step after this one, and `--offline` reports that skip as a *finding* - deliberately, so a
+# session cannot call something fixed while nothing is deployed. Behind this gate that made it
+# unpassable: it refused every run, over a line nobody could act on, from the hour it landed until
+# somebody tried to cut a release. Proving a check can fail is half of it; this is the other half.
 echo "== the battery, before anything public happens"
 bash tests/run.sh >/dev/null || { echo "The suite is red. A tag is public; fix it first."; exit 1; }
-python3 tools/auditcheck.py --offline >/dev/null || {
-  echo "auditcheck has findings. Run: python3 tools/auditcheck.py --offline"; exit 1; }
+python3 tools/auditcheck.py --before-tag >/dev/null || {
+  echo "auditcheck has findings. Run: python3 tools/auditcheck.py --before-tag"; exit 1; }
 echo "   suite and checkers pass"
 
 # The build has to be deterministic, and this is where that is proven cheaply:
