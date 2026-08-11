@@ -22,3 +22,6 @@ __pycache__/
 *.pem
 *.key
 .env
+
+# Machine-specific values (paths, mounts): right here, wrong on any other machine.
+tools/machine.env

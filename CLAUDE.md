@@ -584,9 +584,18 @@ pays for it.
 
 What the other machine needs is not the repository - it is `apps/<app>/`, which is what Chrome reads
 when you load an unpacked extension. `bash tools/totest.sh` copies exactly those two directories into
-the synced folder (`/mnt/g/My Drive/zoost-test`, or `ZOOST_TEST_DIR`), one direction, `--delete`, and
-the other machine loads the extension from there. Testing what is still on the working tree is the
-whole reason a `git pull` on the other side would not do.
+the synced folder, one direction, `--delete`, and the other machine loads the extension from there.
+Testing what is still on the working tree is the whole reason a `git pull` on the other side would
+not do.
+
+**Where that folder actually is, is not in this repository.** It is a drive letter and a mount point -
+a property of one machine - so a path committed here is one that is wrong on the next machine while
+looking perfectly right on this one. `ZOOST_TEST_DIR` lives in **`tools/machine.env`**, which is
+git-ignored and is the single place any such value goes; every tracked file says the placeholder.
+`tests/tools_test.py` reads the values out of that file and fails if one has leaked into something
+tracked, and it also refuses machine-shaped absolute paths anywhere in the tree - because the first
+copy of this rule I wrote checked `tools/` and `tests/run.sh` only, and I put the path in **this
+file** in the same commit, under a test that said it was written in one place.
 
 **It is not something to remember: `tests/run.sh` does it first thing, on every run.** "Run it when
 the user asks" was a rule, and this file has just finished establishing that a rule living only as
@@ -599,7 +608,7 @@ instead of reporting success over a folder it never wrote to.
 **Every command says which shell it goes in.** The work now spans a Mac and a Windows PC, and on the
 PC there are three prompts that look alike and are not: **PowerShell**, **cmd**, and the **Ubuntu
 shell** inside WSL. `wsl --shutdown` belongs to Windows and fails inside Ubuntu; `systemctl` is the
-other way round; a path is `G:\My Drive` on one side and `/mnt/g/My Drive` on the other. Say which,
+other way round; a Windows drive is `<letter>:\<folder>` there and `/mnt/<letter>/<folder>` here. Say which,
 every time - a command pasted into the wrong prompt costs a round trip and reads as the instruction
 being wrong.
 

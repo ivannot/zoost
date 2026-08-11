@@ -1792,15 +1792,49 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         self.assertEqual(out.returncode, 1)
         self.assertIn('does not exist', out.stdout)
 
-    def test_the_destination_is_written_in_one_place(self):
-        # Two copies of the path is one careless edit from mirroring into the void, with both files
-        # looking right.
-        hits = [f.relative_to(ROOT) for f in (ROOT / 'tools').glob('*') if f.is_file()
-                and 'zoost-test' in f.read_text(encoding='utf-8', errors='ignore')]
-        hits += [Path('tests/run.sh')] if 'zoost-test' in (ROOT / 'tests' / 'run.sh').read_text(
-            encoding='utf-8') else []
-        self.assertEqual([str(h) for h in hits], ['tools/totest.sh'],
-                         'the default destination is written in more than one file')
+    def tracked(self):
+        out = subprocess.run(['git', '-C', str(ROOT), 'ls-files'], capture_output=True, text=True)
+        for rel in out.stdout.splitlines():
+            f = ROOT / rel
+            if f.suffix in ('.png', '.webp', '.ico', '.zip') or not f.is_file():
+                continue
+            try:
+                yield rel, f.read_text(encoding='utf-8')
+            except UnicodeDecodeError:
+                continue
+
+    def test_no_machine_value_has_leaked_into_a_tracked_file(self):
+        # Derived from the config itself: whatever this machine has configured must appear in no file
+        # anyone else will check out. Silent where there is no config, because then there is nothing
+        # to compare - the pattern case below is what covers that.
+        env = ROOT / 'tools' / 'machine.env'
+        if not env.exists():
+            self.skipTest('no tools/machine.env on this machine')
+        values = [v.strip().strip('\'"') for line in env.read_text(encoding='utf-8').splitlines()
+                  if '=' in line and not line.lstrip().startswith('#')
+                  for v in [line.split('=', 1)[1]] if v.strip().strip('\'"')]
+        self.assertTrue(values, 'tools/machine.env holds nothing')
+        for rel, text in self.tracked():
+            for v in values:
+                self.assertNotIn(v, text, f'{rel} carries a value that belongs to one machine')
+
+    def test_no_tracked_file_names_a_machine_shaped_path(self):
+        # The first version of this checked tools/ and tests/run.sh, and the same commit put the path
+        # in CLAUDE.md - under a test asserting it was written in one place. A hand-picked file list
+        # is not a check, it is a list. This one reads the tree from git and has no allow-list, so
+        # prose that needs to talk about such a path uses a placeholder, as CLAUDE.md now does.
+        # The drive-letter half needs the lookbehind: without it `SQL:\n` in the Analytics panel
+        # matched, and a check with false positives is one that gets switched off. A drive is a
+        # *single* letter, so anything with a letter in front of it is a word ending in a colon.
+        pattern = re.compile(r'/mnt/[a-z]/|/Users/[A-Za-z]|/home/[a-z]|(?<![A-Za-z])[A-Z]:\\')
+        allowed = {'tools/machine.env'}          # untracked anyway; belt and braces
+        for rel, text in self.tracked():
+            if rel in allowed:
+                continue
+            m = pattern.search(text)
+            self.assertIsNone(m, f'{rel} names {m.group(0) if m else ""!r} - a path that is a '
+                                 f'property of one machine. Put it in tools/machine.env and write a '
+                                 f'placeholder here')
 
 
 class TheGateOnTheTagCanBePassed(unittest.TestCase):

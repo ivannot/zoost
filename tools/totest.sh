@@ -11,24 +11,48 @@
 # One direction, always. The destination is a **mirror**: `--delete` makes it match, so anything
 # edited there is gone at the next run. Fix things in the repository; this is a copy.
 #
-# The destination defaults to Google Drive as mounted inside WSL, and `ZOOST_TEST_DIR` overrides it -
-# the path is a property of one machine, not of this project.
+# The destination is **not written down in this repository**, and that is the point. It is a property
+# of one machine - a drive letter, a mount point, whichever cloud folder that machine syncs - so a
+# path committed here is a path that is wrong on the next machine while looking perfectly right on
+# this one. It lives in `tools/machine.env`, which is git-ignored, and every tracked file uses a
+# placeholder; a test reads the values out of that file and fails if any of them has leaked into
+# something tracked.
 #
-# `--auto` is how `tests/run.sh` calls it: do nothing, quietly, where that folder does not exist.
-# Asked directly it still says so, because a copy that reports success over a folder it never wrote
-# to is the failure this repository keeps naming. The default path is written here and nowhere else -
-# a second copy of it in run.sh would be one careless edit from mirroring into the void.
+#   tools/machine.env       ZOOST_TEST_DIR='/path/to/the/synced/folder/zoost-test'
+#
+# `--auto` is how `tests/run.sh` calls it: do nothing, quietly, where there is nothing to do. Asked
+# directly it says what is missing and how to fix it, because a copy that reports success over a
+# folder it never wrote to is the failure this repository keeps naming.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 AUTO=''
 [ "${1:-}" = '--auto' ] && { AUTO=1; shift; }
 
-DEST="${1:-${ZOOST_TEST_DIR:-/mnt/g/My Drive/zoost-test}}"
+# Sourced, not parsed: it is a shell file on the author's own machine, and quoting the value there is
+# the whole of its syntax.
+#
+# An argument wins over the environment, and the environment wins over the file - a value passed on
+# purpose must not be replaced by the machine's own default. Sourcing alone got that backwards, and
+# the two cases that pass a destination through the environment went green while copying to the real
+# folder: the check said "silent when there is nothing to do" about a run that had just mirrored two
+# extensions.
+ENV_DEST="${ZOOST_TEST_DIR:-}"
+[ -f tools/machine.env ] && . tools/machine.env
+[ -n "$ENV_DEST" ] && ZOOST_TEST_DIR="$ENV_DEST"
+
+DEST="${1:-${ZOOST_TEST_DIR:-}}"
+if [ -z "$DEST" ]; then
+  [ -n "$AUTO" ] && exit 0
+  echo "no destination for the extensions. Write it once, in tools/machine.env (not tracked):"
+  echo "  ZOOST_TEST_DIR='/path/to/the/synced/folder/zoost-test'"
+  echo "or pass the destination as an argument."
+  exit 1
+fi
 if [ ! -d "$(dirname "$DEST")" ]; then
   [ -n "$AUTO" ] && exit 0
-  echo "$(dirname "$DEST") does not exist - this machine has no synced folder, or it is not mounted."
-  echo "  set ZOOST_TEST_DIR, or pass the destination as an argument"
+  echo "$(dirname "$DEST") does not exist - the synced folder is not mounted on this machine,"
+  echo "  or ZOOST_TEST_DIR in tools/machine.env is stale."
   exit 1
 fi
 mkdir -p "$DEST/apps"
