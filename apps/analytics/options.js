@@ -465,7 +465,9 @@ try {
   $('sqlrules').innerHTML = '<ul style="margin:0;padding-left:18px">'
     + window.ZOHO_ANALYTICS_SQL.rules.map((r) => `<li style="padding:2px 0">${esc(r).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>')}</li>`).join('')
     + '</ul>';
-  $('legal').innerHTML = `<b>${esc(m.name)}</b> v${esc(m.version)} · created by ${esc(PRODUCT_AUTHOR)} (with the support of Claudio)<br><br>${esc(LEGAL_DISCLAIMER)}`;
+  // The credits and the version live in the panel's own About dialog, which says the same words -
+  // this page keeps the one thing that may not disappear from any user-facing surface.
+  $('legal').textContent = LEGAL_DISCLAIMER;
   loadAi();
   loadLay();
   loadDc();

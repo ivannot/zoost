@@ -41,7 +41,7 @@ header .wrap{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14p
    drawn at 22-38px, six times the pixels needed, and each one paid a revalidation round trip because
    the platform serves assets with `max-age=0, must-revalidate`. Inline they cost no request at all
    and are sharp at any density. The geometry is the shipped icon's - one stroked path - and not
-   brand/*.svg, which still holds the three-piece Z this project retired. */
+   apps/<app>/icons/icon.svg, which are the only marks this project has. */
 header img,header .bpic{width:26px;height:26px;border-radius:6px}
 header .nm{font-weight:700;font-size:16px;letter-spacing:-.01em}
 header .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
@@ -305,6 +305,14 @@ main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
    row on the home names four of them and `api.anthropic.com` took the approver table 8px past its
    own box at 375px, which is a horizontal scrollbar under six lines of prose. */
 main table code{white-space:normal;overflow-wrap:anywhere}
+/* ...and a *key* column that holds sentences is not a key column. `td.k` keeps its nowrap so a
+   two-word key cannot break; on `data-prose` the first column is prose by definition - that is the
+   whole criterion the attribute encodes - and in a fixed layout a cell that will not wrap does not
+   widen the column, it draws straight over the one beside it. Reported from `it/ai.html`, where
+   «"Cosa si rompe se cambio questo?", seguito su tutta l'org» ran across the answer next to it.
+   Outside the media query on purpose: below 761px the rows stack, where the same nowrap would take
+   a sentence past the width of the phone instead of past the next column. */
+main table[data-prose] td.k{white-space:normal}
 /* The landing pages define .note, .card and .meta inside their own <style>, and the content pages
    used the same class names with nothing behind them — so /how-to.html's two product cards and the
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note

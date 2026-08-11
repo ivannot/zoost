@@ -106,10 +106,18 @@ def filter_options(app: str) -> set:
     that is compared, not the internal key. `All` is skipped: it is the absence of a filter.
     """
     js = (ROOT / f'apps/{app}/sidepanel.js').read_text(encoding='utf-8')
+    out = set()
     m = re.search(r'function buildTypeChips\(\)[\s\S]*?\n}', js)
-    if not m:
-        return set()          # Analytics has one list and a type filter built elsewhere; not a finding
-    return {label for key, label in re.findall(r"\['([\w-]+)', '([^']+)'\]", m.group(0)) if key != 'all'}
+    if m:
+        out |= {label for key, label in re.findall(r"\['([\w-]+)', '([^']+)'\]", m.group(0)) if key != 'all'}
+    # ...and the ones written as <option> in the markup, which is where the other panel keeps its
+    # sort. Only literal options count: `#ws` and `#gozohodc` are filled from the folder and from
+    # the manifest, so their contents are the user's data and Zoho's domains, not our vocabulary -
+    # and a select the panel fills in JS simply has none here to read.
+    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    for sel in re.findall(r'<select\b[^>]*>([\s\S]*?)</select>', html):
+        out |= {t.strip() for t in re.findall(r'<option[^>]*>([^<]+)</option>', sel) if t.strip()}
+    return {x for x in out if x.lower() not in ('all', '\u2014', '-')}
 
 
 def guides_depict_marks(findings: list) -> None:

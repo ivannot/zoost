@@ -1939,7 +1939,11 @@ function healthFindings() {
 function renderHealth() {
   const h = healthFindings();
   const list = (arr, f) => arr.length ? `<ul>${arr.slice(0, 40).map(f).join('')}</ul>${arr.length > 40 ? `<div class="gap">…and ${arr.length - 40} more. The full list is in the exports.</div>` : ''}` : '';
-  const nm = (v) => `<li>${esc(v.name)} <span style="color:var(--muted)">${esc(v.type || v.kind || '')}</span></li>`;
+  // A finding that names a view opens it. It was plain text in every one of these lists - reported
+  // on the CRM panel, where one group of eight was unclickable; here it was all of them, which is
+  // the same defect with nothing to compare it against. The id is what the row declares, and one
+  // handler below reads it, so a list added tomorrow is clickable by writing `nm` and nothing else.
+  const nm = (v) => `<li><a data-open="${escA(String(v.id))}">${esc(v.name)}</a> <span style="color:var(--muted)">${esc(v.type || v.kind || '')}</span></li>`;
   $('healthbody').innerHTML =
     `<h4>What was pulled</h4><div class="hnum">${h.counts.views} views · ${h.counts.folders} folders · ${h.counts.tables} tables · ${h.counts.columns} columns · ${h.counts.relations} relations · ${h.counts.sql} SQL</div>`
     + `<div class="gap">Report definitions - which columns a chart puts on which axis, and how it aggregates them - are <b>not</b> covered. The endpoint that carries them also carries the computed series, which is your data, so Zoost does not call it.</div>`
@@ -1963,10 +1967,15 @@ function renderHealth() {
        + '<div class="gap">Neither their own columns nor a parent chain leading to any. Dashboards are excluded, since having none is correct for them.</div>' : '')
 
     + (h.unread.length ? `<h4 style="color:var(--warn)">Could not be read <span class="hnum">${h.unread.length}</span></h4>`
-       + list(h.unread, (f) => `<li>${esc((viewById().get(f.id) || {}).name || f.id)} - <span style="color:var(--muted)">${esc(f.error)}</span></li>`)
+       + list(h.unread, (f) => `<li><a data-open="${escA(String(f.id))}">${esc((viewById().get(f.id) || {}).name || f.id)}</a> - <span style="color:var(--muted)">${esc(f.error)}</span></li>`)
        + '<div class="gap">Use <b>Retry failed</b>, or ↻ on a single view. Until then this mirror is short by exactly these.</div>' : '')
 
     + `<h4>Design and data dates</h4><div class="gap">Design is a real timestamp for tables and query tables, and Zoho\'s own text for everything else - shown exactly as it sends it, in your interface language, never parsed, and sorted last. Data is always a real timestamp.</div>`;
+  $('healthbody').querySelectorAll('a[data-open]').forEach((a) => (a.onclick = () => {
+    const id = a.dataset.open;
+    if (!viewById().get(id)) { status('That view is no longer in this workspace.', 'warn'); return; }
+    closeHealth(); openDetail(id);
+  }));
 }
 function openHealth() { renderHealth(); document.body.classList.add('health-open'); $('healthview').classList.add('show'); }
 function closeHealth() { document.body.classList.remove('health-open'); $('healthview').classList.remove('show'); }

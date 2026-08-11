@@ -277,6 +277,9 @@
   #healthbody h4{margin:14px 0 5px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
   #healthbody .hnum{font:12px var(--mono);color:var(--ink)}
   #healthbody ul{margin:4px 0 0;padding-left:17px} #healthbody li{padding:1px 0}
+  /* A finding that opens the thing it names - the same rule, on the same selector, as the CRM panel:
+     the idea is «a link inside the health view», which both have however they lay their findings out. */
+  #healthbody a{color:var(--accent);text-decoration:none;cursor:pointer} #healthbody a:hover{text-decoration:underline}
   #healthbody .gap{font-size:11px;color:var(--muted);border-left:2px solid var(--border);padding-left:9px;margin-top:5px}
 
   .empty{padding:22px 18px;color:var(--muted);font-size:12px;line-height:1.6}

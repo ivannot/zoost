@@ -3350,9 +3350,11 @@ bytes.** Measured on the live site: three 192x192 PNGs downloaded on every page 
 `cache-control: public, max-age=0, must-revalidate`**, which is Cloudflare's default and means a
 revalidation round trip per file per page view. Inlining the marks costs **191 compressed bytes of
 HTML** and removes three requests and 13KB: the page went from 6 requests and 26.1KB of resources to
-3 and 7.0KB, and `load` from 386ms to 223ms. The geometry is copied from the shipped icon sources -
-**not** `brand/*.svg`, which still carries the three-piece Z this project retired and is published
-nowhere.
+3 and 7.0KB, and `load` from 386ms to 223ms. The geometry is copied from the shipped icon sources,
+`apps/<app>/icons/icon.svg`. There used to be a `brand/` folder beside them holding the three-piece Z
+this project retired, with a README stating a geometry - a 52x48 Z at 14px bar weight - that the
+shipped mark had already stopped having. Deleted: a stale file that looks authoritative is worse than
+a missing one, and nothing published ever read it.
 
 `site/_headers` caches the images, the icon and the favicon for a week. **`site.css` and `site.js` are
 deliberately not in it**: their names carry no hash, so a long cache would let a returning visitor
