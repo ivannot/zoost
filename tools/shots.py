@@ -528,6 +528,25 @@ def publish_store_set(rendered: dict) -> None:
                  "CHANGED since " + was.get("version", "the last upload")
                  + " - upload all five again, in this order")
         print(f"  {app}: dist/store/{app}/1..{len(keys)}.png  [{digest}] {state}")
+        # ...and recording that they *were* uploaded is one flag, not a hand-edited file. The upload
+        # is the one step nothing here can observe, so the person who did it says so - and everything
+        # around that fact is derived: the digest of the set, the version from the manifest, the list
+        # of files from the slots.
+        # Named, never blanket: the first version took `--uploaded` alone and recorded *both*
+        # products as uploaded when one had been. A tool that writes down a fact nobody performed is
+        # worse than the hand-edited file it replaced.
+        if f"--uploaded={app}" in sys.argv:
+            ledger.write_text(json.dumps({
+                "_": was.get("_", "What is on the Store listing right now. The upload is a manual "
+                                  "step and nothing here can observe it, so it is recorded by "
+                                  "running `python3 tools/shots.py --uploaded` after doing it."),
+                "version": json.loads((ROOT / "apps" / app / "manifest.json")
+                                      .read_text(encoding="utf-8"))["version"],
+                "digest": digest,
+                "files": [f"{n}.png" for n in range(1, len(keys) + 1)],
+                "folder": f"dist/store/{app}/",
+            }, indent=2) + "\n", encoding="utf-8")
+            print(f"  {app}: recorded as uploaded")
 
 
 def current(app: str, keys) -> bool:

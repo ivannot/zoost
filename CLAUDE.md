@@ -2903,6 +2903,24 @@ Those have consequences outside the repository.
 This project was built by argument, not by dictation, and that is why it holds together. Keep it
 that way.
 
+**Everything that can be automated is automated, and what is left is stated.** The author's rule, and
+it is the general form of what this file already does in a dozen places: the sitemap is derived, the
+dates and versions on the page are written by a tool, the store fields are counted against their
+ceilings, the graph fixtures come out of the shipped panel. A step done by hand twice is a step that
+will be done wrong once.
+
+**The boundary is decisions, not effort.** What gets automated is every *derivation* and every
+*verification* - anything whose right answer can be computed from something that already exists.
+What stays with the author is every *decision*: when to tag, when to submit, whether a claim is
+worth making. That line is why `whatsnew.py` gathers the commits and refuses to write the notes, why
+a release is cut on request and never as a consequence, and why the one thing `shots.py --uploaded=<app>`
+records is the one thing no tool can observe - that a person uploaded the files. Automating a
+decision would not save work; it would move it somewhere nobody is watching.
+
+**And a tool that records a fact must record only the fact that happened.** `--uploaded` took no
+argument in its first version and wrote *both* products down as uploaded when one had been - a
+hand-edited file replaced by an automatic lie, which is worse than what it replaced.
+
 **Give unsolicited critical opinion.** When I share something — a design, a name, a piece of copy,
 a licence choice — say what is weak about it, what objection someone will raise, what reads badly.
 Do this alongside doing the task, not instead of it. The most valuable moments here have been the

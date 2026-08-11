@@ -416,6 +416,15 @@ def translations_current(findings: list) -> None:
             findings.append(f'site/it/{page.name}: says it was translated from {src}, which does not exist')
             continue
         now = source_digest(origin)
+        # `--retranslated` is what says «I have carried it over», and it is the only part of this a
+        # person can know. Everything around it is derived: which file, what its digest is now, and
+        # whether every other page is in step. It replaces a one-liner that was being pasted by hand
+        # after every site change - six times in one afternoon - which is exactly the shape of thing
+        # that should not need a person.
+        if now != recorded and '--retranslated' in sys.argv:
+            page.write_text(text.replace(recorded, now, 1), encoding='utf-8')
+            print(f'  site/it/{page.name}: marker moved to {now}')
+            continue
         if now != recorded:
             findings.append(f'site/it/{page.name}: {src} has changed since this was translated '
                             f'(page says {recorded}, it is now {now}) — retranslate what moved, then '
