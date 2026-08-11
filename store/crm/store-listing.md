@@ -167,9 +167,9 @@ The extension does not read browsing history, does not enumerate tabs unrelated 
 ```
 Two groups, both strictly necessary.
 
-1. The Zoho CRM hosts in the manifest: the crm.* and crmsandbox.* domain of every Zoho data centre, plus the matching one.* hosts. On the first two the extension calls the Zoho CRM API, with the session the user is already signed in with, to read their own Deluge functions and configuration metadata. The one.* hosts it does not read at all - they are there only so the panel can tell which organisation a Zoho One tab belongs to. Several domains is not a widening of scope: Zoho runs one product on a data centre per region, a user's org lives on exactly one of them, and which one is not ours to choose. The extension is inert on every other site.
+1. The Zoho CRM hosts in the manifest: the crm.* and crmsandbox.* domain of every Zoho data centre, plus the matching one.* hosts. On the first two the extension calls the Zoho CRM API, with the session the user is already signed in with, to read their own Deluge functions and configuration metadata. The one.* hosts it does not read at all - they are there only so the panel can tell which organisation a Zoho One tab belongs to. Several domains is not a wider scope: Zoho runs a data centre per region, an org lives on exactly one, and which one is not ours to choose. The extension is inert on every other site.
 
-2. api.anthropic.com and api.openai.com, needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to that provider. These two are the only AI destinations the extension can reach; no other endpoint is configurable.
+2. The two AI providers, Anthropic and OpenAI, needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to that provider. These two are the only AI destinations the extension can reach; no other endpoint is configurable.
 ```
 
 ---

@@ -149,7 +149,7 @@ It also uses tab access to navigate the current tab to a workspace URL the user 
 ```
 The Zoho Analytics hosts declared in the manifest: the analytics.* domain of every Zoho data centre. The extension reads the workspace's structure from Zoho Analytics' own endpoints on whichever of them the user's account lives on. It cannot know which one in advance, and the set is exactly the regions Zoho runs, no wider.
 
-https://api.anthropic.com/* and https://api.openai.com/* - used only by the optional AI assistant, and only if the user configures a provider and an API key. Requests go straight from the browser to the provider the user chose. These two are the only AI endpoints supported, because they are the two that are tested; no other endpoint can be configured.
+The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to the provider the user chose. These two are the only AI destinations the extension can reach, and they are the two that are tested; no other endpoint is configurable.
 
 No other host is requested, and none of these are contacted unless the user acts.
 ```
