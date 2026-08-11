@@ -1038,6 +1038,22 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
             self.assertTrue(self._covered(src),
                             f'{src} redirects via the Worker but never reaches it')
 
+    def test_every_binding_the_worker_reads_is_declared(self):
+        # The failure mode this exists for is silence: read `env.CF_VERSION` without declaring
+        # `version_metadata` and the value is simply undefined for ever - no error, no log, and a
+        # footer that quietly stops dating the site. The same shape as the routes above.
+        #
+        # A secret is deliberately *not* in this file - committing it would publish it - so the
+        # remainder after the declared bindings must be exactly the secrets, named here. Declaring
+        # one is a deliberate act; forgetting is what gets reported.
+        SECRETS = {'CWS_SERVICE_ACCOUNT'}
+        read = set(re.findall(r'\benv\.([A-Z][A-Z0-9_]*)', self.worker))
+        declared = set(re.findall(r'"binding":\s*"([^"]+)"', self.cfg))
+        self.assertTrue(read, 'nothing is read off env - has the signature changed?')
+        self.assertEqual(read - declared, SECRETS,
+                         'a name read off env is neither declared in wrangler.jsonc nor a known '
+                         'secret: declare the binding, or add it to SECRETS if it is one')
+
     def test_a_404_page_is_configured_at_all(self):
         # If this is ever removed the rules above stop mattering - and the reader should be told why
         # they exist rather than finding an inexplicable list.

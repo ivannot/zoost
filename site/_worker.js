@@ -191,9 +191,11 @@ async function repoVersion(app) {
   return IS_VERSION.test(v) ? v : null;   // same shape guard as the rest
 }
 
-// When a given path last changed. GitHub knows this without any credential, and it is truer than a
-// deploy timestamp: it is when the content actually changed. Asked per path on purpose — a guide
-// that claims to have been updated because the homepage changed is claiming something false.
+// When a given path last changed. GitHub knows this without any credential, and for a *guide* it is
+// the right question: asked per path on purpose, because a guide claiming to have been updated
+// because the homepage moved is claiming something false — and a deployment date would say exactly
+// that. The site-wide date is the opposite question and takes the opposite answer (see `updated`
+// below): «when did what I am reading go live», which a commit cannot answer.
 async function lastChanged(path) {
   const r = await fetch(`https://github.com/${REPO}/commits/main/${path}.atom`, {
     headers: { 'user-agent': UA, accept: 'application/atom+xml' },
@@ -213,7 +215,7 @@ const settled = (p) => p.then((v) => v).catch(() => null);
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=18';  // bumped: the payload no longer carries submission dates
+const CACHE_KEY = '/api/versions?v=19';  // bumped: siteUpdated is the deployment, not the commit
 
 // Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
 // with a 404 page configured, a request that matches no asset stops reaching the Worker, and
@@ -234,12 +236,12 @@ async function versions(request, env, ctx) {
 
   const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
   const token = auth.token;
-  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, updated, docsUpd, docsAnUpd] =
+  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, docsUpd, docsAnUpd] =
     await Promise.all([
       settled(cwsStatus(token, 'crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
       settled(cwsStatus(token, 'analytics')), settled(repoVersion('analytics')),
       settled(latestTag('analytics')),
-      settled(lastChanged('site')), settled(lastChanged('site/docs-crm.html')),
+      settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
   const ok = (x) => (x && x.published !== undefined ? x : null);   // {http:403} is not a status
@@ -270,6 +272,20 @@ async function versions(request, env, ctx) {
   // for an hour after the source came back. This happened: one fetch to raw.githubusercontent failed,
   // and both submission dates read "unknown" long after the file was serving fine. Caching is there so
   // a blip is invisible; caching the blip itself is the opposite of that.
+  /* When the site was last *published*, which is not when its source last changed.
+   *
+   * This was the newest commit touching `site/`, read from GitHub - and a commit is a proxy for a
+   * deployment, not a deployment. They come apart exactly where this project has already been
+   * burnt: with the build watch paths wrong, twenty-five builds ran for four site changes and then
+   * stopped being queued at all, with no error on the push and the previous deploy left serving. The
+   * badge would have dated the site by a commit nobody could see.
+   *
+   * The version metadata binding is the runtime's own answer - the creation time of the version
+   * currently serving this request - so it needs no API token, no account id and no request that
+   * could fail. Absent rather than guessed if the binding is not there: the badge says nothing
+   * instead of dating the site by something else. */
+  const updated = (env.CF_VERSION && env.CF_VERSION.timestamp) || null;
+
   const complete = [crmStore, crmRepo, crmTag, anStore, anRepo, anTag, updated].every((v) => v != null);
   const ttl = complete ? TTL : TTL_PARTIAL;
 

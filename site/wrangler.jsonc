@@ -15,6 +15,12 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "main": "_worker.js",
+  // When this Worker was deployed, from the runtime rather than from anything anyone types. The
+  // footer used to date the site by the newest commit touching `site/`, which is a *proxy*: a commit
+  // exists whether or not a build ever ran, and this project has already had a fortnight of pushes
+  // that never deployed (see the build-watch-paths note in CLAUDE.md). This binding costs no API
+  // token and no request - it is this version's own creation time, handed to the script.
+  "version_metadata": { "binding": "CF_VERSION" },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
