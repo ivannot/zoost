@@ -17,8 +17,9 @@
  *
  * The Store figures came from scraping the listing page for years, because the old API could not
  * report status and Google published nothing else. They come from the Chrome Web Store API now, read
- * with a service account whose scope is `chromewebstore.readonly` — so the credential this Worker
- * holds can read our items' status and can do nothing else to them. That removes a DOM contract we
+ * with a service account, minting a token for `chromewebstore.readonly` — which is what this code
+ * asks for. Whether the key could ask for more is not established: Google describes the
+ * publisher-level grant as «manage items», and the scope is chosen at token time. That removes a DOM contract we
  * did not own, and it answers a question the scrape never could: whether a submission was
  * **rejected**, which is otherwise indistinguishable from one still in the queue.
  */
@@ -86,8 +87,9 @@ export function pickLatestTag(xml, app) {
 // This used to parse the listing page for a `class="nBZElf"` span, because the old API had no way to
 // report status and Google published nothing else. V2 does: `publishers.items.fetchStatus` returns
 // the published revision and the submitted one, each with a state, and it is read through a service
-// account holding `chromewebstore.readonly` — a credential that cannot publish, cannot edit and
-// cannot take anything down. Three things improve at once: the DOM contract we did not own is gone,
+// account, asking for `chromewebstore.readonly` — a *token* that cannot publish, cannot edit and
+// cannot take anything down. That is a property of the request, not a limit Google is known to
+// enforce on the key: treat any credential of this service account as one that can write. Three things improve at once: the DOM contract we did not own is gone,
 // "in review" is Google saying so instead of a line we wrote in RELEASES.md, and **rejected** became
 // expressible at all — before this, a refused submission would have left the badge claiming it was
 // still in review for ever.
