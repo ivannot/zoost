@@ -1530,5 +1530,50 @@ class TheLiveComparisonCoversEverythingPublished(unittest.TestCase):
         self.assertIn('is not the file in the repository', src)
 
 
+class NothingHerePublishes(unittest.TestCase):
+    """The upload path stops at the draft, and that is a property worth holding by test.
+
+    Every derivation and every verification is automated here; publishing is a decision, and the one
+    endpoint that takes it must never appear in anything that can run on its own. It would be an easy
+    line to add - the token already has the scope, since Google's grant is publisher-wide - which is
+    exactly why it is checked rather than trusted to good sense.
+    """
+
+    def files(self):
+        out = list((ROOT / 'tools').glob('cws*.py'))
+        out += list((ROOT / '.github' / 'workflows').glob('*.yml'))
+        return out
+
+    def test_no_automation_calls_publish(self):
+        for f in self.files():
+            text = f.read_text(encoding='utf-8')
+            code = '\n'.join(l for l in text.splitlines()
+                             if not l.lstrip().startswith(('#', '*', '"""')))
+            self.assertNotIn(':publish', code,
+                             f'{f.relative_to(ROOT)} can publish to the Store on its own')
+
+    def test_the_upload_refuses_over_a_review_in_progress(self):
+        src = (ROOT / 'tools' / 'cwsupload.py').read_text(encoding='utf-8')
+        self.assertIn('PENDING_REVIEW', src, 'the upload no longer checks what Google already has')
+        self.assertIn('sys.exit', src.split('PENDING_REVIEW')[1][:400], 'it checks and carries on anyway')
+
+    def test_the_ids_are_read_and_not_copied(self):
+        # A second copy of the publisher or the extension ids is a second thing to keep in step.
+        src = (ROOT / 'tools' / 'cws.py').read_text(encoding='utf-8')
+        self.assertIn("_worker.js", src)
+        for f in self.files():
+            if f.name == 'cws.py':
+                continue
+            text = f.read_text(encoding='utf-8')
+            self.assertNotIn('f3724a09', text, f'{f.relative_to(ROOT)} carries its own publisher id')
+
+    def test_the_workflow_is_started_by_hand(self):
+        wf = (ROOT / '.github' / 'workflows' / 'store-upload.yml').read_text(encoding='utf-8')
+        self.assertIn('workflow_dispatch:', wf)
+        self.assertNotIn('\n  push:', wf, 'a push must not put a package in front of Google')
+        self.assertNotIn('\n  release:', wf, 'a release must not put a package in front of Google')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+

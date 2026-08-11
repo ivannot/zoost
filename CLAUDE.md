@@ -3143,6 +3143,22 @@ Tags are per product (`crm-v1.8.1`), and `RELEASES.md` is part of the release, n
 If anything user-facing changed, regenerate `store/<app>/store-listing.md` and say which dashboard
 fields move alongside the package — they are reviewed together.
 
+**The upload can be automated; the listing cannot, and publishing is not automated on purpose.**
+`.github/workflows/store-upload.yml` is started by hand with a tag, downloads that Release's asset,
+and puts it on the Store **as a draft** - `tools/cwsupload.py`, which reads the publisher and the item
+ids out of `site/_worker.js` rather than keeping a second copy. It closes the one gap `RELEASES.md`
+admits in writing: run from CI, the thing that uploads is the thing that built and signed it.
+
+Three properties held by test, because each is one line away from being lost. **`:publish` appears in
+nothing that can run on its own** - the token has the scope, so the only thing stopping it is that
+nobody wrote it. **The upload refuses over a revision already in review**, which is the one state
+nobody here has measured. And **the workflow has no `push:` or `release:` trigger**: building and
+signing are derivations and happen on a tag; putting a package in front of Google is a decision.
+
+What the API cannot do at all: the Store listing. Description, screenshots, permission justifications
+and the privacy fields are dashboard-only, which Google's documentation states plainly - so somebody
+opens it anyway, and that is the right moment to press Submit.
+
 **Publishing itself is not on this list, and is not yours to initiate.** Releases go to the Store in
 batches, when there is something solid; cut a tag when asked, not when a version looks ready.
 
@@ -3336,6 +3352,13 @@ exactly right about two smaller things, and both are fixed.
   and a short `max-age` with it: the asset cache key ignores the query string, so a wrong response
   cannot be busted from outside and has to expire on its own. The fix deployed and the old header
   kept being served for as long as the default TTL allowed.
+- **A query string cannot bust `/api/versions`, and that is the point of it.** Proposed as a way to
+  refresh the footer quickly - and measured: `/api/versions` and `/api/versions?v=abcdef` come back
+  with the same `checked` timestamp, because the cache key is built from `CACHE_KEY` and not from the
+  request. It would bust the *browser's* copy and not the edge's, so right after a submission the
+  reader still gets a payload up to an hour old, which is the case the idea was for. The two real
+  levers are the ones already here: bump `CACHE_KEY`, or lower the TTL and pay for it in requests to
+  Google.
 - **The edge cache will hide your deploy.** `/api/versions` is cached for an hour and the Worker
   checks the cache before doing anything, so new code can run and still return the old body — no
   error, no 404, just a value that will not change. The key ignores the query string on purpose (so

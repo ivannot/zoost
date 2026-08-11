@@ -16,37 +16,12 @@ wider token is issued and accepted.
 
 No dependencies: the JWT is signed with the openssl already on the machine.
 """
-import base64
 import json
 import pathlib
-import subprocess
 import sys
-import tempfile
-import urllib.request
 
-TOKEN_URL = 'https://oauth2.googleapis.com/token'
-SCOPE = 'https://www.googleapis.com/auth/chromewebstore'
-PUBLISHER = 'f3724a09-0185-4176-ab7e-3b1df03ca3b7'
-ITEM = 'gmelnigbgklfjgceldicakkomhgplgge'          # Zoost Analytics - read only, never written here
-b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b'=')
-
-
-def token(key: dict, now: int) -> str:
-    head = b64(json.dumps({'alg': 'RS256', 'typ': 'JWT'}).encode())
-    claim = b64(json.dumps({'iss': key['client_email'], 'scope': SCOPE, 'aud': TOKEN_URL,
-                            'iat': now, 'exp': now + 3600}).encode())
-    body = head + b'.' + claim
-    with tempfile.NamedTemporaryFile('w', suffix='.pem', delete=False) as f:
-        f.write(key['private_key'])
-        pem = f.name
-    sig = subprocess.run(['openssl', 'dgst', '-sha256', '-sign', pem],
-                         input=body, capture_output=True, check=True).stdout
-    pathlib.Path(pem).unlink()
-    jwt = (body + b'.' + b64(sig)).decode()
-    data = urllib.parse.urlencode({'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                                   'assertion': jwt}).encode()
-    with urllib.request.urlopen(urllib.request.Request(TOKEN_URL, data=data)) as r:
-        return json.load(r)['access_token']
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import cws  # noqa: E402
 
 
 def main() -> int:
@@ -54,22 +29,13 @@ def main() -> int:
         sys.exit(__doc__.strip().splitlines()[0])
     key = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
     print(f'service account: {key["client_email"]}')
-    import time
     try:
-        tok = token(key, int(time.time()))
+        tok = cws.token(key, cws.WRITE)
     except Exception as e:
         print(f'refused at the token: {e}')
         print('-> the full scope is NOT granted to this key')
         return 1
-    url = f'https://chromewebstore.googleapis.com/v2/publishers/{PUBLISHER}/items/{ITEM}:fetchStatus'
-    req = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + tok})
-    try:
-        with urllib.request.urlopen(req) as r:
-            body = json.load(r)
-    except Exception as e:
-        print(f'token issued, call refused: {e}')
-        print('-> the key holds the wider scope but the API declined it; read the error above')
-        return 1
+    body = cws.status(tok, 'analytics')       # a read, and the only call this tool makes
     print('read back:', json.dumps(body)[:160])
     print('-> the full `chromewebstore` scope IS granted: this key can publish. '
           'Every copy of it is a publishing credential.')
@@ -77,5 +43,4 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-    import urllib.parse
     sys.exit(main())

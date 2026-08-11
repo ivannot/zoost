@@ -123,6 +123,11 @@ def stamped(rel: str) -> tuple:
 # what lets `site.css` and `site.js` be cached at all: they were deliberately left on a short cache
 # because a returning reader could otherwise pair new HTML with an old stylesheet.
 ASSET = re.compile(r'(?:src|href)="/((?:img/)?[\w.-]+\.(?:webp|png|css|js))(\?v=[0-9a-f]+)?"')
+# The card a link unfurls into is the same problem one attribute over: `og:image` is an absolute URL
+# in a `content=`, read by scrapers that cache by URL, so a card that changes and keeps its address
+# is a card nobody sees change. Only asset extensions match, which is why `og:url` - a page - is not
+# touched by this.
+OG = re.compile(r'content="(https://zoost\.it/((?:img/)?[\w.-]+\.(?:webp|png)))(\?v=[0-9a-f]+)?"')
 
 
 def asset_token(rel: str) -> str:
@@ -144,7 +149,15 @@ def stamp_assets(check: bool = False) -> list:
                           f'its bytes hash to {tok}')
             return m.group(0).replace(m.group(1) + had, f'{rel}?v={tok}')
 
-        out = ASSET.sub(one, html)
+        def og(m):
+            rel, had, tok = m.group(2), m.group(3) or '', asset_token(m.group(2))
+            if not tok or had == f'?v={tok}':
+                return m.group(0)
+            behind.append(f'site/{page.relative_to(SITE)}: og:image /{rel} is stamped '
+                          f'{had[3:] or "(not at all)"}, its bytes hash to {tok}')
+            return f'content="{m.group(1)}?v={tok}"'
+
+        out = OG.sub(og, ASSET.sub(one, html))
         if out != html and not check:
             page.write_text(out, encoding='utf-8')
     return behind

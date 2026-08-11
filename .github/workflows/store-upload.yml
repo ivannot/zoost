@@ -1,0 +1,61 @@
+# Take a published Release asset to the Chrome Web Store, as a draft.
+#
+# Started by hand, never by a tag. Building and signing happen on a tag because they are derivations;
+# putting a package in front of Google is a decision, and this repository automates the first kind
+# and not the second. It stops at the draft: `:publish` is never called, and the listing fields and
+# screenshots cannot be set through the API anyway, so somebody opens the dashboard regardless -
+# which is the right moment to press Submit.
+#
+# What it buys is the sentence `RELEASES.md` has had to carry: "uploading it to the Store is a manual
+# step, so nothing here cryptographically proves the file Google received is that one". Run from here,
+# the thing that uploads is the thing that built it, and the gap closes.
+name: store upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload, e.g. analytics-v1.23.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
+
+      # The app and the version come out of the tag, so there is nothing to type twice and no way to
+      # upload one product's package to the other's listing.
+      - name: Read the tag
+        id: tag
+        run: |
+          set -euo pipefail
+          TAG='${{ inputs.tag }}'
+          APP="${TAG%%-v*}"
+          VERSION="${TAG##*-v}"
+          [ "$APP" != "$TAG" ] || { echo "::error::$TAG is not <app>-v<version>"; exit 1; }
+          [ -d "apps/$APP" ] || { echo "::error::there is no apps/$APP"; exit 1; }
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # The Release asset, never a build made here: that is the whole point of the chain.
+      - name: Download the asset from the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download '${{ inputs.tag }}' --repo '${{ github.repository }}' \
+             --pattern '*-store.zip' --dir dist
+          ls -l dist
+
+      - name: Upload it as a draft
+        env:
+          CWS_SERVICE_ACCOUNT: ${{ secrets.CWS_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          python3 tools/cwsupload.py '${{ steps.tag.outputs.app }}' \
+            "dist/zoost-${{ steps.tag.outputs.app }}-${{ steps.tag.outputs.version }}-store.zip"
