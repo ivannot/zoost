@@ -2987,7 +2987,35 @@ function renderTabs() {
   // First draw: open on the first tab the user ordered, not on a name written into the source.
   // Afterwards, only move when the tab being shown has gone away.
   if (vis.length && (viewMode === null || !vis.includes(viewMode))) setMode(vis[0]);
+  fitTabs();
 }
+/** One row of segments or two, decided by measuring rather than by a width typed here.
+ *
+ *  The panel's width is Chrome's: `chrome.sidePanel` has no say in it - `getLayout()` reports which
+ *  side it is on and nothing else - so a minimum width is not ours to set, and the sixth tab pushed
+ *  the row onto two lines at the width the user happens to have. A threshold in a media query would
+ *  not do either: the set of tabs is the user's, hidden and reordered in Settings, so the width the
+ *  labels need is not a constant - measured, six need 380px and five need 300.
+ *
+ *  So: ask. The class comes off before measuring, so the decision is always taken from the same
+ *  state and cannot oscillate; below about 330px six labels do not fit at any size worth reading and
+ *  it wraps, which is the honest end of it. */
+function fitTabs() {
+  const bar = $('modebar');
+  const segs = [...bar.querySelectorAll('.seg')];
+  const wrapped = () => segs.length > 1 && segs.some((c) => c.offsetTop !== segs[0].offsetTop);
+  // Two steps rather than one, and in this order: the spacing is worth less than the type size, so
+  // it goes first and the labels only get smaller when closing the gaps was not enough. Measured on
+  // the six shipped tabs: 400px as authored, 380 with the spacing closed, 330 at 10px.
+  bar.classList.remove('tight', 'tighter');
+  if (!wrapped()) return;
+  bar.classList.add('tight');
+  if (wrapped()) bar.classList.add('tighter');
+}
+// The panel is resized by dragging its edge, which fires resize continuously - debounced for the
+// same reason the diagram window debounces its re-fit.
+let fitTimer = null;
+window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitTabs, 120); });
 /** Is this path one module's file?
  *
  * Eight walks used to spell this out, each re-stating «a .json under modules/ that is not the index»

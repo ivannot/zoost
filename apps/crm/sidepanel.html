@@ -28,6 +28,12 @@
   .wsbar select{flex:1;min-width:0;background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font:12px var(--sans)}   /* min-width:0 lets the select shrink (and ellipsize) instead of shoving Remove off-screen */
   .wsbar button{flex:none}
   .modebar{display:flex;flex-wrap:wrap;gap:3px;padding:6px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+  /* Applied by fitTabs() when the segments would otherwise wrap - see the note there for why it is
+     measured and not a media query. Measured on the six shipped tabs: they need 380px as authored
+     and 330px like this, so the panel has to be dragged genuinely narrow before it breaks. */
+  .modebar.tight{gap:2px;padding:6px 3px}
+  .modebar.tight .seg{padding:6px 2px}
+  .modebar.tighter .seg{font-size:10px;padding:6px 1px}
   .seg{flex:1 1 auto;min-width:0;background:#0f1826;border:1px solid var(--border);color:var(--muted);padding:6px 3px;border-radius:7px;cursor:pointer;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .segnone{flex:1;color:var(--muted);font-size:11px;padding:6px 3px;text-align:center}
   .seg.active{background:#33415e;border-color:#4a5a7e;color:#fff}

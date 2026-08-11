@@ -1455,6 +1455,19 @@ never seen Analytics and would otherwise write SQL that cannot run. If a rule ca
 is left out: an incomplete reference is recoverable, an invented one sends the user to paste a query
 that fails. Zoost never runs, validates or deploys SQL — what the assistant writes is a draft.
 
+**The panel's width is Chrome's, and the segment row has to live with that.** `chrome.sidePanel`
+offers no say in it - `getLayout()` reports which side the panel is on and nothing else - so «make it
+wider» is not an option the API has, and the sixth tab wrapped the row onto two lines at whatever
+width the user had dragged it to. Reported. A media query would not do either: the set of tabs is the
+user's, hidden and reordered in Settings, so the width the labels need is not a constant - six need
+380px and five need 300. `fitTabs()` therefore **asks**: it takes the classes off, measures whether
+any segment has moved to a second line, and escalates one step at a time - close the spacing first,
+shrink the type only if that was not enough, because the size of the words is worth more than the gaps
+between them. Measured: as authored down to 400px, spacing closed to 380, 10px to 330, and below that
+six labels do not fit at any size worth reading and it wraps, which is the honest end of it. Always
+deciding from the untightened state is what stops it latching, and what lets it come back when the
+panel is widened again.
+
 **The CRM's tabs come from one registry, and what a role cannot reach is measured, not assumed.**
 `TABS` in `sidepanel.js` is the single list; the segment row is built from it, so adding a type does
 not mean remembering it in the markup, in five `.active` toggles, in five click handlers and in two

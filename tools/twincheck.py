@@ -184,6 +184,8 @@ def idioms(js):
 EXPECTED_IDIOM = {
     'chrome.tabs.get()': 'the CRM waits for a tab to finish loading; Analytics never navigates and waits',
     'chrome.tabs.reload()': 'the CRM re-injects by reloading the Zoho tab in one recovery path',
+    'window.onresize': 'the CRM re-fits its segment row when the panel is dragged narrower; Analytics '
+                       'has one list and a type filter, so it has no row that can wrap',
 }
 
 # Behaviours that exist in one product only, with the reason.

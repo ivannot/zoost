@@ -3085,3 +3085,38 @@ test('the chat knows what is focused, whatever kind it is', () => {
   }
   assert.ok(!/No function focused/.test(src), 'id=crm the label still claims only functions can be focused');
 });
+
+// The panel's width is Chrome's - `chrome.sidePanel` has no say in it, `getLayout()` reports which
+// side it is on and nothing else - so the sixth tab wrapping the segment row onto two lines at the
+// width the user happens to have is only fixable here. Reported. The thresholds are a measurement
+// (400px as authored, 380 with the spacing closed, 330 at 10px) and are not asserted; what is
+// asserted is the algorithm, which is where this can go wrong: escalate only as far as needed, and
+// always decide from the untightened state so it can come back and cannot oscillate.
+test('the segment row is tightened only as far as it has to be', () => {
+  // `setBar` is handed back the same way the function under test is: `load` evaluates the pieces
+  // in a vm context of its own, so the test cannot reach into it with globalThis.
+  const { fitTabs, setBar } = load([
+    'let bar; const $ = () => bar;',
+    sliceFn('apps/crm/sidepanel.js', 'fitTabs'),
+    'const setBar = (b) => { bar = b; };',
+  ]);
+  // A stub whose layout depends on the classes, the way the real one depends on the CSS: `need` is
+  // how much width each step costs, and rows are recomputed from the width on every read.
+  const make = (width, need = { none: 400, tight: 380, tighter: 330 }) => {
+    const cls = new Set();
+    const step = () => (cls.has('tighter') ? 'tighter' : cls.has('tight') ? 'tight' : 'none');
+    const kids = [0, 1, 2, 3, 4, 5].map((i) => ({ get offsetTop() { return width >= need[step()] ? 0 : (i < 3 ? 0 : 20); } }));
+    return { classList: { add: (...c) => c.forEach((x) => cls.add(x)), remove: (...c) => c.forEach((x) => cls.delete(x)), contains: (c) => cls.has(c) },
+             querySelectorAll: () => kids, get className() { return [...cls].join(' '); } };
+  };
+  const run = (w) => { const b = make(w); setBar(b); fitTabs(); return b.className; };
+  assert.equal(run(420), '', 'id=crm a row with room to spare is being shrunk');
+  assert.equal(run(390), 'tight', 'id=crm the labels shrink before the spacing has been closed');
+  assert.equal(run(360), 'tight tighter', 'id=crm it stops one step short and still wraps');
+  assert.equal(run(300), 'tight tighter', 'id=crm below the floor it wraps, having tried everything');
+  // ...and the state is not latched: the same element, widened, must come back to as-authored.
+  const b = make(420); setBar(b);
+  b.classList.add('tight', 'tighter');
+  fitTabs();
+  assert.equal(b.className, '', 'id=crm tightening never comes off, so the panel stays small for ever');
+});
