@@ -2204,6 +2204,42 @@ class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
         self.assertIn('not made', out)
 
 
+class EveryToolThatTalksToGoogleKnowsWhoWeAre(unittest.TestCase):
+    """The publisher and the item ids resolve, without a network and without a key.
+
+    This exists because they stopped resolving and nothing said so. `cws.publisher()` read
+    `const PUBLISHER` out of `site/_worker.js`; the Worker then stopped calling the Chrome Web Store
+    API and the constant left with the code that used it, which was right - dead code is not allowed
+    to sit there waiting to be somebody's dependency. Every tool in `cws.py` broke in the same
+    instant, `store upload` among them, and the failure surfaced forty minutes later in a scheduled
+    workflow nobody was watching. A release would have found it at the worst moment.
+
+    So this is the cheap half of "find every other user before touching a shared thing": the identity
+    lookups are exercised on every run of the suite, on the machine where the edit is being made.
+    They read files and parse text, so they cost nothing and need no credential.
+    """
+
+    def setUp(self):
+        import importlib
+        self.cws = importlib.import_module('cws')
+
+    def test_the_publisher_resolves(self):
+        # Shape rather than value: the id is not secret, but asserting it here would make this a
+        # second copy of the fact, which is what the class is about.
+        self.assertRegex(self.cws.publisher(), r'^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
+
+    def test_both_items_resolve(self):
+        for app in ('crm', 'analytics'):
+            with self.subTest(app=app):
+                self.assertRegex(self.cws.item_id(app), r'^[a-p]{32}$',
+                                 f'{app}: no item id - has site/_worker.js dropped EXT_ID?')
+        self.assertNotEqual(self.cws.item_id('crm'), self.cws.item_id('analytics'))
+
+    def test_an_app_nobody_declared_stops_rather_than_guesses(self):
+        with self.assertRaises(SystemExit):
+            self.cws.item_id('nosuchapp')
+
+
 class TheStoreReadingIsShapedBeforeItIsPublished(unittest.TestCase):
     """What Google says about our items, on its way into a file the site serves.
 

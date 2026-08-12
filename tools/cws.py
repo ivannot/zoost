@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 """Talking to the Chrome Web Store API: the token, and who the items are.
 
-One implementation, three callers - `cwsscope.py`, `cwsupload.py`, and whatever comes next. The
-publisher and the two extension ids are **read out of `site/_worker.js`**, which has held them since
-the badge was written: a second copy here would be a second thing to keep in step, and the ids are
-not secret (the publisher is in every dashboard URL, the item ids are in the listing URLs).
+One implementation, four callers - `cwsscope.py`, `cwsupload.py`, `storestatus.py`, and whatever
+comes next. Neither id is secret: the publisher is in every dashboard URL, the item ids are in the
+listing URLs.
+
+The two extension ids are **read out of `site/_worker.js`**, because the site genuinely uses them -
+every listing link is built from `EXT_ID` - so reading them keeps one copy of a fact that has to be
+right in both places. The publisher id is declared **here**, and the difference is the lesson:
+
+It used to be read from the Worker too, and then the Worker stopped calling the Chrome Web Store API
+and `const PUBLISHER` went with the code that used it - correctly, since dead code is not allowed to
+sit there waiting to be someone's dependency. Every tool in this file broke at once, `store upload`
+included, and nothing said so for forty minutes: these run on a schedule or at a release, so the red
+lands where nobody is looking. **Reading a constant out of another file is a dependency on that file
+still wanting it**, which is invisible from the file being edited - so it is only worth it while both
+sides genuinely need the value. `EXT_ID` passes that test and the publisher no longer did.
 
 The JWT is signed with the `openssl` already on the machine, so this needs nothing installed.
 
@@ -33,11 +44,13 @@ def _worker() -> str:
     return (ROOT / 'site' / '_worker.js').read_text(encoding='utf-8')
 
 
+# Not a secret: it is in every Chrome Web Store dashboard URL. Declared here rather than read from
+# the site, because the site has no use for it - see the note in the docstring above.
+PUBLISHER = 'f3724a09-0185-4176-ab7e-3b1df03ca3b7'
+
+
 def publisher() -> str:
-    m = re.search(r"const PUBLISHER = '([0-9a-f-]+)'", _worker())
-    if not m:
-        raise SystemExit('site/_worker.js no longer declares PUBLISHER')
-    return m.group(1)
+    return PUBLISHER
 
 
 def item_id(app: str) -> str:
