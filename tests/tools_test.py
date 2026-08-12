@@ -2204,6 +2204,55 @@ class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
         self.assertIn('not made', out)
 
 
+class APinnedActionHasSomethingThatOffersToMoveIt(unittest.TestCase):
+    """Every Action is pinned to a hash, and something proposes the next one.
+
+    Both halves are the decision; only one of them was ever written down. A hash makes the supply
+    chain checkable and makes an upgrade deliberate - and with nothing offering the upgrade,
+    deliberate turned into frozen: `actions/checkout` sat three majors behind and
+    `actions/attest-build-provenance` four, surfacing only as a runner warning about a retiring Node.
+
+    So this holds the pair. Pinning without `dependabot.yml` is the state that already cost months,
+    and it looks identical to a well-maintained repository from the inside.
+    """
+
+    ROOT = pathlib.Path(__file__).resolve().parent.parent
+    WORKFLOWS = ROOT / '.github' / 'workflows'
+
+    def uses(self):
+        return [(f.name, n, l.strip())
+                for f in sorted(self.WORKFLOWS.glob('*.yml'))
+                for n, l in enumerate(f.read_text(encoding='utf-8').splitlines(), 1)
+                if 'uses:' in l]
+
+    def test_every_action_is_pinned_to_a_hash_and_says_which_release(self):
+        used = self.uses()
+        self.assertTrue(used, 'no workflow uses an action - has the chain moved?')
+        for name, n, line in used:
+            with self.subTest(where=f'{name}:{n}'):
+                # The comment is not decoration: it is the only thing that says what the hash *is*,
+                # and Dependabot rewrites it alongside the hash. Without it a pin is unreadable and
+                # an upgrade is unreviewable.
+                self.assertRegex(line, r'uses:\s+[\w.-]+/[\w.-]+@[0-9a-f]{40}\s+# v\d+\.\d+\.\d+',
+                                 f'{name} line {n} is not a hash pin with its version comment')
+
+    def test_something_offers_the_next_hash(self):
+        cfg = self.ROOT / '.github' / 'dependabot.yml'
+        self.assertTrue(cfg.exists(),
+                        'actions are pinned to hashes and nothing proposes newer ones - '
+                        'that state cost three and four majors of drift once already')
+        text = cfg.read_text(encoding='utf-8')
+        self.assertIn('github-actions', text, 'dependabot.yml watches no ecosystem the repo has')
+        # Anchored at the root, because that is where Dependabot looks for .github/workflows. Pointed
+        # at the workflows directory it finds nothing and says nothing, which is this whole class of
+        # defect wearing the fix's clothes.
+        dirs = [v.split('#')[0].strip().strip('\'"')
+                for v in re.findall(r'^\s*directory:(.*)$', text, re.M)]
+        self.assertEqual(dirs, ['/'],
+                         'the github-actions ecosystem must be anchored at the repository root, '
+                         'which is where Dependabot looks for .github/workflows')
+
+
 class EveryToolThatTalksToGoogleKnowsWhoWeAre(unittest.TestCase):
     """The publisher and the item ids resolve, without a network and without a key.
 

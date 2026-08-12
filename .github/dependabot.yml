@@ -1,0 +1,36 @@
+# Pinning every Action to a commit hash is what makes the supply chain checkable, and it is also what
+# makes an upgrade something nobody does by accident. Both halves are true, and for months only the
+# first was doing any work: `actions/checkout` sat three majors behind and
+# `actions/attest-build-provenance` four, and the only signal was a runner warning about a Node
+# version being retired - noticed because it happened to be pasted into a conversation.
+#
+# **A pin without an update mechanism is not a security decision, it is a frozen one.** This is the
+# missing half: Dependabot reads the workflows, resolves each tag to its commit, and opens a pull
+# request that moves the hash *and* the trailing version comment. The pin stays a hash, the upgrade
+# stops depending on somebody noticing.
+#
+# What arrives is a proposal, never a change - which is the boundary this project already draws
+# everywhere else. Reading a major's release notes for a refusal that applies to us, and the source
+# when the notes are ambiguous, is still the author's job; see `docs/releases.md`, where the last
+# such bump is written up along with the hash to restore if the attestation ever breaks.
+#
+# One ecosystem, and that is not an oversight: the extensions ship with no dependencies, no build
+# step and no framework, so there is no package manifest anywhere in the tree to watch. The Actions
+# are the only third-party code in the project, which is exactly why they are the ones that were
+# quietly aging.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    # Repository root: Dependabot reads `.github/workflows` from here. It is not a path to the
+    # workflows themselves, and pointing it at one finds nothing and reports nothing.
+    directory: /
+    schedule:
+      interval: weekly
+    # One pull request for the lot rather than one per action. Three workflows share `checkout`, so
+    # ungrouped updates arrive as separate PRs touching the same three files, each of which has to be
+    # read and merged in turn - and a queue of small PRs is how an upgrade gets postponed, which is
+    # the failure this file exists to fix.
+    groups:
+      actions:
+        patterns: ['*']
+    labels: ['dependencies']
