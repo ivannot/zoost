@@ -1,0 +1,30 @@
+{
+  "analytics": {
+    "published": {
+      "deployPercentage": 100,
+      "state": "PUBLISHED",
+      "version": "1.22.4"
+    },
+    "submitted": {
+      "deployPercentage": 100,
+      "state": "PENDING_REVIEW",
+      "version": "1.23.0"
+    },
+    "takenDown": false
+  },
+  "asOf": "2026-08-12T10:48:12Z",
+  "crm": {
+    "published": {
+      "deployPercentage": 100,
+      "state": "PUBLISHED",
+      "version": "1.39.0"
+    },
+    "submitted": {
+      "deployPercentage": 100,
+      "state": "PENDING_REVIEW",
+      "version": "1.40.0"
+    },
+    "takenDown": false
+  },
+  "cws": "ok"
+}
