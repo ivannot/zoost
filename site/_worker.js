@@ -1,5 +1,6 @@
 /*
- * zoost.it Worker. Everything is a static asset except /api/versions, which this script answers.
+ * zoost.it Worker. Everything is a static asset except two endpoints, which this script answers:
+ * /api/versions, read by every page's footer badge, and /api/ahead, read only by /emergency.
  *
  * Assets are served first by the platform; this script only runs when no file matches, so the site
  * behaves exactly as before and this endpoint is the single addition. `functions/` was the wrong
@@ -46,6 +47,32 @@ const IS_VERSION = /^\d+(\.\d+){1,3}$/; // the shape guard: anything else is not
 const timeout = (ms) => AbortSignal.timeout(ms);
 const listing = (app) => `https://chromewebstore.google.com/detail/${EXT_ID[app]}`;
 
+// Version ordering, in one place because two copies of it in one file would be two things to get
+// wrong about the same question — and what they would disagree about is which release a reader is
+// told to install. Descending, so a sorted list reads newest first.
+//
+// Lengths may differ: a tag is always `x.y.z`, but IS_VERSION accepts two to four components and the
+// Store reports whatever it is serving. Missing components count as zero, which is what 1.9 vs
+// 1.9.0 means to everyone except a comparator that indexes past the end and gets NaN.
+// A function declaration rather than a `const` arrow, and not as a matter of taste: `tests/slice.mjs`
+// lifts a declaration whole and cuts a multi-line `const` at the first semicolon that ends a line -
+// which here is its first statement. The mis-slice is silent and the test then fails somewhere else
+// entirely, which is how half an hour goes.
+function cmpVer(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return y - x;
+  }
+  return 0;
+}
+const isNewer = (a, b) => cmpVer(a, b) < 0;   // spelt out: `cmpVer(a, b) < 0` reads backwards
+const verOf = (tag) => {
+  const m = /-v(\d+\.\d+\.\d+)$/.exec(tag || '');
+  return m ? m[1] : null;
+};
+
 // Newest git tag **per product**, read from GitHub's Atom feed rather than its JSON API.
 //
 // api.github.com allows 60 unauthenticated requests an hour *per IP*, and this Worker goes out
@@ -59,13 +86,21 @@ const listing = (app) => `https://chromewebstore.google.com/detail/${EXT_ID[app]
 // everything, and belonging to neither product — as the state of the project. With one tag per
 // product a single "latest tag" is not an ambiguous fact, it is not a fact at all: the question
 // only means anything once you say which extension you are asking about.
-async function latestTag(app) {
+//
+// The fetch is separate from the question asked of it: both products' tags are in the one document,
+// so `/api/ahead` reads the feed once and asks it two things instead of fetching it twice.
+async function tagsFeed() {
   const r = await fetch(`https://github.com/${REPO}/tags.atom`, {
     headers: { 'user-agent': UA, accept: 'application/atom+xml' },
     signal: timeout(6000),
   });
   if (!r.ok) return null;
-  return pickLatestTag(await r.text(), app);
+  return r.text();
+}
+
+async function latestTag(app) {
+  const xml = await tagsFeed();
+  return xml ? pickLatestTag(xml, app) : null;
 }
 
 // The parsing, separated from the fetching so it can be tested against real feed text. This is
@@ -79,14 +114,34 @@ export function pickLatestTag(xml, app) {
   // `…/releases/tag/<tag>` and is structural — it says what you would check out, whatever anyone
   // decided to call the release.
   const re = new RegExp(`/releases/tag/(${app}-v(\\d+\\.\\d+\\.\\d+))(?:"|/|$)`, 'g');
-  const tags = [...xml.matchAll(re)]
-    .sort((a, b) => {
-      const pa = a[2].split('.').map(Number);
-      const pb = b[2].split('.').map(Number);
-      for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i];
-      return 0;
-    });
+  const tags = [...xml.matchAll(re)].sort((a, b) => cmpVer(a[2], b[2]));
   return tags.length ? tags[0][1] : null;   // the tag name alone: it is what you check out
+}
+
+// Every released version **ahead of what the Store is serving**, newest first. The same feed and the
+// same shape guard as above; what is new is the baseline it is measured against.
+//
+// The baseline is the whole point, and getting it wrong has a direction that matters. If the Store
+// version could not be read, this returns nothing rather than every tag it can see: a list built
+// without a baseline would tell a reader to go and install something over an installation that may
+// already be newer, which is the one wrong answer this page must not give. "Unknown" is a state the
+// page can render honestly; a confident wrong list is not.
+//
+// Capped, because the number of fetches downstream is one per entry. Five is well past the point
+// where a reader is still reading, and it bounds a feed that grew unexpectedly.
+export function tagsAhead(xml, app, from, cap = 5) {
+  if (!from || !IS_VERSION.test(from)) return [];
+  const re = new RegExp(`/releases/tag/(${app}-v(\\d+\\.\\d+\\.\\d+))(?:"|/|$)`, 'g');
+  const seen = new Set();
+  const out = [];
+  for (const m of xml.matchAll(re)) {
+    // Each entry names its tag more than once - the link and the id - and the same release must not
+    // be offered twice.
+    if (seen.has(m[1])) continue;
+    seen.add(m[1]);
+    if (isNewer(m[2], from)) out.push({ tag: m[1], version: m[2] });
+  }
+  return out.sort((a, b) => cmpVer(a.version, b.version)).slice(0, cap);
 }
 
 // What the Chrome Web Store says about our items, asked of the Store rather than scraped off it.
@@ -200,6 +255,26 @@ async function repoVersion(app) {
   return IS_VERSION.test(v) ? v : null;   // same shape guard as the rest
 }
 
+// What changed in a released version, read from the file the Release body was built from.
+//
+// `store/<app>/whatsnew/<version>.md` rather than the Release body itself: the body is the notes
+// followed by a provenance block addressed to somebody verifying a hash, and a reader deciding
+// whether a fix is worth the trouble wants the first half only. It is also one raw file instead of
+// api.github.com, which is the rate limit this Worker already goes out of its way to avoid.
+//
+// The version is interpolated into a path, so it is checked against the shape guard first even
+// though every caller here takes it from a tag that already matched `\d+\.\d+\.\d+`. The guard costs
+// nothing and the assumption it protects is one refactor away from stopping being true.
+async function whatsnew(app, version) {
+  if (!EXT_ID[app] || !IS_VERSION.test(version)) return null;
+  const r = await fetch(
+    `https://raw.githubusercontent.com/${REPO}/main/store/${app}/whatsnew/${version}.md`,
+    { headers: { 'user-agent': UA }, signal: timeout(6000) });
+  if (!r.ok) return null;                  // a version from before the convention has none
+  const t = (await r.text()).trim();
+  return t ? t.slice(0, 8000) : null;      // a size guard, so a surprise file cannot blow the payload
+}
+
 // When a given path last changed. GitHub knows this without any credential, and for a *guide* it is
 // the right question: asked per path on purpose, because a guide claiming to have been updated
 // because the homepage moved is claiming something false — and a deployment date would say exactly
@@ -218,6 +293,11 @@ async function lastChanged(path) {
 }
 
 const settled = (p) => p.then((v) => v).catch(() => null);
+
+// `{http:403}` is not a status. `cwsStatus` returns that shape when Google answered but refused, and
+// it has to be told apart from an answer: both endpoints below ask "what is the Store serving", and
+// reading a refusal as an answer is how a page ends up rendering `undefined` as a version.
+const okStatus = (x) => (x && x.published !== undefined ? x : null);
 
 // The cache key carries a version marker, and it must be bumped whenever the payload's shape
 // changes. The key deliberately ignores the query string — otherwise anyone could fill the cache
@@ -253,9 +333,8 @@ async function versions(request, env, ctx) {
       settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
-  const ok = (x) => (x && x.published !== undefined ? x : null);   // {http:403} is not a status
-  const crmStore = ok(crmCws) && crmCws.published ? crmCws.published.version : null;
-  const anStore = ok(anCws) && anCws.published ? anCws.published.version : null;
+  const crmStore = okStatus(crmCws) && crmCws.published ? crmCws.published.version : null;
+  const anStore = okStatus(anCws) && anCws.published ? anCws.published.version : null;
   const cwsWhy = auth.why !== 'ok' ? auth.why
     : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok';
   /* What is in review, and now with a *state* rather than an inference.
@@ -271,7 +350,7 @@ async function versions(request, env, ctx) {
    * package has been in the queue is not worth knowing, and it was the one figure here typed by hand
    * - so the badge now rests on Google alone and there is nothing left to keep in step. */
   const inReview = (cws) => {
-    const s = ok(cws) && cws.submitted;
+    const s = okStatus(cws) && cws.submitted;
     if (!s || !s.version) return null;
     return { version: s.version, state: s.state };
   };
@@ -323,6 +402,85 @@ async function versions(request, env, ctx) {
   return res;
 }
 
+// What is released but not yet on the Store, and what changed in it.
+//
+// This answers one page - `/emergency` - and it is deliberately not folded into `/api/versions`.
+// That endpoint is called by the footer badge of **every** page, and the notes are a few kilobytes
+// per version: putting them there would make every visitor download a changelog nobody asked to
+// read. Two endpoints, two cache entries, and the expensive one is fetched only where it is shown.
+//
+// What it is careful about is the direction of a wrong answer. Telling somebody "you are up to date"
+// when they are not costs them a bug they could have escaped; telling them "there is a newer one"
+// when there is not sends them to install an older build over a newer one by hand. So a Store
+// version that could not be read yields an empty list and a `cws` field saying why, and the page
+// renders that as «nobody could ask» rather than as either answer.
+const AHEAD_KEY = '/api/ahead?v=1';
+
+async function ahead(request, env, ctx) {
+  const cache = caches.default;
+  const key = new Request(new URL(AHEAD_KEY, request.url).toString(), { method: 'GET' });
+
+  const hit = await cache.match(key);
+  if (hit) return hit;
+
+  const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
+  const [crmCws, anCws, xml] = await Promise.all([
+    settled(cwsStatus(auth.token, 'crm')),
+    settled(cwsStatus(auth.token, 'analytics')),
+    settled(tagsFeed()),
+  ]);
+
+  const block = async (app, cws) => {
+    const c = okStatus(cws);
+    const store = c && c.published ? c.published.version : null;
+    const list = xml ? tagsAhead(xml, app, store) : [];
+    const notes = await Promise.all(list.map((t) => settled(whatsnew(app, t.version))));
+    return {
+      store,
+      latest: xml ? verOf(pickLatestTag(xml, app)) : null,
+      // The same shape `/api/versions` uses, so a reader of one file is not learning two vocabularies
+      // for the same fact.
+      pending: c && c.submitted && c.submitted.version
+        ? { version: c.submitted.version, state: c.submitted.state } : null,
+      ahead: list.map((t, i) => ({
+        version: t.version,
+        tag: t.tag,
+        // Built rather than looked up: this is the name `build.sh` gives the archive and the name the
+        // release workflow uploads, and it is the file the attestation was signed over. A second
+        // request to find out a URL we already know would be a second thing to fail.
+        zip: `https://github.com/${REPO}/releases/download/${t.tag}/zoost-${app}-${t.version}-store.zip`,
+        notes: notes[i] || null,
+      })),
+      url: listing(app),
+    };
+  };
+
+  const [crm, analytics] = await Promise.all([block('crm', crmCws), block('analytics', anCws)]);
+
+  // A missing note is not an outage - versions released before the convention have none - but a note
+  // that failed to fetch looks exactly the same from here, and caching that for ten minutes would
+  // show an empty changelog next to a version somebody is deciding about. Where something is ahead
+  // and its notes are absent, the answer expires with the minute rather than with the hour.
+  const gaps = [crm, analytics].some((b) => b.ahead.some((a) => !a.notes));
+  const complete = xml != null && crm.store != null && analytics.store != null && !gaps;
+
+  const res = new Response(JSON.stringify({
+    crm,
+    analytics,
+    // Without this, "nothing is ahead" and "nobody could ask the Store" are the same empty list, and
+    // only one of them is a fact. Same field, same meaning, as `/api/versions`.
+    cws: auth.why !== 'ok' ? auth.why : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok',
+    checked: new Date().toISOString(),
+  }), {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': `public, max-age=${complete ? TTL : TTL_PARTIAL}`,
+    },
+  });
+  ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
+
 // `/docs` used to be the Zoho CRM guide, which made the generic URL the property of one product
 // while the other had to carry its name in the path. The guides are `/docs-crm` and
 // `/docs-analytics` now, and `/how-to` is the neutral way in.
@@ -348,6 +506,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/versions') return versions(request, env, ctx);
+    if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
     const to = MOVED[url.pathname];
     if (to) return Response.redirect(new URL(to, url).toString(), 301);
 

@@ -74,6 +74,18 @@
     <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/docs-crm"/>
   </url>
   <url>
+    <loc>https://zoost.it/emergency</loc>
+    <lastmod>2026-08-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/emergency"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/emergency"/>
+  </url>
+  <url>
+    <loc>https://zoost.it/it/emergency</loc>
+    <lastmod>2026-08-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/emergency"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://zoost.it/it/emergency"/>
+  </url>
+  <url>
     <loc>https://zoost.it/how-to</loc>
     <lastmod>2026-08-12</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://zoost.it/how-to"/>
@@ -123,6 +135,6 @@
   </url>
   <url>
     <loc>https://zoost.it/llms.txt</loc>
-    <lastmod>2026-08-11</lastmod>
+    <lastmod>2026-08-12</lastmod>
   </url>
 </urlset>

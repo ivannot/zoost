@@ -294,6 +294,12 @@ tests would spend the risk before earning the cover. The limit is stated rather 
 proves the logic, not the wiring — a correct helper called from the wrong place still passes. If
 `sliceFn` cannot find a function it **throws**, so a rename cannot silently drop the cover.
 
+**And what it lifts has to be a *declaration*.** `sliceConst` ends a `const` at the first semicolon
+that closes a line, which for a multi-line arrow is its **first statement** - so the slice is short,
+wrong and silent. A comparator written `const cmpVer = (a, b) => {…}` in `site/_worker.js` was cut
+after one line, and the red mark landed three tests away, on `pickLatestTag`, which sorts with it. A
+shared helper that a test will lift is a `function`; one-line arrows are fine as they are.
+
 **A test appended below `unittest.main()` never runs, and the suite still says OK.** Six cases were
 added to the end of `tests/tools_test.py` and `tests/run.sh` reported 78 passing while ignoring them;
 `unittest discover` found 84. Nothing is wrong on screen — a number changes, and a number nobody

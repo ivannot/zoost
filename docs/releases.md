@@ -175,6 +175,27 @@ directions. A test asserts no page carries `data-pending` / `data-install` / `da
 because the mechanism is a fair-looking idea and the wrong shape for a fact somebody has to be able
 to read without executing anything.
 
+**`/emergency` is the page for the gap this chain cannot close: the review queue.** A tag is built,
+signed and submitted within the hour; Google then takes days. When a fix for a break at Zoho's end is
+sitting in that queue, the page shows what the Store is serving against what has been released, the
+changelog of each version ahead, and a link to the archive **on the Release** - the attested one,
+never a local build. It is fed by `/api/ahead`, which is separate from `/api/versions` on purpose:
+the notes are kilobytes per version and every page's footer calls the other one, so the expensive
+answer is fetched only where it is shown.
+
+Three details worth keeping. *One*, the baseline decides the direction of a wrong answer: with no
+Store version **or** no tag feed, `tagsAhead()` returns nothing and the page says «could not be
+asked», because "you are up to date" told to somebody who is not sends them back to a broken
+extension believing they checked. *Two*, the block is honest with no script - the markup points at
+the releases page rather than claiming to be checking something. *Three*, the page states in its own
+words that an unpacked build gets a **different extension id**, so it opens with empty settings while
+the mirror on disk is untouched; that is the thing readers hit, and it looks exactly like the fix
+having failed.
+
+It is deliberately **not in the navigation**. It is reachable, quotable in an issue reply and linked
+from `/nerd` and `/how-to`, but a first-time visitor should install from the Store, and a shortcut in
+the header would say otherwise.
+
 **The absolutes ledger listed words, and the strongest claim on the site is a noun phrase.** It
 matched `mai`, `never`, `soltanto`, `only` - and never `read-only`, which is the one absolute this
 project has already had to walk back. Two of them were live: an Italian hero reading «in sola lettura

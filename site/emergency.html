@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>In case of emergency - running a Zoost release before the Store has it</title>
+<meta name="description" content="When a fix is out and the Chrome Web Store has not caught up: how to run the same signed package by hand, what it costs you, and how to go back.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Zoost">
+<meta property="og:locale" content="en_GB">
+<meta property="og:url" content="https://zoost.it/emergency">
+<meta property="og:title" content="In case of emergency - running a Zoost release before the Store has it">
+<meta property="og:description" content="When a fix is out and the Chrome Web Store has not caught up: how to run the same signed package by hand, what it costs you, and how to go back.">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=e645376a4b">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://zoost.it/emergency">
+<link rel="alternate" hreflang="en" href="https://zoost.it/emergency">
+<link rel="alternate" hreflang="it" href="https://zoost.it/it/emergency">
+<link rel="alternate" hreflang="x-default" href="https://zoost.it/emergency">
+<link rel="icon" href="/favicon.ico?v=600d06ca4d" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
+<meta name="theme-color" content="#0d121c">
+<link rel="stylesheet" href="/site.css?v=d8d78b9b2e">
+<style>
+  .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
+  .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
+  .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Zoost - home"><svg class="bpic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#47536b"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nm">Zoost</span></a>
+    <nav>
+      <a class="nprod ncrm" href="/crm" aria-label="Zoost - workbench for Zoho CRM"><svg class="npic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#2563eb"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nfull">Zoost - workbench for Zoho CRM</span><span class="nshort">Zoost CRM</span></a>
+      <a class="nprod nana" href="/analytics" aria-label="Zoost - workbench for Zoho Analytics"><svg class="npic" viewBox="0 0 128 128" width="128" height="128" aria-hidden="true" focusable="false"><rect x="6" y="6" width="116" height="116" rx="30" fill="#be2a6b"/><path d="M 33 33 L 95 33 L 33 95 L 95 95" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="square" stroke-linejoin="round"/></svg><span class="nfull">Zoost - workbench for Zoho Analytics</span><span class="nshort">Zoost Analytics</span></a>
+      <a class="nai" href="/ai">AI</a>
+      <span class="nbrk"></span>
+      <a href="/try">Try it</a>
+      <a href="/how-to">How to</a>
+      <a href="/nerd">Nerd</a>
+      <a href="/privacy">Privacy</a>
+      <a class="ncta" href="/it/emergency" hreflang="it" lang="it" title="Questa pagina in italiano" aria-label="Questa pagina in italiano"><span class="lfull">Italiano</span><span class="lshort">IT</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc" id="content">
+<div class="wrap">
+
+  <h1>In case of emergency</h1>
+  <p class="sub">Zoho changes something undocumented, part of Zoost stops working, a fix goes out the
+    same day - and then it sits in a review queue for days. This page is how you skip the queue and
+    run that fix now. It is the same signed package the Chrome Web Store is given, installed by hand.</p>
+
+  <div class="toc">
+    <b>On this page</b>
+    <ol>
+      <li><a href="#what-is-where">What is where, right now</a></li>
+      <li><a href="#why">Why the fix is quick and the queue is not</a></li>
+      <li><a href="#before">Before you start</a></li>
+      <li><a href="#what-you-lose">What you lose, and what you keep</a></li>
+      <li><a href="#running-it">Running it</a></li>
+      <li><a href="#back">Going back</a></li>
+      <li><a href="#not">What this is not</a></li>
+    </ol>
+  </div>
+
+  <h2 id="what-is-where">What is where, right now</h2>
+  <p>This block is filled in when the page loads, by asking the Chrome Web Store what it is serving
+    and GitHub what has been released. If the two agree there is nothing here worth doing: install
+    from the Store like everybody else.</p>
+
+  <div id="ahead">
+    <p class="meta">If this stays as it is - no script, or the check could not run -
+      <a href="https://github.com/ivannot/zoost/releases">the releases page</a> lists what exists, and
+      each product's Store listing states what it is serving.</p>
+  </div>
+
+  <p class="note">Nothing on this page decides for you. It shows the two version numbers and what
+    changed between them, and you judge whether it is worth the trouble. A fix for something you have
+    never hit is not an emergency.</p>
+
+  <h2 id="why">Why the fix is quick and the queue is not</h2>
+  <p>Zoost is written and maintained by one person. Every serious assessment of the project names
+    that as its main risk, and they are right to: there is no team, no rota, and nobody to hand it
+    to. Here is the other half of it, stated as structure rather than as a promise.</p>
+  <p>Both extensions run on interfaces Zoho does not document. Zoho can change one without notice,
+    and when that happens some part of Zoost stops working. That is the failure this page exists
+    for. What follows a break is short: there is nobody to coordinate with, no release train to
+    catch and no sprint boundary to wait for, so a small fix can be understood, written, tagged and
+    built on the day it is reported. What takes days is the review queue at Google, and that is the
+    one step in the chain nobody here can shorten.</p>
+  <p>So the shape of it is: the repair is fast, the delivery is slow. This page is how you skip the
+    slow part on the occasions when it actually costs you something.</p>
+  <div class="box warn">
+    <p><b>None of that is a commitment.</b> The licence says AS IS and means it. There is no
+      guaranteed response time, no support obligation, and no promise that any particular break will
+      be fixed at all. What is described above is where the time goes, not how much of it you are
+      owed.</p>
+  </div>
+  <p>And the honest answer to the question behind the criticism, which is <i>what happens if he
+    stops</i>: your mirror is plain files on your own disk. Deluge sources, SQL, JSON and Markdown,
+    readable with a text editor and a Git client, and they stay readable whether or not Zoost is ever
+    updated again. The source is Apache-2.0, every release is <a href="/nerd#how-a-release-is-built">built
+    in public and signed</a>, and the build is reproducible from the tagged commit by anyone who
+    wants to carry it on. Zoost being abandoned would cost you the tool. It would not cost you the
+    work you did with it.</p>
+
+  <h2 id="before">Before you start</h2>
+  <p>Two things that will stop you, and it is cheaper to find out now than at the last step.</p>
+  <div class="box">
+    <h3>Your browser may not allow it</h3>
+    <p>Loading an unpacked extension requires <b class="k">Developer mode</b> in
+      <code>chrome://extensions</code>. On a Chrome managed by your organisation, policy can disable
+      that switch or block unpacked extensions outright, and there is no way around it from this
+      side. If the toggle is greyed out or the page says your browser is managed, this is a
+      conversation with whoever administers it, not a thing you can do yourself.</p>
+    <p>Chrome also shows a "Disable developer mode extensions" prompt at startup while one is loaded,
+      on some platforms every time. It is a warning about the mechanism, not about this package, and
+      dismissing it leaves the extension running.</p>
+  </div>
+  <div class="box">
+    <h3>It will not update itself</h3>
+    <p>An extension loaded this way is frozen at the version you unzipped. It will not follow later
+      releases, and it will not switch itself back to the Store build when the queue clears.
+      <a href="#back">Going back</a> is two clicks, but nothing will remind you to.</p>
+  </div>
+
+  <h2 id="what-you-lose">What you lose, and what you keep</h2>
+  <p>This is the part that surprises people, so it is worth reading before rather than after.</p>
+  <p>Chrome identifies an extension by an id. The Store build's id comes from the key Google holds;
+    an unpacked build's id is derived from the folder you loaded it from. They are different ids, so
+    to Chrome they are two different extensions, and <b>an extension's stored settings belong to its
+    id</b>.</p>
+  <div class="box warn">
+    <p><b>The unpacked copy opens as if freshly installed.</b> No working folder, no AI provider or
+      API key, no passphrase, no diagram defaults. Nothing is broken and the fix is not failing: it
+      is a different id, so it has its own empty storage.</p>
+  </div>
+  <p><b>What you keep is everything that matters.</b> The mirror is files in a folder on your disk
+    and no extension owns it. Point the new copy at the same working folder with
+    <b class="k">Choose folder</b>, grant access again, and every workspace, every pulled function
+    and every bit of history you committed is there, exactly as it was. The re-setup is the folder,
+    and the AI key if you use one. A couple of minutes.</p>
+  <p class="note">Because the id follows the folder path, <b>moving or renaming the unpacked folder
+    later gives it a new id again</b> and empties its settings a second time. Unzip it somewhere you
+    are content to leave it before you load it, not into Downloads.</p>
+  <p>The two ids being different has one advantage worth using: the Store build and the unpacked one
+    can be installed at the same time. Leave the Store one in place, so going back is removing the
+    unpacked copy rather than reinstalling anything. Use one at a time, though: two panels writing
+    the same mirror folder is not a case anything here has been designed for.</p>
+
+  <h2 id="running-it">Running it</h2>
+  <ol>
+    <li><b>Download the package</b> from the release above, or from
+      <a href="https://github.com/ivannot/zoost/releases">the releases page</a>. It is the file named
+      <code>zoost-&lt;product&gt;-&lt;version&gt;-store.zip</code>. Take the one attached to the
+      release; do not build your own, because then none of what follows means anything.</li>
+    <li><b>Check it is what it claims to be</b>, if you want to. This is the whole reason the release
+      chain exists, and it is one command with the
+      <a href="https://cli.github.com/">GitHub CLI</a>:
+      <br><code>gh attestation verify &lt;the zip&gt; --repo ivannot/zoost</code>
+      <br>It answers whether that exact file was built by this repository's public workflow from the
+      commit it names. <a href="/nerd#check-it-yourself">The nerd page</a> has the longer version,
+      including how to compare the hash by hand.</li>
+    <li><b>Unzip it into a folder you will keep.</b> The archive has the manifest at its root, which
+      is the layout Chrome wants, so the folder you unzip into is the folder you load.</li>
+    <li><b>Open <code>chrome://extensions</code></b> and turn on <b class="k">Developer mode</b>, top
+      right.</li>
+    <li><b>Click <b class="k">Load unpacked</b></b> and select that folder. The extension appears in
+      the list with an ordinary card, and its side panel opens the way it always did.</li>
+    <li><b>Point it at your working folder</b> and re-grant access, as described above. Then carry
+      on.</li>
+  </ol>
+  <p class="note">If Chrome refuses the folder, the usual cause is having selected the one
+    <i>containing</i> the unzipped folder rather than the unzipped folder itself. Chrome wants the
+    directory with <code>manifest.json</code> directly inside it.</p>
+
+  <h2 id="back">Going back</h2>
+  <p>When the Store catches up, and this page will tell you when it has:</p>
+  <ol>
+    <li>Open <code>chrome://extensions</code> and <b class="k">Remove</b> the unpacked copy.</li>
+    <li>If you left the Store build installed, it is already there and already current. If you
+      removed it, install it again from
+      <a href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Zoost CRM</a>
+      or
+      <a href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Zoost Analytics</a>,
+      and point it at your working folder once.</li>
+    <li>Turn <b class="k">Developer mode</b> back off, so Chrome stops asking.</li>
+  </ol>
+  <p>Nothing needs cleaning up beyond that. The unpacked folder can be deleted; your mirror is
+    somewhere else entirely and is not touched by any of this.</p>
+
+  <h2 id="not">What this is not</h2>
+  <p><b>It is not a beta channel.</b> The package is the same one submitted for review, not an
+    earlier or looser build. There is no separate branch of Zoost that gets released here first.</p>
+  <p><b>It is not a way around the review.</b> The version is submitted to Google in the same hour it
+    is tagged, and it will appear on the Store when it clears. What this page removes is your wait,
+    not the review.</p>
+  <p><b>It is not the supported way to install Zoost.</b> The Store build updates itself, keeps its
+    settings and does not make Chrome nag. If you are not currently blocked by something, install it
+    from the Store and close this page.</p>
+  <p><b>It is not a support channel.</b> If something is broken and there is no release ahead of the
+    Store, the fix does not exist yet. <a href="https://github.com/ivannot/zoost/issues">Opening an
+    issue</a> is what makes it exist, and it is also the only way to find out whether the break is
+    known.</p>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div id="vers"></div>
+    <div class="flinks">
+      <a href="/crm" title="Zoost - workbench for Zoho CRM">Zoost CRM</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/analytics" title="Zoost - workbench for Zoho Analytics">Zoost Analytics</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/ivannot/zoost">Source on GitHub</a><span class="sep" aria-hidden="true">·</span>
+            <a href="https://github.com/ivannot/zoost/releases" title="Every release, with what changed in it and the hash of the package">Release notes</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/llms.txt" title="A map of this site and of the evidence behind its claims, written for assistants asked to assess the product rather than summarise the landing page">For AI assistants</a><span class="sep" aria-hidden="true">·</span>
+      <a href="/privacy">Privacy policy</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache-2.0</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://github.com/sponsors/ivannot">Sponsor</a><span class="sep" aria-hidden="true">·</span>
+      <a href="https://ko-fi.com/ivannot">Ko-fi</a><span class="sep" aria-hidden="true">·</span>
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>
+    </div>
+    <p class="legal">
+      Created by Ivan Notaristefano (with the support of Claudio). Copyright <span class="cyear">2026</span>. Licensed under the Apache License 2.0 and provided
+      <b>AS IS</b>, without warranties or conditions of any kind, express or implied. The author accepts no
+      liability for any loss, damage or data issue arising from its use, and is under no obligation to provide
+      support or maintenance.
+    </p>
+    <p class="legal">
+      Zoost is a family of independent, unofficial developer tools. They are <b>not</b> affiliated with, endorsed by,
+      sponsored by or supported by Zoho Corporation. "Zoho", "Zoho CRM", "Zoho Analytics" and "Deluge" are
+      trademarks of Zoho Corporation, used here in a nominative sense only, to indicate compatibility.
+    </p>
+  </div>
+</footer>
+
+<script src="/site.js?v=183574ac83" defer></script>
+</body>
+</html>

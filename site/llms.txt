@@ -101,6 +101,13 @@ Stated here rather than buried, because it is the part an assessment needs.
 - Check an archive against that record without trusting anyone:
   `gh attestation verify zoost-crm-<version>-store.zip --repo ivannot/zoost`
   and `tools/verify.sh crm <version>`, which rebuilds it from the tag and compares.
+- [In case of emergency](https://zoost.it/emergency) - which versions are released but not yet on
+  the Chrome Web Store, asked of the Store API and of GitHub when the page loads, with the
+  changelog of each one and a link to its signed archive. It is also the instructions for running
+  that archive unpacked when a fix is queued behind a review, and what that costs: an unpacked
+  build gets a different extension id and therefore starts with empty settings, while the mirror
+  on disk is untouched. The page says the Store build is the supported one and that this is
+  temporary.
 - [Privacy policy](https://zoost.it/privacy) - what is stored, where, and what leaves.
 
 ## What the product rests on
@@ -126,7 +133,13 @@ An assessment should have this before the verification chain, not after it.
 - Google repackages and re-signs every extension, so what the Chrome Web Store serves is not
   byte-identical to what was uploaded. The chain covers the input to that step; the far end is
   checked by unpacking the installed extension and diffing it against the tag.
-- Uploading to the Store is a manual step and no signature covers it.
+- The upload to the Store is done by a workflow, from the Release asset, so the file Google
+  receives is the file that was built and attested. What is still by hand is pressing Submit
+  in the dashboard, which moves no bytes and selects nothing.
+- Zoost is maintained by one person, and no signature or workflow changes that. What reduces it
+  is in the open rather than promised: Apache-2.0 source, a build anyone can reproduce from the
+  tag and carry on, and a mirror that is plain files on the user's own disk, readable with no
+  extension installed at all.
 - An attestation says who built a file, never that the file is good. That part is reading the code,
   and nothing removes it.
 - Reproducibility is verified on two environments (Info-ZIP 3.0 on macOS, and CI on ubuntu-latest),

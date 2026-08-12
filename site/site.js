@@ -19,7 +19,11 @@
   var REPO_URL = 'https://github.com/ivannot/zoost';
   var box = document.getElementById('vers');
   var stamp = document.querySelector('.upd .dv, .upd .dd');
-  if ((!box && !stamp) || !window.fetch) return;
+  // `#ahead` is /emergency's block, and it is listed here so that page does not depend on also
+  // carrying a footer badge. Three independent things, one guard, none of them a precondition for
+  // the others - which is the same rule the two above already follow.
+  var aheadBox = document.getElementById('ahead');
+  if ((!box && !stamp && !aheadBox) || !window.fetch) return;
 
   function fmtDate(iso, longMonth) {
     var d = new Date(iso);
@@ -42,6 +46,16 @@
       rejected: 'Rejected', staged: 'Approved, not yet published',
       awaiting: 'awaiting review', notSubmitted: 'not submitted yet',
       none: 'none yet', unknown: 'unknown',
+      // /emergency only. Kept in the same table as the rest because a second one would be a second
+      // place to forget a language in.
+      inStep: 'and that is the newest release. Nothing to do here.',
+      ahead1: 'one release ahead of the Store', aheadN: 'releases ahead of the Store',
+      cantAsk: 'The Store could not be asked just now, so this page cannot say whether anything is ahead of it.',
+      releasesPage: 'The releases page has the answer',
+      released: 'Released', download: 'Download', hashes: 'notes and hash',
+      noNotes: 'No notes were published for this version.',
+      queued: 'submitted, awaiting review', refused: 'this submission was rejected',
+      askFailed: 'This check could not be run just now.',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
@@ -49,6 +63,14 @@
       rejected: 'Rifiutata', staged: 'Approvata, non ancora pubblicata',
       awaiting: 'in attesa di revisione', notSubmitted: 'non ancora inviata',
       none: 'nessuna', unknown: 'sconosciuta',
+      inStep: "ed è l'ultima release. Qui non c'è niente da fare.",
+      ahead1: 'una release avanti rispetto allo Store', aheadN: 'release avanti rispetto allo Store',
+      cantAsk: 'Non è stato possibile interrogare lo Store, quindi questa pagina non può dire se ci sia qualcosa avanti.',
+      releasesPage: 'La pagina delle release ha la risposta',
+      released: 'Rilasciata', download: 'Scarica', hashes: 'note e hash',
+      noNotes: 'Per questa versione non sono state pubblicate note.',
+      queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
+      askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
     },
   };
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
@@ -192,6 +214,82 @@
       ? REPO_URL + '/compare/' + encodeURIComponent(v.tag) + '...main'
       : REPO_URL + '/commits/main/apps/' + app;
     return '<a href="' + href + '">' + esc(v.repo) + '</a>';
+  }
+
+  /* /emergency: what has been released but is not on the Store yet, and what changed in it.
+   *
+   * The page is a set of instructions for a situation that is usually not happening, so the first
+   * thing it does is say whether it is. Three answers, kept apart on purpose: in step, something
+   * ahead, and «nobody could ask». The third is never rendered as either of the other two - a page
+   * that says "you are up to date" when it does not know would send somebody back to a broken
+   * extension believing they had checked, and that is the one wrong answer with a cost.
+   *
+   * So «could not ask» covers two sources, not one: the Store not answering, and the tag feed not
+   * answering. With no tag list, "nothing is ahead" is not a finding, it is the absence of one.
+   *
+   * Nothing here nudges. It prints the two numbers, the changelog and a link. Whether what changed
+   * is worth running an unpacked extension for is the reader's call, and it is the one judgement
+   * this page is in no position to make for them.
+   */
+  function mdToHtml(src) {
+    // Escaped first, then a small subset put back. The notes are ours, but they arrive over a
+    // network and "we wrote it" is not a security model. Bold and code are what the files use.
+    return String(src).split(/\n{2,}/).map(function (para) {
+      var h = esc(para.replace(/\s*\n\s*/g, ' ')).trim();
+      if (!h) return '';
+      h = h.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+      return '<p>' + h + '</p>';
+    }).join('');
+  }
+
+  function renderAhead(d) {
+    aheadBox.innerHTML = [['crm', 'Zoost CRM'], ['analytics', 'Zoost Analytics']].map(function (pr) {
+      var app = pr[0], v = d && d[app];
+      if (!v) return '';
+      var head = '<h3>' + esc(pr[1]) + '</h3>';
+      // No Store figure, or no tag feed: either way the comparison could not be made.
+      if (!v.store || !v.latest) {
+        return '<div class="box">' + head + '<p>' + esc(t('cantAsk')) + ' <a href="' + REPO_URL +
+               '/releases">' + esc(t('releasesPage')) + '</a>.</p></div>';
+      }
+      var list = v.ahead || [];
+      if (!list.length) {
+        return '<div class="box">' + head + '<p><b>' + esc(t('store')) + ': ' + esc(v.store) +
+               '</b> - ' + esc(t('inStep')) + '</p></div>';
+      }
+      var out = ['<div class="box warn">' + head + '<p><b>' + esc(t('store')) + ': ' +
+                 esc(v.store) + ' · ' + esc(t('released')) + ': ' + esc(list[0].version) + '</b> - ' +
+                 esc(list.length === 1 ? t('ahead1') : list.length + ' ' + t('aheadN')) + '</p>'];
+      list.forEach(function (a) {
+        // What Google says about *this* version, and only about this one. A submission sitting in
+        // the queue is the reason the page exists; a refused one is worth knowing before you install
+        // it, because it is not going to arrive on its own.
+        var p = v.pending && v.pending.version === a.version ? v.pending.state : null;
+        var state = p === 'PENDING_REVIEW' ? t('queued') : p === 'REJECTED' ? t('refused') : '';
+        out.push('<p><b>' + esc(a.version) + '</b>' + (state ? ' - ' + esc(state) : '') + '<br>' +
+                 '<a href="' + esc(a.zip) + '">' + esc(t('download')) + ' zoost-' + esc(app) + '-' +
+                 esc(a.version) + '-store.zip</a> · <a href="' + REPO_URL + '/releases/tag/' +
+                 esc(a.tag) + '">' + esc(t('hashes')) + '</a></p>');
+        out.push('<div class="note">' +
+                 (a.notes ? mdToHtml(a.notes) : '<p>' + esc(t('noNotes')) + '</p>') + '</div>');
+      });
+      return out.join('') + '</div>';
+    }).join('');
+  }
+
+  if (aheadBox) {
+    fetch('/api/ahead', { headers: { accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) throw new Error('no answer');
+        renderAhead(d);
+      })
+      .catch(function () {
+        // The instructions on the page stay readable either way; this only stops the block claiming
+        // to have checked something it did not, and points at where the answer actually is.
+        aheadBox.innerHTML = '<p class="meta">' + esc(t('askFailed')) + ' <a href="' + REPO_URL +
+                             '/releases">' + esc(t('releasesPage')) + '</a>.</p>';
+      });
   }
 
   // A tag is `<app>-v1.9.0`; the version is what follows the -v. Compared numerically, because

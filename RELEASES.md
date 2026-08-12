@@ -27,8 +27,9 @@ If that number matches the row below, the archive published on the Release was b
 the source in this repository at that tag, and nothing else went into it.
 
 Note the precise claim, because the looser one would be false: this establishes how the *release
-asset* was produced. Uploading it to the Store is a manual step, so nothing here cryptographically
-proves the file Google received is that one. What closes that circle is at the far end - unpack the
+asset* was produced. The upload to the Store is done by a workflow, from that same asset, so the file
+Google receives is the one this proves; what is still by hand is pressing Submit in the dashboard,
+which is a decision and moves no bytes. What none of it establishes is the far end - unpack the
 installed extension and diff it against the tag. See *What this cannot prove*.
 
 <!-- release rows are appended below the header, newest last -->
@@ -128,9 +129,10 @@ There is no build step that could put something in the package that is not in th
 **What Google serves is not byte-identical to what was uploaded.** The Store repackages and re-signs
 every extension, so the `.crx` a browser installs cannot be compared to the `.zip` here. What the
 chain above establishes is the *input* to that process. To check the far end, unpack the installed
-extension from your Chrome profile and diff its files against the tag - they are plain text, and
-this is also what settles the one manual step in the chain, since the upload to Google is done by
-hand and no signature covers it.
+extension from your Chrome profile and diff its files against the tag - they are plain text. It is
+the only check left that nothing else covers: the upload itself is a workflow reading the Release
+asset, so the gap is no longer between this repository and Google, it is between what Google was
+given and what Google serves.
 
 **Diff against the tag of the version you actually have, not the newest one here.** Google publishes
 days after a submission, not minutes - how many is Google's to decide - so the newest tag in this

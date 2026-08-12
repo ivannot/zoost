@@ -18,10 +18,16 @@ const listPages = () => ['', 'it/'].flatMap((d) =>
 // Sliced rather than imported: _worker.js is an ES module but node reads a bare .js as CommonJS,
 // and a package.json at the repo root to change that would be a build-system decision taken by the
 // tests. The tests do not get to reshape the project.
-const { pickLatestTag, pickStatus } = load([
+// `cmpVer` and `isNewer` are carried along because the functions below call them. They were not, the
+// first time, and the failure landed on an unrelated case - `pickLatestTag` sorting with an
+// undefined comparator - which is the free-variable trap this repository has already recorded once.
+const { pickLatestTag, pickStatus, tagsAhead } = load([
   sliceConst('site/_worker.js', 'IS_VERSION'),
+  sliceFn('site/_worker.js', 'cmpVer'),
+  sliceConst('site/_worker.js', 'isNewer'),
   sliceFn('site/_worker.js', 'pickLatestTag'),
   sliceFn('site/_worker.js', 'pickStatus'),
+  sliceFn('site/_worker.js', 'tagsAhead'),
 ]);
 
 const entry = (tag, title) =>
@@ -68,6 +74,54 @@ test('one product never answers with the other product\'s tag', () => {
   const xml = entry('crm-v3.0.0') + entry('analytics-v2.0.0');
   assert.equal(pickLatestTag(xml, 'crm'), 'crm-v3.0.0');
   assert.equal(pickLatestTag(xml, 'analytics'), 'analytics-v2.0.0');
+});
+
+/* What /emergency offers, which is a different question from "what is the newest tag": it is
+ * measured against what the Store is serving, and the direction of a wrong answer matters. */
+
+const feed = ['crm-v1.40.0', 'crm-v1.39.0', 'crm-v1.38.4', 'analytics-v1.23.0', 'v1.0.0']
+  .map((t) => entry(t)).join('');
+
+test('what is ahead of the Store is listed, newest first', () => {
+  assert.equal(tagsAhead(feed, 'crm', '1.38.4').map((t) => t.version).join(' '), '1.40.0 1.39.0');
+});
+
+test('nothing is ahead once the Store has caught up', () => {
+  assert.equal(tagsAhead(feed, 'crm', '1.40.0').length, 0);
+});
+
+test('with no Store version, nothing is offered rather than everything', () => {
+  // The one wrong answer with a cost. Without a baseline the honest output is an empty list: a page
+  // built on "here is every tag I can see" would tell a reader to install by hand over an
+  // installation that may already be newer than any of them.
+  assert.equal(tagsAhead(feed, 'crm', null).length, 0);
+  assert.equal(tagsAhead(feed, 'crm', '').length, 0);
+  assert.equal(tagsAhead(feed, 'crm', 'not-a-version').length, 0);
+});
+
+test('the legacy bare tag belongs to no product and is never offered', () => {
+  // Same tag, same reason as the badge: `v1.0.0` predates the per-product scheme, and offering it to
+  // somebody as an upgrade would be offering them a download of neither extension.
+  assert.equal(tagsAhead(feed, 'analytics', '1.0.0').map((t) => t.tag).join(' '), 'analytics-v1.23.0');
+});
+
+test('a release named twice in one entry is offered once', () => {
+  // Atom entries carry the tag in more than one element. Reading them all is right; offering the
+  // same download twice is not.
+  const twice = '<entry><link href="https://github.com/ivannot/zoost/releases/tag/crm-v1.40.0"/>' +
+                '<id>https://github.com/ivannot/zoost/releases/tag/crm-v1.40.0</id></entry>';
+  assert.equal(tagsAhead(twice, 'crm', '1.39.0').map((t) => t.version).join(' '), '1.40.0');
+});
+
+test('a Store version with fewer components compares as if the rest were zero', () => {
+  // The Store reports what it is serving and IS_VERSION accepts two to four components, while a tag
+  // always has three. 1.39 and 1.39.0 are the same release, and a comparator that indexed past the
+  // end would have got NaN and called it ahead.
+  assert.equal(tagsAhead(feed, 'crm', '1.39').map((t) => t.version).join(' '), '1.40.0');
+});
+
+test('the list is capped, so the fetches it causes are bounded', () => {
+  assert.equal(tagsAhead(feed, 'crm', '1.0.0', 1).length, 1);
 });
 
 test('the Store status is read, and a field that is not a version is dropped', () => {
@@ -272,6 +326,58 @@ test('the footer says what is in review only when it adds a fact', () => {
   // The label is looked up through LBL rather than named directly, because there are three states
   // to say and one of them is a refusal. Asserting `t('review')` would now pass only by reverting.
   assert.ok(/t\(LBL\[p\.state\]\)/.test(src), 'the footer no longer states which state it is in');
+});
+
+test('the three answers the emergency page can give are kept apart', () => {
+  const box = { innerHTML: '' };
+  const { renderAhead } = load([
+    sliceConst('site/site.js', 'STR'),
+    sliceFn('site/site.js', 't'),
+    sliceFn('site/site.js', 'esc'),
+    sliceFn('site/site.js', 'mdToHtml'),
+    sliceFn('site/site.js', 'renderAhead'),
+  ], { REPO_URL: 'https://github.com/ivannot/zoost', LANG: 'en', aheadBox: box });
+
+  renderAhead({
+    crm: { store: '1.39.0', latest: '1.40.0', pending: { version: '1.40.0', state: 'PENDING_REVIEW' },
+           ahead: [{ version: '1.40.0', tag: 'crm-v1.40.0', zip: 'https://example.invalid/a.zip',
+                     notes: '**Fixed.** A thing that was broken.' }] },
+    analytics: { store: '1.23.0', latest: '1.23.0', pending: null, ahead: [] },
+  });
+  assert.ok(box.innerHTML.includes('https://example.invalid/a.zip'), 'the archive is not linked');
+  assert.ok(box.innerHTML.includes('<b>Fixed.</b>'), 'the changelog is not rendered');
+  assert.ok(box.innerHTML.includes('submitted, awaiting review'), 'the queue state is not stated');
+  assert.ok(box.innerHTML.includes('Nothing to do here'), 'the product in step does not say so');
+
+  // The one that has to be its own answer. A Store version with no tag feed is not "you are up to
+  // date" - it is a comparison that could not be made, and rendering it as the calm case would send
+  // somebody back to a broken extension believing they had checked.
+  renderAhead({
+    crm: { store: null, latest: null, ahead: [] },
+    analytics: { store: '1.23.0', latest: null, ahead: [] },
+  });
+  assert.equal((box.innerHTML.match(/could not be asked/g) || []).length, 2,
+    'a comparison that could not be made is being reported as one that came out even');
+  assert.ok(!box.innerHTML.includes('Nothing to do here'), 'unknown is being rendered as in step');
+  assert.ok(!/box warn/.test(box.innerHTML), 'nothing is ahead, so nothing should be flagged');
+});
+
+test('the changelog is escaped before any of it is turned back into markup', () => {
+  const { mdToHtml } = load([
+    sliceFn('site/site.js', 'esc'),
+    sliceFn('site/site.js', 'mdToHtml'),
+  ]);
+  // /emergency drops the release notes into innerHTML. They are our own files, fetched over a
+  // network - and "we wrote it" is not a security model, it is an assumption about every future
+  // edit to a directory nothing else validates.
+  assert.equal(mdToHtml('<img src=x onerror=alert(1)>'),
+               '<p>&lt;img src=x onerror=alert(1)&gt;</p>');
+  // The subset that is put back is applied to the escaped text, in that order, so no tag can be
+  // smuggled in through it.
+  assert.equal(mdToHtml('**Three more data centres.** Now on `zoho.sa`.'),
+               '<p><b>Three more data centres.</b> Now on <code>zoho.sa</code>.</p>');
+  // A blank line is a paragraph; a single newline is where the file wraps, which is not structure.
+  assert.equal(mdToHtml('one\ntwo\n\nthree'), '<p>one two</p><p>three</p>');
 });
 
 // ---------- The footer badge speaks the page's language, all of it ----------
