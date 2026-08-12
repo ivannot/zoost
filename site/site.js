@@ -56,6 +56,7 @@
       noNotes: 'No notes were published for this version.',
       queued: 'submitted, awaiting review', refused: 'this submission was rejected',
       askFailed: 'This check could not be run just now.',
+      storeAsOf: 'The Store was last asked',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
@@ -71,6 +72,7 @@
       noNotes: 'Per questa versione non sono state pubblicate note.',
       queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
       askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
+      storeAsOf: 'Lo Store è stato interrogato l\'ultima volta il',
     },
   };
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
@@ -275,6 +277,14 @@
       });
       return out.join('') + '</div>';
     }).join('');
+    // When the Store was last actually asked, printed rather than judged. The reading is refreshed by
+    // a workflow and committed only when the numbers move, so a run that stopped happening leaves an
+    // old date on a true reading - and the date is the only thing that would show it. Interpreting it
+    // here, with a threshold, would turn a cron that ran late into «unknown».
+    if (d && d.storeAsOf) {
+      const when = fmtDate(d.storeAsOf, true);
+      if (when) aheadBox.innerHTML += '<p class="meta">' + esc(t('storeAsOf')) + ' ' + esc(when) + '.</p>';
+    }
   }
 
   if (aheadBox) {

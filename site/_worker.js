@@ -14,18 +14,20 @@
  *    others still answer; the page then shows "unknown" for that one only.
  *  - Nothing is ever guessed. A value that does not look like a version is discarded rather than
  *    displayed, so a change in Google's markup can only cost us the number — never invent one.
- *  - Answers are cached at the edge for an hour, so a brief upstream failure is invisible.
+ *  - Answers are cached at the edge for ten minutes, so a brief upstream failure is invisible.
  *
- * The Store figures came from scraping the listing page for years, because the old API could not
- * report status and Google published nothing else. They come from the Chrome Web Store API now, read
- * with a service account, minting a token for `chromewebstore.readonly` — which is what this code
- * asks for. Whether the key could ask for more **is** established, and the answer is that it can:
- * `tools/cwsscope.py` mints a token for the full `chromewebstore` scope from this same key and the
- * API answers with the item. Read-only is a property of what this code requests, never of the
- * credential - treat any key of this service account as one that can publish, because Google links
- * one service account per publisher and offers no narrower grant. That removes a DOM contract we
- * did not own, and it answers a question the scrape never could: whether a submission was
- * **rejected**, which is otherwise indistinguishable from one still in the queue.
+ * **This script holds no credential.** The Store figures were scraped off the listing page for
+ * years, then read here from the Chrome Web Store API with a service-account key kept as a
+ * Cloudflare Secret - which meant code answering public requests could read a key that can publish.
+ * `tools/cwsscope.py` established that it can: the same key mints a token for the full
+ * `chromewebstore` scope and the API answers. Read-only was a property of what this code asked for,
+ * never of the credential, and Google links one service account per publisher with no narrower grant
+ * on offer - so least privilege was not available here, and the key left instead.
+ *
+ * `tools/storestatus.py` now asks Google from a workflow and commits `site/store-status.json`, and
+ * this serves what that wrote. What the API bought over the scrape is unchanged: «in review» is
+ * Google saying so, and a **rejected** submission is expressible at all - without a state it would
+ * be indistinguishable from one still in the queue.
  */
 
 const REPO = 'ivannot/zoost';
@@ -37,11 +39,10 @@ const EXT_ID = {
 };
 // Ten minutes, not an hour. The badge is a live status - what the Store is serving, what it has in
 // the queue - and an hour of it was the difference between submitting and seeing it. Measured rather
-// than guessed: a miss costs **9 upstream requests** (4 GitHub Atom feeds, 2 raw manifests, 2
-// fetchStatus, 1 token mint), so this is 54 an hour per PoP against 9 - and «per PoP» is the term
-// that matters, since Cloudflare caches per data centre and the total is that times however many are
-// warm. The one number nobody here has is Google's quota on the Store API, which is the 2 of the 9
-// worth watching if this is ever shortened further.
+// than guessed: a miss costs **6 upstream requests** (4 GitHub Atom feeds, 2 raw manifests), and
+// «per PoP» is the term that matters, since Cloudflare caches per data centre and the total is that
+// times however many are warm. It was 9 while this asked Google directly - two fetchStatus calls and
+// a token mint - and those went away with the credential.
 const TTL = 600;                        // seconds, when every source answered
 const TTL_PARTIAL = 60;                 // …and when one did not, so an outage expires with the outage
 const UA = 'zoost.it version badge (+https://zoost.it)';
@@ -147,102 +148,33 @@ export function tagsAhead(xml, app, from, cap = 5) {
   return out.sort((a, b) => cmpVer(a.version, b.version)).slice(0, cap);
 }
 
-// What the Chrome Web Store says about our items, asked of the Store rather than scraped off it.
+// What the Chrome Web Store says about our items, read from a file this repository publishes rather
+// than asked of Google from here.
 //
-// This used to parse the listing page for a `class="nBZElf"` span, because the old API had no way to
-// report status and Google published nothing else. V2 does: `publishers.items.fetchStatus` returns
-// the published revision and the submitted one, each with a state, and it is read through a service
-// account, asking for `chromewebstore.readonly` — a *token* that cannot publish, cannot edit and
-// cannot take anything down. That is a property of the request, not a limit Google is known to
-// enforce on the key: treat any credential of this service account as one that can write. Three things improve at once: the DOM contract we did not own is gone,
-// "in review" is Google saying so instead of a line we wrote in RELEASES.md, and **rejected** became
-// expressible at all — before this, a refused submission would have left the badge claiming it was
-// still in review for ever.
-const CWS_API = 'https://chromewebstore.googleapis.com/v2';
-const PUBLISHER = 'f3724a09-0185-4176-ab7e-3b1df03ca3b7';   // not a secret: it is in every dashboard URL
-
-const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
-  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-function pemBytes(pem) {
-  const raw = atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out.buffer;
-}
-
-// The service-account JWT flow: sign a one-hour assertion with the account's private key and trade
-// it for an access token. Nothing is stored between requests — the whole payload is cached for an
-// hour anyway, so a token per computation costs one extra call and saves having a second thing that
-// can go stale.
-// Returns {token, why}. `why` is a short, deliberately non-secret reason, and it exists because
-// "unknown" with no cause is the empty state this project refuses everywhere else: a missing binding,
-// a revoked key and a malformed secret all produce the same null and need different fixes. Nothing in
-// it identifies the credential - it names which step declined.
-// `CWS_SERVICE_ACCOUNT` is a Cloudflare **Secret**, and it has to be in the Worker's *runtime*
-// "Variables and secrets", not the one under Build. Those are two different boxes with nearly the
-// same name: the build one is for the build step and never reaches `env`, so the value was set,
-// visible in the dashboard, and the Worker still answered `no-credential`. Read the description, not
-// the title - the runtime one says "used at runtime".
-async function cwsToken(env) {
-  if (!env || !env.CWS_SERVICE_ACCOUNT) return { token: null, why: 'no-credential' };
-  let key;
+// It used to be asked from here, and that put a service-account key in Cloudflare as a Secret that
+// request-handling code could read. The key can publish - `tools/cwsscope.py` mints a token for the
+// full `chromewebstore` scope from it and the API answers - and Google links one service account per
+// publisher with no narrower grant on offer, so read-only was a property of what this code asked for
+// and never of the credential. Least privilege was not available where it was needed, so the key
+// left: `tools/storestatus.py` runs in a workflow and commits `site/store-status.json`, and this
+// serves what that wrote.
+//
+// The reading carries `asOf`, and it is passed through rather than judged. A run that stopped
+// happening leaves an old date on a true reading, and the page shows the date - which is this
+// project's answer everywhere else: expose the number, let the reader weigh it. Inventing a
+// staleness threshold here would be interpreting it, and would turn a working setup into «unknown»
+// on a cron that ran late.
+async function storeStatus(request, env) {
   try {
-    key = JSON.parse(env.CWS_SERVICE_ACCOUNT);
+    const r = await env.ASSETS.fetch(new URL('/store-status.json', request.url));
+    if (!r.ok) return { crm: null, analytics: null, cws: 'no-file', asOf: null };
+    const d = await r.json();
+    return { crm: d.crm || null, analytics: d.analytics || null,
+             cws: d.cws || 'ok', asOf: d.asOf || null };
   } catch {
-    return { token: null, why: 'credential-not-json' };
+    // Same shape either way, so «nobody could ask» stays one thing the pages already know how to say.
+    return { crm: null, analytics: null, cws: 'unreadable', asOf: null };
   }
-  if (!key.client_email || !key.private_key) return { token: null, why: 'credential-incomplete' };
-  const now = Math.floor(Date.now() / 1000);
-  const claim = {
-    iss: key.client_email,
-    scope: 'https://www.googleapis.com/auth/chromewebstore.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now, exp: now + 3600,
-  };
-  const enc = new TextEncoder();
-  const head = b64url(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
-  const body = b64url(enc.encode(JSON.stringify(claim)));
-  const signer = await crypto.subtle.importKey(
-    'pkcs8', pemBytes(key.private_key),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', signer, enc.encode(`${head}.${body}`));
-  const r = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${head}.${body}.${b64url(sig)}`,
-    signal: timeout(8000),
-  });
-  if (!r.ok) return { token: null, why: 'token-http-' + r.status };
-  const j = await r.json();
-  return j && j.access_token ? { token: j.access_token, why: 'ok' }
-                             : { token: null, why: 'token-empty' };
-}
-
-async function cwsStatus(token, app) {
-  if (!token) return null;
-  const r = await fetch(`${CWS_API}/publishers/${PUBLISHER}/items/${EXT_ID[app]}:fetchStatus`, {
-    headers: { authorization: `Bearer ${token}` }, signal: timeout(8000),
-  });
-  if (!r.ok) return { http: r.status };
-  return pickStatus(await r.json());
-}
-
-// Separated so it can be tested against a real response. Every version still passes the same shape
-// guard the scrape used: a field that is not a version is discarded rather than displayed, because
-// the promise has always been that a change at Google's end can cost us a number, never invent one.
-export function pickStatus(d) {
-  const rev = (x) => {
-    if (!x || !x.state) return null;
-    const ch = (x.distributionChannels || [])[0] || {};
-    const v = String(ch.crxVersion || '').trim();
-    return { state: x.state, version: IS_VERSION.test(v) ? v : null,
-             deployPercentage: typeof ch.deployPercentage === 'number' ? ch.deployPercentage : null };
-  };
-  const published = rev(d && d.publishedItemRevisionStatus);
-  const submitted = rev(d && d.submittedItemRevisionStatus);
-  if (!published && !submitted) return null;
-  return { published, submitted, takenDown: !!(d && d.takenDown) };
 }
 
 // The version the code is at right now, straight from the manifest on the default branch. This is
@@ -297,17 +229,12 @@ async function lastChanged(path) {
 
 const settled = (p) => p.then((v) => v).catch(() => null);
 
-// `{http:403}` is not a status. `cwsStatus` returns that shape when Google answered but refused, and
-// it has to be told apart from an answer: both endpoints below ask "what is the Store serving", and
-// reading a refusal as an answer is how a page ends up rendering `undefined` as a version.
-const okStatus = (x) => (x && x.published !== undefined ? x : null);
-
 // The cache key carries a version marker, and it must be bumped whenever the payload's shape
 // changes. The key deliberately ignores the query string — otherwise anyone could fill the cache
 // with junk keys — which also means a stale entry cannot be busted from outside. Without this
 // marker a deploy is invisible for up to an hour: the new code runs, hits the old cached response
 // and returns it unchanged. That is exactly what happened when `repo` was added.
-const CACHE_KEY = '/api/versions?v=20';  // bumped: the TTL changed, so the entries written under v=19 would outlive it by an hour
+const CACHE_KEY = '/api/versions?v=21';  // bumped: the payload gained storeAsOf when the credential left
 
 // Turning on `assets.not_found_handling` took this endpoint away without touching a line of it:
 // with a 404 page configured, a request that matches no asset stops reaching the Worker, and
@@ -326,20 +253,19 @@ async function versions(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
-  const token = auth.token;
-  const [crmCws, crmRepo, crmTag, anCws, anRepo, anTag, docsUpd, docsAnUpd] =
+  const [store, crmRepo, crmTag, anRepo, anTag, docsUpd, docsAnUpd] =
     await Promise.all([
-      settled(cwsStatus(token, 'crm')), settled(repoVersion('crm')), settled(latestTag('crm')),
-      settled(cwsStatus(token, 'analytics')), settled(repoVersion('analytics')),
-      settled(latestTag('analytics')),
+      settled(storeStatus(request, env)),
+      settled(repoVersion('crm')), settled(latestTag('crm')),
+      settled(repoVersion('analytics')), settled(latestTag('analytics')),
       settled(lastChanged('site/docs-crm.html')),
       settled(lastChanged('site/docs-analytics.html')),
     ]);
-  const crmStore = okStatus(crmCws) && crmCws.published ? crmCws.published.version : null;
-  const anStore = okStatus(anCws) && anCws.published ? anCws.published.version : null;
-  const cwsWhy = auth.why !== 'ok' ? auth.why
-    : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok';
+  const s = store || { crm: null, analytics: null, cws: 'unreadable', asOf: null };
+  const crmCws = s.crm, anCws = s.analytics;
+  const crmStore = crmCws && crmCws.published ? crmCws.published.version : null;
+  const anStore = anCws && anCws.published ? anCws.published.version : null;
+  const cwsWhy = s.cws;
   /* What is in review, and now with a *state* rather than an inference.
    *
    * This used to be the newest version RELEASES.md recorded as submitted, which answered the
@@ -353,9 +279,9 @@ async function versions(request, env, ctx) {
    * package has been in the queue is not worth knowing, and it was the one figure here typed by hand
    * - so the badge now rests on Google alone and there is nothing left to keep in step. */
   const inReview = (cws) => {
-    const s = okStatus(cws) && cws.submitted;
-    if (!s || !s.version) return null;
-    return { version: s.version, state: s.state };
+    const sub = cws && cws.submitted;
+    if (!sub || !sub.version) return null;
+    return { version: sub.version, state: sub.state };
   };
 
   // A source that failed is cached for a minute, not an hour. `settled()` turns a blip into null and
@@ -393,6 +319,10 @@ async function versions(request, env, ctx) {
     crm: { store: crmStore, repo: crmRepo, tag: crmTag, pending: inReview(crmCws), url: listing('crm') },
     analytics: { store: anStore, repo: anRepo, tag: anTag, pending: inReview(anCws), url: listing('analytics') },
     cws: cwsWhy,
+    // When the Store was last actually asked. Passed through rather than judged: an old date on a
+    // true reading is a fact the reader can weigh, and a threshold invented here would turn a cron
+    // that ran late into «unknown».
+    storeAsOf: s.asOf,
     siteUpdated: updated, docsUpdated: docsUpd, docsAnalyticsUpdated: docsAnUpd,
     checked: new Date().toISOString(),
   }), {
@@ -417,7 +347,7 @@ async function versions(request, env, ctx) {
 // when there is not sends them to install an older build over a newer one by hand. So a Store
 // version that could not be read yields an empty list and a `cws` field saying why, and the page
 // renders that as «nobody could ask» rather than as either answer.
-const AHEAD_KEY = '/api/ahead?v=1';
+const AHEAD_KEY = '/api/ahead?v=2';
 
 async function ahead(request, env, ctx) {
   const cache = caches.default;
@@ -426,15 +356,11 @@ async function ahead(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const auth = (await settled(cwsToken(env))) || { token: null, why: 'threw' };
-  const [crmCws, anCws, xml] = await Promise.all([
-    settled(cwsStatus(auth.token, 'crm')),
-    settled(cwsStatus(auth.token, 'analytics')),
-    settled(tagsFeed()),
-  ]);
+  const [store, xml] = await Promise.all([settled(storeStatus(request, env)), settled(tagsFeed())]);
+  const s = store || { crm: null, analytics: null, cws: 'unreadable', asOf: null };
 
-  const block = async (app, cws) => {
-    const c = okStatus(cws);
+  const block = async (app) => {
+    const c = s[app];
     const store = c && c.published ? c.published.version : null;
     const list = xml ? tagsAhead(xml, app, store) : [];
     const notes = await Promise.all(list.map((t) => settled(whatsnew(app, t.version))));
@@ -458,7 +384,7 @@ async function ahead(request, env, ctx) {
     };
   };
 
-  const [crm, analytics] = await Promise.all([block('crm', crmCws), block('analytics', anCws)]);
+  const [crm, analytics] = await Promise.all([block('crm'), block('analytics')]);
 
   // A missing note is not an outage - versions released before the convention have none - but a note
   // that failed to fetch looks exactly the same from here, and caching that for ten minutes would
@@ -472,7 +398,8 @@ async function ahead(request, env, ctx) {
     analytics,
     // Without this, "nothing is ahead" and "nobody could ask the Store" are the same empty list, and
     // only one of them is a fact. Same field, same meaning, as `/api/versions`.
-    cws: auth.why !== 'ok' ? auth.why : (crmCws && crmCws.http) ? 'item-http-' + crmCws.http : 'ok',
+    cws: s.cws,
+    storeAsOf: s.asOf,
     checked: new Date().toISOString(),
   }), {
     headers: {

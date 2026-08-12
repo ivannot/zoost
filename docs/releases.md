@@ -175,6 +175,25 @@ directions. A test asserts no page carries `data-pending` / `data-install` / `da
 because the mechanism is a fair-looking idea and the wrong shape for a fact somebody has to be able
 to read without executing anything.
 
+**The Worker holds no credential, and that took moving the question rather than narrowing it.** It
+used to ask the Chrome Web Store API directly, which put a service-account key in Cloudflare as a
+Secret that request-handling code could read - and `tools/cwsscope.py` established that the key can
+publish: it mints a token for the full `chromewebstore` scope and the API answers. Read-only was a
+property of what the Worker *asked for*, never of the credential, and Google links **one** service
+account per publisher with no narrower grant on offer. Least privilege was not available where it was
+needed, so the key left instead: `tools/storestatus.py` asks Google from `.github/workflows/store-status.yml`
+and commits `site/store-status.json`, which the Worker serves through the assets binding. The key now
+lives only where it already had to - the GitHub secret `store-upload.yml` needs to stage a draft.
+
+Three consequences worth knowing before changing any of it. *One*, the badge was at most ten minutes
+behind and is now as far behind as the schedule, which runs every half hour **and** after a package
+is staged - the moment the answer actually changes. *Two*, the file is committed only when the
+numbers move, so the history keeps meaning «the Store changed» rather than «the cron ran»; the cost is
+that a workflow which stopped is not visible from the file, which is why it carries `asOf` and
+`/emergency` prints it. *Three*, `tests/tools_test.py` holds `SECRETS` **empty**: a name reappearing
+there means a credential has come back into a web-facing runtime, and that is a decision rather than
+a detail.
+
 **`/emergency` is the page for the gap this chain cannot close: the review queue.** A tag is built,
 signed and submitted within the hour; Google then takes days. When a fix for a break at Zoho's end is
 sitting in that queue, the page shows what the Store is serving against what has been released, the

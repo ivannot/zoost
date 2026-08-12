@@ -21,12 +21,11 @@ const listPages = () => ['', 'it/'].flatMap((d) =>
 // `cmpVer` and `isNewer` are carried along because the functions below call them. They were not, the
 // first time, and the failure landed on an unrelated case - `pickLatestTag` sorting with an
 // undefined comparator - which is the free-variable trap this repository has already recorded once.
-const { pickLatestTag, pickStatus, tagsAhead } = load([
+const { pickLatestTag, tagsAhead } = load([
   sliceConst('site/_worker.js', 'IS_VERSION'),
   sliceFn('site/_worker.js', 'cmpVer'),
   sliceConst('site/_worker.js', 'isNewer'),
   sliceFn('site/_worker.js', 'pickLatestTag'),
-  sliceFn('site/_worker.js', 'pickStatus'),
   sliceFn('site/_worker.js', 'tagsAhead'),
 ]);
 
@@ -122,45 +121,6 @@ test('a Store version with fewer components compares as if the rest were zero', 
 
 test('the list is capped, so the fetches it causes are bounded', () => {
   assert.equal(tagsAhead(feed, 'crm', '1.0.0', 1).length, 1);
-});
-
-test('the Store status is read, and a field that is not a version is dropped', () => {
-  // Recorded from a real fetchStatus response, so the shape here cannot drift from the API's.
-  const d = {
-    publishedItemRevisionStatus: { state: 'PUBLISHED',
-      distributionChannels: [{ deployPercentage: 100, crxVersion: '1.9.0' }] },
-    submittedItemRevisionStatus: { state: 'PENDING_REVIEW',
-      distributionChannels: [{ deployPercentage: 100, crxVersion: '1.38.4' }] },
-  };
-  const s = pickStatus(d);
-  assert.equal(s.published.version, '1.9.0');
-  assert.equal(s.published.state, 'PUBLISHED');
-  assert.equal(s.submitted.version, '1.38.4');
-  assert.equal(s.submitted.state, 'PENDING_REVIEW');
-  assert.equal(s.published.deployPercentage, 100);
-});
-
-test('a rejected submission is a state, not the absence of one', () => {
-  // The whole reason for moving off the scrape. A refused version looks exactly like a queued one
-  // from outside, so without this the badge would have claimed "awaiting review" for ever.
-  const s = pickStatus({ submittedItemRevisionStatus: { state: 'REJECTED',
-    distributionChannels: [{ crxVersion: '2.0.0' }] } });
-  assert.equal(s.submitted.state, 'REJECTED');
-  assert.equal(s.published, null, 'nothing published is not an error, it is a fact');
-});
-
-test('nothing submitted since the last publish is null, not an empty claim', () => {
-  const s = pickStatus({ publishedItemRevisionStatus: { state: 'PUBLISHED',
-    distributionChannels: [{ crxVersion: '1.0.0' }] } });
-  assert.equal(s.submitted, null);
-});
-
-test('a version-shaped guard still applies to what Google sends', () => {
-  const s = pickStatus({ publishedItemRevisionStatus: { state: 'PUBLISHED',
-    distributionChannels: [{ crxVersion: 'rolling' }] } });
-  assert.equal(s.published.version, null, 'a value that is not a version is dropped, never shown');
-  assert.equal(pickStatus({}), null);
-  assert.equal(pickStatus(null), null);
 });
 
 // ---------- the gap between what is released and what the Store serves ----------
