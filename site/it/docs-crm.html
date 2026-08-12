@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:f22bea91b8a54e98 -->
+<!-- translated-from: site/docs-crm.html sha256:40ce64ca0dcb3e64 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -100,7 +100,7 @@
   <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
   <p class="box"><b>No, con un'unica eccezione che accendi tu.</b> Zoost non ha server e non ha account.
     Quello che legge da Zoho CRM viene scritto direttamente in una cartella sul tuo disco e resta lì. Non
-    viene mandato niente allo sviluppatore, e non c'è nessuna forma di analytics o di tracciamento.</p>
+    viene mandato niente allo sviluppatore, né c'è nessuna forma di analytics o di tracciamento.</p>
   <p>L'eccezione è l'<b>assistente AI</b>, ed è spento finché non incolli una chiave API tua. Una volta
     attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che
     hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
@@ -135,7 +135,7 @@
       sottocartella dentro la cartella di lavoro, così una cartella sola li serve tutti.</li>
     <li>Clicca <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>.</li>
   </ol>
-  <p><b class="ui">+ Sample</b> è l'altra via d'ingresso, e non richiede nessun tab Zoho: scrive nella
+  <p><b class="ui">+ Sample</b> è l'altra via d'ingresso e non richiede nessun tab Zoho: scrive nella
     cartella di lavoro un workspace di dati inventati, così puoi aprire l'albero, il grafo e gli export
     prima di puntare Zoost su qualcosa di tuo. È generato, non scaricato - la barra del workspace lo
     dice, e tutto quello che parlerebbe con Zoho è disabilitato. Per il resto è una cartella come le altre:
@@ -170,10 +170,9 @@
   <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto:
     l'id di un'istanza Zoho CRM è esatto senza essere memorabile, e due sandbox della stessa org non si
     distinguono a colpo d'occhio. Il pulsante
-    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
-    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
+    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo; <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
     niente dentro Zoho, e un pull la riporta indietro.</p>
-  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
+  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, che però non sparisce
     mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
     legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
     solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
@@ -221,7 +220,7 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
   </table>
-  <p class="note">Una cartella per tipo, un <code>index.json</code> dentro ciascuna, e le funzioni sotto
+  <p class="note">Una cartella per tipo, un <code>index.json</code> dentro ciascuna e le funzioni sotto
     <code>functions/</code> così un namespace Deluge non può mai scontrarsi con una cartella creata da
     Zoost. Prima di Zoost CRM 1.13 i namespace stavano nella radice del workspace e le altre cartelle
     portavano un underscore davanti per stargli alla larga; un workspace fatto così lo dice e chiede un
@@ -237,12 +236,11 @@ git commit -m "baseline"</code></pre>
     <b class="ui">Modules</b>, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>,
     <b class="ui">Connections</b>. Seleziona un elemento e sotto si apre l'anteprima.</p>
   <p>Due comandi di quella riga sfuggono facilmente. <b class="ui">Name: display</b> alterna fra il nome che
-    ti mostra Zoho CRM e l'API name che usa il codice - la stessa funzione, detta in due modi, e il secondo
-    ti serve quando scrivi Deluge. <b class="ui">Functions page ↗</b> apre l'elenco delle funzioni di Zoho
+    ti mostra Zoho CRM e l'API name che usa il codice - la stessa funzione, detta in due modi; il secondo ti serve quando scrivi Deluge. <b class="ui">Functions page ↗</b> apre l'elenco delle funzioni di Zoho
     CRM in una scheda e lo filtra su quello che avevi selezionato, per quando vuoi modificare invece che
     leggere.</p>
 
-  <p>Sopra l'elenco, <b class="ui">Type</b> (oppure <b class="ui">Status</b> o <b class="ui">Kind</b>, a seconda della scheda) restringe quello che vedi. In Modules separa <b class="ui">Standard</b> da <b class="ui">Custom</b>; in Workflows e Schedules è <b class="ui">Active</b> / <b class="ui">Inactive</b>, più <b class="ui">Has scheduled actions</b> - le regole che hanno almeno un'azione che parte dopo un ritardo invece che subito. Quelle righe portano un orologio e il conteggio, e il tooltip dice quanto dura il ritardo; il pannello della singola regola mostra <b>Last run</b>, con le stesse parole che la scheda Schedules usa per lo stesso fatto. Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.</p>
+  <p>Sopra l'elenco, <b class="ui">Type</b> (oppure <b class="ui">Status</b> o <b class="ui">Kind</b>, a seconda della scheda) restringe quello che vedi. In Modules separa <b class="ui">Standard</b> da <b class="ui">Custom</b>; in Workflows e Schedules è <b class="ui">Active</b> / <b class="ui">Inactive</b>, più <b class="ui">Has scheduled actions</b> - le regole che hanno almeno un'azione che parte dopo un ritardo invece che subito. Quelle righe portano un orologio e il conteggio; il tooltip dice quanto dura il ritardo; il pannello della singola regola mostra <b>Last run</b>, con le stesse parole che la scheda Schedules usa per lo stesso fatto. Tutti e due vengono dalla regola che hai già su disco, quindi per rispondere a «quali workflow non partono subito» non viene chiesto niente a Zoho.</p>
 
   <p class="box"><b>Non tutti gli utenti Zoho possono leggere tutte queste cose.</b> L'accesso al Deluge o
     al catalogo delle connessioni dipende dal tuo ruolo, e non c'è modo di chiederlo in anticipo - quindi
@@ -261,11 +259,10 @@ git commit -m "baseline"</code></pre>
     resto. Quindi <b>ogni area registra quando è stata letta l'ultima volta</b>. Una sezione i cui dati sono
     indietro rispetto alle altre viene <b>deselezionata nella finestra di export</b>, con la data e il
     motivo - puoi rimetterla, e il report porterà quella data. Entrambi i report dichiarano comunque le date
-    per area: il fatto sta a te pesarlo, e nasconderlo sarebbe l'unica cosa peggiore di un capitolo
+    per area: il fatto sta a te pesarlo; nasconderlo sarebbe l'unica cosa peggiore di un capitolo
     vecchio.</p>
   <ul>
-    <li>Nel codice di una funzione, le chiamate ad altre funzioni custom sono <b>cliccabili</b> - salti alla
-      definizione, e poi usi <b class="ui">◂ back</b>.</li>
+    <li>Nel codice di una funzione, le chiamate ad altre funzioni custom sono <b>cliccabili</b> - salti alla definizione, poi usi <b class="ui">◂ back</b>.</li>
     <li>L'intestazione dell'anteprima mostra dove una funzione è agganciata nell'org (blueprint, pulsante,
       schedulazione…).</li>
     <li>Elenca anche le <b>connessioni</b> che la funzione usa e chi l'ha modificata per ultimo - clicca una
@@ -311,38 +308,40 @@ git commit -m "baseline"</code></pre>
   <ul>
     <li>Il grafo delle chiamate non è fatto solo di funzioni. Un <b>workflow</b> o uno <b>schedule</b> che ne
       fa partire una è un nodo a sé, e così ogni <b>connessione</b> che una funzione raggiunge - ognuno con
-      il suo colore, filtrabile dalle chip. Così un disegno solo risponde a cosa fa partire il codice, a
-      cosa chiama, e a cosa parla fuori da Zoho. Tutto viene da quello che hai già su disco: il JSON di un
+      il suo colore, filtrabile dalle chip. Così un disegno solo risponde a cosa fa partire il codice, a cosa chiama e a cosa parla fuori da Zoho. Tutto viene da quello che hai già su disco: il JSON di un
       workflow dice quali funzioni lancia, la riga di indice di uno schedule nomina quella che esegue, e il
       meta catturato di una funzione elenca le sue connessioni. Un workflow il cui file non è stato ancora
       scaricato è un nodo <b>senza</b> azioni misurate, non un nodo che non ne ha.</li>
     <li>Le chip stanno nell'header della finestra, sopra le schede, quindi ci sono in qualunque vista tu
-      sia, e sono anche la chiave dei colori: ognuna porta la sua tinta e la sua parola. Sono raggruppate
-      per dimensione - <b class="ui">Functions</b> contiene le categorie che le tue funzioni hanno
-      davvero, <b class="ui">Workflows</b>, <b class="ui">Schedules</b> e <b class="ui">Connections</b> una
-      ciascuna, e un tipo senza niente dentro non ha la sua chip. Sono lette dalla tua org invece che
-      elencate nel codice, quindi c'è anche una categoria che Zoho riporta e che nessuno si aspettava,
-      colore compreso; una funzione per cui Zoho non ha dato una categoria è <b class="ui">no category</b>.
-      Mostrano <b>cosa c'è a schermo</b>: tutte accese vuol dire tutto, e un clic ne spegne
-      una. Il gruppo tratteggiato <b class="ui">Only</b> è l'altra domanda, «restringi ai nodi che sono
-      anche…», e parte vuoto perché è la verità quando non hai scelto niente; quei tre valgono per le
-      funzioni. Due pulsanti coprono l'altra direzione: <b class="ui">↺ All</b> rimette tutto, e
-      <b class="ui">None</b> spegne tutto, così un clic solo riaccende la categoria che ti serve. Ognuno
-      dei due è assente quando non farebbe niente. Quelle arrotondate dicono
-      che cosa una funzione Deluge <b>è</b> - la sua categoria; quelle squadrate sono oggetti Zoho che le
-      stanno intorno, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>;
-      le ultime due sono <b>fatti su</b> un nodo, non tipi di nodo. Se ne possono accendere quante si vuole:
-      dentro una riga si sommano, fra righe restringono. <b class="ui">✕</b> le azzera, e ce n'è una anche
-      nel box di ricerca. Guidano tutte e tre le viste, quindi spegnere <b class="ui">Connections</b> è il
-      modo di leggere un diagramma senza di esse - la ricerca invece restringe solo l'elenco.</li>
+      sia. Sono anche la chiave dei colori: ognuna porta la sua tinta e la sua parola.
+      <br><br><b>Da dove arrivano.</b> Sono raggruppate per dimensione: <b class="ui">Functions</b>
+      contiene le categorie che le tue funzioni hanno davvero, mentre <b class="ui">Workflows</b>,
+      <b class="ui">Schedules</b> e <b class="ui">Connections</b> ne hanno una ciascuna. Un tipo senza
+      niente dentro non ha la sua chip. Sono lette dalla tua org invece che elencate nel codice, quindi
+      c'è anche una categoria che Zoho riporta e che nessuno si aspettava, colore compreso. Una
+      funzione per cui Zoho non ha dato una categoria è <b class="ui">no category</b>.
+      <br><br><b>Cosa fanno.</b> Mostrano <b>cosa c'è a schermo</b>: tutte accese vuol dire tutto, un
+      clic ne spegne una. Il gruppo tratteggiato <b class="ui">Only</b> è l'altra domanda - «restringi
+      ai nodi che sono anche…» - e parte vuoto, perché è la verità quando non hai scelto niente; quei
+      tre valgono per le funzioni. Due pulsanti coprono l'altra direzione: <b class="ui">↺ All</b>
+      rimette tutto, <b class="ui">None</b> spegne tutto, così un clic solo riaccende la categoria che
+      ti serve. Ognuno dei due è assente quando non farebbe niente.
+      <br><br><b>Come leggerne la forma.</b> Quelle arrotondate dicono che cosa una funzione Deluge
+      <b>è</b>: la sua categoria. Quelle squadrate sono oggetti Zoho che le stanno intorno -
+      <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>. Le ultime
+      due sono <b>fatti su</b> un nodo, non tipi di nodo.
+      <br><br>Se ne possono accendere quante si vuole: dentro una riga si sommano, fra righe
+      restringono. <b class="ui">✕</b> le azzera, e ce n'è una anche nel box di ricerca. Guidano tutte
+      e tre le viste, quindi spegnere <b class="ui">Connections</b> è il modo di leggere un diagramma
+      senza di esse - la ricerca invece restringe solo l'elenco.</li>
     <li>Il pulsante del diagramma adesso sta nella barra del workspace, fra <b class="ui">MD</b> e
       <b class="ui">Health ♥</b>, insieme alle altre cose che si aprono sull'intero workspace. Non compare
       e sparisce più con la scheda: la finestra sa passare da un disegno all'altro da sola, quindi c'è
-      sempre qualcosa da aprire, e a seguire la scheda è solo quale dei due.</li>
+      sempre qualcosa da aprire; a seguire, la scheda è solo quale dei due.</li>
     <li>La barra in alto di quella finestra porta il nome che hai dato al workspace, se gliene hai dato
       uno - accanto all'istanza e all'org della piattaforma, mai al posto loro.</li>
     <li>La coppia <b class="ui">Wiring</b> / <b class="ui">Schema</b> accanto al titolo dice quale dei due
-      disegni è a schermo, e passa all'altro senza tornare al pannello. È il pannello a costruirlo - questa
+      disegni è a schermo e passa all'altro senza tornare al pannello. È il pannello a costruirlo - questa
       finestra alla tua cartella non ha accesso, per scelta - quindi il pannello dev'essere aperto e la
       cartella concessa; se non lo è, il passaggio si ferma e dice quale delle due cose manca.</li>
     <li><b>Wiring non è solo le funzioni</b>, ed è per questo che non si chiama così. Un workflow o uno
@@ -382,8 +381,7 @@ git commit -m "baseline"</code></pre>
       il motivo per cui si spegne una categoria. Lo stesso filtro dispone il grafo allo stesso modo ogni volta.</li>
     <li>Selezionare qualcosa in Explorer imposta il fuoco per tutte e tre le viste, e il gruppo
       <b class="ui">Focus</b> accanto alle schede è dove quel contesto vive: il nome dell'elemento,
-      <b class="ui">Everything</b>, la <b class="ui">depth</b> che decide fin dove arrivare, e
-      <b class="ui">✕</b> per dimenticarlo. Sta con le schede perché appartiene alla finestra e non a una
+      <b class="ui">Everything</b>, la <b class="ui">depth</b> che decide fin dove arrivare, <b class="ui">✕</b> per dimenticarlo. Sta con le schede perché appartiene alla finestra e non a una
       vista sola: <b>Explorer</b> lo imposta, e il diagramma e <b>Relations</b> lo seguono.</li>
     <li><b class="ui">Everything</b> mette in pausa il fuoco invece di buttarlo via: il nome resta a
       schermo e basta un clic per riprenderlo. Everything più <b class="ui">Save PDF</b> produce una
@@ -392,8 +390,7 @@ git commit -m "baseline"</code></pre>
       sposta lì il fuoco.</li>
     <li><b class="ui">Emphasis: relations</b> spinge i riquadri dei moduli sullo sfondo e porta avanti i
       nomi delle relazioni.</li>
-    <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce,
-      e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.</li>
+    <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.</li>
     <li><b class="ui">Fit</b> inquadra tutto il disegno nella finestra, e <b>ridimensionare la finestra lo fa da sé</b> - a meno che tu non abbia spostato o zoomato, nel qual caso la vista che hai scelto resta e <b class="ui">Fit</b> te la restituisce. <b class="ui">Layout ⚙</b> espone spaziatura, apertura e dimensione delle etichette come slider dal
       vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
   </ul>
@@ -438,7 +435,7 @@ git commit -m "baseline"</code></pre>
       <b class="ui">Fields</b> e <b class="ui">Details</b> - e le related list stanno in cima al secondo.
       Clicca un API name per copiarlo.</li>
     <li><b>Scheda Relations</b> nella finestra del diagramma: una riga per relazione, con il modulo di
-      destinazione, il campo lookup o il modulo di collegamento che ci sta dietro, e la chiamata completa. I
+      destinazione, il campo lookup o il modulo di collegamento che ci sta dietro e la chiamata completa. I
       filtri nascondono le related list di sistema (Notes, Attachments, Tasks…) così restano solo le tue.</li>
   </ul>
 
@@ -453,7 +450,7 @@ git commit -m "baseline"</code></pre>
     che in Zoho CRM esiste per conto suo e viene riusato da più regole - una <b>notifica email</b>, un
     <b>field update</b>, un <b>task</b>, un <b>webhook</b>. Zoost rispecchia quei quattro in un elenco
     solo, sotto <b class="ui">Actions</b>, con un filtro <b class="ui">Kind</b>, perché rispondono a
-    una domanda sola: cosa succede quando la regola scatta, e quali regole fanno scattare questo.</p>
+    una domanda sola: cosa succede quando la regola scatta e quali regole fanno scattare questo.</p>
   <p>Quello che rende l'elenco utile è un dato che ognuno di questi oggetti porta con sé: se Zoho lo
     considera <b>in uso</b>. In un'org vera circa la metà non lo è - misurato su una: 85 notifiche su
     200, 50 field update su 97, 27 task su 56. Sono <b>candidati</b>, esattamente come una funzione
@@ -472,19 +469,21 @@ git commit -m "baseline"</code></pre>
     regola nomina le sue azioni per id, e finora Zoost risolveva solo quelle che erano funzioni
     Deluge.</p>
   <p class="note">Due cose non le legge. Il <b>contenuto</b> di un template email, che è un documento
-    e non una struttura - la notifica lo nomina, e Zoho è il posto dove lo leggi. E <b>chi</b> sono i
-    destinatari: il conteggio torna insieme alla regola, l'elenco delle persone no, e Zoost non lo
-    chiede. L'indirizzo del mittente <em>sì</em>, perché «con quale indirizzo esce questa mail» è la
-    domanda per cui l'elenco esiste - è un indirizzo della tua organizzazione o di un tuo utente, mai
-    di un cliente. Se quell'indirizzo viaggia lo decidi tu, in due posti e separatamente: il dialogo di
-    export ha <b class="ui">Sender addresses</b>, spento di default, e le Settings hanno
+    e non una struttura: la notifica lo nomina, e Zoho è il posto dove lo leggi. E <b>chi</b> sono i
+    destinatari - il conteggio torna insieme alla regola, l'elenco delle persone no, e Zoost non lo
+    chiede.
+    <br><br>L'indirizzo del mittente <em>sì</em>, perché «con quale indirizzo esce questa mail» è la
+    domanda per cui l'elenco esiste. È un indirizzo della tua organizzazione o di un tuo utente, mai
+    di un cliente.
+    <br><br>Se quell'indirizzo viaggia lo decidi tu, in due posti e separatamente: il dialogo di
+    export ha <b class="ui">Sender addresses</b>, spento di default; le Settings hanno
     <b class="ui">Let the assistant see sender addresses</b>, anch'esso spento. Il mirror sul tuo disco
     lo tiene comunque: quello che decidono è se esce dalla macchina.</p>
 
   <figure class="shot">
     <img src="/img/crm-actions.webp?v=29576b128f" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Actions tab: notifications, field updates, tasks and webhooks grouped by kind, with one open showing its template, sender and the rule that fires it.">
-    <figcaption>Capitolo 8: i quattro tipi in un elenco solo, il numero di regole accanto a ognuno, e cosa manda davvero una di loro.</figcaption>
+    <figcaption>Capitolo 8: i quattro tipi in un elenco solo, il numero di regole accanto a ognuno e cosa manda davvero una di loro.</figcaption>
   </figure>
 
   <h2 id="connections">9. Le connessioni</h2>
@@ -493,8 +492,7 @@ git commit -m "baseline"</code></pre>
     ne usano davvero una - così nessuno osa cancellarne una.</p>
   <p>La scheda <b class="ui">Connections</b> è il catalogo dell'org, scaricato con
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg> Pull all</b>. Una riga per connessione, con il suo connettore, il suo stato e
-    <b>quante funzioni la usano</b>. Aprine una per vedere esattamente quali funzioni, e passare a
-    ciascuna.</p>
+    <b>quante funzioni la usano</b>. Aprine una per vedere esattamente quali funzioni e passare a ciascuna.</p>
   <ul>
     <li><b>Unused</b> - è nel catalogo, e nessuna funzione la referenzia. I candidati alla pulizia.</li>
     <li><b>Disconnected</b> - configurata ma al momento non connessa. Tutto ciò che dipende da questa connessione è già rotto.</li>
@@ -538,8 +536,7 @@ git commit -m "baseline"</code></pre>
   <p><b>Size &amp; calls</b> conteneva solo proxy: quanto è lunga una funzione, quante chiamate in
     uscita fa. Coprono tutte le funzioni e non costano niente da calcolare, ma sono una stima di
     quanto una funzione costa. Zoho la risposta ce l'ha, e adesso Zoost gliela chiede: <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull runtime</b>, in cima alla vista, rilegge solo quello - cosa fallisce e quanto è girato - invece di <b class="ui">Pull all</b>, che riscaricherebbe tutta l'org per aggiornare una lettura. <b>Most run,
-    measured</b> elenca le funzioni più attive con quante volte ciascuna è girata davvero nelle
-    ultime 24 ore, e quanto l'org ha speso rispetto al proprio tetto nello stesso periodo. Le righe
+    measured</b> elenca le funzioni più attive con quante volte ciascuna è girata davvero nelle ultime 24 ore e quanto l'org ha speso rispetto al proprio tetto nello stesso periodo. Le righe
     statiche portano il numero misurato accanto, così una funzione che è lunga <em>e</em> gira
     duecento volte al giorno si vede come una cosa sola invece che come due.</p>
   <p>Due limiti, detti perché cambiano come si legge. Zoho risponde con le <b>più attive</b>, non con
@@ -567,7 +564,7 @@ git commit -m "baseline"</code></pre>
   <p>Siccome cambia di ora in ora, il pannello dice la data in cui l'ha letta invece di presentarla
     come duratura, e lo stesso fa l'export. È l'unico capitolo di un report che porta la propria data.</p>
   <div class="box warn">
-    <p><b>Due cose che non fa, e sono volute tutt'e due.</b> Non rilancia un'esecuzione fallita:
+    <p><b>Due cose che non fa, volute tutt'e due.</b> Non rilancia un'esecuzione fallita:
       farebbe eseguire a Zoho del codice che scrive sui tuoi record, che è la prima cosa che questa
       estensione rifiuta. Ti propone di aprire la pagina dei fallimenti in Zoho, dove il pulsante c'è,
       e il click è tuo. E non legge l'<em>input</em> dell'esecuzione fallita - Zoho lo conserva, e per
@@ -666,15 +663,14 @@ git commit -m "baseline"</code></pre>
     aspettarti.</p>
 
   <h3>Togliere una chiave, e cambiare motore</h3>
-  <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
-    rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
+  <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave; la rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
     vuoto vuol dire <em>cancella</em> - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
     c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
     perché è cifrata. <b class="ui">Forget</b> è anche la via d'uscita se hai perso la passphrase.</p>
   <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha chiave
     API: dice cosa manca e resta dov'era, invece di lasciarti con un assistente che fallisce alla prima
     domanda. Ogni opzione dichiara anche se è pronta, così quella selezionata su un'installazione nuova non
-    si legge come una scelta funzionante, e un salvataggio che lascia esattamente un motore utilizzabile
+    si legge come una scelta funzionante. Un salvataggio che lascia esattamente un motore utilizzabile
     seleziona quello e lo dice. I campi dei due provider stanno sulla stessa pagina, quindi compilarli e
     riscegliere sono due passaggi, non un vicolo cieco.</p>
 
@@ -700,7 +696,7 @@ git commit -m "baseline"</code></pre>
     saper aprire.</p>
   <p><b>Se perdi la passphrase</b>, la sezione offre <b class="ui">Remove the protection</b>. Dice cosa se ne
     va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei
-    modelli e ogni altra impostazione restano, e la chiave API la incolli di nuovo dalla dashboard del tuo
+    modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo
     provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compreso - questa è
     l'unica via d'uscita, ed è un pulsante invece di una sequenza da ricostruire.</p>
   <p><b>Puoi tornare indietro quando vuoi</b>, e la strada è simmetrica: Zoost chiede la passphrase in uso,
@@ -750,15 +746,15 @@ git commit -m "baseline"</code></pre>
     un'altra.</p>
   <p><b>Se non c'è nessuna scheda Zoho CRM</b> il pannello lo dice sopra tutto il workbench e offre
     <b class="ui">Go to Zoho CRM ↗</b>, che apre la home del tuo Zoho CRM - quella dell'account, non
-    di un'org in particolare, quindi è il tasto giusto dopo essere usciti da un'org per entrare in
-    un'altra. Quale data centre sia lo legge dal workspace che hai aperto, o dalla scheda. Accanto al tasto c'è una
-    tendina con <b>tutti</b> i data centre, perché dopo essere uscito da un'org quale org vuoi aprire
-    adesso è una scelta e da qui non si deduce - un consulente con clienti su <code>.eu</code>,
-    <code>.com</code> e <code>.jp</code> può benissimo volere quello che da questa macchina non ha mai
-    aperto. Parte da quello su cui sta questo workspace o questa scheda, altrimenti da
-    <b class="ui">⚙ Settings → Data centre</b>, dove sta il default. Il fondo del pannello resta
-    raggiungibile sotto quella schermata: Settings, Help e About restano a un clic mentre il resto è
-    fermo.</p>
+    di un'org in particolare - il tasto giusto dopo essere usciti da un'org per entrare in un'altra.
+    Quale data centre sia lo legge dal workspace che hai aperto, o dalla scheda.</p>
+  <p>Accanto al tasto c'è una tendina con <b>tutti</b> i data centre. Dopo essere uscito da un'org,
+    quale org vuoi aprire adesso è una scelta e da qui non si deduce: un consulente con clienti su
+    <code>.eu</code>, <code>.com</code> e <code>.jp</code> può benissimo volere quello che da questa
+    macchina non ha mai aperto. Parte da quello su cui sta questo workspace o questa scheda, altrimenti
+    da <b class="ui">⚙ Settings → Data centre</b>, dove sta il default.</p>
+  <p>Il fondo del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano
+    a un clic mentre il resto è fermo.</p>
   <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>

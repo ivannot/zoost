@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:e4b4122e5b07f445 -->
+<!-- translated-from: site/docs-analytics.html sha256:14cca59cb26fe474 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -99,7 +99,7 @@
   <h2 id="leave-my-computer">0. Esce qualcosa dal mio computer?</h2>
   <p class="box"><b>No, con un'unica eccezione che accendi tu.</b> Zoost non ha server e non ha account.
     Quello che legge da Zoho Analytics viene scritto direttamente in una cartella sul tuo disco e resta lì.
-    Non viene mandato niente allo sviluppatore, e non c'è nessuna forma di analytics o di tracciamento.</p>
+    Non viene mandato niente allo sviluppatore, né c'è nessuna forma di analytics o di tracciamento.</p>
   <p>L'eccezione è l'<b>assistente AI</b>, ed è spento finché non incolli una chiave API tua. Una volta
     attivato, quello che gli serve per risponderti parte dal tuo browser e va direttamente al provider che
     hai scelto - Anthropic oppure OpenAI - e a nessun altro. Se la tua organizzazione non lo consente,
@@ -125,10 +125,10 @@
     </tbody>
   </table>
   <p class="box">Zoost su Zoho Analytics <b>legge soltanto</b>. Non crea, non modifica e non cancella
-    mai una vista, e non legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori
+    mai una vista, né legge mai le righe dentro le tue tabelle - gli endpoint che restituiscono i valori
     delle celle esistono e deliberatamente non vengono chiamati. Il peggio che può fare al tuo workspace è
     niente. Una delle chiamate che fa è una POST il cui URL contiene <code>CREATE</code>: è il nome che Zoho
-    dà alla richiesta che restituisce il modello ER, e calcola invece di creare. È detto qui perché trovarlo
+    dà alla richiesta che restituisce il modello ER: calcola invece di creare. È detto qui perché trovarlo
     non sembri una scoperta.</p>
 
   <h2 id="first-run">2. Primo avvio</h2>
@@ -141,7 +141,7 @@
       <code>analytics.zoho.eu/workspace/1234567890</code>.</li>
     <li><b class="ui">+ Workspace</b> - crea la cartella e ne legge il nome da Zoho Analytics.</li>
   </ol>
-  <p><b class="ui">+ Sample</b> è l'altra via d'ingresso, e non richiede nessun tab di Zoho Analytics:
+  <p><b class="ui">+ Sample</b> è l'altra via d'ingresso e non richiede nessun tab di Zoho Analytics:
     scrive nella cartella di lavoro un workspace di dati inventati, così puoi aprire l'elenco delle
     viste, il diagramma ER e gli export prima di puntare Zoost su qualcosa di tuo. È generato, non
     scaricato - la barra del workspace lo dice, e tutto quello che parlerebbe con la piattaforma è
@@ -149,9 +149,12 @@
     pulsante sparisce quando ne esiste già uno.</p>
   <p>La stessa azione è sulla schermata <b>Not on a Zoho tab</b>, come <b class="ui">+ Sample workspace</b>:
     un sample non deve niente alla piattaforma, quindi si apre e si legge senza tab e senza account.
-    Quella schermata è dove si trova davvero chi ha appena installato Zoost. Quando ne esiste già uno
-    quel pulsante diventa <b class="ui">Open sample workspace</b> e lo apre; finché Chrome non ha dato al pannello l'accesso alla cartella di lavoro non può saperlo, quindi non dice né l'una né l'altra cosa e legge solo <b class="ui">Sample workspace</b> - il clic chiede prima l'accesso e poi fa quella giusta: l'overlay copre anche
-    l'elenco dei workspace, quindi nasconderlo lì renderebbe il sample irraggiungibile.</p>
+    Quella schermata è dove si trova davvero chi ha appena installato Zoost.</p>
+  <p>Quando ne esiste già uno quel pulsante diventa <b class="ui">Open sample workspace</b> e lo apre.
+    Finché Chrome non ha dato al pannello l'accesso alla cartella di lavoro non può saperlo, quindi non
+    dice né l'una né l'altra cosa e legge solo <b class="ui">Sample workspace</b>; il clic chiede prima
+    l'accesso, poi fa quella giusta. L'overlay copre anche l'elenco dei workspace, quindi nasconderlo
+    lì renderebbe il sample irraggiungibile.</p>
   <p>La barra sotto la toolbar è la protezione. Verde vuol dire che la scheda e la cartella sono lo stesso
     workspace. Ambra con una fila di azioni vuol dire che non lo sono, e tutto quello che parla con Zoho
     resta disattivato finché non scegli una delle due vie d'uscita che ti offre.</p>
@@ -160,10 +163,9 @@
   <p>Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho
     Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono
     arrivare su disco identici. Il pulsante
-    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo, e
-    <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
+    <b class="ui">✎ Name this workspace</b> accanto all'elenco gli dà un nome tuo; <b class="ui">🗑 Remove workspace</b> lì accanto cancella quella cartella - solo il mirror locale, mai
     niente dentro Zoho, e un pull la riporta indietro.</p>
-  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, e il nome della piattaforma non sparisce
+  <p>Viene mostrato <em>al posto</em> del nome della piattaforma, che però non sparisce
     mai: resta nel tooltip dell'elenco e nella barra sotto, che dichiara sempre a quale workspace o org è
     legata davvero la cartella. È voluto - il nome è una tua comodità, l'identità è di Zoho, e un elenco fatto
     solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
@@ -202,7 +204,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>schema.json</code></td><td>colonne e tipi di dato per tabella, più le relazioni</td></tr>
       <tr><td class="k"><code>lineage.json</code></td><td>chi legge da cosa, nelle due direzioni</td></tr>
       <tr><td class="k"><code>sql/*.sql</code></td><td>un file per query table - la parte su cui il diff ha qualcosa da dire</td></tr>
-      <tr><td class="k"><code>sql/index.json</code></td><td>la mappa id-file, e quali colonne sorgente coinvolge ogni query</td></tr>
+      <tr><td class="k"><code>sql/index.json</code></td><td>la mappa id-file e quali colonne sorgente coinvolge ogni query</td></tr>
       <tr><td class="k"><code>export/</code></td><td>i report che generi</td></tr>
     </tbody>
   </table>
@@ -217,24 +219,23 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     leggono dentro, oppure proprietario.</p>
   <p>La casella di ricerca guarda i nomi, le cartelle <em>e i nomi delle colonne</em>. Scrivi il nome di una
     colonna per trovare quali tabelle ce l'hanno - comodo prima di mettersi a cercare dove sta un dato.</p>
-  <p>La colonna <b>Cols</b> conta le colonne, e un numero <b>fra parentesi</b> vuol dire che la vista non ne
+  <p>La colonna <b>Cols</b> conta le colonne; un numero <b>fra parentesi</b> vuol dire che la vista non ne
     ha di proprie: solo tabelle e query table hanno colonne, quindi un report o un grafico mostra il
     conteggio della vista su cui è costruito, e il tooltip la nomina. Le parentesi ci sono perché un
     conteggio si legge come una cifra, e qualunque segno attaccato alle cifre cambierebbe quello che
     dicono.</p>
-  <p>Due colonne di date, e sono due fatti diversi:</p>
+  <p>Due colonne di date, due fatti diversi:</p>
   <ul>
     <li><b>Data</b> - quando i dati si sono aggiornati l'ultima volta. Sempre un timestamp vero, sempre
       ordinabile.</li>
     <li><b>Design</b> - quando è cambiato il design l'ultima volta. Una data vera per tabelle e query table.
       Per report e dashboard Zoho Analytics restituisce solo testo nella lingua della tua interfaccia,
-      quindi viene mostrato <em>esattamente come lo manda</em>, in corsivo, mai interpretato, e ordinato per
-      ultimo. Leggere una data tradotta è lo stesso errore che leggere l'etichetta tradotta di un
+      quindi viene mostrato <em>esattamente come lo manda</em>, in corsivo, mai interpretato e ordinato per ultimo. Leggere una data tradotta è lo stesso errore che leggere l'etichetta tradotta di un
       pulsante.</li>
   </ul>
   <p>Sono entrambe chiavi di ordinamento: <b class="ui">Sort</b> offre <b class="ui">Name</b>,
     <b class="ui">Type</b>, <b class="ui">Folder</b>, <b class="ui">Design changed</b>,
-    <b class="ui">Data changed</b>, <b class="ui">Read by</b> e <b class="ui">Owner</b>, e la freccia
+    <b class="ui">Data changed</b>, <b class="ui">Read by</b> e <b class="ui">Owner</b>; la freccia
     accanto inverte qualunque di questi. Ordinando per <b class="ui">Design changed</b> le viste la cui
     data è il testo di Zoho Analytics finiscono in fondo invece di far finta di avere una posizione -
     una frase tradotta non ha un ordine.</p>
@@ -271,7 +272,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li>Le tabelle come riquadri, le relazioni come frecce, il join scritto sull'arco.</li>
     <li>Clicca un riquadro per ricentrare il diagramma su di esso. Il gruppo <b class="ui">Focus</b>
       accanto alle schede è dove quel contesto vive: il nome della tabella, <b class="ui">Everything</b>,
-      la <b class="ui">depth</b> che decide fin dove arrivare, e <b class="ui">✕</b> per dimenticarlo. Sta
+      la <b class="ui">depth</b> che decide fin dove arrivare, <b class="ui">✕</b> per dimenticarlo. Sta
       con le schede perché appartiene alla finestra e non a una vista sola: <b>Explorer</b> lo imposta, e
       il diagramma e <b>Relations</b> lo seguono. <b class="ui">Everything</b> mette in pausa il fuoco invece di
       buttarlo via: il nome resta a schermo e basta un clic per riprenderlo.</li>
@@ -363,7 +364,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Health?» oppure «può cambiare qualcosa dentro Zoho Analytics?» e risponde dal pannello, senza mandarti
     da nessuna parte. Gli scrivi nella lingua che preferisci e ti risponde in quella. Gli è stato detto cosa fanno i pulsanti e cosa l'estensione non fa; se non lo sa, lo dice
     e ti indica questa pagina invece di inventarsi un passaggio.</p>
-  <p>Opzionale, e spento finché non lo configuri. <b class="ui">⚙ Settings</b> → scegli un provider, incolla
+  <p>Opzionale, spento finché non lo configuri. <b class="ui">⚙ Settings</b> → scegli un provider, incolla
     il nome di un modello e la tua chiave API.</p>
   <h3>Anthropic (Claude) - agente completo</h3>
   <p>Gira con strumenti in sola lettura sul mirror locale: legge una struttura, segue una chiave esterna,
@@ -387,17 +388,17 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     una query che unisce queste due» - perché sono domande che costano più letture. OpenAI va benissimo per
     domande su qualcosa che hai già aperto. Sono gli unici due provider, perché sono quelli che ho provato davvero e gli unici due che l'estensione può raggiungere.</p>
   <h3>Togliere una chiave, e cambiare motore</h3>
-  <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave, e la
-    rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
+  <p>Ogni blocco provider ha un pulsante <b class="ui">Forget</b>: svuota il modello e la chiave; la rimozione ha effetto quando premi <b class="ui">Save AI settings</b>. È l'unico posto in cui un campo
     vuoto vuol dire <em>cancella</em> - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che
     c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare
     perché è cifrata. <b class="ui">Forget</b> è anche la via d'uscita se hai perso la passphrase.</p>
-  <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha chiave
-    API: dice cosa manca e resta dov'era, invece di lasciarti con un assistente che fallisce alla prima
-    domanda. Ogni opzione dichiara anche se è pronta, così quella selezionata su un'installazione nuova non
-    si legge come una scelta funzionante, e un salvataggio che lascia esattamente un motore utilizzabile
-    seleziona quello e lo dice. I campi dei due provider stanno sulla stessa pagina, quindi compilarli e
-    riscegliere sono due passaggi, non un vicolo cieco.</p>
+  <p>Il selettore <b class="ui">Engine</b> non si sposta su un provider che non ha modello o non ha
+    chiave API. Dice cosa manca e resta dov'era, invece di lasciarti con un assistente che fallisce
+    alla prima domanda.</p>
+  <p>Ogni opzione dichiara anche se è pronta, così quella selezionata su un'installazione nuova non si
+    legge come una scelta funzionante. Un salvataggio che lascia esattamente un motore utilizzabile
+    seleziona quello e lo dice. I campi dei due provider stanno sulla stessa pagina, quindi compilarli
+    e riscegliere sono due passaggi, non un vicolo cieco.</p>
 
   <h3>Proteggere la chiave API con una passphrase</h3>
   <p>Di default la chiave è conservata in chiaro nello storage dell'estensione. Non è una svista e in generale
@@ -421,7 +422,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     saper aprire.</p>
   <p><b>Se perdi la passphrase</b>, la sezione offre <b class="ui">Remove the protection</b>. Dice cosa se ne
     va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei
-    modelli e ogni altra impostazione restano, e la chiave API la incolli di nuovo dalla dashboard del tuo
+    modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo
     provider. Quella chiave non la può decifrare nessuno senza la passphrase, Zoost compreso - questa è
     l'unica via d'uscita, ed è un pulsante invece di una sequenza da ricostruire.</p>
   <p><b>Puoi tornare indietro quando vuoi</b>, e la strada è simmetrica: Zoost chiede la passphrase in uso,
@@ -448,7 +449,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Svuotala quando cambi argomento: ottieni chiamate più economiche e risposte più a fuoco.</p>
   <p>Quando un workspace è troppo grande per essere descritto per intero, cosa viene lasciato fuori è deciso
     invece che arbitrario: tabelle e query table non vengono mai lasciate fuori, perché sono il vocabolario
-    che serve per scrivere una query o seguire una chiave esterna, e i report vanno per primi perché
+    che serve per scrivere una query o seguire una chiave esterna; i report vanno per primi perché
     l'assistente quelli li sa comunque trovare per nome. Quello che resta fuori viene dichiarato come tale -
     così non conclude mai che una vista non esiste solo perché non gli è stata mostrata.</p>
   <p>All'assistente viene detto cosa Zoho documenta sull'SQL delle query table - solo SELECT, identificatori
@@ -456,7 +457,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     sopra query. Puoi leggere esattamente cosa gli viene detto in <b class="ui">⚙ Settings</b>. Quello che
     scrive è una bozza da incollare, mai qualcosa che Zoost abbia verificato.</p>
   <p class="box warn">Usare l'assistente manda le parti del tuo workspace che gli servono - nomi di viste e
-    colonne, relazioni, e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
+    colonne, relazioni e l'SQL delle tue query table - dal tuo browser direttamente al provider che hai
     scelto. Non manda mai le righe dentro le tue tabelle, perché Zoost non le legge. Allo sviluppatore non va
     niente. Verifica che questo sia accettabile per la tua organizzazione prima di attivarlo.</p>
 
@@ -474,12 +475,12 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <p><b>Se non c'è nessuna scheda Zoho Analytics</b> il pannello lo dice sopra tutto il workbench e
     offre <b class="ui">Go to Zoho Analytics ↗</b>, che apre Zoho Analytics e non un workspace
     preciso - il tasto giusto dopo essere usciti da un account per entrare in un altro. Quale data
-    centre sia lo legge dal workspace che hai aperto, o dalla scheda. Accanto al tasto c'è una tendina con <b>tutti</b> i
-    data centre, perché dopo essere uscito da un account quale account aprire adesso è una scelta.
-    Parte da quello su cui sta questo workspace o questa scheda, altrimenti da
-    <b class="ui">⚙ Settings → Data centre</b>, dove sta il default. Il fondo
-    del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano a un clic
-    mentre il resto è fermo.</p>
+    centre sia lo legge dal workspace che hai aperto, o dalla scheda.</p>
+  <p>Accanto al tasto c'è una tendina con <b>tutti</b> i data centre, perché dopo essere uscito da un
+    account quale account aprire adesso è una scelta. Parte da quello su cui sta questo workspace o
+    questa scheda, altrimenti da <b class="ui">⚙ Settings → Data centre</b>, dove sta il default.</p>
+  <p>Il fondo del pannello resta raggiungibile sotto quella schermata: Settings, Help e About restano
+    a un clic mentre il resto è fermo.</p>
   <table data-labelled data-cols="2">
     <thead><tr><th>Sintomo</th><th>Causa e rimedio</th></tr></thead>
     <tbody>

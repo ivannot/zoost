@@ -291,24 +291,27 @@ git commit -m "baseline"</code></pre>
       lists its connections. A workflow whose file has not been pulled is a node with <b>no</b> measured
       actions rather than a node with none.</li>
     <li>The chips sit in the window's header, above the view tabs, so they are there whichever view you
-      are in, and they are also the colour key: each carries its own hue and its own word. They are
-      grouped by dimension - <b class="ui">Functions</b> holds whatever categories your own functions
-      actually have, <b class="ui">Workflows</b>, <b class="ui">Schedules</b> and
-      <b class="ui">Connections</b> one each, and a kind with nothing in it gets no chip. They are read
-      off your org rather than listed in the code, so a category Zoho reports that nobody expected is
-      there too, colour and all; a function Zoho gave no category for is <b class="ui">no category</b>.
-      They show <b>what is on screen</b>: all lit means everything, and one click switches
-      one off. The dashed <b class="ui">Only</b> group is the other question, «narrow to nodes that are
-      also…», and it starts empty because that is the truth when nothing is chosen; those three apply to
-      functions. Two buttons cover the other direction: <b class="ui">↺ All</b> puts everything back, and
-      <b class="ui">None</b> switches everything off so one click brings back the single kind you are
-      after. Each is absent when it would do nothing. The rounded ones are
-      what a Deluge function <b>is</b> - its category; the square ones are Zoho objects that stand around
-      it, <b class="ui">Workflows</b>, <b class="ui">Schedules</b>, <b class="ui">Connections</b>; the last
-      two are <b>facts about</b> a node rather than kinds of it. Any number can be on at once: within a
-      row they add up, across rows they narrow. <b class="ui">✕</b> clears them, and there is one in the
-      search box too. They steer all three views, so switching <b class="ui">Connections</b> off is how
-      you read a diagram without them - the search box narrows the list only.</li>
+      are in. They are also the colour key: each carries its own hue and its own word.
+      <br><br><b>Where they come from.</b> They are grouped by dimension - <b class="ui">Functions</b>
+      holds whatever categories your own functions actually have; <b class="ui">Workflows</b>,
+      <b class="ui">Schedules</b> and <b class="ui">Connections</b> one each. A kind with nothing in it
+      gets no chip. They are read off your org rather than listed in the code, so a category Zoho
+      reports that nobody expected is there too, colour and all. A function Zoho gave no category for
+      is <b class="ui">no category</b>.
+      <br><br><b>What they do.</b> They show <b>what is on screen</b>: all lit means everything, one
+      click switches one off. The dashed <b class="ui">Only</b> group asks the other question -
+      «narrow to nodes that are also…» - and starts empty, because that is the truth when nothing is
+      chosen; those three apply to functions. Two buttons cover the other direction:
+      <b class="ui">↺ All</b> puts everything back, <b class="ui">None</b> switches everything off so
+      one click brings back the single kind you are after. Each is absent when it would do nothing.
+      <br><br><b>How to read their shape.</b> The rounded ones are what a Deluge function <b>is</b> -
+      its category. The square ones are Zoho objects that stand around it: <b class="ui">Workflows</b>,
+      <b class="ui">Schedules</b>, <b class="ui">Connections</b>. The last two are <b>facts about</b> a
+      node rather than kinds of it.
+      <br><br>Any number can be on at once: within a row they add up, across rows they narrow.
+      <b class="ui">✕</b> clears them, and there is one in the search box too. They steer all three
+      views, so switching <b class="ui">Connections</b> off is how you read a diagram without them -
+      the search box narrows the list only.</li>
     <li>The diagram button now sits in the workspace bar, between <b class="ui">MD</b> and
       <b class="ui">Health ♥</b>, with the other things that open on the whole workspace. It no longer
       comes and goes with the tab: the window can switch between the two drawings itself, so there is
@@ -440,14 +443,16 @@ git commit -m "baseline"</code></pre>
     it</b>. That link is read from the rules already on your disk rather than fetched: a rule names
     its actions by id, and until now Zoost resolved only the ones that were Deluge functions.</p>
   <p class="note">Two things it does not read. The <b>content</b> of an email template, which is a
-    document rather than a structure - the notification names it, and Zoho is where you read it. And
-    <b>who</b> the recipients are: the count comes back with the rule, the list of people does not,
-    and Zoost never asks for it. The sender's address <em>is</em> captured, because «which address does
-    this go out as» is the question the list exists to answer - it is your organisation's own address
-    or one of your users', never a customer's. Whether that address travels is yours to decide, in two
-    places and separately: the export dialog has <b class="ui">Sender addresses</b>, off by default, and
-    Settings has <b class="ui">Let the assistant see sender addresses</b>, also off. The mirror on your
-    disk keeps it either way - what these decide is whether it leaves the machine.</p>
+    document rather than a structure: the notification names it, and Zoho is where you read it. And
+    <b>who</b> the recipients are - the count comes back with the rule, the list of people does not,
+    and Zoost never asks for it.
+    <br><br>The sender's address <em>is</em> captured, because «which address does this go out as» is
+    the question the list exists to answer. It is your organisation's own address or one of your
+    users', never a customer's.
+    <br><br>Whether that address travels is yours to decide, in two places and separately: the export
+    dialog has <b class="ui">Sender addresses</b>, off by default, and Settings has
+    <b class="ui">Let the assistant see sender addresses</b>, also off. The mirror on your disk keeps
+    it either way - what these decide is whether it leaves the machine.</p>
 
   <figure class="shot">
     <img src="/img/crm-actions.webp?v=29576b128f" width="1760" height="1100" loading="lazy" decoding="async"
@@ -699,15 +704,16 @@ git commit -m "baseline"</code></pre>
   <h2 id="goes-wrong">14. When something goes wrong</h2>
   <p>If the bar under the toolbar is amber, the tab you are on and the workspace you have selected belong to different orgs, and everything that talks to Zoho CRM is disabled until they agree. The bar offers two ways out: <b class="ui">Switch tab → «instance» ↗</b> takes the tab to the org the workspace belongs to, or you switch the workspace to match the tab. Nothing is disabled to be awkward - it is the one guard that stops you mirroring one org into another org's folder.</p>
   <p><b>With no Zoho CRM tab at all</b> the panel says so over the whole workbench and offers
-    <b class="ui">Go to Zoho CRM ↗</b>, which opens your Zoho CRM home - the account's, not a
-    particular org's, so it is the right button after signing out of one org to sign into another. Which data
-    centre that is comes from the workspace you have open, or from the tab. Beside the button is a
-    picklist of <b>every</b> data centre, because after signing out of one org, which org you want next
-    is a choice and nothing here can deduce it - a consultant with clients on <code>.eu</code>,
-    <code>.com</code> and <code>.jp</code> may well want the one they have never opened from this
-    machine. It starts on the data centre this workspace or this tab is on, and otherwise on
-    <b class="ui">⚙ Settings → Data centre</b>, which is where the default lives. The footer stays reachable under that screen, so Settings,
-    Help and About are one click away while the rest is idle.</p>
+    <b class="ui">Go to Zoho CRM ↗</b>. That opens your Zoho CRM home - the account's, not a
+    particular org's - which is the right button after signing out of one org to sign into another.
+    Which data centre that is comes from the workspace you have open, or from the tab.</p>
+  <p>Beside the button is a picklist of <b>every</b> data centre. After signing out of one org, which
+    org you want next is a choice and nothing here can deduce it: a consultant with clients on
+    <code>.eu</code>, <code>.com</code> and <code>.jp</code> may well want the one they have never
+    opened from this machine. It starts on the data centre this workspace or this tab is on, and
+    otherwise on <b class="ui">⚙ Settings → Data centre</b>, where the default lives.</p>
+  <p>The footer stays reachable under that screen, so Settings, Help and About are one click away
+    while the rest is idle.</p>
 <table data-labelled data-cols="2">
     <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
     <tbody>
