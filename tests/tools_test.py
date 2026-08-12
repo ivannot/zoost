@@ -1563,6 +1563,33 @@ class TheReleaseBodyHasTwoReaders(unittest.TestCase):
         h = wf.index('sha256', k)                       # and the hash is inside it, not above
         self.assertLess(i, j); self.assertLess(j, k); self.assertLess(k, h)
 
+    def test_a_tag_can_be_republished_without_being_moved(self):
+        """GitHub forced its runners onto Node 24, softprops/action-gh-release started failing with
+        «self-signed certificate», and crm-v1.40.0 built, compared and attested cleanly with no
+        Release at the end of it. A tag-triggered run executes the copy of this file the *tag* points
+        at, so the only way to retry would have been to move a published ref.
+
+        Two things make that unnecessary, and both have to stay: the workflow can be dispatched
+        against an existing tag, and it checks that tag out rather than the branch - without the
+        `ref`, a dispatched run builds whatever main holds and publishes it under the tag's name.
+        """
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        self.assertIn('workflow_dispatch:', wf, 'a failed publish can only be retried by moving a tag')
+        self.assertIn('ref: ${{ inputs.tag || github.ref }}', wf,
+                      'a dispatched run would build the branch and call it the tag')
+        i, j = wf.index('actions/checkout'), wf.index('Build twice')
+        self.assertIn('inputs.tag', wf[i:j], 'the tag is not resolved before anything is built')
+
+    def test_publishing_does_not_depend_on_a_third_party_action(self):
+        # The build, the double-build comparison and the attestation all passed; only the publish
+        # died, and it died because of a runtime change nobody here made. gh is a Go binary already
+        # on the runner.
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        publish = wf[wf.index('Publish the Release'):]
+        self.assertNotIn('uses:', publish.split('\n      - name:')[0],
+                         'the release is published by an action again')
+        self.assertIn('--clobber', publish, 'a re-run cannot replace the asset, so it is not safe twice')
+
     def test_the_notes_are_required_rather_than_defaulted(self):
         wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         self.assertIn('if [ ! -s "$NOTES" ]', wf, 'a Release could be published with no notes')

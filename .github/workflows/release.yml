@@ -27,6 +27,16 @@ on:
     tags:
       - 'crm-v*'
       - 'analytics-v*'
+  # A tag-triggered run executes the copy of this file that the *tag* points at, so a breakage in it
+  # can only be fixed by moving a published ref - which this repository refuses to do. Dispatching
+  # runs the version on the default branch against a tag that already exists, which is how 1.40.0 was
+  # published after GitHub moved its runners to Node 24 and the release action stopped working.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and publish, e.g. crm-v1.40.0'
+        required: true
+        type: string
 
 permissions:
   contents: write        # create the Release and attach the archive
@@ -37,12 +47,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # `ref` matters on a dispatched run: without it checkout takes the default branch, and the
+      # workflow would build whatever main happens to hold under the name of a tag. It has to be the
+      # tagged commit or the archive is a lie.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Read the app and version out of the tag
         id: tag
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          # GITHUB_REF_NAME is the branch on a dispatched run, so the input wins where there is one.
+          TAG="${{ inputs.tag || github.ref_name }}"
+          case "$TAG" in
+            crm-v*|analytics-v*) ;;
+            *) echo "::error::$TAG is not <app>-v<version>"; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           APP="${TAG%%-v*}"
           VERSION="${TAG#*-v}"
           echo "app=$APP"         >> "$GITHUB_OUTPUT"
@@ -161,9 +182,29 @@ jobs:
           EOF
           echo "path=$BODY" >> "$GITHUB_OUTPUT"
 
+      # `gh`, not an action. softprops/action-gh-release is JavaScript, and when GitHub deprecated
+      # Node 20 and started forcing Node 24 it began failing with «self-signed certificate» on a
+      # runner nobody had touched - the build, the double-build comparison and the attestation all
+      # passed, and only the publish died. gh is a Go binary preinstalled on the runner, it is not
+      # a dependency this repository has to pin or trust, and it cannot break the same way.
+      #
+      # `--clobber` so a dispatched re-run replaces the asset instead of refusing, which is what
+      # makes this step safe to run twice against the same tag.
       - name: Publish the Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.4.0
-        with:
-          files: ${{ steps.tag.outputs.zip }}
-          name: ${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}
-          body_path: ${{ steps.notes.outputs.path }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG='${{ steps.tag.outputs.tag }}'
+          if gh release view "$TAG" --repo '${{ github.repository }}' >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo '${{ github.repository }}' \
+              --title '${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}' \
+              --notes-file '${{ steps.notes.outputs.path }}'
+            gh release upload "$TAG" --repo '${{ github.repository }}' \
+              '${{ steps.tag.outputs.zip }}' --clobber
+          else
+            gh release create "$TAG" --repo '${{ github.repository }}' \
+              --title '${{ steps.tag.outputs.product }} ${{ steps.tag.outputs.version }}' \
+              --notes-file '${{ steps.notes.outputs.path }}' \
+              '${{ steps.tag.outputs.zip }}'
+          fi
