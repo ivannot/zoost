@@ -25,3 +25,11 @@ __pycache__/
 
 # Machine-specific values (paths, mounts): right here, wrong on any other machine.
 tools/machine.env
+
+# Claude Code's own scratch, same rule one layer up: the granted permissions belong to this machine,
+# and a worktree is a second checkout its tooling makes and forgets. Left untracked they are not
+# merely untidy - `release.sh` refuses a dirty tree, so an artefact of the tools would block a
+# release. Named one by one rather than ignoring `.claude/` whole: anything shared put there later
+# should be visible, not silently swallowed.
+.claude/settings.local.json
+.claude/worktrees/
