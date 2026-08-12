@@ -15,8 +15,9 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
   tabCount: (n) => `${n} tables to draw`,
-  tabOver: (n) => `${n} tables - more than the ${READABLE_MAX_NODES} this diagram has been measured to draw without boxes covering each other. Switch a category off above, or pick a table to focus on.`,
-  tooMany: (n) => `<b>Too many to draw at once.</b> ${n} tables are on the tab above and the limit is ${READABLE_MAX_NODES}, which is measured rather than chosen: up to it the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other. An image where boxes hide each other and the arcs cannot be followed says less than showing nothing. Switch a category off above, or pick one table to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits.`,
+  tabCrowded: (n) => `${n} tables - past the ${CROWDED_NODES} this diagram has been measured to draw without boxes covering each other, so expect it crowded. It is still drawn: switch a category off above, or pick a table to focus on, to bring it down.`,
+  tabOver: (n) => `${n} tables - more than the ${DRAW_MAX_NODES} this diagram can lay out. Switch a category off above, or pick a table to focus on.`,
+  tooMany: (n) => `<b>Too many to lay out.</b> ${n} tables are on the tab above and the ceiling is ${DRAW_MAX_NODES}, which is measured: past it the layout takes longer than anyone waits - 1200 comes to about seven seconds - and what it produces cannot be read anyway. Switch a category off above, or pick one table to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits. Past ${CROWDED_NODES} it is drawn but crowded, which the number says before you ask for it.`,
   showList: 'Show the list',
 };
 // Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph
@@ -678,17 +679,30 @@ let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-
 // We know n before we start, so we refuse up front and point to the views that stay fast (Explorer,
 // and - for schema - focus + depth). Conservative and NOT calibrated against a very large org; tune
 // this single number if you ever profile one.
-const FORCE_MAX_NODES = 1200;   // profiled end to end - see the CRM copy for the table
-const READABLE_MAX_NODES = 80;
-// A *readability* budget, and deliberately not FORCE_MAX_NODES above, which is a compute one: whether
-// the O(n\u00b2) settle can be afforded at all, profiled at 1200 and still right there. This one is the
-// size at which the diagram can still place every box clear of every other, measured rather than
-// chosen: with the canvas shaped to the panel, five generated graphs at each size come out with no box
-// covering another up to 80 nodes, 4 of 5 at 90 and at 100, 1 of 5 at 120, none at 150. Above it the
-// boxes cover each other and the arcs cannot be followed, which says less than drawing nothing - so
-// nothing is drawn, and the view says why.
-const readable = (n) => n <= READABLE_MAX_NODES;
-function forceFeasible(n) { return (n == null ? nodesA.length : n) <= FORCE_MAX_NODES; }
+// Two limits, two jobs, both measured - and neither is the other's, which is the mistake that put a
+// 1200-node hairball on screen in the first place.
+//
+// **DRAW_MAX_NODES blocks**, and it is a limit of *cost*. Profiled end to end on generated graphs with
+// the collision pass as it now stands: 200 nodes lay out in 0.5s, 400 in 1.3s, 600 in 2.2s, 1000 in
+// 4.9s, 1200 in **7.2s**. This constant was 1200 on an older profile of about 2.1s, taken against the
+// all-pairs collision pass that has since been replaced - so the change to that pass invalidated the
+// number and nothing said so, which is why the profile is quoted here rather than remembered. Two
+// seconds is a wait and seven is a hang, the same criterion as before, so the line is the largest
+// round size measured under two seconds. **Those figures are layout only**: erRender then builds an
+// SVG path and a div per box, and headless Chrome cannot be trusted to time that - virtual time
+// advances the clock - so the real wait is longer than the numbers above and the line is drawn at the
+// measured 1.3s rather than at the 2.2s that would otherwise have qualified.
+const DRAW_MAX_NODES = 400;
+const drawable = (n) => n <= DRAW_MAX_NODES;
+// **CROWDED_NODES advises**, and it is a limit of *quality*. With the canvas shaped to the panel, five
+// generated graphs at each size come out with no box covering another up to 80 nodes, 4 of 5 at 90 and
+// at 100, 1 of 5 at 120, none at 150. Past it the drawing is still worth having - at 400 nodes about
+// 320 pairs overlap, which is crowded and readable in places rather than useless - so this number is
+// said and not enforced. The reader is told where the quality goes and decides; blocking here instead
+// made the whole-org view unreachable for any org with more than eighty functions in one category,
+// which is most of them, and that is worse than a crowded drawing.
+const CROWDED_NODES = 80;
+const crowded = (n) => n > CROWDED_NODES;
 const edgesAmong = (list) => { const s = new Set(list); return edgesA.filter(([a, b]) => s.has(a) && s.has(b)); };
 // What "everything" would cost with the chips as they stand - asked before scopeAll is applied, so
 // it cannot ask erVisibleIds().
@@ -907,7 +921,7 @@ function setScope(all) {
   // And it is the *diagram's* budget: Relations is a table, so refusing there would be borrowing
   // one view's limit to block another.
   const wide = visibleKindCount();
-  if (all && curView === 'er' && !readable(wide)) { tooWideToDraw(wide); return; }
+  if (all && curView === 'er' && !drawable(wide)) { tooWideToDraw(wide); return; }
   scopeAll = !!all;
   // Widening lays the whole workspace out again, which is the most expensive thing this window
   // does - and it did it in the click handler, so the interface sat there looking hung and then
@@ -1218,7 +1232,7 @@ function erLayout() {
     const key = erIds.join('\n');
     if (laidOutKey !== key) {
       seedRing(erIds);
-      if (forceFeasible(erIds.length)) settle(erIds, edgesAmong(erIds));
+      settle(erIds, edgesAmong(erIds));
       laidOutKey = key;
     }
     // settle() produces positions whose extent depends on how many nodes it was given, so a constant
@@ -1504,9 +1518,9 @@ function erCountRefresh() {
   const n = erVisibleIds().length;
   const badge = $('ertabn');
   if (badge) badge.textContent = n ? String(n) : '';
-  const over = !readable(n);
-  tab.classList.toggle('over', over);
-  tab.title = over ? MSG.tabOver(n) : MSG.tabCount(n);
+  const over = !drawable(n), tight = crowded(n);
+  tab.classList.toggle('over', over || tight);
+  tab.title = over ? MSG.tabOver(n) : tight ? MSG.tabCrowded(n) : MSG.tabCount(n);
 }
 // Nothing is drawn, said where the reader is standing. The tab stays enabled and this is why: above
 // the limit a click lands here and explains itself, where a disabled tab would be a dead control that
@@ -1537,12 +1551,12 @@ function erDrawn() {
 }
 function erShow() {
   const drawing = erVisibleIds().length;
-  if (!readable(drawing)) { erNotDrawn(drawing); erCountRefresh(); return; }
+  if (!drawable(drawing)) { erNotDrawn(drawing); erCountRefresh(); return; }
   erDrawn();
   // A scope widened from Relations, where it is free, may be more than the diagram can lay out.
   // Say so and go back to the focus rather than drawing a ring of boxes nobody can read - the
   // fallback is stated, never silent.
-  if (scopeAll && curFocus && !readable(visibleKindCount())) {
+  if (scopeAll && curFocus && !drawable(visibleKindCount())) {
     scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
     tooWideToDraw(visibleKindCount());
   }

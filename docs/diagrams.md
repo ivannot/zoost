@@ -335,8 +335,27 @@ measured and all three hit that wall: growing the canvas until nothing overlaps 
 every size and drops the fit to **2%**; a radius derived from arc length is 70% too large; relaxation
 does not converge at all, because the cause is global - a canvas too small in a dense region - and
 pushing harder only moves the problem. **The conclusion is a product one, not a layout one**: above a
-readability limit the honest answer is to say so and let the reader narrow down, which is the next
-change, not this one.
+readability limit the honest answer is to say so and let the reader narrow down.
+
+**And the limit that blocks is a limit of cost, not of quality - because the first attempt got that
+backwards and made the feature unreachable.** A readability limit at 80 was tried as a wall, and it is
+wrong in a way worth recording: an org with more than eighty functions in *one category* can never get
+under it, so no combination of chips reaches the whole-org view at all. That is worse for a real org
+than a crowded picture, which was the thing being avoided. Two numbers now, with two jobs:
+
+| | what it is | measured how | what it does |
+|---|---|---|---|
+| `CROWDED_NODES` = 80 | where the drawing stops being clean | five generated graphs per size: no box covering another up to 80, 4 of 5 at 90 and 100, 1 of 5 at 120, none at 150 | the count turns amber and the tooltip says so. **It does not block** |
+| `DRAW_MAX_NODES` = 400 | where the layout stops being affordable | profiled end to end against the current collision pass: 200 in 0.5s, 400 in 1.3s, 600 in 2.2s, 1000 in 4.9s, 1200 in **7.2s** | refuses, and the view says why |
+
+`FORCE_MAX_NODES` is gone, folded into the ceiling. It was 1200 on a profile of about 2.1 seconds taken
+against the all-pairs collision pass that has since been replaced - **so the change to that pass
+invalidated the number and nothing said so.** That is the argument for quoting a profile where the
+constant lives rather than remembering it. Two seconds is a wait and seven is a hang, the same
+criterion as before, so the line is the largest round size measured under two seconds. Those figures
+are **layout only**: `erRender` then builds an SVG path and a div per box, and headless Chrome cannot
+be trusted to time that because virtual time advances the clock, so the real wait is longer and the
+line is drawn at the measured 1.3s rather than at the 2.2s that would otherwise have qualified.
 
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
