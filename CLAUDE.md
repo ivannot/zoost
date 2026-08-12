@@ -796,11 +796,20 @@ What that request means, in order. Do all of it without being asked:
    no judgement left in it. **The decision is Submit for review**, it is in the dashboard, and it stays
    yours - the listing fields and the screenshots cannot be set through the API anyway, so you open
    the dashboard regardless, with the package already there.
-6d. **Ask him to paste back every field he touched in the dashboard, and diff it.** This is the only
-   check that exists on the listing, and it has to be asked for: Google exposes no API for those
-   fields - which is why the step is by hand in the first place - so nothing here can compare what is
-   on the item with what is in `store/<app>/store-listing.md`. `storecopy.py <app> --changed` says
-   which fields *should* have moved; only a human reading the dashboard can say which ones did.
+6d. **Ask him for the dashboard page, and run `python3 tools/dashcheck.py <app> page.html`.** Not
+   the fields one by one - the whole page source, which is easier for him to paste and carries every
+   field at once. It reads the six texts by their `data-payload` anchor, the privacy URL, the
+   data-collection boxes, the three attestations and the remote-code answer, and diffs them against
+   `store/<app>/store-listing.md`. This is the only check that exists on the listing, and it has to
+   be asked for: Google exposes no API for those fields, which is why the step is by hand at all.
+   **The page is never committed** - it carries a session token and an email address; the fixtures
+   are written from `store-listing.md` instead.
+
+   It found two on its first run, and that is the standing warning about `submitted.py`: it records
+   what is *in the repository* when it runs and takes the click on trust, so a field corrected here
+   and never pasted is recorded as sent. §4 and §5 had drifted for four and nine days while
+   `--changed` reported nothing to paste, and the Store was still serving «a local, read-only mirror»
+   - the absolute walked back everywhere else.
    **Ask at step 6, before Submit**, not after: a field pasted short or pasted over a leftover is
    fixable while the form is open and awkward once a revision is in review. It costs him a copy and
    me a `diff`, and it is what found that the Analytics §9 was in step after an hour of believing it

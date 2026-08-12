@@ -19,6 +19,7 @@ import json
 import os
 import pathlib
 import re
+import html
 import subprocess
 import sys
 import tempfile
@@ -2110,6 +2111,89 @@ class TheGateOnTheTagCanBePassed(unittest.TestCase):
         self.assertIn('auditcheck.py --before-tag', src)
         self.assertNotIn('auditcheck.py --offline', src,
                          'release.sh is back on the mode that refuses over the skip itself')
+
+
+class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
+    """`submitted.py` records what is in the repository when it runs and takes the click on trust.
+    That is honest about what it can observe, and blind to the one thing that matters: whether the
+    text on the item is the text we have. Google publishes no API for those fields, so the only way
+    to find out is to paste the page.
+
+    It found two on its first run. §4 and §5 had been corrected on 8 and 3 August and never pasted,
+    so the Store was still serving «a local, read-only mirror» and «Zoost never writes back to Zoho»
+    - the absolute this project walked back everywhere else - while `storecopy --changed` said there
+    was nothing to paste.
+
+    The fixtures are written from store-listing.md, never saved from the real page: that page carries
+    a session token, an email address and the author's own portal.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import dashcheck, storecopy
+        self.dashcheck, self.storecopy = dashcheck, storecopy
+        self.mine = {str(n): b for n, _, _, b in storecopy.sections('crm')}
+
+    def page(self, **override):
+        """A dashboard page that agrees with the repository, unless told otherwise."""
+        say = {k: override.get(k, self.mine[str(n)])
+               for k, n in self.dashcheck.FIELD.items()}
+        out = ['<html><body>']
+        for k, body in say.items():
+            attr = '' if k == 'single-purpose' else f' data-payload={k}'
+            out.append(f'<textarea id="x" disabled{attr}>{html.escape(body)}</textarea>')
+        out.append(f'<input type="text" value="{override.get("privacy", "https://zoost.it/privacy")}"'
+                   f' maxlength="2048">')
+        for v in range(1, 10):
+            tick = ' checked' if v in override.get('collected', ()) else ''
+            out.append(f'<input type="checkbox" value="{v}" disabled{tick} aria-label="Qualcosa">')
+        for i in range(override.get('attested', 3)):
+            out.append(f'<input type="checkbox" disabled checked aria-label="Attestation {i}">')
+        remote = 'true' if override.get('remote') else 'false'
+        out.append(f'<input type="radio" value="{remote}" disabled checked>')
+        return '\n'.join(out) + '</body></html>'
+
+    def run_it(self, page):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / 'page.html'
+            f.write_text(page, encoding='utf-8')
+            r = subprocess.run([sys.executable, str(ROOT / 'tools' / 'dashcheck.py'), 'crm', str(f)],
+                               cwd=ROOT, capture_output=True, text=True)
+            return r.returncode, r.stdout
+
+    def test_a_page_that_agrees_is_quiet(self):
+        code, out = self.run_it(self.page())
+        self.assertEqual(code, 0, out)
+        self.assertIn('0 finding(s)', out)
+        self.assertIn(f'{len(self.dashcheck.FIELD)} of {len(self.dashcheck.FIELD)} fields', out)
+
+    def test_every_field_is_compared(self):
+        # One at a time, so a field silently dropped from the map cannot hide behind another.
+        for key, n in self.dashcheck.FIELD.items():
+            code, out = self.run_it(self.page(**{key: 'something else entirely'}))
+            self.assertEqual(code, 1, f'{key} drifted and nothing said so')
+            self.assertIn(f'§{n}', out)
+
+    def test_the_switches_are_read_too(self):
+        for kw, expect in ((dict(collected=(1,)), 'declares data collection'),
+                           (dict(attested=2), 'of the 3 data-use attestations'),
+                           (dict(remote=True), 'remote code'),
+                           (dict(privacy='https://example.com/privacy'), 'privacy policy URL')):
+            code, out = self.run_it(self.page(**kw))
+            self.assertEqual(code, 1, f'{kw} passed unnoticed')
+            self.assertIn(expect, out)
+
+    def test_a_markup_change_is_loud(self):
+        """The anchors are named, so losing one is a finding rather than a wrong comparison."""
+        code, out = self.run_it(self.page().replace('data-payload=storage', ''))
+        self.assertEqual(code, 1)
+        self.assertIn('the markup moved', out)
+
+    def test_two_unlabelled_fields_are_not_guessed_between(self):
+        page = self.page().replace('data-payload=tabs', '')
+        code, out = self.run_it(page)
+        self.assertEqual(code, 1)
+        self.assertIn('not made', out)
 
 
 class NothingIsPublishedThatNobodyUses(unittest.TestCase):
