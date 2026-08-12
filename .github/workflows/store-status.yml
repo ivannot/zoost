@@ -1,0 +1,74 @@
+# Ask Google what the Store is serving, and commit the answer as a file the site can read.
+#
+# The point is not the file, it is where the key is not. The Worker used to ask the Chrome Web Store
+# API directly, which put a service-account key in Cloudflare as a Secret that request-handling code
+# could read - and that key can publish, because Google links one service account per publisher and
+# offers no narrower grant. Read-only was what the Worker *asked for*, never what the credential
+# could do. Asking from here leaves the key in the one place it already had to be: the GitHub secret
+# `store-upload.yml` needs to stage a draft.
+#
+# It commits **only when the numbers move**, which is a handful of times a month. A heartbeat every
+# half hour would bury a history where each commit currently means something. The cost is stated
+# rather than hidden: a run that stopped happening is not visible from the file, so the file carries
+# `asOf` and /emergency shows it - the reader sees when the Store was last asked and can weigh it.
+#
+# The schedule is frequent because the moment that matters is short: a review clearing is exactly
+# when the site should stop saying a version is ahead of the Store. Most runs print «unchanged» and
+# commit nothing.
+name: store status
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  # After a package has been staged, because that is the other moment the answer changes: a
+  # submission appears in `submitted` the same hour it is uploaded.
+  workflow_run:
+    workflows: ['store upload']
+    types: [completed]
+
+permissions:
+  contents: write
+
+# Two runs pushing to main would race, and the loser fails on a non-fast-forward. Serialised rather
+# than retried: this job has nothing to catch up on, the next tick is thirty minutes away.
+concurrency:
+  group: store-status
+  cancel-in-progress: false
+
+jobs:
+  ask:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
+
+      - name: Ask the Store
+        id: ask
+        env:
+          CWS_SERVICE_ACCOUNT: ${{ secrets.CWS_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          python3 tools/storestatus.py | tee out.txt
+          # The tool prints `changed` or `unchanged` on its last line, and it is the only thing that
+          # knows: `asOf` moves every run, so a plain `git diff` would always say yes.
+          tail -1 out.txt | grep -qx changed && echo 'moved=yes' >> "$GITHUB_OUTPUT" || true
+
+      - name: Commit it, if it moved
+        if: steps.ask.outputs.moved == 'yes'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/store-status.json
+          # The subject says what changed rather than that something did, so the log stays readable
+          # as history instead of as noise.
+          git commit -m "The Store moved: $(python3 -c "
+          import json
+          d = json.load(open('site/store-status.json'))
+          print(' · '.join(
+              f\"{a} {(d[a] or {}).get('published', {}).get('version', '?')}\"
+              + (f\" (+{(d[a] or {}).get('submitted', {}).get('version')} {(d[a] or {}).get('submitted', {}).get('state')})\"
+                 if (d[a] or {}).get('submitted') else '')
+              for a in ('crm', 'analytics')))
+          ")"
+          git push

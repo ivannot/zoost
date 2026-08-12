@@ -2196,6 +2196,59 @@ class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
         self.assertIn('not made', out)
 
 
+class TheStoreReadingIsShapedBeforeItIsPublished(unittest.TestCase):
+    """What Google says about our items, on its way into a file the site serves.
+
+    These cases were `pickStatus` in site/_worker.js and moved with the job when the credential left
+    the Worker. They are kept because what they protect did not move: the promise that a change at
+    Google's end can cost us a number and must never invent one. The response below is recorded from
+    a real fetchStatus, so the shape here cannot drift from the API's.
+    """
+
+    def setUp(self):
+        import importlib
+        self.s = importlib.import_module('storestatus')
+
+    def test_the_status_is_read(self):
+        d = {'publishedItemRevisionStatus': {
+                 'state': 'PUBLISHED',
+                 'distributionChannels': [{'deployPercentage': 100, 'crxVersion': '1.9.0'}]},
+             'submittedItemRevisionStatus': {
+                 'state': 'PENDING_REVIEW',
+                 'distributionChannels': [{'deployPercentage': 100, 'crxVersion': '1.38.4'}]}}
+        out = self.s.shape(d)
+        self.assertEqual(out['published']['version'], '1.9.0')
+        self.assertEqual(out['published']['state'], 'PUBLISHED')
+        self.assertEqual(out['submitted']['version'], '1.38.4')
+        self.assertEqual(out['submitted']['state'], 'PENDING_REVIEW')
+        self.assertEqual(out['published']['deployPercentage'], 100)
+
+    def test_a_rejection_is_a_state_not_an_absence(self):
+        # The whole reason for leaving the scrape behind. A refused version looks exactly like a
+        # queued one from outside, so without this the badge would claim «awaiting review» for ever.
+        d = {'publishedItemRevisionStatus': {'state': 'PUBLISHED',
+                 'distributionChannels': [{'crxVersion': '1.9.0'}]},
+             'submittedItemRevisionStatus': {'state': 'REJECTED',
+                 'distributionChannels': [{'crxVersion': '1.38.4'}]}}
+        self.assertEqual(self.s.shape(d)['submitted']['state'], 'REJECTED')
+
+    def test_nothing_submitted_is_null_not_an_empty_claim(self):
+        d = {'publishedItemRevisionStatus': {'state': 'PUBLISHED',
+                 'distributionChannels': [{'crxVersion': '1.9.0'}]}}
+        self.assertIsNone(self.s.shape(d)['submitted'])
+
+    def test_a_field_that_is_not_a_version_is_dropped(self):
+        # Google can send anything; what it must never do is get a made-up number onto the page.
+        for junk in ('', 'draft', '1.9.0-beta', 'v1.9.0', None):
+            d = {'publishedItemRevisionStatus': {'state': 'PUBLISHED',
+                     'distributionChannels': [{'crxVersion': junk}]}}
+            self.assertIsNone(self.s.shape(d)['published']['version'], junk)
+
+    def test_a_response_carrying_neither_revision_is_not_a_reading(self):
+        self.assertIsNone(self.s.shape({}))
+        self.assertIsNone(self.s.shape({'takenDown': True}))
+
+
 class NothingIsPublishedThatNobodyUses(unittest.TestCase):
     """A stale logo in a Google result sent somebody looking, and the site turned out to be right -
     every icon it serves is the current mark, byte for byte. Two things were wrong anyway.
