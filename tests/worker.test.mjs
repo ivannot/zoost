@@ -358,6 +358,78 @@ test('the three answers the emergency page can give are kept apart', () => {
   assert.ok(!/box warn/.test(box.innerHTML), 'nothing is ahead, so nothing should be flagged');
 });
 
+test('a reading that stopped advancing is called old, and only then', () => {
+  const { staleReading } = load([
+    sliceConst('site/site.js', 'STALE_AFTER_MS'),
+    sliceFn('site/site.js', 'staleReading'),
+  ]);
+  const now = Date.parse('2026-08-12T12:00:00Z');
+  const ago = (h) => new Date(now - h * 3600e3).toISOString();
+
+  // The workflow writes on every run, so the only thing an old date can mean is that runs stopped.
+  assert.equal(staleReading(ago(0.5), now), false, 'a reading half an hour old is the normal case');
+  assert.equal(staleReading(ago(6), now), false, "GitHub's cron jitter must not read as a failure");
+  assert.equal(staleReading(ago(23.9), now), false, 'just inside a day is not old');
+  assert.equal(staleReading(ago(24), now), false, 'the boundary itself is not past it');
+  assert.equal(staleReading(ago(25), now), true, 'a day of missed runs is not being reported');
+  assert.equal(staleReading(ago(72), now), true);
+
+  // A clock set behind the one that wrote the reading gives a negative age. Not stale - and more to
+  // the point, not something to announce to somebody whose extension has just stopped working.
+  // It has to be further out than the threshold: at five hours in the future this passes whether the
+  // age is signed or absolute, which is what the first version of this case did and proved nothing.
+  assert.equal(staleReading(ago(-30), now), false, 'a future date is being called old');
+  assert.equal(staleReading(ago(-5), now), false);
+
+  // A date nothing can parse is a different fault, and it already shows as the line not being drawn
+  // at all. Reporting it as staleness would name the wrong problem, which this project holds to be
+  // worse than saying nothing.
+  assert.equal(staleReading('not a date', now), false);
+  assert.equal(staleReading('', now), false);
+  assert.equal(staleReading(undefined, now), false);
+});
+
+test('the page says how tired the reading is without judging the reading', () => {
+  const box = { innerHTML: '' };
+  const render = (lang, asOf) => {
+    box.innerHTML = '';
+    const { renderAhead } = load([
+      sliceConst('site/site.js', 'STR'),
+      sliceConst('site/site.js', 'STALE_AFTER_MS'),
+      sliceFn('site/site.js', 't'),
+      sliceFn('site/site.js', 'esc'),
+      sliceFn('site/site.js', 'fmtDate'),
+      sliceFn('site/site.js', 'staleReading'),
+      sliceFn('site/site.js', 'mdToHtml'),
+      sliceFn('site/site.js', 'renderAhead'),
+    ], { REPO_URL: 'https://github.com/ivannot/zoost', LANG: lang, aheadBox: box });
+    renderAhead({ crm: { store: '1.39.0', latest: '1.39.0', ahead: [] },
+                  analytics: { store: '1.23.0', latest: '1.23.0', ahead: [] },
+                  storeAsOf: asOf });
+    return box.innerHTML;
+  };
+
+  const fresh = render('en', new Date(Date.now() - 20 * 60e3).toISOString());
+  assert.ok(fresh.includes('The Store was last asked'), 'the date is not printed at all');
+  assert.ok(!fresh.includes('older than usual'), 'a reading twenty minutes old is being flagged');
+
+  const old = render('en', new Date(Date.now() - 3 * 864e5).toISOString());
+  assert.ok(old.includes('older than usual'), 'a three-day-old reading is passed off as current');
+  // The yardstick travels with the claim: without it "older than usual" is a verdict the reader
+  // cannot size, which is the thing this page refuses to hand out.
+  assert.ok(old.includes('every half hour'), 'the interval that makes the age readable is missing');
+  // It stays a note about the measurement. An amber box here would be the flashing sign the page was
+  // designed not to be, and would read as a verdict on the versions rather than on the check.
+  assert.ok(/class="meta"[^>]*>[^<]*older than usual/.test(old.replace(/\n/g, '')),
+    'the staleness sentence has left the quiet meta line');
+  // Not the conclusion, deliberately: the reader draws it from the interval and the date.
+  assert.ok(!/may have moved/.test(old), 'the page has started concluding for the reader');
+
+  const oldIt = render('it', new Date(Date.now() - 3 * 864e5).toISOString());
+  assert.ok(oldIt.includes('pi\u00f9 vecchia del solito'), 'the Italian page falls back to English here');
+  assert.ok(!oldIt.includes('older than usual'), 'both languages are being emitted at once');
+});
+
 test('the changelog is escaped before any of it is turned back into markup', () => {
   const { mdToHtml } = load([
     sliceFn('site/site.js', 'esc'),

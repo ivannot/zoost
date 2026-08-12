@@ -35,6 +35,23 @@
                                 { day: 'numeric', month: longMonth ? 'long' : 'short', year: 'numeric' });
   }
 
+  // How long a reading may sit before the page says so. The workflow runs every half hour, so a day
+  // is forty-eight missed runs: an order of magnitude above the jitter GitHub's scheduled runs show
+  // under load, which is what rules out a threshold in hours, and well below the point where somebody
+  // would act on a number nobody has checked since yesterday.
+  const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+
+  // Deliberately not a judgement on the reading, which is true whatever its age - only on whether
+  // anything has looked lately. An unparseable date returns false: it is a different fault and it
+  // already shows up as a missing line, and reporting it as staleness would name the wrong problem,
+  // which this project treats as worse than silence.
+  function staleReading(iso, nowMs) {
+    const asked = Date.parse(iso);
+    if (isNaN(asked)) return false;
+    // A browser clock set behind ours yields a negative age, which is not stale.
+    return (nowMs - asked) > STALE_AFTER_MS;
+  }
+
   // The version badge is the one thing on the page written by script, so it is the one thing a
   // translated page cannot translate by itself. The language comes from <html lang>, which every page
   // already declares; anything not listed falls back to English rather than showing a key.
@@ -57,6 +74,7 @@
       queued: 'submitted, awaiting review', refused: 'this submission was rejected',
       askFailed: 'This check could not be run just now.',
       storeAsOf: 'The Store was last asked',
+      storeStale: 'This reading is older than usual - the check that asks Google runs every half hour.',
     },
     it: {
       store: 'Sul Chrome Web Store', release: 'Ultima release', dev: 'In sviluppo',
@@ -73,6 +91,7 @@
       queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
       askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
       storeAsOf: 'Lo Store è stato interrogato l\'ultima volta il',
+      storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google gira ogni mezz\'ora.',
     },
   };
   function t(k) { return (STR[LANG] || STR.en)[k] || STR.en[k]; }
@@ -277,13 +296,24 @@
       });
       return out.join('') + '</div>';
     }).join('');
-    // When the Store was last actually asked, printed rather than judged. The reading is refreshed by
-    // a workflow and committed only when the numbers move, so a run that stopped happening leaves an
-    // old date on a true reading - and the date is the only thing that would show it. Interpreting it
-    // here, with a threshold, would turn a cron that ran late into «unknown».
+    // When the Store was last actually asked. The number itself is printed rather than judged - it is
+    // a true reading whatever its age - but how *tired* it is does get said, which is a different
+    // thing and the only signal a workflow that stopped ever produces. It writes to KV on every run,
+    // so a date that stopped advancing means the run stopped, unambiguously; while the reading was a
+    // committed file it moved only when the Store did, and a threshold then would have called a quiet
+    // fortnight a failure.
+    //
+    // The sentence hands over the yardstick («runs every half hour») instead of a verdict, and it
+    // deliberately does not draw the conclusion that the versions below may have moved: a reader who
+    // has just been given the interval and a date two days old draws it unaided, and this page's whole
+    // posture is that the decision to install by hand is theirs.
     if (d && d.storeAsOf) {
       const when = fmtDate(d.storeAsOf, true);
-      if (when) aheadBox.innerHTML += '<p class="meta">' + esc(t('storeAsOf')) + ' ' + esc(when) + '.</p>';
+      if (when) {
+        let line = esc(t('storeAsOf')) + ' ' + esc(when) + '.';
+        if (staleReading(d.storeAsOf, Date.now())) line += ' ' + esc(t('storeStale'));
+        aheadBox.innerHTML += '<p class="meta">' + line + '</p>';
+      }
     }
   }
 
