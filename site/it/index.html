@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:8389843c56a3b126 -->
+<!-- translated-from: site/index.html sha256:6d0f3badde53ee1d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -113,11 +113,9 @@
 <div class="hero">
   <div class="wrap">
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E con Zoost puoi vederlo tutto insieme.</span></h1>
-    <p class="lead">Zoost è una piccola famiglia di estensioni per Chrome, una per ogni prodotto Zoho. Il codice
-      Deluge, lo schema dei moduli, i workspace, l'SQL che ci sta sotto: roba tua, che però puoi
-      guardare solo un pezzo alla volta, dentro una scheda del browser. Zoost la porta tutta sul tuo
-      disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa: chi chiama chi,
-      chi dipende da chi, e cosa non serve più a nessuno.</p>
+    <p class="lead">Zoho te lo fa guardare un pezzo alla volta, dentro una scheda del browser. Zoost porta
+      l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa:
+      chi chiama chi, chi dipende da chi, e cosa non serve più a nessuno.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
@@ -206,10 +204,9 @@
       </div>
       <div>
         <h3>Ti dà i numeri, non i giudizi</h3>
-        <p>Conteggi ed elenchi, e finisce lì. Una funzione da quattrocento righe può benissimo essere una
-          tabella di mappatura scritta bene, e quali siano le tue lo sai soltanto tu: per questo non
-          troverai niente valutato, messo in classifica o colorato di rosso. Accanto a ogni cifra c'è
-          scritto di cosa non tiene conto.</p>
+        <p>Conteggi ed elenchi, mai un voto. Una funzione da quattrocento righe può benissimo essere una
+          tabella di mappatura scritta bene, e quali siano le tue lo sai soltanto tu. Accanto a ogni cifra
+          c'è scritto di cosa non tiene conto.</p>
       </div>
       <div>
         <h3>Dalla tua macchina non esce niente</h3>
@@ -233,11 +230,10 @@
       </div>
       <div>
         <h3>Un cliente, o quindici</h3>
-        <p>L'org non deve per forza essere la tua. Una cartella di lavoro contiene una sottocartella per prodotto
-          e, dentro, una per org o per workspace - così, se fai consulenza, tieni rispecchiati tutti i clienti insieme, ognuno legato all'org,
-          all'host e all'istanza da cui è arrivato. Se sei sulla scheda sbagliata, tutto
-          quello che tocca Zoho resta spento finché le due cose non tornano a coincidere; produzione e sandbox
-          contano per due.</p>
+        <p>L'org non deve per forza essere la tua. Una sola cartella di lavoro tiene rispecchiati tutti i
+          clienti insieme, ognuno legato all'org, all'host e all'istanza da cui è arrivato. Se sei sulla
+          scheda sbagliata, tutto quello che tocca Zoho resta spento finché le due cose non coincidono.
+          Produzione e sandbox contano per due.</p>
       </div>
     </div>
     <p class="note" style="margin-top:26px">Vuoi entrare nel merito - quali endpoint, cosa lo manda in crisi, come viene firmata una release?
@@ -265,10 +261,8 @@
         <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun server, nessun account, nessuna telemetria.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
-        <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>: i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code>, dove non gira nessuno script nostro e che sta lì solo perché il pannello possa capire a quale org appartiene una scheda Zoho One, e <code>api.anthropic.com</code> / <code>api.openai.com</code>, raggiunti solo se qualcuno accende l'assistente. Il manifest fa fede, ed è lungo quattro schermate.</td></tr>
-<tr><td class="k">Come verificarlo</td><td>Il sorgente sono tredici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics - nessun bundler, nessun minificatore,
-          quindi quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la
-          firma, e un comando verifica il file pubblicato.</td></tr>
+        <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code> e <code>api.anthropic.com</code> / <code>api.openai.com</code>. Su <code>one.zoho.*</code> non gira nessuno script nostro: sta lì solo perché il pannello capisca a quale org appartiene una scheda Zoho One. I due host AI si raggiungono solo se qualcuno accende l'assistente. Il manifest fa fede.</td></tr>
+<tr><td class="k">Come verificarlo</td><td>Tredici file di JavaScript in chiaro per Zoho CRM, dieci per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Il dettaglio, endpoint per endpoint, sta sulla
@@ -281,7 +275,7 @@
   <div class="wrap">
     <h2>Come si comincia</h2>
     <ol class="steps">
-      <li><b>Provalo senza collegare niente.</b> Installa una delle due e premi <b>+ Sample</b>: scrive un
+      <li><b>Provalo senza collegare niente.</b> Installa una delle due e premi <b>+ Sample</b>. Scrive un
         workspace di dati inventati nella tua cartella di lavoro, e l'albero, i diagrammi, l'audit e gli
         export funzionano tutti su quello - senza una scheda Zoho e senza account. Niente raggiunge la
         piattaforma, e lo cancelli cancellando la cartella. <a href="/it/try">Cosa c'è dentro</a>.</li>

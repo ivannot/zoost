@@ -112,9 +112,9 @@
 <div class="hero">
   <div class="wrap">
     <h1>Everything you built inside Zoho is yours.<br><span>And with Zoost you can see all of it at once.</span></h1>
-    <p class="lead">Your Deluge code, your module schema, your workspaces and the SQL behind them - one object
-      at a time, in a browser tab. Zoost copies all of it to plain files on your own disk, then draws you the map:
-      what calls what, what depends on what, what nothing uses any more.</p>
+    <p class="lead">Zoho shows you one object at a time, in a browser tab. Zoost copies the whole org to plain
+      files on your own disk, then draws the map: what calls what, what depends on what, what nothing uses
+      any more.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">The workbenches</a>
       <a class="btn" href="#in-common">What every Zoost has in common</a>
@@ -168,7 +168,7 @@
       <figure class="shot">
         <img src="/img/crm-preview.webp?v=be77f6afcf" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost panel beside Zoho CRM: the function list above, and below it the Details tab of the selected function - its callers, what is failing in Zoho, its size.">
-        <figcaption><b>Zoost CRM.</b> The whole org in one list, and under it what is known about the function you picked: who calls it, where it is used, what is failing in Zoho, how big it is. Its source is the tab beside that one, and the calls in it that resolve to a function you have are links through to it.</figcaption>
+        <figcaption><b>Zoost CRM.</b> The whole org in one list, and under it what is known about the function you picked: who calls it, where it is used, what is failing in Zoho, how big it is. Its source is the next tab along, where every call that resolves to a function you have is a link through to it.</figcaption>
       </figure>
     </div>
 </section>
@@ -195,9 +195,9 @@
       </div>
       <div>
         <h3>Numbers without a grade</h3>
-        <p>You get counts and lists. A function that runs to four hundred lines may be a perfectly clean mapping
-          table, and only you know which of yours those are, so nothing here is scored or flagged. Every figure
-          says what it does not cover, right beside itself.</p>
+        <p>You get counts and lists, never a score. A four-hundred-line function may be a perfectly clean
+          mapping table, and only you know which of yours those are. Every figure says what it does not
+          cover, right beside itself.</p>
       </div>
       <div>
         <h3>Nothing leaves the machine</h3>
@@ -207,8 +207,8 @@
       <div>
         <h3>Checkable, not just claimed</h3>
         <p><a href="https://github.com/ivannot/zoost/blob/main/.github/workflows/release.yml">GitHub builds
-          each release</a> from a tagged commit, twice over to prove the bytes are reproducible, and signs it.
-          The archive on the Release is the file sent to the Store, and
+          each release</a> from a tagged commit, twice over, and signs it. The archive on the Release is the
+          file sent to the Store - and
           <a href="https://github.com/ivannot/zoost/blob/main/RELEASES.md">one command tells you whether that
           is true</a>.</p>
       </div>
@@ -219,10 +219,9 @@
       </div>
       <div>
         <h3>One client, or fifteen</h3>
-        <p>The org does not have to be yours. One working folder holds a subfolder per product and, inside it, one
-          per org or workspace - so if you consult, every client stays mirrored at once, each bound to the org, host and instance
-          it came from. Point the browser at the wrong tab and everything that touches Zoho switches off
-          until the two agree; production and sandbox count as two.</p>
+        <p>The org does not have to be yours. One working folder holds every client at once, each bound to the
+          org, host and instance it came from. Point the browser at the wrong tab and everything that touches
+          Zoho switches off until the two agree. Production and sandbox count as two.</p>
       </div>
     </div>
     <p class="note" style="margin-top:26px">Want the detail - which endpoints, what breaks it, how a release is
@@ -251,10 +250,8 @@
         <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No server, no account, no telemetry.</td></tr>
         <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
-        <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>: the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, <code>one.zoho.*</code>, where no content script of ours runs at all and which is there only so the panel can tell which org a Zoho One tab belongs to, and <code>api.anthropic.com</code> / <code>api.openai.com</code>, reached only if someone turns the assistant on. The manifest is the authority and it is four screens long.</td></tr>
-<tr><td class="k">How you can check</td><td>The source is thirteen files of plain JavaScript for Zoho CRM and ten for Zoho Analytics - no bundler, no minifier, so what you read
-          is what runs. Each release is built by GitHub twice over and signed, and one command verifies
-          the file that was published.</td></tr>
+        <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>. The hosts are the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, <code>one.zoho.*</code>, and <code>api.anthropic.com</code> / <code>api.openai.com</code>. No content script of ours runs on <code>one.zoho.*</code>: it is there so the panel can tell which org a Zoho One tab belongs to. The two AI hosts are reached only if someone turns the assistant on. The manifest is the authority.</td></tr>
+<tr><td class="k">How you can check</td><td>Thirteen files of plain JavaScript for Zoho CRM, ten for Zoho Analytics. No bundler, no minifier: what you read is what runs. Each release is built by GitHub twice over and signed, and one command verifies the published file.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Details, endpoint by endpoint: <a href="/nerd">the nerd
@@ -267,9 +264,9 @@
     <h2>Get started</h2>
     <ol class="steps">
       <li><b>Try it without connecting anything.</b> Install either extension and press
-        <b>+ Sample</b>: it writes a workspace of invented data into your working folder, and the tree, the
-        diagrams, the audit and the exports all work on it - with no Zoho tab and no account. Nothing
-        reaches the platform, and you delete it by deleting the folder. <a href="/try">What is in it</a>.</li>
+        <b>+ Sample</b>. It writes a workspace of invented data into your working folder, and the tree, the
+        diagrams, the audit and the exports all work on it - no Zoho tab, no account. Nothing reaches the
+        platform, and you delete it by deleting the folder. <a href="/try">What is in it</a>.</li>
 <li>Pick the product you want to look at: <b><a href="/crm">Zoost - workbench for Zoho CRM</a></b> or
         <b><a href="/analytics">Zoost - workbench for Zoho Analytics</a></b>.</li>
       <li><b>Install the extension</b> from the Chrome Web Store. Both are there.</li>
