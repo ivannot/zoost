@@ -21,6 +21,33 @@ Resolve one with `curl -s https://api.github.com/repos/<owner>/<repo>/git/ref/ta
 that an annotated tag answers with `"type":"tag"`, which must then be dereferenced to its commit;
 pinning the tag object's own sha would not be a commit at all.
 
+**Pinning means upgrades never happen by themselves, so they have to happen on purpose.** Both actions
+sat three and four majors behind until a runner warning surfaced them - `checkout` v4.2.2 and
+`attest-build-provenance` v1.4.4, both targeting a Node the runners had started forcing off. They are
+at v7.0.1 and v4.2.2 now, and the two questions worth asking before any such bump are the ones that
+actually had answers here rather than assumptions:
+
+- **Does a new refusal apply to us?** checkout v7 refuses to check out fork PR code from
+  `pull_request_target` and `workflow_run`, and `store-status.yml` runs on `workflow_run`. Reading
+  `src/unsafe-pr-checkout-helper.ts` at the tag settles it: for `workflow_run` the guard returns
+  immediately unless `workflow_run.event` starts with `pull_request`, and this chain is
+  `release` -> `store upload` -> `store status`, never a pull request. The release-note headline
+  would have read as a blocker; the source said otherwise.
+- **Did an input change?** checkout v6 persists credentials to a separate file, which matters only to
+  a job running authenticated git afterwards - none here do. attest v2 made `subject-path` accept
+  multiple subjects, which is additive for the one path we pass. v5 and v3 both need runner
+  >= 2.327.1; the runners are on 2.336.0.
+
+`attest-build-provenance` v4 is now a thin wrapper over `actions/attest` and says new implementations
+should use that directly. Not worth taking: it would mean assembling the predicate by hand, and the
+wrapper is explicitly still supported.
+
+**What could not be exercised before shipping is the attestation itself.** `checkout` runs on every
+scheduled `store status`, so v7 is proven within half an hour of the bump; the signing step runs only
+when a tag is pushed. So the first release after this bump is the test, and if it fails the fix is to
+restore `ef244123eb79f2f7a7e75d99086184180e6d0018` - which is why the old hash is written here rather
+than only in git history.
+
 **An HTML comment inside a Markdown table ends the table.** `<!-- rows appended here -->` sat between
 the header and the first row of `RELEASES.md`, so GitHub rendered an empty table followed by loose
 pipe-delimited text — locally invisible, wrong on the only surface that matters. Instructions to a
