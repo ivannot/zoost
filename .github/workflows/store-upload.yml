@@ -38,13 +38,17 @@ permissions:
 jobs:
   upload:
     runs-on: ubuntu-latest
-    # A release that failed has no asset to stage. Nothing here checks the *shape* of the tag: the
-    # release workflow runs on `crm-v*` and `analytics-v*` and nothing else, so a second list of the
-    # products in this file would be one more place to forget when a third one arrives - and the tag
-    # step below validates it against `apps/` anyway.
+    # A release that failed has no asset to stage - and a release that was *dispatched* has no tag to
+    # read, because `head_branch` is then the branch it was launched from. That stopped being
+    # hypothetical the moment the release workflow gained a dispatch of its own: the next run of this
+    # one failed with «main is not <app>-v<version>», which is a red mark meaning "normal".
+    #
+    # `-v` rather than a list of the products: the shape is what matters here, and the tag step below
+    # still validates the app against `apps/`. A dispatched release is staged by dispatching this.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       contains(github.event.workflow_run.head_branch, '-v'))
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
 
