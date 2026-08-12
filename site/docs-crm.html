@@ -367,7 +367,7 @@ git commit -m "baseline"</code></pre>
       relation names forward.</li>
     <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
       card appears with the relation's API name and the Deluge call, ready to copy.</li>
-    <li><b class="ui">Fit</b> frames the whole drawing in the window, and a <b>window resize does it for you</b> - unless you have panned or zoomed, in which case the view you chose is kept and <b class="ui">Fit</b> hands it back. <b class="ui">Layout ⚙</b> exposes spacing, spread, label gap and label size as live sliders. There is no correct
+    <li><b class="ui">Fit</b> frames the whole drawing in the window, and a <b>window resize does it for you</b> - unless you have panned or zoomed, in which case the view you chose is kept and <b class="ui">Fit</b> hands it back. The tab carries the number of boxes the diagram would draw, and it follows the filters, so you can see a category coming off bring the graph within reach before you ask for it. Past <b>80</b> it is not drawn at all and the view says so: that is the size at which every box can still be placed clear of every other, and past it the boxes cover each other and the arcs cannot be followed - which tells you less than showing nothing. <b class="ui">Layout ⚙</b> exposes spacing, spread, label gap and label size as live sliders. There is no correct
       value - dense or airy depends on what you are looking at.</li>
   </ul>
   <p><b>What it will not do:</b> above 1200 nodes the free-form layout is not attempted at all -
@@ -376,13 +376,13 @@ git commit -m "baseline"</code></pre>
     The <b>Explorer</b> and a focused <b>Wiring</b> stay fast at any org size; use a focus and a small depth.</p>
 
   <figure class="shot">
-    <img src="/img/crm-graph.webp?v=6d1898cde7" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-graph.webp?v=901adb4023" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The call graph window: functions, workflows, schedules and connections as boxes joined by arrows.">
     <figcaption>Chapter 6: the diagram window. The chips at the top are the filter and the colour key at once, and they steer all three views.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-er.webp?v=674dd64237" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-er.webp?v=e361f87755" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The ER diagram: modules as boxes listing their fields, joined by their lookups.">
     <figcaption>The other drawing in the same window: modules as tables, lookups as arrows, focusable and printable wall-size.</figcaption>
   </figure>
@@ -416,7 +416,7 @@ git commit -m "baseline"</code></pre>
   </ul>
 
   <figure class="shot">
-    <img src="/img/crm-relations.webp?v=ee004d0434" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-relations.webp?v=574660996f" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Relations table: one row per related list with the API name that getRelatedRecords needs.">
     <figcaption>Chapter 7: this table is the answer. One row per related list, with the API name the call needs - which is neither module's own api_name, and is the reason this table exists.</figcaption>
   </figure>

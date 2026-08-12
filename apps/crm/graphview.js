@@ -14,6 +14,9 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  tabCount: (n) => `${n} ${NOUN().n} to draw`,
+  tabOver: (n) => `${n} ${NOUN().n} - more than the ${READABLE_MAX_NODES} this diagram can draw with every box clear of every other. Switch a category off above, or pick something to focus on.`,
+  tooMany: (n) => `<b>Too many to draw at once.</b> ${n} ${NOUN().n} are on the tab above and the limit is ${READABLE_MAX_NODES} - the size at which every box can still be placed clear of every other. Past it the boxes cover each other and the arcs cannot be followed, which says less than showing nothing. Switch a category off above, or pick one to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits.`,
   showList: 'Show the list',
   emphasis: 'Emphasis: ',
 };
@@ -144,7 +147,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // do is disagree with the button in the panel that opens it, which now says Graph too.
   {
     $('ertab').style.display = '';
-    $('ertab').textContent = _schema ? 'ER diagram' : 'Wiring';
+    $('ertabname').textContent = _schema ? 'ER diagram' : 'Wiring';
     $('reltab').style.display = ''; buildRelChips();
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
@@ -923,6 +926,15 @@ const FORCE_MAX_NODES = 1200;
 // The count that matters is what is about to be laid out, never how big the org is: switching a
 // category off can bring a graph that was refused under the budget, and refusing it anyway would
 // mean the filters cannot buy what they exist to buy.
+const READABLE_MAX_NODES = 80;
+// A *readability* budget, and deliberately not FORCE_MAX_NODES above, which is a compute one: whether
+// the O(n\u00b2) settle can be afforded at all, profiled at 1200 and still right there. This one is the
+// size at which the diagram can still place every box clear of every other, measured rather than
+// chosen: with the canvas shaped to the panel, five generated graphs at each size come out with no box
+// covering another up to 80 nodes, 4 of 5 at 90 and at 100, 1 of 5 at 120, none at 150. Above it the
+// boxes cover each other and the arcs cannot be followed, which says less than drawing nothing - so
+// nothing is drawn, and the view says why.
+const readable = (n) => n <= READABLE_MAX_NODES;
 function forceFeasible(n) { return (n == null ? nodesA.length : n) <= FORCE_MAX_NODES; }
 // What "everything" would cost with the chips as they stand - used before scopeAll is applied, so
 // it cannot ask erVisibleIds().
@@ -1111,7 +1123,7 @@ function setScope(all) {
   // which is what made «show all» beside the row count do nothing at all. The diagram re-asserts
   // the limit for itself when it is the view being drawn.
   const wide = visibleKindCount();
-  if (all && curView === 'er' && !forceFeasible(wide)) { tooWideToDraw(wide); return; }
+  if (all && curView === 'er' && !readable(wide)) { tooWideToDraw(wide); return; }
   scopeAll = !!all;
   // Widening to everything lays the whole org out again, which is the most expensive thing this
   // window does - and it did it in the click handler, so the interface sat there looking hung and
@@ -1158,7 +1170,7 @@ function graphStat() {
     : `${entityBreakdown()} · <b>${DATA.counts.edges}</b> links · <b>${DATA.counts.dead_suspects}</b> nothing calls them · <b>${DATA.counts.unresolved}</b> unresolved${orphanNote()}`;
 }
 // Whichever of the two is the right one for the state we are in.
-function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
+function statRefresh() { if (curFocus) egoStat(); else graphStat(); erCountRefresh(); }
 // Said in the diagram, where it is the difference between what the Explorer lists and what is
 // drawn. It is not only about the filter: a node with no link of its own is not drawn either, and
 // the first wording («with nothing left to link them») blamed the chips for both. The number is
@@ -1794,11 +1806,55 @@ function erFit() {
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
   erUserMoved = false;
 }
+// How many boxes the diagram would draw right now, on the tab that draws them. `erCandidate` already
+// accounts for the chips, the focus and the depth, so this is the number and not an approximation of
+// it - and it is shown before the drawing is asked for, so a reader can see a filter bring the graph
+// within reach instead of clicking and finding out.
+function erCountRefresh() {
+  const tab = $('ertab');
+  if (!tab || tab.style.display === 'none') return;
+  const n = erVisibleIds().length;
+  const badge = $('ertabn');
+  if (badge) badge.textContent = n ? String(n) : '';
+  const over = !readable(n);
+  tab.classList.toggle('over', over);
+  tab.title = over ? MSG.tabOver(n) : MSG.tabCount(n);
+}
+// Nothing is drawn, said where the reader is standing. The tab stays enabled and this is why: above
+// the limit a click lands here and explains itself, where a disabled tab would be a dead control that
+// teaches nothing. That is a stated departure from `updateProjectableTabs`, which *disables* a tab
+// when the selection cannot be projected - there nothing the reader does will help, here switching a
+// category off or picking a focus will.
+//
+// The filter stays live while the diagram is open, which is the whole point of it, so this state is
+// reached by raising a filter as well as by clicking the tab. The drawing is taken down when it
+// happens: leaving the previous one up under a filter that no longer describes it is the stale
+// projection this window already refuses elsewhere - both panes looking right on their own and
+// disagreeing with each other.
+function erNotDrawn(n) {
+  const box = $('ernone');
+  if (box) { box.querySelector('p').innerHTML = MSG.tooMany(n); box.classList.add('on'); }
+  $('ervp').classList.add('off');
+  $('ertools').classList.add('off');
+  const h = document.querySelector('#v-er .hint2');
+  if (h) h.classList.add('off');
+}
+function erDrawn() {
+  const box = $('ernone');
+  if (box) box.classList.remove('on');
+  $('ervp').classList.remove('off');
+  $('ertools').classList.remove('off');
+  const h = document.querySelector('#v-er .hint2');
+  if (h) h.classList.remove('off');
+}
 function erShow() {
+  const drawing = erVisibleIds().length;
+  if (!readable(drawing)) { erNotDrawn(drawing); erCountRefresh(); return; }
+  erDrawn();
   // A scope widened from Relations, where it is free, may be more than the diagram can lay out.
   // Say so and go back to the focus rather than drawing a ring of boxes nobody can read - the
   // fallback is stated, never silent.
-  if (scopeAll && curFocus && !forceFeasible(visibleKindCount())) {
+  if (scopeAll && curFocus && !readable(visibleKindCount())) {
     scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
     tooWideToDraw(visibleKindCount());
   }

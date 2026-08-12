@@ -359,8 +359,21 @@ the first page outside the guides to use it rendered it as ordinary bold text. E
 `.card` / `.note` history repeating, and this time `classes_defined` caught it on the same day rather
 than after months. It is `.doc`-scoped, so no landing page changes.
 
-**A change worth keeping → a commit.** Bump `version` in the app's `apps/<app>/manifest.json`: patch for fixes,
-minor for features. Propose the commit message; do not batch unrelated work into one commit.
+**A change worth keeping → a commit.** Do not batch unrelated work into one commit. Commit it yourself
+rather than proposing a message and waiting — the rule that only Ivan decides what goes in a commit
+message is about *attribution*, which stays absent, not about a review gate on the wording.
+
+**A version is bumped for a release, not for a commit.** This used to say "patch for fixes, minor for
+features" per commit, and one afternoon took Zoho CRM from 1.41.2 to 1.43.0 while the Store was still
+serving 1.39.0 — four minors of distance on work nobody outside had seen. **The distance is what a user
+reads**, and a dev version far ahead of the published one says "unstable" rather than "busy": the
+number is a claim about how much has changed for *them*, and there is nothing to claim until a package
+is submitted. So the manifest moves when a release is being cut, once, sized to the whole span it
+covers — patch if the span is fixes, minor if it carries a feature — and a commit in between leaves it
+alone. Nothing derives from a per-commit bump: `stamp.py` writes whatever the manifest says into the
+guides, and `/api/versions` compares the manifest against the Store, so both are happier with a number
+that moves deliberately. `whatsnew.py` already prints the manifest version at each end of the range,
+which is how a release sees the span it has to cover.
 
 **A release → tag, and the tag is the trigger.** `tools/release.sh <app>` refuses a dirty tree,
 proves the build reproducible locally, and creates the tag. `git push --follow-tags` then makes

@@ -1084,7 +1084,13 @@ test('widening the scope clears, says so, and only then computes', async () => {
     curFocus: 'a', scopeAll: false, nodesA: new Array(200), SPIN_NODES: 60, curView: 'er',
     // The budget is now asked about what the chips leave standing, and the refusal is one shared
     // sentence rather than a string written here.
-    forceFeasible: () => true, visibleKindCount: () => 200, tooWideToDraw() {},
+    // `readable` is what setScope asks now - the diagram's own limit rather than the compute budget -
+    // and it is lifted below rather than stubbed, so the test uses the shipped predicate. 200 nodes is
+    // over it, so the scope this case widens has to be brought within reach by the chips. 70 sits
+    // between the two thresholds on purpose: above SPIN_NODES, so the heavy path with the spinner is
+    // the one exercised, and at or below READABLE_MAX_NODES, so the widening is allowed at all. The
+    // first attempt used 40 and silently took the light path, which asserted nothing about the order.
+    forceFeasible: () => true, visibleKindCount: () => 70, tooWideToDraw() {},
     N: { a: { id: 'a', name: 'a' } }, label: (n) => n.name,
     bfsEgo: () => order.push('work'), updateDepthUI() {}, updateScopeUI() {}, egoStat() {},
     erLaidOut: true, erShow: () => order.push('draw'), fitView() {}, draw() {},
@@ -1094,7 +1100,9 @@ test('widening the scope clears, says so, and only then computes', async () => {
     requestAnimationFrame: (f) => frames.push(f),
     NOUN: () => ({ all: 'Everything' }), esc: (x) => x, ctx2d: null, W: 0, H: 0,
   };
-  const { setScope } = load([sliceConst('apps/crm/graphview.js', 'focusName'),
+  const { setScope } = load([sliceConst('apps/crm/graphview.js', 'READABLE_MAX_NODES'),
+                             sliceConst('apps/crm/graphview.js', 'readable'),
+                             sliceConst('apps/crm/graphview.js', 'focusName'),
                              sliceFn('apps/crm/graphview.js', 'runHeavy'),
                              sliceFn('apps/crm/graphview.js', 'setScope')], ctx);
   setScope(true);
@@ -1789,9 +1797,12 @@ test('the diagram lends its layout budget to nobody, and says so when it decline
   // that was never going to be slow.
   const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
   const ss = src.slice(src.indexOf('function setScope('), src.indexOf('\n}', src.indexOf('function setScope(')));
-  assert.ok(/curView === 'er' && !forceFeasible/.test(ss), 'the table is refused a scope it can afford');
+  // The limit it keeps to itself is the *readability* one now. That is the same case one layer on:
+  // borrowing the compute budget here is what let a 1200-node hairball be drawn at all, and borrowing
+  // either of them for the Relations table is what made «show all» do nothing.
+  assert.ok(/curView === 'er' && !readable/.test(ss), 'the table is refused a scope it can afford');
   const es = src.slice(src.indexOf('function erShow('), src.indexOf('\n}', src.indexOf('function erShow(')));
-  assert.ok(/scopeAll[\s\S]{0,120}forceFeasible[\s\S]{0,160}tooWideToDraw/.test(es),
+  assert.ok(/scopeAll[\s\S]{0,120}readable[\s\S]{0,160}tooWideToDraw/.test(es),
     'the diagram draws a scope it cannot lay out, or drops it without saying so');
   // one sentence, one function - it is stated in two places and must not be written twice
   assert.equal((src.match(/too many to lay out all at once/g) || []).length, 1,
@@ -1804,8 +1815,13 @@ test('the functions drawing has one name, and the code does not write the old on
   // that live in the markup and are rebuilt by the code that updates state. It reached the user
   // twice, which is the failure.
   const js = read('apps/crm/graphview.js');
-  assert.ok(/\$\('ertab'\)\.textContent = _schema \? 'ER diagram' : 'Wiring'/.test(js),
+  // Into `#ertabname`, not onto the tab itself: the tab carries the count beside the name now, and
+  // `textContent` on the parent would wipe it out on every open - which is this same trap, one element
+  // up, and is why the assertion names the child rather than being relaxed to match either.
+  assert.ok(/\$\('ertabname'\)\.textContent = _schema \? 'ER diagram' : 'Wiring'/.test(js),
     'the tab is not labelled from code with the name the panel opens it under');
+  assert.ok(!/\$\('ertab'\)\.textContent/.test(js),
+    'the tab label is written over the whole tab, which takes the count with it');
   // and nowhere a control is named may the old name survive - a third name is worse than either
   for (const f of ['apps/crm/graphview.html', 'apps/crm/sidepanel.html', 'apps/crm/sidepanel.js',
                    'apps/crm/product-help.js', 'apps/crm/graphview.js']) {
@@ -1920,6 +1936,31 @@ test('the layout budget was raised on a measurement, and both apps carry the sam
   assert.equal(n('crm'), n('analytics'), 'the twins disagree about how much they can draw');
   assert.equal(s('crm'), s('analytics'), 'the twins disagree about when to show a spinner');
   assert.ok(s('crm') < n('crm'), 'the spinner threshold is above the layout budget, so it never fires');
+});
+
+test('the readability limit is what was measured, and it is not the compute budget', () => {
+  // Two different questions, and borrowing one for the other is how a 1200-node hairball came to be
+  // drawn: FORCE_MAX_NODES asks whether the layout can be *afforded*, this asks whether the result can
+  // be *read*. Measured with the canvas shaped to the panel - five generated graphs at each size come
+  // out with no box covering another up to 80 nodes, 4 of 5 at 90 and at 100, 1 of 5 at 120, none at
+  // 150 - so 80 is the largest size the diagram can promise, and moving it means measuring again.
+  const r = (app) => +read(`apps/${app}/graphview.js`).match(/const READABLE_MAX_NODES = (\d+)/)[1];
+  const f = (app) => +read(`apps/${app}/graphview.js`).match(/const FORCE_MAX_NODES = (\d+)/)[1];
+  assert.equal(r('crm'), 80, 'the readability limit moved without the measurement moving');
+  assert.equal(r('crm'), r('analytics'), 'the twins disagree about how much can be read');
+  for (const app of ['crm', 'analytics']) {
+    assert.ok(r(app) < f(app), `${app}: a readability limit above the compute budget would never fire`);
+    const js = read(`apps/${app}/graphview.js`);
+    // The guard has to be the first thing erShow does, or a layout runs before anything refuses it.
+    const body = js.slice(js.indexOf('function erShow() {'), js.indexOf('function erShow() {') + 400);
+    assert.ok(/readable\(/.test(body), `${app}: erShow does not ask whether the set can be read`);
+    assert.ok(/erNotDrawn\(/.test(body), `${app}: erShow has no path that refuses to draw`);
+    // The count is on the tab, and it follows the filter rather than being written once.
+    assert.ok(/erCountRefresh\(\);?\s*}/.test(js.slice(js.indexOf('function statRefresh()'), js.indexOf('function statRefresh()') + 200)),
+      `${app}: the tab count does not follow a header refresh, so a filter can leave it stale`);
+    assert.ok(read(`apps/${app}/graphview.html`).includes('id="ertabn"'), `${app}: the tab has nowhere to show a count`);
+    assert.ok(read(`apps/${app}/graphview.html`).includes('id="ernone"'), `${app}: the view has nowhere to say why it drew nothing`);
+  }
 });
 
 test('a control that comes and goes may not move the numbers beside it', () => {
