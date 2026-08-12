@@ -182,6 +182,7 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 5236f5b433884e75  site/docs-crm.html: Both are per window and not remembered, and they exist only there: the other three views have no list.
 5651d7917b5e3194  site/docs-crm.html: Both carry everything the panel shows, including each function's size and outbound-call counts (a Size and outbound calls table in the Markdown, columns in the HTML index): a report should never be a lesser copy of what you saw on screen.
 687f4dbbe3ee516c  site/docs-crm.html: Both come from the rule already on your disk, so nothing is fetched to answer "which workflows do not fire straight away".
+0e562dea3e096437  site/docs-crm.html: Changing a filter lays the diagram out again, and the boxes you moved keep their places while only the new ones are placed for you - the hint line says how many of each.
 bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.
 1631422a9c9bb1e3  site/docs-crm.html: Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.
 695566f1704feaf3  site/docs-crm.html: Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
