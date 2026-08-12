@@ -58,18 +58,40 @@ fi
 mkdir -p "$DEST/apps"
 
 # The destination is very likely a cloud-sync filesystem, and those are not ordinary ones: Google
-# Drive's virtual drive refuses `chgrp` and refuses the temporary files rsync writes before renaming
-# them into place. So no attributes are preserved (`-rlt` and not `-a`) and the write is `--inplace`.
-# `cp -R` is the fallback for a machine with no rsync, and also for the day a destination refuses
-# something else - a copy that works beats a copy that is clever.
+# Drive's virtual drive refuses the temporary files rsync writes before renaming them into place, and
+# it refuses to set a file's times at all. So the write is `--inplace`, no attributes are preserved,
+# and - the part that was wrong - **times are not asked for**.
+#
+# `-rlt` asked for them, so rsync failed on every single file with «failed to set times: Operation not
+# permitted», returned non-zero, and the fallback below ran *every time*: a full `rm -rf` of both
+# extensions followed by a fresh copy. Nothing reported it, because the errors went to /dev/null and
+# the fallback is silent. Once this copy became automatic - once per battery run - that was two dozen
+# delete-and-recreate cycles a day on a synced folder, and the folder is genuinely empty inside each
+# one. It was noticed by the author, looking at Drive on the other machine and finding crm gone.
+#
+# Without times, rsync's usual size-and-date shortcut cannot work either, so it compares content:
+# `--checksum` on fifty small files costs nothing and copies only what actually changed. A second run
+# writes nothing at all, which is what a sync folder should see.
+COPIED=''
 if command -v rsync >/dev/null &&
-   rsync -rlt --delete --no-perms --no-owner --no-group --inplace \
-         apps/crm apps/analytics "$DEST/apps/" 2>/dev/null; then
+   COPIED=$(rsync -rl --delete --checksum --no-perms --no-owner --no-group --no-times --inplace -i \
+         apps/crm apps/analytics "$DEST/apps/" 2>/dev/null); then
   :
 else
+  # Loud, because it deletes: whoever is watching that folder should know why it emptied.
+  echo "  rsync could not write there, falling back to delete-and-copy" >&2
   rm -rf "$DEST/apps/crm" "$DEST/apps/analytics"
   cp -R apps/crm apps/analytics "$DEST/apps/"
+  COPIED='(everything)'
 fi
 
 printf '%s\n' "$DEST/apps/crm" "$DEST/apps/analytics"
+# The count is the point: "nothing to do" is what an unchanged run should say, and a number that is
+# suddenly every file is the shape of the defect above coming back.
+if [ "$COPIED" = '(everything)' ]; then
+  echo "  wrote: everything"
+else
+  N=$(printf '%s' "$COPIED" | grep -c '^[<>]' || true)
+  [ "$N" -eq 0 ] && echo "  wrote: nothing, already in step" || echo "  wrote: $N file(s)"
+fi
 echo "  $(git rev-parse --short HEAD)$([ -n "$(git status --porcelain apps/)" ] && echo ' + uncommitted changes under apps/')"

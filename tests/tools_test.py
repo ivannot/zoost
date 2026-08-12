@@ -1818,6 +1818,48 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         self.assertLess(run.index('totest.sh'), run.index('unit: node'),
                         'the copy is after the tests, so a red run never reaches it')
 
+    def test_it_does_not_ask_for_what_the_destination_refuses(self):
+        """`-rlt` asked Google Drive to set file times, which it refuses, so rsync failed on every
+        file and the silent fallback ran every time: `rm -rf` both extensions, then copy them back.
+        Once this became automatic - once per battery run - that was two dozen delete-and-recreate
+        cycles a day on a synced folder, and inside each one the folder is genuinely empty. The author
+        found crm missing on the other machine, which is how a silent failure gets reported.
+        """
+        # Comments are stripped first. This file explains the flags at length in prose, so an
+        # assertion over the whole text finds `--checksum` in a paragraph about `--checksum` and
+        # passes over a call that no longer uses it - the same "read the code, not the prose" the
+        # duplicate-message check already had to learn.
+        code = '\n'.join(l for l in (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+                         .splitlines() if not l.lstrip().startswith('#'))
+        # The short-flag cluster only. A looser pattern over the line matched `--delete`, which has a
+        # t in it: a check that fires on the wrong thing gets loosened until it fires on nothing.
+        m = re.search(r'rsync\s+-([a-zA-Z]+)\s', code)
+        self.assertIsNotNone(m, 'no rsync call found')
+        self.assertNotIn('t', m.group(1), f'-{m.group(1)} asks for times, which the destination refuses')
+        self.assertNotIn('-a ', code, '-a implies times as well')
+        self.assertIn('--no-times', code)
+        self.assertIn('--checksum', code, 'without times there is no shortcut left but content')
+
+    def test_the_destructive_fallback_says_so(self):
+        # It deletes. Whoever is watching that folder should be told why it emptied, rather than
+        # discovering it.
+        sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+        i = sh.index('rm -rf "$DEST/apps/crm"')
+        self.assertIn('echo', sh[max(0, i - 300):i], 'the fallback deletes without a word')
+
+    def test_an_unchanged_run_writes_nothing(self):
+        # The number is the guard: "nothing to do" is what an unchanged run should say, and every
+        # file, every time, is the shape of the defect coming back.
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {**os.environ, 'ZOOST_TEST_DIR': str(Path(tmp) / 'zoost-test')}
+            first = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], cwd=ROOT,
+                                   capture_output=True, text=True, env=env)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            second = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], cwd=ROOT,
+                                    capture_output=True, text=True, env=env)
+            self.assertIn('nothing, already in step', second.stdout,
+                          f'a second run rewrote the destination: {second.stdout}')
+
     def test_it_cannot_fail_the_battery(self):
         # A cloud drive that is offline is not a defect in this repository.
         out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
