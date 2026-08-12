@@ -83,11 +83,12 @@
     independent, unofficial tool. Contact: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
   <p><b>For the data Zoost touches, the developer carries out no processing at all</b>: receives none
     of it, stores none of it, has no access to the folder the extension writes to, and operates no
-    service anything could reach. On that footing the developer is neither the controller nor a
-    processor of that data - the controller is your own organisation, exactly as it was before Zoost
-    was installed. This is written down so that nobody assessing the extension has to infer it; it is
-    not legal advice, and every fact it rests on is checkable in the manifest and in the source. The
-    one exception is this website, and §8 sets it out.</p>
+    service anything could reach.</p>
+  <p>On that footing the developer is neither the controller nor a processor of that data. The
+    controller is your own organisation, exactly as it was before Zoost was installed.</p>
+  <p>This is written down so that nobody assessing the extension has to infer it. It is not legal
+    advice, and every fact it rests on is checkable in the manifest and in the source. The one
+    exception is this website, set out in §8.</p>
   <p>Zoost is not affiliated with, endorsed by, sponsored by or supported by Zoho Corporation.
     Data held inside your Zoho products remains governed by your own agreement with Zoho and by your
     organisation's policies; this document covers only what the Zoost extensions do with it.</p>
@@ -214,10 +215,10 @@
     the encrypted key is kept rather than discarded. Losing the passphrase costs you the stored key, never
     anything else.</p>
   <p>It is off by default because the trade is yours to price, not mine. On a personal machine,
-    typing a passphrase each session buys little; on a shared or managed one it buys a great deal. Note the
-    honest limit of what encryption can do here: while the key is unlocked it is in the browser's memory,
-    where the browser can read it. What the passphrase protects is the key <em>at rest</em> - a copied
-    profile, a backup, another user of the same machine.</p>
+    typing a passphrase each session buys little; on a shared or managed one it buys a great deal.</p>
+  <p>Note the honest limit of what encryption can do here. While the key is unlocked it is in the
+    browser's memory, where the browser can read it. What the passphrase protects is the key
+    <em>at rest</em>: a copied profile, a backup, another user of the same machine.</p>
 
   <h3>4.3 Exports</h3>
   <p>Export files are written to your working folder and go nowhere on their own. Before each export,
@@ -241,7 +242,8 @@
       session, and the hook that notices when you save a function so the local copy can follow.</li>
     <li><code>tabs</code> - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a
       production workspace can never be synced against a sandbox by mistake.</li>
-    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code> - and their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts - which it reads, and <code>one.zoho.*</code> with <code>one.zohocloud.ca</code>, which it does <b>not</b> read: that one is there only so the panel can tell that the tab you are on belongs to Zoho One and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>. Both list <b>nine</b> data centres each, the Saudi, British and Emirati ones included, because an account may live on any of them and an extension that cannot reach yours is inert on it. Zoho runs a tenth in mainland China (<code>zoho.com.cn</code>); neither extension asks for it, because nothing here can test that one and a host we cannot test is not a host we request.</li>
+    <li><b>Host access to the Zoho domains each extension reads.</b> The Zoho CRM workbench lists <code>crm.zoho.*</code> and <code>crmsandbox.zoho.*</code>, with their <code>crm.zohocloud.ca</code> and <code>crmsandbox.zohocloud.ca</code> counterparts. It also lists <code>one.zoho.*</code> and <code>one.zohocloud.ca</code>, which it does <b>not</b> read: those are there only so the panel can tell that the tab you are on belongs to Zoho One, and which org it is. The Zoho Analytics one lists <code>analytics.zoho.*</code> and <code>analytics.zohocloud.ca</code>.
+      <br><br>Both list <b>nine</b> data centres each, the Saudi, British and Emirati ones included: an account may live on any of them, and an extension that cannot reach yours is inert on it. Zoho runs a tenth in mainland China (<code>zoho.com.cn</code>). Neither extension asks for it - nothing here can test that one, and a host we cannot test is not a host we request.</li>
     <li><b>Host access to <code>api.anthropic.com</code> and <code>api.openai.com</code></b> - the only two
       AI destinations the extension can reach, used solely by the optional AI assistant and only after you
       configure it.</li>
@@ -270,13 +272,14 @@
   <p>zoost.it sets no cookies, embeds no trackers, loads no third-party fonts, scripts or analytics, and
     does not profile visitors. The pages are static files; the only script is one small file served from
     this same domain, which fills in the copyright year and the version badge in the footer.</p>
-  <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's edge
-    and asks two public sources - the extension's Chrome Web Store listing page, and GitHub for the
-    repository's newest tag, the version in its manifest, and the date the site content last changed - so
-    the footer can show what is published, what was released, what is in development, and when these pages
-    last changed. Those requests are made <b>by the server, not by
-    your browser</b>: nothing about you is sent to Google or GitHub, no identifier of yours is involved, and
-    the answer is cached for everyone alike. If a source is unreachable the badge simply reads "unknown".</p>
+  <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's
+    edge and asks two public sources: the extension's Chrome Web Store listing page, and GitHub for
+    the repository's newest tag, the version in its manifest and the date the site content last
+    changed. That is how the footer can show what is published, what was released, what is in
+    development, and when these pages last changed.</p>
+  <p>Those requests are made <b>by the server, not by your browser</b>. Nothing about you is sent to
+    Google or GitHub, no identifier of yours is involved, and the answer is cached for everyone
+    alike. If a source is unreachable the badge simply reads "unknown".</p>
   <p><b>The one place where the developer <em>is</em> the controller.</b> This site is served by
     Cloudflare, which is both its network and its host. Like any web server, its edge keeps ordinary
     request logs - IP address, time, URL, user agent - and counts requests without setting a cookie or

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:d166321df6240f00 -->
+<!-- translated-from: site/privacy.html sha256:93e031400fc03ea0 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -74,7 +74,7 @@
   </ul>
   <p>Sono estensioni separate con permessi separati, ma si comportano in modo identico sotto ogni
     aspetto descritto in questo documento: nessun server, nessun account, nessuna telemetria, un mirror
-    locale in una cartella che scegli tu, e un assistente AI opzionale che parla soltanto con un
+    locale in una cartella che scegli tu e un assistente AI opzionale che parla soltanto con un
     provider che configuri tu.</p>
   <p><b>Una differenza va detta chiaramente.</b> Zoost CRM può mandare il tuo codice sorgente Deluge a
     un provider AI, se attivi l'assistente. Zoost Analytics può mandare nomi di viste, nomi di colonne,
@@ -85,11 +85,13 @@
   <p>Zoost è sviluppato e pubblicato da <b>Ivan Notaristefano</b>, sviluppatore individuale, come
     strumento indipendente e non ufficiale. Contatto: <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
   <p><b>Sui dati che Zoost tocca lo sviluppatore non effettua nessun trattamento</b>: non ne riceve,
-    non ne conserva, non ha accesso alla cartella in cui l'estensione scrive, e non gestisce nessun
-    servizio a cui qualcosa possa arrivare. Di conseguenza non è né titolare né responsabile del
-    trattamento di quei dati: il titolare è la tua organizzazione, esattamente come lo era prima che
-    Zoost venisse installato. È scritto qui perché chi deve valutare l'estensione non sia costretto a dedurlo; non è un parere
-      legale, e ognuno dei fatti su cui si regge si può controllare nel manifest e nel sorgente. L'unica eccezione è questo sito, e la spiega il §8.</p>
+    non ne conserva, non ha accesso alla cartella in cui l'estensione scrive, non gestisce nessun
+    servizio a cui qualcosa possa arrivare.</p>
+  <p>Di conseguenza non è né titolare né responsabile del trattamento di quei dati: il titolare è la
+    tua organizzazione, esattamente come lo era prima che Zoost venisse installato.</p>
+  <p>È scritto qui perché chi deve valutare l'estensione non sia costretto a dedurlo. Non è un parere
+    legale, e ognuno dei fatti su cui si regge si può controllare nel manifest e nel sorgente. L'unica
+    eccezione è questo sito, spiegata al §8.</p>
   <p>Zoost non è affiliato, approvato, sponsorizzato né supportato da Zoho Corporation. I dati che
     stanno dentro i tuoi prodotti Zoho restano regolati dal tuo contratto con Zoho e dalle policy della
     tua organizzazione; questo documento copre soltanto quello che le estensioni Zoost fanno con quei dati.</p>
@@ -115,7 +117,7 @@
           l'indirizzo dell'organizzazione o dell'utente da cui partono - <b>mai</b> i destinatari, di cui Zoho
           restituisce solo il numero; field update con il campo e il valore; task con oggetto, scadenza,
           proprietario e promemoria; webhook con metodo e URL), le schedulazioni, l'elenco di quello che Zoho segnala come fallito (la funzione, cosa l'ha invocata, il motivo e quante volte - <b>mai</b> l'input dell'esecuzione fallita, che resta in Zoho), il catalogo delle connessioni dell'org (nomi, connettori e
-          scope OAuth - <b>mai</b> i segreti o i token delle connessioni), gli export, e un piccolo
+          scope OAuth - <b>mai</b> i segreti o i token delle connessioni), gli export e un piccolo
           <code>.zoost.json</code> per workspace che contiene l'id dell'org Zoho, l'host e il nome
           dell'istanza, più quali tipi Zoho ha concesso e quali ha rifiutato, con la data in cui è stato
           chiesto e la data dell'ultima lettura di ciascun tipo, più un nome per il workspace se gliene
@@ -138,11 +140,9 @@
         <td class="p" data-label="Dove">chrome.storage.local</td>
         <td data-label="Cosa">Le tue preferenze: motore AI scelto, modello, chiave API (in chiaro, oppure cifrata se
           attivi la protezione con passphrase), impostazioni di default degli export, impostazioni di
-          layout del diagramma, e quali schede del pannello laterale mostrare, in che ordine, e quali
-          includere nel pull. Insieme a queste, una copia del registro degli accessi del workspace
+          layout del diagramma e quali schede del pannello laterale mostrare, in che ordine e quali includere nel pull. Insieme a queste, una copia del registro degli accessi del workspace
           aperto - lo stesso elenco «concesso / rifiutato» di cui sopra - così che la pagina delle
-          impostazioni possa dire perché una scheda non è disponibile invece di limitarsi a
-          nasconderla, e l'identificativo del workspace di esempio se ne hai creato uno, così che il
+          impostazioni possa dire perché una scheda non è disponibile invece di limitarsi a nasconderla; e l'identificativo del workspace di esempio se ne hai creato uno, così che il
           pannello possa proporre di aprirlo invece di crearne un secondo prima di avere il permesso
           di guardare nella cartella.</td>
         <td data-label="Perché">Le impostazioni devono sopravvivere al riavvio del browser.</td>
@@ -180,7 +180,7 @@
   <p>Zoost chiama l'API del prodotto Zoho aperto nella tua scheda - l'API di Zoho CRM per un'estensione,
     quella di Zoho Analytics per l'altra - usando la sessione con cui sei già autenticato.
     Non manda credenziali proprie e non ne crea. Opera rigorosamente dentro i permessi Zoho che hai già:
-    può leggere esattamente quello che può leggere il tuo utente Zoho, e niente di più.</p>
+    può leggere esattamente quello che può leggere il tuo utente Zoho, niente di più.</p>
   <p>Zoost legge metadati e sorgente delle funzioni. Non legge, non scarica e non esporta i record del
     tuo Zoho CRM: né contatti, né trattative, né dati dei clienti.</p>
 
@@ -191,9 +191,8 @@
       volta attivato, il contenuto che gli serve per risponderti viene mandato direttamente dal tuo
       browser al provider che hai scelto, Anthropic oppure OpenAI. Per Zoost CRM quel contenuto è
       <b>codice sorgente Deluge</b>, schemi dei moduli, definizioni dei workflow, nomi delle connessioni
-      e loro connettori (mai i segreti o i token, che Zoost non legge mai), e le tue domande. Nessun'altra
-      destinazione è possibile: all'estensione è concesso l'accesso di rete a quelle due origini e al tuo
-      prodotto Zoho, e a nient'altro.</p>
+      e loro connettori (mai i segreti o i token, che Zoost non legge mai) e le tue domande. Nessun'altra
+      destinazione è possibile: all'estensione è concesso l'accesso di rete a quelle due origini e al tuo prodotto Zoho, a nient'altro.</p>
     <p>Per <b>Zoost Analytics</b> vale lo stesso con un insieme diverso: nomi delle viste, nomi e tipi
       delle colonne, relazioni fra tabelle, grafo delle dipendenze, e <b>l'SQL delle tue query table</b>.
       Non può mai mandare le righe dentro una tabella, perché non le legge mai: quindi l'assistente
@@ -214,7 +213,7 @@
     presi dal Web Crypto del browser - e quello che sta su disco è testo cifrato. La passphrase la
     digiti una volta per sessione del browser, nel pannello AI; la chiave sbloccata resta in memoria
     (<code>chrome.storage.session</code>) e sparisce alla chiusura del browser. La passphrase in sé non
-    viene mai conservata, mai mandata da nessuna parte, e non può essere recuperata: se la dimentichi,
+    viene mai conservata, mai mandata da nessuna parte, non può essere recuperata: se la dimentichi,
     reinserisci la chiave API e ne scegli una nuova.</p>
   <p>Il meccanismo funziona nei due sensi. Disattivare la protezione richiede la passphrase in uso,
     perché rimettere la chiave in chiaro vuol dire prima decifrarla; se è sbagliata o assente non viene
@@ -222,8 +221,9 @@
     costa la chiave conservata, mai nient'altro.</p>
   <p>È disattivata di default perché il compromesso lo devi valutare tu, non io. Su una macchina
     personale digitare una passphrase a ogni sessione serve a poco; su una condivisa o gestita serve
-    molto. E nota il limite onesto di quello che la cifratura può fare qui: mentre la chiave è sbloccata
-    sta nella memoria del browser, dove il browser la può leggere. Quello che la passphrase protegge è
+    molto.</p>
+  <p>E nota il limite onesto di quello che la cifratura può fare qui. Mentre la chiave è sbloccata sta
+    nella memoria del browser, dove il browser la può leggere. Quello che la passphrase protegge è
     <b>la chiave a riposo</b>: un profilo copiato, un backup, un altro utente della stessa macchina.</p>
 
   <h3>4.3 Gli export</h3>
@@ -250,16 +250,16 @@
       appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato
       per sbaglio contro una sandbox.</li>
     <li>Accesso agli host dei domini Zoho che ogni estensione legge. Il workbench per Zoho CRM elenca
-      <code>crm.zoho.*</code> e <code>crmsandbox.zoho.*</code> - e le loro controparti
-      <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code> - che legge, e
-      <code>one.zoho.*</code> con <code>one.zohocloud.ca</code>, che non legge: quello c'è soltanto
-      perché il pannello possa capire che la scheda su cui sei appartiene a Zoho One e di quale org si
-      tratta. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
-      <code>analytics.zohocloud.ca</code>. Entrambe elencano <b>nove</b> data center ciascuna, compresi quello saudita, quello britannico e
-      quello emiratino, perché un account può trovarsi su uno qualsiasi di essi e su quello che non può
-      raggiungere l'estensione è inerte. Zoho ne ha un decimo in Cina continentale
-      (<code>zoho.com.cn</code>): nessuna delle due lo chiede, perché da qui non è testabile e un host
-      che non possiamo provare non è un host che chiediamo.</li>
+      <code>crm.zoho.*</code> e <code>crmsandbox.zoho.*</code>, con le loro controparti
+      <code>crm.zohocloud.ca</code> e <code>crmsandbox.zohocloud.ca</code>. Elenca anche
+      <code>one.zoho.*</code> e <code>one.zohocloud.ca</code>, che non legge: ci sono soltanto perché
+      il pannello possa capire che la scheda su cui sei appartiene a Zoho One e di quale org si tratta. Quello per Zoho Analytics elenca <code>analytics.zoho.*</code> e
+      <code>analytics.zohocloud.ca</code>.
+      <br><br>Entrambe elencano <b>nove</b> data center ciascuna, compresi quello saudita, quello
+      britannico e quello emiratino: un account può trovarsi su uno qualsiasi di essi, e su quello che
+      non riesce a raggiungere l'estensione è inerte. Zoho ne ha un decimo in Cina continentale
+      (<code>zoho.com.cn</code>). Nessuna delle due lo chiede: da qui non è testabile, e un host che
+      non possiamo provare non è un host che chiediamo.</li>
     <li>Accesso agli host <code>api.anthropic.com</code> e <code>api.openai.com</code> - le uniche due
       destinazioni AI che l'estensione può raggiungere, usate soltanto dall'assistente AI opzionale e
       soltanto dopo che l'hai configurato.</li>
@@ -286,25 +286,23 @@
     e non è destinato all'uso da parte di chi ha meno di 16 anni.</p>
 
   <h2>8. Questo sito</h2>
-  <p>zoost.it non imposta cookie, non incorpora tracker, non carica font, script o analytics di terze
-    parti, e non profila i visitatori. Le pagine sono file statici; l'unico script è un piccolo file
+  <p>zoost.it non imposta cookie, non incorpora tracker, non carica font, script o analytics di terze parti, non profila i visitatori. Le pagine sono file statici; l'unico script è un piccolo file
     servito da questo stesso dominio, che compila l'anno del copyright e il badge delle versioni nel
     footer.</p>
   <p>Quel badge chiama un solo endpoint su questo sito, <code>/api/versions</code>. Gira sull'edge di
-    Cloudflare e interroga due fonti pubbliche - la pagina dell'estensione sul Chrome Web Store, e
+    Cloudflare e interroga due fonti pubbliche: la pagina dell'estensione sul Chrome Web Store, e
     GitHub per il tag più recente del repository, la versione nel suo manifest e la data dell'ultima
-    modifica ai contenuti del sito - così che il footer possa mostrare cosa è pubblicato, cosa è stato
-    rilasciato, cosa è in sviluppo e quando queste pagine sono cambiate l'ultima volta. Quelle richieste
-    le fa il server, non il tuo browser: a Google e a GitHub non viene mandato niente di tuo, non è
-    coinvolto nessun tuo identificatore, e la risposta è messa in cache uguale per tutti. Se una fonte
-    non risponde, il badge dice semplicemente «sconosciuta».</p>
+    modifica ai contenuti del sito. È così che il footer può mostrare cosa è pubblicato, cosa è stato
+    rilasciato, cosa è in sviluppo e quando queste pagine sono cambiate l'ultima volta.</p>
+  <p>Quelle richieste le fa <b>il server, non il tuo browser</b>. A Google e a GitHub non viene
+    mandato niente di tuo, non è coinvolto nessun tuo identificatore, e la risposta è messa in cache
+    uguale per tutti. Se una fonte non risponde, il badge dice semplicemente «sconosciuta».</p>
   <p><b>L'unico punto in cui lo sviluppatore <em>è</em> titolare del trattamento.</b> Questo sito è
     servito da Cloudflare, che ne è insieme la rete e l'hosting. Come qualunque server web, il suo edge
     tiene normali log delle richieste - indirizzo IP, ora, URL, user agent - e ne conta il numero senza
-    impostare cookie né identificatori. Quello è un trattamento di dati personali, per quanto minimo, e
-    per quel trattamento il titolare è lo sviluppatore, sulla base del legittimo interesse a servire e
+    impostare cookie né identificatori. Quello è un trattamento di dati personali, per quanto minimo; per quel trattamento il titolare è lo sviluppatore, sulla base del legittimo interesse a servire e
     proteggere il sito. Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna
-    profilazione, nessuna mailing list, e niente di qui viene collegato a quello che fa l'estensione.
+    profilazione, nessuna mailing list, niente di qui viene collegato a quello che fa l'estensione.
     I tempi di conservazione sono quelli di Cloudflare; nessuna esportazione dei log è attiva e lo sviluppatore non ne
     tiene copia. Per esercitare un diritto su questo, o anche solo per chiedere:
     <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
