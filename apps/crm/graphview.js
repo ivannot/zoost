@@ -20,14 +20,22 @@ const MSG = {
   cutUndo: (k) => `Show the ${k} ${k === 1 ? 'box' : 'boxes'} again`,
   // What a control is about to take away, by name. A count answers «how much» and the question in
   // front of somebody zoomed in on a crowded rim is «what» - most of what a cascade removes is off
-  // screen, so it cannot be looked at, only read. One per line: a tooltip does not wrap, so a comma
-  // list of long api names is a line nobody can read the end of.
+  // screen, so it cannot be looked at, only read.
+  //
+  // A heading, a blank line, and one dash per box. The first version put the names one per line on the
+  // belief that a tooltip does not wrap - it does, and the reader's own screenshot is the proof: a
+  // name like «Formazione specialistica valorizza esito e Crea Compito dopo colloquio» takes three
+  // lines by itself, so «one line, one box» stops being true exactly where the names are long enough
+  // to need it. The dash survives the wrap: a continuation line has none, so what is one item and what
+  // is two is never in question. Reported as «sembra tutto attaccato».
   cutTip: (names, more) => (names.length === 1 && !more
     ? `Removing ${names[0]}`
-    : `Removing ${names.length + more} boxes:\n${names.join('\n')}${more ? `\nand ${more} more` : ''}`),
+    : `Removing ${names.length + more} boxes:\n\n`
+      + names.map((n) => `- ${n}`).join('\n') + (more ? `\n- and ${more} more` : '')),
   backTip: (names, more) => (names.length === 1 && !more
     ? `Putting back ${names[0]}`
-    : `Putting back ${names.length + more} boxes:\n${names.join('\n')}${more ? `\nand ${more} more` : ''}`),
+    : `Putting back ${names.length + more} boxes:\n\n`
+      + names.map((n) => `- ${n}`).join('\n') + (more ? `\n- and ${more} more` : '')),
   folded: (k) => `${k} ${k === 1 ? 'box' : 'boxes'} off the diagram \u00b7 the + where the arc meets the box brings ${k === 1 ? 'it' : 'them'} back`,
   unfolded: (k) => `${k} ${k === 1 ? 'box is' : 'boxes are'} back on the diagram`,
   kept: (k, n) => `kept where you put ${k === 1 ? 'it' : 'them'} \u00b7 ${k} arranged` + (n ? ` \u00b7 ${n} placed by the layout` : '') + ' \u00b7 Re-layout starts over',
@@ -1424,13 +1432,59 @@ function erWouldShow(k) { return erWouldShowSet(k).size; }
 // is not a report, and a hundred names is a wall nobody reads - the count in the last line is the part
 // that stays true at any size.
 const TIP_MAX = 10;
-function erTipText(set, first, back) {
+function erTipIds(set, first) {
   const ids = [...set];
   const nameOf = (id) => (N[id] ? label(N[id]) : id);
   const all = (ids.includes(first) ? [first] : [])
     .concat(ids.filter((id) => id !== first).sort((x, y) => nameOf(x).localeCompare(nameOf(y))));
-  const names = all.slice(0, TIP_MAX).map(nameOf);
-  return (back ? MSG.backTip : MSG.cutTip)(names, all.length - names.length);
+  return { shown: all.slice(0, TIP_MAX), more: Math.max(0, all.length - TIP_MAX) };
+}
+function erTipText(set, first, back) {
+  const { shown, more } = erTipIds(set, first);
+  return (back ? MSG.backTip : MSG.cutTip)(shown.map((id) => (N[id] ? label(N[id]) : id)), more);
+}
+// The same list, drawn rather than spelt. A `title` cannot be styled, so a name in it arrives without
+// the one thing that says what it *is* - «le etichette potrebbero stare all'interno di badge con quel
+// colore», and the colour is already on the box and on the chip in the header. So this is a panel of
+// our own: same order, same cap, same wording, each name in the colour its box wears.
+//
+// It is positioned against `#v-er` rather than the page, flipped when it would run past an edge, and
+// it never takes the pointer - a tooltip that can be hovered is one that can stand between the reader
+// and the control it is about. `erTipText` stays: it is the aria-label, which is the only form of this
+// a screen reader can be given.
+let _tipT = null;
+function erTipShow(anchor, set, first, back) {
+  const tip = $('ertip'), host = $('v-er');
+  if (!tip || !host || !set.size) return;
+  const { shown, more } = erTipIds(set, first);
+  tip.innerHTML = `<div class="tt1">${back ? 'Putting back' : 'Removing'} <b>${shown.length + more}</b> `
+    + `${shown.length + more === 1 ? 'box' : 'boxes'}</div><div class="ttl"></div>`
+    + (more ? `<div class="ttm">and ${more} more</div>` : '');
+  const list = tip.querySelector('.ttl');
+  shown.forEach((id) => {
+    const b = document.createElement('div');
+    b.className = 'tb';
+    b.textContent = N[id] ? label(N[id]) : id;
+    if (N[id]) erPaint(b, N[id]);
+    list.appendChild(b);
+  });
+  tip.classList.add('on');
+  const h = host.getBoundingClientRect(), r = anchor.getBoundingClientRect();
+  const w = tip.offsetWidth, ht = tip.offsetHeight;
+  let x = r.right - h.left + 10, y = r.top - h.top + 10;
+  if (x + w > h.width - 8) x = r.left - h.left - w - 10;
+  if (y + ht > h.height - 8) y = h.height - ht - 8;
+  tip.style.left = Math.max(8, x) + 'px';
+  tip.style.top = Math.max(8, y) + 'px';
+}
+function erTipHide() { clearTimeout(_tipT); const tip = $('ertip'); if (tip) tip.classList.remove('on'); }
+// A short wait, because a pointer crossing a rim of twenty marks on its way somewhere else has not
+// asked about any of them. Long enough not to flash, shorter than the browser's own second.
+function erTipOn(anchor, get) {
+  clearTimeout(_tipT);
+  const { set, first, back } = get();
+  erFlag(set);                         // the outline is immediate: it answers about what is on screen
+  _tipT = setTimeout(() => erTipShow(anchor, set, first, back), 120);
 }
 /** Put `id` back on the drawing, by dropping the removals that took it - the one that did, then any
  *  later one that does it again, and no others.
@@ -1498,21 +1552,23 @@ function erPickCard() {
       + `<button type="button" id="erpickcut2">${esc(MSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
   card.classList.add('on');
   const cb = $('erpickcut');
+  // The same panel the mark on the arc opens, from the same helper: two descriptions of one click, ten
+  // pixels apart, is exactly the drift a shared helper exists to stop.
+  const wire = (btn, get) => {
+    if (!btn) return;
+    btn.setAttribute('aria-label', erTipText(get().set, get().first, get().back));
+    btn.onmouseenter = () => erTipOn(btn, get);
+    btn.onmouseleave = () => { erFlag(null); erTipHide(); };
+  };
   if (cb) {
     cb.onclick = () => erToggleCut(a, b, isCut ? erCut.get(cutK) : b);
-    // The same list the mark on the arc gives, from the same helper: two descriptions of one click,
-    // ten pixels apart, is exactly the drift a shared helper exists to stop.
-    cb.title = isCut ? erTipText(erWouldShowSet(cutK), erCut.get(cutK), true)
-                     : erTipText(erWouldGo(a, b, gone), b, false);
-    cb.onmouseenter = () => erFlag(isCut ? null : erWouldGo(a, b, gone));
-    cb.onmouseleave = () => erFlag(null);
+    wire(cb, isCut ? () => ({ set: erWouldShowSet(cutK), first: erCut.get(cutK), back: true })
+                   : () => ({ set: erWouldGo(a, b, erHiddenSet()), first: b, back: false }));
   }
   const cb2 = $('erpickcut2');
   if (cb2) {
     cb2.onclick = () => erToggleCut(a, b, a);
-    cb2.title = erTipText(erWouldGo(b, a, gone), a, false);
-    cb2.onmouseenter = () => erFlag(erWouldGo(b, a, gone));
-    cb2.onmouseleave = () => erFlag(null);
+    wire(cb2, () => ({ set: erWouldGo(b, a, erHiddenSet()), first: a, back: false }));
   }
   const sn = $('erpicksnip');
   if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
@@ -1944,6 +2000,15 @@ function erSizeMarks() {
   const m = document.getElementById('ermarks');
   if (m) m.style.setProperty('--mkz', Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02)).toFixed(3));
 }
+// The colour a node wears on the diagram - the header of its box, and now the badge the tooltip puts
+// its name in. One helper and not two answers: «which colour is this node» written twice is two
+// answers waiting to disagree, and the second one would be in a tooltip nobody diffs against a box.
+// Analytics only ever draws a schema, so the first branch is the whole of it there.
+function erPaint(el, n) {
+  if (DATA.kind === 'schema') { el.classList.add(n.namespace === 'custom' ? 'custom' : 'standard'); return; }
+  el.classList.add('hued');
+  el.style.setProperty('--kind', NSCOL(KINDOF(n)));
+}
 let erFlag = () => {};   // set by erRender, which is what knows the boxes
 function erRender() {
   // Taken off the drawing by the reader, which is a filter on the drawing and not on the layout: the
@@ -1972,11 +2037,11 @@ function erRender() {
     const div = document.createElement('div');
     const pickIds = erSelEdge ? erSelEdge.split('\u0000') : null;
     const inPick = pickIds ? pickIds.includes(id) : null;
-    const hue = DATA.kind === 'schema' ? '' : NSCOL(KINDOF(n));
-    div.className = 'erbox ' + (DATA.kind === 'schema' ? (n.namespace === 'custom' ? 'custom' : 'standard') : 'hued') + (erEmph === 'relations' ? ' dim' : '')
+    div.className = 'erbox' + (erEmph === 'relations' ? ' dim' : '')
       + (inPick === false ? ' faded' : '') + (inPick === true ? ' epick' : '')
       + (id === sel ? ' sel' : '') + (id === curFocus ? ' focus' : '');
-    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px;min-height:${p.h}px${hue ? `;--kind:${hue}` : ''}`;
+    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px;min-height:${p.h}px`;
+    erPaint(div, n);        // after cssText, which would wipe the inline --kind it sets
     const rows = s.rows.slice(0, s.shown).map((fld) => {
       const lk = fld.lookup ? ' lk' : ''; const req = fld.mandatory ? '<span class="pk">*</span>' : '';
       const t = fld.lookup ? ('\u2192 ' + esc(fld.lookup)) : esc(fld.data_type || '');
@@ -2129,12 +2194,14 @@ function erRender() {
     // crowded rim, where most of what a cascade would take is off screen - so it cannot be looked at,
     // only read. What *is* on screen is outlined at the same moment, which the list cannot do and the
     // outline cannot do for the rest: two halves of the same answer.
+    const asked = () => ({ set: folded ? erWouldShowSet(ek) : erWouldGo(stay, away, erHiddenSet()), first: away, back: folded });
+    el.setAttribute('aria-label', folded ? MSG.cutUndo(erWouldShow(ek)) : MSG.cutDo(label(N[away]), 1));
     el.addEventListener('mouseenter', () => {
-      const set = folded ? erWouldShowSet(ek) : erWouldGo(stay, away, erHiddenSet());
-      el.title = erTipText(set, away, folded);
-      erFlag(set);
+      const { set, first, back } = asked();
+      el.setAttribute('aria-label', erTipText(set, first, back));
+      erTipOn(el, asked);
     });
-    el.addEventListener('mouseleave', () => erFlag(null));
+    el.addEventListener('mouseleave', () => { erFlag(null); erTipHide(); });
     // The same guard the arcs and the boxes use: a drag that ends over a control is still a drag.
     el.addEventListener('click', (ev) => { ev.stopPropagation(); if (erDragged) return; erToggleCut(a, b, away); });
     marks.appendChild(el);

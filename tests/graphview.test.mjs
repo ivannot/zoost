@@ -742,23 +742,26 @@ for (const app of ['crm', 'analytics']) {
     });
     vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'MSG'),
       sliceConst(`apps/${app}/graphview.js`, 'TIP_MAX'),
+      sliceFn(`apps/${app}/graphview.js`, 'erTipIds'),
       sliceFn(`apps/${app}/graphview.js`, 'erTipText')].join('\n\n'), ctx);
     const tip = (set, first, back) => { ctx.s = new Set(set); ctx.f = first; ctx.b = back; return vm.runInContext('erTipText(s, f, b)', ctx); };
 
     // one box: the name, and nothing to count
     assert.equal(tip(['Alpha'], 'Alpha', false), 'Removing Alpha');
     assert.equal(tip(['Alpha'], 'Alpha', true), 'Putting back Alpha');
-    // the box the control names first, then what comes with it, alphabetically, one per line -
-    // a tooltip does not wrap, so a comma list of long api names is a line nobody reads the end of
+    // the box the control names first, then what comes with it alphabetically, one dash per box - a
+    // tooltip *does* wrap, so a long name takes several lines and only the dash says where one box
+    // ends and the next begins. Reported as «sembra tutto attaccato», against a version with none.
     assert.equal(tip(['Zulu', 'Alpha', 'Mike'], 'Zulu', false),
-      'Removing 3 boxes:\nZulu\nAlpha\nMike');
+      'Removing 3 boxes:\n\n- Zulu\n- Alpha\n- Mike');
     // and it is capped, with the number that stays true at any size
     const many = Array.from({ length: 30 }, (_, i) => 'n' + String(i).padStart(2, '0'));
     ctx.N = Object.fromEntries(many.map((i) => [i, { id: i, api_name: i, name: i }]));
     const long = tip(many, 'n29', false);
-    assert.equal(long.split('\n').length, 12, `id=cap ${long.split('\n').length} lines for 30 boxes`);
-    assert.ok(long.startsWith('Removing 30 boxes:\nn29\n'), 'id=head the box being pressed is not named first');
-    assert.ok(long.endsWith('and 20 more'), `id=tail ${JSON.stringify(long.slice(-20))}`);
+    const items = long.split('\n').filter((l) => l.startsWith('- '));
+    assert.equal(items.length, 11, `id=cap ${items.length} items listed for 30 boxes`);
+    assert.ok(long.startsWith('Removing 30 boxes:\n\n- n29\n'), 'id=head the box being pressed is not named first');
+    assert.ok(long.endsWith('\n- and 20 more'), `id=tail ${JSON.stringify(long.slice(-20))}`);
   });
 
   test(`${app}: hovering a control outlines what would go, and lets go of it`, () => {
@@ -769,9 +772,18 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/erFlag = \(set\) => \{/.test(js) && /boxEl\.set\(id, div\)/.test(js),
       'the outline is not built from the boxes the render just drew');
     const mk = js.slice(js.indexOf('const markAt ='), js.indexOf('marks.appendChild(el)'));
-    assert.ok(/mouseenter[\s\S]*erFlag\(set\)/.test(mk), 'hovering a mark outlines nothing');
-    assert.ok(/mouseleave', \(\) => erFlag\(null\)/.test(mk), 'the outline is left behind when the pointer goes');
-    assert.ok(/cb\.title = isCut/.test(js) && /cb2\.title = erTipText/.test(js),
-      'the card buttons do not say what they would take');
+    assert.ok(/mouseenter[\s\S]*erTipOn\(el, asked\)/.test(mk), 'hovering a mark says nothing about what it would take');
+    assert.ok(/mouseleave[\s\S]*erFlag\(null\); erTipHide\(\)/.test(mk),
+      'the outline or the panel is left behind when the pointer goes');
+    assert.ok(/erFlag\(set\);\s+\/\/ the outline is immediate/.test(js),
+      'the outline waits for the same delay as the panel, and it is about what is already on screen');
+    assert.ok(/wire\(cb, isCut/.test(js) && /wire\(cb2, \(\)/.test(js),
+      'the card buttons do not open the same panel');
+    // and the badge wears the colour its box wears, from the one helper that decides it
+    assert.ok(/if \(N\[id\]\) erPaint\(b, N\[id\]\)/.test(js), 'the names in the panel carry no colour');
+    assert.ok(/#ertip \.tb\.standard\{background:var\(--box-std\)\}/.test(html)
+      && /\.erbox\.standard \.erhdr\{background:var\(--box-std\)\}/.test(html),
+      'the badge and the box header no longer read the same colour from one place');
+    assert.ok(/#ertip\{[^}]*pointer-events:none/.test(html), 'the panel can stand between the reader and the control');
   });
 }

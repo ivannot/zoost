@@ -457,11 +457,33 @@ happens.
 che mi dice "stai rimuovendo a - b - c" mi aiuta molto»*, and the reason is in the same sentence -
 reaching one of these marks usually means being zoomed in on a crowded rim, where most of what a
 cascade would take is off screen. It cannot be looked at, only read. So the tooltip is a heading and a
-list, one name per line (a tooltip does not wrap, and a comma list of long api names is a line nobody
-reads the end of), the box the control names first and the cascade after it alphabetically, capped at
-ten with «and N more» - a tooltip is not a report, and the count in the last line stays true at any
-size. `erTipText` is one helper for the mark and for the card button, because the same click described
+list: a heading, a blank line, and **one dash per box**, the one the control names first and the
+cascade after it alphabetically, capped at ten with «and N more» - a tooltip is not a report, and the
+count in the heading stays true at any size.
+
+The dashes went in on the second pass and the first pass's reasoning was wrong in a way worth keeping:
+it put one name per line on the belief that **a tooltip does not wrap**. It does, and the reader's own
+screenshot is the proof - a workflow called «Formazione specialistica valorizza esito e Crea Compito
+dopo colloquio» takes three lines by itself, so «one line, one box» stops being true exactly where the
+names are long enough for it to matter. Reported as «sembra tutto attaccato». A dash survives the wrap:
+a continuation line has none, so what is one item and what is two is never in question. `erTipText` is one helper for the mark and for the card button, because the same click described
 two ways, ten pixels apart, is the drift this repository spends its length on.
+
+**It stopped being the browser's tooltip when the names needed their colour.** «Le etichette
+potrebbero stare all'interno di badge con quel colore» - and a `title` cannot be styled at all, so a
+name arrives in it stripped of the one thing that says what kind of thing it is. The panel is ours
+now: same order, same cap, same wording, each name in a badge wearing **the colour its box wears** on
+the diagram, which is also the colour of its chip in the header. One key, three places. `erPaint` is
+what decides that colour, for the box and for the badge, because «which colour is this node» written
+twice is two answers waiting to disagree - and the second would be in a tooltip nobody diffs against a
+box. The two schema colours moved into CSS variables for the same reason.
+
+Three properties it has and the browser's has not: it appears in 120ms rather than a second (long
+enough that a pointer crossing a rim of twenty marks on its way somewhere else does not flash them
+all), it is positioned against the panel and flipped at an edge rather than clipped, and it **never
+takes the pointer** - a tooltip that can be hovered is one that can stand between the reader and the
+control it is about. What it loses is the accessible name the `title` gave for free, so `erTipText`
+stays and becomes the `aria-label`: the only form of this a screen reader can be given.
 
 **And what *is* on screen is outlined at the same moment.** The list answers for what cannot be seen
 and the outline for what can; neither does the other's job. It is rebuilt with the boxes, so it cannot
