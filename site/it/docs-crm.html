@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:2df1f7ab89b10499 -->
+<!-- translated-from: site/docs-crm.html sha256:be2ddd12c44481fb -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -69,7 +69,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.40.0</span> · aggiornata il <span class="dd" data-stamp="updated">12 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.41.0</span> · aggiornata il <span class="dd" data-stamp="updated">12 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -770,6 +770,8 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k" data-label="Sintomo">AI: <code>404</code> sul modello</td><td data-label="Causa e rimedio">Errore di battitura nell'id del modello, o il modello non è abilitato per il livello del tuo account. Copialo dall'elenco dei modelli del provider.</td></tr>
       <tr><td class="k" data-label="Sintomo">Il diagramma è illeggibile</td><td data-label="Causa e rimedio">Abbassa la profondità, o apri <b class="ui">Layout ⚙</b> e alza la spaziatura dei riquadri. Per una zona affollata, clicca l'arco che ti interessa per isolarlo.</td></tr>
       <tr><td class="k" data-label="Sintomo">Il pull è lento</td><td data-label="Causa e rimedio">Normale su org grandi: una chiamata per ogni modulo per campi, layout e related list, deliberatamente cadenzata per restare gentile con l'API di Zoho.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Una lettura fallisce e accanto al messaggio compare <b class="ui">A fix may already be released ↗</b></td>
+        <td data-label="Causa e rimedio">Zoost si appoggia a interfacce che Zoho non documenta, quindi un cambiamento dalla loro parte può far smettere di funzionare una lettura. Il link apre <a href="/it/emergency">In caso di emergenza</a>, che dice se una fix è già stata rilasciata ed è ancora in coda di revisione allo Store, e come usarla nel frattempo. Non compare quando il fallimento è il tuo ruolo Zoho che rifiuta un'area, perché nessuna release cambia quello.</td></tr>
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è

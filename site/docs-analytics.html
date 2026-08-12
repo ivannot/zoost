@@ -67,7 +67,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.23.0</span> · updated <span class="dd" data-stamp="updated">12 August 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.24.0</span> · updated <span class="dd" data-stamp="updated">12 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -480,6 +480,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k" data-label="Symptom">A report shows no columns</td>
         <td data-label="Cause and fix">Only tables and query tables have columns of their own. If Zoost cannot reach a data-bearing
           view through what the report is built on, it says so rather than showing an empty table.</td></tr>
+      <tr><td class="k" data-label="Symptom">A read fails and <b class="ui">A fix may already be released ↗</b> appears beside the message</td>
+        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden when the failure is your Zoho role refusing an area, because no release changes that.</td></tr>
     </tbody>
   </table>
   <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and

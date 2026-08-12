@@ -67,7 +67,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.40.0</span> · updated <span class="dd" data-stamp="updated">12 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.41.0</span> · updated <span class="dd" data-stamp="updated">12 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -729,6 +729,8 @@ git commit -m "baseline"</code></pre>
       <tr><td class="k" data-label="Symptom">AI: <code>404</code> on the model</td><td data-label="Cause and fix">Model id typo, or the model is not enabled for your account tier. Copy it from the provider's model list.</td></tr>
       <tr><td class="k" data-label="Symptom">Diagram is unreadable</td><td data-label="Cause and fix">Lower the depth, or open <b class="ui">Layout ⚙</b> and raise box spacing. For a crowded area, click the arc you care about to isolate it.</td></tr>
       <tr><td class="k" data-label="Symptom">Pull is slow</td><td data-label="Cause and fix">Normal on large orgs: one call per module for fields, layouts and related lists, deliberately paced to stay friendly to Zoho's API.</td></tr>
+      <tr><td class="k" data-label="Symptom">A read fails and <b class="ui">A fix may already be released ↗</b> appears beside the message</td>
+        <td data-label="Cause and fix">Zoost runs on interfaces Zoho does not document, so a change at their end can stop a read working. The link opens <a href="/emergency">In case of emergency</a>, which says whether a fix has been released and is still waiting in the Store's review queue, and how to run it in the meantime. It stays hidden when the failure is your Zoho role refusing an area, because no release changes that.</td></tr>
     </tbody>
   </table>
   <p>Still stuck, or found a bug? Write to <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost is free and

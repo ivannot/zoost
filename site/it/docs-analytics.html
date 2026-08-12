@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:ac357b40e868542b -->
+<!-- translated-from: site/docs-analytics.html sha256:5cfe0ab51026b371 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -69,7 +69,7 @@
     muoverti in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror
     versionato di un workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.23.0</span> · aggiornata il <span class="dd" data-stamp="updated">12 agosto 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Riferita a Zoost Analytics <span class="dv" data-stamp="version">1.24.0</span> · aggiornata il <span class="dd" data-stamp="updated">12 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -506,6 +506,8 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
           Health li elenca.</td></tr>
       <tr><td class="k" data-label="Sintomo">Un report non mostra colonne</td>
         <td data-label="Causa e rimedio">Solo tabelle e query table hanno colonne proprie. Se, seguendo ciò su cui il report è costruito, Zoost non arriva a una vista che porta dati, lo dice invece di mostrare una tabella vuota.</td></tr>
+      <tr><td class="k" data-label="Sintomo">Una lettura fallisce e accanto al messaggio compare <b class="ui">A fix may already be released ↗</b></td>
+        <td data-label="Causa e rimedio">Zoost si appoggia a interfacce che Zoho non documenta, quindi un cambiamento dalla loro parte può far smettere di funzionare una lettura. Il link apre <a href="/it/emergency">In caso di emergenza</a>, che dice se una fix è già stata rilasciata ed è ancora in coda di revisione allo Store, e come usarla nel frattempo. Non compare quando il fallimento è il tuo ruolo Zoho che rifiuta un'area, perché nessuna release cambia quello.</td></tr>
     </tbody>
   </table>
   <p>Ancora bloccato, o hai trovato un bug? Scrivi a <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>. Zoost è

@@ -2793,12 +2793,33 @@ test('notePullFailure() records the verdict before it says anything', async () =
     noteAccess: async (a, e) => { await null; order.push(['noteAccess', a, e.message]); },
     pullFailMessage: (a, e) => `${a} pull error: ${e.message}`,
     setStatus: (t, c) => order.push(['setStatus', t, c]),
+    showEmergency: (on) => order.push(['showEmergency', on]),
   });
   await notePullFailure('connections', new Error('boom'));
   assert.deepEqual(order, [
     ['noteAccess', 'connections', 'boom'],
     ['setStatus', 'connections pull error: boom', 'bad'],
+    ['showEmergency', true],
   ]);
+});
+
+test('a role refusal does not point at /emergency', async () => {
+  // The pointer answers one question - «has a fix for this been released» - and for a Zoho role that
+  // does not grant an area the answer is no and always will be. Offering it there would send someone
+  // to a page that cannot help, which is the «wrong missing thing» this project already has a rule
+  // about. Every other failure is «Zoho did not answer the way this expects», and that is its case.
+  const seen = [];
+  const { notePullFailure } = load([sliceFn('apps/crm/sidepanel.js', 'notePullFailure')], {
+    noteAccess: async () => { await null; },
+    pullFailMessage: () => 'refused',
+    setStatus: () => {},
+    showEmergency: (on) => seen.push(on),
+  });
+  const refusal = Object.assign(new Error('403'), { forbidden: true, status: 403 });
+  await notePullFailure('workflows', refusal);
+  assert.deepEqual(seen, [false]);
+  await notePullFailure('workflows', new Error('Failed to fetch'));
+  assert.deepEqual(seen, [false, true]);
 });
 
 test('byField() sorts exactly as the arrow it replaced did', () => {

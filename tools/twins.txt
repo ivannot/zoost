@@ -113,7 +113,7 @@ passKind	684df355a097	bdf6d02817df	divergent
 pdfTitle	93b3d0697faa	d692e674db7f	divergent
 pickRoot	cd92b6382197	f43eb72e1a77	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
-pullAll	2ae07e3ccfb2	dc2dd23609bb	divergent
+pullAll	2ae07e3ccfb2	59f58b9f4a3b	divergent
 readFile	1522334e8fac	1522334e8fac	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	09341dd105f4	d191b4760933	divergent
@@ -135,6 +135,7 @@ setFocus	0fa0daddddff	519f8df2f357	divergent
 setScope	b1392b5e1f2c	53eff9bd8afc	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	cde7a07ce71f	aa578e8faf85	divergent
+showEmergency	8b9ac1ed618e	8b9ac1ed618e	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 srcBlock	411409a2d53a	411409a2d53a	identical
 statCounts	87b246d2040f	87b246d2040f	identical

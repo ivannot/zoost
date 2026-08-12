@@ -159,7 +159,15 @@ const ORPHANS = '__orphans__';
 let typeFilter = null, sortKey = 'name', sortDir = 1, selectedId = null, detailTab = 'cols';
 
 // ---------- status ----------
-function status(text, kind) { $('statustext').textContent = text; $('status').className = kind || ''; }
+function status(text, kind) { $('statustext').textContent = text; $('status').className = kind || ''; showEmergency(false); }
+
+// The pointer to zoost.it/emergency: a link that lives in the markup and is only ever shown or
+// hidden. Nothing here is ever built from what Zoho answered, which is what keeps the status line
+// safe to print a platform error into - it stays textContent, and the link stays static.
+//
+// Cleared by every status write and set again by the one failure path that should carry it, so it
+// cannot linger over a later success. One place to clear, one place to set.
+function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on', !!on); }
 
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
@@ -662,6 +670,7 @@ async function pullAll() {
       ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written - what is on disk is unchanged.`
       : 'Pull failed: ' + (e.message || e));
     $('status').className = 'bad';
+    showEmergency(!(e && e.forbidden));
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);
   }
@@ -699,6 +708,7 @@ async function pullOne(id) {
   } catch (e) {
     setBusy(false, `Could not re-read «${v.name}»: ` + (e.message || e));
     $('status').className = 'bad';
+    showEmergency(!(e && e.forbidden));
   }
 }
 
@@ -724,6 +734,7 @@ async function retryFailed() {
     render();
   } catch (e) {
     setBusy(false, 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
+    showEmergency(!(e && e.forbidden));
   } finally { chrome.runtime.onMessage.removeListener(onProgress); }
 }
 

@@ -67,7 +67,15 @@ const expandedMods = new Set();
 let pullActive = false, pullBusy = false;
 
 const $ = (id) => document.getElementById(id);
-const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; };
+const setStatus = (t, cls = '') => { $('stxt').textContent = t; $('status').className = cls; showEmergency(false); };
+
+// The pointer to zoost.it/emergency: a link that lives in the markup and is only ever shown or
+// hidden. Nothing here is ever built from what Zoho answered, which is what keeps the status line
+// safe to print a platform error into - it stays textContent, and the link stays static.
+//
+// Cleared by every status write and set again by the one failure path that should carry it, so it
+// cannot linger over a later success. One place to clear, one place to set.
+function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on', !!on); }
 // Every sentence this panel says in more than one place. Not a translation layer and not a habit to
 // extend to one-off wording: a message written out twice is two messages the moment somebody edits
 // one of them, and that had already happened here - the same lapsed folder permission was reported
@@ -342,6 +350,10 @@ function pullFailMessage(area, e) {
 async function notePullFailure(area, e) {
   await noteAccess(area, e);
   setStatus(pullFailMessage(area, e), 'bad');
+  // A role refusal is not a platform change and no release will fix it, so the pointer would be
+  // sending the reader somewhere that cannot help. Everything else is «Zoho did not answer the way
+  // this expects», which is exactly the case /emergency exists for.
+  showEmergency(!(e && e.forbidden));
 }
 
 // After a full pull: one line naming the areas that were refused. Said once, plainly, rather than

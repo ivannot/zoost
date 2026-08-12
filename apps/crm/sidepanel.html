@@ -89,6 +89,11 @@
   #mmbar .mmbtns button{white-space:nowrap;flex:1 1 auto}
   #mmbar #mmgo{background:var(--warn);border-color:var(--warn);color:#1a1206;font-weight:600}
   #status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)} #status.busy{color:var(--ink)}
+  /* The pointer to zoost.it/emergency, shown only when a read from Zoho failed in a way that is
+     not a role refusal. A class and not the `hidden` attribute: `display:inline` on an id would
+     quietly beat `[hidden]`, which is a trap this project has already paid for once. */
+  #emerg{display:none;margin-left:auto;color:var(--accent);text-decoration:none;white-space:nowrap}
+  #emerg.on{display:inline} #emerg:hover{text-decoration:underline}
   .spin{width:11px;height:11px;border:2px solid #33415a;border-top-color:var(--sel);border-radius:50%;animation:sp .7s linear infinite;display:none;flex:none}
   #status.busy .spin{display:inline-block}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -544,7 +549,7 @@
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
   <div class="controls"><div class="chips" id="typechips"></div></div>
-  <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span></div>
+  <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 
   <div id="main">
     <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho tab and the local workspace point to different orgs. Browsing is disabled to avoid mixing environments - align them using the actions above.</div></div></div>
