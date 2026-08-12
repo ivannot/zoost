@@ -1909,7 +1909,7 @@ function erShow() {
   if (!erLaidOut) { erLayout(); erLaidOut = true; }
   erRender(); erFit(); erUpdateControlVis();
   const h = document.querySelector('#v-er .hint2');
-  if (h) h.textContent = `scroll to zoom \u00b7 drag to pan \u00b7 click a ${NOUN().box} to inspect`;
+  if (h) h.textContent = `scroll or double-click to zoom \u00b7 drag to pan or to arrange \u00b7 click a ${NOUN().box} to inspect`;
 }
 // ---- arranging by hand ----
 // A box can be dragged. The auto layout is a starting point, not a verdict: past eighty boxes it
@@ -2002,6 +2002,30 @@ window.addEventListener('resize', () => {
   clearTimeout(_erFitT);
   _erFitT = setTimeout(() => { if (curView === 'er' && !erUserMoved) erFit(); }, 120);
 });
+// Double-click on empty canvas: zoom in and put what was clicked in the middle. It is what every
+// interface does, and this one only had the wheel - which zooms towards the pointer but never centres,
+// so reaching a cluster meant scrolling and then dragging. `Fit` is the way back.
+//
+// Empty canvas only: a box answers a double-click by being inspected and an arc by being isolated, so
+// those keep their own meaning. The same exclusions the click handler already uses, plus the arc hit
+// areas, which are transparent and 14px wide and would otherwise swallow a double-click near a line.
+document.addEventListener('dblclick', (e) => {
+  if (curView !== 'er') return;
+  const t = e.target;
+  if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erpick')
+      || t.closest('.erbox') || t.closest('.erhit'))) return;
+  const rect = $('v-er').getBoundingClientRect();
+  // Where the click landed in the drawing's own coordinates, before the transform.
+  const dx = (e.clientX - rect.left - erTx) / (erScale || 1);
+  const dy = (e.clientY - rect.top - erTy) / (erScale || 1);
+  const before = erScale;
+  erScale = Math.max(0.02, Math.min(3, erScale * 1.6));
+  if (erScale === before) return;              // already at the ceiling: nothing to say, nothing to do
+  erTx = rect.width / 2 - dx * erScale;
+  erTy = rect.height / 2 - dy * erScale;
+  erApply();
+  erUserMoved = true;                          // a view somebody chose, so a resize must not overrule it
+}, { passive: true });
 document.addEventListener('wheel', (e) => {
   if (curView !== 'er') return; e.preventDefault();
   const rect = $('v-er').getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;

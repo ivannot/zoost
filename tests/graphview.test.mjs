@@ -429,3 +429,29 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/id="erRelay"/.test(html), 'there is no way back from an arrangement');
   });
 }
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a double-click on empty canvas zooms and centres, and nowhere else`, () => {
+    // What every interface does, and this one only had the wheel - which zooms towards the pointer and
+    // never centres, so reaching a cluster meant scrolling and then dragging. Driven for real headless:
+    // 0.695 becomes 1.112, which is the 1.6 step; the view is marked as the reader's own so a resize
+    // does not overrule it; and a double-click on a box does not zoom. Held here is what a careless
+    // edit would break - the exclusions, and the ceiling agreeing with the wheel's.
+    const js = read(`apps/${app}/graphview.js`);
+    const at = js.indexOf("addEventListener('dblclick'");
+    assert.ok(at > 0, 'nothing listens for a double-click');
+    const h = js.slice(at, js.indexOf('\n});', at));
+    for (const keep of ['.erbox', '.erhit', '#ertools', '#erlay', '#erpick']) {
+      assert.ok(h.includes(keep), `a double-click on ${keep} is taken over by the zoom`);
+    }
+    assert.ok(/erUserMoved = true/.test(h), 'the zoom does not mark the view as the reader\'s own');
+    // The wheel and the double-click must not disagree about how far in they can go.
+    const wheelAt = js.indexOf("addEventListener('wheel'");
+    const wheel = js.slice(wheelAt, js.indexOf('\n}', wheelAt));
+    const cap = (s) => (s.match(/Math\.min\((\d+(?:\.\d+)?), erScale/) || [])[1];
+    assert.equal(cap(h), cap(wheel), 'the two ways of zooming stop at different scales');
+    // and the hint line has to name it, or it is a gesture nobody discovers
+    const hint = js + read(`apps/${app}/graphview.html`);
+    assert.ok(/double-click to zoom/.test(hint), 'the hint line does not name the gesture');
+  });
+}
