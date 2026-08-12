@@ -510,3 +510,20 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(state.erLastKept, 0, 'positions are handed back when nothing was arranged');
   });
 }
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a box that was moved stays on top of the ones it was moved over`, () => {
+    // Without it, dropping a box onto a cluster can put it *under* boxes it was moved to sit beside -
+    // and the reader has just said which one matters. The order is kept rather than a flag, so the last
+    // thing moved is the thing on top, and Re-layout clears it with the rest of the arrangement.
+    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    assert.ok(/erRaised\.set\(id, \+\+erRaiseN\)/.test(js), 'a drop does not raise the box it moved');
+    assert.ok(/erRaised\.get\(id\)/.test(js) && /style\.zIndex/.test(js),
+      'the render does not apply the order, so it is lost on the next redraw');
+    const relay = js.slice(js.indexOf("$('erRelay')"), js.indexOf("$('erRelay')") + 220);
+    assert.ok(/erRaised = new Map\(\)/.test(relay), 'Re-layout leaves the raised boxes raised');
+    // and the one under the pointer has to be above even those
+    assert.ok(/\.erbox\.dragging\{[^}]*z-index:9999/.test(html),
+      'the box being dragged is not above the ones already raised');
+  });
+}

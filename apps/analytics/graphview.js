@@ -1452,6 +1452,9 @@ function erRender() {
     // the element, not the loop. Without it the drag reads undefined and never begins - which is how
     // it was written the first time.
     div.dataset.id = id;
+    // Moved boxes keep the order they were moved in, so the last one placed is the one on top.
+    const z = erRaised.get(id);
+    if (z) div.style.zIndex = String(10 + z);
     boxes.appendChild(div);
   });
   const svg = $('ersvg');
@@ -1719,6 +1722,11 @@ let erLastKept = 0;        // how many the last layout handed back, so the hint 
 // placed by the layout, and `Re-layout` is the way to start over. Reported: "il chip ha cambiato di
 // stato pur non applicando il filtro".
 let erHeld = {};           // id -> { x, y }, as the reader left it
+// A box the reader moved rises above the rest and stays there. Without it, dropping one onto a cluster
+// can put it *under* boxes it was moved to sit beside - and the reader has just said which one matters.
+// The order is kept rather than a single flag, so the last thing moved is the thing on top. Reported.
+let erRaised = new Map();  // id -> the order it was moved in
+let erRaiseN = 0;
 let erBoxDrag = null;      // { id, sx, sy, x0, y0 }
 function erBoxUnder(t) { return t && t.closest ? t.closest('.erbox') : null; }
 function erCovers(id) {
@@ -1784,6 +1792,7 @@ document.addEventListener('mouseup', () => {
         const q = erPos[other];
         if (q) erHeld[other] = { x: q.x, y: q.y };
       });
+      erRaised.set(id, ++erRaiseN);
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
       erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
@@ -1904,7 +1913,7 @@ $('v-er').addEventListener('click', (e) => {
   erClearPick();
 });
 $('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erResize(); };
-$('erRelay').onclick = () => { erHeld = {}; erArranged = false; erLaidOut = false; erShowMaybeHeavy(); };
+$('erRelay').onclick = () => { erHeld = {}; erRaised = new Map(); erRaiseN = 0; erArranged = false; erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();
 
