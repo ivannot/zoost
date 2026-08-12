@@ -20,6 +20,7 @@ import os
 import pathlib
 import re
 import html
+import struct
 import subprocess
 import sys
 import tempfile
@@ -2202,6 +2203,78 @@ class TheDashboardIsReadRatherThanTrusted(unittest.TestCase):
         code, out = self.run_it(page)
         self.assertEqual(code, 1)
         self.assertIn('not made', out)
+
+
+class EveryIconDeclaredIsThereAndEveryIconThereIsDeclared(unittest.TestCase):
+    """The manifests' icon keys against the files, in both directions.
+
+    Nothing checked this. Four tests already hold the *marks* - the geometry of the SVG sources, the
+    stroke weight, the caps, one hue each - and not one of them would have noticed a declared PNG
+    that was not on disk, a PNG that was not the size its key claims, or a leftover raster shipping
+    in the package. Chrome would have found the first at load and the Store at review, which is the
+    expensive end of the chain to find it at.
+
+    It is the rule this repository already states - declare only what you have, have everything you
+    declare - applied to the one set of files where it was running on trust. The app list is derived
+    from the tree rather than named, so a third product is covered without anybody remembering.
+    """
+
+    ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+    def manifests(self):
+        found = sorted(self.ROOT.glob('apps/*/manifest.json'))
+        self.assertTrue(found, 'no app manifests found - has the layout moved?')
+        return [(m.parent.name, json.loads(m.read_text(encoding='utf-8'))) for m in found]
+
+    def declared(self, man):
+        """Every (size, path) the manifest asks Chrome to load, from both keys that name icons."""
+        out = set()
+        for block in (man.get('icons') or {}, (man.get('action') or {}).get('default_icon') or {}):
+            for size, rel in block.items():
+                out.add((int(size), rel))
+        return out
+
+    def test_every_declared_icon_exists_and_is_the_size_it_claims(self):
+        for app, man in self.manifests():
+            got = self.declared(man)
+            self.assertTrue(got, f'{app}: the manifest declares no icons at all')
+            for size, rel in sorted(got):
+                with self.subTest(app=app, icon=rel):
+                    f = self.ROOT / 'apps' / app / rel
+                    self.assertTrue(f.exists(), f'{app}: {rel} is declared and not on disk')
+                    b = f.read_bytes()
+                    self.assertEqual(b[:8], b'\x89PNG\r\n\x1a\n', f'{app}: {rel} is not a PNG')
+                    # Width and height out of the IHDR, which is always the first chunk. Read rather
+                    # than trusted: a 32 copied over a 24 is invisible in a file listing and wrong in
+                    # the toolbar, where nobody would think to look for a manifest fault.
+                    w, h = struct.unpack('>II', b[16:24])
+                    self.assertEqual((w, h), (size, size),
+                                     f'{app}: {rel} is declared as {size} and is {w}x{h}')
+
+    def test_no_raster_ships_that_nothing_declares(self):
+        # The other direction, and the one that goes unnoticed: build.sh copies apps/<app>/ verbatim,
+        # so a PNG left behind after a resize is shipped, listed in the public `unzip -l`, and read by
+        # a reviewer as something the extension uses. The SVG is deliberately exempt - it is the
+        # source the rasters are rendered from and it lives beside them on purpose, because the
+        # separate `brand/` folder that used to hold the geometry drifted from the shipped mark.
+        for app, man in self.manifests():
+            declared = {rel for _, rel in self.declared(man)}
+            for f in sorted((self.ROOT / 'apps' / app / 'icons').glob('*.png')):
+                rel = f'icons/{f.name}'
+                with self.subTest(app=app, icon=rel):
+                    self.assertIn(rel, declared,
+                                  f'{app}: {rel} ships and no manifest key names it')
+
+    def test_the_renderer_knows_about_every_one_of_them(self):
+        # tools/icons.html is where the PNGs come from. A size added to a manifest and not to it is a
+        # file that exists once and is silently stale after the next regeneration - which is exactly
+        # how apps/crm ended up with rasters whose source nobody had kept.
+        jobs = (self.ROOT / 'tools' / 'icons.html').read_text(encoding='utf-8')
+        for app, man in self.manifests():
+            for size, rel in sorted(self.declared(man)):
+                with self.subTest(app=app, icon=rel):
+                    self.assertIn(f"{size}, 'apps/{app}/{rel}'", jobs,
+                                  f'{app}: nothing renders {rel} - tools/icons.html has no job for it')
 
 
 class APinnedActionHasSomethingThatOffersToMoveIt(unittest.TestCase):

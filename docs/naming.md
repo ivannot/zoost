@@ -489,3 +489,28 @@ was not one. All three now exist and every raster comes from them. There is no r
 repository and there will not be one: the PNGs are rendered through a browser canvas
 (`tools/icons.html`) and the multi-size `favicon.ico` is assembled from those PNGs by hand, because a
 build step for six icons a year is not worth the first dependency.
+
+**Each extension ships a 24 as well, and it is the toolbar's own size.** Chrome's `icons` key uses
+16/32/48/128 - page contexts, Windows, the extensions page, install and the Store - and none of them
+is redundant. `action.default_icon` is a different question with a different answer: Chrome asks for
+16, 24 and 32 there, and with the 24 absent it was scaling a 32 down at some display densities, which
+is the one place a mark is read at a glance all day. So the 24 is declared on the action only, and
+`test_no_raster_ships_that_nothing_declares` holds the line - a size added to the folder and not to a
+manifest is dead weight in a package whose contents are printed into a public log.
+
+Four cases now check the manifests against the files in both directions: every declared icon exists,
+is a PNG, and is the size its key claims (read out of the IHDR - a 32 copied over a 24 is invisible
+in a listing and wrong in the toolbar); every PNG in the folder is declared by something; and
+`tools/icons.html` has a job for each, so a size can never exist once and go stale at the next
+regeneration - which is precisely how `apps/crm` ended up with rasters whose source nobody had kept.
+The app list is globbed, so a third product is covered without anyone remembering.
+
+**`tools/icons.html` takes `?only=<substring>` and `?auto`**, which is what made adding one size a
+one-file change. A full run rewrites every PNG here and the bytes come from whichever Chrome is
+installed, so on another machine - or simply after an update - "add a 24" would have arrived as
+seventeen changed files with nothing to distinguish the new icon from the re-encoded ones. Driven
+headless it is one command:
+
+    python3 tools/icons-receive.py &
+    google-chrome --headless --disable-gpu --virtual-time-budget=15000 \
+      --dump-dom "http://localhost:<port>/tools/icons.html?auto&only=24.png"

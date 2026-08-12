@@ -22,10 +22,12 @@ canvas{display:none}button{font:14px system-ui;padding:8px 14px}pre{color:#8ea0b
 <script>
 const JOBS = [
   ['/apps/crm/icons/icon.svg', 16, 'apps/crm/icons/16.png'],
+  ['/apps/crm/icons/icon.svg', 24, 'apps/crm/icons/24.png'],
   ['/apps/crm/icons/icon.svg', 32, 'apps/crm/icons/32.png'],
   ['/apps/crm/icons/icon.svg', 48, 'apps/crm/icons/48.png'],
   ['/apps/crm/icons/icon.svg', 128, 'apps/crm/icons/128.png'],
   ['/apps/analytics/icons/icon.svg', 16, 'apps/analytics/icons/16.png'],
+  ['/apps/analytics/icons/icon.svg', 24, 'apps/analytics/icons/24.png'],
   ['/apps/analytics/icons/icon.svg', 32, 'apps/analytics/icons/32.png'],
   ['/apps/analytics/icons/icon.svg', 48, 'apps/analytics/icons/48.png'],
   ['/apps/analytics/icons/icon.svg', 128, 'apps/analytics/icons/128.png'],
@@ -49,12 +51,25 @@ async function render(svgUrl, size) {
   URL.revokeObjectURL(url);
   return c.toDataURL('image/png').split(',')[1];
 }
+// `?only=<substring>` renders the matching destinations and nothing else, and `?auto` runs on load
+// so this can be driven headless. Both exist for the same reason: adding one size should write one
+// file. A full run rewrites every PNG here, and the bytes come out of whatever Chrome is installed -
+// so on another machine, or after an update, "add a 24" would arrive as seventeen changed files with
+// no way to tell the new icon from the re-encoded ones.
 async function generate() {
+  const q = new URLSearchParams(location.search);
+  const only = q.get('only');
+  const jobs = only ? JOBS.filter(([, , dest]) => dest.includes(only)) : JOBS;
+  if (!jobs.length) {
+    document.getElementById('log').textContent = `nothing matches ?only=${only}`;
+    return;
+  }
   const out = [];
-  for (const [svg, size, dest] of JOBS) out.push([dest, size, await render(svg, size)]);
+  for (const [svg, size, dest] of jobs) out.push([dest, size, await render(svg, size)]);
   const r = await fetch('/', { method: 'POST', body: JSON.stringify(out) });
   document.getElementById('log').textContent = r.ok
     ? (await r.json()).join('\n')
     : 'No receiver: start tools/icons-receive.py instead of http.server.';
 }
+if (new URLSearchParams(location.search).has('auto')) generate();
 </script>
