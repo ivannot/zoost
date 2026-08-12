@@ -390,6 +390,54 @@ Keeping the positions removes the question. What is still on screen stays where 
 is placed by the layout, the hint line says how many of each, and `Re-layout` starts over. A box that
 has left the screen keeps its entry, so switching a category off and on again finds it where it was.
 
+**The control for folding a branch sits on the branch: a circle where the arc meets the box.** Hiding
+what hangs off an arc was reachable only by clicking the arc and then a button in the card that opened
+- the control living away from its subject, which is the defect this window has already had twice (the
+chips outside the view they steered, the scope control on another tab). It is a `-` on every arc that
+has something hanging off it, drawn on the **box that stays**, and a `+` with the count where a folded
+branch used to leave. The card keeps the same button, in the same words from the same computation: it
+is where a reader arrives having clicked the arc to read what it *is*, and sending them back out to
+the drawing to act on it would recreate the problem one control over.
+
+Four decisions in it, each measured rather than argued:
+
+**Which end hangs off was being decided by the data.** The cut always hid the side of `b` - whichever
+end the pull happened to write second, a lookup target or a callee - so on a chain `leaf-hub-x-y`
+focused on `hub`, cutting the *leaf's own* arc hid **x and y**, the rest of the drawing, and left the
+leaf standing. Run rather than read: `erWouldHide` reported 2 for that arc. The side that goes is the
+side the reader is not standing on - the one without the focus, and with no focus the smaller of the
+two, since "what hangs off this" has no other meaning there. Without that decision there is no box to
+put the circle on, so the control could not have been placed correctly on top of the old rule.
+
+**The end to hide is settled when the fold is made and stored with it**, so a later focus change
+cannot re-point an existing fold at the other half of the drawing. And because the Explorer beside the
+diagram still lists what a fold has taken off it - deliberately - the focus can be moved *into* a
+folded branch: those folds, and only those, are dropped as it happens. Re-centring on a box you can
+see keeps them, which is the whole reason to fold before going looking.
+
+**`erBranches` is one bridge search per render, not `erHiddenSet` once per arc.** "Cutting this hides
+something" is exactly "this arc is a bridge", which is what the card had always said in words, and the
+subtree size is the count the control promises. Measured: 1.2ms at 400 nodes and 2.9ms at 1200, against
+a fresh traversal per arc. The cheap answer is only worth having while it agrees with the authority, so
+`tests/graphview.test.mjs` holds the two against each other over generated graphs - 668 arcs and 156
+nested folds. That is also what found the case no tree would have shown: **two boxes joined in both
+directions**. `erReach` drops *both* when either is cut, so counting a mutual pair as two arcs had the
+walk find a way round an arc through itself, and every one of them was reported as hiding nothing.
+
+**The marks are drawn above the boxes and counter-scaled against the zoom.** The meeting point is the
+box's own edge, and a control the box paints over half of is not a control - so they are a layer of
+their own above `#erboxes`, which also means they go with the arcs for the duration of a drag, their
+anchors being derived from positions that are moving. The size is the argument the arrowheads already
+won (3.3px across on a whole-org view, reported as missing), with a cap the arrowheads do not need: a
+circle that keeps growing as the reader zooms out ends up wider than the box it hangs off. One CSS
+variable on the layer, so a zoom costs one property write rather than one per mark. Measured on the
+sample schema: folding changes neither the scale nor the pan - 1.102 and tx 339 before and after - so
+nothing moves under the click except what was asked to go.
+
+On paper the two marks are treated differently: a `-` is a control nobody can press, and a `+` is the
+only thing on the page saying boxes are missing from it - which the reader of a PDF needs more than the
+reader at the window does. So the first is hidden in print and the second is not.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 

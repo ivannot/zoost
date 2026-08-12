@@ -25,7 +25,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceFn, read } from './slice.mjs';
+import { sliceFn, sliceConst, read, load } from './slice.mjs';
 import vm from 'node:vm';
 
 /** erFit() lifted out of an app's graph window, over a panel of a stated size.
@@ -568,5 +568,163 @@ for (const app of ['crm', 'analytics']) {
     }
     // a lone arc keeps the middle it always had
     assert.equal(at([['hub', 'm']], 'hub', 'm'), 595, 'a lone arc moved off the middle');
+  });
+}
+
+
+/* ---- folding a branch -------------------------------------------------------------------------
+ *
+ * Cutting an arc hides what hangs off it. Two things are held here, and the first is a defect that
+ * shipped: *which* end hangs off was decided by the data - the cut always hid the side of `b`, and
+ * `b` is whichever end the pull wrote second. On a chain leaf-hub-x-y focused on `hub`, cutting the
+ * leaf's own arc hid x and y, the whole rest of the drawing, and left the leaf standing.
+ *
+ * The second is that `erBranches` - one bridge search per render, which is what puts a - or a + on
+ * every arc - agrees with `erHiddenSet`, which is the authority on what a cut actually removes and
+ * costs a traversal per arc. Generated graphs rather than hand-written ones, because the case that
+ * broke the first version was a pair of boxes joined in *both* directions: `erReach` drops both when
+ * either is cut, and nothing in a tree would ever have shown it.
+ */
+function folder(app, ids, edges, focus) {
+  const ctx = vm.createContext({
+    erIds: ids.slice(), edgesA: edges.map((e) => e.slice()),
+    N: Object.fromEntries(ids.map((i) => [i, { id: i }])),
+    curFocus: focus, erCut: new Map(),
+  });
+  vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ekey'), ctx);
+  vm.runInContext(['erReach', 'erHiddenSet', 'erWouldShow', 'erBranches']
+    .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+  const run = (src) => vm.runInContext(src, ctx);
+  return {
+    branches: (shown, pairs) => { ctx.shown = shown; ctx.pairs = pairs; return run('erBranches(shown, pairs)'); },
+    hidden: () => new Set(run('[...erHiddenSet()]')),
+    fold: (k, away) => { ctx.k = k; ctx.away = away; return run('erCut.set(k, away).size'); },
+    wouldShow: (k) => { ctx.k = k; return run('erWouldShow(k)'); },
+  };
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a fold hides the branch, not the graph behind it`, () => {
+    // The reported shape, run rather than read. `leaf` hangs off the focus; the rest of the chain is
+    // what the reader is looking at. Folding the leaf's arc may only take the leaf.
+    const ids = ['leaf', 'hub', 'x', 'y'];
+    const edges = [['leaf', 'hub'], ['hub', 'x'], ['x', 'y']];
+    const f = folder(app, ids, edges, 'hub');
+    const br = f.branches(ids, edges);
+    const leafArc = br.get('leaf\u0000hub');
+    assert.ok(leafArc, 'the arc to a leaf offers no fold at all');
+    assert.equal(leafArc.away, 'leaf', 'the fold points at the graph instead of at the leaf');
+    assert.equal(leafArc.n, 1, `folding the leaf claims to take ${leafArc.n} boxes`);
+    f.fold('leaf\u0000hub', leafArc.away);
+    assert.deepEqual([...f.hidden()], ['leaf'], 'folding the leaf took the rest of the drawing');
+    // and the arc into the chain takes the chain, from the same end the control would sit on
+    const g = folder(app, ids, edges, 'hub');
+    const deep = g.branches(ids, edges).get('hub\u0000x');
+    assert.equal(deep.away, 'x', 'the fold on the chain points back at the focus');
+    assert.equal(deep.n, 2, 'the chain beyond x is not counted');
+    // the control sits on the box that stays, which is the one the reader can still see
+    assert.equal(deep.other, 'hub', 'the mark would be drawn on the box that is about to disappear');
+  });
+
+  test(`${app}: what the fold marks promise is what erHiddenSet removes`, () => {
+    // The cheap pass against the authority, over generated graphs: a spanning tree plus a few extra
+    // arcs, some of them the mutual pair that broke the first version, with and without a focus, and
+    // folding up to four branches one inside another. 156 folds and 668 arcs when this was written.
+    const rnd = (() => { let s = 4242; return () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; })();
+    let checkedArcs = 0, checkedFolds = 0;
+    for (let g = 0; g < 40; g++) {
+      const n = 5 + Math.floor(rnd() * 16);
+      const ids = Array.from({ length: n }, (_, i) => 'n' + i);
+      const edges = [];
+      for (let i = 1; i < n; i++) edges.push([ids[Math.floor(rnd() * i)], ids[i]]);
+      for (let i = 0; i < Math.floor(rnd() * 4); i++) {
+        const a = ids[Math.floor(rnd() * n)], b = ids[Math.floor(rnd() * n)];
+        if (a !== b) edges.push(rnd() < 0.5 ? [a, b] : [b, a]);   // some of them the mutual pair
+      }
+      const focus = g % 2 ? ids[Math.floor(rnd() * n)] : null;
+      const f = folder(app, ids, edges, focus);
+      // every arc: what it says it would take is what taking it removes
+      const br0 = f.branches(ids, edges);
+      for (const [a, b] of edges) {
+        const k = a + '\u0000' + b, rec = br0.get(k);
+        const t = folder(app, ids, edges, focus);
+        t.fold(k, rec ? rec.away : b);
+        const got = t.hidden().size;
+        checkedArcs++;
+        if (rec) assert.equal(got, rec.n, `${a}-${b}: promised ${rec.n}, removed ${got}`);
+        else {
+          // no record means no fold on offer, and that has to be true from either end
+          const u = folder(app, ids, edges, focus);
+          u.fold(k, a);
+          assert.equal(got + u.hidden().size, 0, `${a}-${b}: hides ${got}/${u.hidden().size} while offering no fold`);
+        }
+      }
+      // and one fold inside another: the + on each says what comes back, not what someone else holds
+      for (let round = 0; round < 4; round++) {
+        const gone = f.hidden();
+        const shown = ids.filter((i) => !gone.has(i));
+        const pairs = edges.filter(([a, b]) => !gone.has(a) && !gone.has(b));
+        const br = f.branches(shown, pairs);
+        const keys = [...br.keys()];
+        if (!keys.length) break;
+        const k = keys[Math.floor(rnd() * keys.length)], rec = br.get(k);
+        const before = gone.size;
+        f.fold(k, rec.away);
+        const after = f.hidden();
+        checkedFolds++;
+        assert.equal(after.size - before, rec.n, `nested fold promised ${rec.n}, removed ${after.size - before}`);
+        assert.equal(f.wouldShow(k), rec.n, 'the + offers back a different number from the one the - took');
+        if (focus) assert.ok(!after.has(focus), 'a fold hid the thing the diagram is about');
+      }
+    }
+    assert.ok(checkedArcs > 400 && checkedFolds > 100, `only ${checkedArcs} arcs / ${checkedFolds} folds exercised`);
+  });
+
+  test(`${app}: the fold mark is drawn where the arc meets the box that stays`, () => {
+    // The wiring, which the slices above cannot see: the layer exists, it is above the boxes, it goes
+    // with the arcs during a drag, a press on it is not a pan, and the mark is placed at the end of
+    // the arc that belongs to the box that is *not* about to disappear.
+    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    assert.ok(/<div id="ermarks"><\/div>/.test(html), 'id=ermarks is not in the markup');
+    assert.ok(/#ermarks\{[^}]*z-index:99999/.test(html), 'the marks are not above the boxes');
+    assert.ok(/#ermarks\.dragging\{display:none\}/.test(html), 'the marks stay behind while a box is dragged');
+    assert.ok(/@media print\{ \.ermk\.fold\{display:none\}/.test(html), 'a control nobody can press is printed');
+    assert.ok(/closest\('#ermarks'\)/.test(js), 'pressing a mark starts a pan');
+    assert.ok(/scale\(var\(--mkz/.test(html) && /--mkz/.test(js), 'the marks do not follow the zoom');
+    const mk = js.slice(js.indexOf('const markAt ='), js.indexOf('marks.appendChild(el)'));
+    assert.ok(/stay === a \? pt\[0\] : pt\[2\]/.test(mk) && /stay === a \? pt\[1\] : pt\[3\]/.test(mk),
+      'the mark is not placed on the end of the arc that stays');
+  });
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: focusing inside a folded branch drops that fold and keeps the others`, () => {
+    // The Explorer beside the diagram still lists what a fold has taken off it, so the focus can be
+    // moved *into* a folded branch. Left alone the fold would then hide everything around the new
+    // focus and leave it alone in the middle - it hides the side away from the reader, and the reader
+    // has just walked round to the other side of it. Only the folds that would do that are dropped:
+    // re-centring on a box you can see is the reason to fold before going looking.
+    const ids = ['leaf', 'hub', 'x', 'y'], edges = [['leaf', 'hub'], ['hub', 'x'], ['x', 'y']];
+    const ekey = (a, b) => a + '\u0000' + b;
+    const erCut = new Map([[ekey('leaf', 'hub'), 'leaf'], [ekey('x', 'y'), 'y']]);
+    let focused = null;
+    const ctx = {
+      erIds: ids, edgesA: edges, erCut,
+      N: Object.fromEntries(ids.map((i) => [i, { id: i, api_name: i }])),
+      get curFocus() { return 'hub'; }, set curFocus(v) { focused = v; },
+      $: () => ({ innerHTML: '', style: {} }), esc: (x) => String(x), label: (n) => n.api_name,
+      computeMaxDepth() {}, updateDepthUI() {}, updateScopeUI() {}, egoStat() {}, erRender() {},
+      bfsEgo() {}, erShow() {}, relRender() {},
+      get egoDepth() { return 2; }, set egoDepth(_v) {}, get maxEgoDepth() { return 6; },
+      get scopeAll() { return false; }, get curView() { return 'er'; },
+      get erLaidOut() { return true; }, set erLaidOut(_v) {}, Math,
+    };
+    const { setFocus } = load([sliceConst(`apps/${app}/graphview.js`, 'ekey'),
+      sliceFn(`apps/${app}/graphview.js`, 'erReach'),
+      sliceFn(`apps/${app}/graphview.js`, 'setFocus')], ctx);
+    setFocus('leaf');
+    assert.equal(focused, 'leaf', 'the focus did not move');
+    assert.ok(!erCut.has(ekey('leaf', 'hub')), 'the fold the reader just focused inside is still hiding it');
+    assert.ok(erCut.has(ekey('x', 'y')), 'a fold nowhere near the new focus was thrown away with it');
   });
 }

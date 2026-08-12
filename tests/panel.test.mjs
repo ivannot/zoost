@@ -667,6 +667,10 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
     computeMaxDepth() { focused = focused || 'reached'; },
     updateDepthUI() {}, updateScopeUI() {}, updateTopTools() {}, egoStat() {}, erRender() {}, draw() {},
     bfsEgo() {}, updateBack() {}, erShow() {},
+    // setFocus also drops the folds that would swallow the new focus - a free variable each, and a
+    // slice runs in a bare context. Empty here on purpose: this case is about the refusal above,
+    // and the folds have their own case in tests/graphview.test.mjs, with a real erReach under it.
+    erCut: new Map(), erReach: () => new Set(),
     get egoDepth() { return 2; }, set egoDepth(_v) {}, get maxEgoDepth() { return 6; },
     get scopeAll() { return false; }, get curView() { return 'er'; },
     Math,
@@ -3146,6 +3150,38 @@ test('no shipped script says the same thing twice', () => {
   assert.equal(findings.length, 0,
     'a user-facing message is written out more than once - give it a name (MSG.x, or a const beside '
     + 'its siblings) so the two copies cannot drift apart:\n  ' + findings.join('\n  '));
+});
+
+// ---------- a message that is named must exist, and one that exists must be used ----------
+//
+// The fold marks landed with three new lines in the CRM's MSG and none in the Analytics one, because
+// the edit that added them named a single file while the edit that used them ran over both. Nothing
+// static said so: `node --check` is happy, and `tools/twincheck.py` compares *functions*, so a table
+// of strings is outside what it can see. What found it was opening the Analytics window headless and
+// watching `MSG.cutUndo is not a function` come out of a click - which is the argument for running
+// things, and also the argument for this, since running every window is not something a suite does.
+//
+// Both directions, and the second is not padding: a message nobody names is a sentence left behind by
+// a feature that went, which is the legacy this repository refuses to keep lying around. Derived from
+// the same glob as the check above, so a script added tomorrow is covered without anyone remembering.
+test('every message named is defined, and every message defined is named', () => {
+  const files = shippedScripts();
+  assert.ok(files.length >= 20, `id=glob found only ${files.length} shipped scripts - the walk is wrong`);
+  const findings = [];
+  for (const rel of files) {
+    const src = read(rel);
+    const used = new Set([...src.matchAll(/\bMSG\.(\w+)/g)].map((m) => m[1]));
+    const at = src.indexOf('const MSG = {');
+    if (at < 0) {
+      if (used.size) findings.push(`${rel}: names MSG.${[...used][0]} and has no MSG table`);
+      continue;
+    }
+    const block = src.slice(at, src.indexOf('\n};', at));
+    const defined = new Set([...block.matchAll(/^ {2}(\w+):/gm)].map((m) => m[1]));
+    for (const k of used) if (!defined.has(k)) findings.push(`${rel}: MSG.${k} is used and never defined`);
+    for (const k of defined) if (!used.has(k)) findings.push(`${rel}: MSG.${k} is defined and never used`);
+  }
+  assert.equal(findings.length, 0, 'the message table and the code that reads it have come apart:\n  ' + findings.join('\n  '));
 });
 
 test('both panels report a lapsed folder permission in the same words', () => {

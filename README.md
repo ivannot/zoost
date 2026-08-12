@@ -85,11 +85,13 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 
 **Understand the implementation**
 - **Reference graph**: for any function, who calls it (impact) and what it calls (dependencies)
-  - as a searchable Explorer and a visual node-link graph (drag a box to arrange it, Save PDF).
+  - as a searchable Explorer and a visual node-link graph (drag a box to arrange it, fold a branch
+    away from the circle where its arc meets the box, Save PDF).
 - **Hypertext code**: in the preview, calls to custom functions are clickable - jump to the
   definition and back.
 - **Module schema & ER diagram**: browse fields (type, lookup, picklist) and view foreign-key
-  relationships as an entity-relationship diagram (pan / zoom / fit / drag a box to arrange it / Save PDF).
+  relationships as an entity-relationship diagram (pan / zoom / fit / drag a box to arrange it / fold a
+  branch away / Save PDF).
 - **Automation map**: Workflows and Schedules with their triggers, criteria, instant and time-based
   actions, and the functions they invoke - plus on-demand workflow execution stats. A rule with actions
   that run *after a delay* carries the count and the delay, **Has scheduled actions** filters the list
