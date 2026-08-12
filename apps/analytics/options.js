@@ -35,9 +35,15 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 
 // The ER preset the graph window starts from. Kept identical to ER_PRESET.modules in graphview.js:
 // the two are the same setting seen from two places, not a default and a copy of it.
-const LAY_DEFAULT = { margin: 36, spread: 42, ring: 420, gap: 8, fs: 10, sub: true };
-const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pRing', 'vRing', 'ring'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
+const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
+const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
 let lay = Object.assign({}, LAY_DEFAULT);
+// The ceiling is not one of the layout values: the graph window's Layout panel does not edit it,
+// `Restore built-in defaults` above is about the sliders, and erSaveParams() there writes the whole
+// erParams object - so a ceiling stored inside it would be lost the next time a slider moved. Its
+// own key, and the built-in default is the measured one: 400.
+const DRAW_MAX_DEFAULT = 400;
+let drawMax = DRAW_MAX_DEFAULT;
 
 let toastT = null;
 function toast(msg, bad) {
@@ -339,19 +345,35 @@ async function saveAi() {
 function layToUI() {
   LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
   $('pSub').checked = !!lay.sub;
+  $('pDrawMax').value = drawMax;
+  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 }
 LAY_CTL.forEach(([sl, lb, k]) => {
   $(sl).addEventListener('input', () => { lay[k] = parseInt($(sl).value, 10); $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
 });
 $('pSub').onchange = () => { lay.sub = $('pSub').checked; };
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI(); };
+$('pDrawMax').addEventListener('input', () => {
+  // Clamped to the field's own bounds rather than trusted: a number input accepts anything typed
+  // into it, and 0 would refuse every diagram while 10 million would hang the window for minutes.
+  const raw = parseInt($('pDrawMax').value, 10);
+  const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
+  drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
+  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+});
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
 $('saveLay').onclick = async () => {
   markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false);
-  try { await chrome.storage.local.set({ erParams: { current: lay } }); toast('Diagram defaults saved.'); }
+  markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
+  try { await chrome.storage.local.set({ erParams: { current: lay }, erDrawMax: drawMax }); toast('Diagram defaults saved.'); }
   catch (e) { toast(MSG.saveFailed + e.message, true); }
 };
 async function loadLay() {
   try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
+  try {
+    const r = await chrome.storage.local.get('erDrawMax');
+    const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
+    if (Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
+  } catch (_) {}
   layToUI();
 }
 
@@ -411,10 +433,13 @@ $('zohoDc').onchange = async () => {
   toast('Data centre saved.');
 };
 
+const SEC_DIAGRAM = 'Diagram layout';
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
   aicfg: { label: 'AI assistant', reload: loadAi },
-  erParams: { label: 'Diagram layout', reload: loadLay },
+  // Two keys, one section, so the label is a name rather than two copies one edit apart.
+  erParams: { label: SEC_DIAGRAM, reload: loadLay },
+  erDrawMax: { label: SEC_DIAGRAM, reload: loadLay },
 };
 const dirty = new Set();
 const ownWrite = new Map();

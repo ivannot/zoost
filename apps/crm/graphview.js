@@ -16,8 +16,8 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 const MSG = {
   tabCount: (n) => `${n} ${NOUN().n} to draw`,
   tabCrowded: (n) => `${n} ${NOUN().n} - past the ${CROWDED_NODES} this diagram has been measured to draw without boxes covering each other, so expect it crowded. It is still drawn: switch a category off above, or pick something to focus on, to bring it down.`,
-  tabOver: (n) => `${n} ${NOUN().n} - more than the ${DRAW_MAX_NODES} this diagram can lay out. Switch a category off above, or pick something to focus on.`,
-  tooMany: (n) => `<b>Too many to lay out.</b> ${n} ${NOUN().n} are on the tab above and the ceiling is ${DRAW_MAX_NODES}, which is measured: past it the layout takes longer than anyone waits - 1200 comes to about seven seconds - and what it produces cannot be read anyway. Switch a category off above, or pick one to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits. Past ${CROWDED_NODES} it is drawn but crowded, which the number says before you ask for it.`,
+  tabOver: (n) => `${n} ${NOUN().n} - more than the ${drawMax} this diagram is set to lay out. Switch a category off above, or pick something to focus on.`,
+  tooMany: (n) => `<b>Too many to lay out.</b> ${n} ${NOUN().n} are on the tab above and the ceiling is ${drawMax}, which is 400 by default because that is what was measured: past it the layout takes longer than anyone waits - 1200 comes to about seven seconds - and what it produces cannot be read anyway. Switch a category off above, or pick one to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits. Past ${CROWDED_NODES} it is drawn but crowded, which the number says before you ask for it.`,
   showList: 'Show the list',
   emphasis: 'Emphasis: ',
 };
@@ -154,6 +154,8 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     try {
       const st = await chrome.storage.local.get('erParams');
       if (st && st.erParams && st.erParams.current && st.erParams.kind === DATA.kind) erP = Object.assign({}, erP, erKnownParams(st.erParams.current));
+      const dm = await chrome.storage.local.get('erDrawMax');
+      if (Number.isFinite(dm.erDrawMax) && dm.erDrawMax > 0) drawMax = dm.erDrawMax;
     } catch (_) {}
     erInitControls();
     // Depth buttons wired once: they work whether the focus comes from the open ("Open ER") or is
@@ -940,7 +942,12 @@ let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-
 // advances the clock - so the real wait is longer than the numbers above and the line is drawn at the
 // measured 1.3s rather than at the 2.2s that would otherwise have qualified.
 const DRAW_MAX_NODES = 400;
-const drawable = (n) => n <= DRAW_MAX_NODES;
+// The measured figure is the default, not the rule: the options page lets it be raised, because
+// what is being traded is the reader's own patience against how much of the graph they get, and
+// that is theirs to trade. Read once when the window opens; a change there takes effect on the
+// next open, which is the same contract the layout sliders have.
+let drawMax = DRAW_MAX_NODES;
+const drawable = (n) => n <= drawMax;
 // **CROWDED_NODES advises**, and it is a limit of *quality*. With the canvas shaped to the panel, five
 // generated graphs at each size come out with no box covering another up to 80 nodes, 4 of 5 at 90 and
 // at 100, 1 of 5 at 120, none at 150. Past it the drawing is still worth having - at 400 nodes about

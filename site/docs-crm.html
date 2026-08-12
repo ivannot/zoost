@@ -367,7 +367,7 @@ git commit -m "baseline"</code></pre>
       relation names forward.</li>
     <li><b>Click an arc</b> to isolate one relation: the two modules light up, everything else fades, and a
       card appears with the relation's API name and the Deluge call, ready to copy.</li>
-    <li><b class="ui">Fit</b> frames the whole drawing in the window, and a <b>window resize does it for you</b> - unless you have panned or zoomed, in which case the view you chose is kept and <b class="ui">Fit</b> hands it back. The tab carries the number of boxes the diagram would draw, and it follows the filters, so you can see a category coming off bring the graph within reach before you ask for it. Two numbers, both measured, doing different jobs. Past <b>80</b> the drawing gets crowded - up to there the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other - so the count turns amber and says so, and the diagram is still drawn: that is your call, not ours. Past <b>400</b> it is not drawn at all, because the layout itself stops being affordable: 400 takes about 1.3 seconds, 1200 about seven. Switch a category off, or pick something to focus on, and the count comes down as you do. <b class="ui">Layout ⚙</b> exposes spacing, spread, label gap and label size as live sliders. There is no correct
+    <li><b class="ui">Fit</b> frames the whole drawing in the window, and a <b>window resize does it for you</b> - unless you have panned or zoomed, in which case the view you chose is kept and <b class="ui">Fit</b> hands it back. The tab carries the number of boxes the diagram would draw, and it follows the filters, so you can see a category coming off bring the graph within reach before you ask for it. Two numbers, both measured, doing different jobs. Past <b>80</b> the drawing gets crowded - up to there the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other - so the count turns amber and says so, and the diagram is still drawn: that is your call, not ours. Past <b>400</b> it is not drawn at all, because the layout itself stops being affordable: 400 takes about 1.3 seconds, 1200 about seven. That ceiling is a default and not a rule - the settings page lets you raise it, and says what you are trading: more of the graph, not a better picture of it. Switch a category off, or pick something to focus on, and the count comes down as you do. <b class="ui">Layout ⚙</b> exposes spacing, spread, label gap and label size as live sliders. There is no correct
       value - dense or airy depends on what you are looking at.</li>
   </ul>
   <p><b>What it will not do:</b> above 1200 nodes the free-form layout is not attempted at all -
@@ -376,7 +376,7 @@ git commit -m "baseline"</code></pre>
     The <b>Explorer</b> and a focused <b>Wiring</b> stay fast at any org size; use a focus and a small depth.</p>
 
   <figure class="shot">
-    <img src="/img/crm-graph.webp?v=b8b4a8da7e" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-graph.webp?v=901adb4023" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The call graph window: functions, workflows, schedules and connections as boxes joined by arrows.">
     <figcaption>Chapter 6: the diagram window. The chips at the top are the filter and the colour key at once, and they steer all three views.</figcaption>
   </figure>

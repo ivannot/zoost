@@ -1,7 +1,7 @@
 /* options.js - Zoost settings.
  * Everything here writes to storage the side panel and the graph window already read:
  *   IndexedDB 'zoost'/kv  → rootDir (FileSystemDirectoryHandle)
- *   chrome.storage.local  → aicfg, exportScope, erParams
+ *   chrome.storage.local  → aicfg, exportScope, erParams, erDrawMax
  * A `settingsStamp` is bumped on every change so an open side panel can react.
  */
 const $ = (id) => document.getElementById(id);
@@ -26,8 +26,8 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
 const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'workflows', 'schedules', 'connections', 'health'];
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, connections: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, connections: true, health: false };
-const LAY_DEFAULT = { margin: 36, spread: 42, ring: 420, gap: 8, fs: 10, sub: true };
-const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pRing', 'vRing', 'ring'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
+const LAY_DEFAULT = { margin: 36, spread: 42, gap: 8, fs: 10, sub: true };
+const LAY_CTL = [['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs']];
 const CFG_FILE = '.zoost.json';
 
 let toastT = null;
@@ -414,18 +414,41 @@ $('saveScope').onclick = async () => { scopeFromUI(); markOwn('exportScope'); di
 
 // ---------- diagram layout ----------
 let lay = Object.assign({}, LAY_DEFAULT);
+// The ceiling is not one of the layout values: the graph window's Layout panel does not edit it,
+// `Restore built-in defaults` above is about the sliders, and erSaveParams() there writes the whole
+// erParams object - so a ceiling stored inside it would be lost the next time a slider moved. Its
+// own key, and the built-in default is the measured one: 400.
+const DRAW_MAX_DEFAULT = 400;
+let drawMax = DRAW_MAX_DEFAULT;
 function layToUI() {
   LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
   $('pSub').checked = !!lay.sub;
+  $('pDrawMax').value = drawMax;
+  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
 }
 LAY_CTL.forEach(([sl, lb, k]) => {
   $(sl).addEventListener('input', () => { lay[k] = parseInt($(sl).value, 10); $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });
 });
 $('pSub').onchange = () => { lay.sub = $('pSub').checked; };
-$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); layToUI(); };
-$('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false); await chrome.storage.local.set({ erParams: { current: lay } }); await stamp(); toast('Diagram defaults saved.'); };
+$('pDrawMax').addEventListener('input', () => {
+  // Clamped to the field's own bounds rather than trusted: a number input accepts anything typed
+  // into it, and 0 would refuse every diagram while 10 million would hang the window for minutes.
+  const raw = parseInt($('pDrawMax').value, 10);
+  const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
+  drawMax = Number.isFinite(raw) ? Math.min(hi, Math.max(lo, raw)) : DRAW_MAX_DEFAULT;
+  $('vDrawMax').textContent = drawMax === DRAW_MAX_DEFAULT ? 'boxes (measured)' : 'boxes';
+});
+$('layReset').onclick = () => { lay = Object.assign({}, LAY_DEFAULT); drawMax = DRAW_MAX_DEFAULT; layToUI(); };
+$('saveLay').onclick = async () => { markOwn('erParams'); dirty.delete('erParams'); conflictBox('erParams', false); markOwn('erDrawMax'); dirty.delete('erDrawMax'); conflictBox('erDrawMax', false);
+  await chrome.storage.local.set({ erParams: { current: lay }, erDrawMax: drawMax });
+  await stamp(); toast('Diagram defaults saved.'); };
 async function loadLay() {
   try { const r = await chrome.storage.local.get('erParams'); if (r.erParams && r.erParams.current) lay = Object.assign({}, LAY_DEFAULT, r.erParams.current); } catch (_) {}
+  try {
+    const r = await chrome.storage.local.get('erDrawMax');
+    const lo = +$('pDrawMax').min, hi = +$('pDrawMax').max;
+    if (Number.isFinite(r.erDrawMax)) drawMax = Math.min(hi, Math.max(lo, r.erDrawMax));
+  } catch (_) {}
   layToUI();
 }
 
@@ -573,11 +596,14 @@ $('zohoDc').onchange = async () => {
   toast('Data centre saved.');
 };
 
+const SEC_DIAGRAM = 'Diagram layout';
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
   exportScope: { label: 'Export defaults', reload: loadScope },
   tabPrefs: { label: 'Tabs', reload: loadTabs },
-  erParams: { label: 'Diagram layout', reload: loadLay },
+  // Two keys, one section, so the label is a name rather than two copies one edit apart.
+  erParams: { label: SEC_DIAGRAM, reload: loadLay },
+  erDrawMax: { label: SEC_DIAGRAM, reload: loadLay },
   aicfg: { label: 'AI assistant', reload: loadAi },
 };
 const dirty = new Set();

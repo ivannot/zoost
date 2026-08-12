@@ -1105,6 +1105,10 @@ test('widening the scope clears, says so, and only then computes', async () => {
     NOUN: () => ({ all: 'Everything' }), esc: (x) => x, ctx2d: null, W: 0, H: 0,
   };
   const { setScope } = load([sliceConst('apps/crm/graphview.js', 'DRAW_MAX_NODES'),
+                             // `drawMax` starts at the measured default and the options page may raise
+                             // it, so the predicate reads the variable and not the constant - which is
+                             // one more thing the lift has to carry.
+                             sliceConst('apps/crm/graphview.js', 'drawMax'),
                              sliceConst('apps/crm/graphview.js', 'drawable'),
                              sliceConst('apps/crm/graphview.js', 'focusName'),
                              sliceFn('apps/crm/graphview.js', 'runHeavy'),

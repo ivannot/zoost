@@ -96,6 +96,31 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(!/clientHeight\s*\|\|\s*\d/.test(src), 'clientHeight || <number> is back in graphview.js');
   });
 
+  test(`${app}: the ceiling is a default the reader can raise, and it is read as one`, () => {
+    // The measured 400 is the built-in value, not the rule: what is being traded is the reader's own
+    // patience against how much of the graph they get. Three things have to hold for that to be true
+    // rather than decorative, and each has been wrong at some point in a setting on this page.
+    const gv = read(`apps/${app}/graphview.js`), oj = read(`apps/${app}/options.js`);
+    const oh = read(`apps/${app}/options.html`);
+    // it is read from storage, and the predicate reads the variable rather than the constant
+    assert.ok(/const drawable = \(n\) => n <= drawMax;/.test(gv),
+      'the ceiling predicate reads the built-in constant, so the setting cannot move it');
+    assert.ok(/erDrawMax/.test(gv), 'the graph window never reads the setting');
+    // it is its own key: erSaveParams writes the whole erParams object whenever a slider moves, so a
+    // ceiling parked inside it would be dropped silently on the next drag of Box spacing
+    // Named precisely, because the first version of this line read "erParams within 80 characters of
+    // drawMax" and failed on the correct code: the two keys sit side by side in one set() call, which
+    // is the point. What must hold is that the erParams object carries nothing but the layout values.
+    assert.ok(/erParams: \{ current: lay \}/.test(oj),
+      'the erParams object carries something besides the layout values');
+    assert.ok(/erDrawMax: drawMax/.test(oj), 'the ceiling is not stored under a key of its own');
+    // and the field is bounded, because a number input accepts whatever is typed into it
+    assert.ok(/id="pDrawMax"[^>]*min="\d+"[^>]*max="\d+"/.test(oh),
+      'the ceiling field has no bounds, so 0 refuses every diagram and a huge value hangs the window');
+    assert.ok(/Math\.min\(hi, Math\.max\(lo, raw\)\)/.test(oj),
+      'the typed value is trusted rather than clamped to the field own bounds');
+  });
+
   test(`${app}: the scale stays inside its clamp`, () => {
     // 0.02 and 1.4 are the floor and the ceiling in the shipped expression. A window narrower than
     // the padding would otherwise produce a negative scale, which draws the diagram mirrored.
@@ -250,9 +275,16 @@ for (const app of ['crm', 'analytics']) {
   test(`${app}: the ring slider is gone, in every place it was wired`, () => {
     // It existed to compensate for the formula above, and `margin` drives the radii now. Removing a
     // control means five places, which is exactly the kind of list that gets four of five done.
-    const js = read(`apps/${app}/graphview.js`)
+    //
+    // And this case is the evidence for that: its first version read the graph window only, so the
+    // **options page** kept offering `Ring radius` for two commits - a control that set a value nothing
+    // read any more. The surface was found by opening the file for something else, which is luck. Both
+    // pages are read here now, and the lesson is the one already written down: when a control goes,
+    // walk every surface that names it rather than the ones that come to mind.
+    const js = ['graphview.js', 'options.js']
+      .map((f) => read(`apps/${app}/${f}`)).join('\n')
       .split('\n').filter((l) => !l.trimStart().startsWith('//')).join('\n');
-    const html = read(`apps/${app}/graphview.html`);
+    const html = ['graphview.html', 'options.html'].map((f) => read(`apps/${app}/${f}`)).join('\n');
     assert.ok(!/erP\.ring\b/.test(js), 'erP.ring is still read');
     assert.ok(!/\bring:\s*\d/.test(js), 'a preset still declares a ring value');
     assert.ok(!/'ring'/.test(js), "'ring' is still named in a control or relayout table");
