@@ -2177,8 +2177,13 @@ function erFit() {
   // means nothing to draw yet - the next fit has a real panel to read.
   const vw = $('v-er').clientWidth, vh = $('v-er').clientHeight;
   if (!vw || !vh) return;
+  // A folded box keeps its position - that is what lets a fold compose with an arrangement - so this
+  // walk has to skip what is not drawn or the frame is sized for boxes nobody can see: fold a branch
+  // at the far edge and Fit would zoom out to include it. `erMaxX` is already measured over what was
+  // drawn; this is the boxes themselves, in case the last render did not reach them.
+  const goneNow = erHiddenSet();
   let maxX = erMaxX, maxY = erMaxY;
-  erIds.forEach((id) => { const p = erPos[id]; if (!p) return; maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
+  erIds.forEach((id) => { const p = erPos[id]; if (!p || goneNow.has(id)) return; maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
   const pad = 40;
   erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
@@ -2501,8 +2506,10 @@ $('erPdf').onclick = () => window.print();
 let _erStyle = null;
 window.addEventListener('beforeprint', () => {
   if (curView !== 'er') return;
+  // What is folded away is not on the page, so it may not size the page either - same reason as erFit.
+  const goneNow = erHiddenSet();
   let maxX = erMaxX, maxY = erMaxY;
-  erIds.forEach((id) => { const p = erPos[id]; if (p) { maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); } });
+  erIds.forEach((id) => { const p = erPos[id]; if (p && !goneNow.has(id)) { maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); } });
   const W = Math.ceil(maxX + 40), H = Math.ceil(maxY + 40);
   _erStyle = document.createElement('style');
   _erStyle.textContent = `@page{size:${W}px ${H}px;margin:0}

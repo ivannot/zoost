@@ -68,7 +68,7 @@ erCovers	c8d7f68ba585	c8d7f68ba585	identical
 erDrawn	f0c143992e52	f0c143992e52	identical
 erEdgePoints	38225449fcf9	38225449fcf9	identical
 erFieldsFor	39b26c15f9ce	7f029df0a700	divergent
-erFit	aaf525971528	aaf525971528	identical
+erFit	a8dbbf551f8b	a8dbbf551f8b	identical
 erFitToArcs	2f5e6e917735	2f5e6e917735	identical
 erHiddenSet	531b1dc22ec2	531b1dc22ec2	identical
 erHint	1444fecc2b7e	1444fecc2b7e	identical

@@ -34,10 +34,14 @@ import vm from 'node:vm';
  * assignment inside the slice is visible on it afterwards - that is how the assertions read back
  * erScale without the function returning anything, which it does not.
  */
-function fitter(app, panel, geom = { maxX: 553, maxY: 494 }) {
+function fitter(app, panel, geom = { maxX: 553, maxY: 494 }, hidden = []) {
   let applied = 0;
   const state = {
-    erMaxX: geom.maxX, erMaxY: geom.maxY, erIds: [], erPos: {},
+    erMaxX: geom.maxX, erMaxY: geom.maxY, erIds: geom.ids || [], erPos: geom.pos || {},
+    // A folded box keeps its position, so the fit has to be told what is not drawn. Stubbed rather
+    // than lifted: erHiddenSet reaches for the cuts, the edges and every node, and what this file is
+    // about is the arithmetic that turns a measurement into a scale.
+    erHiddenSet: () => new Set(hidden),
     // Values nothing would ever compute, so "untouched" is distinguishable from "recomputed".
     erScale: -1, erTx: -1, erTy: -1, erUserMoved: true,
     $: () => ({ clientWidth: panel.w, clientHeight: panel.h }),
@@ -46,6 +50,22 @@ function fitter(app, panel, geom = { maxX: 553, maxY: 494 }) {
   const ctx = vm.createContext(state);
   vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erFit'), ctx);
   return { fit: () => vm.runInContext('erFit()', ctx), state, applied: () => applied };
+}
+
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a box folded away does not size the frame`, () => {
+    // Folding is a filter on the drawing and not on the layout - a folded box keeps its position, so
+    // that a fold composes with an arrangement - and this walk reads positions. Left alone it framed
+    // the window for boxes nobody can see: fold a branch at the far edge and Fit zooms out to it.
+    const geom = { maxX: 553, maxY: 494, ids: ['near', 'far'],
+                   pos: { near: { x: 0, y: 0, w: 553, h: 494 }, far: { x: 2000, y: 0, w: 190, h: 80 } } };
+    const wide = fitter(app, REAL, geom); wide.fit();
+    const folded = fitter(app, REAL, geom, ['far']); folded.fit();
+    assert.ok(wide.state.erScale < 0.6, `the far box is meant to drag the fit down, it gave ${wide.state.erScale}`);
+    assert.ok(Math.abs(folded.state.erScale - REAL_SCALE) < 0.001,
+      `a folded box still sized the frame: ${folded.state.erScale} rather than ${REAL_SCALE}`);
+  });
 }
 
 // The measured numbers from the render: the sample schema draws 553x494 of boxes into a 1280x583

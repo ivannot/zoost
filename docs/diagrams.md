@@ -438,6 +438,14 @@ On paper the two marks are treated differently: a `-` is a control nobody can pr
 only thing on the page saying boxes are missing from it - which the reader of a PDF needs more than the
 reader at the window does. So the first is hidden in print and the second is not.
 
+**A fold hides boxes and the frame was still sized for them.** `erFit` and the print handler both
+walk `erIds` for the widest and tallest box - a folded box keeps its position, which is what lets a
+fold compose with an arrangement, so both were framing the window and sizing the PDF page for boxes
+nobody can see. Fold a branch at the far edge and `Fit` zoomed out to include it; `Save PDF` printed
+the empty space where it used to be. It was there before the marks and nothing had found it, because
+folding was three clicks deep and the two are only visible together. Both skip what `erHiddenSet`
+hides now, and the case is a unit one - a box 2000px to the right, fitted with and without it.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 
