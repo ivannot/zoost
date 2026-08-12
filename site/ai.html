@@ -117,10 +117,10 @@
     Zoost.</p>
   <p>This works better than people expect, and I would rather say so than sell around it. The sample
     org that ships with Zoost - the 293 files itemised on <a href="/try">Try it</a>, Deluge sources
-    included - is about 200 KB of text, which sits comfortably inside what any current model will
-    hold at once. If the question is "explain
-    what this function does", or "summarise these workflows for the handover note", this route gives
-    you a larger model, a proper chat window and a conversation you can keep.</p>
+    included - is about 200 KB of text. Any current model holds that at once.</p>
+  <p>So if the question is "explain what this function does" or "summarise these workflows for the
+    handover note", this route gives you a larger model, a proper chat window and a conversation you
+    can keep.</p>
   <div class="note">
     <p>It has one structural limit, and it decides everything below. The export is a snapshot with a
       scope chosen in advance. Whatever you left out is invisible to the model in a way it has no way
@@ -148,21 +148,20 @@
     see rather than something it claims. Four things follow, and together they are the whole of the
     difference.</p>
   <p><b>Scale.</b> The org never has to fit anywhere. What travels with each message is the index of
-    names, capped at 72,000 characters by default and adjustable; the panel prints the real size for
-    the workspace you have open, in characters and approximate tokens, under the chat title, so the
-    knob and its consequence are in the same sentence. When an org is too large to name in full, what
-    gets dropped is decided rather than arbitrary - the function list, or the data objects in Zoho
-    Analytics, are never dropped, because they are the vocabulary everything else refers to - and
-    whatever is left out is stated as left out, so it does not conclude that something does not
-    exist because it was not shown it.</p>
+    names, capped at 72,000 characters by default and adjustable. Under the chat title the panel
+    prints the real size of the workspace you have open, in characters and approximate tokens.</p>
+  <p>When an org is too large to name in full, what gets dropped is decided rather than arbitrary.
+    The function list is never dropped - in Zoho Analytics, the data objects - because it is the
+    vocabulary everything else refers to. Whatever is left out is stated as left out, so the model
+    cannot conclude that something does not exist just because it was not shown it.</p>
   <p><b>It knows what you are looking at.</b> Select a function, a workflow, a query table, and ask
     "what does this do?" with no preamble. The selection is part of the prompt.</p>
   <p><b>Freshness.</b> There is no snapshot to redo after the next pull.</p>
-  <p><b>It is where the question is asked.</b> This is the one that matters most in practice and is
-    easiest to overlook. Zoost exists so that questions about an org stop having to travel to whoever
-    administers it. The person with the question is often not the person who would assemble an
-    export, open a chat and phrase the context - they will click a tab, or they will ask a colleague.
-    A file on disk does not solve that; a tab does.</p>
+  <p><b>It is where the question is asked.</b> This matters most in practice and is easiest to
+    overlook. Zoost exists so that questions about an org stop having to travel to whoever
+    administers it. The person with the question will rarely assemble an export, open a chat and
+    phrase the context: they will click a tab, or ask a colleague. A file on disk does not solve
+    that. A tab does.</p>
 
   <figure class="shot">
     <img src="/img/crm-ai.webp?v=72164a0fd8" width="1760" height="1100" loading="lazy" decoding="async"
@@ -191,9 +190,9 @@
     </tbody>
   </table>
   <p>The claim worth making is smaller than "it has AI in it", and it is the one that survives being
-    checked: <b>the built-in assistant buys retrieval and proximity, not knowledge.</b> No fact about your org is
-    reachable by one and not the other: the mirror is the same mirror. If that reads as a modest pitch, it is the accurate one, and I would rather you found it
-    here than found it out later.</p>
+    checked: <b>the built-in assistant buys retrieval and proximity, not knowledge.</b> No fact about
+    your org is reachable by one route and not the other - the mirror is the same mirror. A modest
+    pitch, and the accurate one. Better found here than found out later.</p>
 
   <h2 id="why-your-own-key">Why your own key</h2>
   <p>Because there is no Zoost server. The request goes from your browser straight to Anthropic or
@@ -201,22 +200,21 @@
     nothing of mine for it to pass through: no backend, no account, no log.</p>
   <div class="box">
     <h3>What an API key is, since the rest of this page assumes it</h3>
-    <p>Anthropic and OpenAI sell two different things. One is the chat you already talk to -
-      Claude, ChatGPT, Gemini - in a browser or in its own app on your computer or phone, paid by the
-      month and used by typing into it. The
-      other is the same models reached by a <em>program</em> rather than by a person: you ask their
-      developer console for a key, which is a long string of characters, you paste it into the
-      program, and from then on that program can send questions and they are billed to you - normally
-      by the amount of text sent and received, not by the month.</p>
+    <p>Anthropic and OpenAI sell two different things. One is the chat you already talk to - Claude,
+      ChatGPT, Gemini - in a browser or in its own app, paid by the month and used by typing into it.
+      The other is the same models reached by a <em>program</em> rather than by a person.</p>
+    <p>For that second one you ask their developer console for a key: a long string of characters
+      you paste into the program. From then on the program can send questions, billed to you by the
+      amount of text sent and received rather than by the month.</p>
     <p>A key is a credential, not a setting. Anyone holding it can spend on your account, which is why
       it is worth a passphrase and a spending limit, and why nobody should ever have yours - including
       me. <b>A Claude.ai or ChatGPT Plus subscription is neither one of these nor does it include
       one</b>; that catches most people out, and it is the reason the steps below say it twice.</p>
   </div>
-  <p>The alternative is the common one - the extension talks to a service the author runs, which
-    holds a key and relays the questions. That is more convenient, it is a subscription, and it means
-    the structure of your org crossing a machine you do not control. Given the whole posture of this
-    product, it was not a trade I could make and still say the rest of it with a straight face.</p>
+  <p>The alternative is the common one: the extension talks to a service the author runs, which holds
+    a key and relays the questions. More convenient, and a subscription. It also means the structure
+    of your org crossing a machine you do not control. Given the rest of this product, that was not a
+    trade I could make and still say the rest of it with a straight face.</p>
   <div class="note">
     <p>One consequence you can see in the source: the call to Anthropic carries the header
       <code>anthropic-dangerous-direct-browser-access: true</code>. The name is Anthropic's own and it
@@ -264,28 +262,28 @@
     index, which travels with every message and whose size the panel shows you, plus however many
     tool steps an answer takes. Tool answers are capped and say how to narrow the question rather
     than returning nine hundred lines. Set the spending limit; that part is not an estimate.</p>
-  <p>There is a third term and it is the one people miss, because the control that governs it looks
-    like housekeeping. <b>The whole conversation is re-sent with every message</b> - your questions,
-    the answers, and every function, view or SQL file the agent opened along the way. Nothing trims
-    it. So the tenth question in a thread costs more than the first, and it costs more because of
-    material that has nothing to do with it.</p>
-  <p><b class="ui">Clear</b> is what governs that. It is not only a way to tidy the box: it is the control you have over how much
-    history you are paying to carry, and clearing it when you change subject
-    buys two things at once - a cheaper call and a sharper answer, since the model is no longer
-    reading around a previous investigation to reach your question. Changing workspace clears it too,
-    for a different reason: the old thread was about another org.</p>
+  <p>There is a third term, and people miss it because the control that governs it looks like
+    housekeeping. <b>The whole conversation is re-sent with every message</b> - your questions, the
+    answers, and every function, view or SQL file the agent opened along the way. Nothing trims it.
+    The tenth question in a thread costs more than the first, over material that has nothing to do
+    with it.</p>
+  <p><b class="ui">Clear</b> is what governs that. It is not housekeeping: it is your control over
+    how much history you are paying to carry. Clear it when you change subject and you buy two things
+    at once - a cheaper call, and a sharper answer, because the model is no longer reading around a
+    previous investigation to reach your question. Changing workspace clears it too, for a different
+    reason: the old thread was about another org.</p>
 
   <h3>Protecting the key</h3>
   <p>By default the key is stored in clear text in your browser profile. Chrome gives an extension no
     credential store and no encryption at rest, so encrypting it with a key kept beside the
     ciphertext would be theatre - and worse than storing it plainly, because it would let me claim a
     protection I do not provide.</p>
-  <p>What is offered instead is a passphrase only you hold: the key is encrypted with it, you type it
-    once per browser session, and <b>there is no recovery</b> - no hint, no reset, no escrow. If you
-    lose it, each provider's <b>Forget</b> button clears that key so you can paste a new one, and
-    <b>Remove the protection</b> takes the whole thing off in one control. It is off by default and
-    stated rather than defaulted: on a personal machine a passphrase each session buys little, on a
-    shared one it buys a lot, and nobody but you can price that.</p>
+  <p>What is offered instead is a passphrase only you hold. The key is encrypted with it and you type
+    it once per browser session. <b>There is no recovery</b> - no hint, no reset, no escrow. Lose it,
+    and each provider's <b>Forget</b> button clears that key so you can paste a new one;
+    <b>Remove the protection</b> takes the whole thing off in one control.</p>
+  <p>It is off by default, and stated rather than defaulted. On a personal machine a passphrase each
+    session buys little; on a shared one it buys a lot. Nobody but you can price that.</p>
 
   <h2 id="what-it-will-not-do">What it will not do</h2>
   <ul>

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/ai.html sha256:dda52a7713b814f4 -->
+<!-- translated-from: site/ai.html sha256:aede09b0b3ec085a -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI e Zoost - cosa aggiunge, e quando non serve</title>
@@ -54,9 +54,9 @@
 <div class="wrap">
 
   <h1>AI e Zoost</h1>
-  <p class="sub">Il workbench è completo anche senza un modello AI, e la maggior parte delle volte si
+  <p class="sub">Il workbench è completo anche senza un modello AI: la maggior parte delle volte si
     usa così. Questa pagina parla degli altri casi: cosa può fare un assistente con quello che Zoost ha
-    già scritto su disco, cosa aggiunge quello integrato che un file non può dare, e a che punto
+    già scritto su disco, cosa aggiunge quello integrato che un file non può dare e a che punto
     non serve più una API key.</p>
   <p class="note" data-it-only>I nomi dei controlli restano in inglese, perché l'estensione è in
     inglese: <b>Export</b>, <b>Settings</b>, <b>Forget</b> sono i pulsanti che troverai davvero.</p>
@@ -77,13 +77,13 @@
 
   <h2 id="senza-niente-di-tutto-questo">Funziona senza niente di tutto questo</h2>
   <p>Zoost rispecchia in file di testo sulla tua macchina quello che hai costruito dentro Zoho CRM o
-    Zoho Analytics, e poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi
+    Zoho Analytics, poi ti dà le cose che la piattaforma non dà: l'albero di tutto insieme, diagrammi
     che puoi mettere a fuoco e stampare, la ricerca testuale su ogni file, un audit che ti dice cosa
-    non è più referenziato da niente, e due export.</p>
+    non è più referenziato da niente e due export.</p>
   <p>Niente di tutto questo passa da un modello, da una chiave o da un account. Se non apri mai
     l'assistente non ti manca nulla: è stato aggiunto a un workbench che già funzionava. Lo dico
     all'inizio e non alla fine perché uno strumento che ha senso solo dopo che hai comprato una chiave
-    API è un altro prodotto, e non è quello che volevo costruire.</p>
+    API è un altro prodotto. Non è quello che volevo costruire.</p>
 
   <h2 id="due-export-due-lettori">Due export, due lettori</h2>
   <p>I due export nascono dallo stesso specchio e contengono gli stessi fatti. Quello che cambia è chi
@@ -91,8 +91,7 @@
   <div class="box">
     <h3>HTML - per le persone</h3>
     <p>Un unico file autonomo, con indice, sezioni e tabelle. Lo passi a un collega, a un auditor, a un
-      cliente, al consulente che prende in mano il progetto. Si apre in qualsiasi browser, si stampa, e
-      chi lo legge non deve installare niente e non deve avere accesso alla tua org.</p>
+      cliente, al consulente che prende in mano il progetto. Si apre in qualsiasi browser, si stampa; chi lo legge non deve installare niente e non deve avere accesso alla tua org.</p>
   </div>
   <div class="box">
     <h3>Markdown - per un modello</h3>
@@ -102,7 +101,7 @@
   <p>Prima di scrivere l'uno o l'altro, una finestra ti chiede cosa può finirci dentro - funzioni,
     schema dei moduli, dettaglio dei layout, relazioni, workflow, schedulazioni, connessioni, health -
     con il codice sorgente Deluge come voce a parte, segnalata, perché è la parte sensibile. Ci sono
-    due preset, <b>Everything</b> e <b>Share-safe</b>, e la scelta viene ricordata. Una sezione i cui
+    due preset, <b>Everything</b> e <b>Share-safe</b>. La scelta viene ricordata. Una sezione i cui
     dati sono più vecchi degli altri arriva già deselezionata, con la data e il motivo.</p>
   <p>Un export è un file che esce dalla macchina. La decisione su cosa contiene si prende quindi una
     volta sola, con calma, in un posto dove la vedi tutta.</p>
@@ -110,19 +109,19 @@
   <figure class="shot">
     <img src="/img/crm-export.webp?v=228e3b78e0" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra dell'export: una casella per sezione, con il codice sorgente Deluge segnalato come la parte sensibile.">
-    <figcaption><b>Cosa può uscire dalla macchina, deciso una volta.</b> Una riga per sezione, il sorgente segnalato come la parte sensibile, due preset, e la scelta viene ricordata.</figcaption>
+    <figcaption><b>Cosa può uscire dalla macchina, deciso una volta.</b> Una riga per sezione, il sorgente segnalato come la parte sensibile, due preset, la scelta ricordata.</figcaption>
   </figure>
 
   <h2 id="la-strada-che-non-costa-niente">La strada che non costa niente</h2>
   <p>Porti il file Markdown all'assistente che già usi - Claude, ChatGPT, Gemini, Copilot - e fai lì la
     tua domanda. Nel browser o nella sua app da computer o da telefono: è un
     file in ogni caso. Nessuna chiave, nessuna configurazione, niente da accendere dentro Zoost.</p>
-  <p>Funziona meglio di quanto la gente si aspetti, e preferisco dirlo piuttosto che aggirarlo. L'org
+  <p>Funziona meglio di quanto la gente si aspetti. Preferisco dirlo piuttosto che aggirarlo. L'org
     di esempio che Zoost porta con sé - i 293 file elencati uno per uno su <a href="/it/try">Prova</a>,
-    sorgenti Deluge compresi - sta in circa 200 KB di testo, che rientrano comodamente in quello che
-    un modello di oggi tiene tutto insieme. Se la
-    domanda è "spiegami cosa fa questa funzione" oppure "riassumimi questi workflow per la nota di
-    passaggio", questa strada ti dà un modello più grande, una vera finestra di chat e una
+    sorgenti Deluge compresi - sta in circa 200 KB di testo: un modello di oggi li tiene tutti
+    insieme senza fatica.</p>
+  <p>Quindi se la domanda è "spiegami cosa fa questa funzione" oppure "riassumimi questi workflow per
+    la nota di passaggio", questa strada ti dà un modello più grande, una vera finestra di chat, una
     conversazione che puoi tenere.</p>
   <div class="note">
     <p>C'è un limite strutturale, ed è quello che decide tutto il resto della pagina. L'export è una
@@ -148,18 +147,18 @@
       <code>get_relations</code> <code>who_uses</code> <code>orphans</code></p>
   </div>
   <p>Ogni chiamata che fa viene scritta nella chat mentre succede, così quello che ha letto è una cosa
-    che vedi invece di una cosa che dichiara. Ne derivano quattro conseguenze, e insieme sono tutta la
+    che vedi invece di una cosa che dichiara. Ne derivano quattro conseguenze. Insieme sono tutta la
     differenza.</p>
   <p><b>La scala.</b> L'org non deve entrare da nessuna parte. Quello che viaggia con ogni messaggio è
-    l'indice dei nomi, limitato a 72.000 caratteri per impostazione predefinita e regolabile; il
-    pannello scrive sotto il titolo della chat la dimensione reale per il workspace che hai aperto, in
-    caratteri e token approssimativi, così la manopola e la sua conseguenza stanno nella stessa frase.
-    Quando un'org è troppo grande per essere nominata per intero, cosa viene lasciato fuori è deciso e
-    non casuale - l'elenco delle funzioni, o gli oggetti dati in Zoho Analytics, non vengono mai
-    lasciati fuori, perché sono il vocabolario a cui tutto il resto si riferisce - e quello che manca
-    viene dichiarato come mancante, così l'assistente non conclude che una cosa non esiste solo perché
-    non gliel'hanno fatta vedere.</p>
-  <p><b>Sa cosa stai guardando.</b> Selezioni una funzione, un workflow, una query table, e chiedi
+    l'indice dei nomi, limitato a 72.000 caratteri per impostazione predefinita ma regolabile. Sotto
+    il titolo della chat il pannello scrive la dimensione reale del workspace che hai aperto, in
+    caratteri e token approssimativi.</p>
+  <p>Quando un'org è troppo grande per essere nominata per intero, cosa resta fuori è deciso, non
+    casuale. L'elenco delle funzioni non viene mai lasciato fuori - in Zoho Analytics, gli oggetti
+    dati - perché è il vocabolario a cui tutto il resto si riferisce. E quello che manca viene
+    dichiarato come mancante: così l'assistente non conclude che una cosa non esiste solo perché non
+    gliel'hanno fatta vedere.</p>
+  <p><b>Sa cosa stai guardando.</b> Selezioni una funzione, un workflow o una query table e chiedi
     "questo cosa fa?" senza premesse. La selezione fa parte della domanda.</p>
   <p><b>È sempre aggiornato.</b> Non c'è nessuna fotografia da rifare dopo il prossimo pull.</p>
   <p><b>Sta dove nasce la domanda.</b> Nella pratica è la conseguenza che pesa di più ed è la più
@@ -177,7 +176,7 @@
   <figure class="shot">
     <img src="/img/analytics-ai.webp?v=e5c99b825b" width="1760" height="1100" loading="lazy" decoding="async"
          alt="L'assistente nel pannello Zoost Analytics, con gli strumenti che chiama elencati mentre li usa.">
-    <figcaption><b>Lo stesso assistente, un prodotto più in là.</b> In Zoho Analytics legge strutture, segue una chiave esterna e apre l'SQL di una query - nove strumenti, e ogni chiamata viene scritta mentre succede.</figcaption>
+    <figcaption><b>Lo stesso assistente, un prodotto più in là.</b> In Zoho Analytics legge strutture, segue una chiave esterna e apre l'SQL di una query - nove strumenti; ogni chiamata viene scritta mentre succede.</figcaption>
   </figure>
 
   <h2 id="quando-serve-una-api-key">Quando serve una API key</h2>
@@ -197,30 +196,26 @@
   <p>L'affermazione che vale la pena fare è più piccola di "c'è l'AI dentro", ed è quella che regge se
     qualcuno va a controllare: <b>l'assistente integrato compra recupero e vicinanza, non
     conoscenza.</b> Nessun fatto sulla tua org è raggiungibile da uno dei due e non dall'altro:
-    lo specchio è lo stesso specchio. Se suona come una promessa modesta, è quella esatta, e preferisco che tu
+    lo specchio è lo stesso specchio. Se suona come una promessa modesta, è quella esatta. Preferisco che tu
     la trovi qui piuttosto che scoprirla dopo.</p>
 
   <h2 id="perche-una-chiave-tua">Perché una chiave tua</h2>
   <p>Perché non esiste un server Zoost. La richiesta parte dal tuo browser e arriva direttamente ad
-    Anthropic o a OpenAI, con la tua chiave e addebitata sul tuo account. Da me non passa niente, e non
-    c'è niente di mio da cui possa passare: nessun backend, nessun account, nessun log.</p>
+    Anthropic o a OpenAI, con la tua chiave e addebitata sul tuo account. Da me non passa niente: non c'è niente di mio da cui possa passare: nessun backend, nessun account, nessun log.</p>
   <div class="box">
     <h3>Cos'è una API key, visto che il resto della pagina la dà per scontata</h3>
     <p>Anthropic e OpenAI vendono due cose diverse. Una è la chat con cui parli già - Claude,
-      ChatGPT, Gemini - nel browser o nella sua app sul computer o sul telefono, che paghi al mese e
-      usi scrivendoci dentro. L'altra sono gli stessi modelli
-      raggiunti da un <em>programma</em> invece che da una persona: chiedi una chiave alla loro console
-      per sviluppatori, che è una lunga stringa di caratteri, la incolli nel programma, e da quel
-      momento quel programma può mandare domande e te le addebitano - di norma in base alla quantità
-      di testo che va e che torna, non al mese.</p>
+      ChatGPT, Gemini - nel browser o nella sua app, che paghi al mese e usi scrivendoci dentro.
+      L'altra sono gli stessi modelli raggiunti da un <em>programma</em> invece che da una persona.</p>
+    <p>Per la seconda chiedi una chiave alla loro console per sviluppatori: una lunga stringa di
+      caratteri che incolli nel programma. Da quel momento il programma può mandare domande. Te le addebitano di norma in base alla quantità di testo che va e che torna, non al mese.</p>
     <p>Una chiave è una credenziale, non un'impostazione. Chi ce l'ha può spendere sul tuo account: per
-      questo vale una passphrase e un limite di spesa, e per questo la tua non deve averla nessuno,
-      me compreso. <b>Un abbonamento a Claude.ai o a ChatGPT Plus non è né l'una né l'altra cosa, e non
-      ne comprende una</b>; è l'inciampo più comune, ed è il motivo per cui i passaggi qui sotto lo
+      questo vale una passphrase e un limite di spesa; per questo la tua non deve averla nessuno,
+      me compreso. <b>Un abbonamento a Claude.ai o a ChatGPT Plus non è né l'una né l'altra cosa, né ne comprende una</b>; è l'inciampo più comune, ed è il motivo per cui i passaggi qui sotto lo
       ripetono due volte.</p>
   </div>
   <p>L'alternativa è quella comune: l'estensione parla con un servizio gestito dall'autore, che tiene
-    una chiave e inoltra le domande. È più comodo, diventa un abbonamento, e vuol dire che la struttura
+    una chiave e inoltra le domande. È più comodo, diventa un abbonamento. Vuol dire anche che la struttura
     della tua org attraversa una macchina che non controlli. Vista la postura del resto del prodotto,
     non era uno scambio che potevo fare continuando a raccontare il resto con la faccia seria.</p>
   <div class="note">
@@ -234,7 +229,7 @@
   <h2 id="come-ottenere-una-chiave">Come ottenere una chiave</h2>
   <p>Due fornitori, perché quei due sono testati e sono gli unici due che i manifest possono
     raggiungere. Se ne potrebbero aggiungere altri; finché uno non è stato provato davvero contro un
-    workspace vero non verrà aggiunto, e una funzione non testata è peggio di una funzione che manca.</p>
+    workspace vero non verrà aggiunto: una funzione non testata è peggio di una funzione che manca.</p>
 
   <h3>Anthropic (Claude) - il motore agentico</h3>
   <ol>
@@ -248,19 +243,18 @@
       lo scrive Anthropic.</li>
   </ol>
   <p>Con questo motore l'assistente lavora come agente: apre quello che gli serve, segue i chiamanti,
-    cerca nel codice, e torna con una risposta più la strada che ha fatto. <b>Max tool steps</b> limita
-    quante volte può usare uno strumento prima di dover rispondere: 20 di default, e la maggior parte
+    cerca nel codice e torna con una risposta più la strada che ha fatto. <b>Max tool steps</b> limita
+    quante volte può usare uno strumento prima di dover rispondere: 20 di default; la maggior parte
     delle risposte ne usa due o tre.</p>
 
   <h3>OpenAI (ChatGPT) - passata singola</h3>
   <ol>
     <li>Apri <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
       e scegli <b>Create new secret key</b>. Copiala subito: viene mostrata una volta sola.</li>
-    <li><b>ChatGPT Plus non è accesso alle API.</b> Aggiungi credito prepagato sotto Billing, e già che
-      ci sei imposta un limite mensile.</li>
+    <li><b>ChatGPT Plus non è accesso alle API.</b> Aggiungi credito prepagato sotto Billing e, già che ci sei, imposta un limite mensile.</li>
     <li>Incolla la chiave e l'id del modello in <b>Settings</b>.</li>
   </ol>
-  <p>Questo motore riceve l'indice e quello che hai aperto, e risponde in una passata sola. Non può
+  <p>Questo motore riceve l'indice e quello che hai aperto e risponde in una passata sola. Non può
     andarsi a leggere una seconda funzione da solo, quindi ti chiede quello che gli manca invece di
     inventarlo. È il comportamento previsto ed è anche una differenza reale di capacità: il motore in
     uso è scritto come badge nell'intestazione della chat, così sai sempre con quale dei due stai
@@ -273,28 +267,27 @@
     la domanda invece di restituire novecento righe. Il limite di spesa impostalo: quella parte non è
     una stima.</p>
   <p>C'è un terzo fattore ed è quello che sfugge, perché il controllo che lo governa sembra pulizia.
-    <b>Tutta la conversazione viene rimandata a ogni messaggio</b> - le tue domande, le risposte, e
-    ogni funzione, vista o file SQL che l'agente ha aperto strada facendo. Niente la sfoltisce. Quindi
-    la decima domanda di un thread costa più della prima, e costa di più per materiale che con quella
+    <b>Tutta la conversazione viene rimandata a ogni messaggio</b> - le tue domande, le risposte e ogni funzione, vista o file SQL che l'agente ha aperto strada facendo. Niente la sfoltisce. Quindi
+    la decima domanda di un thread costa più della prima, per materiale che con quella
     domanda non c'entra niente.</p>
-  <p><b class="ui">Clear</b> è quello che governa questa cosa. Non serve solo a ripulire il riquadro: è il
-    controllo che hai su quanta storia ti stai portando dietro a pagamento, e svuotarlo quando cambi
-    argomento ti compra due cose insieme - una chiamata più economica e una risposta più a fuoco,
-    perché il modello smette di leggere intorno a un'indagine precedente per arrivare alla tua domanda.
-    Anche cambiare workspace lo svuota, per un motivo diverso: quel thread parlava di un'altra org.</p>
+  <p><b class="ui">Clear</b> è quello che governa questa cosa. Non serve solo a ripulire il riquadro:
+    è il controllo che hai su quanta storia ti stai portando dietro a pagamento. Svuotalo quando
+    cambi argomento e ti compra due cose insieme - una chiamata più economica e una risposta più a fuoco, perché il modello smette di leggere intorno a un'indagine precedente per arrivare alla tua
+    domanda. Anche cambiare workspace lo svuota, per un motivo diverso: quel thread parlava di
+    un'altra org.</p>
 
   <h3>Proteggere la chiave</h3>
   <p>Di base la chiave è salvata in chiaro nel profilo del tuo browser. Chrome non dà alle estensioni
     né un portachiavi né cifratura a riposo, quindi cifrarla con una chiave tenuta accanto al testo
     cifrato sarebbe teatro - e peggio che salvarla in chiaro, perché mi lascerebbe rivendicare una
     protezione che non fornisco.</p>
-  <p>Quello che c'è invece è una passphrase che hai solo tu: la chiave viene cifrata con quella, la
-    digiti una volta per sessione del browser, e <b>non esiste recupero</b> - nessun suggerimento,
-    nessun reset, nessun deposito. Se la perdi, il pulsante <b>Forget</b> di ciascun fornitore cancella
-    quella chiave così puoi incollarne una nuova, e <b>Remove the protection</b> toglie tutto con un
-    controllo solo. È disattivata di default e la cosa è detta invece che decisa: su una macchina
-    personale una passphrase a sessione vale poco, su una condivisa vale molto, e nessuno tranne te può
-    valutarlo.</p>
+  <p>Quello che c'è invece è una passphrase che hai solo tu. La chiave viene cifrata con quella e la
+    digiti una volta per sessione del browser. <b>Non esiste recupero</b>: nessun suggerimento,
+    nessun reset, nessun deposito. Se la perdi, il pulsante <b>Forget</b> di ciascun fornitore
+    cancella quella chiave così puoi incollarne una nuova; <b>Remove the protection</b> toglie tutto
+    con un controllo solo.</p>
+  <p>È disattivata di default, detta invece che decisa. Su una macchina personale una
+    passphrase a sessione vale poco; su una condivisa vale molto. Nessuno tranne te può valutarlo.</p>
 
   <h2 id="cosa-non-fa">Cosa non fa</h2>
   <ul>
@@ -308,7 +301,7 @@
       quella nuova è peggio che ricominciare.</li>
     <li><b>Quello che scrive è una bozza.</b> Zoost non esegue, non valida e non distribuisce niente,
       SQL che l'assistente di Zoho Analytics ti scrive volentieri compreso.</li>
-    <li><b>Niente qui dentro lo richiede.</b> Spegnilo, non configurarlo mai, e il workbench resta lo
+    <li><b>Niente qui dentro lo richiede.</b> Spegnilo, non configurarlo mai: il workbench resta lo
       stesso workbench. È la forma voluta, non un ripiego.</li>
   </ul>
 
