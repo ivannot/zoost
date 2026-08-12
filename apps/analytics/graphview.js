@@ -1389,15 +1389,57 @@ function erLayout() {
 // So the side is chosen by the dominant direction. The caller needs to know which it was, because
 // the bezier's control points have to be pulled along the same axis or the curve leaves the box
 // sideways again.
-function erEdgePoints(A, B) {
+// Which side of A the arc to B leaves from. Split out because the slot pass below has to make the
+// same decision before anything is drawn.
+function erSideOf(A, B) {
+  const acx = A.x + A.w / 2, acy = A.y + A.h / 2, bcx = B.x + B.w / 2, bcy = B.y + B.h / 2;
+  if (Math.abs(bcy - acy) > Math.abs(bcx - acx)) return bcy >= acy ? 'b' : 't';
+  return bcx >= acx ? 'r' : 'l';
+}
+/** Where each arc meets each box, as a share of the side it arrives on.
+ *
+ * Every arc used to meet the *middle* of its side, so seven arriving from above arrived at one point:
+ * you could not tell them apart by looking, which is the complaint this window opened with, and you
+ * could not click the one you meant either. Each side now shares its width between the arcs that use
+ * it. They are ordered by where the other end lies, so the order along the edge matches the order on
+ * screen and the fan does not cross itself. One arc on a side still gets the middle, so nothing that
+ * was already unambiguous moves.
+ */
+function erComputeSlots(pairs) {
+  const groups = new Map();
+  const push = (id, side, key, along) => {
+    const k = id + '\u0001' + side;
+    const g = groups.get(k);
+    if (g) g.push({ key, along }); else groups.set(k, [{ key, along }]);
+  };
+  pairs.forEach(([a, b]) => {
+    const A = erPos[a], B = erPos[b];
+    if (!A || !B) return;
+    const sa = erSideOf(A, B), sb = erSideOf(B, A), key = ekey(a, b);
+    push(a, sa, key, (sa === 't' || sa === 'b') ? B.x + B.w / 2 : B.y + B.h / 2);
+    push(b, sb, key, (sb === 't' || sb === 'b') ? A.x + A.w / 2 : A.y + A.h / 2);
+  });
+  const slots = new Map();
+  groups.forEach((list, k) => {
+    const id = k.slice(0, k.indexOf('\u0001'));
+    // by where the other end lies, then by key so the order cannot depend on iteration accidents
+    list.sort((p, q) => p.along - q.along || (p.key < q.key ? -1 : 1));
+    list.forEach((e, i) => slots.set(e.key + '\u0001' + id, { i, n: list.length }));
+  });
+  return slots;
+}
+function erEdgePoints(A, B, sa, sb) {
+  // A share of the side rather than its middle. (i+1)/(n+1) keeps the first and last off the corners
+  // and gives a lone arc exactly the middle, which is where it used to be.
+  const fa = sa ? (sa.i + 1) / (sa.n + 1) : 0.5, fb = sb ? (sb.i + 1) / (sb.n + 1) : 0.5;
   const acx = A.x + A.w / 2, acy = A.y + A.h / 2;
   const bcx = B.x + B.w / 2, bcy = B.y + B.h / 2;
   if (Math.abs(bcy - acy) > Math.abs(bcx - acx)) {
     const down = bcy >= acy;
-    return [acx, down ? A.y + A.h : A.y, bcx, down ? B.y : B.y + B.h, 'v'];
+    return [A.x + A.w * fa, down ? A.y + A.h : A.y, B.x + B.w * fb, down ? B.y : B.y + B.h, 'v'];
   }
   const right = bcx >= acx;
-  return [right ? A.x + A.w : A.x, acy, right ? B.x : B.x + B.w, bcy, 'h'];
+  return [right ? A.x + A.w : A.x, A.y + A.h * fa, right ? B.x : B.x + B.w, B.y + B.h * fb, 'h'];
 }
 function erApply() {
   $('ervp').style.transform = `translate(${erTx}px,${erTy}px) scale(${erScale})`;
@@ -1464,9 +1506,13 @@ function erRender() {
   // --- pass 1: draw the links, collect the label descriptors ---
   const labels = [];
   const REL = erEmph === 'relations';
+  const erSlotMap = erComputeSlots(edgesA.filter(([a, b]) => shown.has(a) && shown.has(b)));
   edgesA.forEach(([a, b]) => {
     if (!shown.has(a) || !shown.has(b)) return;
-    const A = erPos[a], B = erPos[b]; const [x1, y1, x2, y2, axis] = erEdgePoints(A, B);
+    const A = erPos[a], B = erPos[b];
+    const ek = ekey(a, b);
+    const [x1, y1, x2, y2, axis] = erEdgePoints(A, B,
+      erSlotMap.get(ek + '\u0001' + a), erSlotMap.get(ek + '\u0001' + b));
     const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
     const curve = axis === 'v' ? `C${x1},${my} ${x2},${my} ${x2},${y2}` : `C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
     const hot = (a === sel || b === sel);

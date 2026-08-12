@@ -527,3 +527,44 @@ for (const app of ['crm', 'analytics']) {
       'the box being dragged is not above the ones already raised');
   });
 }
+
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: arcs share a side instead of stacking on its middle`, () => {
+    // Seven arcs arriving from above arrived at one point, so you could not tell them apart by looking
+    // - the complaint this window opened with - let alone click the one you meant. Each side shares its
+    // width now. Two invariants: a lone arc is where it always was, and n arcs are n distinct points,
+    // ordered by where their far ends lie so the fan does not cross itself.
+    const SEP = '\u0001';
+    const ctx = vm.createContext({
+      erPos: {
+        hub: { x: 500, y: 500, w: 190, h: 80 },
+        l: { x: 100, y: 100, w: 190, h: 80 },
+        m: { x: 500, y: 100, w: 190, h: 80 },
+        r: { x: 900, y: 100, w: 190, h: 80 },
+      },
+      ekey: (a, b) => a + SEP + b,
+    });
+    vm.runInContext(['erSideOf', 'erComputeSlots', 'erEdgePoints']
+      .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+    const at = (pairs, a, b) => {
+      ctx.pairs = pairs;
+      const slots = vm.runInContext('erComputeSlots(pairs)', ctx);
+      ctx.A = ctx.erPos[a]; ctx.B = ctx.erPos[b];
+      ctx.sa = slots.get(ctx.ekey(a, b) + SEP + a);
+      ctx.sb = slots.get(ctx.ekey(a, b) + SEP + b);
+      return vm.runInContext('erEdgePoints(A, B, sa, sb)', ctx)[0];
+    };
+    const three = [['hub', 'l'], ['hub', 'm'], ['hub', 'r']];
+    const xs = three.map(([a, b]) => at(three, a, b));
+    const distinct = new Set(xs.map((x) => Math.round(x))).size;
+    assert.equal(distinct, 3, `three arcs leaving one side met ${distinct} point(s): ${xs}`);
+    // ordered by where the far end lies: the one going left leaves further left
+    const byFar = three.map(([, b], i) => [ctx.erPos[b].x, xs[i]]).sort((p, q) => p[0] - q[0]);
+    for (let i = 1; i < byFar.length; i++) {
+      assert.ok(byFar[i][1] > byFar[i - 1][1], `the fan crosses itself: ${JSON.stringify(byFar)}`);
+    }
+    // a lone arc keeps the middle it always had
+    assert.equal(at([['hub', 'm']], 'hub', 'm'), 595, 'a lone arc moved off the middle');
+  });
+}
