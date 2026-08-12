@@ -1582,6 +1582,20 @@ class TheReleaseBodyHasTwoReaders(unittest.TestCase):
         i, j = wf.index('actions/checkout'), wf.index('Build twice')
         self.assertIn('inputs.tag', wf[i:j], 'the tag is not resolved before anything is built')
 
+    def test_the_provenance_names_the_commit_that_was_built(self):
+        """The first dispatched run published a Release saying the archive came from main. The bytes
+        were right - the hash matched a local build of the tagged commit - and the sentence describing
+        where they came from was wrong, which in a chain that exists to establish provenance is the
+        worse half. `github.sha` is the branch head on a dispatched run, not what checkout took.
+        """
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        body = wf[wf.index('Assemble the Release body'):]
+        env = body[:body.index('run: |')]
+        self.assertNotIn('github.sha', env, 'the provenance would name the branch on a dispatched run')
+        self.assertNotIn('github.ref_name', env, 'the ref would be the branch on a dispatched run')
+        self.assertIn('steps.tag.outputs.commit', env)
+        self.assertIn('git rev-parse HEAD', wf, 'nothing records what was actually checked out')
+
     def test_publishing_does_not_depend_on_a_third_party_action(self):
         # The build, the double-build comparison and the attestation all passed; only the publish
         # died, and it died because of a runtime change nobody here made. gh is a Go binary already

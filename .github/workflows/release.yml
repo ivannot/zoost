@@ -64,6 +64,12 @@ jobs:
             *) echo "::error::$TAG is not <app>-v<version>"; exit 1 ;;
           esac
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # The commit that was checked out, never github.sha: on a dispatched run that is the head
+          # of the branch the workflow was launched from, so the first dispatch published a Release
+          # whose provenance named main instead of the tag. The bytes were right - the hash matched a
+          # local build of the tagged commit - and the sentence describing where they came from was
+          # wrong, which in a chain whose whole point is provenance is the worse half.
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           APP="${TAG%%-v*}"
           VERSION="${TAG#*-v}"
           echo "app=$APP"         >> "$GITHUB_OUTPUT"
@@ -130,9 +136,9 @@ jobs:
           APP: ${{ steps.tag.outputs.app }}
           VERSION: ${{ steps.tag.outputs.version }}
           SHA256: ${{ steps.build.outputs.sha256 }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ steps.tag.outputs.commit }}
           REPO: ${{ github.repository }}
-          REF: ${{ github.ref_name }}
+          REF: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
           NOTES="store/$APP/whatsnew/$VERSION.md"
