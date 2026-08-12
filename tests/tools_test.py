@@ -19,6 +19,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import html
 import struct
 import subprocess
@@ -1900,7 +1901,30 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
                              capture_output=True, text=True, cwd=ROOT,
                              env={**os.environ, 'ZOOST_TEST_DIR': '/nonexistent/place/zoost-test'})
         self.assertEqual(out.returncode, 0, f'--auto failed where the folder is absent: {out.stderr}')
-        self.assertEqual(out.stdout.strip(), '', 'it is meant to be silent when there is nothing to do')
+        self.assertEqual(out.stdout.strip(), '', 'it wrote a path it never copied to')
+
+    def test_a_configured_folder_that_is_gone_is_said_even_in_auto(self):
+        # The two silences are not the same silence. No destination at all is a machine that never
+        # asked for a mirror; a destination that has gone missing is a mirror that has quietly stopped
+        # being written, and the extension on the other machine then stays at whatever version it last
+        # received. That was the state here for an afternoon, while the battery printed "not mirrored"
+        # and no reason - the mount lived in another mount namespace and nothing said so.
+        gone = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
+                              capture_output=True, text=True, cwd=ROOT,
+                              env={**os.environ, 'ZOOST_TEST_DIR': '/nonexistent/place/zoost-test'})
+        self.assertEqual(gone.returncode, 0, 'a missing folder failed the battery')
+        self.assertIn('/nonexistent/place is not mounted', gone.stderr,
+                      f'--auto says nothing about a destination that has gone: {gone.stderr!r}')
+        # ...and where nothing was ever configured it stays quiet, which is the other half
+        env = {k: v for k, v in os.environ.items() if k != 'ZOOST_TEST_DIR'}
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(ROOT / 'tools', pathlib.Path(tmp) / 'tools',
+                            ignore=shutil.ignore_patterns('machine.env'))
+            shutil.copytree(ROOT / 'apps', pathlib.Path(tmp) / 'apps')
+            quiet = subprocess.run(['bash', str(pathlib.Path(tmp) / 'tools' / 'totest.sh'), '--auto'],
+                                   capture_output=True, text=True, cwd=tmp, env=env)
+        self.assertEqual((quiet.returncode, quiet.stdout.strip(), quiet.stderr.strip()), (0, '', ''),
+                         'it spoke about a mirror nobody asked for')
 
     def test_asked_directly_it_says_it_did_nothing(self):
         # A copy that reports success over a folder it never wrote to is the failure this repository
@@ -1909,7 +1933,8 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
                              capture_output=True, text=True, cwd=ROOT,
                              env={**os.environ, 'ZOOST_TEST_DIR': '/nonexistent/place/zoost-test'})
         self.assertEqual(out.returncode, 1)
-        self.assertIn('does not exist', out.stdout)
+        self.assertIn('is not mounted', out.stderr)
+        self.assertIn('ZOOST_TEST_DIR', out.stderr)
 
     def tracked(self):
         out = subprocess.run(['git', '-C', str(ROOT), 'ls-files'], capture_output=True, text=True)

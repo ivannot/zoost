@@ -61,9 +61,16 @@ if [ -z "$DEST" ]; then
   exit 1
 fi
 if [ ! -d "$(dirname "$DEST")" ]; then
+  # A destination is configured and it is not there. That is *not* «nothing to do» - it is the one
+  # thing this script exists for, not happening - so it is said even in --auto, in one line and
+  # without failing the battery. The distinction is the whole of it: no destination at all is a
+  # machine that never asked for a mirror and stays quiet; a destination that has gone missing is a
+  # mirror that has quietly stopped being written, and the extension on the other machine is then
+  # tested at whatever version it last received. Which was the state this repository was actually in
+  # for a whole afternoon, while the battery printed «not mirrored» and no reason.
+  echo "$(dirname "$DEST") is not mounted" >&2
   [ -n "$AUTO" ] && exit 0
-  echo "$(dirname "$DEST") does not exist - the synced folder is not mounted on this machine,"
-  echo "  or ZOOST_TEST_DIR in tools/machine.env is stale."
+  echo "  the synced folder is not mounted on this machine, or ZOOST_TEST_DIR in tools/machine.env is stale." >&2
   exit 1
 fi
 mkdir -p "$DEST/apps"
