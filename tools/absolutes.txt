@@ -520,6 +520,7 @@ e2e23a434d105a25  site/it/docs-crm.html: No, con un'unica eccezione che accendi 
 d23df49d9fda8717  site/it/docs-crm.html: Non c'è nessuna soglia e nessun verdetto attaccato: una funzione lunga merita un'occhiata, non è necessariamente un problema, e una corta può benissimo essere quella pericolosa.
 8fb725ca69c8028d  site/it/docs-crm.html: Non c'è per una funzione che non chiama niente e che nessuno chiama: un riquadro solo e nessuna freccia non è un diagramma.
 ffa263002a1fe164  site/it/docs-crm.html: Non compare e sparisce più con la scheda: la finestra sa passare da un disegno all'altro da sola, quindi c'è sempre qualcosa da aprire; a seguire, la scheda è solo quale dei due.
+cab5b905eb687858  site/it/docs-crm.html: Non compare quando il fallimento è il tuo ruolo Zoho che rifiuta un'area, perché nessuna release cambia quello.
 aebd2d67d5085241  site/it/docs-crm.html: Non devi fare niente.
 5b957648b8191690  site/it/docs-crm.html: Non tutti gli utenti Zoho possono leggere tutte queste cose.
 1793d0b84f24db04  site/it/docs-crm.html: Non viene chiesto niente in più a Zoho e non viene conservato niente: è calcolato dai sorgenti che stanno su disco.
