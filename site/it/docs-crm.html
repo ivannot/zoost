@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:845ac8de25699dec -->
+<!-- translated-from: site/docs-crm.html sha256:15c1a574a04ed262 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -391,7 +391,7 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Emphasis: relations</b> spinge i riquadri dei moduli sullo sfondo e porta avanti i
       nomi delle relazioni.</li>
     <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.</li>
-    <li><b class="ui">Fit</b> inquadra tutto il disegno nella finestra, e <b>ridimensionare la finestra lo fa da sé</b> - a meno che tu non abbia spostato o zoomato, nel qual caso la vista che hai scelto resta e <b class="ui">Fit</b> te la restituisce. La tab riporta quanti riquadri il diagramma disegnerebbe, e segue i filtri: vedi una categoria spenta riportare il grafo entro il limite prima di chiederlo. Due numeri, entrambi misurati, con due ruoli diversi. Oltre <b>80</b> il disegno si affolla - fino a lì il layout ha tenuto ogni riquadro libero da ogni altro sui grafi su cui è stato provato, e oltre quella soglia i riquadri iniziano a coprirsi - quindi il conteggio diventa ambra e lo dice, e il diagramma viene disegnato comunque: la scelta è tua, non nostra. Oltre <b>800</b> non viene disegnato, perché è il layout stesso a non essere più sostenibile: 400 riquadri richiedono circa 1,3 secondi, 800 circa 3,6, 1200 circa sette. Quel tetto è un default e non una regola - la pagina delle impostazioni ti permette di alzarlo, e dice cosa stai scambiando: più grafo, non un disegno migliore. Spegni una categoria, o metti un focus, e il conteggio scende insieme. <b>Doppio click sul vuoto per zoomarci sopra</b> - il punto che clicchi finisce al centro, e <b class="ui">Fit</b> è la via di ritorno. <b>Trascina un riquadro per spostarlo.</b> Il layout automatico è un punto di partenza - oltre ottanta riquadri si affolla comunque, e sei tu a sapere quali due devono stare vicini. Gli archi spariscono durante il trascinamento e vengono ridisegnati dove lasci, il rilascio dice quanti riquadri stai coprendo, e <b class="ui">Re-layout</b> butta via la disposizione. Quello che sistemi è quello che <b class="ui">Save PDF</b> stampa. Cambiare un filtro rifà il layout, e i riquadri che hai spostato tengono il loro posto mentre vengono posizionati solo i nuovi - la riga in basso dice quanti per parte. Un nuovo arrivato che finisce sopra uno dei tuoi lo sposta un po', perché la passata che impedisce ai riquadri di coprirsi muove entrambi. <b class="ui">Layout ⚙</b> espone spaziatura, apertura, distanza e dimensione delle etichette come slider dal
+    <li><b class="ui">Fit</b> inquadra tutto il disegno nella finestra, e <b>ridimensionare la finestra lo fa da sé</b> - a meno che tu non abbia spostato o zoomato, nel qual caso la vista che hai scelto resta e <b class="ui">Fit</b> te la restituisce. La tab riporta quanti riquadri il diagramma disegnerebbe, e segue i filtri: vedi una categoria spenta riportare il grafo entro il limite prima di chiederlo. Due numeri, entrambi misurati, con due ruoli diversi. Oltre <b>80</b> il disegno si affolla - fino a lì il layout ha tenuto ogni riquadro libero da ogni altro sui grafi su cui è stato provato, e oltre quella soglia i riquadri iniziano a coprirsi - quindi il conteggio diventa ambra e lo dice, e il diagramma viene disegnato comunque: la scelta è tua, non nostra. Oltre <b>800</b> non viene disegnato, perché è il layout stesso a non essere più sostenibile: 400 riquadri richiedono circa 1,3 secondi, 800 circa 3,6, 1200 circa sette. Quel tetto è un default e non una regola - la pagina delle impostazioni ti permette di alzarlo, e dice cosa stai scambiando: più grafo, non un disegno migliore. Spegni una categoria, o metti un focus, e il conteggio scende insieme. <b>Doppio click sul vuoto per zoomarci sopra</b> - il punto che clicchi finisce al centro, e <b class="ui">Fit</b> è la via di ritorno. <b>Clicca un arco e nascondi quello che ci pende sotto</b> - la scheda che si apre dice quanti riquadri sparirebbero, e sparisce solo ciò che non è raggiungibile in altro modo, quindi un helper chiamato da altrove resta. Nasconde senza rifare il layout, quindi si combina con quello che hai sistemato. <b>Trascina un riquadro per spostarlo.</b> Il layout automatico è un punto di partenza - oltre ottanta riquadri si affolla comunque, e sei tu a sapere quali due devono stare vicini. Gli archi spariscono durante il trascinamento e vengono ridisegnati dove lasci, il rilascio dice quanti riquadri stai coprendo, e <b class="ui">Re-layout</b> butta via la disposizione. Quello che sistemi è quello che <b class="ui">Save PDF</b> stampa. Cambiare un filtro rifà il layout, e i riquadri che hai spostato tengono il loro posto mentre vengono posizionati solo i nuovi - la riga in basso dice quanti per parte. Un nuovo arrivato che finisce sopra uno dei tuoi lo sposta un po', perché la passata che impedisce ai riquadri di coprirsi muove entrambi. <b class="ui">Layout ⚙</b> espone spaziatura, apertura, distanza e dimensione delle etichette come slider dal
       vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
   </ul>
   <p><b>Cosa non fa:</b> sopra 1200 nodi il layout libero non viene nemmeno tentato - calcolarlo
@@ -400,25 +400,25 @@ git commit -m "baseline"</code></pre>
     fuoco e una profondità piccola.</p>
 
   <figure class="shot">
-    <img src="/img/crm-graph.webp?v=38c09cb698" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-graph.webp?v=08094541a2" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra del grafo delle chiamate: funzioni, workflow, schedulazioni e connessioni come riquadri uniti da frecce.">
     <figcaption>Capitolo 6: la finestra del diagramma. I chip in alto sono insieme il filtro e la legenda dei colori, e comandano tutte e tre le viste.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-er.webp?v=cc657b4d27" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-er.webp?v=51141fd82e" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il diagramma ER: i moduli come riquadri con i loro campi, uniti dai lookup.">
     <figcaption>L'altro disegno nella stessa finestra: i moduli come tabelle, i lookup come frecce, focalizzabile e stampabile a parete.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-explorer.webp?v=dd5ce5a20d" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-explorer.webp?v=d7cbf9084a" width="1760" height="1100" loading="lazy" decoding="async"
          alt="L'elenco Explorer della finestra del diagramma accanto al disegno, con una funzione selezionata.">
     <figcaption>La colonna Explorer elenca cosa contiene il disegno, e selezionare lì sposta il fuoco nel diagramma.</figcaption>
   </figure>
 
   <figure class="shot">
-    <img src="/img/crm-buttons.webp?v=3638938cb7" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-buttons.webp?v=ba90101ea7" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra del diagramma con una categoria spenta, che ridisegna il grafo invece di nascondere pezzi.">
     <figcaption>I chip non nascondono i riquadri, ridisegnano: spegnere un tipo rende davvero leggibile un grafo grande.</figcaption>
   </figure>

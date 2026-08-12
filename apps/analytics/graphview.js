@@ -14,6 +14,9 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  cutNone: 'nothing hangs off this arc - what it leads to is reachable another way',
+  cutDo: (k) => `Hide the ${k} ${k === 1 ? 'box' : 'boxes'} that hang off this`,
+  cutUndo: 'Show them again',
   kept: (k, n) => `kept where you put ${k === 1 ? 'it' : 'them'} \u00b7 ${k} arranged` + (n ? ` \u00b7 ${n} placed by the layout` : '') + ' \u00b7 Re-layout starts over',
   dropCovers: (k) => `moved \u00b7 it now covers ${k} other ${k === 1 ? 'box' : 'boxes'}`,
   dropClear: 'moved \u00b7 nothing is covered',
@@ -913,9 +916,10 @@ function statOf(set, allN, allE) {
 // underneath a summary of the unfiltered graph.
 function graphStat() {
   $('statline').innerHTML = `${statOf(null, DATA.counts.nodes, DATA.counts.edges)} · <b>${DATA.counts.dead_suspects}</b> in no relation${orphanNote()}`;
+  erCountRefresh();
 }
 // Whichever of the two is the right one for the state we are in.
-function statRefresh() { if (curFocus) egoStat(); else graphStat(); erCountRefresh(); }
+function statRefresh() { if (curFocus) egoStat(); else graphStat(); }
 // Said in the diagram, where it is the difference between what the Explorer lists and what is
 // drawn. It is not only about the filter: a node with no link of its own is not drawn either, and
 // the first wording («with nothing left to link them») blamed the chips for both. The number is
@@ -962,6 +966,7 @@ function egoStat() {
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
   $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
+  erCountRefresh();
 }
 function setDepth(d) {
   egoDepth = Math.max(1, Math.min(maxEgoDepth, d));
@@ -1014,6 +1019,64 @@ let erSelEdge = null;   // "a\u0000b"
 const ekey = (a, b) => a + '\u0000' + b;
 function erPick(a, b) { erSelEdge = (erSelEdge === ekey(a, b)) ? null : ekey(a, b); erRender(); }
 function erClearPick() { if (erSelEdge) { erSelEdge = null; erRender(); } }
+// ---- hiding a branch ----
+// Cutting an arc hides what hangs off it, and *only* what hangs off it: everything that can still be
+// reached another way stays. That rule is the one the reader chose, and it is the only one that does
+// not surprise - a helper called from ten places would otherwise vanish because one of its callers was
+// cut. When a cut removes nothing, the card says so rather than doing nothing quietly.
+//
+// It is a filter on the *drawing*, not on the layout. Nothing is laid out again, so it composes with an
+// arrangement instead of throwing it away: hide what is in the way, then move what is left, and the
+// PDF prints what you see.
+let erCut = new Set();     // edge keys the reader has cut, as "a\u0000b"
+function erReach(from, cut) {
+  // What `from` can still reach, over the drawn set, without crossing a cut edge. Undirected: an arc
+  // that can be walked back along is still a way of reaching something.
+  const inPlay = new Set(erIds);
+  const adj = new Map();
+  edgesA.forEach(([a, b]) => {
+    if (!inPlay.has(a) || !inPlay.has(b)) return;
+    if (cut.has(ekey(a, b)) || cut.has(ekey(b, a))) return;
+    (adj.get(a) || adj.set(a, []).get(a)).push(b);
+    (adj.get(b) || adj.set(b, []).get(b)).push(a);
+  });
+  const seen = new Set([from]), q = [from];
+  while (q.length) {
+    const c = q.pop();
+    for (const nb of (adj.get(c) || [])) if (!seen.has(nb)) { seen.add(nb); q.push(nb); }
+  }
+  return seen;
+}
+/** Everything currently hidden by the cuts. Recomputed rather than stored, so a filter change or a
+ *  different focus cannot leave it describing a graph that is no longer on screen. */
+function erHiddenSet() {
+  if (!erCut.size) return new Set();
+  const gone = new Set();
+  erCut.forEach((k) => {
+    const [a, b] = k.split('\u0000');
+    if (!N[a] || !N[b]) return;
+    const side = erReach(b, erCut);
+    if (side.has(a)) return;              // still reachable another way: the cut hides nothing
+    side.forEach((id) => gone.add(id));
+  });
+  gone.delete(curFocus);                  // the focus is what the diagram is about; it never goes
+  return gone;
+}
+/** How many boxes cutting this arc would take away, without cutting it. */
+function erWouldHide(a, b) {
+  const trial = new Set(erCut); trial.add(ekey(a, b));
+  const before = erHiddenSet().size;
+  const keep = erCut; erCut = trial;
+  const after = erHiddenSet().size;
+  erCut = keep;
+  return after - before;
+}
+function erToggleCut(a, b) {
+  const k = ekey(a, b);
+  if (erCut.has(k)) erCut.delete(k); else erCut.add(k);
+  erRender();                             // a drawing filter: nothing is laid out again
+  erPickCard();
+}
 function erPickCard() {
   const card = $('erpick');
   if (!erSelEdge) { card.classList.remove('on'); return; }
@@ -1028,7 +1091,19 @@ function erPickCard() {
     `<div class="pk1">${esc(label(N[a]))} \u2192 ${esc(label(N[b]))}</div>`
     + `<div class="pk2">${js.map((r) => `<b>${esc(r.column)}</b> \u2192 <b>${esc(r.otherColumn)}</b>`).join(' \u00b7 ')}</div>`
     + (snip ? `<div class="pksnip" id="erpicksnip" title="Click to copy">${esc(snip)}</div>` : '');
+  // Cutting the arc hides what hangs off it. The count is worked out before the cut, so the control
+  // says what it will take away instead of the reader finding out - and when it would take away
+  // nothing, it says why rather than being a button that does nothing.
+  const cutK = ekey(a, b), isCut = erCut.has(cutK);
+  const would = isCut ? 0 : erWouldHide(a, b);
+  $('erpickbody').insertAdjacentHTML('beforeend', isCut
+    ? `<div class="pkcut"><button type="button" id="erpickcut">${esc(MSG.cutUndo)}</button></div>`
+    : (would
+      ? `<div class="pkcut"><button type="button" id="erpickcut">${esc(MSG.cutDo(would))}</button></div>`
+      : `<div class="pkcut pkno">${esc(MSG.cutNone)}</div>`));
   card.classList.add('on');
+  const cb = $('erpickcut');
+  if (cb) cb.onclick = () => erToggleCut(a, b);
   const sn = $('erpicksnip');
   if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
     const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
@@ -1348,10 +1423,14 @@ function erSizeArrows() {
   }
 }
 function erRender() {
-  const shown = new Set(erIds);
+  // Hidden by a cut arc, which is a drawing filter and not a layout one: the positions are untouched,
+  // so what is left stays exactly where the reader put it.
+  const gone = erHiddenSet();
+  const shown = new Set(erIds.filter((id) => !gone.has(id)));
   const boxes = $('erboxes'); boxes.innerHTML = '';
   let maxX = 0, maxY = 0;
   erIds.forEach((id) => {
+    if (gone.has(id)) return;
     const n = N[id], p = erPos[id], s = erBoxSize(n);
     maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h);
     const div = document.createElement('div');
@@ -1580,6 +1659,24 @@ function erDrawn() {
   const h = document.querySelector('#v-er .hint2');
   if (h) h.classList.remove('off');
 }
+// A label change is not a layout change. `Name:` and `Fields:` alter what is written in a box - and
+// therefore how wide and how tall it is - but not which boxes there are or how they relate, so laying
+// the diagram out again throws away an arrangement for nothing. Reported: after moving boxes, switching
+// `Name:` redrew everything, because every box's width changed and the layout followed.
+//
+// The boxes are re-measured in place instead, and the collision pass tidies whatever the new size made
+// overlap. Nothing is placed again, so a hand-arranged diagram survives a relabelling intact.
+function erResize() {
+  if (!erIds.length) return;
+  erIds.forEach((id) => {
+    const p = erPos[id];
+    if (!p) return;
+    const s = erBoxSize(N[id]);
+    p.w = s.w; p.h = s.h;
+  });
+  collideBoxes(erIds, erP.margin);
+  erRender();
+}
 function erShow() {
   const drawing = erVisibleIds().length;
   if (!drawable(drawing)) { erNotDrawn(drawing); erCountRefresh(); return; }
@@ -1679,8 +1776,14 @@ document.addEventListener('mouseup', () => {
     if (el) el.classList.remove('dragging');
     if (erDragged) {
       erArranged = true;
-      const q = erPos[id];
-      if (q) erHeld[id] = { x: q.x, y: q.y };
+      // Every box, not just the one that was moved. Holding only the dragged ones preserved nothing
+      // that matters: an arrangement is a set of *relationships* between boxes, so letting the other
+      // three hundred be placed again destroys it while the dragged one sits where it was left.
+      // Reported, and the guides had already described the right behaviour - the code had not.
+      erIds.forEach((other) => {
+        const q = erPos[other];
+        if (q) erHeld[other] = { x: q.x, y: q.y };
+      });
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
       erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
@@ -1800,7 +1903,7 @@ $('v-er').addEventListener('click', (e) => {
   if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erpick') || t.closest('.erbox'))) return;
   erClearPick();
 });
-$('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erLaidOut = false; erShow(); };
+$('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erResize(); };
 $('erRelay').onclick = () => { erHeld = {}; erArranged = false; erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();

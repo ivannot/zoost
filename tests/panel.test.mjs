@@ -1854,7 +1854,9 @@ test('every element the diagram window reaches for is in its own markup', () => 
   //
   // The ids listed here are the ones built at runtime rather than authored, and they are named
   // rather than pattern-matched so that adding one is a decision.
-  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpicksnip', 'layzone', 'up']);
+  // `erpickcut` joins them: the arc card writes its own button, because whether there is one - and
+  // what it says - depends on how many boxes hang off that arc.
+  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
@@ -1979,8 +1981,13 @@ test('the two diagram limits are the measurements, and neither is doing the othe
       `${app}: the tab cannot say which of the three states it is in`);
     assert.ok(read(`apps/${app}/graphview.html`).includes('id="ertabn"'), `${app}: the tab has nowhere to show a count`);
     assert.ok(read(`apps/${app}/graphview.html`).includes('id="ernone"'), `${app}: the view has nowhere to say why it drew nothing`);
-    assert.ok(/erCountRefresh\(\);?\s*}/.test(js.slice(js.indexOf('function statRefresh()'), js.indexOf('function statRefresh()') + 200)),
-      `${app}: the tab count does not follow a header refresh, so a filter can leave it stale`);
+    // On both functions that write the header numbers, not on statRefresh which dispatches to them:
+    // setFocus calls egoStat() directly, so selecting in the Explorer left the count stale. Reported.
+    for (const fn of ['egoStat', 'graphStat']) {
+      const body = js.slice(js.indexOf(`function ${fn}()`), js.indexOf('\n}', js.indexOf(`function ${fn}()`)));
+      assert.ok(/erCountRefresh\(\)/.test(body),
+        `${app}: ${fn} does not move the tab count, so a path that calls it directly leaves it stale`);
+    }
   }
 });
 test('a control that comes and goes may not move the numbers beside it', () => {

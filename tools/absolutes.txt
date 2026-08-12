@@ -186,6 +186,7 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.
 1631422a9c9bb1e3  site/docs-crm.html: Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.
 695566f1704feaf3  site/docs-crm.html: Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
+4d2d8b981709c627  site/docs-crm.html: Click an arc, then hide what hangs off it - the card that opens says how many boxes would go, and only what becomes unreachable any other way is hidden, so a helper reached from elsewhere stays.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
 12f98ef7c51b88b5  site/docs-crm.html: Every tool it uses is shown in the chat.

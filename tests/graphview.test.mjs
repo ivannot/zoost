@@ -431,7 +431,12 @@ for (const app of ['crm', 'analytics']) {
     // reported as a bug: the refusal fired after the control had toggled its own state, so a chip went
     // grey while its category stayed on screen. What must hold is that the positions are remembered on
     // the drop and handed back by the layout.
-    assert.ok(/erHeld\[id\] = \{ x: q\.x, y: q\.y \}/.test(js), 'a drop does not remember where the box was put');
+    // Every box, not just the dragged one: an arrangement is the relationships between boxes, so
+    // holding one while the rest are placed again preserves nothing the reader can see. Reported.
+    assert.ok(/erHeld\[other\] = \{ x: q\.x, y: q\.y \}/.test(js),
+      'a drop remembers only the box that moved, so the arrangement around it is lost');
+    const up = js.slice(js.indexOf("addEventListener('mouseup'"), js.indexOf("addEventListener('mouseup'") + 900);
+    assert.ok(/erIds\.forEach/.test(up), 'the drop does not walk every box when it remembers positions');
     const lay = sliceFn(`apps/${app}/graphview.js`, 'erLayout');
     assert.ok(/erHeld\[id\]/.test(lay) && /erPos\[id\]\.x = h\.x/.test(lay),
       'the layout does not hand a hand-placed box back to where it was put');
