@@ -1,20 +1,27 @@
-# Ask Google what the Store is serving, and commit the answer as a file the site can read.
+# Ask Google what the Store is serving, and put the answer in Workers KV for the site to read.
 #
-# The point is not the file, it is where the key is not. The Worker used to ask the Chrome Web Store
-# API directly, which put a service-account key in Cloudflare as a Secret that request-handling code
-# could read - and that key can publish, because Google links one service account per publisher and
-# offers no narrower grant. Read-only was what the Worker *asked for*, never what the credential
+# The point is not the answer, it is where the key is not. The Worker used to ask the Chrome Web
+# Store API directly, which put a service-account key in Cloudflare as a Secret that request-handling
+# code could read - and that key can publish, because Google links one service account per publisher
+# and offers no narrower grant. Read-only was what the Worker *asked for*, never what the credential
 # could do. Asking from here leaves the key in the one place it already had to be: the GitHub secret
 # `store-upload.yml` needs to stage a draft.
 #
-# It commits **only when the numbers move**, which is a handful of times a month. A heartbeat every
-# half hour would bury a history where each commit currently means something. The cost is stated
-# rather than hidden: a run that stopped happening is not visible from the file, so the file carries
-# `asOf` and /emergency shows it - the reader sees when the Store was last asked and can weigh it.
+# **It writes to KV rather than committing a file, and the reason is a defect the file caused.**
+# Anything under `site/` is a build watch path, so committing the reading redeployed the whole site
+# whenever Google moved a number - and `siteUpdated` in the footer is that deploy's own timestamp, so
+# the site would have announced itself updated because a version somewhere else changed. KV takes the
+# reading out of the deploy path, and lets `asOf` refresh on every run instead of only when the
+# numbers move: a workflow that quietly stopped is then a date that stopped advancing, which
+# /emergency prints for the reader to weigh.
+#
+# The two credentials are deliberately unequal. `CWS_SERVICE_ACCOUNT` can publish an extension;
+# `CF_KV_TOKEN` is scoped to Workers KV Storage and can do nothing but write this reading. The one
+# that can do damage never leaves GitHub.
 #
 # The schedule is frequent because the moment that matters is short: a review clearing is exactly
-# when the site should stop saying a version is ahead of the Store. Most runs print «unchanged» and
-# commit nothing.
+# when the site should stop saying a version is ahead of the Store. 48 writes a day against a free
+# plan that allows 1,000 - checked before choosing the interval, not after.
 name: store status
 
 on:
@@ -27,11 +34,13 @@ on:
     workflows: ['store upload']
     types: [completed]
 
+# Nothing is committed any more. The job reads a secret and writes to Cloudflare; it has no business
+# with the repository beyond checking itself out.
 permissions:
-  contents: write
+  contents: read
 
-# Two runs pushing to main would race, and the loser fails on a non-fast-forward. Serialised rather
-# than retried: this job has nothing to catch up on, the next tick is thirty minutes away.
+# Two runs would write the same key with two readings and the later start could land first. Nothing
+# here has to catch up - the next tick is thirty minutes away - so they are serialised.
 concurrency:
   group: store-status
   cancel-in-progress: false
@@ -43,32 +52,31 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.2.2
 
       - name: Ask the Store
-        id: ask
         env:
           CWS_SERVICE_ACCOUNT: ${{ secrets.CWS_SERVICE_ACCOUNT }}
+        # Writes nothing on failure: `storestatus.py` exits non-zero if Google cannot be asked or
+        # answers something that is not a version, so the step goes red before the file exists and
+        # the reading already in KV stands. A wrong number is worse than an old one.
         run: |
           set -euo pipefail
-          python3 tools/storestatus.py | tee out.txt
-          # The tool prints `changed` or `unchanged` on its last line, and it is the only thing that
-          # knows: `asOf` moves every run, so a plain `git diff` would always say yes.
-          tail -1 out.txt | grep -qx changed && echo 'moved=yes' >> "$GITHUB_OUTPUT" || true
+          python3 tools/storestatus.py --out status.json
+          cat status.json
 
-      - name: Commit it, if it moved
-        if: steps.ask.outputs.moved == 'yes'
+      - name: Put it in KV
+        env:
+          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
+        # Account and namespace are ids out of a dashboard URL, not secrets - the same reasoning as
+        # the publisher id in `_worker.js`. The token is the secret, and it is scoped to KV alone.
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add site/store-status.json
-          # The subject says what changed rather than that something did, so the log stays readable
-          # as history instead of as noise.
-          git commit -m "The Store moved: $(python3 -c "
-          import json
-          d = json.load(open('site/store-status.json'))
-          print(' · '.join(
-              f\"{a} {(d[a] or {}).get('published', {}).get('version', '?')}\"
-              + (f\" (+{(d[a] or {}).get('submitted', {}).get('version')} {(d[a] or {}).get('submitted', {}).get('state')})\"
-                 if (d[a] or {}).get('submitted') else '')
-              for a in ('crm', 'analytics')))
-          ")"
-          git push
+          code=$(curl -sS -o resp.json -w '%{http_code}' -X PUT \
+            "https://api.cloudflare.com/client/v4/accounts/11a76c6cd17bc67e7e6dc872036546bb/storage/kv/namespaces/7bccd32413744db3a7cf9d90c9396bc7/values/status" \
+            -H "Authorization: Bearer $CF_KV_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @status.json)
+          cat resp.json; echo
+          # Cloudflare answers 200 with `"success": false` for some refusals, so the status code is
+          # not enough on its own - a job that went green over a rejected write would leave the site
+          # serving a stale reading and say nothing.
+          test "$code" = 200
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('resp.json')).get('success') else 1)"

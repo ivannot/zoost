@@ -21,6 +21,19 @@
   // that never deployed (see the build-watch-paths note in CLAUDE.md). This binding costs no API
   // token and no request - it is this version's own creation time, handed to the script.
   "version_metadata": { "binding": "CF_VERSION" },
+  // What the Chrome Web Store is serving, written every half hour by the `store status` workflow and
+  // read here. It is deliberately *not* a file in this directory: anything under site/ is a build
+  // watch path, so committing the reading redeployed the whole site whenever Google moved a number -
+  // and `CF_VERSION.timestamp` above is that deploy's own time, so the footer would have announced
+  // the site updated because a version somewhere else changed. Same defect this project already
+  // fixed once for `lastChanged('site')`, arriving by a different door.
+  //
+  // The ids are out of a dashboard URL and are not secrets, exactly like the publisher id in
+  // `_worker.js`. The credential is a GitHub secret scoped to Workers KV Storage, and it stays there:
+  // nothing web-facing can write this.
+  "kv_namespaces": [
+    { "binding": "STATUS", "id": "7bccd32413744db3a7cf9d90c9396bc7" }
+  ],
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

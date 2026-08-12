@@ -1056,8 +1056,10 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
         # It is empty, and that is the point: the Worker used to read `CWS_SERVICE_ACCOUNT`, a
         # service-account key that can publish to the Chrome Web Store, sitting in Cloudflare where
         # request-handling code could read it. `tools/storestatus.py` asks Google from a workflow
-        # now and the Worker serves the file it commits. **A name reappearing here means a
-        # credential has come back into a web-facing runtime**, which is a decision, not a detail.
+        # now and writes the answer to KV, which the Worker reads through a binding - and a binding
+        # is declared in the config this test already reads, so it lands in `declared` and never
+        # here. **A name reappearing here means a credential has come back into a web-facing
+        # runtime**, which is a decision, not a detail.
         SECRETS = set()
         read = set(re.findall(r'\benv\.([A-Z][A-Z0-9_]*)', self.worker))
         declared = set(re.findall(r'"binding":\s*"([^"]+)"', self.cfg))

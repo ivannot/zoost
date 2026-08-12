@@ -24,8 +24,8 @@
  * never of the credential, and Google links one service account per publisher with no narrower grant
  * on offer - so least privilege was not available here, and the key left instead.
  *
- * `tools/storestatus.py` now asks Google from a workflow and commits `site/store-status.json`, and
- * this serves what that wrote. What the API bought over the scrape is unchanged: «in review» is
+ * `tools/storestatus.py` now asks Google from a workflow and writes the answer to Workers KV, and
+ * this reads it from there. What the API bought over the scrape is unchanged: «in review» is
  * Google saying so, and a **rejected** submission is expressible at all - without a state it would
  * be indistinguishable from one still in the queue.
  */
@@ -148,27 +148,30 @@ export function tagsAhead(xml, app, from, cap = 5) {
   return out.sort((a, b) => cmpVer(a.version, b.version)).slice(0, cap);
 }
 
-// What the Chrome Web Store says about our items, read from a file this repository publishes rather
-// than asked of Google from here.
+// What the Chrome Web Store says about our items, read out of KV rather than asked of Google here.
 //
 // It used to be asked from here, and that put a service-account key in Cloudflare as a Secret that
 // request-handling code could read. The key can publish - `tools/cwsscope.py` mints a token for the
 // full `chromewebstore` scope from it and the API answers - and Google links one service account per
 // publisher with no narrower grant on offer, so read-only was a property of what this code asked for
 // and never of the credential. Least privilege was not available where it was needed, so the key
-// left: `tools/storestatus.py` runs in a workflow and commits `site/store-status.json`, and this
-// serves what that wrote.
+// left: `tools/storestatus.py` runs in a workflow and puts the answer in KV, and this reads it.
+//
+// KV rather than a committed file, because a file under site/ is a build watch path: every Store
+// change redeployed the site, and `siteUpdated` in the footer is that deploy's timestamp - so the
+// site would have announced itself updated because a number at Google's end moved. It also lets
+// `asOf` refresh on every run instead of only when the numbers move, which is what makes a workflow
+// that quietly stopped visible at all.
 //
 // The reading carries `asOf`, and it is passed through rather than judged. A run that stopped
 // happening leaves an old date on a true reading, and the page shows the date - which is this
 // project's answer everywhere else: expose the number, let the reader weigh it. Inventing a
 // staleness threshold here would be interpreting it, and would turn a working setup into «unknown»
 // on a cron that ran late.
-async function storeStatus(request, env) {
+async function storeStatus(env) {
   try {
-    const r = await env.ASSETS.fetch(new URL('/store-status.json', request.url));
-    if (!r.ok) return { crm: null, analytics: null, cws: 'no-file', asOf: null };
-    const d = await r.json();
+    const d = env.STATUS ? await env.STATUS.get('status', { type: 'json' }) : null;
+    if (!d) return { crm: null, analytics: null, cws: 'no-file', asOf: null };
     return { crm: d.crm || null, analytics: d.analytics || null,
              cws: d.cws || 'ok', asOf: d.asOf || null };
   } catch {
@@ -255,7 +258,7 @@ async function versions(request, env, ctx) {
 
   const [store, crmRepo, crmTag, anRepo, anTag, docsUpd, docsAnUpd] =
     await Promise.all([
-      settled(storeStatus(request, env)),
+      settled(storeStatus(env)),
       settled(repoVersion('crm')), settled(latestTag('crm')),
       settled(repoVersion('analytics')), settled(latestTag('analytics')),
       settled(lastChanged('site/docs-crm.html')),
@@ -356,7 +359,7 @@ async function ahead(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const [store, xml] = await Promise.all([settled(storeStatus(request, env)), settled(tagsFeed())]);
+  const [store, xml] = await Promise.all([settled(storeStatus(env)), settled(tagsFeed())]);
   const s = store || { crm: null, analytics: null, cws: 'unreadable', asOf: null };
 
   const block = async (app) => {

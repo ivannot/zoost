@@ -182,17 +182,44 @@ publish: it mints a token for the full `chromewebstore` scope and the API answer
 property of what the Worker *asked for*, never of the credential, and Google links **one** service
 account per publisher with no narrower grant on offer. Least privilege was not available where it was
 needed, so the key left instead: `tools/storestatus.py` asks Google from `.github/workflows/store-status.yml`
-and commits `site/store-status.json`, which the Worker serves through the assets binding. The key now
+and writes the answer to Workers KV, which the Worker reads through the `STATUS` binding. The key now
 lives only where it already had to - the GitHub secret `store-upload.yml` needs to stage a draft.
+
+**The first version of this committed the reading as `site/store-status.json`, and that was a defect
+found four hours later while checking something else.** Anything under `site/` is a build watch path,
+so every Store change redeployed the whole site - and `siteUpdated` in the footer comes from
+`CF_VERSION.timestamp`, which is that deploy's own creation time. The site would have announced itself
+updated because a number at Google's end moved. This project had already fixed exactly that defect
+once, for `lastChanged('site')`, and it came back through a door nobody was watching: **a value is not
+safe because it is derived, it is safe because nothing spurious can move what it derives from.** KV
+takes the reading out of the deploy path entirely.
+
+The two credentials are deliberately unequal, and that inequality is the point of the whole
+arrangement. `CWS_SERVICE_ACCOUNT` can publish an extension; `CF_KV_TOKEN` is scoped to Workers KV
+Storage and can write this one reading. **Do not reuse the Cloudflare build token** - it carries
+`Secrets Store: Edit`, `D1`, `R2`, `Containers` and a dozen more, so putting it in GitHub would move
+the dangerous credential rather than remove it, and revoking it after a leak would also stop the
+site's deploys. The KV permission is account-wide because Cloudflare offers no per-namespace scope:
+that is the minimum available, not the minimum imaginable, and it is said here rather than left to
+sound narrower than it is.
 
 Three consequences worth knowing before changing any of it. *One*, the badge was at most ten minutes
 behind and is now as far behind as the schedule, which runs every half hour **and** after a package
-is staged - the moment the answer actually changes. *Two*, the file is committed only when the
-numbers move, so the history keeps meaning «the Store changed» rather than «the cron ran»; the cost is
-that a workflow which stopped is not visible from the file, which is why it carries `asOf` and
-`/emergency` prints it. *Three*, `tests/tools_test.py` holds `SECRETS` **empty**: a name reappearing
-there means a credential has come back into a web-facing runtime, and that is a decision rather than
-a detail.
+is staged - the moment the answer actually changes. 48 writes a day against a free plan that allows
+1,000, checked before the interval was chosen. *Two*, `asOf` refreshes on **every** run, so a workflow
+that quietly stopped shows up as a date that stopped advancing; `/emergency` prints it and judges
+nothing, because a staleness threshold here would turn a cron that ran late into «unknown». *Three*,
+`tests/tools_test.py` holds `SECRETS` **empty**: a name reappearing there means a credential has come
+back into a web-facing runtime, and that is a decision rather than a detail.
+
+The failure path is the part to keep: `storestatus.py` exits non-zero if Google cannot be asked or
+answers something that is not a version, so nothing is written and the previous reading stands, and
+the KV step checks `"success": true` rather than the status code alone - Cloudflare returns 200 with
+`success: false` for some refusals, and a job that went green over a rejected write would leave the
+site serving a stale reading and say nothing. On the read side an empty or unreadable KV becomes
+`cws: no-file` / `unreadable`, never a plain absence of versions: `/emergency` says it could not ask.
+Four cases in `tests/worker.test.mjs` hold that, because the one wrong answer with a cost is «you are
+up to date» over a Store nobody spoke to.
 
 **`/emergency` is the page for the gap this chain cannot close: the review queue.** A tag is built,
 signed and submitted within the hour; Google then takes days. When a fix for a break at Zoho's end is

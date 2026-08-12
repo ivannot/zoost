@@ -89,6 +89,42 @@ test('nothing is ahead once the Store has caught up', () => {
   assert.equal(tagsAhead(feed, 'crm', '1.40.0').length, 0);
 });
 
+const { storeStatus } = load([sliceFn('site/_worker.js', 'storeStatus')]);
+
+// KV, not an asset: a file under site/ is a build watch path, so committing the reading redeployed
+// the site whenever Google moved a number and `siteUpdated` in the footer - which is that deploy's
+// own timestamp - would have announced the site updated for a change somewhere else entirely.
+const kv = (v) => ({ STATUS: { get: async () => v } });
+
+test('an empty KV reads as "nobody could ask", never as "you are up to date"', async () => {
+  // The one wrong answer with a cost, one layer below the tagsAhead case above. `cws` is what makes
+  // /emergency say it could not ask; a missing reading that arrived as a plain absence of versions
+  // would render as the in-step message over a Store nobody had spoken to.
+  for (const empty of [null, undefined]) {
+    const s = await storeStatus(kv(empty));
+    assert.equal(s.cws, 'no-file', `empty KV must not read as ok (${String(empty)})`);
+    assert.equal(s.crm, null);
+    assert.equal(s.asOf, null);
+  }
+  // No binding at all - the state between adding the workflow and creating the namespace.
+  assert.equal((await storeStatus({})).cws, 'no-file');
+});
+
+test('a KV that throws is reported, not swallowed into a good-looking answer', async () => {
+  const s = await storeStatus({ STATUS: { get: async () => { throw new Error('down'); } } });
+  assert.equal(s.cws, 'unreadable');
+  assert.equal(s.analytics, null);
+});
+
+test('a reading is passed through with its asOf', async () => {
+  const s = await storeStatus(kv({ crm: { published: { version: '1.39.0' } }, analytics: null,
+                                   cws: 'ok', asOf: '2026-08-12T10:48:12Z' }));
+  assert.equal(s.crm.published.version, '1.39.0');
+  assert.equal(s.asOf, '2026-08-12T10:48:12Z');
+  // Absent per-app blocks stay null rather than becoming undefined: the pages test them with `!v.store`.
+  assert.equal(s.analytics, null);
+});
+
 test('with no Store version, nothing is offered rather than everything', () => {
   // The one wrong answer with a cost. Without a baseline the honest output is an empty list: a page
   // built on "here is every tag I can see" would tell a reader to install by hand over an

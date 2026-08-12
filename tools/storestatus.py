@@ -11,23 +11,27 @@ on every request could read. And that key can publish: `tools/cwsscope.py` mints
 narrower grant on offer - so least privilege was not available where it was needed, and the only
 remaining move was to stop holding the key there at all.
 
-So the question is asked here, on a schedule, and the answer is committed as an ordinary file the
-Worker serves. The key stays where it already had to be - the GitHub Actions secret that
-`store-upload.yml` needs to stage a draft - instead of being in two places.
+So the question is asked here, on a schedule, and the answer is put in Workers KV for the Worker to
+read. The key stays where it already had to be - the GitHub Actions secret that `store-upload.yml`
+needs to stage a draft - instead of being in two places.
+
+**It went to KV rather than into a committed file, and the reason is a defect the file caused.**
+Anything under `site/` is a build watch path, so committing the reading redeployed the whole site
+every time Google moved a number - and `siteUpdated` in the footer comes from that deploy's own
+timestamp. The footer would have announced «site updated» because a version elsewhere changed, which
+is the same defect this project already fixed once for `lastChanged('site')`. KV takes the reading
+out of the deploy path entirely.
+
+It also fixes what the file could not: `asOf` is refreshed on **every** run instead of only when the
+numbers move, so a workflow that quietly stopped shows up as a date that stopped advancing. The page
+prints it rather than judging it - a threshold here would turn a cron that ran late into «unknown».
+
+**A failure never overwrites a good reading.** If Google cannot be asked this exits non-zero, the
+workflow goes red without writing, and what is in KV stands.
 
 What it costs is freshness: the badge was at most ten minutes behind and is now as far behind as the
 schedule. That was worth paying because the moment anyone cares is the hour after a submission, and
 this also runs at the end of the release chain, when that is exactly what has just happened.
-
-**A failure never overwrites a good reading.** If Google cannot be asked this exits non-zero, the
-workflow goes red, and the previous file stands.
-
-The reading is committed **only when the numbers move**, which is a handful of times a month rather
-than a heartbeat every half hour - a history where every commit means «the Store changed» is worth
-more than one that proves the cron ran. The cost is that a workflow which quietly stopped is not
-visible from the file itself, so `asOf` is carried in it and shown on /emergency: a reader sees when
-the Store was last actually asked and can weigh it, which is this project's answer everywhere else -
-expose the number, do not interpret it.
 """
 import argparse
 import datetime
@@ -41,7 +45,6 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import cws  # noqa: E402
 
 APPS = ('crm', 'analytics')
-OUT = ROOT / 'site' / 'store-status.json'
 IS_VERSION = re.compile(r'^\d+(\.\d+){1,3}$')   # the same guard the Worker used, moved with the job
 
 
@@ -72,7 +75,7 @@ def shape(d: dict) -> dict | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('--out', default=str(OUT), help='where to write it (default: site/store-status.json)')
+    ap.add_argument('--out', default='-', help='where to write it; - is stdout (the default)')
     args = ap.parse_args()
 
     key = cws.key_from_env()
@@ -86,30 +89,18 @@ def main() -> int:
     for app in APPS:
         out[app] = shape(cws.status(tok, app))
 
-    path = pathlib.Path(args.out)
-    # Sorted keys and a trailing newline, because this file is committed: an unstable key order would
-    # produce a diff on every run and the history would stop meaning «the Store changed».
+    # Sorted keys so two readings of the same state are the same bytes. Nothing diffs this any more,
+    # but a payload that reorders itself makes any future comparison useless for no gain.
     text = json.dumps(out, indent=2, sort_keys=True) + '\n'
-    before = path.read_text(encoding='utf-8') if path.exists() else ''
-
-    def versions(t):
-        try:
-            d = json.loads(t)
-        except Exception:                                  # noqa: BLE001 - a first run has no file
-            return None
-        return {a: d.get(a) for a in APPS}
-
-    path.write_text(text, encoding='utf-8')
-    moved = versions(before) != versions(text)
-    for app in APPS:
-        b = out[app] or {}
-        p, s = b.get('published') or {}, b.get('submitted') or {}
-        print(f'  {app:10} store {p.get("version") or "unknown"}'
-              + (f' · submitted {s.get("version")} ({s.get("state")})' if s.get('version') else ''))
-    # The caller commits only when something actually changed, and this is what says so. `asOf` moves
-    # on every run by design, so it is deliberately not part of the comparison - otherwise the file
-    # would be committed every half hour and every commit would say nothing.
-    print('changed' if moved else 'unchanged')
+    if args.out == '-':
+        sys.stdout.write(text)
+    else:
+        pathlib.Path(args.out).write_text(text, encoding='utf-8')
+        for app in APPS:
+            b = out[app] or {}
+            pub, sub_ = b.get('published') or {}, b.get('submitted') or {}
+            print(f'  {app:10} store {pub.get("version") or "unknown"}'
+                  + (f' · submitted {sub_.get("version")} ({sub_.get("state")})' if sub_.get('version') else ''))
     return 0
 
 
