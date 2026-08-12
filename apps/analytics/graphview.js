@@ -1364,6 +1364,7 @@ function erLayout() {
   // Anything the reader placed goes back where they placed it, before the collision pass runs - so
   // newcomers make room around an arrangement rather than the arrangement being computed away. A box
   // that has left the screen keeps its entry, so switching a category off and on again finds it again.
+  erFitToArcs(edgesAmong(erIds));
   erLastKept = 0;
   if (erArranged) {
     erIds.forEach((id) => {
@@ -1405,6 +1406,41 @@ function erSideOf(A, B) {
  * screen and the fan does not cross itself. One arc on a side still gets the middle, so nothing that
  * was already unambiguous moves.
  */
+// A box grows until its arcs have room to land apart. Reported with a picture: the fan works above and
+// below, where the box is wide, and fails on the sides, where a relation-first box is only as tall as
+// its own title - twenty arcs sharing forty pixels are one thick line again.
+//
+// The reader's argument for it is the better one, and it is why this grows the box rather than pushing
+// the arcs around: a box that is referenced from twenty places *is* more important than one referenced
+// once, so drawing it larger says something true. The arcs distributing better is then a consequence.
+//
+// One pass, not a fixed point. Growing a box moves its neighbours, which can change which side an arc
+// arrives on, which would change the counts - chasing that to convergence would cost more than it is
+// worth and could oscillate. The counts are taken once, from the positions as laid out, and the
+// collision pass then makes room for whatever grew.
+const ARC_GAP = 16;        // pixels between two landing points, a shade above the 14px hit corridor
+function erSideCounts(pairs) {
+  const c = new Map();
+  const bump = (id, side) => {
+    const e = c.get(id) || { t: 0, b: 0, l: 0, r: 0 };
+    e[side]++; c.set(id, e);
+  };
+  pairs.forEach(([a, b]) => {
+    const A = erPos[a], B = erPos[b];
+    if (!A || !B) return;
+    bump(a, erSideOf(A, B)); bump(b, erSideOf(B, A));
+  });
+  return c;
+}
+function erFitToArcs(pairs) {
+  const counts = erSideCounts(pairs);
+  counts.forEach((c, id) => {
+    const p = erPos[id];
+    if (!p) return;
+    p.w = Math.max(p.w, (Math.max(c.t, c.b) + 1) * ARC_GAP);
+    p.h = Math.max(p.h, (Math.max(c.l, c.r) + 1) * ARC_GAP);
+  });
+}
 function erComputeSlots(pairs) {
   const groups = new Map();
   const push = (id, side, key, along) => {
@@ -1481,7 +1517,7 @@ function erRender() {
     div.className = 'erbox ' + (n.namespace === 'custom' ? 'custom' : 'standard') + (erEmph === 'relations' ? ' dim' : '')
       + (inPick === false ? ' faded' : '') + (inPick === true ? ' epick' : '')
       + (id === sel ? ' sel' : '') + (id === curFocus ? ' focus' : '');
-    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px`;
+    div.style.cssText = `left:${p.x}px;top:${p.y}px;width:${p.w}px;min-height:${p.h}px`;
     const rows = s.rows.slice(0, s.shown).map((fld) => {
       const lk = fld.lookup ? ' lk' : ''; const req = fld.mandatory ? '<span class="pk">*</span>' : '';
       const t = fld.lookup ? ('\u2192 ' + esc(label(N[fld.lookup]) || fld.lookup)) : esc(fld.data_type || '');
@@ -1723,6 +1759,7 @@ function erResize() {
     const s = erBoxSize(N[id]);
     p.w = s.w; p.h = s.h;
   });
+  erFitToArcs(edgesAmong(erIds));
   collideBoxes(erIds, erP.margin);
   erRender();
 }

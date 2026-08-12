@@ -181,6 +181,8 @@ function laidOut(app, levels, margin = 36) {
     // free-variable trap, for the third time in one day: a slice runs in a bare context and anything
     // the function reaches for has to be there or it throws three lines in.
     erArranged: false, erHeld: {}, erLastKept: 0,
+    // erLayout grows a box until its arcs have room to land apart, so it reaches for these too.
+    edgesAmong: () => [],
     erVisibleIds: () => ids,
     erConcentric: () => true,                   // the branch under test; the free one is not entered
     erBoxSize: (n) => ({ w: 190, h: 28 + n.rows * 18 }),
@@ -190,7 +192,7 @@ function laidOut(app, levels, margin = 36) {
   // ReferenceError three lines in - the free-variable trap this repository has already recorded once,
   // and it fired again here the moment the pass was extracted into its own function. The suite caught
   // it, which is the argument for the suite.
-  vm.runInContext(['erLayout', 'collideBoxes']
+  vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf']
     .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
   vm.runInContext('erLayout()', ctx);
   const p = state.erPos;
@@ -491,10 +493,10 @@ for (const app of ['crm', 'analytics']) {
       erP: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
       erVisibleIds: () => ids, erConcentric: () => true,
       erBoxSize: () => ({ w: 190, h: 64 }),
-      erArranged: true, erHeld: held, erLastKept: 0,
+      erArranged: true, erHeld: held, erLastKept: 0, edgesAmong: () => [],
     };
     const ctx = vm.createContext(state);
-    vm.runInContext(['erLayout', 'collideBoxes']
+    vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf']
       .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
     vm.runInContext('erLayout()', ctx);
     assert.equal(state.erLastKept, 1, 'the layout handed nothing back, so an arrangement is lost');
