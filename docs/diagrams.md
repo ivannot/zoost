@@ -299,15 +299,50 @@ condition for it to correct, and it would change when the drawing re-adapts unde
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 
-**Open: the concentric ring is as wide for eight boxes as for eighty.** Measured while rendering the
-Store screenshots, on the sample org at 1280 x 800: a focused ER at depth 2 with **eight** boxes fits
-at **38%** zoom with the default `ring` (420), where `ring: 140` fits the same drawing at **101%** -
-10px text rendered under 4px. The cause is `ringR = max(L * erP.ring, needed)`: the radius is a fixed
-multiple of the level, so the ring is the same size whatever has to go on it, and `erFit` then scales
-the whole drawing down to fit a circle that is mostly empty. A radius derived from what has to sit on
-it - each ring just outside the previous one, plus a gap the slider controls - would fix it, and it
-changes what the `ring` slider *means*, which is why it has not been done in passing. `tools/shots.py`
-moves the slider and says so; the defect is still there for anyone who does not.
+**Fixed: the concentric ring is as wide as what sits on it, and the slider that compensated is gone.**
+It was `ringR = max(L * erP.ring, needed)` with a default of 420 - a radius that is a fixed multiple of
+the level, so the same for eight boxes as for eighty, and `erFit` then scaled the whole drawing down to
+fit a circle that was mostly empty. Measured on the shipped fixtures at 1280 x 800, default against
+default, which is the comparison that matters because a reader who never opens `Layout ⚙` only ever
+sees the default:
+
+| drawing | old default (`ring` 420) | derived radii |
+|---|---|---|
+| Analytics ER, focus at depth 2 | **0.289** | **0.857** |
+| CRM ER, focus at depth 1 | 0.523 | 1.018 |
+| CRM wiring, focus at depth 1 | 0.657 | 0.767 |
+
+Both terms are measured. **Radially**, a ring clears the one inside it by half of each ring's tallest
+box plus `margin` - the same clearance the collision pass enforces between any two boxes, so the two
+agree instead of one undoing the other. **Tangentially**, the chord between neighbours has to clear the
+*narrower* of a box's two sides, because two axis-aligned rectangles are apart as soon as either axis
+separates them. That second term is a starting position and not a proof: near the top of a ring it is
+the wide axis that has to separate, and the collision pass finishes the job - which is the point, since
+the pass packs denser than a perfect circle ever does.
+
+**Choosing between the candidates was done by modelling seven shapes, not by eye**, and two plausible
+formulas lost. A radius derived from arc length alone - circumference equal to the sum of the box
+widths, which is the obvious reading of "derived from what sits on it" - comes out **70% too large**
+(47% zoom where this gives 76%), because boxes at the sides of a ring are separated vertically and
+their widths are irrelevant there. A radial-only radius, leaving all crowding to the collision pass,
+lets twelve boxes collapse into a blob that no longer reads as a ring. The winner also **matches or
+beats the hand-tuned `ring: 140`** that `tools/shots.py` was setting on three shots, which is the
+outcome worth having: the published screenshots are now the *default*, not a setting the reader would
+have had to discover.
+
+`erP.ring` is therefore gone - from both presets, the control table, the relayout set, the visibility
+map and the markup - and `margin` drives the radii, which is also what the collision pass has always
+used. A browser that drew one diagram before this version still holds `ring: 420` in
+`chrome.storage.local`, so the merge takes only keys the presets declare: not migration code with a
+version to grow out of, but the permanent shape of the merge, so the next parameter that goes has
+nothing left to leave behind.
+
+**What it cost, stated rather than left to be found.** The CRM wiring shot came out slightly *smaller*
+(0.767 against the 0.83 the tuned setting gave) because seven boxes on one ring make the tangential
+term bind at 147 where the tuning used 140 - the arrangement has fewer crossing arcs, but it is not
+uniformly bigger. And on the Analytics fixture one `Account_Id` edge label now falls under the
+`Order_Lines` box where it used to sit clear: a denser layout crowds the labels that live between the
+boxes. Raising `margin` is the control for that, which is what it is for.
 
 **An arc has to attach to the side that faces the other box.** It always used the left or right
 edge, whatever the two boxes' relative positions - so on a focused diagram with one neighbour, which

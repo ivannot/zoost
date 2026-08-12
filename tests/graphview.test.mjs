@@ -111,3 +111,146 @@ for (const app of ['crm', 'analytics']) {
       `nothing to draw gave ${f.state.erScale}`);
   });
 }
+
+/* ---------------------------------------------------------------------------------------------
+ * The concentric radius. `ringR = max(L * erP.ring, needed)` made a ring the same size for eight
+ * boxes as for eighty, and erFit then scaled the drawing down to fit a circle that was mostly
+ * empty. Measured on the lifted layout, old formula against the derived one - the fill column is
+ * the share of the bounding box the boxes actually occupy, which is the defect stated as a number:
+ *
+ *     levels     old extent   fill      derived     fill
+ *     1+1        190x484     26.4%     190x164     78.0%
+ *     1+3        917x712      9.0%     416x300     47.2%
+ *     1+8       1030x904     16.2%     642x583     40.2%
+ *     1+12      1361x1253    12.9%     785x862     32.5%
+ *     1+30      3102x3019     5.6%    1655x1666    19.0%
+ *     1+3+4     1870x1762     3.9%     716x608     29.4%
+ *
+ * Which of these actually discriminate was measured, not assumed, by putting the old formula back
+ * with its own preset: **four of the ten go red** - the fill ratio and the slider removal, one each
+ * per app. The other six pass on both formulas and are guards, which is said at each of them rather
+ * than left for whoever next wonders what the suite is claiming. Getting this wrong in the first
+ * draft is how a test file ends up asserting its author's intentions instead of the code's behaviour.
+ *
+ * Both apps are asserted separately: they carry erLayout word for word, and a divergence in either is
+ * a red mark on that app's name.
+ */
+
+/** erLayout() lifted out of an app, over a synthetic ego graph of `levels` boxes per BFS level. */
+function laidOut(app, levels, margin = 36) {
+  const N = {}, egoLevel = {}, ids = [];
+  levels.forEach((count, L) => {
+    for (let i = 0; i < count; i++) {
+      const id = `L${L}n${i}`; ids.push(id);
+      N[id] = { rows: 2 + (i % 4) };            // boxes of four different heights, as a real one has
+      egoLevel[id] = L;
+    }
+  });
+  const state = {
+    erSelEdge: 'stale', erIds: [], erPos: {}, egoLevel, N,
+    erP: { margin, spread: 42, gap: 8, fs: 10, sub: true },
+    erVisibleIds: () => ids,
+    erConcentric: () => true,                   // the branch under test; the free one is not entered
+    erBoxSize: (n) => ({ w: 190, h: 28 + n.rows * 18 }),
+  };
+  const ctx = vm.createContext(state);
+  vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erLayout'), ctx);
+  vm.runInContext('erLayout()', ctx);
+  const p = state.erPos;
+  const ext = {
+    x: Math.max(...ids.map((i) => p[i].x + p[i].w)) - Math.min(...ids.map((i) => p[i].x)),
+    y: Math.max(...ids.map((i) => p[i].y + p[i].h)) - Math.min(...ids.map((i) => p[i].y)),
+  };
+  const area = ids.reduce((t, i) => t + p[i].w * p[i].h, 0);
+  return { pos: p, ids, ext, egoLevel, fill: area / (ext.x * ext.y) };
+}
+
+/** How deep the worst overlapping pair overlaps, in pixels. 0 means nothing overlaps anything. */
+function worstOverlap({ pos, ids }) {
+  let worst = 0, pair = '';
+  for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) {
+    const A = pos[ids[a]], B = pos[ids[b]];
+    const ox = (A.w + B.w) / 2 - Math.abs((B.x + B.w / 2) - (A.x + A.w / 2));
+    const oy = (A.h + B.h) / 2 - Math.abs((B.y + B.h / 2) - (A.y + A.h / 2));
+    if (ox > 0 && oy > 0 && Math.min(ox, oy) > worst) { worst = Math.min(ox, oy); pair = `${ids[a]}/${ids[b]}`; }
+  }
+  return { worst, pair };
+}
+
+const SHAPES = [[1, 1], [1, 3], [1, 8], [1, 12], [1, 30], [1, 3, 4], [1, 3, 9, 20]];
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: no two boxes in a concentric layout overlap`, () => {
+    // The ring formula is a starting position and the collision pass finishes it, so this holds the
+    // two together: tightening one without the other would show up here and nowhere else.
+    for (const levels of SHAPES) {
+      const { worst, pair } = worstOverlap(laidOut(app, levels));
+      assert.equal(Math.round(worst), 0, `levels ${levels}: ${pair} overlap by ${Math.round(worst)}px`);
+    }
+  });
+
+  test(`${app}: a ring of three is not drawn on a circle sized for thirty`, () => {
+    // The defect itself, as a ratio against the formula it replaced rather than as one flat
+    // threshold. A single number cannot do this job: at 1+1 the old radius already filled 26.4% and
+    // at 1+3+4 it filled 3.9%, so any line that catches the second lets the first through - which
+    // the first version of this test did, and it failed at 29.4% against a 30% gate I had written
+    // from the other rows without checking it against that one. The old fill per shape is the datum.
+    const OLD_FILL = [[[1, 1], 0.264], [[1, 3], 0.090], [[1, 8], 0.162], [[1, 12], 0.129], [[1, 3, 4], 0.039]];
+    for (const [levels, was] of OLD_FILL) {
+      const { fill, ext } = laidOut(app, levels);
+      assert.ok(fill > was * 1.5,
+        `levels ${levels}: boxes fill ${(fill * 100).toFixed(1)}% of ${Math.round(ext.x)}x`
+        + `${Math.round(ext.y)}, against ${(was * 100).toFixed(1)}% on the fixed-multiple radius `
+        + '- the ring is sized for something other than what sits on it');
+    }
+  });
+
+  test(`${app}: the radius follows the count instead of the level`, () => {
+    // A guard, not a defect check - and the difference was established by trying it. Written with a
+    // comment claiming this "could not have been true before", it then passed against the old
+    // formula given its real preset: `max(L * ring, n * slot / 2pi)` does grow with n once n is
+    // large enough for the second term to win, so monotonicity was never the thing that was broken.
+    // What was broken is the *size*, which the fill case above measures. This stays because losing
+    // monotonicity is a plausible way to get the new formula wrong.
+    const w = [3, 8, 12, 30].map((n) => laidOut(app, [1, n]).ext.x);
+    for (let i = 1; i < w.length; i++) {
+      assert.ok(w[i] > w[i - 1],
+        `a ring of ${[3, 8, 12, 30][i]} is not wider than one of ${[3, 8, 12, 30][i - 1]}: ${w}`);
+    }
+  });
+
+  test(`${app}: rings stay in level order`, () => {
+    // Also a guard rather than a defect check: the old radii were 420/840/1260 and perfectly ordered,
+    // so this passes on both formulas. It is here because deriving the radius is only worth having if
+    // the diagram still reads as rings around a focus, and the tangential term is deliberately loose
+    // enough for the collision pass to finish - which is the mechanism that could interleave them.
+    const { pos, ids, egoLevel } = laidOut(app, [1, 3, 9, 20]);
+    const c = pos['L0n0'];
+    const centre = { x: c.x + c.w / 2, y: c.y + c.h / 2 };
+    const byLevel = {};
+    ids.forEach((id) => {
+      const d = Math.hypot(pos[id].x + pos[id].w / 2 - centre.x, pos[id].y + pos[id].h / 2 - centre.y);
+      (byLevel[egoLevel[id]] = byLevel[egoLevel[id]] || []).push(d);
+    });
+    for (const L of [1, 2]) {
+      assert.ok(Math.max(...byLevel[L]) < Math.min(...byLevel[L + 1]),
+        `level ${L} reaches ${Math.round(Math.max(...byLevel[L]))} and level ${L + 1} starts at `
+        + `${Math.round(Math.min(...byLevel[L + 1]))} - the rings have interleaved`);
+    }
+  });
+
+  test(`${app}: the ring slider is gone, in every place it was wired`, () => {
+    // It existed to compensate for the formula above, and `margin` drives the radii now. Removing a
+    // control means five places, which is exactly the kind of list that gets four of five done.
+    const js = read(`apps/${app}/graphview.js`)
+      .split('\n').filter((l) => !l.trimStart().startsWith('//')).join('\n');
+    const html = read(`apps/${app}/graphview.html`);
+    assert.ok(!/erP\.ring\b/.test(js), 'erP.ring is still read');
+    assert.ok(!/\bring:\s*\d/.test(js), 'a preset still declares a ring value');
+    assert.ok(!/'ring'/.test(js), "'ring' is still named in a control or relayout table");
+    for (const id of ['pRing', 'vRing', 'rowRing']) {
+      assert.ok(!js.includes(id), `${id} is still wired in graphview.js`);
+      assert.ok(!html.includes(id), `${id} is still in the markup`);
+    }
+  });
+}

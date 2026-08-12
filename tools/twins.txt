@@ -63,7 +63,7 @@ erEdgePoints	6f7a665c6b5e	6f7a665c6b5e	identical
 erFieldsFor	39b26c15f9ce	7f029df0a700	divergent
 erFit	aaf525971528	aaf525971528	identical
 erInitControls	0552e736e0ad	6f4e81fa1e04	divergent
-erLayout	de2b7307a15c	de2b7307a15c	identical
+erLayout	da80de30e51b	da80de30e51b	identical
 erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	a914056d157c	757f61125aad	divergent
@@ -72,7 +72,7 @@ erSaveParams	ad2c6817be8a	16797c3d8335	divergent
 erShow	e73e211eb385	65823bf91053	divergent
 erShowMaybeHeavy	9ccced5c0d1f	eff332d42700	divergent
 erSizeArrows	516d6a3e9677	516d6a3e9677	identical
-erUpdateControlVis	683d50989e28	992fcbdc720d	divergent
+erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
 erVisibleIds	c0535e2bf8be	18d29a8da398	divergent
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical

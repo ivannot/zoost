@@ -87,17 +87,16 @@ STORE = {
 # the page, so they use the same ids the product does - a renamed control breaks the shot, which is
 # the correct direction for it to break in.
 SHOTS = [
-    # The `ring` slider is moved on the three focused shots, and that is worth saying rather than
-    # leaving as a magic number. Measured on this fixture at 1280 x 800: the concentric layout's
-    # default ring (420) draws an eight-box diagram at **38% zoom** - 10px text rendered under 4px -
-    # where 140 draws the same diagram at 101%. The radius is a fixed multiple of the level, so it
-    # is as wide for eight boxes as for eighty. A picture at 38% would be an honest photograph of a
-    # readability defect; the slider is a shipped, documented control, so these use it. **The defect
-    # itself is still open** - see the note in CLAUDE.md.
+    # These three used to move the `ring` slider, because the concentric radius was a fixed multiple
+    # of the level and drew an eight-box diagram at 38% zoom - 10px text under 4px. Photographing
+    # that meant either publishing the defect or reaching for a control the reader would have to find
+    # for themselves, and the comment here said as much for as long as it lasted. The radii are
+    # derived from the boxes now and the slider is gone, so what these render is the default: the
+    # picture and the product agree without anything being set up.
     ("crm-graph", "crm", "graph-crm-calls.json", """
         select('standalone.buildInvoice');
         document.querySelector('.tab[data-v="er"]').click();
-        setTimeout(() => { setDepth(1); erP.ring = 140; erLaidOut = false; erShow(); }, 300);
+        setTimeout(() => { setDepth(1); erLaidOut = false; erShow(); }, 300);
     """),
     ("crm-explorer", "crm", "graph-crm-calls.json", """
         select('automation.onOrderCreate');
@@ -116,13 +115,13 @@ SHOTS = [
     ("crm-er", "crm", "graph-crm-schema.json", """
         select('Orders');
         document.querySelector('.tab[data-v="er"]').click();
-        setTimeout(() => { setDepth(1); erP.ring = 140; erLaidOut = false; erShow(); }, 300);
+        setTimeout(() => { setDepth(1); erLaidOut = false; erShow(); }, 300);
     """),
     ("analytics-er", "analytics", "graph-analytics.json", """
         const t = Object.values(N).find((n) => n.name === 'Orders');
         if (t) select(t.id);
         document.querySelector('.tab[data-v="er"]').click();
-        setTimeout(() => { setDepth(2); erP.ring = 140; erLaidOut = false; erShow(); }, 300);
+        setTimeout(() => { setDepth(2); erLaidOut = false; erShow(); }, 300);
     """),
 ]
 

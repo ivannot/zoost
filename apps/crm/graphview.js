@@ -149,7 +149,7 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
     erP = Object.assign({}, ER_PRESET[erBoxPreset()]);
     try {
       const st = await chrome.storage.local.get('erParams');
-      if (st && st.erParams && st.erParams.current && st.erParams.kind === DATA.kind) erP = Object.assign({}, erP, st.erParams.current);
+      if (st && st.erParams && st.erParams.current && st.erParams.kind === DATA.kind) erP = Object.assign({}, erP, erKnownParams(st.erParams.current));
     } catch (_) {}
     erInitControls();
     // Depth buttons wired once: they work whether the focus comes from the open ("Open ER") or is
@@ -1235,16 +1235,24 @@ let erMaxX = 0, erMaxY = 0;
 // Readability vs. compactness has no single right answer across graphs, so the trade-off is
 // exposed as runtime controls instead of being guessed once at build time.
 const ER_PRESET = {
-  modules:   { margin: 36,  spread: 42, ring: 420, gap: 8,  fs: 10, sub: true },
-  // `spread` drives the free branch and `ring` the concentric one, so only one of the two is ever
-  // in use - and this preset's spread had never been exercised, because «edges» used to be reached
-  // only with a focus. 72 put 19 boxes on a 3000px canvas: measured 0.25 zoom against 0.39 for the
+  modules:   { margin: 36,  spread: 42, gap: 8,  fs: 10, sub: true },
+  // `spread` drives the free branch, and nothing drives the concentric one any more: its radii are
+  // derived from the boxes on each ring. This preset's spread had never been exercised, because
+  // «edges» used to be reached only with a focus. 72 put 19 boxes on a 3000px canvas: measured 0.25 zoom against 0.39 for the
   // same graph in boxes mode, which is a diagram laid out correctly and drawn too small to read.
-  relations: { margin: 120, spread: 38, ring: 640, gap: 10, fs: 13, sub: true },
+  relations: { margin: 120, spread: 38, gap: 10, fs: 13, sub: true },
   // A call box carries a handful of rows where a module box carries dozens, so the same spacing
-  // leaves the diagram mostly empty. Tighter rings, less spread, and the boxes come out closer.
-  calls:     { margin: 28,  spread: 34, ring: 320, gap: 8,  fs: 10, sub: true },
+  // leaves the diagram mostly empty. Less margin and less spread, and the boxes come out closer -
+  // and since the concentric radii are derived from `margin`, the rings tighten with it.
+  calls:     { margin: 28,  spread: 34, gap: 8,  fs: 10, sub: true },
 };
+// A stored blob may only put back keys the presets declare. `ring` was a slider once, and a browser
+// that had drawn one diagram before this version still has `ring: 420` in `chrome.storage.local` -
+// merged in whole, it would sit in `erP` for ever, read by nothing and reported by nothing. This is
+// not migration code with a version to grow out of: it is the permanent shape of the merge, so the
+// next parameter that goes has nothing left to leave behind.
+const erKnownParams = (o) => Object.fromEntries(
+  Object.entries(o || {}).filter(([k]) => k in ER_PRESET.modules));
 // The boxed mode's preset depends on what is being drawn; `relations` is the same idea either way.
 const erBoxPreset = () => (DATA && DATA.kind === 'schema' ? 'modules' : 'calls');
 let erP = Object.assign({}, ER_PRESET.modules);
@@ -1369,12 +1377,37 @@ function erLayout() {
     // concentric ego layout: focus at centre, each BFS level on its own ring (compact + readable)
     const byLevel = {};
     erIds.forEach((id) => { const L = (egoLevel[id] != null) ? egoLevel[id] : 1; (byLevel[L] = byLevel[L] || []).push(id); });
+    // A ring is as wide as what has to sit on it, and no wider. It was `L * erP.ring` with a default
+    // of 420, so the radius was the same for eight boxes as for eighty and `erFit` then scaled the
+    // whole drawing down to fit a circle that was mostly empty. Measured on the sample schema at
+    // 1280x800: a focused diagram of eight boxes over two levels fitted at **28%** - 10px text drawn
+    // under 3px - where the radii below fit the same drawing at **76%**. Both terms are measured
+    // rather than chosen, which is the point: the slider that used to compensate for this is gone.
+    //
+    //   radially, a ring clears the one inside it by half of each ring's tallest box plus `margin` -
+    //     the same clearance the collision pass further down enforces between any two boxes, so the
+    //     two agree instead of one undoing the other;
+    //   tangentially, the chord between neighbours has to clear the narrower of a box's two sides,
+    //     because two axis-aligned rectangles are apart as soon as *either* axis separates them.
+    //
+    // The tangential term is a starting position, not a proof of non-overlap: near the top of a ring
+    // it is the wide axis that has to do the separating, and the collision pass finishes that off.
+    // Choosing it this way leaves the pass little to do, which is what keeps a ring looking like a
+    // ring. Measured against the alternatives on seven shapes: a radius derived from arc length alone
+    // came out 70% too large (47% zoom where this gives 76%), and a radial-only one let twelve boxes
+    // collapse into a blob. This also matches or beats the hand-tuned `ring: 140` that `shots.py` was
+    // setting to photograph the diagrams honestly - which it no longer needs to.
+    let ringR = 0, prevH = 0;
     Object.keys(byLevel).map(Number).sort((a, b) => a - b).forEach((L) => {
-      const ids = byLevel[L];
-      if (L === 0) { const s = erBoxSize(N[ids[0]]); erPos[ids[0]] = { x: -s.w / 2, y: -s.h / 2, w: s.w, h: s.h }; return; }
-      const n = ids.length, slot = Math.max(160, erP.ring * 0.73);
-      const ringR = Math.max(L * erP.ring, (n * slot) / (2 * Math.PI));
-      ids.forEach((id, i) => { const ang = (i / n) * 2 * Math.PI - Math.PI / 2; const s = erBoxSize(N[id]); erPos[id] = { x: ringR * Math.cos(ang) - s.w / 2, y: ringR * Math.sin(ang) - s.h / 2, w: s.w, h: s.h }; });
+      const ids = byLevel[L], sizes = ids.map((id) => erBoxSize(N[id]));
+      if (L === 0) { const s = sizes[0]; erPos[ids[0]] = { x: -s.w / 2, y: -s.h / 2, w: s.w, h: s.h }; prevH = s.h; return; }
+      const n = ids.length;
+      const tall = Math.max(...sizes.map((s) => s.h)), wide = Math.max(...sizes.map((s) => s.w));
+      const step = prevH / 2 + tall / 2 + erP.margin;
+      const chord = n > 1 ? (Math.min(wide, tall) + erP.margin) / (2 * Math.sin(Math.PI / n)) : 0;
+      ringR = Math.max(ringR + step, chord);
+      prevH = tall;
+      ids.forEach((id, i) => { const ang = (i / n) * 2 * Math.PI - Math.PI / 2; const s = sizes[i]; erPos[id] = { x: ringR * Math.cos(ang) - s.w / 2, y: ringR * Math.sin(ang) - s.h / 2, w: s.w, h: s.h }; });
     });
   } else {
     // Free layout needs the force positions. Concentric focus mode above does NOT (it uses rings),
@@ -1711,12 +1744,12 @@ document.addEventListener('wheel', (e) => {
 // ---- runtime layout controls ----
 const ER_CTL = [
   ['pMargin', 'vMargin', 'margin'], ['pSpread', 'vSpread', 'spread'],
-  ['pRing', 'vRing', 'ring'], ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs'],
+  ['pGap', 'vGap', 'gap'], ['pFs', 'vFs', 'fs'],
 ];
-const ER_RELAYOUT = new Set(['margin', 'spread', 'ring']);
+const ER_RELAYOUT = new Set(['margin', 'spread']);
 let _erT = null;
 // Which layout branch is live decides which knobs mean anything:
-// concentric (focus + ego set) is driven by `ring`, the force branch by `spread`.
+// the force branch is driven by `spread`; the concentric one derives its radii and has no knob.
 function erConcentric() { return !!(curFocus && egoSet); }   // concentric follows the CURRENT focus, not just the one it was opened with
 function erUpdateControlVis() {
   const rel = erEmph === 'relations', conc = erConcentric(), _schema = DATA.kind === 'schema';
@@ -1727,7 +1760,6 @@ function erUpdateControlVis() {
   const em = $('erEmph'); if (em) em.textContent = MSG.emphasis + erEmphLabel();
   set('rowMargin', true);
   set('rowSpread', !conc);
-  set('rowRing', conc);
   set('rowGap', rel);
   set('rowFs', rel);
   set('rowSub', rel);
