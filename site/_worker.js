@@ -19,8 +19,11 @@
  * The Store figures came from scraping the listing page for years, because the old API could not
  * report status and Google published nothing else. They come from the Chrome Web Store API now, read
  * with a service account, minting a token for `chromewebstore.readonly` — which is what this code
- * asks for. Whether the key could ask for more is not established: Google describes the
- * publisher-level grant as «manage items», and the scope is chosen at token time. That removes a DOM contract we
+ * asks for. Whether the key could ask for more **is** established, and the answer is that it can:
+ * `tools/cwsscope.py` mints a token for the full `chromewebstore` scope from this same key and the
+ * API answers with the item. Read-only is a property of what this code requests, never of the
+ * credential - treat any key of this service account as one that can publish, because Google links
+ * one service account per publisher and offers no narrower grant. That removes a DOM contract we
  * did not own, and it answers a question the scrape never could: whether a submission was
  * **rejected**, which is otherwise indistinguishable from one still in the queue.
  */

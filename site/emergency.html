@@ -151,8 +151,13 @@
     are content to leave it before you load it, not into Downloads.</p>
   <p>The two ids being different has one advantage worth using: the Store build and the unpacked one
     can be installed at the same time. Leave the Store one in place, so going back is removing the
-    unpacked copy rather than reinstalling anything. Use one at a time, though: two panels writing
-    the same mirror folder is not a case anything here has been designed for.</p>
+    unpacked copy rather than reinstalling anything. Run one at a time, though, and the way to do that
+    is the toggle in <code>chrome://extensions</code>: switch the Store copy <b>off</b> rather than
+    uninstalling it, and it keeps its settings and comes back with one click. Two copies watching the
+    same Zoho tab is not a case anything here was designed for, and on Zoho CRM it is not merely
+    untidy: the hook Zoost puts into the page's own world is guarded so that whichever copy loaded
+    first wins, which leaves the behaviour depending on load order rather than on the copy you meant
+    to use.</p>
 
   <h2 id="running-it">Running it</h2>
   <ol>
@@ -181,7 +186,7 @@
     directory with <code>manifest.json</code> directly inside it.</p>
 
   <h2 id="back">Going back</h2>
-  <p>When the Store catches up, and this page will tell you when it has:</p>
+  <p>When the Store catches up - this page says so, if you come back and look:</p>
   <ol>
     <li>Open <code>chrome://extensions</code> and <b class="k">Remove</b> the unpacked copy.</li>
     <li>If you left the Store build installed, it is already there and already current. If you

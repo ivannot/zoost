@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:9298dcbf47ebbc43 -->
+<!-- translated-from: site/nerd.html sha256:789962d16d525d86 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -178,11 +178,11 @@
     firmato, usato senza aspettare la coda.</p>
 
   <h2 id="what-none-of-it-proves">Cosa non dimostra niente di tutto questo</h2>
-  <p>Il caricamento sul Chrome Web Store è un passaggio manuale, quindi nessuna firma lo copre: quello
-    che è dimostrato è come è stato costruito l'archivio della release. Google poi reimpacchetta e
-    rifirma ogni estensione, quindi quello che distribuisce non è identico byte per byte a quello che
-    è stato caricato. Entrambe le cose si chiudono all'altro capo, confrontando l'estensione
-    installata con il tag.</p>
+  <p>Il caricamento sul Chrome Web Store lo fa un workflow leggendo l'asset della Release, quindi il
+    file che Google riceve è quello costruito e firmato; resta a mano il click su Submit, che non
+    sposta byte. Quello che non è coperto è l'altro capo: Google reimpacchetta e rifirma ogni
+    estensione, quindi quello che distribuisce non è identico byte per byte a quello che è stato
+    caricato. Si chiude confrontando l'estensione installata con il tag.</p>
   <p>Il tag della versione che <em>hai tu</em>, però: quella che <code>chrome://extensions</code>
     dichiara. Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi
     sempre avanti rispetto a quello che lo Store distribuisce.</p>

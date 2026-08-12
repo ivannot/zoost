@@ -8,3 +8,9 @@ wrangler.jsonc
 # sets were re-checked on a preview after adding it, since this list is also what excludes files from
 # the upload.
 _headers
+# wrangler writes its deploy scratch inside the assets directory, and it was being published with
+# everything else: `/.wrangler/tmp/deploy-<random>/_worker.js.map` answered 200 on the live site. No
+# secret in it - the Worker source is in this repository - but it is a build artefact nobody asked
+# for, at a URL that changes every deploy, and it is outside everything auditcheck compares, because
+# it is not a file this repository holds.
+.wrangler

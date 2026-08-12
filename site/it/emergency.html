@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/emergency.html sha256:c966424c2a424071 -->
+<!-- translated-from: site/emergency.html sha256:ebd4d2472254afbe -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>In caso di emergenza - usare una release di Zoost prima che arrivi sullo Store</title>
@@ -156,9 +156,13 @@
     Download.</p>
   <p>Il fatto che i due id siano diversi ha un vantaggio da sfruttare: la build dello Store e quella
     unpacked possono stare installate insieme. Lascia quella dello Store dov'è, così tornare
-    indietro è rimuovere la copia unpacked invece che reinstallare qualcosa. Usane però una alla
-    volta: due pannelli che scrivono sulla stessa cartella di mirror non sono un caso per cui qui sia
-    stato progettato niente.</p>
+    indietro è rimuovere la copia unpacked invece che reinstallare qualcosa. Usane però una alla volta,
+    e il modo concreto è l'interruttore in <code>chrome://extensions</code>: spegni la copia dello
+    Store invece di disinstallarla, così si tiene le sue impostazioni e torna con un clic. Due copie
+    che guardano la stessa scheda Zoho non sono un caso per cui qui sia stato progettato niente, e su
+    Zoho CRM non è solo disordine: l'hook che Zoost mette nel world della pagina ha una guardia per
+    cui vince la copia caricata per prima, quindi il comportamento dipende dall'ordine di caricamento
+    invece che da quale volevi usare.</p>
 
   <h2 id="running-it">Come si carica</h2>
   <ol>
@@ -189,7 +193,7 @@
     directory che ha <code>manifest.json</code> direttamente dentro.</p>
 
   <h2 id="back">Tornare indietro</h2>
-  <p>Quando lo Store recupera, e questa pagina te lo dirà:</p>
+  <p>Quando lo Store recupera - questa pagina lo dice, se torni a guardare:</p>
   <ol>
     <li>Apri <code>chrome://extensions</code> e fai <b class="k">Rimuovi</b> sulla copia unpacked.</li>
     <li>Se hai lasciato installata la build dello Store, è già lì ed è già aggiornata. Se

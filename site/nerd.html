@@ -178,10 +178,11 @@
     without waiting for the queue.</p>
 
   <h2 id="what-none-of-it-proves">What none of it proves</h2>
-  <p>Uploading to the Chrome Web Store is a manual step, so no signature covers it: what is proven is
-    how the release archive was built. Google also repackages and re-signs every extension, so what it
-    serves is not byte-identical to what was uploaded.</p>
-  <p>Both are settled at the far end, by diffing the installed extension against the tag - the tag of
+  <p>The upload to the Chrome Web Store is a workflow reading the Release asset, so the file Google
+    receives is the one that was built and signed; what is still by hand is pressing Submit, which
+    moves no bytes. What is still not covered is the far end: Google repackages and re-signs every
+    extension, so what it serves is not byte-identical to what was uploaded.</p>
+  <p>That one is settled at the far end, by diffing the installed extension against the tag - the tag of
     the version <em>you have</em>, which <code>chrome://extensions</code> states.</p>
   <p>Mind which tag. Google publishes days after a submission rather than minutes, so the newest tag
     here is routinely ahead of what the Store is serving, and a version still in review is not being
