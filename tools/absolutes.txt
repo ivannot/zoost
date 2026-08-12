@@ -590,6 +590,7 @@ cdffb4ce7b71d830  site/it/docs-crm.html: È l'unico capitolo di un report che po
 c8edf3ee22bc1e8a  site/it/docs-crm.html: È tutto disattivato O non c'è nessuna scheda Zoho CRM attiva, oppure l'org della scheda non corrisponde al workspace selezionato.
 78809f2957da8069  site/it/docs-crm.html: È un indirizzo della tua organizzazione o di un tuo utente, mai di un cliente.
 06c2a315fd1d4c57  site/it/emergency.html: Chrome mostra anche un avviso "Disattiva le estensioni in modalità sviluppatore" all'avvio finché ne hai una caricata, su alcune piattaforme tutte le volte.
+ef8dcadca3b02f3d  site/it/emergency.html: Due copie che guardano la stessa scheda Zoho non sono un caso per cui qui sia stato progettato niente, e su Zoho CRM non è solo disordine: l'hook che Zoost mette nel world della pagina ha una guardia per cui vince la copia caricata per prima, quindi il comportamento dipende dall'ordine di caricamento invece che da quale volevi usare.
 e4ead6257baaccc6  site/it/emergency.html: Il mirror sono file in una cartella sul tuo disco e non appartiene a nessuna estensione.
 48948f8cb7757a85  site/it/emergency.html: L'estensione compare nell'elenco con una scheda normale, e il suo pannello laterale si apre come ha sempre fatto.
 57a25dfe0302421f  site/it/emergency.html: La cartella unpacked si può cancellare; il tuo mirror sta da tutt'altra parte e niente di tutto questo lo tocca.
@@ -611,7 +612,6 @@ ca59d397dd2d9e51  site/it/emergency.html: Se in questo momento non sei bloccato 
 e2a8749377bbbee3  site/it/emergency.html: Su un Chrome gestito dalla tua organizzazione le policy possono disattivare quell'interruttore o vietare del tutto le estensioni unpacked, e da questo lato non c'è modo di aggirarle.
 6331f21c228a872b  site/it/emergency.html: Tornare indietro sono due clic, ma non te lo ricorderà niente.
 ea63ec5c2bd41777  site/it/emergency.html: Una fix per qualcosa in cui non sei mai incappato non è un'emergenza.
-f51351b0131d66ec  site/it/emergency.html: Usane però una alla volta: due pannelli che scrivono sulla stessa cartella di mirror non sono un caso per cui qui sia stato progettato niente.
 cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa ↗ Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un colpo solo, la struttura di una tabella con le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, l'elenco di quello da cui non dipende più niente, gli export e l'assistente AI.
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
 4bd2a0ffb11f67f9  site/it/index.html: Accanto a ogni cifra c'è scritto di cosa non tiene conto.
@@ -653,14 +653,13 @@ e32a3b1c5bd6e896  site/it/index.html: Zoost porta l'org intera sul tuo disco, in
 49983475f95ff67d  site/it/nerd.html: Chi lo ha battuto è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.
 483013f913d99628  site/it/nerd.html: Come legge Zoho Analytics Prende il workspace dall'URL della scheda su cui sei - /workspace/{id} - quindi non c'è niente da estrarre, quindi niente da sbagliare.
 08459da24ef9cf4d  site/it/nerd.html: Come legge Zoho CRM Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina, perché nessun endpoint li offre.
-c8481a0f98fce694  site/it/nerd.html: Cosa non dimostra niente di tutto questo Il caricamento sul Chrome Web Store è un passaggio manuale, quindi nessuna firma lo copre: quello che è dimostrato è come è stato costruito l'archivio della release.
+040d5ef05b212b8d  site/it/nerd.html: Cosa non dimostra niente di tutto questo Il caricamento sul Chrome Web Store lo fa un workflow leggendo l'asset della Release, quindi il file che Google riceve è quello costruito e firmato; resta a mano il click su Submit, che non sposta byte.
 368fbba3c7362f30  site/it/nerd.html: Cosa non viene mai chiamato Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa.
 60bc5dc5f24ce0ce  site/it/nerd.html: Cosa è promesso e cosa no Quelle interfacce interne non portano nessuna promessa di compatibilità.
 38ee39dac2a2a25a  site/it/nerd.html: Dodici file per Zoho CRM e dieci per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto questo ti chiede di fidarti di come il codice è stato prodotto.
 c67472ee59ec19d3  site/it/nerd.html: Due endpoint di Zoho Analytics restano deliberatamente intoccati, per lo stesso motivo tutti e due: restituiscono i tuoi dati.
 c94108102978562a  site/it/nerd.html: E un'attestazione dice chi ha costruito un file, mai che quel file sia buono.
 77f4db35875b94cb  site/it/nerd.html: E una versione ancora in revisione non è distribuita affatto: confrontarla con quel tag dà una differenza che non dice niente né dell'uno né dell'altro file.
-59948a65e27fd1c3  site/it/nerd.html: Google poi reimpacchetta e rifirma ogni estensione, quindi quello che distribuisce non è identico byte per byte a quello che è stato caricato.
 b602ba9098ebef76  site/it/nerd.html: Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi sempre avanti rispetto a quello che lo Store distribuisce.
 2525c9769acdba30  site/it/nerd.html: Il CSRF segue il metodo HTTP invece del percorso: ogni POST porta X-ZCSRF-TOKEN , nessuna GET lo fa, misurato su una cattura di 104 richieste senza eccezioni.
 8f8ee752d82c5346  site/it/nerd.html: Il suo URL contiene CREATE e non crea niente: calcola e restituisce il modello.
@@ -677,6 +676,7 @@ af6695a6b2109ec4  site/it/nerd.html: Non legge nessun header e nessun corpo di r
 e3154aa353fd4b89  site/it/nerd.html: O certi, o fermi Nessun ciclo di tentativi contro un'ipotesi.
 6b99cf61b0c01b51  site/it/nerd.html: Ogni GitHub Action è agganciata a un hash di commit, mai a un tag che si può spostare.
 e29f01092166be20  site/it/nerd.html: Ora la build marca ogni file con la data del commit, ordina l'elenco dei file e passa -X .
+6378c1d0e35dff0f  site/it/nerd.html: Quello che non è coperto è l'altro capo: Google reimpacchetta e rifirma ogni estensione, quindi quello che distribuisce non è identico byte per byte a quello che è stato caricato.
 200ce27aec50985a  site/it/nerd.html: Quindi le definizioni dei report restano non coperte , e ogni superficie lo dice invece di lasciar credere che il mirror sia completo.
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
 8b65eed0c207c257  site/it/nerd.html: Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
@@ -796,7 +796,6 @@ d6c76ca7065f7dc7  site/nerd.html: And an attestation says who built a file, neve
 37a380d22fdb0174  site/nerd.html: Check it yourself gh attestation verify <file> --repo ivannot/zoost asks GitHub whether it built that exact archive tools/verify.sh rebuilds it on your machine and compares the hashes RELEASES.md commit, tag and SHA-256 of every submitted version - including the two entries it says it cannot verify, and why llms.txt the same map written for an assistant asked to assess the product rather than summarise the landing page Neither command asks you to take my word for it.
 e45c8a1f9d8896da  site/nerd.html: Diffing against that one gives a mismatch that says nothing about either file.
 3331fd75e1f749b2  site/nerd.html: Every GitHub Action is pinned to a commit hash, never to a moving tag.
-ac7204a234da2218  site/nerd.html: Google also repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
 63588171fe620c14  site/nerd.html: Guessing at a parameter to suppress the data is exactly where a read-only claim gets broken by accident.
 9b17fcbe480b3753  site/nerd.html: It is named here because anyone checking the read-only claim literally will find it, and finding it unannounced would read as a caught lie rather than as what it is.
 1576bd97d81a8c38  site/nerd.html: Its URL contains CREATE and it creates nothing - it computes and returns the model.
@@ -810,6 +809,7 @@ f216a3fc063092a9  site/nerd.html: So report definitions stay uncovered , and eve
 5c4f78e11d5a97d3  site/nerd.html: The build now stamps every file with the commit's own date, sorts the file list, and passes -X .
 76cf2582b0cd5564  site/nerd.html: The exceptions are narrow, deliberate and written down: a bounded wait for a known element after a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a deterministic 4xx), and recovery by an action that was measured to work - the first /deluge/ call after a fresh login is refused, any ordinary Zoho CRM call fixes it, and that was reproduced deliberately rather than guessed at.
 2efe0b9d3934f4bb  site/nerd.html: What is never called Neither extension calls an endpoint that creates, edits or deletes anything.
+f516b3a1a25a4a16  site/nerd.html: What is still not covered is the far end: Google repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
 e6d1abbcefdbea2e  site/nerd.html: Zoost states it never reads your rows, so it does not call it.
 9df22ecc3408ccf1  site/privacy.html: 4.2 The AI provider - only if you enable it Read this before enabling the assistant The AI assistant is off by default and requires you to enter your own API key.
 8ceaaa09f8a1ffac  site/privacy.html: A policy can only be tightened this way: Chrome refuses a manifest that tries to relax the first two.
