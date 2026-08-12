@@ -796,6 +796,17 @@ What that request means, in order. Do all of it without being asked:
    no judgement left in it. **The decision is Submit for review**, it is in the dashboard, and it stays
    yours - the listing fields and the screenshots cannot be set through the API anyway, so you open
    the dashboard regardless, with the package already there.
+6d. **Ask him to paste back every field he touched in the dashboard, and diff it.** This is the only
+   check that exists on the listing, and it has to be asked for: Google exposes no API for those
+   fields - which is why the step is by hand in the first place - so nothing here can compare what is
+   on the item with what is in `store/<app>/store-listing.md`. `storecopy.py <app> --changed` says
+   which fields *should* have moved; only a human reading the dashboard can say which ones did.
+   **Ask at step 6, before Submit**, not after: a field pasted short or pasted over a leftover is
+   fixable while the form is open and awkward once a revision is in review. It costs him a copy and
+   me a `diff`, and it is what found that the Analytics §9 was in step after an hour of believing it
+   might not be. He asked to be reminded, so this is the reminder: it lives here because there is no
+   command that can carry it.
+
 7. **After submission: `python3 tools/submitted.py <app>`.** It takes the `RELEASES.md` row from the
    published Release - the commit and the hash GitHub signed, not ones recomputed here - and records
    which screenshots the listing now carries. Running it is the one thing it takes on trust: nothing
