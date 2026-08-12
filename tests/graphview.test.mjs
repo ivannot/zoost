@@ -1,5 +1,8 @@
 /*
- * graphview.test.mjs — erFit(), the one place the diagrams turn a measurement into a scale.
+ * graphview.test.mjs — the three places the diagrams turn measurements into a drawing: the fit that
+ * chooses a scale, the concentric radius, and the pass that stops one box being drawn over another.
+ *
+ * The first section is erFit().
  *
  * Every case here comes from one investigation, and the investigation's first two conclusions were
  * both wrong, which is why the cover is written the way it is rather than around a symptom.
@@ -154,7 +157,12 @@ function laidOut(app, levels, margin = 36) {
     erBoxSize: (n) => ({ w: 190, h: 28 + n.rows * 18 }),
   };
   const ctx = vm.createContext(state);
-  vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erLayout'), ctx);
+  // `collideBoxes` goes with it. erLayout calls it, and a slice that leaves a callee behind throws a
+  // ReferenceError three lines in - the free-variable trap this repository has already recorded once,
+  // and it fired again here the moment the pass was extracted into its own function. The suite caught
+  // it, which is the argument for the suite.
+  vm.runInContext(['erLayout', 'collideBoxes']
+    .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
   vm.runInContext('erLayout()', ctx);
   const p = state.erPos;
   const ext = {
@@ -251,6 +259,91 @@ for (const app of ['crm', 'analytics']) {
     for (const id of ['pRing', 'vRing', 'rowRing']) {
       assert.ok(!js.includes(id), `${id} is still wired in graphview.js`);
       assert.ok(!html.includes(id), `${id} is still in the markup`);
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * collideBoxes(), the pass that decides whether a box ends up drawn over another. It used to compare
+ * every pair against every other and therefore ran *fewer* passes above 150 nodes, which left 230
+ * overlapping pairs at 200 nodes and 1852 at 500 - each one a box with part of another painted over
+ * it, and nothing on screen saying so. It is a grid now, and it keeps its best pass rather than its
+ * last, because the push oscillates.
+ *
+ * Tested on scattered boxes rather than on force-layout output: the pass takes positions and gives
+ * positions back, and generating them here keeps the case readable and the failure legible. What that
+ * does not cover is stated - how good the *input* is, which is the force layout's job and measured
+ * separately in the model under tools/, not here.
+ */
+function scatter(n, spanX, spanY, seed = 5) {
+  let s = seed;
+  const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const pos = {}, ids = [];
+  for (let i = 0; i < n; i++) {
+    const id = `b${i}`; ids.push(id);
+    pos[id] = { x: rnd() * spanX, y: rnd() * spanY, w: 190, h: 28 + (1 + Math.floor(rnd() * 5)) * 18 };
+  }
+  return { pos, ids };
+}
+
+function collide(app, { pos, ids }, margin = 28) {
+  const ctx = vm.createContext({ erPos: pos });
+  vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'collideBoxes'), ctx);
+  ctx.list = ids; ctx.margin = margin;
+  vm.runInContext('collideBoxes(list, margin)', ctx);
+  return pos;
+}
+
+function overlapCount(pos, ids) {
+  let pairs = 0;
+  for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) {
+    const A = pos[ids[a]], B = pos[ids[b]];
+    const ox = (A.w + B.w) / 2 - Math.abs((B.x + B.w / 2) - (A.x + A.w / 2));
+    const oy = (A.h + B.h) / 2 - Math.abs((B.y + B.h / 2) - (A.y + A.h / 2));
+    if (ox > 0 && oy > 0) pairs++;
+  }
+  return pairs;
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: boxes with room are all pulled clear of each other`, () => {
+    // 60 boxes over a span with room for them: the pass must leave none covering another. This is the
+    // measurement the readability limit is derived from, so it is asserted rather than remembered.
+    for (const seed of [5, 13, 29, 47, 83]) {
+      const g = scatter(60, 2600, 1800, seed);
+      const before = overlapCount(g.pos, g.ids);
+      const after = overlapCount(collide(app, g), g.ids);
+      assert.ok(before > 0, `seed ${seed}: nothing overlapped to begin with, the case proves nothing`);
+      assert.equal(after, 0, `seed ${seed}: ${after} pair(s) still overlap, from ${before}`);
+    }
+  });
+
+  test(`${app}: a crowded set is improved, never made worse`, () => {
+    // Half the room, so it cannot come out clean - relaxation does not converge at this density and
+    // the comment in the source says so. What must hold is that it never hands back something worse
+    // than it was given, which a run that keeps its last pass instead of its best can do.
+    for (const seed of [5, 13, 29]) {
+      const g = scatter(220, 2600, 1800, seed);
+      const before = overlapCount(g.pos, g.ids);
+      const after = overlapCount(collide(app, g), g.ids);
+      assert.ok(after < before, `seed ${seed}: ${before} pairs in, ${after} out`);
+    }
+  });
+
+  test(`${app}: the same input comes out the same way twice`, () => {
+    // Load-bearing, not tidiness: the PDF has to be reproducible, and a chip switched off and back on
+    // must not rearrange a diagram the reader had already learnt to read. The grid iterates in
+    // insertion order for this reason.
+    const a = collide(app, scatter(90, 2600, 1800, 61));
+    const b = collide(app, scatter(90, 2600, 1800, 61));
+    const key = (p) => Object.keys(p).sort().map((k) => `${k}:${p[k].x.toFixed(6)},${p[k].y.toFixed(6)}`).join('|');
+    assert.equal(key(a), key(b), 'two runs of the same set placed the boxes differently');
+  });
+
+  test(`${app}: one box, or none, is not a special case that throws`, () => {
+    for (const n of [0, 1]) {
+      const g = scatter(n, 100, 100);
+      assert.doesNotThrow(() => collide(app, g), `${n} box(es) threw`);
     }
   });
 }

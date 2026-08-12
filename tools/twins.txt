@@ -44,6 +44,7 @@ closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	8e2a65db1025	8e2a65db1025	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
 closeScope	7e880dca67a7	9961035b74ab	divergent
+collideBoxes	4e13460a1534	4e13460a1534	identical
 computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	ecb43a011b8e	ecb43a011b8e	identical
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
@@ -63,7 +64,7 @@ erEdgePoints	6f7a665c6b5e	6f7a665c6b5e	identical
 erFieldsFor	39b26c15f9ce	7f029df0a700	divergent
 erFit	aaf525971528	aaf525971528	identical
 erInitControls	0552e736e0ad	6f4e81fa1e04	divergent
-erLayout	da80de30e51b	da80de30e51b	identical
+erLayout	f4124377616c	f4124377616c	identical
 erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	a914056d157c	757f61125aad	divergent

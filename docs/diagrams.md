@@ -296,6 +296,48 @@ suspect twice and cannot be: `#ertools` is `position:absolute` and out of flow, 
 what the panel measures. A `ResizeObserver` was therefore *not* added: there is no demonstrated
 condition for it to correct, and it would change when the drawing re-adapts under a reader's hands.
 
+**A box drawn over another hides its content, and 230 of them did so in silence.** The pass that pulls
+overlapping boxes apart compared every pair against every other - O(n^2) - so its budget was cut from
+140 passes to 60 above 150 nodes: fewer passes exactly where there are more boxes to separate. Measured
+on generated graphs of the size a real org reaches (generated, because a real org's names never enter
+this repository):
+
+| nodes | overlapping pairs, before | after | fit before | after |
+|---|---|---|---|---|
+| 60 | 4-6 | **0** | 11% | **15%** |
+| 120 | 47-99 | 38-61 | 11% | 8-10% |
+| 200 | 169-410 | 78-139 | 8% | 7-8% |
+| 500 | 1547-2554 | 451-585 | 5-6% | 5-6% |
+
+Two changes. A **uniform grid** rebuilt each pass, so only boxes that could touch are compared - a cell
+is the widest box plus the margin, which makes a pass cost about n and a generous uniform budget cheaper
+than the old 60 passes were. And the run keeps its **best pass rather than its last**, because the push
+oscillates: a pair that keeps trading places can leave pass 240 worse than pass 90, so any fixed budget
+is a bet on where the run happens to stop. Over 25 graphs from 60 to 500 nodes, **no case came out worse
+on both counts** and the overlaps fell in every one. It costs time - 93ms at 60 nodes against 3ms, 1.5s
+at 500 - and one or two points of fit in the middle of the range. Deliberate: a covered box loses
+information where a smaller drawing only makes it smaller, and zoom is a control the reader has.
+
+**The canvas is given the panel's proportions, not a square's.** The panel is about two and a half times
+wider than it is tall, and the collision pass separates a pair along the axis needing the smaller move -
+which for boxes 190 wide and 82 tall is the vertical one. So every overlapping pair was pushed downwards
+and a round blob came out as a column: 1972 x 4676 at 60 nodes, with the fit decided by the height every
+time. Same area, shape of the thing it has to fit in: the fit improves at every size measured from 20 to
+150 nodes (28% to 37% at 20, 11% to 15% at 60), and the layout places every box clear of every other in
+5 runs out of 5 up to **80 nodes**, where a square canvas managed 3 out of 5. It distorts - stretching
+one axis lengthens the edges that run that way, and the force layout's distances carry the structure -
+and it is kept because the measurements are better on both counts, not because the distortion is free.
+
+**What none of it fixes, and the arithmetic that says so.** 200 boxes occupy about 3.1 million px2; the
+panel has 746,000. Even touching, with no gaps and no arcs, they need **4.2 times the panel's area**, so
+the best possible fit for a whole-org drawing is about 49% - 10px text at 5px. Three approaches were
+measured and all three hit that wall: growing the canvas until nothing overlaps reaches zero overlaps at
+every size and drops the fit to **2%**; a radius derived from arc length is 70% too large; relaxation
+does not converge at all, because the cause is global - a canvas too small in a dense region - and
+pushing harder only moves the problem. **The conclusion is a product one, not a layout one**: above a
+readability limit the honest answer is to say so and let the reader narrow down, which is the next
+change, not this one.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 
