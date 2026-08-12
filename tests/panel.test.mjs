@@ -1946,7 +1946,7 @@ test('the two diagram limits are the measurements, and neither is doing the othe
   // category could never see the whole-org view at all - worse than a crowded picture.
   //
   // So: DRAW_MAX_NODES blocks and is measured on cost - 200 nodes lay out in 0.5s, 400 in 1.3s, 600
-  // in 2.2s, 1200 in 7.2s, profiled against the collision pass as it now stands, and layout only
+  // in 2.2s, 800 in 3.6s, 1200 in 7.2s, profiled against the collision pass as it now stands, layout only
   // because headless Chrome cannot time the DOM (virtual time advances the clock). Two seconds is a
   // wait and seven is a hang, so 400 is the largest round size measured under two. CROWDED_NODES
   // advises and is measured on quality - five generated graphs per size come out with no box covering
@@ -1954,7 +1954,10 @@ test('the two diagram limits are the measurements, and neither is doing the othe
   const d = (app) => +read(`apps/${app}/graphview.js`).match(/const DRAW_MAX_NODES = (\d+)/)[1];
   const c = (app) => +read(`apps/${app}/graphview.js`).match(/const CROWDED_NODES = (\d+)/)[1];
   const s2 = (app) => +read(`apps/${app}/graphview.js`).match(/const SPIN_NODES = (\d+)/)[1];
-  assert.equal(d('crm'), 400, 'the ceiling moved without the profile moving');
+  // 800, not the 400 the profile alone suggested: a real org reported 725 boxes, so 400 satisfied the
+  // criterion and refused the user it was written for. 800 covers that with headroom, at about 3.6
+  // seconds behind a spinner. Moving it again means another reading, from a profile or from an org.
+  assert.equal(d('crm'), 800, 'the ceiling moved without a profile or a real reading moving');
   assert.equal(c('crm'), 80, 'the crowding line moved without the measurement moving');
   assert.equal(d('crm'), d('analytics'), 'the twins disagree about how much they can lay out');
   assert.equal(c('crm'), c('analytics'), 'the twins disagree about where it gets crowded');

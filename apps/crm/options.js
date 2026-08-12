@@ -417,8 +417,9 @@ let lay = Object.assign({}, LAY_DEFAULT);
 // The ceiling is not one of the layout values: the graph window's Layout panel does not edit it,
 // `Restore built-in defaults` above is about the sliders, and erSaveParams() there writes the whole
 // erParams object - so a ceiling stored inside it would be lost the next time a slider moved. Its
-// own key, and the built-in default is the measured one: 400.
-const DRAW_MAX_DEFAULT = 400;
+// own key, and the built-in default is the measured one: 800, which covers the 725 a real org
+// reported. 400 satisfied the profile and refused that org, which is the wrong way round.
+const DRAW_MAX_DEFAULT = 800;
 let drawMax = DRAW_MAX_DEFAULT;
 function layToUI() {
   LAY_CTL.forEach(([sl, lb, k]) => { $(sl).value = lay[k]; $(lb).textContent = k === 'spread' ? (lay[k] / 10).toFixed(1) : lay[k]; });

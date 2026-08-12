@@ -697,7 +697,14 @@ let scopeAll = false;   // true = ignore the focus and draw the whole org (wall-
 // SVG path and a div per box, and headless Chrome cannot be trusted to time that - virtual time
 // advances the clock - so the real wait is longer than the numbers above and the line is drawn at the
 // measured 1.3s rather than at the 2.2s that would otherwise have qualified.
-const DRAW_MAX_NODES = 400;
+// **800 rather than 400, because a real org measured 725.** The first value satisfied the criterion
+// above - largest round size under two seconds - and refused the org it was written for, which makes it
+// a number that served the rule and missed the user. 800 covers that measurement with headroom and
+// costs about 3.6 seconds of layout, behind a spinner, once. Three seconds is a wait somebody makes
+// deliberately for a whole-org drawing; the seven at 1200 is not. The lesson is the one this file keeps
+// learning: a threshold derived from generated data has to be checked against one real reading before
+// it is trusted, and the reading changed it by a factor of two.
+const DRAW_MAX_NODES = 800;
 // The measured figure is the default, not the rule: the options page lets it be raised, because
 // what is being traded is the reader's own patience against how much of the graph they get, and
 // that is theirs to trade. Read once when the window opens; a change there takes effect on the
