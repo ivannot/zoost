@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/try.html sha256:6eafd493521cf0be -->
+<!-- translated-from: site/try.html sha256:8ec0273c6472526f -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Prova Zoost su dati inventati - senza account Zoho</title>
@@ -60,15 +60,14 @@
 
   <h1>Provalo su dati inventati</h1>
   <p class="sub">Tutte e due le estensioni sanno scrivere un workspace di dati inventati in una
-    cartella che scegli tu, e poi lavorarci esattamente come farebbero su uno vero. Nessun account
+    cartella che scegli tu, poi lavorarci esattamente come farebbero su uno vero. Nessun account
     Zoho, nessun accesso, nessun permesso concesso a niente.</p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in
     inglese: il pulsante che troverai si chiama davvero <b>+ Sample</b>.</p>
 
   <p>Ogni altra pagina di questo sito sostiene che Zoost meriti fiducia. Questa ti dà il modo di
-    deciderlo da solo, che è una cosa diversa e migliore. Installi l'estensione, premi un pulsante, e
-    hai davanti il prodotto intero - l'albero, la ricerca, i diagrammi, l'audit, gli export,
+    deciderlo da solo, che è una cosa diversa e migliore. Installi l'estensione, premi un pulsante e hai davanti il prodotto intero - l'albero, la ricerca, i diagrammi, l'audit, gli export,
     l'assistente - che gira su un workspace che non è mai passato vicino alla tua azienda.</p>
 
   <h2>Cosa viene scritto</h2>
@@ -94,7 +93,7 @@
     <thead><tr><th>Cosa contiene</th><th>File</th><th>Perché sono tanti</th></tr></thead>
     <tbody>
     <tr><td data-label="Cosa contiene">39 viste</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>views.json</code> tiene il censimento: 17 tabelle, 8 query table, 7 grafici, 3 pivot, 4 dashboard</td></tr>
-    <tr><td data-label="Cosa contiene">14 relazioni, e tutte le colonne</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>schema.json</code> - i join fra tabelle, con le colonne da una parte e dall'altra</td></tr>
+    <tr><td data-label="Cosa contiene">14 relazioni e tutte le colonne</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>schema.json</code> - i join fra tabelle, con le colonne da una parte e dall'altra</td></tr>
     <tr><td data-label="Cosa contiene">8 query table</td><td data-label="File">9</td><td data-label="Perché sono tanti">un file <code>.sql</code> ciascuna più l'indice, ed è quello che rende leggibile un diff</td></tr>
     <tr><td data-label="Cosa contiene">da cosa dipende cosa</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>lineage.json</code></td></tr>
     <tr><td data-label="Cosa contiene">la configurazione del workspace</td><td data-label="File">1</td><td data-label="Perché sono tanti"><code>.zoost.json</code></td></tr>
@@ -103,9 +102,8 @@
 
   <p>I nomi sono parole comuni del linguaggio aziendale - <code>buildInvoice</code>,
     <code>calcTax</code>, <code>Contacts</code> - e i nomi dei moduli sono quelli standard di Zoho.
-    Non c'è da nessuna parte il nome di un portale, di una funzione o di un campo reale, e non è un
-    dettaglio: questo progetto dichiara di essere costruito indipendentemente dal lavoro quotidiano
-    del suo autore, e un nome vero dentro un dato di prova lo smentirebbe in silenzio.</p>
+    Non c'è da nessuna parte il nome di un portale, di una funzione o di un campo reale. Non è un dettaglio: questo progetto dichiara di essere costruito indipendentemente dal lavoro quotidiano
+    del suo autore: un nome vero dentro un dato di prova lo smentirebbe in silenzio.</p>
 
   <figure class="shot">
     <img src="/img/crm-sample.webp?v=4c7a81ef69" width="1760" height="1100" loading="lazy" decoding="async"
@@ -116,23 +114,22 @@
   <h2>Perché questo è un argomento di sicurezza, non una comodità</h2>
 
   <p>Un workspace di prova è l'unico modo di rispondere alla domanda «ma questa cosa qui che fa?» senza
-    prima averle dato qualcosa da leggere. Di solito l'ordine è rovesciato: installi, dai accesso
-    all'organizzazione, e solo dopo scopri. Qui puoi guardare prima.</p>
+    prima averle dato qualcosa da leggere. Di solito l'ordine è rovesciato: installi, dai accesso all'organizzazione e solo dopo scopri. Qui puoi guardare prima.</p>
 
   <p>Cosa vale mentre un sample è aperto:</p>
 
   <ul>
     <li><b>Non viene chiesto niente a nessuno.</b> I file sono generati nel browser e scritti sul tuo
-      disco. Nessuna richiesta va a Zoho, e nessuna va altrove.</li>
-    <li><b>Un flag solo, e lo legge tutto il prodotto.</b> <code>sample: true</code> nella
-      configurazione del workspace è tutto il meccanismo: non esiste una modalità demo, non c'è un
-      secondo percorso nel codice, non c'è niente che tratti i dati inventati in modo speciale. Tutto
-      quello che arriverebbe a Zoho interroga quel flag prima di agire: i pulsanti che scaricano sono
+      disco. Nessuna richiesta va a Zoho, nessuna va altrove.</li>
+    <li><b>Un flag solo, letto da tutto il prodotto.</b> <code>sample: true</code> nella
+      configurazione del workspace è tutto il meccanismo: nessuna modalità demo, nessun secondo
+      percorso nel codice, niente che tratti i dati inventati in modo speciale. Tutto quello che
+      arriverebbe a Zoho interroga quel flag prima di agire: i pulsanti che scaricano sono
       disattivati, quelli che aprirebbero una pagina Zoho si rifiutano e dicono perché. Dietro un
-      sample non c'è nessuna org, quindi non c'è niente da aprire. Una volta che i file sono sul
-      disco li legge lo stesso codice di sempre, li elenca la stessa lista, li esporta lo stesso
-      export - e un ramo che trattasse i dati inventati in modo speciale finirebbe prima o poi per
-      far passare per inventati i dati veri di qualcuno.</li>
+      sample non c'è nessuna org, quindi non c'è niente da aprire.
+      <br><br>Una volta sul disco, quei file li legge lo stesso codice di sempre, li elenca la stessa
+      lista, li esporta lo stesso export. Un ramo che trattasse i dati inventati in modo speciale
+      finirebbe prima o poi per far passare per inventati i dati veri di qualcuno.</li>
     <li><b>Cancellarlo vuol dire cancellare la cartella.</b> L'unica traccia fuori da lì è
       l'identificatore del sample, tenuto nella memoria locale del browser perché il pannello possa
       proporti di aprirlo prima che Chrome gli abbia ridato l'accesso alla cartella.
@@ -142,21 +139,21 @@
   <p>E il sample dice quello che è, ovunque compaia. Se mentre leggi dati inventati hai aperto un tab
     di Zoho su un'organizzazione vera, il pannello segnala la discrepanza nella barra dei workspace
     invece di lasciare che le due cose si confondano. Non ti blocca - un sample non corrisponderà mai
-    a nessuna organizzazione, e bloccare lo renderebbe inutilizzabile - ma non ti lascia dimenticare.</p>
+    a nessuna organizzazione; bloccare lo renderebbe inutilizzabile - ma non ti lascia dimenticare.</p>
 
   <h2>Se sei tu ad autorizzare l'installazione</h2>
 
-  <p>Puoi fare tutta la valutazione da solo, su una macchina senza nessuna sessione Zoho aperta, e
-    rispondere alle domande che di solito vanno prese per buone: cosa legge, cosa scrive, dove
-    finiscono i file, cosa esce dalla macchina, cosa contengono gli export, cosa viene detto
-    all'assistente. La <a href="/it/nerd">pagina per nerd</a> spiega come viene costruita una release
-    e come verificare che il pacchetto installato sia quello costruito dal codice pubblicato; questa
-    pagina è l'altra metà, e insieme fanno sì che un'autorizzazione poggi su quello che hai visto e non su quello che ti hanno
+  <p>Puoi fare tutta la valutazione da solo, su una macchina senza nessuna sessione Zoho aperta. Le
+    domande che di solito vanno prese per buone - cosa legge, cosa scrive, dove finiscono i file,
+    cosa esce dalla macchina, cosa contengono gli export, cosa viene detto all'assistente - hanno
+    tutte una risposta che puoi vedere.</p>
+  <p>La <a href="/it/nerd">pagina per nerd</a> copre l'altra metà: come viene costruita una release e come verificare che il pacchetto installato sia quello costruito dal codice pubblicato. Insieme
+    fanno sì che un'autorizzazione poggi su quello che hai visto, non su quello che ti hanno
     raccontato.</p>
 
   <p>Una cosa da avere chiara prima di cominciare: l'assistente AI facoltativo è l'unica funzione che
-    manda qualcosa da qualche parte, e resta spento finché non inserisci una tua chiave API. Sul
-    sample <b>funziona</b>, ed è proprio il punto - puoi valutare anche quello, e quello che esce
+    manda qualcosa da qualche parte: resta spento finché non inserisci una tua chiave API. Sul
+    sample <b>funziona</b>, ed è proprio il punto - puoi valutare anche quello; quello che esce
     dalla macchina è inventato. Puntato sulla tua organizzazione, la stessa funzione manda al fornitore
     che hai scelto il codice Deluge vero, ed è lo scambio che <a href="/it/privacy">la pagina sulla
     privacy</a> descrive.</p>
@@ -164,16 +161,14 @@
   <h2>Come si fa</h2>
 
   <ol class="steps">
-    <li>Installa <a href="/it/crm">Zoost CRM</a> o <a href="/it/analytics">Zoost Analytics</a> dal
-      Chrome Web Store, e apri il pannello laterale dalla barra degli strumenti.</li>
+    <li>Installa <a href="/it/crm">Zoost CRM</a> o <a href="/it/analytics">Zoost Analytics</a> dal Chrome Web Store e apri il pannello laterale dalla barra degli strumenti.</li>
     <li>Scegli una cartella di lavoro quando il pannello te la chiede. Va bene qualunque cartella; una
       vuota è la scelta più pulita. Chrome chiede il permesso su quella cartella e su nient'altro.</li>
     <li>Premi <span class="k">+ Sample</span>. Scrive i file e apre il workspace. Su una macchina
       senza nessun tab di Zoho aperto lo stesso pulsante è sulla schermata iniziale del pannello,
       perché è esattamente lì che si trova chi ha appena installato l'estensione.</li>
     <li>Usalo: funziona tutto. La ricerca su tutti i sorgenti insieme, il grafo delle chiamate e il
-      diagramma entità-relazioni, il controllo di salute con i suoi limiti scritti accanto, e tutti e
-      due gli export.</li>
+      diagramma entità-relazioni, il controllo di salute con i suoi limiti scritti accanto e tutti e due gli export.</li>
     <li>Cancella la cartella quando hai finito.</li>
   </ol>
 
@@ -186,7 +181,8 @@
 
   <p>Un'organizzazione inventata non è la tua. Non ti dirà quanto tempo impiega uno scarico su un
     portale con tremila funzioni, se il tuo ruolo può leggere il catalogo delle connessioni, o che
-    aspetto abbiano i diagrammi alle dimensioni reali della tua organizzazione. È costruita apposta
+    aspetto abbiano i diagrammi alle dimensioni reali della tua organizzazione.</p>
+  <p>È costruita apposta
     per contenere un esemplare di ogni cosa - compresi gli stati scomodi, come un modulo che Zoho si
     rifiuta di descrivere - quindi quello che vedi è il prodotto in tutta la sua complessità e non una
     versione ripulita, ma la complessità non è la scala.</p>
@@ -194,7 +190,7 @@
   <p>A cosa risponde invece è a ogni domanda sul comportamento - che poi sono quelle che decidono se una
     cosa si può installare tranquillamente.</p>
 
-  <p class="meta">Il generatore è <code>sample-org.js</code> dentro ogni estensione, e viaggia dentro
+  <p class="meta">Il generatore è <code>sample-org.js</code> dentro ogni estensione: viaggia dentro
     il pacchetto - quindi è leggibile nel codice che installi, ed è lo stesso file che scrive i dati su cui girano i test. Due usi, una sola descrizione: è per questo che il sample non può allontanarsi dalla forma che
     avrebbe un pull vero.</p>
 

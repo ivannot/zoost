@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/analytics.html sha256:ab59ef6fbd60e489 -->
+<!-- translated-from: site/analytics.html sha256:5c713024f15a87a0 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost Analytics - guarda la forma di un workspace</title>
@@ -93,18 +93,17 @@
 <div class="hero">
   <div class="wrap">
     <p class="eyebrow"><b>Zoost Analytics</b><span>Zoost - workbench for Zoho Analytics</span></p>
-      <h1>Centinaia di viste, e nessun modo<br>di vederne la forma.<br>
+      <h1>Centinaia di viste, nessun modo<br>di vederne la forma.<br>
       <span>Zoost te ne disegna la mappa.</span></h1>
-    <p class="lead">Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella, e
-      l'SQL dietro ogni query table come file su cui puoi fare un diff. Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che sembra non leggere più nessuno,
+    <p class="lead">Ogni vista con il suo tipo e le sue date, le colonne e le chiavi esterne di ogni tabella e l'SQL dietro ogni query table come file su cui puoi fare un diff. Poi il diagramma ER, cosa legge da cosa - e l'elenco di quello che sembra non leggere più nessuno,
       con accanto scritto cosa quell'elenco non riesce a vedere.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
       <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" style="margin-top:22px" data-it-only>Questa pagina è in italiano, e lo sono anche la guida e la privacy policy.
-      <b>L'estensione invece è in inglese</b>, e i nomi dei comandi che trovi scritti qui
+    <p class="note" style="margin-top:22px" data-it-only>Questa pagina è in italiano, come la guida e la guida e la privacy policy.
+      <b>L'estensione invece è in inglese</b>: i nomi dei comandi che trovi scritti qui
       (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli veri del pannello, non una loro
       traduzione. La versione inglese di questa pagina è <a href="/analytics" hreflang="en">qui</a>.</p>
   </div>
@@ -124,8 +123,8 @@
         <h3>Una storia per tutto quello che hai scaricato</h3>
         <p>Zoho Analytics non tiene lo storico di niente: cambi l'SQL di una query table, una colonna o una
           relazione e lo stato precedente non esiste più. Il mirror è fatto di file che si leggono con un editor
-          qualsiasi (JSON e SQL), quindi con Git <code>git diff</code> risponde a <em>cos'è cambiato in questo workspace il mese scorso</em> - la domanda che conta di più il giorno in cui un numero si muove e
-          nessuno sa perché. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì, e li cerchi e li passi a un collega
+          qualsiasi (JSON e SQL). Mettici Git sopra e <code>git diff</code> risponde a <em>cos'è cambiato in questo workspace il mese scorso</em> - la domanda che conta di più il giorno in cui un numero si muove e
+          nessuno sa perché. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì e li cerchi e li passi a un collega
           comunque.</p>
       </div>
       <div>
@@ -141,14 +140,14 @@
           <em>candidato</em>, perché un link condiviso o un export schedulato quel grafo non li vede.</p>
       </div>
       <div>
-        <h3>Cosa hai costruito tu, e cosa ci ha messo Zoho</h3>
+        <h3>Cosa hai costruito tu e cosa ci ha messo Zoho</h3>
         <p>In un workspace collegato metà delle tabelle sono arrivate da una sincronizzazione e non sono mai state
           tue. Il modello ER di Zoho Analytics sa quali, e l'elenco delle viste le segna - così quello che conti
           è il tuo lavoro, non tutto quanto.</p>
       </div>
       <div>
         <h3>Più workspace, uno accanto all'altro</h3>
-        <p>Una cartella di lavoro, una sottocartella per workspace, e ognuno legato a quello da cui è arrivato. Se fai consulenza ne tieni rispecchiati quattro insieme, e il pannello prende il workspace dalla
+        <p>Una cartella di lavoro, una sottocartella per workspace, ognuno legato a quello da cui è arrivato. Se fai consulenza ne tieni rispecchiati quattro insieme, e il pannello prende il workspace dalla
           scheda su cui sei: a quale cliente stai guardando risponde il browser, non la tua memoria.</p>
       </div>
     </div>
@@ -169,7 +168,7 @@
       <div class="card">
         <h3>Tutte le viste, in un elenco solo</h3>
         <ul>
-          <li>Tipo, cartella, proprietario, numero di colonne e date - ordinabili, e cercabili
+          <li>Tipo, cartella, proprietario, numero di colonne e date - ordinabili e cercabili
             <span class="k">dentro i nomi delle colonne</span>, così trovi quale tabella porta un certo campo.</li>
           <li>Quando è cambiato il design e quando si sono aggiornati i dati, tenuti distinti: sono due fatti
             diversi.</li>
@@ -184,16 +183,14 @@
           <li>Colonne e tipi di dato Zoho per ogni tabella e query table.</li>
           <li>Un report non ha colonne sue, quindi Zoost risale a quello su cui è costruito e ne mostra la
             struttura - <span class="k">dicendoti di chi è</span>.</li>
-          <li><span class="k">Le chiavi esterne di ogni colonna, in tutte e due le direzioni</span>: dove punta
-            lei, e chi punta a lei. Ogni nome è cliccabile.</li>
+          <li><span class="k">Le chiavi esterne di ogni colonna, in tutte e due le direzioni</span>: dove punta lei e chi punta a lei. Ogni nome è cliccabile.</li>
         </ul>
       </div>
 
       <div class="card">
         <h3>L'SQL, come file</h3>
         <ul>
-          <li>Un <code>.sql</code> per query table - l'unica cosa qui dentro che qualcuno ha scritto davvero, e la
-            parte su cui <code>git diff</code> ha qualcosa da dire.</li>
+          <li>Un <code>.sql</code> per query table - l'unica cosa qui dentro che qualcuno ha scritto davvero, la parte su cui <code>git diff</code> ha qualcosa da dire.</li>
           <li>Cerchi dentro tutte le query in una volta sola.</li>
           <li>Ognuna registra le tabelle che legge e quali loro colonne tocca, così «se tolgo questa colonna, cosa
             si rompe» ha una risposta.</li>
@@ -215,21 +212,21 @@
         <ul>
           <li>La risposta di Zoho Analytics stessa sulle dipendenze, chiesta una volta per tutto invece che una
             vista per volta.</li>
-          <li>Per ogni vista: cosa legge, chi la legge, e su quali dashboard compare.</li>
+          <li>Per ogni vista: cosa legge, chi la legge e su quali dashboard compare.</li>
           <li><span class="k">Candidati, mai un verdetto</span> - un link condiviso o un export schedulato sono
-            invisibili a quel grafo, e il numero lo dice.</li>
+            invisibili a quel grafo: il numero lo dice.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h3>Export, e un assistente opzionale</h3>
+        <h3>Export e un assistente opzionale</h3>
         <ul>
           <li>Tutto il workspace come un unico file HTML, o in Markdown - che si porta dietro i vincoli del dialetto
             SQL di Zoho Analytics, così un assistente non scrive query che non possono girare.</li>
           <li>Una finestra dove decidi tu, sezione per sezione, cosa può uscire dalla tua macchina.</li>
           <li>Con una chiave tua, un assistente che esplora <em>il tuo</em> workspace - e mai le tue righe, perché
             Zoost non le legge.</li>
-                  <li><a href="/it/ai">Quando serve una API key, e quando conviene l'export</a>.</li>
+                  <li><a href="/it/ai">Quando serve una API key e quando conviene l'export</a>.</li>
         </ul>
       </div>
 
@@ -238,7 +235,7 @@
       <figure class="shot">
         <img src="/img/analytics-columns.webp?v=bdf294d8f7" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Le colonne di una tabella con i tipi di dato di Zoho, e le chiavi esterne che entrano e che escono.">
-        <figcaption><b>Una colonna alla volta.</b> Il tipo come lo dichiara Zoho Analytics, e le sue chiavi esterne nelle due direzioni: cosa punta questa colonna, e chi punta a lei.</figcaption>
+        <figcaption><b>Una colonna alla volta.</b> Il tipo come lo dichiara Zoho Analytics, con le sue chiavi esterne nelle due direzioni: cosa punta questa colonna e chi punta a lei.</figcaption>
       </figure>
     
       <figure class="shot">
@@ -262,13 +259,13 @@
       </div>
       <div>
         <h3>Non legge mai le tue righe</h3>
-        <p>Solo struttura, relazioni, SQL e metadati. Gli endpoint che restituiscono il contenuto delle celle esistono, e non vengono chiamati apposta -
+        <p>Solo struttura, relazioni, SQL e metadati. Gli endpoint che restituiscono il contenuto delle celle esistono e non vengono chiamati apposta -
           ed è anche il motivo per cui l'assistente AI non potrà mai dirti cosa c'è scritto <em>dentro</em>
           i tuoi dati.</p>
       </div>
       <div>
         <h3>Le definizioni dei report non sono coperte</h3>
-        <p>Quali colonne un grafico mette su quale asse, e come le aggrega, arriverebbero saldate insieme alla serie
+        <p>Quali colonne un grafico mette su quale asse e come le aggrega, arriverebbero saldate insieme alla serie
           calcolata - i tuoi dati. Quindi quell'endpoint non viene chiamato, e questo buco resta scritto qui.</p>
       </div>
       <div>
@@ -297,17 +294,16 @@
       <li><b>Apri un workspace</b> in Zoho Analytics. Il pannello si prende il workspace dalla scheda su cui sei: non c'è niente da configurare, quindi
         non c'è niente da sbagliare.</li>
       <li>Premi <b>+ Workspace</b>, poi <b>Pull all</b>. Qualche centinaio di viste ci mette meno di un minuto.</li>
-      <li><b>Se vuoi:</b> <code>git init</code> nella cartella del workspace, e da lì in avanti hai uno
+      <li><b>Se vuoi:</b> <code>git init</code> nella cartella del workspace e da lì in avanti hai uno
         storico. Tutto il resto funziona anche senza.</li>
     </ol>
     <p class="note"><b>Oppure premi <span class="k">+ Sample</span> e salti tutto.</b> Scrive nella cartella
       di lavoro un workspace di dati inventati, così apri l'albero, i diagrammi e gli export prima di puntare
       Zoost su qualcosa di tuo. Nessun tab Zoho, nessun account: è generato e non scaricato, tutto ciò che
-      parlerebbe con la piattaforma è disabilitato, e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta, e come valutarlo così &rarr;</b></a></p>
-    <p class="note" style="margin-top:24px">Su cosa si regge, i due endpoint che deliberatamente non chiama mai, e
-      come verificarlo: <a href="/it/nerd">la pagina nerd</a>.</p>
+      parlerebbe con la piattaforma è disabilitato e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta e come valutarlo così &rarr;</b></a></p>
+    <p class="note" style="margin-top:24px">Su cosa si regge, i due endpoint che deliberatamente non chiama mai e come verificarlo: <a href="/it/nerd">la pagina nerd</a>.</p>
     <p class="note" style="margin-top:8px">Gira tutto dentro il tuo browser, con la sessione Zoho che hai già aperta. Nessun server, nessun account, nessuna telemetria. L'unica cosa che esce dalla tua macchina è
-      quello che scegli di mandare a un provider AI, e mai le righe delle tue tabelle.</p>
+      quello che scegli di mandare a un provider AI, mai le righe delle tue tabelle.</p>
   
       <figure class="shot">
         <img src="/img/analytics-health.webp?v=15194a22b4" width="1760" height="1100" loading="lazy" decoding="async"

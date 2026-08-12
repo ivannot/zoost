@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:b7011df5e94c290d -->
+<!-- translated-from: site/nerd.html sha256:4fd73989edc7d836 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -53,7 +53,7 @@
 
   <h1>La pagina nerd</h1>
   <p class="sub">Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge
-    Zoost, cosa si rifiuta di fare, come viene costruita una release, e come verificare ognuna di
+    Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ognuna di
     queste cose senza doverti fidare della mia parola.</p>
 
   <div class="toc">
@@ -62,7 +62,7 @@
       <li><a href="#undocumented-interfaces">Interfacce non documentate</a></li>
       <li><a href="#certain-or-stopped">O certi, o fermi</a></li>
       <li><a href="#what-is-never-called">Cosa non viene mai chiamato</a></li>
-      <li><a href="#what-is-promised">Cosa è promesso, e cosa no</a></li>
+      <li><a href="#what-is-promised">Cosa è promesso e cosa no</a></li>
       <li><a href="#how-a-release-is-built">Come viene costruita una release</a></li>
       <li><a href="#check-it-yourself">Verificalo tu</a></li>
       <li><a href="#what-none-of-it-proves">Cosa non dimostra niente di tutto questo</a></li>
@@ -76,18 +76,18 @@
   <div class="box">
     <h3>Come legge Zoho CRM</h3>
     <p>Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina,
-      perché nessun endpoint li offre, e prende il token CSRF dai cookie che il browser ha già.
+      perché nessun endpoint li offre. Prende poi il token CSRF dai cookie che il browser ha già.
       Separatamente osserva la pagina per <b>una</b> cosa sola: URL e metodo della richiesta che salva
       una funzione, così la copia sul disco ti segue quando salvi. Non legge nessun header e nessun
       corpo di risposta, e non altera niente di quello che la pagina invia o riceve.</p>
-    <p>Due famiglie di token, e non sono intercambiabili: gli endpoint <code>/crm/</code> vogliono
+    <p>Due famiglie di token, non intercambiabili: gli endpoint <code>/crm/</code> vogliono
       <code>crmcsrfparam</code> con il cookie <code>CT_CSRF_TOKEN</code>, quelli <code>/deluge/</code>
       vogliono <code>drepn</code> con il cookie <code>drecn</code>. Il prefisso non è il nome del cookie, e darlo per scontato è costato una giornata: di solito i due
       contengono lo stesso valore - finché uno dei due non ruota.</p>
   </div>
   <div class="box">
     <h3>Come legge Zoho Analytics</h3>
-    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non c'è niente da estrarre, e perciò niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
+    <p>Prende il workspace dall'URL della scheda su cui sei - <code>/workspace/{id}</code> - quindi non c'è niente da estrarre, quindi niente da sbagliare. Il CSRF segue il metodo HTTP invece del percorso:
       ogni POST porta <code>X-ZCSRF-TOKEN</code>, nessuna GET lo fa, misurato su una cattura di 104
       richieste senza eccezioni.</p>
     <p>Il modello ER viene da una POST a <code>ZDBCreateERD.ma</code>. Il suo URL contiene
@@ -106,15 +106,14 @@
   <p>Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una
     navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un
     4xx deterministico), e il recupero tramite un'azione che è stata <em>misurata</em> - la prima
-    chiamata <code>/deluge/</code> dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la
-    sistema, e questo è stato riprodotto apposta invece che ipotizzato.</p>
+    chiamata <code>/deluge/</code> dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema; questo è stato riprodotto apposta invece che ipotizzato.</p>
 
   <h2 id="what-is-never-called">Cosa non viene mai chiamato</h2>
   <p>Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa. È una proprietà di quali endpoint stanno scritti nel sorgente, non di qualcosa che il browser
       imponga - e il
     sorgente sono tredici file di JavaScript in chiaro per Zoho CRM e dieci per Zoho Analytics, senza bundler né minificatore fra quello
     che è pubblicato e quello che leggi.</p>
-  <p>Due endpoint di Zoho Analytics restano deliberatamente intoccati, e per lo stesso motivo tutti e
+  <p>Due endpoint di Zoho Analytics restano deliberatamente intoccati, per lo stesso motivo tutti e
       due: restituiscono i tuoi dati.</p>
   <ul>
     <li><code>ZDBTableDataAction.ma</code> restituisce il contenuto vero delle celle di una tabella. Zoost
@@ -127,19 +126,18 @@
   <p>Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una
     dichiarazione di sola lettura si rompe per sbaglio. Non ci si prova.</p>
 
-  <h2 id="what-is-promised">Cosa è promesso, e cosa no</h2>
+  <h2 id="what-is-promised">Cosa è promesso e cosa no</h2>
   <p>Quelle interfacce interne non portano nessuna promessa di compatibilità. Zoho può cambiarne una
     senza preavviso e una funzionalità può smettere di funzionare da un giorno all'altro.</p>
   <p>Niente è garantito - lo dice la licenza e lo dice questa pagina. Quello che viene offerto è
-    impegno: se qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non
-    lo sarà, e allora la funzionalità dirà chiaramente che quella cosa non la può fare, invece di
+    impegno: se qualcosa si rompe viene guardato e sistemato dove è possibile sistemarlo. A volte non lo sarà: allora la funzionalità dirà chiaramente che quella cosa non la può fare, invece di
     tirare a indovinare. <b>Il mirror che hai già sul disco continua a funzionare comunque</b>, perché è
     fatto di file che si leggono con un editor qualsiasi.</p>
 
   <h2 id="how-a-release-is-built">Come viene costruita una release</h2>
   <p>Pubblicare un tag di release fa sì che GitHub faccia il checkout di quel commit, lo costruisca
     <b>due volte</b> per dimostrare che il risultato è identico byte per byte, stampi il contenuto
-    dell'archivio in un log pubblico, e firmi un'attestazione di provenienza. L'archivio allegato alla
+    dell'archivio in un log pubblico e firmi un'attestazione di provenienza. L'archivio allegato alla
     Release <em>è</em> il file inviato al Chrome Web Store - mai una build fatta su un portatile.</p>
   <p>La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non
     vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché
@@ -150,7 +148,8 @@
     di fornitura che finisce con «e poi quello che dice quel tag oggi» non è una catena.</p>
   <p>Che è anche la risposta a una domanda legittima, detta chiaramente invece di lasciarla indovinare:
     questo codice è stato scritto con l'assistenza pesante di un modello linguistico e riletto riga per
-    riga, ed è anche per quello che la catena qui sopra ha la forma che ha. Dodici file per Zoho CRM e
+    riga, ed è anche per quello che la catena qui sopra ha la forma che ha.</p>
+  <p>Dodici file per Zoho CRM e
     dieci per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su
     una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto
     questo ti chiede di fidarti di come il codice è stato prodotto. Chi lo ha battuto è la cosa meno
@@ -179,11 +178,12 @@
     che è dimostrato è come è stato costruito l'archivio della release. Google poi reimpacchetta e
     rifirma ogni estensione, quindi quello che distribuisce non è identico byte per byte a quello che
     è stato caricato. Entrambe le cose si chiudono all'altro capo, confrontando l'estensione
-    installata con il tag - il tag della versione che <em>hai tu</em>, quella che
-    <code>chrome://extensions</code> dichiara. Google pubblica giorni dopo l'invio, non minuti - quanti lo decide Google - quindi
-    il tag più recente è quasi sempre avanti rispetto a quello che lo Store distribuisce, e una versione
-    ancora in revisione non è distribuita affatto: confrontarla con quel tag dà una differenza che
-    non dice niente né dell'uno né dell'altro file.</p>
+    installata con il tag.</p>
+  <p>Il tag della versione che <em>hai tu</em>, però: quella che <code>chrome://extensions</code>
+    dichiara. Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi
+    sempre avanti rispetto a quello che lo Store distribuisce.</p>
+  <p>E una versione ancora in revisione non è distribuita affatto: confrontarla con quel tag dà una
+    differenza che non dice niente né dell'uno né dell'altro file.</p>
   <p>E un'attestazione dice chi ha costruito un file, mai che quel file sia buono. Per stabilirlo non
     c'è scorciatoia: il codice va letto.</p>
 

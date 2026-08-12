@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/crm.html sha256:7b89704f9dc955a1 -->
+<!-- translated-from: site/crm.html sha256:3b5664a2111e9252 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost CRM - il Deluge sotto Git, e la mappa della tua org</title>
@@ -94,15 +94,15 @@
   <div class="wrap">
     <p class="eyebrow"><b>Zoost CRM</b><span>Zoost - workbench for Zoho CRM</span></p>
       <h1>La tua org Zoho CRM come codebase locale,<br>versionabile e navigabile. <span>E la mappa di come sta insieme.</span></h1>
-    <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama chi, di quali moduli si tengono per mano, e di quale automazione scatta e quando. Tutta la tua org Zoho CRM sul tuo disco, da cercare in un colpo solo - e senza che venga chiamato
+    <p class="lead">Ogni funzione Deluge come un file su cui puoi fare un diff. La mappa di chi chiama chi, di quali moduli si tengono per mano e di quale automazione scatta e quando. Tutta la tua org Zoho CRM sul tuo disco, da cercare in un colpo solo - e senza che venga chiamato
       un solo endpoint capace di crearci, modificarci o cancellarci qualcosa.</p>
     <div class="cta">
       <a class="btn p" href="https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj">Installa dal Chrome Web Store</a>
       <a class="btn" href="#whats-inside">Cosa c'è dentro</a>
       <span class="meta">Gratuito · Apache-2.0 · nessun account</span>
     </div>
-    <p class="note" data-it-only style="margin-top:22px">Questa pagina è in italiano, e lo sono anche la guida e la privacy policy.
-      <b>L'estensione invece è in inglese</b>, e i nomi dei comandi che trovi scritti qui
+    <p class="note" data-it-only style="margin-top:22px">Questa pagina è in italiano, come la guida e la guida e la privacy policy.
+      <b>L'estensione invece è in inglese</b>: i nomi dei comandi che trovi scritti qui
       (<b>Pull all</b>, <b>Settings</b>, <b>Health</b>) sono quelli veri del pannello, non una loro
       traduzione. La versione inglese di questa pagina è <a href="/crm" hreflang="en">qui</a>.</p>
   </div>
@@ -114,12 +114,12 @@
     <div class="why">
       <div>
         <h3>Una storia per tutto quello che scarichi</h3>
-        <p>Lo storico che Zoho CRM tiene copre una <em>funzione</em> per volta, e solo dentro Zoho.
+        <p>Lo storico che Zoho CRM tiene copre una <em>funzione</em> per volta, solo dentro Zoho.
           Tutto il resto che il pull cattura - schema dei moduli, layout, related list, workflow e cosa fanno
           scattare, schedulazioni, connessioni - arriva sul tuo disco come file che si leggono con un editor qualsiasi
           (sorgenti, JSON). Mettici Git sopra e uno storico ce l'ha anche tutto il resto: un solo diff ti dice
           <em>cos'è cambiato in quest'org il mese scorso</em>, su ogni tipo insieme, invece che una
-          funzione alla volta. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì, e li
+          funzione alla volta. <b>Git resta facoltativo</b>: anche senza, quei file stanno lì e li
           cerchi e li passi a un collega comunque.</p>
       </div>
       <div>
@@ -146,7 +146,7 @@
       </div>
       <div>
         <h3>Più org, una accanto all'altra</h3>
-        <p>Una cartella di lavoro, una sottocartella per org, e ogni workspace legato all'org, all'host e
+        <p>Una cartella di lavoro, una sottocartella per org, ogni workspace legato all'org, all'host e
           all'istanza da cui è arrivato. Se fai consulenza ne tieni aperti quattro insieme senza poter scaricare l'uno dentro il mirror
           dell'altro: se la scheda e il workspace non coincidono, tutto quello che tocca Zoho resta spento
           finché non tornano a coincidere. Produzione e sandbox contano per due.</p>
@@ -173,7 +173,7 @@
         <ul>
           <li>Sorgente Deluge in cartelle per namespace, pronto per Git. Salvi in Zoho e il file sul disco si aggiorna da solo.</li>
           <li><span class="k">Ricerca full-text su tutte le funzioni insieme</span> - quanto di più simile a un
-            <code>grep</code> sulla tua org, e qualcosa che Zoho non offre.</li>
+            <code>grep</code> sulla tua org: qualcosa che Zoho non offre.</li>
           <li>Ognuna si porta dietro la sua lunghezza, le chiamate API che fa, chi l'ha toccata per ultimo e le
         connessioni che usa.</li>
         </ul>
@@ -182,7 +182,7 @@
       <div class="card">
         <h3>La mappa</h3>
         <ul>
-          <li><span class="k">Graph</span>: chi chiama una funzione, e cosa chiama lei. Ci cammini dentro a forza di clic.</li>
+          <li><span class="k">Graph</span>: chi chiama una funzione e cosa chiama lei. Ci cammini dentro a forza di clic.</li>
           <li><span class="k">Diagramma ER</span>: moduli come tabelle, lookup come frecce. Ne metti uno a fuoco,
             ti allontani, lo stampi grande quanto una parete.</li>
           <li>Nel codice, le chiamate ad altre funzioni sono cliccabili: salti alla definizione e torni indietro.</li>
@@ -195,7 +195,7 @@
           <li>Una riga per related list, con il suo API name e la chiamata
             <code>getRelatedRecords()</code> pronta da copiare.</li>
           <li>Il campo lookup o il modulo di collegamento che ci sta dietro, così vedi da dove nasce.</li>
-          <li>Ogni campo con il suo tipo, e una matrice che mostra su quale layout compare.</li>
+          <li>Ogni campo con il suo tipo e una matrice che mostra su quale layout compare.</li>
         </ul>
       </div>
 
@@ -203,7 +203,7 @@
         <h3>Le automazioni, e quali aspettano</h3>
         <ul>
           <li>Workflow con trigger, criteri e le funzioni che invocano; schedulazioni con frequenza e stato.</li>
-          <li><span class="k">Quali regole non scattano subito</span>, quanto aspettano, e quando ognuna è stata
+          <li><span class="k">Quali regole non scattano subito</span>, quanto aspettano e quando ognuna è stata
             eseguita l'ultima volta.</li>
           <li>Il catalogo delle connessioni dell'org, con quante funzioni usano ciascuna - così sai cosa puoi cancellare senza pentirtene.</li>
         </ul>
@@ -227,14 +227,14 @@
       </div>
 
       <div class="card">
-        <h3>Export, e un assistente opzionale</h3>
+        <h3>Export e un assistente opzionale</h3>
         <ul>
           <li>Tutta l'org come un unico file HTML che sta in piedi da solo, o in Markdown per darlo in pasto a un'AI.</li>
           <li>Una finestra dove decidi tu, sezione per sezione, cosa può uscire dalla tua macchina. Il codice
         sorgente lo devi includere apposta.</li>
           <li>Con una chiave tua, un assistente che legge <em>la tua</em> org invece di tirare a indovinare - e che
             può essere protetto da una passphrase.</li>
-                  <li><a href="/it/ai">Quando serve una API key, e quando conviene l'export</a>.</li>
+                  <li><a href="/it/ai">Quando serve una API key e quando conviene l'export</a>.</li>
         </ul>
       </div>
 
@@ -243,7 +243,7 @@
       <figure class="shot">
         <img src="/img/crm-graph.webp?v=d76c5d8ca4" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il grafo delle chiamate: riquadri per funzioni, workflow, schedulazioni e connessioni, uniti dalle frecce di chi chiama chi.">
-        <figcaption><b>La mappa.</b> A fuoco su una funzione, due passi intorno. Anche workflow, schedulazioni e connessioni sono nodi: vedi cosa <em>fa partire</em> il codice e cosa raggiunge, e una connessione che non usa nessuno salta all'occhio.</figcaption>
+        <figcaption><b>La mappa.</b> A fuoco su una funzione, due passi intorno. Anche workflow, schedulazioni e connessioni sono nodi: vedi cosa <em>fa partire</em> il codice e cosa raggiunge; una connessione che non usa nessuno salta all'occhio.</figcaption>
       </figure>
     </div>
 </section>
@@ -256,20 +256,20 @@
       <li>In <b>Settings</b>, scegli una <b>cartella di lavoro</b> - dedicata e vuota. Ogni workspace vivrà lì dentro.</li>
       <li>Apri una scheda Zoho CRM e premi <b>+</b>. Zoost ti prepara il workspace per quell'org.</li>
       <li>Premi <b>Pull all</b> per rispecchiare funzioni, moduli, layout, relazioni, workflow, schedulazioni e connessioni.</li>
-      <li><b>Se vuoi:</b> <code>git init</code> nella cartella, e da lì in avanti hai lo storico dell'org
+      <li><b>Se vuoi:</b> <code>git init</code> nella cartella e da lì in avanti hai lo storico dell'org
         intera. Tutto il resto funziona anche senza.</li>
       <li>Poi gira: segui una chiamata, apri il grafo, lancia il controllo di salute, o esporta tutto.</li>
     </ol>
     <p class="note"><b>Oppure premi <span class="k">+ Sample</span> e salti tutto.</b> Scrive nella cartella
       di lavoro un workspace di dati inventati, così apri l'albero, i diagrammi e gli export prima di puntare
       Zoost su qualcosa di tuo. Nessun tab Zoho, nessun account: è generato e non scaricato, tutto ciò che
-      parlerebbe con la piattaforma è disabilitato, e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta, e come valutarlo così &rarr;</b></a></p>
+      parlerebbe con la piattaforma è disabilitato e lo cancelli come qualsiasi altro workspace. <a href="/it/try"><b>Perché conta e come valutarlo così &rarr;</b></a></p>
     <p class="note">Guida completa, inclusa la configurazione della chiave API e la risoluzione dei problemi:
       <a href="/it/docs-crm"><b>Come si usa Zoost CRM</b></a>.</p>
-    <p class="note">Su cosa si regge, cosa si rifiuta di fare, e come verificarlo:
+    <p class="note">Su cosa si regge, cosa si rifiuta di fare e come verificarlo:
       <a href="/it/nerd">la pagina nerd</a>.</p>
     <p class="note">Ti serve una sessione Zoho CRM aperta nello stesso browser. Zoost usa la tua sessione e i tuoi
-      permessi esistenti - vede esattamente quello che vedi tu, e niente di più.</p>
+      permessi esistenti - vede esattamente quello che vedi tu, niente di più.</p>
     <p class="note warn">L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del
       workspace che gli serve, sorgente Deluge compreso, va al provider che configuri. Prima di accenderlo, assicurati che nella tua azienda sia una cosa ammessa. Tutto il resto non si
       muove da lì.</p>

@@ -115,7 +115,7 @@
     <h1>Tutto quello che hai costruito dentro Zoho è tuo.<br><span>E con Zoost puoi vederlo tutto insieme.</span></h1>
     <p class="lead">Zoho te lo fa guardare un pezzo alla volta, dentro una scheda del browser. Zoost porta
       l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa:
-      chi chiama chi, chi dipende da chi, e cosa non serve più a nessuno.</p>
+      chi chiama chi, chi dipende da chi e cosa non serve più a nessuno.</p>
     <div class="cta">
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
@@ -123,7 +123,7 @@
     </div>
     <p class="note" style="margin-top:22px" data-it-only>Il sito è tutto in italiano, guide e privacy policy comprese; la
       <a href="/llms.txt" hreflang="en">mappa per gli assistenti</a> resta in inglese, perché a
-      leggerla è una macchina. <b>L'estensione invece è in inglese</b>, e i nomi dei comandi che trovi
+      leggerla è una macchina. <b>L'estensione invece è in inglese</b>: i nomi dei comandi che trovi
       scritti qui sono quelli veri del pannello, non una loro traduzione.
       <a href="/" hreflang="en">English version</a>.</p>
   </div>
@@ -162,7 +162,7 @@
         </div>
         <p class="full">Zoost - workbench for Zoho Analytics</p>
         <p>Ogni vista di un workspace con il suo tipo, la cartella e le date, le colonne e le chiavi esterne
-          di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme, e l'elenco di quello da cui sembra non dipendere più niente.</p>
+          di ogni tabella, l'SQL di ogni query table in un file per conto suo, il diagramma ER dell'insieme e l'elenco di quello da cui sembra non dipendere più niente.</p>
         <div class="plinks">
           <a href="/it/analytics" aria-label="Cosa fa Zoost Analytics">Cosa fa →</a>
           <a href="/it/docs-analytics" aria-label="Come si usa Zoost Analytics">Come si usa →</a>
@@ -176,7 +176,7 @@
       <figure class="shot">
         <img src="/img/crm-preview.webp?v=be77f6afcf" width="1760" height="1100" loading="lazy" decoding="async"
              alt="Il pannello Zoost accanto a Zoho CRM: sopra l'elenco delle funzioni, sotto il tab Details di quella selezionata - chi la chiama, cosa sta fallendo in Zoho, quanto è lunga.">
-        <figcaption><b>Zoost CRM.</b> Tutta l'org in un elenco, e sotto quello che si sa della funzione che hai scelto: chi la chiama, dove è usata, cosa sta fallendo in Zoho, quanto è lunga. Il sorgente sta nel tab accanto, e le chiamate che risolvono a una funzione che hai sono link per arrivarci.</figcaption>
+        <figcaption><b>Zoost CRM.</b> Tutta l'org in un elenco, e sotto quello che si sa della funzione che hai scelto: chi la chiama, dove è usata, cosa sta fallendo in Zoho, quanto è lunga. Il sorgente sta nel tab accanto, dove le chiamate che risolvono a una funzione che hai sono link per arrivarci.</figcaption>
       </figure>
     </div>
 </section>
@@ -199,20 +199,19 @@
       </div>
       <div>
         <h3>Tutto insieme, in un colpo solo</h3>
-        <p>Cerchi ovunque in una volta sola, segui un nome fin dove viene usato davvero, e passi tutto
-          quanto a un collega sotto forma di un documento unico.</p>
+        <p>Cerchi ovunque in una volta sola, segui un nome fin dove viene usato davvero, passi tutto quanto a un collega sotto forma di un documento unico.</p>
       </div>
       <div>
         <h3>Ti dà i numeri, non i giudizi</h3>
         <p>Conteggi ed elenchi, mai un voto. Una funzione da quattrocento righe può benissimo essere una
-          tabella di mappatura scritta bene, e quali siano le tue lo sai soltanto tu. Accanto a ogni cifra
+          tabella di mappatura scritta bene: quali siano le tue lo sai soltanto tu. Accanto a ogni cifra
           c'è scritto di cosa non tiene conto.</p>
       </div>
       <div>
         <h3>Dalla tua macchina non esce niente</h3>
         <p>Nessun server, nessun account da creare, nessuna telemetria. L'unica eccezione è l'assistente
           AI, che è facoltativo e resta spento finché non gli dai una chiave tua -
-          <a href="/it/ai">cosa aggiunge, e quando non serve</a>.</p>
+          <a href="/it/ai">cosa aggiunge e quando non serve</a>.</p>
       </div>
       <div>
         <h3>Puoi controllare, non solo fidarti</h3>
@@ -260,9 +259,9 @@
         <tr><td class="k">Cosa scrive</td><td>Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.</td></tr>
         <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun server, nessun account, nessuna telemetria.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
-        <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi, e non può fare niente che lei non potrebbe fare.</td></tr>
+        <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code> e <code>api.anthropic.com</code> / <code>api.openai.com</code>. Su <code>one.zoho.*</code> non gira nessuno script nostro: sta lì solo perché il pannello capisca a quale org appartiene una scheda Zoho One. I due host AI si raggiungono solo se qualcuno accende l'assistente. Il manifest fa fede.</td></tr>
-<tr><td class="k">Come verificarlo</td><td>Tredici file di JavaScript in chiaro per Zoho CRM, dieci per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma, e un comando verifica il file pubblicato.</td></tr>
+<tr><td class="k">Come verificarlo</td><td>Tredici file di JavaScript in chiaro per Zoho CRM, dieci per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Il dettaglio, endpoint per endpoint, sta sulla
@@ -276,7 +275,7 @@
     <h2>Come si comincia</h2>
     <ol class="steps">
       <li><b>Provalo senza collegare niente.</b> Installa una delle due e premi <b>+ Sample</b>. Scrive un
-        workspace di dati inventati nella tua cartella di lavoro, e l'albero, i diagrammi, l'audit e gli
+        workspace di dati inventati nella tua cartella di lavoro. L'albero, i diagrammi, l'audit e gli
         export funzionano tutti su quello - senza una scheda Zoho e senza account. Niente raggiunge la
         piattaforma, e lo cancelli cancellando la cartella. <a href="/it/try">Cosa c'è dentro</a>.</li>
 <li><b>Scegli il prodotto</b> che ti interessa: <b><a href="/it/crm">Zoost - workbench for Zoho CRM</a></b> oppure

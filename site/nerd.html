@@ -76,8 +76,8 @@
     <h3>Reading Zoho CRM</h3>
     <p>Reads two identifiers - your org id and your user id - out of the page's own HTML, because no
       endpoint offers them, and takes the CSRF token from the cookies your browser already holds.
-      Separately it watches the page for <b>one</b> thing: the URL and method of the request that
-      saves a function, so the local copy can follow when you save. It reads no headers and no
+      <br><br>Separately it watches the page for <b>one</b> thing: the URL and method of the request
+      that saves a function, so the local copy can follow when you save. It reads no headers and no
       response bodies, and alters nothing the page sends or receives.</p>
     <p>Two token families, and they are not interchangeable: the <code>/crm/</code> endpoints want
       <code>crmcsrfparam</code> with the <code>CT_CSRF_TOKEN</code> cookie, the <code>/deluge/</code>
@@ -147,13 +147,13 @@
     commit's own date, sorts the file list, and passes <code>-X</code>.</p>
   <p>Every GitHub Action is pinned to a commit hash, never to a moving tag. A supply chain that ends
     in "and then whatever that tag says today" is not one.</p>
-  <p>Which is also the answer to a fair question, stated plainly rather than left to be guessed at:
-    this code was written with heavy assistance from a language model and reviewed line by line, and
-    that is part of why the chain above exists in the form it does. Twelve files for Zoho CRM and ten
-    for Zoho Analytics, no bundler and no minifier, a build reproduced twice on a machine that is not
-    mine and signed, a hash you can check in one command - none of it asks you to trust how the code
-    was produced. Who typed it is the least verifiable thing about a program, and the least
-    interesting once the rest can be read.</p>
+  <p>Which is also the answer to a fair question, stated plainly rather than left to be guessed at.
+    This code was written with heavy assistance from a language model and reviewed line by line, and
+    that is part of why the chain above exists in the form it does.</p>
+  <p>Twelve files for Zoho CRM and ten for Zoho Analytics, no bundler and no minifier, a build
+    reproduced twice on a machine that is not mine and signed, a hash you can check in one command:
+    none of it asks you to trust how the code was produced. Who typed it is the least verifiable thing
+    about a program, and the least interesting once the rest can be read.</p>
 
   <h2 id="check-it-yourself">Check it yourself</h2>
   <table>
@@ -176,12 +176,12 @@
   <h2 id="what-none-of-it-proves">What none of it proves</h2>
   <p>Uploading to the Chrome Web Store is a manual step, so no signature covers it: what is proven is
     how the release archive was built. Google also repackages and re-signs every extension, so what it
-    serves is not byte-identical to what was uploaded. Both are settled at the far end, by diffing the
-    installed extension against the tag - the tag of the version <em>you have</em>, which
-    <code>chrome://extensions</code> states. Google publishes days after a submission rather than minutes - how many is Google's to decide - so
-    the newest tag here is routinely ahead of what the Store is serving, and a version still in review
-    is not being served at all; diffing against that one gives a mismatch that says nothing about
-    either file.</p>
+    serves is not byte-identical to what was uploaded.</p>
+  <p>Both are settled at the far end, by diffing the installed extension against the tag - the tag of
+    the version <em>you have</em>, which <code>chrome://extensions</code> states.</p>
+  <p>Mind which tag. Google publishes days after a submission rather than minutes, so the newest tag
+    here is routinely ahead of what the Store is serving, and a version still in review is not being
+    served at all. Diffing against that one gives a mismatch that says nothing about either file.</p>
   <p>And an attestation says who built a file, never that the file is good. That part is still reading
     the code.</p>
 

@@ -123,12 +123,12 @@
     <li><b>Nothing is fetched.</b> The files are generated in the browser and written to your disk.
       No request goes to Zoho, and none goes anywhere else.</li>
     <li><b>One flag, and the whole product reads it.</b> <code>sample: true</code> in the workspace's
-      own config is the entire mechanism - there is no demo mode, no second code path, nothing that
-      treats invented data specially. Everything that would reach Zoho asks that flag before it acts:
-      the buttons that pull are disabled, the ones that would open a Zoho page refuse and say why.
-      There is no org behind a sample, so there is nothing for them to open. Once the files are on
-      disk they are read by the ordinary code, listed by the ordinary list, exported by the ordinary
-      export - and a branch that showed invented data differently would eventually show somebody's
+      own config is the entire mechanism: no demo mode, no second code path, nothing that treats
+      invented data specially. Everything that would reach Zoho asks that flag first - the buttons
+      that pull are disabled, the ones that would open a Zoho page refuse and say why. There is no org
+      behind a sample, so there is nothing for them to open.
+      <br><br>Once the files are on disk the ordinary code reads them, the ordinary list lists them,
+      the ordinary export exports them. A branch that showed invented data differently would eventually show somebody's
       real data through it.</li>
     <li><b>Deleting it is deleting the folder.</b> The one trace outside it is the sample's own
       identifier, kept in the browser's local storage so the panel can offer to open it before Chrome
@@ -143,18 +143,19 @@
 
   <h2>If you are the one approving the install</h2>
 
-  <p>You can run the whole evaluation yourself, on a machine with no Zoho session at all, and answer
-    the questions that usually have to be taken on faith: what it reads, what it writes, where the
-    files go, what leaves the machine, what the exports contain, what the assistant is told. The
-    <a href="/nerd">nerd page</a> covers how a release is built and how to verify the package you
-    install is the one built from the published source; this page is the other half, and the two
-    together mean an approval can rest on something you saw rather than something you were told.</p>
+  <p>You can run the whole evaluation yourself, on a machine with no Zoho session at all. The questions
+    that usually have to be taken on faith - what it reads, what it writes, where the files go, what
+    leaves the machine, what the exports contain, what the assistant is told - all have an answer you
+    can see.</p>
+  <p>The <a href="/nerd">nerd page</a> covers the other half: how a release is built, and how to
+    verify that the package you install is the one built from the published source. Together they
+    mean an approval can rest on something you saw rather than something you were told.</p>
 
-  <p>One thing to have straight before you start: the optional AI assistant is the only feature that
+  <p>One thing to have straight before you start. The optional AI assistant is the only feature that
     sends anything anywhere, and it stays off until you enter your own API key. It <b>does</b> work on
-    a sample, which is the point - you can evaluate that part too, and what leaves the machine is
+    a sample, which is the point: you can evaluate that part too, and what leaves the machine is
     invented. Pointed at your own organisation the same feature sends real Deluge source to the
-    provider you configured, and that trade is set out on <a href="/privacy">the privacy page</a>.</p>
+    provider you configured - that trade is set out on <a href="/privacy">the privacy page</a>.</p>
 
   <h2>How to do it</h2>
 
@@ -181,10 +182,10 @@
 
   <p>An invented organisation is not yours. It will not tell you how long a pull takes against a
     portal with three thousand functions, whether your role can read the connections catalogue, or
-    what the diagrams look like at the size your organisation actually is. It is deliberately built
-    to contain one of everything - including the awkward states, like a module Zoho refuses to
-    describe - so what you see is the product at its full complexity rather than a tidied version,
-    but complexity is not scale.</p>
+    what the diagrams look like at the size your organisation actually is.</p>
+  <p>It is deliberately built to contain one of everything, awkward states included - a module Zoho
+    refuses to describe, for instance. So what you see is the product at its full complexity rather
+    than a tidied version. But complexity is not scale.</p>
 
   <p>What it does answer is every question about behaviour, and those are the ones that decide whether
     something is safe to install.</p>
