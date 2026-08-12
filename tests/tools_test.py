@@ -2003,6 +2003,75 @@ class TheGateOnTheTagCanBePassed(unittest.TestCase):
                          'release.sh is back on the mode that refuses over the skip itself')
 
 
+class NothingIsPublishedThatNobodyUses(unittest.TestCase):
+    """A stale logo in a Google result sent somebody looking, and the site turned out to be right -
+    every icon it serves is the current mark, byte for byte. Two things were wrong anyway.
+
+    `site/crm-192.png` and `site/analytics-192.png` were rendered by `tools/icons.html`, deployed, and
+    referenced by nothing: the unused-image check globs `*.webp`, so no icon had ever been asked the
+    question. And the favicon was the one asset whose URL never changed when its bytes did, because
+    `stamp.py` matched `webp|png|css|js` and not `ico` - so the mark was redrawn and the one picture
+    people see first kept its old address.
+
+    The reference universe is the part to be careful with. `site/icon.svg` is named by no page, and a
+    first pass called it an orphan: it is the source every raster icon and every favicon frame is
+    rendered from. Deleting it would have destroyed the ability to regenerate any of them.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import stamp
+        self.stamp = stamp
+
+    def test_an_icon_url_carries_its_own_digest(self):
+        for ext in ('ico', 'svg'):
+            self.assertRegex(self.stamp.ASSET.pattern, rf'\|{ext}[|)]',
+                             f'.{ext} is outside the stamper, so its URL cannot change when it does')
+        home = (ROOT / 'site' / 'index.html').read_text(encoding='utf-8')
+        self.assertRegex(home, r'href="/favicon\.ico\?v=[0-9a-f]{10}"',
+                         'the favicon is declared with no version')
+
+    def test_the_manifest_icons_are_stamped_too(self):
+        # It is JSON, so it went through none of the HTML path and had never been looked at.
+        mf = (ROOT / 'site' / 'site.webmanifest').read_text(encoding='utf-8')
+        for m in re.finditer(r'"src":\s*"([^"]+)"', mf):
+            self.assertIn('?v=', m.group(1), f'{m.group(1)} in the manifest carries no digest')
+
+    def test_every_published_icon_is_referenced_by_something(self):
+        site = ROOT / 'site'
+        where = [p.read_text(encoding='utf-8') for p in
+                 list(site.glob('*.html')) + list((site / 'it').glob('*.html'))]
+        where += [(site / 'site.webmanifest').read_text(encoding='utf-8'),
+                  (ROOT / 'tools' / 'icons.html').read_text(encoding='utf-8')]
+        hay = '\n'.join(where)
+        for f in sorted(list(site.glob('*.png')) + list(site.glob('*.ico')) + list(site.glob('*.svg'))):
+            self.assertIn(f.name, hay, f'site/{f.name} is deployed and nothing references it')
+
+    def test_the_source_of_the_icons_is_not_treated_as_an_orphan(self):
+        # The one file that would look unused by every naive measure and must never be removed.
+        gen = (ROOT / 'tools' / 'icons.html').read_text(encoding='utf-8')
+        self.assertIn('/site/icon.svg', gen, 'the icon generator no longer draws from site/icon.svg')
+        self.assertTrue((ROOT / 'site' / 'icon.svg').is_file(),
+                        'site/icon.svg is gone, and with it the source of every icon and favicon frame')
+
+    def test_the_home_page_states_its_logo(self):
+        # Without structured data Google has to guess a site's logo from the favicon, which it caches
+        # for far longer than a redraw takes.
+        for rel in ('site/index.html', 'site/it/index.html'):
+            src = (ROOT / rel).read_text(encoding='utf-8')
+            m = re.search(r'<script type="application/ld\+json">([\s\S]*?)</script>', src)
+            self.assertIsNotNone(m, f'{rel} carries no structured data')
+            data = json.loads(m.group(1))
+            self.assertEqual(data['@type'], 'Organization')
+            self.assertTrue(data['logo'].startswith('https://zoost.it/'), data['logo'])
+            name = data['logo'].rsplit('/', 1)[1].split('?')[0]
+            self.assertTrue((ROOT / 'site' / name).is_file(),
+                            f'the declared logo {name} is not a file this site serves')
+            self.assertNotIn('?v=', data['logo'],
+                             'a digest here is one nothing maintains - stamp.py rewrites href, src '
+                             'and og:image, never a JSON string, so it would rot in silence')
+
+
 class TheMapNamesTheWholeRepository(unittest.TestCase):
     """The tree at the top of docs/layout.md named four of the eight directories, and `store/crm/`
     described itself as "per app" while `store/analytics/` appeared nowhere.

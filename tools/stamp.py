@@ -122,7 +122,14 @@ def stamped(rel: str) -> tuple:
 # the file keeps one name - nothing accumulates orphans and `og:image` stays a clean URL. And it is
 # what lets `site.css` and `site.js` be cached at all: they were deliberately left on a short cache
 # because a returning reader could otherwise pair new HTML with an old stylesheet.
-ASSET = re.compile(r'(?:src|href)="/((?:img/)?[\w.-]+\.(?:webp|png|css|js))(\?v=[0-9a-f]+)?"')
+# `ico` and `svg` were missing, and the favicon is the one asset that most needed them: the mark was
+# redrawn and every URL on the site changed except that one, so anything holding the old bytes had no
+# signal to refetch. The rule this file exists for - a picture that changed is a URL that changed -
+# was not applied to the picture people see first. It is not a complete cure, because a browser asks
+# for `/favicon.ico` by itself and ignores the `<link>`, but the inconsistency was ours.
+ASSET = re.compile(r'(?:src|href)="/((?:img/)?[\w.-]+\.(?:webp|png|ico|svg|css|js))(\?v=[0-9a-f]+)?"')
+# The web manifest names two icons and is not HTML, so nothing here had ever looked at it.
+MANIFEST_ICON = re.compile(r'"src":\s*"/([\w.-]+\.(?:png|svg|ico))(\?v=[0-9a-f]+)?"')
 # The card a link unfurls into is the same problem one attribute over: `og:image` is an absolute URL
 # in a `content=`, read by scrapers that cache by URL, so a card that changes and keeps its address
 # is a card nobody sees change. Only asset extensions match, which is why `og:url` - a page - is not
@@ -160,6 +167,24 @@ def stamp_assets(check: bool = False) -> list:
         out = OG.sub(og, ASSET.sub(one, html))
         if out != html and not check:
             page.write_text(out, encoding='utf-8')
+
+    # The manifest is JSON, so it went through none of the above and its two icons carried no digest
+    # at all. Same rule, one file, its own pattern rather than a second copy of the logic.
+    mf = SITE / 'site.webmanifest'
+    if mf.exists():
+        text = mf.read_text(encoding='utf-8')
+
+        def icon(m):
+            rel, had, tok = m.group(1), m.group(2) or '', asset_token(m.group(1))
+            if not tok or had == f'?v={tok}':
+                return m.group(0)
+            behind.append(f'site/site.webmanifest: /{rel} is stamped {had[3:] or "(not at all)"}, '
+                          f'its bytes hash to {tok}')
+            return f'"src": "/{rel}?v={tok}"'
+
+        out = MANIFEST_ICON.sub(icon, text)
+        if out != text and not check:
+            mf.write_text(out, encoding='utf-8')
     return behind
 
 

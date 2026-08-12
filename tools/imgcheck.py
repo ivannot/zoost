@@ -153,6 +153,27 @@ def main() -> int:
         findings.append(f"{key}.webp is published and no page uses it - either place it or stop "
                         f"publishing it, because it is weight nobody sees")
 
+    # The same question one file type over, and it had never been asked: the check above globs
+    # `*.webp`, so every icon was outside it. `crm-192.png` and `analytics-192.png` were rendered by
+    # tools/icons.html, deployed, and referenced by nothing at all - found by hand while chasing a
+    # stale logo in a search result. **Take out whatever is not needed**; being essential is the rule,
+    # and a rule with nothing measuring it is one that lapses.
+    #
+    # The reference universe is what makes this honest rather than noisy. It is not just the pages:
+    # site/icon.svg is named by no page, and deleting it would have destroyed the source every raster
+    # icon and every favicon frame is rendered from - a first pass here counted references in HTML
+    # alone and called it an orphan. So tools/icons.html counts too, and so does the web manifest.
+    where = ([p.read_text(encoding='utf-8') for p in pages()]
+             + [(SITE / 'site.webmanifest').read_text(encoding='utf-8')
+                if (SITE / 'site.webmanifest').exists() else '']
+             + [(ROOT / 'tools' / 'icons.html').read_text(encoding='utf-8')
+                if (ROOT / 'tools' / 'icons.html').exists() else ''])
+    haystack = '\n'.join(where)
+    for f in sorted(list(SITE.glob('*.png')) + list(SITE.glob('*.ico')) + list(SITE.glob('*.svg'))):
+        if f.name not in haystack:
+            findings.append(f"{f.name} is published and nothing references it - no page, not the web "
+                            f"manifest, not the icon generator. Take it out, or place it")
+
     for rel, n in sorted(per_page.items()):
         if rel.startswith("it/"):
             continue
