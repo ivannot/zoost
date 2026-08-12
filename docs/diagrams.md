@@ -271,6 +271,31 @@ zooms to 0.119, a resize keeps 0.119, `Fit` hands it back and the next resize fo
 handler is debounced at 120ms, because resize fires continuously through a drag and `erFit()` walks
 every box.
 
+**A fit divides by a measurement, so it never invents one.** `erFit()` read
+`clientWidth || 1000, clientHeight || 700`, which substitutes a viewport for the case where the panel
+measures 0 - a real state, since a `.view` without `.on` is `display:none`. Measured on the sample
+schema at 1280 x 800, where the panel is 1280x583: the true fit is 1.018 centred at x=358 and the
+invented pair gives 1.255 at x=153, a diagram 23% too big and 200px off. It measures instead, and
+returns when there is nothing to measure. **It was unreachable, and that is the reason it went rather
+than an excuse to leave it**: instrumenting `erFit()` across all six rendered shots while driving Fit,
+depth, focus and scope gives 35 calls, and every one that measured 0 needed a click on a button that
+was `display:none`, because all four call sites are guarded by `curView === 'er'`. A guard on the
+caller was the only thing between an invented number and a wrong drawing, so the fifth call site would
+have got a silently mis-scaled diagram instead of no diagram. `tests/graphview.test.mjs` names the old
+answer, not just the new one: reintroducing `|| 1000` fails there rather than in a screenshot three
+commits later. All 27 site images are byte-identical across the change, which is the same fact from
+the other side.
+
+**Two things were disproved on the way, and they are recorded so nobody chases them again.** Neither
+the layout nor the fit is non-deterministic: six renders of the same tree are identical, `settle()`
+runs a fixed 300 iterations with no random and the scatter is already a hash of the id. And **no stale
+scale was ever observed**. The panel does change height at a fixed window size - 542 then 512 then 482
+within the wiring shot, because `#v-er` is `100vh` minus a header whose rows wrap - but a fit follows
+each time, since every handler updates the header *before* calling `erShow()`. The chip bar was the
+suspect twice and cannot be: `#ertools` is `position:absolute` and out of flow, so it cannot change
+what the panel measures. A `ResizeObserver` was therefore *not* added: there is no demonstrated
+condition for it to correct, and it would change when the drawing re-adapts under a reader's hands.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 

@@ -1336,9 +1336,24 @@ function erRender() {
 // be the window overruling them.
 let erUserMoved = false;
 function erFit() {
+  // The panel's measured size is the only honest input to a scale, and this read used to be
+  // `clientWidth || 1000, clientHeight || 700` - a viewport invented for the case where the panel
+  // measures 0, which is a real state: a `.view` without `.on` is `display:none`. Measured on the
+  // sample schema at 1280x800, where the panel is 1280x583: the true fit is 1.018 centred at x=358,
+  // the invented pair gives 1.255 at x=153 - a diagram 23% too big and 200px off.
+  //
+  // No reachable path hit it. Instrumenting this function across all six rendered shots and driving
+  // Fit, depth, focus and scope gives 35 calls, and every one that measured 0 needed a click on a
+  // button that was `display:none` - all four call sites are guarded by `curView === 'er'`. It goes
+  // anyway, because a guard on the caller is the only thing that stood between an invented number
+  // and a wrong drawing: the fifth call site would have got a silently mis-scaled diagram instead of
+  // no diagram, and this project does not guess a number it can measure. Nothing to fall back to
+  // means nothing to draw yet - the next fit has a real panel to read.
+  const vw = $('v-er').clientWidth, vh = $('v-er').clientHeight;
+  if (!vw || !vh) return;
   let maxX = erMaxX, maxY = erMaxY;
   erIds.forEach((id) => { const p = erPos[id]; if (!p) return; maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
-  const vw = $('v-er').clientWidth || 1000, vh = $('v-er').clientHeight || 700, pad = 40;
+  const pad = 40;
   erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
   erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
   erUserMoved = false;

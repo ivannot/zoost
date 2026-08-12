@@ -571,6 +571,17 @@ performance threshold, an API response shape, a browser behaviour — say so exp
 letting it sound settled. Several times today the honest "I could not check this" was worth more
 than a confident answer would have been.
 
+**A conclusion inherited from an earlier session is evidence, not a verdict — and that includes your
+own.** The same rule as an outside review, and harder to apply, because the claim arrives in your own
+voice with all of its measurements stripped off and the user's approval already attached. A dead
+thread's diagnosis of the ER fit was handed back to be implemented, and two of its three claims died
+on the first measurement: `#ertools` is `position:absolute`, so the "chip bar wrapping onto a third
+row" could never change what the panel measures, and its 70px came from the ratio of two images
+rather than from the page. The generalisation is about *method*, not about that bug: a number derived
+from an artefact is not a measurement of the thing that produced it, and the way to check a function
+is to instrument the function. Re-derive before building, and say which half survived — a fix built
+on the dead half is a change nobody can defend later.
+
 **Own mistakes plainly.** When a bug traces back to something you wrote, say that, name the cause,
 and fix it. No hedging, no diffusing it into the passive voice.
 
