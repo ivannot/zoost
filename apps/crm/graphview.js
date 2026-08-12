@@ -18,6 +18,16 @@ const MSG = {
     ? `Hide ${name} and the ${k - 1} ${k === 2 ? 'box' : 'boxes'} that came with it`
     : `Hide ${name}`),
   cutUndo: (k) => `Show the ${k} ${k === 1 ? 'box' : 'boxes'} again`,
+  // What a control is about to take away, by name. A count answers «how much» and the question in
+  // front of somebody zoomed in on a crowded rim is «what» - most of what a cascade removes is off
+  // screen, so it cannot be looked at, only read. One per line: a tooltip does not wrap, so a comma
+  // list of long api names is a line nobody can read the end of.
+  cutTip: (names, more) => (names.length === 1 && !more
+    ? `Removing ${names[0]}`
+    : `Removing ${names.length + more} boxes:\n${names.join('\n')}${more ? `\nand ${more} more` : ''}`),
+  backTip: (names, more) => (names.length === 1 && !more
+    ? `Putting back ${names[0]}`
+    : `Putting back ${names.length + more} boxes:\n${names.join('\n')}${more ? `\nand ${more} more` : ''}`),
   folded: (k) => `${k} ${k === 1 ? 'box' : 'boxes'} off the diagram \u00b7 the + where the arc meets the box brings ${k === 1 ? 'it' : 'them'} back`,
   unfolded: (k) => `${k} ${k === 1 ? 'box is' : 'boxes are'} back on the diagram`,
   kept: (k, n) => `kept where you put ${k === 1 ? 'it' : 'them'} \u00b7 ${k} arranged` + (n ? ` \u00b7 ${n} placed by the layout` : '') + ' \u00b7 Re-layout starts over',
@@ -1392,15 +1402,35 @@ function erHiddenSet() {
   });
   return gone;
 }
-/** How many boxes come back if this one is undone. Measured against the set that is actually hidden,
- *  so two removals one inside the other cannot both claim the boxes only one of them is holding. */
-function erWouldShow(k) {
-  const before = erHiddenSet().size;
+/** Which boxes come back if this one is undone. Measured against the set that is actually hidden, so
+ *  two removals one inside the other cannot both claim the boxes only one of them is holding. */
+function erWouldShowSet(k) {
+  const before = erHiddenSet();
   const keep = erCut;
   erCut = new Map(erCut); erCut.delete(k);
-  const after = erHiddenSet().size;
+  const after = erHiddenSet();
   erCut = keep;
-  return before - after;
+  const out = new Set();
+  before.forEach((id) => { if (!after.has(id)) out.add(id); });
+  return out;
+}
+function erWouldShow(k) { return erWouldShowSet(k).size; }
+// The names a control is about to take away or put back, ordered and capped, as its tooltip says
+// them. One helper for the mark and for the card: the same click described two ways is the drift this
+// repository spends its length on, and here they are ten pixels apart.
+//
+// The box the control names comes first and the cascade follows it alphabetically, because the first
+// line answers «what am I pressing» and the rest answers «what comes with it». Ten of them: a tooltip
+// is not a report, and a hundred names is a wall nobody reads - the count in the last line is the part
+// that stays true at any size.
+const TIP_MAX = 10;
+function erTipText(set, first, back) {
+  const ids = [...set];
+  const nameOf = (id) => (N[id] ? label(N[id]) : id);
+  const all = (ids.includes(first) ? [first] : [])
+    .concat(ids.filter((id) => id !== first).sort((x, y) => nameOf(x).localeCompare(nameOf(y))));
+  const names = all.slice(0, TIP_MAX).map(nameOf);
+  return (back ? MSG.backTip : MSG.cutTip)(names, all.length - names.length);
 }
 /** Put `id` back on the drawing, by dropping the removals that took it - the one that did, then any
  *  later one that does it again, and no others.
@@ -1468,9 +1498,22 @@ function erPickCard() {
       + `<button type="button" id="erpickcut2">${esc(MSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
   card.classList.add('on');
   const cb = $('erpickcut');
-  if (cb) cb.onclick = () => erToggleCut(a, b, isCut ? erCut.get(cutK) : b);
+  if (cb) {
+    cb.onclick = () => erToggleCut(a, b, isCut ? erCut.get(cutK) : b);
+    // The same list the mark on the arc gives, from the same helper: two descriptions of one click,
+    // ten pixels apart, is exactly the drift a shared helper exists to stop.
+    cb.title = isCut ? erTipText(erWouldShowSet(cutK), erCut.get(cutK), true)
+                     : erTipText(erWouldGo(a, b, gone), b, false);
+    cb.onmouseenter = () => erFlag(isCut ? null : erWouldGo(a, b, gone));
+    cb.onmouseleave = () => erFlag(null);
+  }
   const cb2 = $('erpickcut2');
-  if (cb2) cb2.onclick = () => erToggleCut(a, b, a);
+  if (cb2) {
+    cb2.onclick = () => erToggleCut(a, b, a);
+    cb2.title = erTipText(erWouldGo(b, a, gone), a, false);
+    cb2.onmouseenter = () => erFlag(erWouldGo(b, a, gone));
+    cb2.onmouseleave = () => erFlag(null);
+  }
   const sn = $('erpicksnip');
   if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
     const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
@@ -1888,11 +1931,20 @@ function erSizeArrows() {
 // the thing it is about. Below 0.56 it stops growing in the drawing and starts shrinking on screen:
 // 20px at any zoom the diagram is read at, 6px on a whole org nobody is clicking arcs in.
 const MARK_MAX = 1.8;
-const MARK_D = 20;         // and never wider than the gap between two landing points; see markAt
+const MARK_D = 16;         // and never wider than the gap between two landing points; see markAt
+// ...but never smaller than this, whatever the gap says. Reported with a picture: the first version
+// floored at 11 and left the `-` on a crowded rim beside a `+` at the full 20, which reads as two
+// different controls rather than as one that is squeezed. The gap is a *starting* number and not a
+// guarantee - `erFitToArcs` grows a box for the arcs its sides carried **as laid out**, and the
+// collision pass then moves boxes, which can move an arc onto a side that was never sized for it. So
+// a floor, and where the rim is genuinely tighter than this the marks touch: two circles overlapping
+// by a pixel is a smaller failure than a control nobody can hit, and hovering one raises it.
+const MARK_MIN = 13;
 function erSizeMarks() {
   const m = document.getElementById('ermarks');
   if (m) m.style.setProperty('--mkz', Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02)).toFixed(3));
 }
+let erFlag = () => {};   // set by erRender, which is what knows the boxes
 function erRender() {
   // Taken off the drawing by the reader, which is a filter on the drawing and not on the layout: the
   // positions are untouched, so what is left stays exactly where he put it.
@@ -1911,6 +1963,7 @@ function erRender() {
     folds.push([a, b, away, stay]);
   });
   const boxes = $('erboxes'); boxes.innerHTML = '';
+  const boxEl = new Map();          // so a control can outline what it is about to take away
   let maxX = 0, maxY = 0;
   erIds.forEach((id) => {
     if (gone.has(id)) return;
@@ -1948,7 +2001,17 @@ function erRender() {
     const z = erRaised.get(id);
     if (z) div.style.zIndex = String(10 + z);
     boxes.appendChild(div);
+    boxEl.set(id, div);
   });
+  // What the control under the pointer would take, outlined on the boxes that are on screen. Rebuilt
+  // with the boxes, so it cannot outlive the render that drew them.
+  let flagged = [];
+  erFlag = (set) => {
+    flagged.forEach((el) => el.classList.remove('willgo'));
+    flagged = [];
+    if (!set) return;
+    set.forEach((id) => { const el = boxEl.get(id); if (el) { el.classList.add('willgo'); flagged.push(el); } });
+  };
   const svg = $('ersvg');
   // `.erhit` was not in this list, and it is the one nobody can see: an invisible 14px-wide copy of
   // every arc, left behind by every render since the window opened. Measured on the sample schema
@@ -2057,14 +2120,21 @@ function erRender() {
     el.className = 'ermk ' + (folded ? 'back' : 'fold');
     el.style.left = (stay === a ? pt[0] : pt[2]) + 'px';
     el.style.top = (stay === a ? pt[1] : pt[3]) + 'px';
-    el.style.setProperty('--d', (folded ? MARK_D : Math.max(11, Math.min(MARK_D, gap * 0.92))).toFixed(1) + 'px');
+    el.style.setProperty('--d', Math.max(MARK_MIN, Math.min(MARK_D, gap - 1)).toFixed(1) + 'px');
     el.textContent = folded ? '+' : '\u2212';
-    // Worked out when it is asked for, not for every arc on every render: the walk behind the number
-    // is cheap once and 2N times is the render. A tooltip nobody has hovered has told nobody anything.
+    // Worked out when it is asked for, not for every arc on every render: the walks behind it are
+    // cheap once and 2N times is the render. A tooltip nobody has hovered has told nobody anything.
+    //
+    // It says the names, not a number. Reaching one of these usually means being zoomed in on a
+    // crowded rim, where most of what a cascade would take is off screen - so it cannot be looked at,
+    // only read. What *is* on screen is outlined at the same moment, which the list cannot do and the
+    // outline cannot do for the rest: two halves of the same answer.
     el.addEventListener('mouseenter', () => {
-      el.title = folded ? MSG.cutUndo(erWouldShow(ek))
-        : MSG.cutDo(label(N[away]), erWouldGo(stay, away, erHiddenSet()).size);
+      const set = folded ? erWouldShowSet(ek) : erWouldGo(stay, away, erHiddenSet());
+      el.title = erTipText(set, away, folded);
+      erFlag(set);
     });
+    el.addEventListener('mouseleave', () => erFlag(null));
     // The same guard the arcs and the boxes use: a drag that ends over a control is still a drag.
     el.addEventListener('click', (ev) => { ev.stopPropagation(); if (erDragged) return; erToggleCut(a, b, away); });
     marks.appendChild(el);

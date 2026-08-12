@@ -453,6 +453,29 @@ one: two arcs never meet a box at the same point, so one `+` is one removal and 
 him something he did not ask. It is in the tooltip, and in the line under the drawing at the moment it
 happens.
 
+**The tooltip says the names, because the count answers the wrong question.** Reported: *«un tooltip
+che mi dice "stai rimuovendo a - b - c" mi aiuta molto»*, and the reason is in the same sentence -
+reaching one of these marks usually means being zoomed in on a crowded rim, where most of what a
+cascade would take is off screen. It cannot be looked at, only read. So the tooltip is a heading and a
+list, one name per line (a tooltip does not wrap, and a comma list of long api names is a line nobody
+reads the end of), the box the control names first and the cascade after it alphabetically, capped at
+ten with «and N more» - a tooltip is not a report, and the count in the last line stays true at any
+size. `erTipText` is one helper for the mark and for the card button, because the same click described
+two ways, ten pixels apart, is the drift this repository spends its length on.
+
+**And what *is* on screen is outlined at the same moment.** The list answers for what cannot be seen
+and the outline for what can; neither does the other's job. It is rebuilt with the boxes, so it cannot
+outlive the render that drew them.
+
+**The marks are one size rule, with a floor, and the first version had neither.** It sized the `-` from
+the gap and left the `+` at the full 20px, so a crowded rim carried two sizes and read as two kinds of
+control - reported with a picture. And the floor was 11px, which is smaller than the pointer that has
+to hit it. The gap is a *starting* number rather than a guarantee: `erFitToArcs` grows a box for the
+arcs its sides carried **as laid out**, and the collision pass then moves boxes, which can put an arc
+on a side that was never sized for it. So both marks follow the same rule between a floor of 15 and a
+cap of 20, and where a rim is genuinely tighter than that they touch - two circles overlapping by a
+pixel is a smaller failure than a control nobody can hit, and the one under the pointer comes forward.
+
 **The tooltip is worked out on hover, not on render.** Two walks per mark is nothing once and 2N times
 is the render; a tooltip nobody has pointed at has told nobody anything. Measured on the sample schema,
 folding changes neither the scale nor the pan - 1.102 and tx 339 before and after - so nothing moves

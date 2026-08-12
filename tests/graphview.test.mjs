@@ -615,7 +615,7 @@ function remover(app, ids, edges, focus) {
     curFocus: focus, erCut: new Map(),
   });
   vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ekey'), ctx);
-  vm.runInContext(['erReach', 'erWouldGo', 'erHiddenSet', 'erWouldShow', 'erUnhide']
+  vm.runInContext(['erReach', 'erWouldGo', 'erHiddenSet', 'erWouldShowSet', 'erWouldShow', 'erUnhide']
     .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
   const run = (src) => vm.runInContext(src, ctx);
   return {
@@ -707,13 +707,16 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/#ermarks\.dragging\{display:none\}/.test(html), 'the marks stay behind while a box is dragged');
     assert.ok(/@media print\{ \.ermk\.fold\{display:none\}/.test(html), 'a control nobody can press is printed');
     assert.ok(/closest\('#ermarks'\)/.test(js), 'pressing a mark starts a pan');
-    assert.ok(/width:var\(--d,20px\);height:var\(--d,20px\)/.test(html), 'the marks are not sized from the drawing');
+    assert.ok(/width:var\(--d,16px\);height:var\(--d,16px\)/.test(html), 'the marks are not sized from the drawing');
     assert.ok(/drawnPairs\.forEach\(\(\[a, b\]\) => \{ markAt\(a, b, b, a, false\); markAt\(a, b, a, b, false\); \}\)/.test(js),
       'an arc no longer carries a mark at each of its two ends');
     const mk = js.slice(js.indexOf('const markAt ='), js.indexOf('marks.appendChild(el)'));
     assert.ok(/stay === a \? pt\[0\] : pt\[2\]/.test(mk) && /stay === a \? pt\[1\] : pt\[3\]/.test(mk),
       'the mark is not placed on the end of the arc that stays');
-    assert.ok(/Math\.max\(11, Math\.min\(MARK_D, gap \* 0\.92\)\)/.test(mk), 'the width no longer follows the gap');
+    // One rule for both marks: a `-` squeezed to 11px beside a `+` at 20 reads as two controls, which
+    // is what the second picture showed. Between the floor and the cap it follows the gap.
+    assert.ok(/Math\.max\(MARK_MIN, Math\.min\(MARK_D, gap - 1\)\)/.test(mk), 'the width no longer follows the gap');
+    assert.ok(!/folded \? MARK_D/.test(mk), 'the + is sized by a different rule from the -');
     assert.ok(/folded \? '\+' : '\\u2212'/.test(mk), 'the + carries something other than a +');
   });
 
@@ -724,5 +727,51 @@ for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/graphview.js`);
     assert.ok(/querySelectorAll\('\.erlink,\.erhit,\.erlabel,\.erlead'\)/.test(js),
       'the hit corridors are left behind by the render that replaces them');
+  });
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a control says what it is about to take, by name`, () => {
+    // A count answers «how much», and the question in front of somebody zoomed in on a crowded rim is
+    // «what» - most of what a cascade takes is off screen at that zoom, so it cannot be looked at,
+    // only read. Reported: «un tooltip che mi dice "stai rimuovendo a - b - c" mi aiuta molto».
+    const ids = ['hub', 'Zulu', 'Alpha', 'Mike', 'far'];
+    const ctx = vm.createContext({
+      N: Object.fromEntries(ids.map((i) => [i, { id: i, api_name: i, name: i }])),
+      label: (n) => n.api_name,
+    });
+    vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'MSG'),
+      sliceConst(`apps/${app}/graphview.js`, 'TIP_MAX'),
+      sliceFn(`apps/${app}/graphview.js`, 'erTipText')].join('\n\n'), ctx);
+    const tip = (set, first, back) => { ctx.s = new Set(set); ctx.f = first; ctx.b = back; return vm.runInContext('erTipText(s, f, b)', ctx); };
+
+    // one box: the name, and nothing to count
+    assert.equal(tip(['Alpha'], 'Alpha', false), 'Removing Alpha');
+    assert.equal(tip(['Alpha'], 'Alpha', true), 'Putting back Alpha');
+    // the box the control names first, then what comes with it, alphabetically, one per line -
+    // a tooltip does not wrap, so a comma list of long api names is a line nobody reads the end of
+    assert.equal(tip(['Zulu', 'Alpha', 'Mike'], 'Zulu', false),
+      'Removing 3 boxes:\nZulu\nAlpha\nMike');
+    // and it is capped, with the number that stays true at any size
+    const many = Array.from({ length: 30 }, (_, i) => 'n' + String(i).padStart(2, '0'));
+    ctx.N = Object.fromEntries(many.map((i) => [i, { id: i, api_name: i, name: i }]));
+    const long = tip(many, 'n29', false);
+    assert.equal(long.split('\n').length, 12, `id=cap ${long.split('\n').length} lines for 30 boxes`);
+    assert.ok(long.startsWith('Removing 30 boxes:\nn29\n'), 'id=head the box being pressed is not named first');
+    assert.ok(long.endsWith('and 20 more'), `id=tail ${JSON.stringify(long.slice(-20))}`);
+  });
+
+  test(`${app}: hovering a control outlines what would go, and lets go of it`, () => {
+    // The other half of the same answer: the list is for what is off screen, the outline for what is
+    // on it. Rebuilt with the boxes, so it cannot outlive the render that drew them.
+    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    assert.ok(/\.erbox\.willgo\{[^}]*dashed/.test(html), 'nothing marks the boxes a control would take');
+    assert.ok(/erFlag = \(set\) => \{/.test(js) && /boxEl\.set\(id, div\)/.test(js),
+      'the outline is not built from the boxes the render just drew');
+    const mk = js.slice(js.indexOf('const markAt ='), js.indexOf('marks.appendChild(el)'));
+    assert.ok(/mouseenter[\s\S]*erFlag\(set\)/.test(mk), 'hovering a mark outlines nothing');
+    assert.ok(/mouseleave', \(\) => erFlag\(null\)/.test(mk), 'the outline is left behind when the pointer goes');
+    assert.ok(/cb\.title = isCut/.test(js) && /cb2\.title = erTipText/.test(js),
+      'the card buttons do not say what they would take');
   });
 }

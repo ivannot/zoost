@@ -263,8 +263,8 @@
   /* The width comes from the drawing: `markAt` sets --d from the gap between two landing points on
      that side, so a rim carrying thirteen arcs gets thirteen marks that touch nothing. */
   .ermk{position:absolute;transform:translate(-50%,-50%) scale(var(--mkz,1));display:flex;align-items:center;justify-content:center;
-        width:var(--d,20px);height:var(--d,20px);border-radius:50%;border:1px solid #cdc2f2;background:#fff;color:#7c3aed;
-        font:600 calc(var(--d,20px) * 0.62)/1 var(--sans);cursor:pointer;box-shadow:0 1px 3px rgba(20,30,50,.16);padding:0}
+        width:var(--d,16px);height:var(--d,16px);border-radius:50%;border:1px solid #cdc2f2;background:#fff;color:#7c3aed;
+        font:600 calc(var(--d,16px) * 0.66)/1 var(--sans);cursor:pointer;box-shadow:0 1px 3px rgba(20,30,50,.16);padding:0}
   .ermk:hover{border-color:#7c3aed;background:#f6f2fe;z-index:1}
   .ermk.back{border-color:#e8b563;background:#fffbeb;color:#92400e}
   .ermk.back:hover{border-color:#d97706;background:#fef3c7}
@@ -285,6 +285,10 @@
   /* in relation mode the labels are the subject: they go above the boxes */
   #v-er.relemph #ersvg{z-index:3}
   #v-er.relemph .erbox{z-index:1}
+  /* What the control under the pointer would take off the drawing. Amber, dashed and faded: the same
+     colour the picked arc and its card already use, and a dash because it is a state that lasts as
+     long as the pointer does. */
+  .erbox.willgo{outline:3px dashed #d97706;outline-offset:2px;opacity:.5}
   /* edge selection: bring one relation and its two ends to the front, push the rest back */
   .erbox.faded{opacity:.16}
   .erbox.epick{border-color:#d97706 !important;box-shadow:0 0 0 3px rgba(217,119,6,.32),0 6px 18px rgba(0,0,0,.12) !important}
