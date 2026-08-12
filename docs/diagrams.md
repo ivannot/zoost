@@ -379,11 +379,16 @@ change the entry point and a restored arrangement has lost coherence with the cl
 which is worse than no arrangement. So the state dies with the window, and nothing about it reaches
 `chrome.storage` or the privacy page.
 
-**Every path that would lay the diagram out again is protected in one place.** Eleven of them reset
-`erLaidOut`, and chasing eleven call sites is the enumeration trap this repository keeps recording - so
-`erShow` is where an arrangement is defended: asked once, told once, and the second ask goes through.
-The control that asked stays alive and answers, rather than being greyed out, which is the same choice
-the over-ceiling tab makes and for the same reason.
+**An arrangement is kept across a re-layout, not defended against one - and the first attempt is worth
+recording because it was reported as a bug within the hour.** Refusing a re-layout was tried, in one
+place, in `erShow`. It is downstream of the controls: by the time it fires, the chip that asked has
+already toggled its own colour, so the diagram refused the filter and the chip showed it as applied -
+a control lying about itself, which is the defect class this window has already had once. Fixing that
+properly would have meant intercepting all eight entry points, which is the enumeration trap.
+
+Keeping the positions removes the question. What is still on screen stays where it was put, what is new
+is placed by the layout, the hint line says how many of each, and `Re-layout` starts over. A box that
+has left the screen keeps its entry, so switching a category off and on again finds it where it was.
 
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.

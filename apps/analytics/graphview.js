@@ -14,7 +14,7 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
-  arrangedKeeps: 'The diagram has been arranged by hand, so this would throw that away and lay it out again. Do it again to go ahead, or press Re-layout to start over.',
+  kept: (k, n) => `kept where you put ${k === 1 ? 'it' : 'them'} \u00b7 ${k} arranged` + (n ? ` \u00b7 ${n} placed by the layout` : '') + ' \u00b7 Re-layout starts over',
   dropCovers: (k) => `moved \u00b7 it now covers ${k} other ${k === 1 ? 'box' : 'boxes'}`,
   dropClear: 'moved \u00b7 nothing is covered',
   tabCount: (n) => `${n} tables to draw`,
@@ -1286,6 +1286,16 @@ function erLayout() {
     const kx = target * Math.sqrt(aspect) / ext('x'), ky = target / Math.sqrt(aspect) / ext('y');
     erIds.forEach((id) => { const s = sizes[id]; erPos[id] = { x: (posX[id] || 0) * kx, y: (posY[id] || 0) * ky, w: s.w, h: s.h }; });
   }
+  // Anything the reader placed goes back where they placed it, before the collision pass runs - so
+  // newcomers make room around an arrangement rather than the arrangement being computed away. A box
+  // that has left the screen keeps its entry, so switching a category off and on again finds it again.
+  erLastKept = 0;
+  if (erArranged) {
+    erIds.forEach((id) => {
+      const h = erHeld[id];
+      if (h && erPos[id]) { erPos[id].x = h.x; erPos[id].y = h.y; erLastKept++; }
+    });
+  }
   collideBoxes(erIds, erP.margin);   // labels live between the boxes, they need the room
   let minX = Infinity, minY = Infinity;
   erIds.forEach((id) => { minX = Math.min(minX, erPos[id].x); minY = Math.min(minY, erPos[id].y); });
@@ -1581,21 +1591,11 @@ function erShow() {
     scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
     tooWideToDraw(visibleKindCount());
   }
-  // Every path that wants a fresh layout arrives here with erLaidOut false - eleven of them - so this
-  // is the one place that can protect an arrangement without each of them remembering to. The control
-  // that asked stays alive and answers instead of being greyed out: asked once, told once, and the
-  // second ask goes through.
-  if (!erLaidOut && erArranged) {
-    if (!erWarned) {
-      erWarned = true; erLaidOut = true;
-      $('statline').textContent = MSG.arrangedKeeps;
-      erRender(); erUpdateControlVis();
-      return;
-    }
-    erArranged = false; erWarned = false;
-  }
   if (!erLaidOut) { erLayout(); erLaidOut = true; }
   erRender(); erFit(); erUpdateControlVis();
+  // Said rather than warned about: a filter change keeps what was arranged and places the rest, so
+  // the line reports what happened instead of asking permission for it.
+  if (erLastKept) erHint(MSG.kept(erLastKept, erIds.length - erLastKept));
 }
 // ---- arranging by hand ----
 // A box can be dragged. The auto layout is a starting point, not a verdict: past eighty boxes it
@@ -1612,8 +1612,16 @@ function erShow() {
 // neighbours give way would fight the reader, who has just said where they want that box. The reason
 // for wanting it - never hiding content unknowingly - is served by *saying* what the drop covers
 // instead, which is this project's position on numbers anyway. `Re-layout` is the way back.
-let erArranged = false;    // the reader has moved at least one box since the last layout
-let erWarned = false;      // and has been told once that re-laying out would discard it
+let erArranged = false;    // the reader has moved at least one box
+let erLastKept = 0;        // how many the last layout handed back, so the hint can say so
+// Where they put them. A filter change lays the diagram out again - eight controls do - and refusing
+// each of them was tried and was worse: the refusal fired *after* the control had toggled its own
+// state, so a chip went grey while its category stayed on screen, which is a control lying about
+// itself, and fixing that properly would have meant intercepting all eight. Keeping the positions
+// means nothing has to be refused. What is still on screen stays where it was put, what is new is
+// placed by the layout, and `Re-layout` is the way to start over. Reported: "il chip ha cambiato di
+// stato pur non applicando il filtro".
+let erHeld = {};           // id -> { x, y }, as the reader left it
 let erBoxDrag = null;      // { id, sx, sy, x0, y0 }
 function erBoxUnder(t) { return t && t.closest ? t.closest('.erbox') : null; }
 function erCovers(id) {
@@ -1670,7 +1678,9 @@ document.addEventListener('mouseup', () => {
     $('ersvg').classList.remove('dragging');
     if (el) el.classList.remove('dragging');
     if (erDragged) {
-      erArranged = true; erWarned = false;
+      erArranged = true;
+      const q = erPos[id];
+      if (q) erHeld[id] = { x: q.x, y: q.y };
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
       erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
@@ -1791,7 +1801,7 @@ $('v-er').addEventListener('click', (e) => {
   erClearPick();
 });
 $('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erLaidOut = false; erShow(); };
-$('erRelay').onclick = () => { erArranged = false; erWarned = false; erLaidOut = false; erShowMaybeHeavy(); };
+$('erRelay').onclick = () => { erHeld = {}; erArranged = false; erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();
 

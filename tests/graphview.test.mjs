@@ -177,6 +177,10 @@ function laidOut(app, levels, margin = 36) {
   const state = {
     erSelEdge: 'stale', erIds: [], erPos: {}, egoLevel, N,
     erP: { margin, spread: 42, gap: 8, fs: 10, sub: true },
+    // erLayout hands a hand-arranged position back before the collision pass, so it reads these. The
+    // free-variable trap, for the third time in one day: a slice runs in a bare context and anything
+    // the function reaches for has to be there or it throws three lines in.
+    erArranged: false, erHeld: {}, erLastKept: 0,
     erVisibleIds: () => ids,
     erConcentric: () => true,                   // the branch under test; the free one is not entered
     erBoxSize: (n) => ({ w: 190, h: 28 + n.rows * 18 }),
@@ -423,9 +427,17 @@ for (const app of ['crm', 'analytics']) {
     // One funnel, because eleven paths reset erLaidOut and chasing them all is the trap.
     // The whole function, not a window of characters: the first version counted 900 of them and stopped
     // short of the funnel, which sits below a long comment. sliceFn ends at the declaration's own brace.
-    const sh = sliceFn(`apps/${app}/graphview.js`, 'erShow');
-    assert.ok(/erArranged/.test(sh) && /erWarned/.test(sh),
-      'an arrangement is not defended where every re-layout passes');
+    // An arrangement is kept across a re-layout rather than refused before one. Refusing was tried and
+    // reported as a bug: the refusal fired after the control had toggled its own state, so a chip went
+    // grey while its category stayed on screen. What must hold is that the positions are remembered on
+    // the drop and handed back by the layout.
+    assert.ok(/erHeld\[id\] = \{ x: q\.x, y: q\.y \}/.test(js), 'a drop does not remember where the box was put');
+    const lay = sliceFn(`apps/${app}/graphview.js`, 'erLayout');
+    assert.ok(/erHeld\[id\]/.test(lay) && /erPos\[id\]\.x = h\.x/.test(lay),
+      'the layout does not hand a hand-placed box back to where it was put');
+    assert.ok(lay.indexOf('erHeld') < lay.indexOf('collideBoxes'),
+      'the positions are restored after the collision pass, so nothing tidies around them');
+    assert.ok(!/erWarned/.test(js), 'the refusal that made a chip lie about itself is still here');
     assert.ok(/id="erRelay"/.test(html), 'there is no way back from an arrangement');
   });
 }
@@ -453,5 +465,43 @@ for (const app of ['crm', 'analytics']) {
     // and the hint line has to name it, or it is a gesture nobody discovers
     const hint = js + read(`apps/${app}/graphview.html`);
     assert.ok(/double-click to zoom/.test(hint), 'the hint line does not name the gesture');
+  });
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a hand-placed box is handed back where it was put`, () => {
+    // Reported: after moving a box, clicking a chip toggled the chip's own colour and did not apply the
+    // filter - because the refusal fired downstream of the control that had already changed state. The
+    // refusal is gone and the arrangement is kept instead, so nothing has to be refused. This is that
+    // mechanism, run rather than read: lay out with a position held, and see it come back.
+    const held = { L1n0: { x: 4242, y: 1717 } };
+    const N = {}, egoLevel = {}, ids = [];
+    [1, 3].forEach((count, L) => {
+      for (let i = 0; i < count; i++) {
+        const id = `L${L}n${i}`; ids.push(id); N[id] = { rows: 2 }; egoLevel[id] = L;
+      }
+    });
+    const state = {
+      erSelEdge: null, erIds: [], erPos: {}, egoLevel, N,
+      erP: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
+      erVisibleIds: () => ids, erConcentric: () => true,
+      erBoxSize: () => ({ w: 190, h: 64 }),
+      erArranged: true, erHeld: held, erLastKept: 0,
+    };
+    const ctx = vm.createContext(state);
+    vm.runInContext(['erLayout', 'collideBoxes']
+      .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+    vm.runInContext('erLayout()', ctx);
+    assert.equal(state.erLastKept, 1, 'the layout handed nothing back, so an arrangement is lost');
+    // The whole drawing is shifted to a 40px origin at the end, so the held box keeps its *offset*
+    // from the others rather than its absolute coordinates - which is what surviving means here.
+    const others = ids.filter((i) => i !== 'L1n0').map((i) => state.erPos[i]);
+    const far = Math.min(...others.map((p) => Math.hypot(p.x - state.erPos.L1n0.x, p.y - state.erPos.L1n0.y)));
+    assert.ok(far > 1000, `the held box was placed back among the others, ${Math.round(far)}px from the nearest`);
+
+    // and with nothing held, the layout is free to place everything
+    state.erArranged = false; state.erLastKept = 0; state.erPos = {};
+    vm.runInContext('erLayout()', ctx);
+    assert.equal(state.erLastKept, 0, 'positions are handed back when nothing was arranged');
   });
 }
