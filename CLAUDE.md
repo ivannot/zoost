@@ -363,6 +363,16 @@ than after months. It is `.doc`-scoped, so no landing page changes.
 rather than proposing a message and waiting — the rule that only Ivan decides what goes in a commit
 message is about *attribution*, which stays absent, not about a review gate on the wording.
 
+**And the commit is pushed in the same breath. Ivan never touches the code — the git is yours, all of
+it.** He decides *when the publication process starts*; every mechanical step of it is yours, push
+included. This is the boundary this file already states — decisions his, derivations and executions
+here — applied to the one place it had been drawn in the wrong spot: a commit left sitting locally is
+work nobody can see, and it fails `auditcheck` as a finding, so «I have committed, you push» leaves a
+red gate behind and calls it done. **The one thing still gated on his word is `git push --follow-tags`
+with a release tag on it**, because that is what publishes a Release and signs an attestation — not
+because it is a push, but because it is publication. An ordinary push to `main` deploys the site and
+is expected of you without asking.
+
 **A version is bumped for a release, not for a commit.** This used to say "patch for fixes, minor for
 features" per commit, and one afternoon took Zoho CRM from 1.41.2 to 1.43.0 while the Store was still
 serving 1.39.0 — four minors of distance on work nobody outside had seen. **The distance is what a user
@@ -803,7 +813,9 @@ What that request means, in order. Do all of it without being asked:
    the tag exists - and creates `<app>-v<version>`.
 4. **`git push --follow-tags`** — this, and nothing else, starts the public build. GitHub checks out
    the tag, builds it twice, prints `unzip -l` into the public log, signs a provenance attestation
-   and publishes the Release.
+   and publishes the Release. You run it, like every other step here; what made it his was never the
+   command but the word that started the routine, and that word has already been given by the time
+   you reach step 4.
 5. **Watch the workflow and read its log.** It is the only place a build failure appears. Report what
    it said — including the hash — rather than assuming it passed.
 6. **Hand over the link to the Release asset, plus the hash, plus what to paste** into the Store
