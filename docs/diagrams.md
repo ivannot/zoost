@@ -390,53 +390,80 @@ Keeping the positions removes the question. What is still on screen stays where 
 is placed by the layout, the hint line says how many of each, and `Re-layout` starts over. A box that
 has left the screen keeps its entry, so switching a category off and on again finds it where it was.
 
-**The control for folding a branch sits on the branch: a circle where the arc meets the box.** Hiding
-what hangs off an arc was reachable only by clicking the arc and then a button in the card that opened
-- the control living away from its subject, which is the defect this window has already had twice (the
-chips outside the view they steered, the scope control on another tab). It is a `-` on every arc that
-has something hanging off it, drawn on the **box that stays**, and a `+` with the count where a folded
-branch used to leave. The card keeps the same button, in the same words from the same computation: it
-is where a reader arrives having clicked the arc to read what it *is*, and sending them back out to
-the drawing to act on it would recreate the problem one control over.
+**Taking off the drawing what you are not looking at, one box at a time.** The filters answer «which
+kinds am I looking at»; this answers the other half, and the reader's own statement of it is the
+specification: *«un arco mette in relazione due elementi e io posso cliccare in corrispondenza di
+questi due elementi per eliminare quello che c'e a monte o a valle, rimuovendo anche in cascata tutto
+cio che c'e collegato»*. So an arc carries a `-` at **each** of the two points where it meets a box:
+the one on A takes B away and whatever came into the drawing with it, the one on B says the same of A.
+A `+` where a removal was made brings it back. It is a filter on the *drawing*, not on the layout -
+nothing is laid out again, so it composes with an arrangement, and the PDF prints what you see.
 
-Four decisions in it, each measured rather than argued:
+**It went in twice, and the first version answered a different question.** «Hide only what becomes
+unreachable any other way» is a defensible rule - a helper called from ten places should not vanish
+because one caller was cut - and it is the rule this file recorded, chosen for the arc-cutting the card
+offered. Put on the drawing as a mark per arc it fell over immediately, reported with a picture: a hub
+carrying forty arcs and **six** controls. Measured on a star of forty with thirty-four of the
+neighbours also referenced elsewhere, it is exactly six; the other thirty-four arcs said «nothing hangs
+off this» - true, and no use whatever to somebody trying to clear the view. The lesson is not about
+graphs: **a rule that is right about the data can still be the wrong answer to what the reader is
+doing**, and the way that showed up was a control that was absent in most of the places he looked.
 
-**Which end hangs off was being decided by the data.** The cut always hid the side of `b` - whichever
-end the pull happened to write second, a lookup target or a callee - so on a chain `leaf-hub-x-y`
-focused on `hub`, cutting the *leaf's own* arc hid **x and y**, the rest of the drawing, and left the
-leaf standing. Run rather than read: `erWouldHide` reported 2 for that arc. The side that goes is the
-side the reader is not standing on - the one without the focus, and with no focus the smaller of the
-two, since "what hangs off this" has no other meaning there. Without that decision there is no box to
-put the circle on, so the control could not have been placed correctly on top of the old rule.
+**What «in cascata tutto cio che c'e collegato» has to mean, because it cannot mean itself.** Taken
+literally, everything connected to B includes the way back round to A and then the whole component, so
+the first click would empty the diagram. What goes is B **and whatever was in the drawing only through
+B**: two walks from the box the control sits on, one with B and one without, and the difference is the
+answer. In a triangle A-B-C with D under B, taking B from A takes D and leaves C, which A can still
+see. Taking it as a difference is also what stops a second component being swallowed - it was not in
+the first walk either - and there is nothing left to decide about «which end hangs off», because the
+control names its own end.
 
-**The end to hide is settled when the fold is made and stored with it**, so a later focus change
-cannot re-point an existing fold at the other half of the drawing. And because the Explorer beside the
-diagram still lists what a fold has taken off it - deliberately - the focus can be moved *into* a
-folded branch: those folds, and only those, are dropped as it happens. Re-centring on a box you can
-see keeps them, which is the whole reason to fold before going looking.
+**A removal always removes something, which is what makes a mark at every meeting point honest.** The
+far box goes whatever else it is attached to, so no mark is ever a control that does nothing - the
+state `erPickCard` used to have a sentence for («nothing hangs off this arc») cannot occur, and that
+sentence is gone. The card offers **both** directions instead, named and counted: `Hide Accounts` /
+`Hide Invoices`.
 
-**`erBranches` is one bridge search per render, not `erHiddenSet` once per arc.** "Cutting this hides
-something" is exactly "this arc is a bridge", which is what the card had always said in words, and the
-subtree size is the count the control promises. Measured: 1.2ms at 400 nodes and 2.9ms at 1200, against
-a fresh traversal per arc. The cheap answer is only worth having while it agrees with the authority, so
-`tests/graphview.test.mjs` holds the two against each other over generated graphs - 668 arcs and 156
-nested folds. That is also what found the case no tree would have shown: **two boxes joined in both
-directions**. `erReach` drops *both* when either is cut, so counting a mutual pair as two arcs had the
-walk find a way round an arc through itself, and every one of them was reported as hiding nothing.
+**The state is the removals, replayed - not the hidden set.** `erCut` is the arc and the end that went,
+in the order the reader took them away, and `erHiddenSet` replays them against what was on screen when
+each was made. Recomputing rather than storing is what lets a filter change or a new focus re-evaluate
+cleanly; replaying *in order* is what keeps two removals one inside the other from claiming each
+other's boxes, and `erWouldShow` measures the difference so the `+` offers back exactly what its `-`
+took. A removal whose own box has since gone is skipped rather than reinterpreted.
 
-**The marks are drawn above the boxes and counter-scaled against the zoom.** The meeting point is the
-box's own edge, and a control the box paints over half of is not a control - so they are a layer of
-their own above `#erboxes`, which also means they go with the arcs for the duration of a drag, their
-anchors being derived from positions that are moving. The size is the argument the arrowheads already
-won (3.3px across on a whole-org view, reported as missing), with a cap the arrowheads do not need: a
-circle that keeps growing as the reader zooms out ends up wider than the box it hangs off. One CSS
-variable on the layer, so a zoom costs one property write rather than one per mark. Measured on the
-sample schema: folding changes neither the scale nor the pan - 1.102 and tx 339 before and after - so
-nothing moves under the click except what was asked to go.
+**And the focus can be taken off the drawing, which is why `erUnhide` exists.** The Explorer beside the
+diagram still lists what has been removed - deliberately - so the reader can focus a box that is not
+drawn, and a diagram whose subject is missing is one lying about itself. Asking to look at something is
+the clearest statement there is that he wants it back: the removals that took *it* are dropped, oldest
+first, and everything else he put away stays away.
 
-On paper the two marks are treated differently: a `-` is a control nobody can press, and a `+` is the
-only thing on the page saying boxes are missing from it - which the reader of a PDF needs more than the
-reader at the window does. So the first is hidden in print and the second is not.
+**The marks are their own layer above the boxes, and their width comes from the drawing.** The meeting
+point *is* the box's edge, and a control the box paints over half of is not a control - so they sit
+above `#erboxes`, which also means they go with the arcs for the duration of a drag, their anchors
+being derived from positions that are moving. Size: constant on screen (the argument the arrowheads
+already won - 3.3px across on a whole-org view, reported as missing) up to a cap, because a circle that
+keeps growing as the reader zooms out ends up wider than the box it hangs off; and never wider than the
+distance between two landing points on that side, because the second report was thirteen arcs on one
+rim with 20px circles touching. `erFitToArcs` already grows a box until its arcs land `ARC_GAP` apart,
+so taking the width from that gap means the marks can crowd but never cover each other. Measured on a
+generated hub of forty: 80 arcs, 160 marks, widths from 14.7 to 20px, none overlapping.
+
+**No number on the `+`.** It carried the count for half a day - the reader's objection is the right
+one: two arcs never meet a box at the same point, so one `+` is one removal and the number is telling
+him something he did not ask. It is in the tooltip, and in the line under the drawing at the moment it
+happens.
+
+**The tooltip is worked out on hover, not on render.** Two walks per mark is nothing once and 2N times
+is the render; a tooltip nobody has pointed at has told nobody anything. Measured on the sample schema,
+folding changes neither the scale nor the pan - 1.102 and tx 339 before and after - so nothing moves
+under the click except what was asked to go.
+
+**And counting the elements found a leak nobody could see.** `.erhit` is a transparent 14px-wide copy
+of every arc, and it was not in the list `erRender` clears: six arcs on screen, **thirty** hit
+corridors under them after five renders, each still carrying the geometry of the layout it was drawn
+for - so a click beside an arc could select a relation that had moved, and the count grew for as long
+as the window stayed open. It predates all of this and was found while counting marks against arcs for
+something else.
 
 **A fold hides boxes and the frame was still sized for them.** `erFit` and the print handler both
 walk `erIds` for the widest and tallest box - a folded box keeps its position, which is what lets a

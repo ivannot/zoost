@@ -667,10 +667,10 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
     computeMaxDepth() { focused = focused || 'reached'; },
     updateDepthUI() {}, updateScopeUI() {}, updateTopTools() {}, egoStat() {}, erRender() {}, draw() {},
     bfsEgo() {}, updateBack() {}, erShow() {},
-    // setFocus also drops the folds that would swallow the new focus - a free variable each, and a
-    // slice runs in a bare context. Empty here on purpose: this case is about the refusal above,
-    // and the folds have their own case in tests/graphview.test.mjs, with a real erReach under it.
-    erCut: new Map(), erReach: () => new Set(),
+    // setFocus also puts back whatever removal had taken the new focus off the drawing - a free
+    // variable, and a slice runs in a bare context. Stubbed here on purpose: this case is about the
+    // refusal above, and erUnhide has its own case in tests/graphview.test.mjs, running the real one.
+    erUnhide: () => {},
     get egoDepth() { return 2; }, set egoDepth(_v) {}, get maxEgoDepth() { return 6; },
     get scopeAll() { return false; }, get curView() { return 'er'; },
     Math,
@@ -1858,9 +1858,9 @@ test('every element the diagram window reaches for is in its own markup', () => 
   //
   // The ids listed here are the ones built at runtime rather than authored, and they are named
   // rather than pattern-matched so that adding one is a decision.
-  // `erpickcut` joins them: the arc card writes its own button, because whether there is one - and
-  // what it says - depends on how many boxes hang off that arc.
-  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpicksnip', 'layzone', 'up']);
+  // `erpickcut` and `erpickcut2` join them: the arc card writes its own buttons, because an arc has
+  // two ends and what each of them says is how many boxes that end would take away.
+  const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpickcut2', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));

@@ -296,11 +296,13 @@
      they do: its anchor is derived from positions that are moving. */
   #ermarks{position:absolute;top:0;left:0;z-index:99999}
   #ermarks.dragging{display:none}
+  /* The width comes from the drawing: `markAt` sets --d from the gap between two landing points on
+     that side, so a rim carrying thirteen arcs gets thirteen marks that touch nothing. */
   .ermk{position:absolute;transform:translate(-50%,-50%) scale(var(--mkz,1));display:flex;align-items:center;justify-content:center;
-        min-width:20px;height:20px;padding:0 3px;border-radius:10px;border:1px solid #cdc2f2;background:#fff;color:#7c3aed;
-        font:600 12px var(--sans);line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(20,30,50,.16)}
-  .ermk:hover{border-color:#7c3aed;background:#f6f2fe}
-  .ermk.back{border-color:#e8b563;background:#fffbeb;color:#92400e;font-size:11px;font-variant-numeric:tabular-nums}
+        width:var(--d,20px);height:var(--d,20px);border-radius:50%;border:1px solid #cdc2f2;background:#fff;color:#7c3aed;
+        font:600 calc(var(--d,20px) * 0.62)/1 var(--sans);cursor:pointer;box-shadow:0 1px 3px rgba(20,30,50,.16);padding:0}
+  .ermk:hover{border-color:#7c3aed;background:#f6f2fe;z-index:1}
+  .ermk.back{border-color:#e8b563;background:#fffbeb;color:#92400e}
   .ermk.back:hover{border-color:#d97706;background:#fef3c7}
   /* On paper a `-` is a control nobody can press, and a `+` is the only thing saying boxes are missing
      from the page - which the reader of a PDF needs more than the reader at the window does. */

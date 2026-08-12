@@ -14,10 +14,11 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
-  cutNone: 'nothing hangs off this arc - what it leads to is reachable another way',
-  cutDo: (k) => `Hide the ${k} ${k === 1 ? 'box' : 'boxes'} that ${k === 1 ? 'hangs' : 'hang'} off this`,
+  cutDo: (name, k) => (k > 1
+    ? `Hide ${name} and the ${k - 1} ${k === 2 ? 'box' : 'boxes'} that came with it`
+    : `Hide ${name}`),
   cutUndo: (k) => `Show the ${k} ${k === 1 ? 'box' : 'boxes'} again`,
-  folded: (k) => `${k} ${k === 1 ? 'box' : 'boxes'} folded away \u00b7 the + where the arc meets the box brings ${k === 1 ? 'it' : 'them'} back`,
+  folded: (k) => `${k} ${k === 1 ? 'box' : 'boxes'} off the diagram \u00b7 the + where the arc meets the box brings ${k === 1 ? 'it' : 'them'} back`,
   unfolded: (k) => `${k} ${k === 1 ? 'box is' : 'boxes are'} back on the diagram`,
   kept: (k, n) => `kept where you put ${k === 1 ? 'it' : 'them'} \u00b7 ${k} arranged` + (n ? ` \u00b7 ${n} placed by the layout` : '') + ' \u00b7 Re-layout starts over',
   dropCovers: (k) => `moved \u00b7 it now covers ${k} other ${k === 1 ? 'box' : 'boxes'}`,
@@ -979,12 +980,11 @@ function setFocus(id) {
   // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
   // projections of the same context, so whoever changes the focus updates all of them.
   if (!id || !N[id] || id === curFocus) return;
-  // A fold hides the side away from where the reader is standing, so focusing *inside* one turns it
-  // against them: the new focus would be the only thing left of its own neighbourhood. It is reachable
-  // - the Explorer beside the diagram still lists what a fold has taken off it, deliberately - so the
-  // folds that would swallow the new focus are dropped here, and only those. Re-centring on a box you
-  // can see keeps them, which is the whole point of folding before going looking.
-  erCut.forEach((away, k) => { if (erReach(away, erCut).has(id)) erCut.delete(k); });
+  // Asking to look at something is asking for it back: the Explorer beside the diagram still lists
+  // what has been taken off it, so the focus can be moved to a box that is not drawn, and a diagram
+  // whose subject is missing is one lying about itself. Only the removals that took *it* are dropped;
+  // everything else the reader put away stays away.
+  erUnhide(id);
   curFocus = id; computeMaxDepth(); egoDepth = Math.max(1, Math.min(maxEgoDepth, egoDepth || 2));
   updateDepthUI(); updateScopeUI();
   if (scopeAll) {
@@ -1027,61 +1027,81 @@ let erSelEdge = null;   // "a\u0000b"
 const ekey = (a, b) => a + '\u0000' + b;
 function erPick(a, b) { erSelEdge = (erSelEdge === ekey(a, b)) ? null : ekey(a, b); erRender(); }
 function erClearPick() { if (erSelEdge) { erSelEdge = null; erRender(); } }
-// ---- folding a branch ----
-// Cutting an arc hides what hangs off it, and *only* what hangs off it: everything that can still be
-// reached another way stays. That rule is the one the reader chose, and it is the only one that does
-// not surprise - a helper called from ten places would otherwise vanish because one of its callers was
-// cut. When a cut removes nothing, the card says so rather than doing nothing quietly.
+// ---- taking off the drawing what you are not looking at ----
+// The filters answer «which kinds am I looking at»; this answers the other half - *that* box, and
+// whatever came into the drawing only because of it. An arc joins two boxes and carries a `-` at each
+// end: the one where it touches A says «take B away, and what came with it», the one where it touches
+// B says the same of A. So there is a control at every point where an arc meets a box, which is the
+// reader's own description of what he wanted, and pressing one always removes something.
+//
+// **The rule it replaces refused most of them, and that is what the reader saw.** «Hide only what
+// becomes unreachable any other way» was the first version: on the arc into a box that is referenced
+// from somewhere else it removed nothing, said so, and left him with a hub carrying forty arcs and six
+// controls. Measured on a star of forty with thirty-four of the neighbours also referenced elsewhere:
+// exactly six. True, and no use to somebody clearing the view. What goes now is the box at the far end
+// **and** whatever was only in the drawing through it - in a triangle A-B-C with D under B, cutting at
+// A takes B and D, and leaves C, which A can still see without B.
 //
 // It is a filter on the *drawing*, not on the layout. Nothing is laid out again, so it composes with an
-// arrangement instead of throwing it away: hide what is in the way, then move what is left, and the
-// PDF prints what you see.
-//
-// **Which of the two ends hangs off was being decided by the data, and it is a decision about the
-// reader.** It always hid the side of `b`, and `b` is whichever end the pull happened to write second:
-// a module's lookup target, a function's callee. Measured on a chain leaf-hub-x-y focused on `hub`,
-// cutting the *leaf's own* arc hid **x and y** - the whole rest of the drawing - and left the leaf
-// standing. The side that goes is the side the reader is not standing on: the one without the focus,
-// and with no focus the smaller of the two, since "what hangs off this" has no other meaning there.
-// The end to hide is settled when the arc is folded and stored with the cut, so a later focus change
-// cannot quietly re-point an existing fold at the other half of the diagram.
-let erCut = new Map();     // edge key -> the end whose side is hidden
-function erReach(from, cut) {
-  // What `from` can still reach, over the drawn set, without crossing a cut edge. Undirected: an arc
-  // that can be walked back along is still a way of reaching something.
+// arrangement instead of throwing it away: take away what is in the way, then move what is left, and
+// the PDF prints what you see.
+let erCut = new Map();     // edge key -> the end that went, in the order the reader took them away
+/** What `from` can reach over the drawn set without entering a box in `skip`.
+ *
+ *  Nodes, not edges. The first version walked around *cut arcs*, which is a different question and the
+ *  one that produced the six controls out of forty: an arc with another way round it cut nothing. What
+ *  is asked here is what stays attached once a box is gone, and the arc is only how the reader named
+ *  the box. */
+function erReach(from, skip) {
   const inPlay = new Set(erIds);
   const adj = new Map();
   edgesA.forEach(([a, b]) => {
     if (!inPlay.has(a) || !inPlay.has(b)) return;
-    if (cut.has(ekey(a, b)) || cut.has(ekey(b, a))) return;
     (adj.get(a) || adj.set(a, []).get(a)).push(b);
     (adj.get(b) || adj.set(b, []).get(b)).push(a);
   });
   const seen = new Set([from]), q = [from];
   while (q.length) {
     const c = q.pop();
-    for (const nb of (adj.get(c) || [])) if (!seen.has(nb)) { seen.add(nb); q.push(nb); }
+    for (const nb of (adj.get(c) || [])) if (!seen.has(nb) && !skip.has(nb)) { seen.add(nb); q.push(nb); }
   }
   return seen;
 }
-/** Everything currently hidden by the cuts. Recomputed rather than stored, so a filter change or a
- *  different focus cannot leave it describing a graph that is no longer on screen. */
+/** What taking `away` off the drawing costs, seen from `from` - the box the control sits on. `away`
+ *  itself, and everything that was in the drawing only through it.
+ *
+ *  Two walks: what `from` can see now, and what it can see with `away` gone. The difference is the
+ *  answer, and taking it as a difference is what keeps it honest in both directions - a box with a
+ *  life of its own stays, and a second component nobody asked about is never swallowed, because it
+ *  was not in the first walk either. */
+function erWouldGo(from, away, gone) {
+  const before = erReach(from, gone);
+  if (!before.has(away)) return new Set();
+  const after = erReach(from, new Set([...gone, away]));
+  const out = new Set();
+  before.forEach((id) => { if (!after.has(id)) out.add(id); });
+  return out;
+}
+/** Everything currently off the drawing, replayed from the removals in the order they were made, each
+ *  against what was on screen when it was taken.
+ *
+ *  Recomputed rather than stored, so a filter change or a different focus cannot leave it describing a
+ *  graph that is no longer there. A removal whose own box has since gone is skipped rather than
+ *  reinterpreted against a drawing it was never about. */
 function erHiddenSet() {
   if (!erCut.size) return new Set();
   const gone = new Set();
   erCut.forEach((away, k) => {
     const [a, b] = k.split('\u0000');
     if (!N[a] || !N[b]) return;
-    const other = away === a ? b : a;
-    const side = erReach(away, erCut);
-    if (side.has(other)) return;          // still reachable another way: the cut hides nothing
-    side.forEach((id) => gone.add(id));
+    const from = away === a ? b : a;
+    if (gone.has(from) || gone.has(away)) return;
+    erWouldGo(from, away, gone).forEach((id) => gone.add(id));
   });
-  gone.delete(curFocus);                  // the focus is what the diagram is about; it never goes
   return gone;
 }
-/** How many boxes come back if this fold is undone. Measured against the set that is actually hidden,
- *  so two folds one inside the other cannot both claim the boxes only one of them is holding. */
+/** How many boxes come back if this one is undone. Measured against the set that is actually hidden,
+ *  so two removals one inside the other cannot both claim the boxes only one of them is holding. */
 function erWouldShow(k) {
   const before = erHiddenSet().size;
   const keep = erCut;
@@ -1090,89 +1110,35 @@ function erWouldShow(k) {
   erCut = keep;
   return before - after;
 }
-/** Every arc with a branch hanging off it, in one pass: `edge key -> { away, other, n }`, where `away`
- *  is the end whose side would go, `other` is the end that stays - the box the control sits on - and
- *  `n` is how many boxes the fold would take away.
+/** Put `id` back on the drawing, by dropping the removals that took it - the one that did, then any
+ *  later one that does it again, and no others.
  *
- *  It is a bridge search, because "cutting this hides something" is exactly "this arc is a bridge":
- *  an arc with another way round it hides nothing, which is what the card has always said in words.
- *  Asking `erHiddenSet` once per arc gives the same answer for a hundred times the work - a fresh
- *  traversal per arc against one for the whole drawing - and this runs on every render. The two are
- *  held against each other on random graphs in `tests/graphview.test.mjs`: the cheap one is only worth
- *  having while it agrees with the authority, and nothing else would say when it stopped.
- *
- *  Rooted at the focus when there is one, which is what makes "the side that hangs off" well defined:
- *  a DFS from the focus leaves the focus outside every subtree, so a subtree is always the side away
- *  from the reader. A component with no focus in it has no such anchor, and there the branch is the
- *  smaller of the two sides.
- *
- *  Iterative rather than recursive: the ceiling on what may be drawn is a setting, so the depth of this
- *  walk is the reader's to raise, and a stack overflow is not an acceptable answer to a large org.
- */
-function erBranches(ids, pairs) {
-  // Two boxes, one connection - whether the pull wrote it twice or wrote it once each way. `erReach`
-  // drops **both** directions when either is cut, so counting a mutual pair as two arcs here would
-  // have the walk find a way round an arc through itself, and every one of them would be reported as
-  // hiding nothing. Found by generating graphs rather than by reading: it is invisible in a tree.
-  const adj = new Map(ids.map((id) => [id, []]));
-  const keysOf = [], byPair = new Map();
-  pairs.forEach(([a, b]) => {
-    if (a === b || !adj.has(a) || !adj.has(b)) return;
-    const und = a < b ? ekey(a, b) : ekey(b, a);
-    const known = byPair.get(und);
-    if (known !== undefined) { keysOf[known].push(ekey(a, b)); return; }
-    const e = keysOf.length; keysOf.push([ekey(a, b)]);
-    byPair.set(und, e);
-    adj.get(a).push([b, e]); adj.get(b).push([a, e]);
-  });
-  const tin = new Map(), low = new Map(), sz = new Map(), via = new Map();
-  const out = new Map();
-  let timer = 0;
-  // The focus first, so its component is the one whose subtrees are all "away" from the reader.
-  const roots = (curFocus && adj.has(curFocus)) ? [curFocus, ...ids] : ids;
-  roots.forEach((root) => {
-    if (tin.has(root)) return;
-    const start = timer, mine = [];
-    tin.set(root, timer); low.set(root, timer); timer++; sz.set(root, 1);
-    const stack = [[root, 0]];
-    while (stack.length) {
-      const top = stack[stack.length - 1], u = top[0], list = adj.get(u);
-      if (top[1] < list.length) {
-        const [v, e] = list[top[1]++];
-        if (e === via.get(u)) continue;              // the arc we came in by - once, so a parallel one still counts
-        if (tin.has(v)) { low.set(u, Math.min(low.get(u), tin.get(v))); continue; }
-        via.set(v, e);
-        tin.set(v, timer); low.set(v, timer); timer++; sz.set(v, 1);
-        stack.push([v, 0]);
-        continue;
-      }
-      stack.pop();
-      const p = stack.length ? stack[stack.length - 1][0] : null;
-      if (p === null) continue;
-      low.set(p, Math.min(low.get(p), low.get(u)));
-      sz.set(p, sz.get(p) + sz.get(u));
-      if (low.get(u) > tin.get(p)) {                 // a bridge: everything under u hangs off it
-        const rec = { away: u, other: p, n: sz.get(u) };
-        keysOf[via.get(u)].forEach((k) => out.set(k, rec));   // one record, however many ways it was written
-        mine.push(rec);
-      }
+ *  The Explorer beside the diagram still lists what has been taken off it, deliberately, so the focus
+ *  can be moved to a box that is not drawn. A diagram whose subject is missing is a diagram lying about
+ *  itself, and the reader asking to look at something is the clearest statement there is that he wants
+ *  it back. Everything he took away that has nothing to do with it stays away. */
+function erUnhide(id) {
+  for (let guard = erCut.size; guard >= 0; guard--) {
+    const gone = new Set();
+    let culprit = null;
+    for (const [k, away] of erCut) {
+      const [a, b] = k.split('\u0000');
+      if (!N[a] || !N[b]) continue;
+      const from = away === a ? b : a;
+      if (gone.has(from) || gone.has(away)) continue;
+      const went = erWouldGo(from, away, gone);
+      went.forEach((x) => gone.add(x));
+      if (went.has(id)) { culprit = k; break; }
     }
-    if (root === curFocus) return;                   // rooted at the reader: the subtree is the branch
-    const comp = timer - start;
-    mine.forEach((rec) => {
-      if (rec.n * 2 <= comp) return;                 // already the smaller side
-      const away = rec.other;
-      rec.other = rec.away; rec.away = away; rec.n = comp - rec.n;
-    });
-  });
-  return out;
+    if (culprit === null) return;
+    erCut.delete(culprit);
+  }
 }
-// What the last render found, so the card and the marks answer from one computation rather than two.
-let erBranchMap = new Map();
-/** Fold or unfold the branch on this arc. `away` is the end that goes, decided by `erBranches` and
- *  then kept with the cut. The hint reports what actually moved rather than what was promised: the
- *  promise is written on the control the reader just pressed, and a difference between the two is a
- *  defect they are entitled to see. */
+/** Take a box off the drawing, or put back what one removal took. `away` is the end that goes and
+ *  `a`/`b` name the arc it was asked from, which is where the `+` will sit.
+ *
+ *  The hint reports what actually moved rather than what was promised: the promise is written on the
+ *  control the reader just pressed, and a difference between the two is a defect he is entitled to see. */
 function erToggleCut(a, b, away) {
   const k = ekey(a, b);
   const before = erHiddenSet().size;
@@ -1205,16 +1171,16 @@ function erPickCard() {
   // card is where the reader arrives having clicked the arc to read what it *is*, and having to go
   // back out to the drawing to act on it would be the control living away from its subject again.
   const cutK = ekey(a, b), isCut = erCut.has(cutK);
-  const br = erBranchMap.get(cutK);
-  const away = isCut ? erCut.get(cutK) : (br && br.away);
-  $('erpickbody').insertAdjacentHTML('beforeend', isCut
-    ? `<div class="pkcut"><button type="button" id="erpickcut">${esc(MSG.cutUndo(erWouldShow(cutK)))}</button></div>`
-    : (br
-      ? `<div class="pkcut"><button type="button" id="erpickcut">${esc(MSG.cutDo(br.n))}</button></div>`
-      : `<div class="pkcut pkno">${esc(MSG.cutNone)}</div>`));
+  const gone = erHiddenSet();
+  $('erpickbody').insertAdjacentHTML('beforeend', '<div class="pkcut">' + (isCut
+    ? `<button type="button" id="erpickcut">${esc(MSG.cutUndo(erWouldShow(cutK)))}</button>`
+    : `<button type="button" id="erpickcut">${esc(MSG.cutDo(label(N[b]), erWouldGo(a, b, gone).size))}</button>`
+      + `<button type="button" id="erpickcut2">${esc(MSG.cutDo(label(N[a]), erWouldGo(b, a, gone).size))}</button>`) + '</div>');
   card.classList.add('on');
   const cb = $('erpickcut');
-  if (cb) cb.onclick = () => erToggleCut(a, b, away);
+  if (cb) cb.onclick = () => erToggleCut(a, b, isCut ? erCut.get(cutK) : b);
+  const cb2 = $('erpickcut2');
+  if (cb2) cb2.onclick = () => erToggleCut(a, b, a);
   const sn = $('erpicksnip');
   if (sn) sn.onclick = () => navigator.clipboard.writeText(snip).then(() => {
     const t = sn.textContent; sn.textContent = 'copied \u2713'; setTimeout(() => { sn.textContent = t; }, 900);
@@ -1614,27 +1580,26 @@ function erSizeArrows() {
 }
 // A control has to stay the size of the pointer that presses it, which is the argument the arrowheads
 // already won: drawn in the diagram's coordinates, they measured 3.3px across on a whole-org view and
-// were reported as missing. So the fold marks are counter-scaled against the zoom - and *capped*,
-// because a circle that keeps growing as the reader zooms out ends up wider than the box it hangs off
-// and hides the thing it is about. Below 0.56 it stops growing in the drawing and starts shrinking on
-// screen: 22px at any zoom the diagram is read at, 6px on a whole org nobody is clicking arcs in.
+// were reported as missing. So the marks are counter-scaled against the zoom - and *capped*, because a
+// circle that keeps growing as the reader zooms out ends up wider than the box it hangs off and hides
+// the thing it is about. Below 0.56 it stops growing in the drawing and starts shrinking on screen:
+// 20px at any zoom the diagram is read at, 6px on a whole org nobody is clicking arcs in.
 const MARK_MAX = 1.8;
+const MARK_D = 20;         // and never wider than the gap between two landing points; see markAt
 function erSizeMarks() {
   const m = document.getElementById('ermarks');
   if (m) m.style.setProperty('--mkz', Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02)).toFixed(3));
 }
 function erRender() {
-  // Hidden by a cut arc, which is a drawing filter and not a layout one: the positions are untouched,
-  // so what is left stays exactly where the reader put it.
+  // Taken off the drawing by the reader, which is a filter on the drawing and not on the layout: the
+  // positions are untouched, so what is left stays exactly where he put it.
   const gone = erHiddenSet();
   const shown = new Set(erIds.filter((id) => !gone.has(id)));
-  // What can be folded, and what already is. One pass over the drawing, so the circle on an arc and
-  // the card behind it are the same answer rather than two computations that can drift apart.
   const drawnPairs = edgesA.filter(([a, b]) => shown.has(a) && shown.has(b));
-  erBranchMap = erBranches(erIds.filter((id) => shown.has(id)), drawnPairs);
-  // A folded arc still meets its box, and that meeting point is where its + sits, so it takes a slot
-  // on that side like any other arc. Without it the arcs left standing would redistribute along the
-  // side the moment a branch is folded: every one of them moving under a click that was about one.
+  // The arc a removal was asked from still meets the box that stayed, and that meeting point is where
+  // its `+` sits, so it takes a slot on that side like any other arc. Without it the arcs left standing
+  // would redistribute along the side the moment something is taken away: every one of them moving
+  // under a click that was about one.
   const folds = [];
   erCut.forEach((away, k) => {
     const [a, b] = k.split('\u0000');
@@ -1673,7 +1638,13 @@ function erRender() {
     boxes.appendChild(div);
   });
   const svg = $('ersvg');
-  [...svg.querySelectorAll('.erlink,.erlabel,.erlead')].forEach((x) => x.remove());
+  // `.erhit` was not in this list, and it is the one nobody can see: an invisible 14px-wide copy of
+  // every arc, left behind by every render since the window opened. Measured on the sample schema
+  // after five renders - six arcs on screen, **thirty** hit corridors under them, each still carrying
+  // the click handler and the geometry of the layout it was drawn for. So clicking beside an arc could
+  // select a relation that had moved, and the count grew for as long as the window stayed open. Found
+  // by counting elements while checking something else, which is the argument for counting.
+  [...svg.querySelectorAll('.erlink,.erhit,.erlabel,.erlead')].forEach((x) => x.remove());
   $('v-er').classList.toggle('relemph', erEmph === 'relations');
 
   // --- pass 1: draw the links, collect the label descriptors ---
@@ -1741,36 +1712,54 @@ function erRender() {
     }
   });
 
-  // --- the fold marks: a circle where the arc meets the box that stays ---
-  // The control for folding a branch belongs on the branch, not in a card three clicks away: the arc
-  // and the box are what the reader is looking at, and the point where the two meet is the one place
-  // that names both. `-` while what hangs off it is on screen, `+` and the count once it is folded -
-  // so a fold can never be silent, which is the same rule the drop hint follows about covered boxes.
+  // --- the marks: one where every arc meets every box ---
+  // An arc joins two boxes, so it carries a control at each end: the `-` where it touches A takes B
+  // away and whatever came into the drawing with it, the one where it touches B says the same of A.
+  // Standing on a box, every arc that reaches it offers to take that neighbour off - which is why the
+  // marks cluster on the rim of the box you are reading, where the pointer already is.
+  //
+  // A `+` where a removal was made brings it back. No number on it: two arcs never meet a box at the
+  // same point, so one `+` is one removal, and the count is in the tooltip and in the line below the
+  // drawing at the moment it happens.
   //
   // Drawn above the boxes rather than in the arc layer: the meeting point *is* the box's edge, and a
   // control the box paints over half of is not a control.
+  //
+  // The size comes from the arcs themselves. `erFitToArcs` grows a box until its landing points are
+  // ARC_GAP apart, so a mark that is at most that wide can never cover its neighbour - measured on the
+  // reported case, a box with thirteen arcs on one side where a fixed 20px circle overlapped the next.
+  // The `+` keeps the full size: there are a handful of them and they are the ones saying something is
+  // missing, where the `-` are one per arc and must not become the drawing.
   const marks = $('ermarks'); marks.innerHTML = '';
-  const markAt = (a, b, away, stay, n, folded) => {
+  const markAt = (a, b, away, stay, folded) => {
     const A = erPos[a], B = erPos[b];
-    if (!A || !B || !n) return;
+    if (!A || !B) return;
     const ek = ekey(a, b);
-    const pt = erEdgePoints(A, B, erSlotMap.get(ek + '\u0001' + a), erSlotMap.get(ek + '\u0001' + b));
+    const sa = erSlotMap.get(ek + '\u0001' + a), sb = erSlotMap.get(ek + '\u0001' + b);
+    const pt = erEdgePoints(A, B, sa, sb);
+    const S = stay === a ? A : B, slot = stay === a ? sa : sb;
+    const side = erSideOf(S, stay === a ? B : A);
+    const along = (side === 't' || side === 'b') ? S.w : S.h;
+    const gap = along / ((slot ? slot.n : 1) + 1);
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'ermk ' + (folded ? 'back' : 'fold');
     el.style.left = (stay === a ? pt[0] : pt[2]) + 'px';
     el.style.top = (stay === a ? pt[1] : pt[3]) + 'px';
-    el.textContent = folded ? '+' + n : '\u2212';
-    el.title = folded ? MSG.cutUndo(n) : MSG.cutDo(n);
+    el.style.setProperty('--d', (folded ? MARK_D : Math.max(11, Math.min(MARK_D, gap * 0.92))).toFixed(1) + 'px');
+    el.textContent = folded ? '+' : '\u2212';
+    // Worked out when it is asked for, not for every arc on every render: the walk behind the number
+    // is cheap once and 2N times is the render. A tooltip nobody has hovered has told nobody anything.
+    el.addEventListener('mouseenter', () => {
+      el.title = folded ? MSG.cutUndo(erWouldShow(ek))
+        : MSG.cutDo(label(N[away]), erWouldGo(stay, away, erHiddenSet()).size);
+    });
     // The same guard the arcs and the boxes use: a drag that ends over a control is still a drag.
     el.addEventListener('click', (ev) => { ev.stopPropagation(); if (erDragged) return; erToggleCut(a, b, away); });
     marks.appendChild(el);
   };
-  erBranchMap.forEach((br, k) => {
-    const [a, b] = k.split('\u0000');
-    markAt(a, b, br.away, br.other, br.n, false);
-  });
-  folds.forEach(([a, b, away, stay]) => markAt(a, b, away, stay, erWouldShow(ekey(a, b)), true));
+  drawnPairs.forEach(([a, b]) => { markAt(a, b, b, a, false); markAt(a, b, a, b, false); });
+  folds.forEach(([a, b, away, stay]) => markAt(a, b, away, stay, true));
 
   // --- pass 2: pull the labels apart, and away from the boxes ---
   if (labels.length) {
