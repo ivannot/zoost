@@ -4759,15 +4759,32 @@ function renderActions() {
     tree.appendChild(hdr);
   }
   let group = null;
+  // Whether the group being emitted is folded away. The other four lists build their groups in an
+  // outer loop and can `return` out of one; this one walks a flat sorted list and starts a group when
+  // the kind changes, so the state has to be carried across iterations rather than scoped to a group.
+  let groupCollapsed = false;
   list.forEach((a) => {
-    if (sorter) group = a.kind;   // flat: no headers, and the kind rides on the row instead
+    if (sorter) { group = a.kind; groupCollapsed = false; }   // flat: no headers, and the kind rides on the row instead
     else if (a.kind !== group) {
       group = a.kind;
-      const g = document.createElement('div'); g.className = 'grp';
+      // Prefixed, like `mod:` `sc:` `wf:`, because `collapsed` is one Set shared by every list: a
+      // bare key here would fold a namespace on the Functions tab that happened to share the name.
+      //
+      // `kind` is a block-scoped copy and the handler below closes over *it*, never over `group`.
+      // The other four lists take their key from a forEach parameter, which is a fresh binding per
+      // call and safe by construction; this one walks a flat list and mutates one outer `let`, so a
+      // handler reading `group` would run long after the loop had left it on the last kind - every
+      // header folding the same group, and nothing about the code looking wrong.
+      const kind = group;
+      const isCol = collapsed.has('act:' + kind);
+      groupCollapsed = isCol;
+      const g = document.createElement('div'); g.className = 'grp' + (isCol ? ' collapsed' : '');
       const n = list.filter((x) => x.kind === group).length;
       g.innerHTML = `<span class="chev">\u25be</span><span>${escHtml(actionKindLabel(group).toUpperCase())}</span><span class="cnt">${n}</span>`;
+      g.onclick = () => { isCol ? collapsed.delete('act:' + kind) : collapsed.add('act:' + kind); renderActions(); };
       tree.appendChild(g);
     }
+    if (groupCollapsed) return;
     const el = document.createElement('div'); el.className = 'f'; el.dataset.path = a.path;
     el.setAttribute('aria-selected', a.path === currentPath);
     // The dot is the mirror state and nothing else - «this is on your disk» - because that is what

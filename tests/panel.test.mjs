@@ -2955,6 +2955,56 @@ function messageLiterals(src) {
   }
   return out;
 }
+// ---------- A group header is a control, in every list that draws one ----------
+
+test('every group header folds its list, because the CSS already promises it does', () => {
+  // Reported: on the Actions tab, clicking «FIELD UPDATES» did nothing, while the same click on the
+  // Functions tab folded the group away. `renderActions` built its header without a `collapsed`
+  // lookup and without an onclick - and `.grp` carries `cursor:pointer`, so it looked like a control
+  // and was not. The worst shape of this defect: not a missing feature, a lie about what is clickable.
+  //
+  // It is the schematic-piece rule, which this project states and had not enforced: when you add one
+  // of a set, it does everything its siblings do. Four lists had it and the fifth did not, and
+  // nothing was measuring, so the check is derived from the tree rather than from a list of tabs -
+  // a sixth one written tomorrow is covered without anybody remembering.
+  const findings = [];
+  for (const rel of shippedScripts()) {
+    const lines = read(rel).split('\n');
+    lines.forEach((line, i) => {
+      if (!/className = 'grp'/.test(line)) return;
+      // The header and its wiring are written together, within a few lines - that is how all four
+      // working ones read. A window is enough and avoids parsing JavaScript to find a block, and it
+      // opens *above* the header: every one of them reads `collapsed.has` first and uses the answer
+      // on the className, so a window starting at the header itself reports all five as broken.
+      const near = lines.slice(Math.max(0, i - 4), i + 6).join('\n');
+      // Two halves, asserted separately, because either alone passes while the header is broken.
+      // The first version of this asked only whether the block mentioned `collapsed` at all, and a
+      // planted defect that made the chevron constant - `const isCol = false` - sailed through it,
+      // since the onclick still said `collapsed.add`. Reading the state and writing it are different
+      // jobs: without the read the arrow never turns and the rows never hide.
+      if (!/collapsed\.has\(/.test(near)) {
+        findings.push(`${rel}:${i + 1} draws a .grp whose folded state is never read`);
+      }
+      if (!/\.onclick\s*=/.test(near)) findings.push(`${rel}:${i + 1} draws a .grp with no onclick`);
+    });
+  }
+  assert.deepEqual(findings, [], findings.join('\n'));
+});
+
+test('the folded state of one list cannot fold another', () => {
+  // `collapsed` is a single Set shared by every list in the panel, so the keys have to be namespaced
+  // or two tabs collide - a function namespace and an action kind that happen to share a word would
+  // fold each other, which is untraceable from either screen. Functions owns the bare key by being
+  // first; everything since carries a prefix.
+  const src = read('apps/crm/sidepanel.js');
+  const keys = [...src.matchAll(/collapsed\.(?:has|add|delete)\(([^)]*)\)/g)].map((m) => m[1].trim());
+  assert.ok(keys.length >= 8, `expected the five lists to use collapsed, found ${keys.length} uses`);
+  const bare = keys.filter((k) => !/^'[a-z]+:'/.test(k));
+  // Only the functions tree, which predates the convention and would need a migration to change.
+  assert.deepEqual([...new Set(bare)], ['ns'],
+    `a list is keying collapsed without a prefix: ${[...new Set(bare)].join(', ')}`);
+});
+
 const looksLikeMessage = (s) => /^[A-Z]/.test(s) && s.includes(' ');
 
 /** Every .js an app ships, globbed rather than listed - a file added tomorrow is covered without
