@@ -15,8 +15,8 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
   tabCount: (n) => `${n} ${NOUN().n} to draw`,
-  tabOver: (n) => `${n} ${NOUN().n} - more than the ${READABLE_MAX_NODES} this diagram can draw with every box clear of every other. Switch a category off above, or pick something to focus on.`,
-  tooMany: (n) => `<b>Too many to draw at once.</b> ${n} ${NOUN().n} are on the tab above and the limit is ${READABLE_MAX_NODES} - the size at which every box can still be placed clear of every other. Past it the boxes cover each other and the arcs cannot be followed, which says less than showing nothing. Switch a category off above, or pick one to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits.`,
+  tabOver: (n) => `${n} ${NOUN().n} - more than the ${READABLE_MAX_NODES} this diagram has been measured to draw without boxes covering each other. Switch a category off above, or pick something to focus on.`,
+  tooMany: (n) => `<b>Too many to draw at once.</b> ${n} ${NOUN().n} are on the tab above and the limit is ${READABLE_MAX_NODES}, which is measured rather than chosen: up to it the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other. An image where boxes hide each other and the arcs cannot be followed says less than showing nothing. Switch a category off above, or pick one to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits.`,
   showList: 'Show the list',
   emphasis: 'Emphasis: ',
 };
