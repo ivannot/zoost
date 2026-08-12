@@ -46,7 +46,7 @@ WHAT IT DOES
 
 - Relations, with the names you actually need. The API name of a related list is not the api name of either module, and it is what zoho.crm.getRelatedRecords() requires. Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
 
-- ER diagram that stays readable. Modules as tables, foreign keys as arrows. Focus a module, adjust depth, walk the graph by clicking. A relation-first mode pushes modules into the background and brings relation names forward. Click an arc to isolate one relation and fade everything else. Live sliders for spacing, spread, label gap and label size, an all-modules scope, and Save PDF for wall-size prints.
+- ER diagram that stays readable. Modules as tables, foreign keys as arrows. Focus a module, adjust depth, walk the graph by clicking. A relation-first mode pushes modules into the background and brings relation names forward. Click an arc to isolate one relation and fade everything else. Boxes can be dragged: the automatic layout is a starting point, and what you arrange is what the PDF prints. Live sliders for spacing, spread, label gap and label size, an all-modules scope, and Save PDF for wall-size prints.
 
 - Fits the access you actually have. Not every Zoho user may read Deluge or the connections catalogue, and no API says so in advance - so Zoost finds out by asking, once, and records the answer with the date. An area your role is refused is skipped on later pulls, nothing is written for it, and its tab is removed rather than sitting there greyed out; the reason is in Settings, which can also re-check, since roles change. You can hide and reorder the tabs yourself too, and choose which types Pull all should ask for at all.
 

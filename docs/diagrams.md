@@ -357,6 +357,34 @@ are **layout only**: `erRender` then builds an SVG path and a div per box, and h
 be trusted to time that because virtual time advances the clock, so the real wait is longer and the
 line is drawn at the measured 1.3s rather than at the 2.2s that would otherwise have qualified.
 
+**A box can be dragged, and the automatic layout is a starting point rather than a verdict.** Past
+eighty boxes it crowds whatever it does, the reader is the one who knows which two have to sit together
+for the print, and `Save PDF` already sizes the page from `erPos` - so an arrangement leaves the window
+with nothing added for it. Three decisions in it, each with a reason that is not obvious:
+
+**The arcs are hidden for the duration of the drag and drawn again on the drop.** Their paths are
+derived from the positions, so following a box live means recomputing every path that touches it inside
+a 16ms frame, and the collision pass alone measures 93ms at sixty boxes. Hidden and then correct beats
+present and stuttering. This was the reader's own suggestion, and it is better than the live version it
+replaced.
+
+**Nothing else moves on the drop, which is a deliberate departure from what was agreed.** Making the
+neighbours give way would fight the reader, who has just said where they want that box. The reason for
+wanting it - never hiding content unknowingly - is served by *saying* what the drop covers, which is
+this project's position on numbers anyway. `Re-layout` is the way back.
+
+**Nothing is persisted, and the argument against it is better than the cost argument.** A saved
+arrangement is only coherent if the window is re-entered from the same button on the same context;
+change the entry point and a restored arrangement has lost coherence with the click that asked for it,
+which is worse than no arrangement. So the state dies with the window, and nothing about it reaches
+`chrome.storage` or the privacy page.
+
+**Every path that would lay the diagram out again is protected in one place.** Eleven of them reset
+`erLaidOut`, and chasing eleven call sites is the enumeration trap this repository keeps recording - so
+`erShow` is where an arrangement is defended: asked once, told once, and the second ask goes through.
+The control that asked stays alive and answers, rather than being greyed out, which is the same choice
+the over-ceiling tab makes and for the same reason.
+
 **Readability trade-offs are exposed, not guessed.** Diagram spacing, spread and label size are
 runtime sliders, because there is no single right value across graphs.
 

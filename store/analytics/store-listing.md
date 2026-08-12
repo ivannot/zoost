@@ -47,7 +47,7 @@ WHAT IT DOES
 
 - Foreign keys on every column, and they are links. Each column shows what it points at and what points at it, both directions, because a foreign key is not symmetric. Click one and you are looking at the other table. Taken from the ER model Zoho Analytics itself draws, with the join written exactly as Zoho writes it.
 
-- ER diagram that stays readable. Tables as boxes, relations as arrows, the join on the arc. Focus one table, adjust the depth, walk the graph by clicking. Click an arc to isolate one relation and fade the rest. Live sliders for spacing, spread, label gap and label size, and Save PDF for wall-size prints.
+- ER diagram that stays readable. Tables as boxes, relations as arrows, the join on the arc. Focus one table, adjust the depth, walk the graph by clicking. Click an arc to isolate one relation and fade the rest. Boxes can be dragged: the automatic layout is a starting point, and what you arrange is what the PDF prints. Live sliders for spacing, spread, label gap and label size, and Save PDF for wall-size prints.
 
 - The SQL of your query tables. Read in the panel, written to disk one file each, and searchable across all of them at once. Each one also records which source tables it reads and which of their columns it actually involves.
 

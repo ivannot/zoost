@@ -379,3 +379,53 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+/* ---------------------------------------------------------------------------------------------
+ * Arranging by hand. The auto layout is a starting point past eighty boxes whatever it does, and the
+ * reader is the one who knows which two boxes have to sit together for the PDF - which `Save PDF`
+ * already exports from erPos, so an arrangement needs nothing added to leave the window.
+ *
+ * The drag itself is three listeners, a transform and a re-render, and none of that can be asserted
+ * from source: it was driven for real in headless Chrome instead, dispatching mousedown, mousemove and
+ * mouseup at a box, and the result checked - the box moves by the screen delta divided by the zoom, the
+ * arcs carry the `dragging` class while it happens and lose it on the drop, the drop reports what it
+ * covers, and a re-layout request is refused once and honoured the second time. What is held here is
+ * the arithmetic and the wiring that a rename would break.
+ */
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a box knows how many others it is drawn over`, () => {
+    const ctx = vm.createContext({
+      erPos: {
+        a: { x: 0, y: 0, w: 190, h: 80 },
+        b: { x: 100, y: 20, w: 190, h: 80 },     // overlaps a
+        c: { x: 400, y: 0, w: 190, h: 80 },      // clear of both
+        d: { x: 30, y: 40, w: 190, h: 80 },      // overlaps a as well
+      },
+      erIds: ['a', 'b', 'c', 'd'],
+    });
+    vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erCovers'), ctx);
+    assert.equal(vm.runInContext("erCovers('a')", ctx), 2, 'a covers b and d');
+    assert.equal(vm.runInContext("erCovers('c')", ctx), 0, 'c covers nothing');
+    assert.equal(vm.runInContext("erCovers('nope')", ctx), 0, 'a box with no position counts nothing');
+  });
+
+  test(`${app}: the drag is wired where a rename would break it`, () => {
+    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    // The handler has the element and not the loop variable, so the id has to be on the element. It
+    // was not, the first time, and the drag read undefined and never began.
+    assert.ok(/div\.dataset\.id = id;/.test(js), 'the boxes do not carry their id, so a drag cannot start');
+    assert.ok(/erBoxDrag = \{ id: box\.dataset\.id/.test(js), 'the drag does not read the id off the box');
+    // The screen delta is divided by the zoom, or a box lags the pointer at anything but 100%.
+    assert.ok(/erScale \|\| 1/.test(js), 'the drag moves by screen pixels rather than diagram ones');
+    // Arcs off for the duration, and the stylesheet has to agree with the class the script sets.
+    assert.ok(/\$\('ersvg'\)\.classList\.add\('dragging'\)/.test(js), 'the arcs are not hidden during a drag');
+    assert.ok(/#ersvg\.dragging\{display:none\}/.test(html), 'the class the drag sets is not styled');
+    // One funnel, because eleven paths reset erLaidOut and chasing them all is the trap.
+    // The whole function, not a window of characters: the first version counted 900 of them and stopped
+    // short of the funnel, which sits below a long comment. sliceFn ends at the declaration's own brace.
+    const sh = sliceFn(`apps/${app}/graphview.js`, 'erShow');
+    assert.ok(/erArranged/.test(sh) && /erWarned/.test(sh),
+      'an arrangement is not defended where every re-layout passes');
+    assert.ok(/id="erRelay"/.test(html), 'there is no way back from an arrangement');
+  });
+}

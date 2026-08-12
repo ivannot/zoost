@@ -2400,8 +2400,21 @@ test('a window resize re-fits the diagram, unless the view is the reader\'s own'
     assert.ok(/erUserMoved = false/.test(fit), `${app}: a fit does not hand the view back to the window`);
     const wheel = js.slice(js.indexOf("addEventListener('wheel'"), js.indexOf("addEventListener('wheel'") + 500);
     assert.ok(/erUserMoved = true/.test(wheel), `${app}: zooming does not mark the view as chosen`);
-    const move = js.slice(js.indexOf("addEventListener('mousemove'"), js.indexOf("addEventListener('mousemove'") + 400);
+    // The whole listener, to its own closing `});`, rather than a window of characters. This read 400
+    // of them and went red the day a box-drag branch was added at the top of the handler, pushing the
+    // panning code past the window - the assertion was still true and the slice no longer covered it,
+    // which is the same mis-slice this repository records about brace counting.
+    const mStart = js.indexOf("addEventListener('mousemove'");
+    const move = js.slice(mStart, js.indexOf('\n});', mStart));
     assert.ok(/erUserMoved = true/.test(move), `${app}: panning does not mark the view as chosen`);
+    // and the box drag must not claim the view was moved: dragging a box is arranging the diagram, not
+    // choosing a viewport, so a later resize is still allowed to re-fit it.
+    // The box branch itself, up to the `return` that keeps it out of the panning code below. Written
+    // first as "erBoxDrag within 400 characters of erUserMoved" it fired on correct code, because the
+    // two branches share one handler - a regex that cannot tell inside from after.
+    const boxBranch = move.slice(move.indexOf('if (erBoxDrag)'), move.indexOf('return;', move.indexOf('if (erBoxDrag)')));
+    assert.ok(!/erUserMoved/.test(boxBranch),
+      `${app}: dragging a box marks the viewport as chosen, so a resize stops re-fitting`);
   }
 });
 

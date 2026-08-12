@@ -14,6 +14,9 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  arrangedKeeps: 'The diagram has been arranged by hand, so this would throw that away and lay it out again. Do it again to go ahead, or press Re-layout to start over.',
+  dropCovers: (k) => `moved \u00b7 it now covers ${k} other ${k === 1 ? 'box' : 'boxes'}`,
+  dropClear: 'moved \u00b7 nothing is covered',
   tabCount: (n) => `${n} ${NOUN().n} to draw`,
   tabCrowded: (n) => `${n} ${NOUN().n} - past the ${CROWDED_NODES} this diagram has been measured to draw without boxes covering each other, so expect it crowded. It is still drawn: switch a category off above, or pick something to focus on, to bring it down.`,
   tabOver: (n) => `${n} ${NOUN().n} - more than the ${drawMax} this diagram is set to lay out. Switch a category off above, or pick something to focus on.`,
@@ -1662,6 +1665,10 @@ function erRender() {
       : [KINDOF(n), n.namespace].filter(Boolean).join(' \u00b7 ');
     div.innerHTML = `<div class="erhdr"><span>${esc(label(n))}</span><small>${esc(sub)}</small></div>${rows}${more}`;
     div.onclick = () => { if (erDragged) return; const wasFocus = curFocus; select(id); if (!wasFocus) erRender(); };
+    // The id on the element, because dragging starts from a mousedown on the box and the handler has
+    // the element, not the loop. Without it the drag reads undefined and never begins - which is how
+    // it was written the first time.
+    div.dataset.id = id;
     boxes.appendChild(div);
   });
   const svg = $('ersvg');
@@ -1879,22 +1886,107 @@ function erShow() {
     scopeAll = false; bfsEgo(); updateScopeUI(); erLaidOut = false;
     tooWideToDraw(visibleKindCount());
   }
+  // Every path that wants a fresh layout arrives here with erLaidOut false - eleven of them - so this
+  // is the one place that can protect an arrangement without each of them remembering to. The control
+  // that asked stays alive and answers instead of being greyed out: asked once, told once, and the
+  // second ask goes through.
+  if (!erLaidOut && erArranged) {
+    if (!erWarned) {
+      erWarned = true; erLaidOut = true;
+      $('statline').textContent = MSG.arrangedKeeps;
+      erRender(); erUpdateControlVis();
+      return;
+    }
+    erArranged = false; erWarned = false;
+  }
   if (!erLaidOut) { erLayout(); erLaidOut = true; }
   erRender(); erFit(); erUpdateControlVis();
   const h = document.querySelector('#v-er .hint2');
   if (h) h.textContent = `scroll to zoom \u00b7 drag to pan \u00b7 click a ${NOUN().box} to inspect`;
 }
+// ---- arranging by hand ----
+// A box can be dragged. The auto layout is a starting point, not a verdict: past eighty boxes it
+// crowds whatever it does, and the reader is the one who knows which two boxes need to be side by
+// side for the PDF. `Save PDF` already sizes the page from `erPos`, so an arrangement exports as
+// arranged with nothing added here.
+//
+// The arcs are hidden for the duration of the drag and drawn again on the drop. That is not a
+// shortcut, it is the measured one: their paths are derived from the positions, so following a box
+// live means recomputing every path that touches it on every mousemove, and there are 16ms in a frame.
+// Hidden and then correct beats present and stuttering.
+//
+// Nothing else moves on the drop, and this is a deliberate departure from what was agreed: making the
+// neighbours give way would fight the reader, who has just said where they want that box. The reason
+// for wanting it - never hiding content unknowingly - is served by *saying* what the drop covers
+// instead, which is this project's position on numbers anyway. `Re-layout` is the way back.
+let erArranged = false;    // the reader has moved at least one box since the last layout
+let erWarned = false;      // and has been told once that re-laying out would discard it
+let erBoxDrag = null;      // { id, sx, sy, x0, y0 }
+function erBoxUnder(t) { return t && t.closest ? t.closest('.erbox') : null; }
+function erCovers(id) {
+  // How many boxes this one is drawn over. The boxes themselves, not their margins: sitting close is
+  // not hiding anything, and it is not what the reader is being told about.
+  const A = erPos[id];
+  if (!A) return 0;
+  let k = 0;
+  erIds.forEach((other) => {
+    if (other === id) return;
+    const B = erPos[other];
+    if (!B) return;
+    const ox = (A.w + B.w) / 2 - Math.abs((B.x + B.w / 2) - (A.x + A.w / 2));
+    const oy = (A.h + B.h) / 2 - Math.abs((B.y + B.h / 2) - (A.y + A.h / 2));
+    if (ox > 0 && oy > 0) k++;
+  });
+  return k;
+}
+function erHint(text) { const h = document.querySelector('#v-er .hint2'); if (h) h.textContent = text; }
 let erDown = false, erDragged = false, erSx = 0, erSy = 0, erT0x = 0, erT0y = 0;
 document.addEventListener('mousedown', (e) => {
   if (curView !== 'er' || e.target.closest('#ertools')) return;
+  const box = erBoxUnder(e.target);
+  if (box && box.dataset.id && erPos[box.dataset.id]) {
+    // Arranging, not panning. The arcs go for the duration; see erCovers above for why.
+    const p = erPos[box.dataset.id];
+    erBoxDrag = { id: box.dataset.id, sx: e.clientX, sy: e.clientY, x0: p.x, y0: p.y, el: box };
+    erDragged = false;
+    $('ersvg').classList.add('dragging');
+    box.classList.add('dragging');
+    e.preventDefault();
+    return;
+  }
   erDown = true; erDragged = false; erSx = e.clientX; erSy = e.clientY; erT0x = erTx; erT0y = erTy;
 });
 document.addEventListener('mousemove', (e) => {
+  if (erBoxDrag) {
+    // The viewport carries a scale, so a screen delta is not a diagram delta.
+    const dx = (e.clientX - erBoxDrag.sx) / (erScale || 1), dy = (e.clientY - erBoxDrag.sy) / (erScale || 1);
+    if (Math.abs(e.clientX - erBoxDrag.sx) + Math.abs(e.clientY - erBoxDrag.sy) > 4) erDragged = true;
+    const p = erPos[erBoxDrag.id];
+    if (p) { p.x = erBoxDrag.x0 + dx; p.y = erBoxDrag.y0 + dy; }
+    if (erBoxDrag.el) { erBoxDrag.el.style.left = (erBoxDrag.x0 + dx) + 'px'; erBoxDrag.el.style.top = (erBoxDrag.y0 + dy) + 'px'; }
+    return;
+  }
   if (!erDown) return; const dx = e.clientX - erSx, dy = e.clientY - erSy;
   if (Math.abs(dx) + Math.abs(dy) > 4) { erDragged = true; erUserMoved = true; }
   erTx = erT0x + dx; erTy = erT0y + dy; erApply();
 });
-document.addEventListener('mouseup', () => { erDown = false; setTimeout(() => (erDragged = false), 0); });
+document.addEventListener('mouseup', () => {
+  if (erBoxDrag) {
+    const id = erBoxDrag.id, el = erBoxDrag.el;
+    erBoxDrag = null;
+    $('ersvg').classList.remove('dragging');
+    if (el) el.classList.remove('dragging');
+    if (erDragged) {
+      erArranged = true; erWarned = false;
+      erRender();                                   // the arcs follow the new position, once
+      const k = erCovers(id);
+      erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
+    }
+    setTimeout(() => (erDragged = false), 0);
+    return;
+  }
+  erDown = false; setTimeout(() => (erDragged = false), 0);
+});
 // The window changing size leaves the drawing framed for a size it no longer has, and the only way
 // back was the Fit button. Debounced, because resize fires continuously through a drag and erFit
 // walks every box; 120ms is below what reads as a delay and well above the event rate.
@@ -1994,6 +2086,7 @@ $('v-er').addEventListener('click', (e) => {
   erClearPick();
 });
 $('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erLaidOut = false; erShowMaybeHeavy(); };
+$('erRelay').onclick = () => { erArranged = false; erWarned = false; erLaidOut = false; erShowMaybeHeavy(); };
 $('erFit2').onclick = () => erFit();
 $('erPdf').onclick = () => window.print();
 
