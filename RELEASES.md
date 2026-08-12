@@ -42,6 +42,7 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 | analytics | 1.22.4 | `analytics-v1.22.4` | `3d03074` | `a6c8d4c0935c44851e706d8b809c01eb8be0489e4a259e5f7dcf04ce81181781` |
 | crm | 1.39.0 | `crm-v1.39.0` | `5d101c8` | `07b2eeab2d36f1db349907f9de747406805a3fa27950331d5be4f4411a625bc2` |
 | analytics | 1.23.0 | `analytics-v1.23.0` | `696e1b3` | `6e1de636c23ddec259491456663004c4fd183ca024bcf31d2acfdfaf027f872c` |
+| crm | 1.40.0 | `crm-v1.40.0` | `29757220bac0b4f852421373dd95343e21cfa93c` | `a075cd67154fe26d9f02ad54f7be6d9888886946ac4012f3daf51e156b4d9cdc` |
 
 ## What this table cannot tell you, and why
 

@@ -1840,6 +1840,30 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         self.assertIn('--no-times', code)
         self.assertIn('--checksum', code, 'without times there is no shortcut left but content')
 
+    def test_force_replaces_the_comparison_rather_than_adding_to_it(self):
+        """Writing only what changed has a tail: a write the sync client on the other side missed is
+        never made again, because there is nothing left to write. `--force` regenerates the events
+        without deleting anything - but `--ignore-times` *alongside* `--checksum` still skips a file
+        whose content matches, which is every file in the case this exists for. It has to replace the
+        comparison, and the first version added to it and reported "nothing, already in step".
+        """
+        code = '\n'.join(l for l in (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+                         .splitlines() if not l.lstrip().startswith('#'))
+        self.assertIn("COMPARE='--checksum'", code)
+        self.assertIn("COMPARE='--ignore-times'", code)
+        self.assertNotRegex(code, r'--checksum[^\n]*--ignore-times|--ignore-times[^\n]*--checksum',
+                            'both comparisons on one call: the stricter one wins and force does nothing')
+
+    def test_force_actually_rewrites(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {**os.environ, 'ZOOST_TEST_DIR': str(Path(tmp) / 'zoost-test')}
+            run = lambda *a: subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), *a],
+                                            cwd=ROOT, capture_output=True, text=True, env=env)
+            run()
+            self.assertIn('nothing, already in step', run().stdout)
+            forced = run('--force')
+            self.assertRegex(forced.stdout, r'wrote: \d+ file', f'--force wrote nothing: {forced.stdout}')
+
     def test_the_destructive_fallback_says_so(self):
         # It deletes. Whoever is watching that folder should be told why it emptied, rather than
         # discovering it.

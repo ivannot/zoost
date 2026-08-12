@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tools/totest.sh [destination]
+# tools/totest.sh [--auto|--force] [destination]
 #
 # Copy the two extensions where the browser that loads them can see them.
 #
@@ -28,6 +28,17 @@ cd "$(dirname "$0")/.."
 
 AUTO=''
 [ "${1:-}" = '--auto' ] && { AUTO=1; shift; }
+
+# `--force` rewrites every file even when the content already matches. The recovery path for the one
+# thing this script cannot see: whether the sync client on the other side of that folder actually
+# noticed. Writing only what changed is right - it is what stopped two dozen delete-and-recreate
+# cycles a day - but it has a tail: a write the client missed is never made again, because there is
+# nothing left to write. This regenerates the change events without deleting anything, which is the
+# difference between it and the fallback below.
+# It has to *replace* the comparison, not add to it: `--ignore-times` alongside `--checksum` still
+# skips a file whose content matches, which is every file in the case this exists for.
+COMPARE='--checksum'
+[ "${1:-}" = '--force' ] && { COMPARE='--ignore-times'; shift; }
 
 # Sourced, not parsed: it is a shell file on the author's own machine, and quoting the value there is
 # the whole of its syntax.
@@ -74,7 +85,7 @@ mkdir -p "$DEST/apps"
 # writes nothing at all, which is what a sync folder should see.
 COPIED=''
 if command -v rsync >/dev/null &&
-   COPIED=$(rsync -rl --delete --checksum --no-perms --no-owner --no-group --no-times --inplace -i \
+   COPIED=$(rsync -rl --delete "$COMPARE" --no-perms --no-owner --no-group --no-times --inplace -i \
          apps/crm apps/analytics "$DEST/apps/" 2>/dev/null); then
   :
 else
