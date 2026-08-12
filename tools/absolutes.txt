@@ -258,6 +258,15 @@ e3a85bca70d7fa00  site/docs-crm.html: Wrong passphrase or none, and nothing is c
 f6bba5fbd59303d1  site/docs-crm.html: Zoost only reads from Zoho - it never writes back.
 5eefb0ef5b526b2a  site/docs-crm.html: Zoost takes you to it, but the last click is yours - it never drives the Zoho interface for you.
 c7d24432ce7d3b67  site/docs-crm.html: git commit -m "baseline" What you get on disk: functions/<namespace>/ one .dg source and one .meta.json sidecar per Deluge function, in the namespace Zoho gives it functions/index.json the census: every function with its namespace, id and where it is wired modules/ one file per module - fields, types, lookup targets, picklist values.
+01ca05a238b6b367  site/emergency.html: A fix for something you have never hit is not an emergency.
+ea8d1538eb6c05ac  site/emergency.html: Chrome also shows a "Disable developer mode extensions" prompt at startup while one is loaded, on some platforms every time.
+bd143e2488fb02f5  site/emergency.html: Going back is two clicks, but nothing will remind you to.
+ab849ff30e33835a  site/emergency.html: If the two agree there is nothing here worth doing: install from the Store like everybody else.
+7fde3398a8dc8152  site/emergency.html: Nothing is broken and the fix is not failing: it is a different id, so it has its own empty storage.
+2557906937f495d9  site/emergency.html: Nothing needs cleaning up beyond that.
+391912f7775b90c9  site/emergency.html: Nothing on this page decides for you.
+5832e19315d75b32  site/emergency.html: Point the new copy at the same working folder with Choose folder , grant access again, and every workspace, every pulled function and every bit of history you committed is there, exactly as it was.
+42ae8337e0f2f9b3  site/emergency.html: The extension appears in the list with an ordinary card, and its side panel opens the way it always did.
 c6fb67a5a122ec4f  site/how-to.html: What it does → Read the guide → Install ↗ Zoost - workbench for Zoho Analytics Working folder and workspaces, pulling a workspace in one pass, a table's structure and its foreign keys, the ER diagram, query-table SQL as files, what nothing depends on any more, exports, and the AI assistant.
 e2962f186cc6eb0b  site/how-to.html: Whether you should is a different question, and AI and Zoost answers it: what the Markdown export already gives any assistant for nothing, what the built-in one adds, and the cases where it is not worth a key.
 9754b176703085f9  site/how-to.html: Zoost - workbench for Zoho CRM Working folder and workspaces, pulling functions, module schema and automations, the reference graph and the ER diagram, full-text search across every function, the health audit, exports, and the AI assistant.
@@ -580,6 +589,29 @@ cdffb4ce7b71d830  site/it/docs-crm.html: È l'unico capitolo di un report che po
 14205d46b22af9e3  site/it/docs-crm.html: È l'unico posto in cui un campo vuoto vuol dire cancella - dappertutto altrove un campo chiave vuoto vuol dire «tieni quello che c'è», ed è quello che impedisce a un salvataggio qualsiasi di buttare via una chiave che non puoi ridigitare perché è cifrata.
 c8edf3ee22bc1e8a  site/it/docs-crm.html: È tutto disattivato O non c'è nessuna scheda Zoho CRM attiva, oppure l'org della scheda non corrisponde al workspace selezionato.
 78809f2957da8069  site/it/docs-crm.html: È un indirizzo della tua organizzazione o di un tuo utente, mai di un cliente.
+06c2a315fd1d4c57  site/it/emergency.html: Chrome mostra anche un avviso "Disattiva le estensioni in modalità sviluppatore" all'avvio finché ne hai una caricata, su alcune piattaforme tutte le volte.
+e4ead6257baaccc6  site/it/emergency.html: Il mirror sono file in una cartella sul tuo disco e non appartiene a nessuna estensione.
+48948f8cb7757a85  site/it/emergency.html: L'estensione compare nell'elenco con una scheda normale, e il suo pannello laterale si apre come ha sempre fatto.
+57a25dfe0302421f  site/it/emergency.html: La cartella unpacked si può cancellare; il tuo mirror sta da tutt'altra parte e niente di tutto questo lo tocca.
+7332a25603834de4  site/it/emergency.html: Le valutazioni di questo progetto indicano regolarmente questo come il suo rischio principale, e fanno bene a indicarlo: non c'è un team, non c'è un turno, non c'è nessuno a cui passarlo.
+aca1ab009d04cbdf  site/it/emergency.html: Nessuna cartella di lavoro, nessun provider AI né chiave API, nessuna passphrase, nessun default del diagramma.
+babf25ff89c1d72f  site/it/emergency.html: Niente di tutto questo è un impegno.
+0268f775b58bd78b  site/it/emergency.html: Niente in questa pagina decide al posto tuo.
+bc71fb89c2c77862  site/it/emergency.html: Non è rotto niente e la fix non sta fallendo: è un id diverso, quindi ha il suo spazio vuoto.
+b18e0266c363ba7c  site/it/emergency.html: Oltre a questo non c'è niente da ripulire.
+2a80e65b33340441  site/it/emergency.html: Prendi quello allegato alla release; non costruirtelo da solo, perché allora niente di quello che segue significa più qualcosa.
+fd42cd659a957d4e  site/it/emergency.html: Punta la copia nuova sulla stessa cartella di lavoro con Scegli cartella , riconcedi l'accesso, e ogni workspace, ogni funzione scaricata e tutta la storia che hai committato sono lì, esattamente come prima.
+34187097925a00f0  site/it/emergency.html: Quello che resta è tutto ciò che conta.
+ffff9cd0ac9b20c8  site/it/emergency.html: Quello che richiede giorni è la coda di revisione da Google, e nessuno qui può accorciarla.
+12a5990f1944fa54  site/it/emergency.html: Quello che segue una rottura è corto: non c'è nessuno con cui coordinarsi, nessun treno di rilascio da prendere e nessun confine di sprint da aspettare, quindi una fix piccola può essere capita, scritta, taggata e costruita il giorno stesso in cui viene segnalata.
+cd5776073f8b5b47  site/it/emergency.html: Se i due coincidono qui non c'è niente da fare: installa dallo Store come tutti.
+ca59d397dd2d9e51  site/it/emergency.html: Se in questo momento non sei bloccato da niente, installala dallo Store e chiudi questa pagina.
+974466ee69f633ef  site/it/emergency.html: Se qualcosa è rotto e non c'è nessuna release avanti rispetto allo Store, vuol dire che la fix non è ancora stata rilasciata.
+02cb21f3a6b00bd5  site/it/emergency.html: Se resta com'è - niente script, oppure il controllo non è riuscito - la pagina delle release elenca quello che esiste, e la scheda sullo Store di ciascun prodotto dice che cosa sta servendo.
+e2a8749377bbbee3  site/it/emergency.html: Su un Chrome gestito dalla tua organizzazione le policy possono disattivare quell'interruttore o vietare del tutto le estensioni unpacked, e da questo lato non c'è modo di aggirarle.
+6331f21c228a872b  site/it/emergency.html: Tornare indietro sono due clic, ma non te lo ricorderà niente.
+ea63ec5c2bd41777  site/it/emergency.html: Una fix per qualcosa in cui non sei mai incappato non è un'emergenza.
+f51351b0131d66ec  site/it/emergency.html: Usane però una alla volta: due pannelli che scrivono sulla stessa cartella di mirror non sono un caso per cui qui sia stato progettato niente.
 cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa ↗ Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un colpo solo, la struttura di una tabella con le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, l'elenco di quello da cui non dipende più niente, gli export e l'assistente AI.
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
 4bd2a0ffb11f67f9  site/it/index.html: Accanto a ogni cifra c'è scritto di cosa non tiene conto.
@@ -757,6 +789,7 @@ efd2d9c2d3464cad  site/llms.txt: The Zoho CRM one also reads the org id and user
 5ef56d347a57286c  site/llms.txt: The workbench is complete without a model; the Markdown export gives any external assistant the same mirror for nothing; the built-in one adds retrieval and proximity rather than knowledge, and the page says which situations do not justify a key.
 76b9b5a001f4af25  site/llms.txt: This file exists so that an assistant sent to zoost.it can reach every claim the site makes **and the evidence for it**, rather than summarising the marketing page.
 5a2f1abd925ece20  site/llms.txt: What is offered is effort - a break will be looked at and fixed where fixing it is possible, and where it is not, the feature will say it cannot do the thing rather than guess.
+c1a531513f8f437c  site/llms.txt: What is still by hand is pressing Submit in the dashboard, which moves no bytes and selects nothing.
 af407f331faf29d1  site/llms.txt: Zoho Analytics: never the rows inside a table; the endpoints that would return cell values exist and are deliberately never called.
 d6c76ca7065f7dc7  site/nerd.html: And an attestation says who built a file, never that the file is good.
 5eaf6a960441f7b6  site/nerd.html: CSRF follows the HTTP method rather than the path: every POST carries X-ZCSRF-TOKEN , no GET does, measured across a 104-request capture with no exceptions.

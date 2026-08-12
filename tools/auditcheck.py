@@ -172,6 +172,20 @@ def canonicals_answer_without_redirecting(findings: list, notes: list) -> None:
     notes.append(f'{checked} canonical and alternate URLs answer 200 without redirecting')
 
 
+# What each endpoint must carry, per route, because they answer different questions: /api/versions
+# feeds every page's footer badge, /api/ahead feeds /emergency alone. One list applied to both
+# reported `siteUpdated` missing from a payload that never had a reason to carry it - the check
+# calling a correct endpoint broken, which is the failure mode that teaches people to ignore it.
+#
+# A route with no entry here is a **finding**, never a skip. The routes themselves are derived from
+# the Worker, so a new one arrives on its own; without this, it would arrive with no contract and
+# nothing would say so.
+ENDPOINT_FIELDS = {
+    '/api/versions': ('crm', 'analytics', 'siteUpdated'),
+    '/api/ahead': ('crm', 'analytics', 'cws'),
+}
+
+
 def worker_routes_answer(findings: list, notes: list) -> None:
     """Every route the Worker owns, asked of the live site and checked for the right *shape*.
 
@@ -217,10 +231,15 @@ def worker_routes_answer(findings: list, notes: list) -> None:
                             f'(starts {body[:40]!r}) - a cached error can outlive its fix, so bump '
                             f'CACHE_KEY as well as fixing the route')
             continue
-        # the fields site.js actually reads; a payload missing one renders a badge that says nothing
-        for key in ('crm', 'analytics', 'siteUpdated'):
+        # the fields the page actually reads; a payload missing one renders something that says nothing
+        needs = ENDPOINT_FIELDS.get(path)
+        if needs is None:
+            findings.append(f'{path}: a Worker route with no declared shape - name the fields the '
+                            f'page reads from it in ENDPOINT_FIELDS, or nothing here checks it')
+            continue
+        for key in needs:
             if key not in d:
-                findings.append(f'{path}: the payload has no "{key}", which the footer badge reads')
+                findings.append(f'{path}: the payload has no "{key}", which the page reading it needs')
 
     for src in re.findall(r"'(/[^']*)':", re.search(r'const MOVED = \{(.*?)\}', worker, re.S).group(1)):
         code, _, dest = head(BASE_URL + src)
