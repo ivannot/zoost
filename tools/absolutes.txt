@@ -611,7 +611,7 @@ ca59d397dd2d9e51  site/it/emergency.html: Se in questo momento non sei bloccato 
 974466ee69f633ef  site/it/emergency.html: Se qualcosa è rotto e non c'è nessuna release avanti rispetto allo Store, vuol dire che la fix non è ancora stata rilasciata.
 02cb21f3a6b00bd5  site/it/emergency.html: Se resta com'è - niente script, oppure il controllo non è riuscito - la pagina delle release elenca quello che esiste, e la scheda sullo Store di ciascun prodotto dice che cosa sta servendo.
 e2a8749377bbbee3  site/it/emergency.html: Su un Chrome gestito dalla tua organizzazione le policy possono disattivare quell'interruttore o vietare del tutto le estensioni unpacked, e da questo lato non c'è modo di aggirarle.
-6331f21c228a872b  site/it/emergency.html: Tornare indietro sono due clic, ma non te lo ricorderà niente.
+f0266d37321760da  site/it/emergency.html: Tornare indietro sono due clic, ma niente te lo ricorderà.
 ea63ec5c2bd41777  site/it/emergency.html: Una fix per qualcosa in cui non sei mai incappato non è un'emergenza.
 cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa ↗ Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un colpo solo, la struttura di una tabella con le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, l'elenco di quello da cui non dipende più niente, gli export e l'assistente AI.
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
