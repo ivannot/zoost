@@ -207,7 +207,13 @@ def check_release_workflow(findings: list) -> None:
     if not wf.exists():
         return
     s = wf.read_text(encoding='utf-8')
-    m = re.search(r'^\s*name:\s*((?:Zoost|\$\{\{)[^\n]*)$', s, re.M)
+    # Two spellings, because the mechanism changed under this check and the check knew only the old
+    # one: `name:` was the release action's input, `--title` is the gh flag that replaced it when
+    # GitHub forced its runners onto Node 24 and that action stopped working. A checker that encodes
+    # one tool's syntax goes quiet the day the tool is swapped - and this one went red, which is the
+    # right direction, but it went red about the title being *absent* rather than wrong.
+    m = re.search(r"^\s*name:\s*((?:Zoost|\$\{\{)[^\n]*)$", s, re.M) \
+        or re.search(r"--title\s+'((?:Zoost|\$\{\{)[^']*)'", s)
     if not m:
         findings.append('.github/workflows/release.yml: no release title found')
         return

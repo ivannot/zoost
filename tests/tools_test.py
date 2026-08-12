@@ -970,7 +970,9 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         sh = (ROOT / 'tools/release.sh').read_text(encoding='utf-8')
         self.assertIn('store/$APP/whatsnew/$VERSION.md', sh)
         # Only body_path: `body` and `body_path` together leave it to the action which one wins.
-        self.assertIn('body_path:', wf)
+        # `--notes-file` since the publish moved from a JavaScript action to gh; `body_path:` was the
+        # action's spelling of the same thing.
+        self.assertIn('--notes-file', wf)
         self.assertNotIn('body: |', wf)
 
     # Where the convention starts, per app, stated once with the reason — the same posture as
