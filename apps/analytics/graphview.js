@@ -26,6 +26,10 @@ const MSG = {
   // Naming the workspace it came from, because «nothing here matches» is true and is not the
   // reason. Reported: saved one arrangement, changed workspace, loaded it, and nothing said
   // the file belonged somewhere else - which is the one fact the file actually carries.
+  // A fold whose arc is no longer there cannot be replayed, and it was being dropped without a
+  // word - which made «every loss is counted» false in four guides. auditcheck stopped the
+  // release over exactly that sentence, which is what it is for.
+  arrFolds: (n) => ` \u00b7 ${n} folded ${n === 1 ? 'branch' : 'branches'} in the file no longer apply`,
   arrOtherWorkspace: (was) => ` \u00b7 saved from ${was}, so only names that match on their own came back`,
   arrWrongWorkspace: (was, now) => `That arrangement was saved from ${was}, and this diagram is ${now}. `
     + 'Nothing in it belongs to this one.',
@@ -2744,9 +2748,10 @@ function erApplyArrangement(file) {
   // a branch that has changed hides something the reader never chose to hide.
   erCut = new Map();
   const known = new Set(erIds);
+  let foldsLost = 0;
   file.folds.forEach(([a, b, away]) => {
-    if (!known.has(a) && !known.has(b)) return;
-    if (!edgesA.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) return;
+    if ((!known.has(a) && !known.has(b))
+        || !edgesA.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) { foldsLost++; return; }
     erCut.set(ekey(a, b), away);
   });
   erLaidOut = false;
@@ -2755,8 +2760,9 @@ function erApplyArrangement(file) {
   // they cannot see is not an arrangement either.
   erFit();
   const arcs = edgesAmong(erIds).length;
-  const lost = m.stale.length || elsewhere || (file.arcs && arcs !== file.arcs);
+  const lost = m.stale.length || foldsLost || elsewhere || (file.arcs && arcs !== file.arcs);
   erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
     + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
+    + (foldsLost ? MSG.arrFolds(foldsLost) : '')
     + (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : ''), !!lost);
 }
