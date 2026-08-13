@@ -83,7 +83,11 @@ def source_digest(app: str, script: str) -> str:
     for f in sorted((ROOT / "fixtures").rglob("*")):
         if f.is_file() and app in str(f.relative_to(ROOT / "fixtures")):
             h.update(f.read_bytes())
-    for f in (ROOT / "tools" / "shots.py", ROOT / "tools" / "fsshim.js"):
+    # `fixtures.mjs` is in here because most pictures are no longer rendered from `fixtures/` at all:
+    # they are rendered from the workspace `+ Sample` delivers, which that file writes at render time
+    # from the shipped generator. The generator itself is an app file and already hashed above; the
+    # command that drives it was the one input that could move without any image being re-rendered.
+    for f in (ROOT / "tools" / "shots.py", ROOT / "tools" / "fsshim.js", ROOT / "tools" / "fixtures.mjs"):
         h.update(f.read_bytes())
     h.update(script.encode())
     return h.hexdigest()[:16]

@@ -674,15 +674,25 @@ async function refreshContext() {
   mmbar.classList.toggle('soft', sampleMm);
   if (mm) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); }
   if (mm || sampleMm) {
+  // **The sample is a state the user chose, and it was being announced like an accident.** Three
+  // sentences on one screen said the same fact - the status line's «not related to the sample», the
+  // workspace chip's «sample - generated, never pulled», and a full paragraph in the bar - and the
+  // bar then offered a full-width «Create workspace for ...», which is the control the workspace row
+  // already carries and has enabled in exactly this state. One fact three times, one action twice.
+  //
+  // What the bar alone was carrying is the *reason*: `guardOk()` is false for a sample, so Pull is
+  // disabled, and nothing else on screen says why. So it keeps that and loses the rest - one line,
+  // no call to action. A real mismatch is unchanged: that one is accidental, it can be resolved, and
+  // the two buttons are how.
     $('mmtext').textContent = sampleMm
-      ? `You are looking at the sample workspace - invented data - while the Zoho tab is \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}). Nothing here comes from it, and nothing here can reach it.`
+      ? `Sample workspace - invented data. Pulling is off: nothing here comes from \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}), and nothing here can reach it.`
       : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${bound.instance || '?'}\u00bb (org ${bound.org}). Pulling is off until they match; what is already mirrored stays readable.`;
     // «Switch tab» is meaningless for a sample: there is no Zoho org to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
     $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.instance || '?'}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id !== activeWsId && w.binding && w.binding.org === lastCtx.org && (!w.binding.base || !lastCtx.origin || w.binding.base === lastCtx.origin));
-    const sw = $('mmsw'); sw.style.display = '';
+    const sw = $('mmsw'); sw.style.display = sampleMm ? 'none' : '';
     if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name}\u00bb`; sw.onclick = () => { $('ws').value = match.id; activate(match, true); }; }
     else { sw.textContent = `Create workspace for \u00ab${lastCtx.instance || '?'}\u00bb`; sw.onclick = () => addWorkspaceForTab(); }
   }

@@ -31,6 +31,28 @@ exist so the panel's own marks and filters have something to show. Those belong 
 tests read; they do not belong in the workspace somebody opens on their first day, where a module
 Zoho refuses to describe is just a puzzle.
 
+**And every published picture is the workspace `+ Sample` delivers, which is not where they came
+from for months.** They were rendered from `fixtures/` - the edge-case tree - so the Chrome Web Store
+listing for Zoho Analytics opened on a greyed **«Retry 1 failed»** chip: a query the generator writes
+as unreadable *on purpose*, so that the retry path has something to act on, and that nobody who
+presses `+ Sample` is ever handed. Nothing was failing. The shop window was photographing the test
+fixture, and the same picture said **44 views** two clicks from a page that describes the sample as
+**39**. Reported by the author, who asked the right question about it: whether the chip was an
+application defect, and whether the clean answer was to remove the cause rather than the display.
+
+So `node tools/fixtures.mjs --as-delivered <dir>` writes the other side of the flag, `tools/shots.py`
+asks for it at render time, and nothing is committed twice - one generator, one command, two
+consumers. There is **no exception list**, and there was going to be one: an audit photographed with
+nothing to report documents nothing, so the figures whose subject is a refusal looked like they had
+to keep the edge-case tree. Measured rather than assumed, and they do not - «Failing in Zoho» still
+counts four and «Wiring» four, because those states are in the workspace the product delivers, while
+what `edgeCases` adds is finer than anything a published figure points at. An exception nobody needs
+would be a second workspace in the published material and a rule with a hole in it.
+
+`tests/tools_test.py` holds the two halves that matter: the delivered workspace contains **nothing
+recorded as failed**, and its view count is the number `site/try.html` prints. That second one is the
+check that would have caught this the day it appeared.
+
 **Names: written by hand for the core, composed for the volume.** `buildInvoice` calls `calcTax`
 which calls `formatMoney`, because that is what the screenshots show and what a first-time reader
 explores - `standalone_1`, `standalone_2` would make the product look like a test harness. Beyond the

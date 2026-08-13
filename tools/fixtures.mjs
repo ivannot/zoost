@@ -13,6 +13,17 @@
  * They do not belong in the workspace somebody opens on their first day, where a refused module is
  * just a puzzle.
  *
+ *     node tools/fixtures.mjs --as-delivered <dir>
+ *
+ * writes the other side of that flag - the workspace `+ Sample` actually produces - and writes it
+ * nowhere near `fixtures/`, because nothing reads it from disk twice: `tools/shots.py` asks for it
+ * at render time and photographs that. The reason is a contradiction that reached the published
+ * material: `site/try.html` describes the sample as 39 views, and the picture beside it showed 44
+ * with a greyed «Retry 1 failed» - a query the generator writes as unreadable *on purpose*, which
+ * no user is ever handed. Nothing was failing; the shop window was photographing the test fixture.
+ * A figure that documents a refusal still asks for the edge-case tree, and says so where it is
+ * declared.
+ *
  * It also builds the graphData payloads the diagram window consumes, because tools/shots.py feeds
  * them straight to graphview.html. They are derived from the same file tree, so they cannot describe
  * a workspace the files do not.
@@ -153,11 +164,18 @@ function schemaGraph(files, meta) {
            workspace: { instance: meta.instance, org: meta.org, label: 'Sample org' } };
 }
 
+// `--as-delivered <dir>` writes what `+ Sample` writes, into a directory of the caller's choosing.
+// Same generator, same code path, one flag: the two trees cannot describe different products.
+const asDelivered = process.argv.indexOf('--as-delivered');
+const OUT = asDelivered > 0 ? process.argv[asDelivered + 1] : join(ROOT, 'fixtures');
+const EDGE = asDelivered < 0;
+if (asDelivered > 0 && !OUT) throw new Error('--as-delivered needs a directory');
+
 const crm = generator('crm');
-const files = crm.files({ functions: 120, edgeCases: true });
-writeTree(join(ROOT, 'fixtures', 'crm', crm.folderName()), files);
+const files = crm.files({ functions: 120, edgeCases: EDGE });
+writeTree(join(OUT, 'crm', crm.folderName()), files);
 const meta = { namespaces: crm.namespaces, org: crm.org, instance: crm.instance };
-const J = (p, v) => writeFileSync(join(ROOT, 'fixtures', p), JSON.stringify(v, null, 2) + '\n', 'utf8');
+const J = (p, v) => writeFileSync(join(OUT, p), JSON.stringify(v, null, 2) + '\n', 'utf8');
 const calls = callGraph(files, meta);
 J('graph-crm-calls.json', calls);
 J('graph-crm-schema.json', schemaGraph(files, meta));
@@ -208,8 +226,8 @@ function analyticsGraph(af) {
 }
 
 const an = generator('analytics');
-const af = an.files({ edgeCases: true });
-writeTree(join(ROOT, 'fixtures', 'analytics', an.folderName()), af);
+const af = an.files({ edgeCases: EDGE });
+writeTree(join(OUT, 'analytics', an.folderName()), af);
 const ag = analyticsGraph(af);
 J('graph-analytics.json', ag);
 console.log('Analytics: %d files, %d views, %d data objects, %d relations',

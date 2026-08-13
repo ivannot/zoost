@@ -2749,6 +2749,56 @@ class TheStoreReadingIsShapedBeforeItIsPublished(unittest.TestCase):
         self.assertIsNone(self.s.shape({'takenDown': True}))
 
 
+class ThePicturesShowWhatTheProductDelivers(unittest.TestCase):
+    """The Chrome Web Store listing for Zoho Analytics opened on a greyed «Retry 1 failed» chip, and
+    nothing was failing: the pictures were rendered from `fixtures/`, which is generated with
+    `edgeCases: true` so the tests have those states to read, and one of them is a query the
+    generator writes as unreadable on purpose. Nobody who presses `+ Sample` is ever handed it.
+
+    The same picture said «44 views» two clicks away from `site/try.html`, which describes the sample
+    as 39 - a page and a photograph of two different workspaces, published together, for months. That
+    contradiction is the cheap thing to check, and it is what these hold: what the product delivers
+    has nothing recorded as failed, and its census is the number the page prints.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        out = subprocess.run(['node', str(ROOT / 'tools' / 'fixtures.mjs'), '--as-delivered', cls.tmp],
+                             capture_output=True, text=True, cwd=ROOT)
+        if out.returncode != 0:
+            raise unittest.SkipTest('the generator would not run: ' + out.stderr[-300:])
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def delivered(self, name: str) -> dict:
+        hit = list(pathlib.Path(self.tmp).glob('analytics/*/' + name))
+        self.assertTrue(hit, f'the delivered workspace has no {name}')
+        return json.loads(hit[0].read_text(encoding='utf-8'))
+
+    def test_nothing_the_product_delivers_is_recorded_as_failed(self):
+        self.assertEqual(self.delivered('lineage.json').get('failed', []), [],
+                         'the delivered sample carries an unreadable item, so a picture of it shows '
+                         '«Retry n failed» - which reads as the extension failing')
+
+    def test_the_census_on_the_page_is_the_census_the_generator_writes(self):
+        # site/try.html is the trust argument: it says exactly what + Sample writes. A number typed
+        # there and a number the code produces are two claims about one thing.
+        views = len(self.delivered('views.json')['views'])
+        page = (ROOT / 'site' / 'try.html').read_text(encoding='utf-8')
+        self.assertIn(f'{views} views', page,
+                      f'the generator delivers {views} views and try.html says something else')
+
+    def test_the_pictures_are_rendered_from_it_and_not_from_the_test_fixture(self):
+        sh = (ROOT / 'tools' / 'shots.py').read_text(encoding='utf-8')
+        self.assertIn('--as-delivered', sh, 'the renderer does not ask for the delivered workspace')
+        code = '\n'.join(l for l in sh.splitlines() if not l.lstrip().startswith('#'))
+        self.assertNotIn('ROOT / "fixtures"', code,
+                         'a picture is being rendered from the edge-case tree again')
+
+
 class NothingIsPublishedThatNobodyUses(unittest.TestCase):
     """A stale logo in a Google result sent somebody looking, and the site turned out to be right -
     every icon it serves is the current mark, byte for byte. Two things were wrong anyway.

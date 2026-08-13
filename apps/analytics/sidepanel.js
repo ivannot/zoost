@@ -549,8 +549,18 @@ async function refreshContext() {
   $('mmbar').classList.toggle('show', mm || sampleMm);
   $('mmbar').classList.toggle('soft', sampleMm);
   if (mm || sampleMm) {
+  // **The sample is a state the user chose, and it was being announced like an accident.** Three
+  // sentences on one screen said the same fact - the status line's «not related to the sample», the
+  // workspace chip's «sample - generated, never pulled», and a full paragraph in the bar - and the
+  // bar then offered a full-width «Create workspace for ...», which is the control the workspace row
+  // already carries and has enabled in exactly this state. One fact three times, one action twice.
+  //
+  // What the bar alone was carrying is the *reason*: `guardOk()` is false for a sample, so Pull is
+  // disabled, and nothing else on screen says why. So it keeps that and loses the rest - one line,
+  // no call to action. A real mismatch is unchanged: that one is accidental, it can be resolved, and
+  // the two buttons are how.
     $('mmtext').textContent = sampleMm
-      ? `You are looking at the sample workspace - invented data - while the tab is workspace ${ctx.workspace}. Nothing here comes from it, and nothing here can reach it.`
+      ? `Sample workspace - invented data. Pulling is off: nothing here comes from workspace ${ctx.workspace}, and nothing here can reach it.`
       : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
@@ -559,7 +569,7 @@ async function refreshContext() {
     $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.name || bound.workspace}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
-    const sw = $('mmsw'); sw.className = 'znav';
+    const sw = $('mmsw'); sw.className = 'znav'; sw.style.display = sampleMm ? 'none' : '';
     if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name || match.folder}\u00bb`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
     else { sw.textContent = `Create workspace for \u00ab${ctx.workspace}\u00bb`; sw.onclick = () => addWorkspace(); }
   }

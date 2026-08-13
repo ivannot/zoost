@@ -338,10 +338,47 @@ def files_under(base: pathlib.Path, prefix: str):
     return out
 
 
+# --- which workspace the pictures show -------------------------------------------------------
+#
+# The one `+ Sample` writes, and that was not true until it was measured. `fixtures/` is generated
+# with `edgeCases: true` - a module Zoho refuses to describe, unresolved names, and a query written
+# as unreadable - because the tests need those states to exist. The pictures were rendered from it
+# too, so the Analytics listing opened on a greyed «Retry 1 failed» chip, and `site/try.html`
+# described a 39-view sample beside a photograph of a 44-view one. Nothing was failing: the shop
+# window was photographing the test fixture.
+#
+# So every picture is the delivered workspace, generated at render time by the same command that
+# writes `fixtures/` - one generator, one flag, nothing committed twice.
+#
+# There is no exception list, and there was going to be one: an audit photographed with nothing to
+# report documents nothing, so the figures whose subject is a refusal looked like they had to keep
+# the edge-case tree. Measured instead of assumed, and they do not - «Failing in Zoho» still counts
+# four and «Wiring» four, because those states are in the sample the product delivers, while what
+# `edgeCases` adds is finer than anything a published figure points at. An exception nobody needs is
+# a second workspace in the published material and a rule with a hole in it.
+_DELIVERED = None
+
+
+def delivered() -> pathlib.Path:
+    """The workspaces as the product hands them over, written once per run."""
+    global _DELIVERED
+    if _DELIVERED is None:
+        d = pathlib.Path(tempfile.mkdtemp(prefix="zoost-delivered-"))
+        subprocess.run(["node", str(ROOT / "tools" / "fixtures.mjs"), "--as-delivered", str(d)],
+                       check=True, capture_output=True)
+        atexit.register(shutil.rmtree, d, True)
+        _DELIVERED = d
+    return _DELIVERED
+
+
+def fixtures_for(_key: str) -> pathlib.Path:
+    return delivered()
+
+
 def render(shot):
     key, app, fixture, script = shot
     src = ROOT / "apps" / app
-    data = json.loads((ROOT / "fixtures" / fixture).read_text(encoding="utf-8"))
+    data = json.loads((fixtures_for(key) / fixture).read_text(encoding="utf-8"))
     with tempfile.TemporaryDirectory() as tmp:
         stage = pathlib.Path(tmp)
         for f in src.iterdir():
@@ -451,8 +488,8 @@ def render_panel(shot):
     """
     key, app, ws, script = shot
     src = ROOT / "apps" / app
-    files = files_under(ROOT / "fixtures" / ws, ("crm" if app == "crm" else "analytics")
-                        + "/" + (ROOT / "fixtures" / ws).name)
+    base = fixtures_for(key) / ws
+    files = files_under(base, ("crm" if app == "crm" else "analytics") + "/" + base.name)
     with tempfile.TemporaryDirectory() as tmp:
         stage = pathlib.Path(tmp)
         for f in src.iterdir():
