@@ -670,3 +670,23 @@ its own.
 `nodesA`/`edgesA` are filled by `initPositions()`, which runs *after* the line is first written — so
 counting from them reported «0 of 90 modules» on the schema side while the call graph, which counts
 from `N`, was right. The one-of-a-set miss again: the same helper, two callers, one of them wrong.
+
+**What a reader placed may not be moved, and what «placed» means is decided at two moments.** The
+collision pass takes the set of boxes it may not push. Without it the sentence in `erLayout` -
+newcomers make room around an arrangement rather than the arrangement being computed away - was an
+intention rather than a behaviour: held positions were written back and then pushed like any others,
+so switching a category on could move what somebody had spent twenty minutes building. When one of
+an overlapping pair is pinned the other takes the whole push, so a pair separates in as many passes
+as before; when both are pinned the overlap is **counted and left**, because the reader put them
+there and is already told when one box covers another. `erResize` deliberately does not pin: that
+overlap is made by labels changing size, not by the reader, and a hidden box is a correctness
+problem whoever caused it.
+
+The two moments differ, and the difference is settled rather than left to whoever writes the second
+one. **While working**, a drag pins *everything on screen* - the decision from «an arrangement is the
+relationships», where holding only the dragged box preserved nothing. **On loading a saved
+arrangement**, which does not exist yet, only the boxes the reader had actually moved are pinned.
+Both restore every position the file carries; the question is only who may be nudged aside when a
+new box needs room, and there the tables nobody chose to place are the ones that give way. Decided
+with Ivan on 13 August 2026, on the functional question - «when you reload, what is *yours*» - and
+recorded here because the file that would carry it does not exist.
