@@ -718,7 +718,17 @@ for (const app of ['crm', 'analytics']) {
       'the mark is not placed on the end of the arc that stays');
     // One rule for both marks: a `-` squeezed to 11px beside a `+` at 20 reads as two controls, which
     // is what the second picture showed. Between the floor and the cap it follows the gap.
-    assert.ok(/Math\.max\(MARK_MIN, Math\.min\(MARK_D, gap - 1\)\)/.test(mk), 'the width no longer follows the gap');
+    //
+    // The rule lives in erMarkD now and markAt asks it, because the arcs stop at the circle's rim and
+    // therefore need the same number: two copies of it would let a mark grow while the arc did not,
+    // which puts the arrowhead straight back under the control it was moved out from.
+    const md = sliceFn(`apps/${app}/graphview.js`, 'erMarkD');
+    assert.ok(/Math\.max\(MARK_MIN, Math\.min\(MARK_D, gap - 1\)\)/.test(md), 'the width no longer follows the gap');
+    assert.ok(/erMarkD\(S, stay === a \? B : A, slot\)/.test(mk), 'the mark is sized by its own copy of the rule');
+    assert.ok(/erMarkR\(A, B,/.test(js) && /erMarkR\(B, A,/.test(js),
+      'the arcs no longer stop at the circles, so the arrowheads are drawn under them');
+    assert.ok(/if \(!erPrintFull\) \{/.test(js) && /erPrintFull = true; erRender\(\)/.test(js),
+      'a print keeps the room left for circles it does not draw');
     assert.ok(!/folded \? MARK_D/.test(mk), 'the + is sized by a different rule from the -');
     assert.ok(/folded \? '\+' : '\\u2212'/.test(mk), 'the + carries something other than a +');
   });

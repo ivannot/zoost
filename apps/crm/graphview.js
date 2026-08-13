@@ -2015,9 +2015,25 @@ const MARK_D = 16;         // and never wider than the gap between two landing p
 // a floor, and where the rim is genuinely tighter than this the marks touch: two circles overlapping
 // by a pixel is a smaller failure than a control nobody can hit, and hovering one raises it.
 const MARK_MIN = 13;
+let erPrintFull = false;   // the print asks for arcs that reach the boxes; see beforeprint
 function erSizeMarks() {
   const m = document.getElementById('ermarks');
   if (m) m.style.setProperty('--mkz', Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02)).toFixed(3));
+}
+// How wide one mark comes out, from the room its side has. It is asked in two places now that the
+// arcs stop at the circle instead of under it - markAt draws it, the link pass shortens itself by it
+// - and a mark that grew while the arc did not would put the arrowhead straight back where it was
+// hidden. One answer, so the two cannot disagree.
+function erMarkD(S, other, slot) {
+  const side = erSideOf(S, other);
+  const along = (side === 't' || side === 'b') ? S.w : S.h;
+  const gap = along / ((slot ? slot.n : 1) + 1);
+  return Math.max(MARK_MIN, Math.min(MARK_D, gap - 1));
+}
+// The same circle in the drawing's own units, which is what an arc is measured in: `--mkz` keeps the
+// mark a constant size on screen, so at half zoom it covers twice as much of the diagram.
+function erMarkR(S, other, slot) {
+  return erMarkD(S, other, slot) / 2 * Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02));
 }
 // The colour a node wears on the diagram - the header of its box, and now the badge the tooltip puts
 // its name in. One helper and not two answers: «which colour is this node» written twice is two
@@ -2114,8 +2130,25 @@ function erRender() {
     if (!shown.has(a) || !shown.has(b)) return;
     const A = erPos[a], B = erPos[b];
     const ek = ekey(a, b);
-    const [x1, y1, x2, y2, axis] = erEdgePoints(A, B,
+    const [ex1, ey1, ex2, ey2, axis] = erEdgePoints(A, B,
       erSlotMap.get(ek + '\u0001' + a), erSlotMap.get(ek + '\u0001' + b));
+    // The fold control is a circle centred on the point where the arc meets the box, so the last few
+    // pixels of the arc - and the arrowhead, which is the only part carrying the direction - were
+    // drawn underneath it: reported as the arrows being barely visible. The arc stops at the rim
+    // instead, at both ends, so the head sits against the control rather than behind it.
+    //
+    // Never shortened past half the span: two boxes almost touching would otherwise have their arc
+    // turned inside out, and an arc pointing backwards is worse than one with a hidden head. The
+    // marks are not printed, so a print asks for the full-length arcs and gets them.
+    let [x1, y1, x2, y2] = [ex1, ey1, ex2, ey2];
+    if (!erPrintFull) {
+      const ra = erMarkR(A, B, erSlotMap.get(ek + '\u0001' + a));
+      const rb = erMarkR(B, A, erSlotMap.get(ek + '\u0001' + b));
+      const span = axis === 'v' ? Math.abs(ey2 - ey1) : Math.abs(ex2 - ex1);
+      const k = Math.min(1, span / (2 * (ra + rb) || 1));
+      if (axis === 'v') { const s = Math.sign(ey2 - ey1) || 1; y1 += s * ra * k; y2 -= s * rb * k; }
+      else { const s = Math.sign(ex2 - ex1) || 1; x1 += s * ra * k; x2 -= s * rb * k; }
+    }
     const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
     const curve = axis === 'v' ? `C${x1},${my} ${x2},${my} ${x2},${y2}` : `C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
     const hot = (a === sel || b === sel);
@@ -2196,15 +2229,12 @@ function erRender() {
     const sa = erSlotMap.get(ek + '\u0001' + a), sb = erSlotMap.get(ek + '\u0001' + b);
     const pt = erEdgePoints(A, B, sa, sb);
     const S = stay === a ? A : B, slot = stay === a ? sa : sb;
-    const side = erSideOf(S, stay === a ? B : A);
-    const along = (side === 't' || side === 'b') ? S.w : S.h;
-    const gap = along / ((slot ? slot.n : 1) + 1);
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'ermk ' + (folded ? 'back' : 'fold');
     el.style.left = (stay === a ? pt[0] : pt[2]) + 'px';
     el.style.top = (stay === a ? pt[1] : pt[3]) + 'px';
-    el.style.setProperty('--d', Math.max(MARK_MIN, Math.min(MARK_D, gap - 1)).toFixed(1) + 'px');
+    el.style.setProperty('--d', erMarkD(S, stay === a ? B : A, slot).toFixed(1) + 'px');
     el.textContent = folded ? '+' : '\u2212';
     // Worked out when it is asked for, not for every arc on every render: the walks behind it are
     // cheap once and 2N times is the render. A tooltip nobody has hovered has told nobody anything.
@@ -2695,8 +2725,17 @@ function pdfTitle() {
   return `Zoost-${kind}-${ws.instance || 'unknown'}-org${ws.org || 'x'}-${d}`;
 }
 let _prevDocTitle = null;
-window.addEventListener('beforeprint', () => { _prevDocTitle = document.title; document.title = pdfTitle(); });
-window.addEventListener('afterprint', () => { if (_prevDocTitle != null) { document.title = _prevDocTitle; _prevDocTitle = null; } });
+// A printed page has no controls on it - the fold marks are display:none there - so the arcs must not
+// keep the room they were leaving for circles nobody can see. Redrawn full length for the print and
+// redrawn again after it, which is cheap next to what printing itself costs.
+window.addEventListener('beforeprint', () => {
+  _prevDocTitle = document.title; document.title = pdfTitle();
+  if (curView === 'er' && erIds.length) { erPrintFull = true; erRender(); }
+});
+window.addEventListener('afterprint', () => {
+  if (_prevDocTitle != null) { document.title = _prevDocTitle; _prevDocTitle = null; }
+  if (erPrintFull) { erPrintFull = false; erRender(); }
+});
 
 // Visible attribution (also appears in the printed PDF)
 (function () {

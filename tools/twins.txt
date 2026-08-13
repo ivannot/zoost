@@ -73,13 +73,15 @@ erHiddenSet	6e39611ba7ab	6e39611ba7ab	identical
 erHint	1444fecc2b7e	1444fecc2b7e	identical
 erInitControls	0552e736e0ad	6f4e81fa1e04	divergent
 erLayout	c923d560d459	c923d560d459	identical
+erMarkD	ef92c171f3a9	ef92c171f3a9	identical
+erMarkR	74f38ec7f005	74f38ec7f005	identical
 erNotDrawn	03bd5983b5cf	03bd5983b5cf	identical
 erPaint	cd555d2f16c5	cd555d2f16c5	identical
 erParamsToUI	4fcd92a95216	4fcd92a95216	identical
 erPick	1abe2d6a2c51	1abe2d6a2c51	identical
 erPickCard	6e172af64b88	02e5c971b706	divergent
 erReach	67c9311a7d26	67c9311a7d26	identical
-erRender	f0bbba68abc3	7189e083dfe9	divergent
+erRender	2b26daff8c71	b42dd4ae416c	divergent
 erResize	772c4f787802	772c4f787802	identical
 erSaveParams	ad2c6817be8a	16797c3d8335	divergent
 erShow	6b499465c3c1	c8da0ea26cae	divergent
