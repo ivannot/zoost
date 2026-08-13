@@ -238,7 +238,14 @@
   .genbar{display:flex;gap:6px;align-items:center;padding:8px 8px 6px;background:var(--surface);min-width:0}
   /* nowrap keeps the row on one line; min-width:0 lets it scroll INSIDE its own box instead of
      pushing the whole panel wide (which made Remove / Ask AI spill past the edge). */
-  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:5px 7px 7px;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
+  /* The top padding is not spacing, it is headroom: `overflow-x:auto` makes this a scroll container,
+     and a box with one axis `auto` and the other `visible` computes the visible one to `auto` too -
+     so this clips vertically as well. `.explabel` sits 7px above its group's border to straddle it,
+     which put it 1px above this element's padding box and had the top of EXPORT shaved off, in both
+     products, wherever the panel is drawn. Measured in the shipped panel rather than reasoned:
+     label 183.3..191.3, padding box 184.3, clipped by 1.0px. Reported by the author from a
+     screenshot. Keep this at least 6px or the letters lose their top row again. */
+  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:8px 7px 7px;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
   .wsgroup button{height:28px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}   /* uniform height + centering, so every button on the row sits at the same level */
   .wsgroup::-webkit-scrollbar{height:5px}
   .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}

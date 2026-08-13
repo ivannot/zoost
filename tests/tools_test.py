@@ -2749,6 +2749,47 @@ class TheStoreReadingIsShapedBeforeItIsPublished(unittest.TestCase):
         self.assertIsNone(self.s.shape({'takenDown': True}))
 
 
+class TheScrollingRowDoesNotShaveItsOwnLabel(unittest.TestCase):
+    """`.wsgroup` scrolls sideways when the buttons cannot fit, and `overflow-x:auto` beside an
+    `overflow-y:visible` computes the visible axis to `auto` as well - so the row clips vertically
+    too, which nobody asked it for. `.explabel` sits 7px above its group's border on purpose, to
+    straddle it the way a fieldset legend does, and that put it 1px above the row's padding box: the
+    top row of pixels of EXPORT was shaved off, in both products, everywhere the panel is drawn.
+
+    Measured in the shipped panel rather than reasoned - label 183.3..191.3 against a padding box at
+    184.3 - and reported by the author from a screenshot, which is the only way it was ever going to
+    be found: it is one pixel, it is in both twins, and no check looked at geometry.
+
+    This one does the arithmetic instead of the rendering, because that is what a suite can hold: the
+    label rises `top` above the group's padding box, the group's own border earns one of those pixels
+    back, and what is left has to fit in the row's top padding.
+    """
+
+    def rule(self, css: str, selector: str) -> str:
+        m = re.search(re.escape(selector) + r'\{([^}]*)\}', css)
+        self.assertIsNotNone(m, f'{selector} is gone - this check now asserts nothing')
+        return m.group(1)
+
+    def px(self, decls: str, prop: str) -> float:
+        m = re.search(rf'(?:^|;)\s*{prop}\s*:\s*(-?[\d.]+)px', decls)
+        self.assertIsNotNone(m, f'{prop} is not a pixel value in: {decls[:80]}')
+        return float(m.group(1))
+
+    def test_the_label_fits_inside_the_row_that_clips_it(self):
+        for app in ('crm', 'analytics'):
+            css = (ROOT / 'apps' / app / 'sidepanel.html').read_text(encoding='utf-8')
+            row = self.rule(css, '.wsgroup')
+            self.assertIn('overflow-x:auto', row.replace(' ', ''),
+                          f'{app}: the row no longer scrolls, so this check is about nothing')
+            pad_top = float(re.search(r'padding:\s*([\d.]+)px', row).group(1))
+            group_border = float(re.search(r'border:\s*([\d.]+)px', self.rule(css, '.expgroup')).group(1))
+            rise = -self.px(self.rule(css, '.explabel'), 'top')
+            self.assertGreaterEqual(pad_top, rise - group_border,
+                                    f'{app}: the label rises {rise}px, the group gives back '
+                                    f'{group_border}px, and the row only has {pad_top}px of headroom '
+                                    '- the top of EXPORT is being clipped')
+
+
 class ThePicturesShowWhatTheProductDelivers(unittest.TestCase):
     """The Chrome Web Store listing for Zoho Analytics opened on a greyed «Retry 1 failed» chip, and
     nothing was failing: the pictures were rendered from `fixtures/`, which is generated with
