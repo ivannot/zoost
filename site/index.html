@@ -46,6 +46,10 @@
     margin:0 0 22px;font-weight:600}
   h3{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px}
+  .dep{margin:0;padding:16px 18px;background:#0f1826;border:1px solid var(--line);border-radius:10px;
+       font:13.5px/1.75 var(--mono);color:var(--ink);overflow-x:auto}
+  .dep b{color:var(--teal);font-weight:600}
+  .dep i{color:var(--muted);font-style:normal}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
   .card p{margin:0;color:var(--muted);font-size:14.5px}
   .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
@@ -123,10 +127,30 @@
     <div class="cta">
       <a class="btn p" href="#the-workbenches">The workbenches</a>
       <a class="btn" href="#in-common">What every Zoost has in common</a>
+      <a class="btn" href="/try">Try it with invented data</a>
       <span class="meta">Free · Apache-2.0 · no account</span>
     </div>
   </div>
 </div>
+
+<section id="what-moves">
+  <div class="wrap">
+    <h2>You are about to change one function</h2>
+    <p class="lead" style="margin-top:-6px">What else moves?</p>
+    <pre class="dep"><b>Build invoice</b>
+├─ On deal won         <i>automation</i>
+├─ Refresh pricebooks  <i>button</i>
+└─ Dunning run         <i>schedule</i></pre>
+    <p class="note" style="margin-top:16px">Three different kinds of thing reach that one function: an
+      automation behind a workflow, a button somebody added to a module, and a schedule. Zoho will tell you
+      about each of them on a different screen - if you already know to ask. This is the sample workspace,
+      so you can open it yourself in a minute and click the same function.</p>
+    <div class="cta" style="margin-top:18px">
+      <a class="btn p" href="/try">Open the sample workspace →</a>
+      <span class="meta">invented data · no Zoho org · nothing to configure</span>
+    </div>
+  </div>
+</section>
 
 <section id="the-workbenches">
   <div class="wrap">
@@ -174,6 +198,13 @@
         <img src="/img/crm-preview.webp?v=699dcce85b" width="1760" height="1100" loading="lazy" decoding="async"
              alt="The Zoost panel beside Zoho CRM: the function list above, and below it the Details tab of the selected function - its callers, what is failing in Zoho, its size.">
         <figcaption><b>Zoost CRM.</b> The whole org in one list, and under it what is known about the function you picked: who calls it, where it is used, what is failing in Zoho, how big it is. Its source is the next tab along, where every call that resolves to a function you have is a link through to it.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <img src="/img/crm-graph.webp?v=ee4ca82842" width="1760" height="1100" loading="lazy" decoding="async"
+             alt="The Zoost call graph: one function at the centre and every function that calls it around it, drawn from the whole org at once.">
+        <figcaption><b>The same question, drawn.</b> One function, everything that reaches it, and everything it
+          reaches - from the whole org at once rather than one screen at a time.</figcaption>
       </figure>
     </div>
 </section>
