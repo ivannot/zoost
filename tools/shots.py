@@ -322,10 +322,30 @@ atexit.register(_browser_stop)
 
 
 def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, height=800):
-    """One screenshot of a staged page, through the browser that is already running."""
+    """One screenshot of a staged page, through the browser that is already running.
+
+    And the page's own verdict on the run, which used to be thrown away. Every stub writes
+    `SHOT ERROR: ...` into the title when its click script throws, and nothing had ever read it: a
+    panel that failed on load still produced a perfectly good picture of a panel that had not run.
+    An uncaught exception counts the same way.
+
+    This is also the browser-level coverage an audit asked for, arriving from a direction that costs
+    nothing: the shipped pages are loaded in a real Chrome on every render, so «it loads and its
+    scripts run» is now asserted for both panels, both graph windows and both options pages, without
+    a test framework and without the project's first dependency.
+    """
     ws, _, _ = _browser_for(width, height, SCALE)
-    subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, page.as_uri(),
-                    str(dest), str(wait_ms)], check=True, capture_output=True)
+    out = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, page.as_uri(),
+                          str(dest), str(wait_ms)], check=True, capture_output=True, text=True)
+    try:
+        said = json.loads(out.stdout or "{}")
+    except ValueError:
+        said = {}
+    if said.get("title", "").startswith("SHOT ERROR"):
+        raise SystemExit(f"{page.name}: {said['title']}")
+    if said.get("errors"):
+        raise SystemExit(f"{page.name}: the page logged {len(said['errors'])} error(s): "
+                         + " | ".join(said["errors"])[:400])
     return dest
 
 

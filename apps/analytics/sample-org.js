@@ -132,6 +132,8 @@
     let n = 0;
     const newId = () => '177856000000' + String(++n * 4).padStart(6, '0');
     const vid = {}, views = [], schema = {}, deps = {}, sqlindex = {};
+    // One hop away, which is what a pull records for a direct parent or child.
+    const lvl = (id) => ({ id: id, level: 1 });
 
     const FOLDERS = [['1', 'Data'], ['2', 'Queries'], ['3', 'Reports']]
       .concat(o.edgeCases ? [['4', 'System']] : []);
@@ -171,8 +173,18 @@
       schema[id] = { name: name, kind: 'QueryTable', description: '', system: false, dataPrep: false,
                      designModifiedAt: 1786100000000 + n * 1000, columns: cols(['Col_1', 'Col_2', 'Col_3']) };
       const stem = stemOf(name, id);
+      // `{ name, kind, columns[] }` per source, which is what a pull writes - `expandCols()` in the
+      // bridge. It used to be `[name]`, an array, so the sample described a shape the product never
+      // produces: the panel's Lineage tab read `s.columns.length` on it and threw, and every picture
+      // and every test that touched SQL sources was working from an invention. Found by the render
+      // gate the day it started reading what the page says about itself.
       const src = {};
-      sources.forEach((t) => { if (vid[t]) src[vid[t]] = [t]; });
+      sources.forEach((t) => {
+        if (!vid[t]) return;
+        const tbl = TABLES.find((x) => x[0] === t);
+        src[vid[t]] = { name: t, kind: 'Table',
+                        columns: (tbl ? tbl[1] : ['Id']).slice(0, 3).map((c) => ({ name: c, type: 'PLAIN' })) };
+      });
       // A query that could not be read has no file and no stem - «Retry failed» is what exists for
       // it - while one Zoho returned empty has a file with nothing in it. Different facts.
       if (sql === null) {
@@ -181,7 +193,7 @@
         out['sql/' + stem + '.sql'] = sql;
         sqlindex[id] = { stem: stem, name: name, parents: sources.map((t) => vid[t]).filter(Boolean), sources: src };
       }
-      deps[id] = { id: id, parents: sources.map((t) => vid[t]).filter(Boolean), children: [], dashboards: [] };
+      deps[id] = { id: id, parents: sources.map((t) => vid[t]).filter(Boolean).map(lvl), children: [], dashboards: [] };
     }
     for (const [name, parent, kind] of REPORTS) view(name, kind, 'Reports', parent, false);
     for (const name of DASHBOARDS) view(name, 'Dashboard', 'Reports', null, false);
@@ -190,12 +202,16 @@
     // directions are filled, because the panel reads children and dashboards as well as parents.
     for (const v of views) {
       if (!deps[v.id]) deps[v.id] = { id: v.id, parents: [], children: [], dashboards: [] };
-      if (v.parent) deps[v.id].parents.push(v.parent);
+      if (v.parent) deps[v.id].parents.push(lvl(v.parent));
     }
     for (const v of views) {
       for (const p of deps[v.id].parents) {
-        if (!deps[p]) deps[p] = { id: p, parents: [], children: [], dashboards: [] };
-        if (v.type === 'Dashboard') deps[p].dashboards.push(v.id); else deps[p].children.push(v.id);
+        if (!deps[p.id]) deps[p.id] = { id: p.id, parents: [], children: [], dashboards: [] };
+        // A dashboard is carried as a bare id and a view as { id, level }, because that is what a
+        // pull writes - `scanDependencies()` in the bridge maps one through `ids()` and the other
+        // through `one()`. The sample used to write bare ids for all three, so the panel's Lineage
+        // tab rendered «? level undefined» beside every parent, and that picture is on the site.
+        if (v.type === 'Dashboard') deps[p.id].dashboards.push(v.id); else deps[p.id].children.push(lvl(v.id));
       }
     }
 

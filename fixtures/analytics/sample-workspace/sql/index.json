@@ -8,15 +8,60 @@
       "177856000000000216"
     ],
     "sources": {
-      "177856000000000052": [
-        "Orders"
-      ],
-      "177856000000000004": [
-        "Accounts"
-      ],
-      "177856000000000216": [
-        "Regions"
-      ]
+      "177856000000000052": {
+        "name": "Orders",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Date",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000004": {
+        "name": "Accounts",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Name",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Region",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000216": {
+        "name": "Regions",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Region",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Country",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Timezone",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000380": {
@@ -27,12 +72,42 @@
       "177856000000000168"
     ],
     "sources": {
-      "177856000000000144": [
-        "Invoices"
-      ],
-      "177856000000000168": [
-        "Payments"
-      ]
+      "177856000000000144": {
+        "name": "Invoices",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Invoice_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Issued_On",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000168": {
+        "name": "Payments",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Payment_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Invoice_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Received_On",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000396": {
@@ -42,9 +117,24 @@
       "177856000000000120"
     ],
     "sources": {
-      "177856000000000120": [
-        "Shipments"
-      ]
+      "177856000000000120": {
+        "name": "Shipments",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Shipment_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Carrier",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000412": {
@@ -55,12 +145,42 @@
       "177856000000000052"
     ],
     "sources": {
-      "177856000000000076": [
-        "Order_Lines"
-      ],
-      "177856000000000052": [
-        "Orders"
-      ]
+      "177856000000000076": {
+        "name": "Order_Lines",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Line_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Product_Id",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000052": {
+        "name": "Orders",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Date",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000428": {
@@ -71,12 +191,42 @@
       "177856000000000004"
     ],
     "sources": {
-      "177856000000000192": [
-        "Tickets"
-      ],
-      "177856000000000004": [
-        "Accounts"
-      ]
+      "177856000000000192": {
+        "name": "Tickets",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Ticket_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Opened_On",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000004": {
+        "name": "Accounts",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Name",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Region",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000444": {
@@ -87,12 +237,42 @@
       "177856000000000232"
     ],
     "sources": {
-      "177856000000000252": [
-        "Touchpoints"
-      ],
-      "177856000000000232": [
-        "Campaigns"
-      ]
+      "177856000000000252": {
+        "name": "Touchpoints",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Touch_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Campaign_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Contact_Id",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000232": {
+        "name": "Campaigns",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Campaign_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Campaign_Name",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Channel",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000460": {
@@ -103,12 +283,42 @@
       "177856000000000052"
     ],
     "sources": {
-      "177856000000000296": [
-        "Returns"
-      ],
-      "177856000000000052": [
-        "Orders"
-      ]
+      "177856000000000296": {
+        "name": "Returns",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Return_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Reason",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000052": {
+        "name": "Orders",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Order_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Order_Date",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000476": {
@@ -119,12 +329,42 @@
       "177856000000000100"
     ],
     "sources": {
-      "177856000000000272": [
-        "Subscriptions"
-      ],
-      "177856000000000100": [
-        "Products"
-      ]
+      "177856000000000272": {
+        "name": "Subscriptions",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Subscription_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Account_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Product_Id",
+            "type": "PLAIN"
+          }
+        ]
+      },
+      "177856000000000100": {
+        "name": "Products",
+        "kind": "Table",
+        "columns": [
+          {
+            "name": "Product_Id",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Product_Name",
+            "type": "PLAIN"
+          },
+          {
+            "name": "Family",
+            "type": "PLAIN"
+          }
+        ]
+      }
     }
   },
   "177856000000000492": {

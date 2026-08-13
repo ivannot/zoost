@@ -67,6 +67,32 @@ if (arg2 === '--probe') {
   process.stdout.write((await evaluate('[innerWidth, innerHeight]')).join('x'));
 } else {
   await to('Page.enable');
+  // What the page says about itself while it draws. Two things are collected and neither used to be:
+  // an uncaught exception, and the title the stubs write when their click script throws
+  // (`SHOT ERROR: ...`). That title has existed for as long as the stubs have and nothing ever read
+  // it - a page could fail on load and still produce a perfectly good screenshot of a panel that had
+  // not run, which is the «artefact that looks finished» this repository keeps meeting. Reported on
+  // stdout so shots.py can refuse the picture.
+  const thrown = [];
+  await to('Runtime.enable');
+  ws.addEventListener('message', (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.sessionId !== sessionId) return;
+    // With where, not only what: a rejected promise arrives as a message and nothing else, and
+    // «Cannot read properties of undefined» without a frame is a sentence, not a finding. The top
+    // frame of the stack is added when the protocol carries one.
+    const where = (d) => {
+      const f = (d?.stackTrace?.callFrames || [])[0];
+      return f ? ` @ ${String(f.url).split('/').pop()}:${f.lineNumber + 1}:${f.columnNumber} in ${f.functionName || '(top level)'}` : '';
+    };
+    if (m.method === 'Runtime.exceptionThrown') {
+      const d = m.params?.exceptionDetails || {};
+      thrown.push((d.exception?.description || d.text || 'exception') + where(d));
+    } else if (m.method === 'Runtime.consoleAPICalled' && m.params?.type === 'error') {
+      thrown.push((m.params.args || []).map((a) => a.value ?? a.description ?? '?').join(' ')
+                  + where({ stackTrace: m.params.stackTrace }));
+    }
+  });
   await to('Page.navigate', { url: arg2 });
   const deadline = Date.now() + (+capMs || 20000);
   let quiet = 0;
@@ -98,6 +124,8 @@ if (arg2 === '--probe') {
     data = again;
   }
   fs.writeFileSync(out, Buffer.from(data, 'base64'));
+  const title = await evaluate('document.title');
+  process.stdout.write(JSON.stringify({ title: String(title || ''), errors: thrown.slice(0, 5) }));
 }
 await call('Target.closeTarget', { targetId });
 ws.close();

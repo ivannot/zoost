@@ -1239,7 +1239,11 @@ async function renderDetail(v) {
     : '<div class="none">none</div>';
   const q = sqls[v.id];
   const cols = q && q.sources
-    ? Object.entries(q.sources).map(([tid, s]) => `<li>${esc(s.name || nameOf(tid, m))} <span class="lv">${s.columns.length} columns involved</span></li>`).join('')
+    // `s.columns` rather than `s.columns.length` straight: a pull always writes the list, and a
+    // detail pane that throws half-drawn is not the place to find out that something did not. The
+    // count is omitted rather than shown as zero - «0 columns involved» is a measurement, and this
+    // would be the absence of one.
+    ? Object.entries(q.sources).map(([tid, s]) => `<li>${esc((s && s.name) || nameOf(tid, m))}${s && Array.isArray(s.columns) ? ` <span class="lv">${s.columns.length} columns involved</span>` : ''}</li>`).join('')
     : '';
   body.innerHTML = '<div class="dpad">'
     + `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
