@@ -139,7 +139,7 @@ def render_og_card(dest: pathlib.Path) -> pathlib.Path:
     # A profile of its own, for the reason written above shots.render: the shared one is locked by
     # whichever Chrome has not finished exiting, and the wait is a hundred seconds.
     with tempfile.TemporaryDirectory() as prof:
-        subprocess.run([shots.CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+        subprocess.run([shots.chrome(), "--headless", "--disable-gpu", "--hide-scrollbars",
                         "--user-data-dir=" + prof,
                         "--window-size=1200,630", "--force-device-scale-factor=1",
                         "--virtual-time-budget=4000", "--screenshot=" + str(dest),

@@ -70,7 +70,7 @@ def payload(app: str, ws: str, expr: str) -> dict:
         page.write_text(html.replace(
             first, '<script src="fsshim.js"></script>\n<script src="shot.js"></script>\n' + first, 1),
             encoding='utf-8')
-        out = subprocess.run([shots.CHROME, '--headless', '--disable-gpu', '--hide-scrollbars',
+        out = subprocess.run([shots.chrome(), '--headless', '--disable-gpu', '--hide-scrollbars',
                               '--window-size=1280,800', '--virtual-time-budget=20000', '--dump-dom',
                               page.as_uri()], capture_output=True, text=True).stdout
     if 'id="__err"' in out:

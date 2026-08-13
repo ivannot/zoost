@@ -67,7 +67,33 @@ def _chrome() -> str:
     sys.exit("no Chrome found - install one, or set CHROME to its path")
 
 
-CHROME = _chrome()
+# Resolved on first use, never at import, and the difference is not style. `tools_test.py` imports
+# this file - through imgcheck, and directly - so exiting here took the whole Python battery down on
+# any machine without a browser: an outside reviewer cloning the repository saw thirty errors and one
+# failure, and had to work out whether the product was broken or a browser was missing. That is a
+# verdict that depends on the machine, which is the thing this repository refuses everywhere else -
+# and the suite already knows how to say «skipped». It says it here too now.
+_CHROME = None
+
+
+def chrome() -> str:
+    """Where Chrome is, or a clean exit saying so - asked at the moment one is needed."""
+    global _CHROME
+    if _CHROME is None:
+        _CHROME = _chrome()
+    return _CHROME
+
+
+def have_chrome() -> bool:
+    """Is there one at all? For a caller that would rather skip than stop."""
+    global _CHROME
+    if _CHROME is not None:
+        return True
+    try:
+        _CHROME = _chrome()
+        return True
+    except SystemExit:
+        return False
 NAME = {"crm": "Zoost - workbench for Zoho CRM",
         "analytics": "Zoost - workbench for Zoho Analytics"}
 
@@ -249,7 +275,7 @@ def _browser_for(width: int, height: int, scale: float):
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
         proc = subprocess.Popen(
-            [CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+            [chrome(), "--headless=new", "--disable-gpu", "--hide-scrollbars",
              f"--window-size={win_w},{win_h}", f"--force-device-scale-factor={scale}",
              f"--remote-debugging-port={port}", f"--user-data-dir={profile}", "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -804,8 +830,8 @@ def main():
                 say(f"  {app}: unchanged, the five published images are still what this renders")
                 want = [k for k in want if k not in keys]
     rendered = {}
-    if want and not pathlib.Path(CHROME).exists():
-        sys.exit("Chrome not found at " + CHROME)
+    if want and not pathlib.Path(chrome()).exists():
+        sys.exit("Chrome not found at " + chrome())
     todo = [s for s in SHOTS + PANELS + OPTIONS if s[0] in want]
     bad = []
 

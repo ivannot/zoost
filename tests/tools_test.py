@@ -1043,6 +1043,27 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('tools/shots.py', sh, 'it does not name the command that renders them')
         self.assertIn('$SHOTS_NOTE', sh, 'the note is built and never printed')
 
+    def test_a_missing_browser_is_a_skip_and_not_a_verdict(self):
+        # `CHROME = _chrome()` ran at import and `_chrome()` exits when it finds nothing, so on a
+        # machine without a browser the whole Python battery collapsed - thirty errors and a failure,
+        # measured, and an outside reviewer cloning the repository had to work out whether the product
+        # was broken or a browser was missing. A verdict that depends on the machine is the thing this
+        # repository refuses everywhere else, and the suite already knew how to say «skipped».
+        #
+        # Asserted on the source because the alternative is re-importing a module mid-suite: what
+        # matters is that resolving happens in a function, that there is a way to ask without dying,
+        # and that the only exit is inside the resolver.
+        src = (ROOT / 'tools/shots.py').read_text(encoding='utf-8')
+        self.assertNotIn('\nCHROME = _chrome()', src, 'Chrome is resolved at import again')
+        self.assertIn('def chrome()', src, 'nothing resolves it on demand')
+        self.assertIn('def have_chrome()', src, 'nothing can ask without being exited on')
+        self.assertEqual(src.count('sys.exit("no Chrome found'), 1,
+                         'the exit is in more than one place, so one of them will be reached by an import')
+        # and it answers rather than raises, whatever this machine has
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import shots
+        self.assertIn(shots.have_chrome(), (True, False), 'have_chrome() does not answer a question')
+
     def test_what_both_windows_compute_identically_lives_in_one_file(self):
         # The two graph windows are different shapes with identical arithmetic, and that cost a double
         # edit on nearly every change: over one day of layout work, twenty functions were touched and
@@ -2113,7 +2134,9 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         # shots.py, which it does in a comment, so deleting the import left the check green over a
         # module that would raise on import.
         import shots
-        self.assertTrue(shots.CHROME, 'shots.py resolves no browser')
+        if not shots.have_chrome():
+            self.skipTest('no Chrome on this machine - the browser is what this asserts about')
+        self.assertTrue(shots.chrome(), 'shots.py resolves no browser')
         # icons-receive.py serves on import, so it is read rather than run - but read for the call,
         # not for a word that occurs in prose.
         src = (ROOT / 'tools' / 'icons-receive.py').read_text(encoding='utf-8')
