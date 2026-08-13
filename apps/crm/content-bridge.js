@@ -7,6 +7,12 @@
   window.__zoostBridge = true;
 
   const PAGE = 50;
+  // One ceiling for every page loop in this file. It used to be `page > 20` written twice and absent
+  // twice: the two loops without it could walk for ever on an endpoint that never says «no more»,
+  // and - worse for a mirror - the two that had it were the only ones that could *say* they had
+  // stopped early. A partial list must never be shaped like a complete one, so every loop now
+  // counts against this and every result carries `capped`.
+  const MAX_PAGES = 20;
   const BASE = location.origin;
   const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
 
@@ -119,11 +125,34 @@
         { headers: headers(), credentials: 'include' });
     } catch (_) {}
   }
+  // «Zoho said none» and «Zoho answered something this code does not recognise» are two different
+  // facts, and `(resp.workflow_rules || [])` turned the second into the first: a response whose shape
+  // changed would have been mirrored as an empty area, in silence, by a tool whose entire purpose is
+  // to be a faithful copy. Nobody would see a failure - they would see zero workflows and believe it.
+  //
+  // 204 is the only absence Zoho actually states, so it is the only one accepted as one. Anything
+  // else missing its collection is a shape that has moved, and it stops with a message naming the
+  // field. What that costs, said plainly rather than discovered: if some endpoint answers 200 with
+  // the field absent for an org that genuinely has none - not observed here, and not testable
+  // without such an org - that area now reports an error instead of writing zero. That is the right
+  // way round for a mirror, and it is visible and reportable instead of silent.
+  const NO_CONTENT = Object.freeze({});
+  function list(resp, field, path) {
+    if (resp === NO_CONTENT) return [];
+    const v = resp && resp[field];
+    if (Array.isArray(v)) return v;
+    const e = new Error(`${path} answered without a «${field}» list - the response is not the shape `
+      + 'this reads, so nothing was written for it. Zoho may have changed the endpoint.');
+    e.shape = true;
+    e.status = 0;
+    throw e;
+  }
+
   async function api(path, csrfPrefix, retried) {
     const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
     // 204 is an answer: «this org has none of those». It has no body, so res.json() would throw and
     // an empty area would arrive as a failure - measured on an org with no webhooks at all.
-    if (res.status === 204) return {};
+    if (res.status === 204) return NO_CONTENT;
     if (res.ok) return res.json();
     const { message, code } = await errorDetail(res);
     if (!retried && csrfPrefix === 'drepn' && res.status === 400 && message === 'INVALID_CSRF_TOKEN') {
@@ -150,29 +179,33 @@
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
   async function pullAll() {
-    let start = 1, raw = [];
+    let start = 1, raw = [], pages = 0, capped = false;
     while (true) {
-      const page = (await api(`/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`)).functions || [];
+      const path = `/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`;
+      const page = list(await api(path), 'functions', path);
       raw = raw.concat(page); if (page.length < PAGE) break; start += PAGE;
+      if (++pages >= MAX_PAGES) { capped = true; break; }
     }
     const all = raw.filter((f) => f.source !== 'extension'); const files = [];
     for (let i = 0; i < all.length; i++) {
       const f = all[i];
       try {
         const d = await api(`/crm/v2/settings/functions/${f.id}?category=${encodeURIComponent(f.category)}&language=deluge&source=${encodeURIComponent(f.source)}`);
-        const fn = (d.functions || [])[0]; if (fn) files.push(toFile(fn, { namespace: f.workflow?.namespace || f.category }));
+        const fn = list(d, 'functions', 'functions/' + f.id)[0]; if (fn) files.push(toFile(fn, { namespace: f.workflow?.namespace || f.category }));
       } catch (_) {}
       chrome.runtime.sendMessage({ type: 'pullProgress', done: i + 1, total: all.length }).catch(() => {});
       await new Promise((r) => setTimeout(r, 100));
     }
-    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, files };
+    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, files, capped };
   }
   // Metadata-only list (fast, no code) - used to show all functions immediately, then download each on demand.
   async function listFunctions() {
-    let start = 1, raw = [];
+    let start = 1, raw = [], pages = 0, capped = false;
     while (true) {
-      const page = (await api(`/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`)).functions || [];
+      const path = `/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`;
+      const page = list(await api(path), 'functions', path);
       raw = raw.concat(page); if (page.length < PAGE) break; start += PAGE;
+      if (++pages >= MAX_PAGES) { capped = true; break; }
     }
     const all = raw.filter((f) => f.source !== 'extension');
     const entries = all.map((f) => ({
@@ -181,16 +214,16 @@
       category: f.category, source: f.source,
       rest: (f.rest_api || []).some((r) => r.active),
     }));
-    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries };
+    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped };
   }
   // Workflow rules - list (metadata) and per-rule detail (conditions + actions).
   async function listWorkflows() {
     let page = 1, raw = [], capped = false;
     while (true) {
       const resp = await api(`/crm/v8/settings/automation/workflow_rules?page=${page}&per_page=200`);
-      const rules = resp.workflow_rules || []; raw = raw.concat(rules);
+      const rules = list(resp, 'workflow_rules', 'workflow_rules'); raw = raw.concat(rules);
       const info = resp.info || {}; if (!info.more_records || rules.length === 0) break; page++;
-      if (page > 20) { capped = true; break; }   // surfaced to the panel instead of stopping in silence
+      if (page > MAX_PAGES) { capped = true; break; }   // surfaced to the panel instead of stopping in silence
     }
     const entries = raw.map((r) => ({
       id: String(r.id), name: r.name, description: r.description || '',
@@ -201,24 +234,24 @@
   }
   async function fetchWorkflow(id) {
     const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}`);
-    const rule = (resp.workflow_rules || [])[0]; if (!rule) throw new Error('not found');
+    const rule = list(resp, 'workflow_rules', 'workflow_rules/' + id)[0]; if (!rule) throw new Error('not found');
     return { rule };
   }
   async function workflowUsage(id, fromD, tillD) {
     const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}/actions/usage?executed_from=${fromD}&executed_till=${tillD}&include_inner_details=related_details.sent_percentage`);
-    return { usage: (resp.workflow_rules || [])[0] || null };
+    return { usage: list(resp, 'workflow_rules', 'workflow_rules/' + id + '/actions/usage')[0] || null };
   }
   // Scheduled functions - the list already carries the called function {id, name}.
   async function fetchModuleFields(apiName) {
     const fr = await api(`/crm/v2/settings/fields?module=${encodeURIComponent(apiName)}&type=all`);
-    return { fields: fr.fields || [] };
+    return { fields: list(fr, 'fields', 'fields?module=' + apiName) };
   }
   async function listSchedules() {
     let page = 1, raw = [], capped = false;
     while (true) {
       const resp = await api(`/crm/v9/settings/automation/schedules?page=${page}&per_page=200`);
-      const s = resp.schedules || []; raw = raw.concat(s);
-      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > 20) { capped = true; break; }
+      const s = list(resp, 'schedules', 'schedules'); raw = raw.concat(s);
+      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > MAX_PAGES) { capped = true; break; }
     }
     const entries = raw.map((s) => ({
       id: String(s.id), name: s.name, status: s.status,
@@ -229,12 +262,12 @@
   }
   async function fetchOne(id, category, source) {
     const q = []; if (category) q.push('category=' + encodeURIComponent(category)); q.push('language=deluge'); if (source) q.push('source=' + encodeURIComponent(source));
-    const d = await api(`/crm/v2/settings/functions/${id}?${q.join('&')}`); const fn = (d.functions || [])[0];
+    const d = await api(`/crm/v2/settings/functions/${id}?${q.join('&')}`); const fn = list(d, 'functions', 'functions/' + id)[0];
     return fn ? toFile(fn) : null;
   }
 
   async function pullModules() {
-    const mods = (await api('/crm/v2/settings/modules')).modules || [];
+    const mods = list(await api('/crm/v2/settings/modules'), 'modules', 'modules');
     const out = [];
     for (let i = 0; i < mods.length; i++) {
       const m = mods[i]; if (!m.api_name) continue;
@@ -248,27 +281,32 @@
       // written to the module file with the date they were given, in the same spirit as the per-area
       // access record: it is what was asked and what came back, not a permanent verdict.
       let fields = [], fieldsOk = false, unreadable = null;
-      try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}&type=all`)).fields || []; fieldsOk = true; }
+      const fpath = `/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}&type=all`;
+      try { fields = list(await api(fpath), 'fields', fpath); fieldsOk = true; }
       catch (e1) {
-        try { fields = (await api(`/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}`)).fields || []; fieldsOk = true; }
+        const f2 = `/crm/v2/settings/fields?module=${encodeURIComponent(m.api_name)}`;
+        try { fields = list(await api(f2), 'fields', f2); fieldsOk = true; }
         catch (e2) {
           const err = e2.status ? e2 : e1;   // the second attempt drops the URL variant, not the reason
           // Only a 4xx is a refusal: Zoho understood and said no. A dropped connection or a 5xx is a
           // failure, and dating it on disk as a settled answer would be a measurement never taken.
           const st = Number(err.status) || 0;
-          if (st >= 400 && st < 500) unreadable = { status: st, code: err.code || null, message: err.detail || String(err.message || err), at: new Date().toISOString() };
+          // A shape that has moved is also «asked, and the answer is not usable» - a third state
+          // beside refused and failed, and one that must be written down for the same reason: with
+          // it absent, the module lands on disk with no fields and nothing saying why.
+          if ((st >= 400 && st < 500) || err.shape) unreadable = { status: st, code: err.code || null, message: err.detail || String(err.message || err), at: new Date().toISOString() };
         }
       }
       let layouts = [];
       // Only real record modules have layouts. Exact call the CRM UI uses (verified via HAR):
       // v2.2 with the comma URL-encoded (id%2Cstatus) returns every layout WITH full sections/fields.
-      if (fieldsOk) { try { layouts = (await api(`/crm/v2.2/settings/layouts?module=${encodeURIComponent(m.api_name)}&fields=id%2Cstatus`)).layouts || []; } catch (_) {} }
+      if (fieldsOk) { try { layouts = list(await api(`/crm/v2.2/settings/layouts?module=${encodeURIComponent(m.api_name)}&fields=id%2Cstatus`), 'layouts', 'layouts?module=' + m.api_name); } catch (_) {} }
       // Related lists. The API name of a related list is NOT the api_name of the target module:
       // it is what zoho.crm.getRelatedRecords() / the REST /{module}/{id}/{related_list} path expect.
       let related = [];
       if (fieldsOk) {
         try {
-          const rl = (await api(`/crm/v2/settings/related_lists?module=${encodeURIComponent(m.api_name)}`)).related_lists || [];
+          const rl = list(await api(`/crm/v2/settings/related_lists?module=${encodeURIComponent(m.api_name)}`), 'related_lists', 'related_lists?module=' + m.api_name);
           related = rl.map((r) => ({
             api_name: r.api_name || r.name || null,
             label: r.display_label || r.name || r.api_name || null,
@@ -468,7 +506,7 @@
           const sep = k.path.includes('?') ? '&' : '?';
           const resp = await api(`${k.path}${sep}page=${page}&per_page=200&sort_by=modified_time&sort_order=desc`
             + (k.detail ? `&include_inner_details=${encodeURIComponent(k.detail)}` : ''));
-          const rows = resp[k.key] || [];
+          const rows = list(resp, k.key, k.path);
           rows.forEach((r) => out.push(actionRow(k.kind, r)));
           const info = resp.info || {};
           if (!info.more_records || rows.length === 0) break;
@@ -488,7 +526,7 @@
             try {
               const one = await api(`${k.path}/${mine[i].id}`
                 + (k.detail ? `?include_inner_details=${encodeURIComponent(k.detail)}` : ''));
-              const t = (one[k.key] || [])[0];
+              const t = list(one, k.key, `${k.path}/${mine[i].id}`)[0];
               if (t && t.field_mappings) mine[i].mappings = t.field_mappings.map(mapping).filter((m) => m.field);
             } catch (_) { /* one task that will not answer is not the area failing */ }
             await new Promise((res) => setTimeout(res, 40));
@@ -513,7 +551,7 @@
     if (!org) throw new Error('org id not found on the page');
     if (!zu) throw new Error('zuid not found on the page');
     const j = await api(`/deluge/api/ui/v1/${org}/services/ZohoCRM/connections?zuid=${zu}&flowNeeded=true&extentionPlatform=false`, 'drepn');
-    const connections = (j.connections || []).map((c) => ({
+    const connections = list(j, 'connections', 'connections').map((c) => ({
       name: c.name, label: c.displayName || c.name,
       connector: (c.connector && c.connector.name) || null,
       connectorLabel: (c.connector && c.connector.displayName) || null,
@@ -555,7 +593,7 @@
   }
   async function pullFailures() {
     const j = await api('/crm/v2/settings/functions/failures?language=deluge&start=1&limit=100&componentType=all');
-    const failures = (j.custom_function_failures || []).map(failureRow);
+    const failures = list(j, 'custom_function_failures', 'custom_function_failures').map(failureRow);
     // The run counts are aggregates - a count per hour, nothing else - so they carry no record data
     // at all and are the one half of this that costs nothing in posture.
     const to = new Date(), from = new Date(to.getTime() - 24 * 3600 * 1000);

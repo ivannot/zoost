@@ -130,6 +130,21 @@
   const zip = (keys, rows) => (rows || []).map((r) => {
     const o = {}; (keys || []).forEach((k, i) => { o[k] = r[i]; }); return o;
   });
+  // «This workspace has none» and «the answer is not the shape this reads» are two different facts,
+  // and `(rows || [])` made the second look like the first: a VIEWLIST that changed would have been
+  // mirrored as an empty workspace, in silence, by a tool whose whole promise is a faithful copy.
+  // A census that came back as a shape nobody recognises stops here, naming the field. The twin
+  // check on the CRM side is `list()`; the shape of the answer differs, the rule does not.
+  // A `function`, not a `const` arrow, and that is not style: `tests/slice.mjs` lifts a named
+  // declaration out of a browser file to run it alone, and it threw on the arrow version - which is
+  // the rule CLAUDE.md already states about anything a test will lift.
+  function need(v, field, path) {
+    if (Array.isArray(v)) return v;
+    const e = new Error(`${path} answered without «${field}» - the response is not the shape this `
+      + 'reads, so nothing was written for it. Zoho Analytics may have changed the endpoint.');
+    e.shape = true;
+    throw e;
+  }
   // Several fields arrive with a leading space (" 03 Jul 2025"). Trimmed on the way in.
   const text = (v) => (v == null ? '' : String(v).trim());
 
@@ -149,8 +164,9 @@
     const id = ws();
     const j = await api(`/reportsapi/db/${id}/VIEWLIST?ZOHO_FOLDERLIST=true&NOCACHE=${Date.now()}`);
     const d = (j && j.data) || {};
-    const views = zip(d.viewListKey, d.viewListValues);
-    const folders = zip(d.folderListKey, d.folderListValues);
+    const path = `db/${id}/VIEWLIST`;
+    const views = zip(need(d.viewListKey, 'viewListKey', path), need(d.viewListValues, 'viewListValues', path));
+    const folders = zip(need(d.folderListKey, 'folderListKey', path), need(d.folderListValues, 'folderListValues', path));
     const folderName = new Map(folders.map((f) => [String(f.FOLDER_ID), f.FOLD_NAME]));
     return {
       workspace: id,

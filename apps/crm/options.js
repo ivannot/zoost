@@ -92,7 +92,13 @@ async function mergeKeys(cfg, prev, wantLock, pass, forget, cur) {
   for (const prov of ['anthropic', 'openai']) {
     const typed = cfg[prov].apiKey;
     const had = prev[prov] || {};
-    if (forget && forget.has(prov)) { cfg[prov].apiKey = ''; delete cfg[prov].apiKeyEnc; continue; }
+    if (forget && forget.has(prov)) {
+      cfg[prov].apiKey = ''; delete cfg[prov].apiKeyEnc;
+      // And out of the session cache too, or «Forget» means «forget on disk» - the panel would go on
+      // holding the plaintext for this provider until the browser restarted.
+      await window.ZOOST_KEYVAULT.forget(prov);
+      continue;
+    }
 
     // The plaintext to store, from the most authoritative source available. Decrypting is the last
     // resort and the only one that can fail.

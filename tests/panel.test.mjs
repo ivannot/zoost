@@ -3505,3 +3505,48 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/&& bound &&/.test(send), 'a panel with no workspace bound cannot create its first');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «Nothing came back» is not «there is nothing». A mirror that cannot tell those apart writes a
+// convincing lie: zero workflows, zero modules, zero views, and no error anywhere. The two bridges
+// used to read every collection as `(resp.field || [])`, so a response whose shape had moved landed
+// on disk as an empty area. These hold the three states apart - Zoho said none (204), Zoho sent an
+// empty list, Zoho sent something this code does not recognise - in both products, because the rule
+// is one and only the shape of the answer differs.
+{
+  // One context for both, and the reason is the thing being tested: the 204 answer is recognised by
+  // *identity*, so lifting the sentinel and the reader separately gives two frozen objects that are
+  // equal and not the same - which is exactly the failure this first produced. In the shipped file
+  // they share one scope; a test that split them was testing its own harness.
+  const { list, NO_CONTENT } = load([sliceConst('apps/crm/content-bridge.js', 'NO_CONTENT'),
+                                     sliceFn('apps/crm/content-bridge.js', 'list')]);
+
+  test('crm: a 204 is an answer, and it means none', () => {
+    // Length, not deepEqual: the array comes back from the context the slice runs in, so its
+    // prototype is that realm's and a strict structural compare fails on identity alone.
+    assert.equal(list(NO_CONTENT, 'workflow_rules', 'workflow_rules').length, 0);
+  });
+
+  test('crm: an empty list is passed through as an empty list', () => {
+    assert.equal(list({ workflow_rules: [] }, 'workflow_rules', 'workflow_rules').length, 0);
+  });
+
+  test('crm: a body without the collection stops, and says which field', () => {
+    assert.throws(() => list({ info: { more_records: false } }, 'workflow_rules', '/crm/v8/...'),
+                  /workflow_rules/);
+    assert.throws(() => list({ workflow_rules: { id: 1 } }, 'workflow_rules', '/crm/v8/...'),
+                  /not the shape/);
+    try { list({}, 'modules', '/crm/v2/settings/modules'); assert.fail('no throw'); }
+    catch (e) { assert.equal(e.shape, true, 'the failure does not say it is a shape failure'); }
+  });
+
+  const { need } = load([sliceFn('apps/analytics/content-bridge.js', 'need')]);
+
+  test('analytics: the census refuses a shape it does not recognise', () => {
+    assert.equal(need([], 'viewListValues', 'VIEWLIST').length, 0);
+    assert.equal(need([[1]], 'viewListValues', 'VIEWLIST')[0][0], 1);
+    assert.throws(() => need(undefined, 'viewListValues', 'VIEWLIST'), /viewListValues/);
+    try { need(null, 'viewListKey', 'VIEWLIST'); assert.fail('no throw'); }
+    catch (e) { assert.equal(e.shape, true); }
+  });
+}

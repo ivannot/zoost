@@ -726,3 +726,85 @@ test('the dropdown states which engines are ready, on both sides', async () => {
       `${app}: an unconfigured engine must say so in the list`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The cost of the derivation travels with the ciphertext. An outside audit asked for it and the
+// reason is sharper than «future-proofing»: PBKDF2's iteration count is an input to the key, so
+// raising it - the one change this file is *meant* to accept as machines get faster - would make
+// every box already written derive a different key and fail to open. That failure is
+// indistinguishable from a wrong passphrase, which is the single error this design cannot explain,
+// so the number has to be readable from the box rather than from the code that wrote it.
+
+test('the box records the cost it was written at', async () => {
+  const box = await vault('crm').lock(KEY, 'correct horse');
+  assert.equal(typeof box.it, 'number');
+  assert.ok(box.it >= 100000, `a derivation cost of ${box.it} is not a cost`);
+});
+
+test('a box written at another cost still opens', async () => {
+  // Not a hypothetical: this is what raising ITER looks like to a key stored yesterday.
+  const kv = vault('crm');
+  const box = await kv.lock(KEY, 'correct horse');
+  const cheaper = { ...box, it: box.it };            // same box, read through the recorded number
+  assert.equal(await kv.unlock(cheaper, 'correct horse'), KEY);
+  const lying = { ...box, it: box.it + 1 };          // a cost that is not the one it was written at
+  assert.equal(await kv.unlock(lying, 'correct horse'), null,
+               'a box opened at the wrong cost - then the number in it is decorative');
+});
+
+test('a box from before the cost was recorded still opens', async () => {
+  // Backward compatibility is the whole point of the default: an envelope written by 1.43.0 has no
+  // `it`, and must read at the cost that produced it rather than being quietly unreadable.
+  const kv = vault('crm');
+  const box = await kv.lock(KEY, 'correct horse');
+  const old = { v: box.v, salt: box.salt, iv: box.iv, ct: box.ct };
+  assert.equal(await kv.unlock(old, 'correct horse'), KEY);
+});
+
+test('both products write the same envelope', async () => {
+  const a = await vault('crm').lock(KEY, 'x');
+  const b = await vault('analytics').lock(KEY, 'x');
+  assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort());
+  assert.equal(a.it, b.it, 'the twins derive at different costs');
+});
+
+test('nothing that reaches a log or an error carries the key', async () => {
+  // The audit's point, made testable: an API key that reaches a thrown message or a serialised
+  // object has left the vault, and the panel prints error messages.
+  const kv = vault('crm');
+  const box = await kv.lock(KEY, 'correct horse');
+  assert.ok(!JSON.stringify(box).includes(KEY));
+  await kv.remember('anthropic', KEY);
+  const wrong = await kv.unlock(box, 'not the passphrase');
+  assert.equal(wrong, null, 'a wrong passphrase returned something');
+  try {
+    await kv.unlock({ v: 1, it: 250000, salt: 'x', iv: 'y', ct: 'z' }, 'p');
+  } catch (e) {
+    assert.ok(!String(e && e.message).includes(KEY));
+  }
+});
+
+test('forgetting a provider takes it out of the session cache too', async () => {
+  // «Forget» meant «forget on disk»: nothing called into the vault, so the plaintext stayed in the
+  // session cache until the browser restarted. The button's whole meaning is that the key is gone.
+  const kv = vault('crm');
+  await kv.remember('anthropic', KEY);
+  await kv.remember('openai', 'sk-openai-not-real');
+  await kv.forget('anthropic');
+  assert.equal(await kv.recall('anthropic'), null, 'the forgotten key is still in the session');
+  assert.equal(await kv.recall('openai'), 'sk-openai-not-real', 'forgetting one took the other with it');
+  await kv.forget();
+  assert.equal(await kv.recall('openai'), null, 'a bare forget() left something behind');
+});
+
+test('the options page is what calls it', async () => {
+  // The vault could always do this and nobody asked - which is the actual defect. Asserted on the
+  // source because mergeKeys runs against a stubbed window in the other cases here.
+  for (const app of ['crm', 'analytics']) {
+    const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
+    const i = src.indexOf('forget.has(prov)');
+    assert.ok(i > 0, `${app}: the forget branch is gone`);
+    assert.ok(/ZOOST_KEYVAULT\.forget\(prov\)/.test(src.slice(i, i + 400)),
+              `${app}: forgetting a key leaves the plaintext in the session cache`);
+  }
+});

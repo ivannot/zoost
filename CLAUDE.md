@@ -20,6 +20,7 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | [`docs/fixtures.md`](docs/fixtures.md) | before changing what `+ Sample` writes - and before touching any picture on the site or the Store, because every one of them is rendered from **the workspace `+ Sample` delivers**, through the shipped panel |
 | [`docs/panels.md`](docs/panels.md) | before rearranging the chrome, the tabs, a settings form or a second window - and for what the Zoho Analytics data model actually exposes, measured rather than assumed |
 | [`docs/assistant.md`](docs/assistant.md) | before changing what the assistant is told, what it may read, or anything touching the API key and the passphrase that protects it |
+| [`docs/boundaries.md`](docs/boundaries.md) | before touching anything that crosses one: the hook in Zoho's page, the bridge, what a message is allowed to cause, what the assistant may reach, what «read-only» means and where it is enforced |
 | [`docs/traps.md`](docs/traps.md) | when something does nothing and says nothing. Every entry in it failed silently once |
 | [`docs/naming.md`](docs/naming.md) | before writing anything a user or a reviewer can read: the product names, the site, the translations, and the checks that hold them |
 | [`docs/releases.md`](docs/releases.md) | when something in the chain misbehaves - Cloudflare, the Store API, the workflows, the attestations. The routine itself is below, in this file |

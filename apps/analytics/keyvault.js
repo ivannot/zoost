@@ -28,10 +28,10 @@
   const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
   const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-  async function derive(pass, salt) {
+  async function derive(pass, salt, iterations) {
     const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations: iterations || ITER, hash: 'SHA-256' },
       base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
     );
   }
@@ -39,9 +39,14 @@
   async function lock(plain, pass) {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await derive(pass, salt);
+    const key = await derive(pass, salt, ITER);
     const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plain));
-    return { v: 1, salt: b64(salt), iv: b64(iv), ct: b64(ct) };
+    // The cost is written down beside the ciphertext, not only in the code that produced it. Raising
+    // ITER tomorrow is a change nobody can make while the number lives here alone: every box already
+    // written would silently derive a different key and read as «wrong passphrase», which is the one
+    // failure this file cannot distinguish from a real one. A box that predates this carries no `it`
+    // and is read at the old cost, so nothing has to be migrated.
+    return { v: 1, it: ITER, salt: b64(salt), iv: b64(iv), ct: b64(ct) };
   }
 
   /** Returns the plaintext, or null when the passphrase is wrong - AES-GCM authenticates, so a wrong
@@ -50,7 +55,7 @@
   async function unlock(box, pass) {
     try {
       if (!box || box.v !== 1) return null;
-      const key = await derive(pass, unb64(box.salt));
+      const key = await derive(pass, unb64(box.salt), Number(box.it) || ITER);
       const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(box.iv) }, key, unb64(box.ct));
       return dec.decode(out);
     } catch (_) { return null; }
@@ -70,7 +75,20 @@
     try { const r = await chrome.storage.session.get(SESSION); return (r[SESSION] || {})[provider] || null; }
     catch (_) { return null; }
   }
-  async function forget() { try { await chrome.storage.session.remove(SESSION); } catch (_) {} }
+  // With a provider named, only that one leaves; with none, the whole cache goes. It was all-or-
+  // nothing and, worse, nothing called it: pressing «Forget» cleared the key from storage and left
+  // the plaintext sitting in the session cache until the browser restarted - so the one control whose
+  // whole meaning is «this key is gone» left it in memory. Found while checking an audit's point
+  // about session hygiene, which was right for a reason it did not have.
+  async function forget(provider) {
+    try {
+      if (!provider) { await chrome.storage.session.remove(SESSION); return; }
+      const r = await chrome.storage.session.get(SESSION);
+      const keys = Object.assign({}, r[SESSION] || {});
+      delete keys[provider];
+      await chrome.storage.session.set({ [SESSION]: keys });
+    } catch (_) {}
+  }
 
   window.ZOOST_KEYVAULT = { lock, unlock, remember, recall, forget };
 })();
