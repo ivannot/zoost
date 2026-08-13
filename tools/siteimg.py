@@ -27,6 +27,9 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import concurrent.futures
+import threading
+import os
 import time
 import tempfile
 
@@ -37,6 +40,25 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 OUT = ROOT / "site" / "img"
 LEDGER = ROOT / "tools" / "imgstamp.json"
+# Rendered several at a time, and the reason is measured rather than assumed. A single shot of the
+# heavier pages takes about 100 seconds here and the same shot takes half a second on the next run -
+# the same command, the same page, its own profile. Chrome's own log says what the wait is: the
+# compositor never goes idle («CompositorAnimationObserver is active for too long (73.7s)»), so the
+# screenshot sits waiting for a quiet frame that does not come, and gives up on a timeout. Everything
+# that could plausibly have caused it was tried and measured: a dedicated profile, the render scale,
+# the virtual time budget, old headless against new, background networking, occluded-window
+# backgrounding, --timeout. None of them move it.
+#
+# What does move it is that the wait costs nothing but wall clock. **Four of the slow shots in
+# parallel finish in 78 seconds - less than one of them alone** - and the four images come out
+# byte-identical to the serial ones. So the fix is not to make each render faster, which nothing here
+# can do, but to stop queueing behind an idle wait.
+#
+# Threads rather than processes because every worker is a `subprocess.run`: the GIL is released for
+# the whole of it. The default is deliberately modest - each Chrome is a few hundred megabytes, and
+# this runs on a machine somebody is also using.
+JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "6"))
+
 WIDTH = 1760      # 2x the 880px the content column reaches at its widest
 QUALITY = 80
 
@@ -123,10 +145,14 @@ def render_og_card(dest: pathlib.Path) -> pathlib.Path:
     exist. PNG rather than WebP: a scraper that cannot decode the image shows nothing at all, and
     what a given scraper supports is not something this repository can check.
     """
-    subprocess.run([shots.CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                    "--window-size=1200,630", "--force-device-scale-factor=1",
-                    "--virtual-time-budget=4000", "--screenshot=" + str(dest),
-                    (ROOT / "tools" / "ogcard.html").as_uri()], check=True, capture_output=True)
+    # A profile of its own, for the reason written above shots.render: the shared one is locked by
+    # whichever Chrome has not finished exiting, and the wait is a hundred seconds.
+    with tempfile.TemporaryDirectory() as prof:
+        subprocess.run([shots.CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--user-data-dir=" + prof,
+                        "--window-size=1200,630", "--force-device-scale-factor=1",
+                        "--virtual-time-budget=4000", "--screenshot=" + str(dest),
+                        (ROOT / "tools" / "ogcard.html").as_uri()], check=True, capture_output=True)
     return dest
 
 
@@ -181,26 +207,31 @@ def main() -> int:
     # bytes. Measured across the whole set: a run that changes nothing now takes about a second.
     was = json.loads(LEDGER.read_text(encoding="utf-8")) if LEDGER.exists() else {}
     force = "--force" in sys.argv
-    say(f"{'image':22} {'rendered':>13} {'published':>10}")
+    say(f"{'image':22} {'rendered':>13} {'published':>10}   ({JOBS} at a time)")
     every = shots.SHOTS + shots.PANELS + shots.OPTIONS
     kept = unchanged = 0
-    for i, shot in enumerate(every, 1):
+    lock = threading.Lock()
+
+    def one(i, shot):
+        nonlocal kept, unchanged, total
         key = shot[0]
-        # Said *before* the work and flushed, which is the whole point. The line used to be printed
-        # after the render, and stdout block-buffers when it is not a terminal, so a run redirected
-        # to a file produced nothing at all until it exited: thirty-four minutes in which a working
-        # run and a hung one looked identical. Asked for as a rule - «un task monolitico che giri per
-        # tanti minuti e' indistinguibile da uno stuck».
-        say(f"  [{i:>2}/{len(every)}] {key:20}", end="")
+        # Named when it starts and again when it ends, both flushed. The start line is what makes a
+        # run observable at all: the lines used to be printed after the work, and stdout block-buffers
+        # whenever it is not a terminal, so a run redirected to a file said nothing until it exited -
+        # thirty-four minutes in which working and hung looked identical. Asked for as a rule: «un
+        # task monolitico che gira per tanti minuti e' indistinguibile da uno stuck».
+        say(f"  [{i:>2}/{len(every)}] {key:20} …")
         t0 = time.monotonic()
         digest = source_digest(shot[1], shot[-1])
         dest = OUT / (key + ".webp")
         if not force and dest.exists() and (was.get(key) or {}).get("from") == digest:
-            stamp[key] = {"app": shot[1], "from": digest}
-            total += dest.stat().st_size
-            kept += 1
-            say(f" {'':>8}    {dest.stat().st_size // 1024:>8} KB  unchanged source")
-            continue
+            with lock:
+                stamp[key] = {"app": shot[1], "from": digest}
+                total += dest.stat().st_size
+                kept += 1
+            say(f"  [{i:>2}/{len(every)}] {key:20} {'':>8}    "
+                f"{dest.stat().st_size // 1024:>8} KB  unchanged source")
+            return
         png = (shots.render_options if shot in shots.OPTIONS else
                shots.render_panel if shot in shots.PANELS else shots.render)(shot)
         raw = png.stat().st_size
@@ -213,13 +244,19 @@ def main() -> int:
         if dest.exists() and same_picture(fresh, dest, dwebp):
             fresh.unlink()                          # same pixels: the file on disk stays untouched
             note = "  same picture"
-            unchanged += 1
+            with lock:
+                unchanged += 1
         else:
             fresh.replace(dest)
-        total += dest.stat().st_size
-        stamp[key] = {"app": shot[1], "from": digest}
-        say(f" {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}"
-            f"  {time.monotonic() - t0:.0f}s")
+        with lock:
+            total += dest.stat().st_size
+            stamp[key] = {"app": shot[1], "from": digest}
+        say(f"  [{i:>2}/{len(every)}] {key:20} {raw // 1024:>8} KB "
+            f"{dest.stat().st_size // 1024:>8} KB{note}  {time.monotonic() - t0:.0f}s")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JOBS) as pool:
+        for fut in [pool.submit(one, i, s) for i, s in enumerate(every, 1)]:
+            fut.result()                      # re-raises, so a failed render still stops the run
     # The card, under the guard the screenshots are under. It was rendered unconditionally on every
     # run - four seconds of Chrome to produce, most of the time, the same picture - and because
     # `--screenshot=` writes the file whatever comes out, a run that changed nothing could still

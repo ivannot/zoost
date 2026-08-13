@@ -24,6 +24,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import concurrent.futures
 import time
 import tempfile
 
@@ -155,6 +156,22 @@ window.addEventListener('load', () => setTimeout(() => {{
 # takes options.
 SCALE = 1
 
+# Several at a time, for the reason measured in siteimg.py: the heavy pages spend about a hundred
+# seconds waiting for a compositor frame that never comes, and four of them in parallel finish in the
+# time one of them takes alone. Threads, because every worker is a subprocess.run.
+JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "6"))
+
+
+# Every Chrome here gets a profile of its own, and it is worth the paragraph because the cost was
+# enormous and completely invisible. Without `--user-data-dir` Chrome uses the single profile under
+# ~/.config/google-chrome-headless and takes a singleton lock on it, so a render that starts while the
+# previous Chrome has not finished letting go waits for that lock to time out. Measured on the same
+# trivial page while another render was alive: **14.66s without a dedicated profile against 0.37s
+# with one**. Across the set it showed as a metronome - 101s, 1s, 101s, 1s - and that is what gave it
+# away, because work does not take exactly the same number of seconds twice; a timeout does. The
+# profile goes inside the staging directory that is already created and removed per shot, so nothing
+# survives the run.
+
 
 def files_under(base: pathlib.Path, prefix: str):
     """The fixture workspace as {path: text}, the way the shim wants it."""
@@ -187,6 +204,7 @@ def render(shot):
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--user-data-dir=" + str(stage / "_profile"),
                         "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
                         "--virtual-time-budget=9000", "--screenshot=" + str(dest),
                         page.as_uri()], check=True, capture_output=True)
@@ -275,6 +293,7 @@ def render_panel(shot):
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--user-data-dir=" + str(stage / "_profile"),
                         "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
                         "--virtual-time-budget=12000", "--screenshot=" + str(dest),
                         page.as_uri()], check=True, capture_output=True)
@@ -338,6 +357,7 @@ def render_options(shot):
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
         subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+                        "--user-data-dir=" + str(stage / "_profile"),
                         "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
                         "--virtual-time-budget=12000", "--screenshot=" + str(dest),
                         page.as_uri()], check=True, capture_output=True)
@@ -603,21 +623,32 @@ def main():
     if want and not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
     todo = [s for s in SHOTS + PANELS + OPTIONS if s[0] in want]
-    for i, shot in enumerate(todo, 1):
-        # Said before the render and flushed. Each of these is a headless Chrome and takes tens of
-        # seconds; printed afterwards, and block-buffered as stdout is whenever it is not a terminal,
-        # the whole run was silent until it exited - which is indistinguishable from a hung one, and
-        # was for forty minutes. The elapsed seconds are on the line for the same reason: a shot that
-        # is slower than its siblings is the first thing you want to know.
-        say("  [{:>2}/{}] {:<16} ".format(i, len(todo), shot[0]), end="")
+    bad = []
+
+    def one(i, shot):
+        # Named when it starts and again when it ends, both flushed. Printed afterwards - and
+        # block-buffered, as stdout is whenever it is not a terminal - the whole run said nothing
+        # until it exited, which is indistinguishable from a hung one and was for forty minutes. The
+        # elapsed seconds are there because a shot slower than its siblings is the first thing worth
+        # knowing; they are what showed the wait this parallelism exists to reclaim.
+        say("  [{:>2}/{}] {:<16} …".format(i, len(todo), shot[0]))
         t0 = time.monotonic()
         dest = (render_options if shot in OPTIONS else render_panel if shot in PANELS else render)(shot)
         out = subprocess.run(["file", "-b", str(dest)], capture_output=True, text=True).stdout.strip()
         ok = "1280 x 800" in out and "RGB" in out and "RGBA" not in out
-        say("{}  {}  {:.0f}s".format("ok " if ok else "BAD", out, time.monotonic() - t0))
+        say("  [{:>2}/{}] {:<16} {}  {}  {:.0f}s".format(
+            i, len(todo), shot[0], "ok " if ok else "BAD", out, time.monotonic() - t0))
         if not ok:
-            sys.exit("that is not what the Store accepts - see store/assets.md")
+            bad.append(shot[0])
         rendered[shot[0]] = dest
+
+    if todo:
+        say(f"  rendering {len(todo)} shot(s), {JOBS} at a time")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JOBS) as pool:
+        for fut in [pool.submit(one, i, s) for i, s in enumerate(todo, 1)]:
+            fut.result()
+    if bad:
+        sys.exit("that is not what the Store accepts - see store/assets.md: " + ", ".join(bad))
     if not named:
         publish_store_set(rendered)
     # The 1280x800 PNGs are working material: what is published is dist/store/<app>/, and what the

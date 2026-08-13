@@ -966,6 +966,46 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('No release notes', out.stdout,
                       'an empty notes file satisfied the check, which is the same as no notes')
 
+    def test_two_pngs_of_one_picture_are_recognised_as_one(self):
+        # `cmp` answers a question nobody asked: a PNG encoder chooses a row filter per row and a
+        # deflate level, so one picture has many valid encodings. siteimg has compared *pixels* for
+        # WebP since it started leaving unchanged files alone; the PNG half was missing, and it was
+        # missing where it decides things - the Store's screenshots, and any comparison between two
+        # ways of capturing the same page.
+        #
+        # Built here rather than shipped as fixtures: two encodings of the same 2x2 image, one with
+        # every row unfiltered and one with the Up filter, which is exactly the case bytes disagree
+        # on and pixels do not.
+        import struct, zlib
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import pngsame
+
+        def png(rows_with_filters):
+            ihdr = struct.pack('>IIBBBBB', 2, 2, 8, 2, 0, 0, 0)
+            body = b''.join(bytes([f]) + row for f, row in rows_with_filters)
+            def chunk(kind, data):
+                c = kind + data
+                return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c))
+            return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr)
+                    + chunk(b'IDAT', zlib.compress(body)) + chunk(b'IEND', b''))
+
+        red, blue = bytes([255, 0, 0, 255, 0, 0]), bytes([0, 0, 255, 0, 0, 255])
+        plain = png([(0, red), (0, blue)])
+        # the same two rows, second one stored as a difference from the first
+        up = png([(0, red), (2, bytes((b - a) & 0xFF for a, b in zip(red, blue)))])
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = pathlib.Path(tmp) / 'a.png', pathlib.Path(tmp) / 'b.png'
+            a.write_bytes(plain); b.write_bytes(up)
+            self.assertNotEqual(plain, up, 'the two encodings are the same bytes, so this proves nothing')
+            same, why = pngsame.compare(a, b)
+            self.assertTrue(same, f'two encodings of one picture were called different: {why}')
+            # and it has to be able to say no, or it is not a comparison
+            c = pathlib.Path(tmp) / 'c.png'
+            c.write_bytes(png([(0, blue), (0, red)]))
+            differ, why = pngsame.compare(a, c)
+            self.assertFalse(differ, 'a different picture passed as the same one')
+            self.assertIn('pixels differ', why)
+
     def test_the_long_renders_say_where_they_are(self):
         # A silent process and a hung one are the same thing from outside. siteimg rendered 27 images
         # for thirty-four minutes without a line, and the only way to tell it was alive was Chrome's
@@ -976,7 +1016,12 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         for tool in ('siteimg.py', 'shots.py'):
             src = (ROOT / 'tools' / tool).read_text(encoding='utf-8')
             self.assertIn('print(*a, flush=True, **k)', src, f'{tool}: progress can sit in a buffer')
-            self.assertIn('end=""', src, f'{tool}: the line is printed after the work, not before it')
+            # A line naming the unit before the work starts. The shape changed when the renders went
+            # parallel - a half-line with end="" cannot survive interleaving - so what is asserted is
+            # the requirement: something is said, naming the shot, before the render is called.
+            self.assertIn(' …"', src, f'{tool}: nothing is said before the work begins')
+            self.assertLess(src.index(' …"'), src.index('time.monotonic()'),
+                            f'{tool}: the start line comes after the clock, so it is not a start line')
             self.assertIn('time.monotonic()', src, f'{tool}: nothing says how long a unit took')
             self.assertNotIn('\n    print(f"  {key:20}', src, f'{tool}: an unflushed print is back')
 
