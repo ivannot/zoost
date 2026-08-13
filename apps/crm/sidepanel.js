@@ -2555,6 +2555,17 @@ function emptyReason() {
       + 'for that org - or press <b>+ Sample</b> to write one of invented data and look around first. '
       + 'The sample never contacts Zoho, and it is deleted like any other workspace.';
   }
+  if (isSample()) {
+    // A sample workspace is written by «+ Sample» and never pulled, so «Press Pull all» names a
+    // control that is refused for it by design - the reader goes to press it, finds it grey, and
+    // learns nothing. Reported on the Actions tab, which arrived after the sample generator did:
+    // an older sample folder simply has no actions/ in it, and rewriting the sample is the only
+    // thing that puts one there.
+    return '<b>Nothing of this kind in the sample workspace.</b> It is invented data written by '
+      + '<b>+ Sample</b> and never pulled, so <b>Pull all</b> does not apply to it. If this list '
+      + 'should not be empty, the sample was written before this part existed: delete the workspace '
+      + 'and press <b>+ Sample</b> again.';
+  }
   if (oldLayout) {
     // Not a migration and not a fallback: nothing here reads the old paths. It is an empty state
     // telling the truth, the same way the older flat working-folder layout is reported rather than

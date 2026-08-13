@@ -1004,6 +1004,17 @@ function emptyReason() {
       + '<b>+ Sample</b> to write one of invented data and look around first: it never contacts '
       + 'Zoho Analytics, and it is deleted like any other workspace.';
   }
+  if (isSample()) {
+    // A sample workspace is written by «+ Sample» and never pulled, so «Press Pull all» names a
+    // control that is refused for it by design - the reader goes to press it, finds it grey, and
+    // learns nothing. Reported on the Actions tab, which arrived after the sample generator did:
+    // an older sample folder simply has no actions/ in it, and rewriting the sample is the only
+    // thing that puts one there.
+    return '<b>Nothing of this kind in the sample workspace.</b> It is invented data written by '
+      + '<b>+ Sample</b> and never pulled, so <b>Pull all</b> does not apply to it. If this list '
+      + 'should not be empty, the sample was written before this part existed: delete the workspace '
+      + 'and press <b>+ Sample</b> again.';
+  }
   if (diskUnreadable) {
     // The one state where the files are there and the panel cannot see them. Naming the file and what
     // the browser called it, because the cause is outside this extension - a folder that moved, a

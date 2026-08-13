@@ -3411,3 +3411,21 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/guardOk\(\)/.test(js), 'nothing decides what a mismatch refuses');
   });
 }
+
+// A sample workspace is written by + Sample and never pulled, so Pull all is refused for it by
+// design. Every empty list in one still said "Press Pull all" - reported on the Actions tab, which
+// arrived after the sample generator did, so an older sample folder has no actions in it at all.
+// Sending a reader to a control that is grey teaches them nothing and costs them the trip.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: an empty list in the sample workspace does not send you to a grey button`, () => {
+    const why = sliceFn(`apps/${app}/sidepanel.js`, 'emptyReason');
+    assert.ok(/isSample\(\)/.test(why), 'the sample is not a state the empty reason knows about');
+    const at = why.indexOf('isSample()');
+    const tail = why.slice(at);
+    assert.ok(/\+ Sample<\/b> again/.test(tail), 'it does not name what actually rewrites the sample');
+    assert.ok(!/Press <b>Pull all<\/b> to read/.test(tail.split('}')[0]),
+      'the sample branch still sends the reader to Pull all');
+    // Ordering: the folder and the permission still come first - they block the sample too.
+    assert.ok(why.indexOf('rootGranted') < at, 'the sample is blamed before a folder nobody granted');
+  });
+}
