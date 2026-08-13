@@ -3366,3 +3366,24 @@ test('every kind of health finding has a way to open it', () => {
     assert.ok(new RegExp(`\\b${k}:`).test(map), `id=crm nothing opens a ${k}`);
   }
 });
+
+// A workspace whose files were all on disk was announced as "Nothing pulled yet" - reported. Every
+// failure to read went into one fallback, so «there is no such file» and «the read failed» arrived
+// as the same fact, and the panel then named the wrong missing thing: the reader is sent to pull a
+// workspace that has already been pulled, and pulling changes nothing.
+test('analytics: a workspace that cannot be read is not reported as never pulled', () => {
+  const js = read('apps/analytics/sidepanel.js');
+  const rj = js.slice(js.indexOf('const readJson ='), js.indexOf('let diskUnreadable'));
+  assert.ok(/e\.name !== 'NotFoundError'/.test(rj),
+    'every failure still becomes the fallback, so unreadable and absent are one fact');
+  assert.ok(/readFailed = \{ rel/.test(rj), 'a failed read leaves nothing behind to report');
+  const load = sliceFn('apps/analytics/sidepanel.js', 'loadFromDisk');
+  assert.ok(/readFailed = null;/.test(load), 'the load starts from an old failure');
+  assert.ok(/diskUnreadable = views\.length \? null : readFailed;/.test(load),
+    'a stray failure from an unrelated read can speak about this workspace');
+  const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason');
+  assert.ok(why.indexOf('diskUnreadable') < why.indexOf('Nothing pulled yet'),
+    'the panel blames the pull before it says the files could not be read');
+  assert.ok(/Refresh/.test(why.slice(why.indexOf('diskUnreadable'))),
+    'the unreadable state names no control to press');
+});

@@ -280,7 +280,20 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     <li>Switching a kind off removes what it strands as well: a table whose only relations went into it
       has nothing left to link it, so it is not drawn, and the status line says how many. They stay in
       the <b>Explorer</b> list - the diagram is answering a narrower question than the list is.</li>
-    <li><b class="ui">Save PDF</b> prints it at wall size.</li>
+    <li><b class="ui">File ▾</b> holds what leaves the window. <b class="ui">Save PDF</b> prints it at wall
+      size. <b class="ui">Save arrangement…</b> writes the arrangement you made - which boxes sit where,
+      which branches you folded - to a plain file, and <b class="ui">Load arrangement…</b> puts one back.
+      You name the file, so one diagram can have several readings: one arranged for a presentation, one
+      for chasing a problem. Nothing is restored automatically and there is no list of saved
+      arrangements to manage - they are files, in your folders, under your names.</li>
+    <li>When you load one onto a diagram the mirror has moved on, <b>the diagram of today wins and every
+      loss is counted</b>: a table that is gone drops its position, a table that is new is placed by the
+      layout around what was kept, and a table that was renamed loses its position rather than
+      inheriting a stranger's - a box sitting where a different one used to sit would misstate the
+      shape you built. The status line says what happened, in numbers: <i>31 where you put them · 4 new,
+      placed by the layout · 2 in the file are gone from this diagram</i>. If every table still matches
+      but the relations have changed, it says that too - that is the drift nothing else would show.
+      An arrangement saved from another workspace is refused, and the line names both.</li>
   </ul>
   <p>The window also has a <b>Relations</b> tab: one row per join, searchable by table, column or join,
     and every join copyable.</p>

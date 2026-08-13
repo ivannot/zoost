@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:8e3cbb7e473e1ac6 -->
+<!-- translated-from: site/docs-crm.html sha256:310f5a87dcb8e69d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -393,6 +393,21 @@ git commit -m "baseline"</code></pre>
     <li><b>Clicca un arco</b> per isolare una relazione: i due moduli si accendono, tutto il resto sbiadisce e compare una scheda con l'API name della relazione e la chiamata Deluge, pronta da copiare.</li>
     <li><b class="ui">Fit</b> inquadra tutto il disegno nella finestra, e <b>ridimensionare la finestra lo fa da sé</b> - a meno che tu non abbia spostato o zoomato, nel qual caso la vista che hai scelto resta e <b class="ui">Fit</b> te la restituisce. La tab riporta quanti riquadri il diagramma disegnerebbe, e segue i filtri: vedi una categoria spenta riportare il grafo entro il limite prima di chiederlo. Due numeri, entrambi misurati, con due ruoli diversi. Oltre <b>80</b> il disegno si affolla - fino a lì il layout ha tenuto ogni riquadro libero da ogni altro sui grafi su cui è stato provato, e oltre quella soglia i riquadri iniziano a coprirsi - quindi il conteggio diventa ambra e lo dice, e il diagramma viene disegnato comunque: la scelta è tua, non nostra. Oltre <b>800</b> non viene disegnato, perché è il layout stesso a non essere più sostenibile: 400 riquadri richiedono circa 1,3 secondi, 800 circa 3,6, 1200 circa sette. Quel tetto è un default e non una regola - la pagina delle impostazioni ti permette di alzarlo, e dice cosa stai scambiando: più grafo, non un disegno migliore. Spegni una categoria, o metti un focus, e il conteggio scende insieme. <b>Doppio click sul vuoto per zoomarci sopra</b> - il punto che clicchi finisce al centro, e <b class="ui">Fit</b> è la via di ritorno. <b>Togli un riquadro dal disegno</b> con il <b class="ui">−</b> dove un arco lo tocca - un arco unisce due riquadri, quindi ne porta uno per estremità: quello su questo riquadro toglie il riquadro dall'altra parte, e quello laggiù fa lo stesso con questo. Se ne va con lui tutto ciò che il riquadro da cui hai cliccato non raggiunge più senza di lui, quindi ciò che resta raggiungibile per un'altra strada resta, e il tooltip dice cosa sparisce e quanto è prima che tu prema. Passandoci sopra li elenca per nome - ognuno nel colore che il suo riquadro ha nel disegno, così distingui un workflow da una funzione senza leggere - perché allo zoom a cui li leggi buona parte di quello che la cascata porta via è fuori schermo. Quello che è a schermo viene evidenziato nello stesso momento. Un <b class="ui">+</b> nello stesso punto lo riporta indietro. Cliccare l'arco offre entrambe le direzioni dalla scheda, per nome. Nasconde senza rifare il layout, quindi si combina con quello che hai sistemato, e mettere a fuoco qualcosa che hai tolto lo rimette. <b>Trascina un riquadro per spostarlo.</b> Il layout automatico è un punto di partenza - oltre ottanta riquadri si affolla comunque, e sei tu a sapere quali due devono stare vicini. Gli archi spariscono durante il trascinamento e vengono ridisegnati dove lasci, il rilascio dice quanti riquadri stai coprendo, e <b class="ui">Re-layout</b> butta via la disposizione. Quello che sistemi è quello che <b class="ui">Save PDF</b> stampa. Cambiare un filtro rifà il layout, e i riquadri che hai spostato tengono il loro posto mentre vengono posizionati solo i nuovi - la riga in basso dice quanti per parte. Un nuovo arrivato che finisce sopra uno dei tuoi si sposta lui: quello che hai messo tu resta dove l'hai messo, e cede il passo solo ciò che non hai posizionato. Due riquadri che hai sovrapposto <i>tu</i> restano sovrapposti - il rilascio ti ha già detto che uno copre l'altro, e disfarlo sarebbe scavalcare una tua scelta. <b class="ui">Layout ⚙</b> espone spaziatura, apertura, distanza e dimensione delle etichette come slider dal
       vivo. Non esiste un valore giusto - denso o arioso dipende da cosa stai guardando.</li>
+    <li><b class="ui">File ▾</b> raccoglie ciò che esce dalla finestra. <b class="ui">Save PDF</b> lo stampa
+      a dimensione da parete. <b class="ui">Save arrangement…</b> scrive la disposizione che hai fatto -
+      quali riquadri stanno dove, quali rami hai piegato - in un file normale, e <b class="ui">Load
+      arrangement…</b> la rimette. Il nome del file lo scegli tu, quindi lo stesso diagramma può avere
+      più letture: una sistemata per una presentazione, una per inseguire un problema. Non viene
+      ripristinato niente da solo e non c'è nessun elenco di disposizioni da gestire: sono file, nelle
+      tue cartelle, con i tuoi nomi.</li>
+    <li>Quando ne carichi una su un diagramma che nel frattempo è cambiato, <b>vince il diagramma di
+      oggi e ogni perdita viene contata</b>: un riquadro sparito perde la sua posizione, uno nuovo viene
+      piazzato dal layout attorno a quello che hai tenuto, e uno rinominato perde la posizione invece di
+      ereditare quella di un altro - un riquadro messo dove ne stava un altro racconterebbe una forma
+      che non hai costruito. La riga di stato dice cos'è successo, in numeri: <i>31 dove li avevi messi
+      · 4 nuovi, piazzati dal layout · 2 del file non ci sono più su questo diagramma</i>. Se combacia
+      ancora tutto ma le relazioni sono cambiate, dice anche quello: è la deriva che nient'altro
+      mostrerebbe. Una disposizione salvata da un'altra org viene rifiutata, e la riga nomina entrambe.</li>
   </ul>
   <p><b>Cosa non fa:</b> sopra 1200 nodi il layout libero non viene nemmeno tentato - calcolarlo
     bloccherebbe la finestra - quindi <b class="ui">Everything</b> lo dice invece di piantarsi, e resta

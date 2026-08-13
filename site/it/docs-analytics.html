@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:e38f5a9f96c5ff50 -->
+<!-- translated-from: site/docs-analytics.html sha256:69104ca53619ba18 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -302,7 +302,22 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       andavano lì non ha più niente che la leghi, quindi non viene disegnata, e la riga di stato dice
       quante sono. Restano nell'elenco di <b>Explorer</b>: il diagramma risponde a una domanda più
       stretta di quella dell'elenco.</li>
-    <li><b class="ui">Save PDF</b> lo stampa a dimensione da parete.</li>
+    <li><b class="ui">File ▾</b> raccoglie ciò che esce dalla finestra. <b class="ui">Save PDF</b> lo stampa
+      a dimensione da parete. <b class="ui">Save arrangement…</b> scrive la disposizione che hai fatto -
+      quali riquadri stanno dove, quali rami hai piegato - in un file normale, e <b class="ui">Load
+      arrangement…</b> la rimette. Il nome del file lo scegli tu, quindi lo stesso diagramma può avere
+      più letture: una sistemata per una presentazione, una per inseguire un problema. Non viene
+      ripristinato niente da solo e non c'è nessun elenco di disposizioni da gestire: sono file, nelle
+      tue cartelle, con i tuoi nomi.</li>
+    <li>Quando ne carichi una su un diagramma che nel frattempo è cambiato, <b>vince il diagramma di
+      oggi e ogni perdita viene contata</b>: una tabella sparita perde la sua posizione, una nuova viene
+      piazzata dal layout attorno a quello che hai tenuto, e una rinominata perde la posizione invece di
+      ereditare quella di un'altra - un riquadro messo dove ne stava un altro racconterebbe una forma
+      che non hai costruito. La riga di stato dice cos'è successo, in numeri: <i>31 dove le avevi messe
+      · 4 nuove, piazzate dal layout · 2 del file non ci sono più su questo diagramma</i>. Se combaciano
+      ancora tutte ma le relazioni sono cambiate, dice anche quello: è la deriva che nient'altro
+      mostrerebbe. Una disposizione salvata da un altro workspace viene rifiutata, e la riga nomina
+      entrambi.</li>
   </ul>
   <p>La finestra ha anche una scheda <b>Relations</b>: una riga per join, cercabile per tabella, colonna o
     join, e ogni join si può copiare.</p>

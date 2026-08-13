@@ -191,7 +191,25 @@ async function readFile(rel) {
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
 }
-const readJson = async (rel, fallback) => { try { return JSON.parse(await readFile(rel)); } catch { return fallback; } };
+// «Not there» and «could not be read» are different facts, and this returned the same fallback for
+// both - so a workspace whose files were all on disk was announced as never pulled, and the reader
+// was sent to press Pull all over a folder that had simply gone unreadable. Reported. The file three
+// screens down carries the same lesson about empty vs unreadable *inside* a file; this is the same
+// mistake one level up, about the file itself.
+//
+// The fallback stays, because most callers genuinely want «use this when there is nothing». What is
+// added is that a failure which is not «no such file» leaves a trace, so whoever asks can say which
+// of the two happened.
+let readFailed = null;
+const readJson = async (rel, fallback) => {
+  try { return JSON.parse(await readFile(rel)); } catch (e) {
+    if (e && e.name !== 'NotFoundError') readFailed = { rel, name: (e && e.name) || 'Error' };
+    return fallback;
+  }
+};
+// What the last load off disk ran into, and the only thing the empty state is allowed to speak about:
+// a stray failure from some unrelated read must not turn into a sentence about this workspace.
+let diskUnreadable = null;
 const writeJson = (rel, o) => writeFile(rel, JSON.stringify(o, null, 2));
 // Merge rather than replace. `.zoost.json` holds more than the binding - the workspace's own name
 // lives there too - and a whole-object write from any one writer silently drops what the others put
@@ -779,6 +797,7 @@ async function writeToDisk(info) {
 }
 
 async function loadFromDisk() {
+  readFailed = null;
   const v = await readJson('views.json', null);
   const s = await readJson('schema.json', null);
   const l = await readJson('lineage.json', null);
@@ -789,6 +808,7 @@ async function loadFromDisk() {
   const index = await readJson('sql/index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
+  diskUnreadable = views.length ? null : readFailed;
   selectedId = null; $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
@@ -977,6 +997,15 @@ function emptyReason() {
       + 'looks like <code>/workspace/&lt;id&gt;</code> - then press <b>+ Workspace</b>. Or press '
       + '<b>+ Sample</b> to write one of invented data and look around first: it never contacts '
       + 'Zoho Analytics, and it is deleted like any other workspace.';
+  }
+  if (diskUnreadable) {
+    // The one state where the files are there and the panel cannot see them. Naming the file and what
+    // the browser called it, because the cause is outside this extension - a folder that moved, a
+    // drive that went offline, a permission that lapsed between sessions - and the reader is the only
+    // one who can tell which.
+    return '<b>This workspace is on disk and could not be read.</b> <code>' + esc(diskUnreadable.rel)
+      + '</code> is there and the read failed (' + esc(diskUnreadable.name) + '). Press <b>\u21bb Refresh</b>. '
+      + 'If it happens again, the folder may have moved, or the drive it lives on may be offline.';
   }
   return '<b>Nothing pulled yet.</b> Press <b>Pull all</b> to read this workspace into the folder: the '
     + 'view list, the columns of every table, the relations and the SQL of each query table.';
