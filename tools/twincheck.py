@@ -298,10 +298,15 @@ def selector_is_product_only(sel):
 # to add something and it goes unchecked - cannot happen. `--accept` records the current state
 # after it has been read, the same differential shape as tools/absolutes.txt.
 #
-# What it does not catch, said rather than left to be found: a change made on both sides in the
-# same commit is exactly what should happen and is recorded silently, so a fix applied twice but
-# *differently* reads as intentional. Only the count of sides that moved is compared, never the
-# content of the change.
+# What it catches and what it does not, said rather than left to be found. A one-sided change is the
+# obvious case. The expensive one is a fix applied to both copies *differently* - it looks like
+# diligence, both files edited in one commit - and that is caught too now: a pair that was
+# byte-identical and is no longer is a finding, whichever side moved. What stays outside is a pair
+# that was *already* divergent and moves again: those are two functions sharing a name, and telling
+# them to agree would be this file inventing a rule the code never had.
+#
+# This paragraph said the opposite until the day the check was written, which is its own lesson: a
+# comment describing a hole outlives the hole, and reads as current.
 LEDGER = ROOT / 'tools/twins.txt'
 
 

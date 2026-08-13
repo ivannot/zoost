@@ -2562,8 +2562,10 @@ let erHeld = {};           // id -> { x, y }, as the reader left it
 // What the file does *not* carry is as deliberate as what it does. No zoom or pan: that is where you
 // were looking, not what you built. No undo history: replaying a story is fragile where replaying its
 // effects is not. No box sizes: a size comes from the content and the label mode, so a stored one is
-// a lie waiting for a rename. And no display names anywhere - ids and numbers only, so a file that
-// arrives from somebody else cannot put text on the screen.
+// a lie waiting for a rename. No display names anywhere - ids and numbers only, so a file that
+// arrives from somebody else cannot put text on the screen. And no list of what is hidden: hiding is
+// what folding a branch *does*, so the folds already say it, and a file carrying both would have two
+// sources for one fact - which is the pair that disagrees eventually.
 const ARR_V = 1;
 
 // Canonical on purpose: keys sorted, coordinates whole pixels, one box to a line. Two saves of the
