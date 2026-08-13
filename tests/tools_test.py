@@ -1043,6 +1043,33 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('tools/shots.py', sh, 'it does not name the command that renders them')
         self.assertIn('$SHOTS_NOTE', sh, 'the note is built and never printed')
 
+    def test_what_both_windows_compute_identically_lives_in_one_file(self):
+        # The two graph windows are different shapes with identical arithmetic, and that cost a double
+        # edit on nearly every change: over one day of layout work, twenty functions were touched and
+        # twelve had to be typed twice. graphlogic.js holds the shared half, and **what belongs in it
+        # is derived rather than listed** - byte-identical in both products and touching no DOM handle.
+        #
+        # Which is what this asserts, because a hand-kept list is a checklist wearing a script's
+        # clothes: it only ever holds the mistakes already made. A function that becomes shared
+        # tomorrow fails here without anyone remembering it should.
+        import re
+        DOM = re.compile(r"document\.|\$\(|classList|\.style|appendChild|innerHTML|textContent"
+                         r"|getElementById|querySelector|addEventListener|createElement")
+        wins = {a: twincheck.functions((ROOT / 'apps' / a / 'graphview.js').read_text(encoding='utf-8'))
+                for a in ('crm', 'analytics')}
+        shared = set(wins['crm']) & set(wins['analytics'])
+        stragglers = sorted(n for n in shared
+                            if wins['crm'][n] == wins['analytics'][n] and not DOM.search(wins['crm'][n]))
+        self.assertEqual(stragglers, [],
+                         'these are identical in both windows and touch no page, so they belong in '
+                         'graphlogic.js where one edit serves both: ' + ', '.join(stragglers))
+        # and the two copies of the shared file are the same file, which is what makes editing one
+        # of them and copying it across a mechanical step rather than a second act of typing
+        crm = (ROOT / 'apps/crm/graphlogic.js').read_bytes()
+        ana = (ROOT / 'apps/analytics/graphlogic.js').read_bytes()
+        self.assertEqual(crm, ana, 'the two graphlogic.js have drifted')
+        self.assertGreater(len(crm), 10000, 'graphlogic.js has been emptied')
+
     def test_the_gates_are_in_ci_and_not_only_on_this_machine(self):
         # The suite and auditcheck ran in tools/release.sh and nowhere else, so they were gates on
         # the machine that types the tag rather than on the tag: `git tag && git push --follow-tags`

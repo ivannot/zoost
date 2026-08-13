@@ -13,6 +13,19 @@ import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
+/** A named function or const out of a graph window, wherever it now lives: everything both products
+ *  compute identically and that touches no DOM moved into graphlogic.js. Still throws when neither
+ *  file has it, so a rename cannot quietly drop the cover. */
+const gfn = (app, name) => {
+  try { return sliceFn(`apps/${app}/graphlogic.js`, name); }
+  catch { return sliceFn(`apps/${app}/graphview.js`, name); }
+};
+const gcon = (app, name) => {
+  try { return sliceConst(`apps/${app}/graphlogic.js`, name); }
+  catch { return sliceConst(`apps/${app}/graphview.js`, name); }
+};
+const gsrc = (app) => read(`apps/${app}/graphview.js`) + '\n' + read(`apps/${app}/graphlogic.js`);
+
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
 const { stripNonCode } = load([sliceFn('apps/crm/sidepanel.js', 'stripNonCode')]);
@@ -482,7 +495,7 @@ test('the dot, the chips and the filter read the same fact', () => {
   // worked in an org where Zoho returns no namespace, and every dot fell back to grey. One accessor
   // decides all three now, which is the only thing that stops them drifting apart again.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/graphview.js`);
+    const src = gsrc(app);
     assert.match(src, /const KINDOF = \(n\) => \(DATA\.kind === 'schema' \? n\.namespace : n\.category\)/,
       `${app}: the shared accessor is gone`);
     assert.ok(!/NSCOL\(n\.namespace\)/.test(src), `${app}: a dot is coloured by namespace again`);
@@ -516,12 +529,12 @@ test('the kinds are read off the graph, never listed in the code', () => {
     g: { id: 'g', name: 'Notify', category: 'email_notifications', entity: 'actions' },
   };
   const ctx = { N, DATA: { kind: 'calls' }, Object, Set, Map };
-  const api = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                    sliceConst('apps/crm/graphview.js', 'ENTITY_LABEL'),
-                    sliceConst('apps/crm/graphview.js', 'entityOf'),
-                    sliceFn('apps/crm/graphview.js', 'entitiesPresent'),
-                    sliceFn('apps/crm/graphview.js', 'kindGroups'),
-                    sliceConst('apps/crm/graphview.js', 'allKinds')], ctx);
+  const api = load([gcon('crm', 'KINDOF'),
+                    gcon('crm', 'ENTITY_LABEL'),
+                    gcon('crm', 'entityOf'),
+                    gfn('crm', 'entitiesPresent'),
+                    gfn('crm', 'kindGroups'),
+                    gcon('crm', 'allKinds')], ctx);
   const groups = api.kindGroups();
   assert.equal(groups.map(([t]) => t).join(' '), 'Functions Actions Workflows',
     'the groups are not the entities actually present, in their declared order');
@@ -544,7 +557,7 @@ test('every kind gets a colour, and no condition gets one', () => {
   // two roles in one colour. It now picks a *preferred* slot and takes the first free one from
   // there, so the answer depends on the whole set and every kind present is distinct.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     assert.ok(/const FALLBACK_HUES = \[/.test(js), `${app}: an unknown kind would have no colour`);
     assert.ok(/const KINDCOL = \(k\) => declaredHue\(k\) \|\| \(k \? hueFor\(k\) : ''\)/.test(js),
       `${app}: the declared hue no longer wins, or the fallback is gone`);
@@ -554,11 +567,11 @@ test('every kind gets a colour, and no condition gets one', () => {
       // nothing is declared in this stub, so every kind falls through to the fallback
       document: { documentElement: {} },
       getComputedStyle: () => ({ getPropertyValue: () => '' }) };
-    const { hueFor } = load([sliceConst(`apps/${app}/graphview.js`, 'FALLBACK_HUES'),
-                             sliceConst(`apps/${app}/graphview.js`, 'declaredHue'),
+    const { hueFor } = load([gcon(app, 'FALLBACK_HUES'),
+                             gcon(app, 'declaredHue'),
                              // the memo the function keeps, so the slice is the real one
                              'let _hues = null, _huesKey = null;',
-                             sliceFn(`apps/${app}/graphview.js`, 'hueFor')], ctx);
+                             gfn(app, 'hueFor')], ctx);
     kinds = ['scheduler', 'custombutton', 'crmfundamentals', 'standalone', 'workflow'];
     const cols = kinds.map(hueFor);
     assert.equal(new Set(cols).size, kinds.length, `${app}: two kinds collapse to one colour: ${cols}`);
@@ -675,7 +688,7 @@ test('a module Zoho refused cannot be focused, and its emptiness is not a measur
     get scopeAll() { return false; }, get curView() { return 'er'; },
     Math,
   };
-  const { setFocus } = load([sliceFn('apps/crm/graphview.js', 'setFocus')], ctx);
+  const { setFocus } = load([gfn('crm', 'setFocus')], ctx);
   setFocus('Invoices');
   assert.equal(focused, null, 'a module Zoho would not describe was made the focus');
   setFocus('Contacts');
@@ -691,7 +704,7 @@ test('a function box lists what it calls, the way a module box lists its fields'
     'shared.log': { id: 'shared.log', name: 'log', namespace: 'shared', calls: [], called_by: ['billing.createInvoice'] },
     'billing.calcTax': { id: 'billing.calcTax', name: 'calcTax', namespace: 'billing', calls: [], called_by: ['billing.createInvoice'] },
   };
-  const { erCallRows } = load([sliceFn('apps/crm/graphview.js', 'erCallRows')],
+  const { erCallRows } = load([gfn('crm', 'erCallRows')],
     { N, label: (n) => n.name, DATA: { kind: 'calls' }, passKind: () => true });
   const rows = erCallRows(N['billing.createInvoice']);
   assert.deepEqual(rows.map((r) => r.api_name), ['calcTax', 'log'], 'the callees are not listed, or not in order');
@@ -702,8 +715,8 @@ test('a function box lists what it calls, the way a module box lists its fields'
   // deleting the line that reaches it passed, which is the mutation that found this gap.
   const rowsOf = (kind, n, node) => {
     const ctx = { N, label: (x) => x.name, DATA: { kind }, erEmph: 'modules', erAll: true, passKind: () => true };
-    const { erFieldsFor } = load([sliceFn('apps/crm/graphview.js', 'erCallRows'),
-                                  sliceFn('apps/crm/graphview.js', 'erFieldsFor')], ctx);
+    const { erFieldsFor } = load([gfn('crm', 'erCallRows'),
+                                  gfn('crm', 'erFieldsFor')], ctx);
     return erFieldsFor(node);
   };
   assert.deepEqual(rowsOf('calls', 0, N['billing.createInvoice']).map((r) => r.api_name), ['calcTax', 'log'],
@@ -716,7 +729,7 @@ test('nothing user-facing prints a raw node id', () => {
   // The rule is already written down - anything a person reads goes through label(), with the id
   // only as a last resort - and it held by luck: a function's id *is* namespace.name, so it read
   // fine. A workflow's is «wf:501», and the Focus label printed exactly that. Reported.
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   assert.match(src, /const focusName = \(id\) => \(id && N\[id\] \? label\(N\[id\]\) : \(id \|\| ''\)\)/,
     'the accessor that keeps an id off the screen is gone');
   for (const raw of [/esc\(curFocus\)/, /esc\(DATA\.focus\)/, /\$\{curFocus \|\| 'focus'\}/]) {
@@ -741,7 +754,7 @@ test('the workspace bar carries the name the user gave it, next to the platform\
   assert.ok(aw.length >= 1, 'id=analytics the graph stopped carrying its workspace');
   for (const one of aw) assert.ok(/label:/.test(one), `id=analytics a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
   for (const app of ['crm', 'analytics']) {
-    const gv = read(`apps/${app}/graphview.js`);
+    const gv = gsrc(app);
     assert.ok(/function wsLine\(ws\)/.test(gv), `${app}: the header line is not the shared function`);
     assert.ok(/ws\.label && ws\.label !== ws\.instance/.test(gv),
       `${app}: the window either ignores the label or prints it beside an identical name`);
@@ -768,9 +781,9 @@ test('the chips show what is on screen and are switched off, not on', () => {
   };
   const hiddenKinds = new Set(), onlyConds = new Set();
   const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds, Set, Object };
-  const { passKind } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                             sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
-                             sliceFn('apps/crm/graphview.js', 'passKind')], ctx);
+  const { passKind } = load([gcon('crm', 'KINDOF'),
+                             gcon('crm', 'CONDITION_KEYS'),
+                             gfn('crm', 'passKind')], ctx);
   const shown = () => Object.keys(N).filter((k) => passKind(N[k])).join('');
 
   assert.equal(shown(), 'abc', 'the default is not everything');
@@ -788,7 +801,7 @@ test('the filter can be emptied as well as filled, and says so when it is', () =
   // isolating «standalone» meant switching eight things off, which is the same eight clicks the
   // first model charged for the opposite job. Both directions exist now, and each button is absent
   // when it would do nothing.
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   assert.match(src, /btn\('chipall'/, 'there is no way back to everything');
   assert.match(src, /btn\('chipnone'[\s\S]*?hiddenKinds = new Set\(allKinds\(\)\)/, 'there is no way to empty it');
   const sync = src.slice(src.indexOf('function syncChips('), src.indexOf('\n}', src.indexOf('function syncChips(')));
@@ -806,7 +819,7 @@ test('the Visual view is gone, and nothing it alone used survives', () => {
   // It was a second, weaker drawing of what the boxed diagram already shows, so it went. What must
   // not go with it is the layout machinery the boxed free branch shares - settle, the position
   // arrays, forceFeasible - which is the whole risk in deleting a view rather than a file.
-  const js = read('apps/crm/graphview.js'), html = read('apps/crm/graphview.html');
+  const js = gsrc('crm'), html = read('apps/crm/graphview.html');
   for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
                       'pdfBtn', 'vistoobig', 'id="cv"', 'id="tip"']) {
     assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
@@ -840,7 +853,7 @@ test('the Visual view is gone, and nothing it alone used survives', () => {
 test('a box is as wide as what is written in it', () => {
   // Reported: long headers ran past the edge of a fixed 250px box. Text is measured now, and the
   // measurer makes its own canvas because this window no longer has one.
-  const js = read('apps/crm/graphview.js');
+  const js = gsrc('crm');
   assert.match(js, /function textWidth\(/, 'nothing measures the text');
   assert.match(js, /const BOX_MIN = \d+, BOX_MAX = \d+;/, 'the width has no bounds');
   // Run it rather than read it: asserting that the clamp *appears* passed when the whole expression
@@ -852,10 +865,10 @@ test('a box is as wide as what is written in it', () => {
     KINDOF: (n) => n.category, Math,
     document: { createElement: () => ({ getContext: () => ({ set font(_v) {}, measureText: (t) => ({ width: t.length * 7 }) }) }) },
   };
-  const { erBoxSize } = load([sliceConst('apps/crm/graphview.js', 'BOX_MIN'),
-                              sliceConst('apps/crm/graphview.js', '_tm'),
-                              sliceFn('apps/crm/graphview.js', 'textWidth'),
-                              sliceFn('apps/crm/graphview.js', 'erBoxSize')], ctx);
+  const { erBoxSize } = load([gcon('crm', 'BOX_MIN'),
+                              gcon('crm', '_tm'),
+                              gfn('crm', 'textWidth'),
+                              gfn('crm', 'erBoxSize')], ctx);
   const w1 = erBoxSize(wide).w, w2 = erBoxSize(narrow).w;
   assert.ok(w1 > w2, `a long name does not widen its box (${w1} vs ${w2})`);
   assert.ok(w2 >= 190, `a short name goes below the minimum (${w2})`);
@@ -872,7 +885,7 @@ test('the filter is reachable from every view, and reaches every view', () => {
   const aside = html.slice(html.indexOf('<aside>'), html.indexOf('</aside>'));
   assert.ok(!aside.includes('id="chips"'), 'the filter is back inside the one view that has a column');
 
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   const rp = src.slice(src.indexOf('function relPass('), src.indexOf('\n}', src.indexOf('function relPass(')));
   assert.match(rp, /passKind\(N\[r\.from\]\)/, 'the catalogue ignores the filter');
   // Three views, since Visual is gone: the list, the catalogue and the boxed diagram.
@@ -958,7 +971,7 @@ test('the diagram window can change subject, and says why when it cannot', async
     location: { reload: () => { reloaded = true; } },
     alert: (m) => { alerted = m; },
   };
-  const { wireSubject } = load([sliceFn('apps/crm/graphview.js', 'wireSubject')], ctx);
+  const { wireSubject } = load([gfn('crm', 'wireSubject')], ctx);
   wireSubject();
   assert.equal(seg.map((x) => x.sel).join(' '), 'true false', 'the segment does not mark what is on screen');
 
@@ -977,7 +990,7 @@ test('the diagram window can change subject, and says why when it cannot', async
   // from the graph being replaced, and re-deriving them one by one is the half-migrated state this
   // project keeps getting bitten by. Removing the reload passed until this was asserted.
   ctx.chrome.runtime.sendMessage = async () => ({ ok: true });
-  const ok = load([sliceFn('apps/crm/graphview.js', 'wireSubject')], ctx);
+  const ok = load([gfn('crm', 'wireSubject')], ctx);
   ok.wireSubject();
   await box.onclick({ target: seg[1] });
   assert.equal(reloaded, true, 'a successful switch left the old graph on screen');
@@ -1027,10 +1040,10 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
   };
   const ctx = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], relFilter: 'all', relQ: '', passKind: () => true };
   const { buildCallRels, relSnippet, relPass } = load([
-    sliceFn('apps/crm/graphview.js', 'buildCallRels'),
-    sliceConst('apps/crm/graphview.js', 'relSnippet'),
-    sliceConst('apps/crm/graphview.js', 'relScoped'),
-    sliceFn('apps/crm/graphview.js', 'relPass')], ctx);
+    gfn('crm', 'buildCallRels'),
+    gcon('crm', 'relSnippet'),
+    gcon('crm', 'relScoped'),
+    gfn('crm', 'relPass')], ctx);
 
   buildCallRels();
   // Joined rather than deepEqual: the rows are built inside the vm, so their array carries that
@@ -1059,8 +1072,8 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
   // ...and buildRels has to route to it. The same hole as with erFieldsFor: testing the builder
   // without the line that reaches it let deleting that line pass.
   const c2 = { N, label: (n) => n.name, DATA: { kind: 'calls' }, RELS: [], SYS_REL: /^$/, passKind: () => true };
-  const b2 = load([sliceFn('apps/crm/graphview.js', 'buildCallRels'),
-                   sliceFn('apps/crm/graphview.js', 'buildRels')], c2);
+  const b2 = load([gfn('crm', 'buildCallRels'),
+                   gfn('crm', 'buildRels')], c2);
   b2.buildRels();
   assert.equal(c2.RELS.length, 2, 'buildRels does not reach the call catalogue on a call graph');
   assert.ok(c2.RELS[0].call, 'buildRels built schema rows for a call graph');
@@ -1069,7 +1082,7 @@ test('the call catalogue puts the link first, and its snippet is derived not inv
 test('a call graph is never described in the nouns of a schema', () => {
   // Four status lines wrote "modules" and "lookups" literally, so the call graph reported the wrong
   // nouns in three of them. One accessor decides, and nothing else may spell them out.
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   const stat = [...src.matchAll(/\$\('statline'\)\.innerHTML = ([^;]*);/g)].map((m) => m[1]);
   assert.ok(stat.length >= 3, 'the status lines moved - this test has drifted off its target');
   for (const line of stat) {
@@ -1108,15 +1121,15 @@ test('widening the scope clears, says so, and only then computes', async () => {
     requestAnimationFrame: (f) => frames.push(f),
     NOUN: () => ({ all: 'Everything' }), esc: (x) => x, ctx2d: null, W: 0, H: 0,
   };
-  const { setScope } = load([sliceConst('apps/crm/graphview.js', 'DRAW_MAX_NODES'),
+  const { setScope } = load([gcon('crm', 'DRAW_MAX_NODES'),
                              // `drawMax` starts at the measured default and the options page may raise
                              // it, so the predicate reads the variable and not the constant - which is
                              // one more thing the lift has to carry.
-                             sliceConst('apps/crm/graphview.js', 'drawMax'),
-                             sliceConst('apps/crm/graphview.js', 'drawable'),
-                             sliceConst('apps/crm/graphview.js', 'focusName'),
-                             sliceFn('apps/crm/graphview.js', 'runHeavy'),
-                             sliceFn('apps/crm/graphview.js', 'setScope')], ctx);
+                             gcon('crm', 'drawMax'),
+                             gcon('crm', 'drawable'),
+                             gcon('crm', 'focusName'),
+                             gfn('crm', 'runHeavy'),
+                             gfn('crm', 'setScope')], ctx);
   setScope(true);
   assert.deepEqual([...order], ['cleared', 'spinner'], 'it computed before saying anything');
   frames.shift()(); frames.shift()();
@@ -1145,7 +1158,7 @@ test('the force layout paints its spinner before it blocks, not after', () => {
       requestAnimationFrame: (f) => frames.push(f),
       SPIN_NODES: 150,
     };
-    const { runHeavy } = load([sliceFn(`apps/${app}/graphview.js`, 'runHeavy')], ctx);
+    const { runHeavy } = load([gfn(app, 'runHeavy')], ctx);
     runHeavy(host, 'Laying out 300 nodes…', () => order.push('work'));
 
     assert.deepEqual(order, ['show:on'], `${app}: the work ran before anything was shown`);
@@ -1178,14 +1191,14 @@ test('one click folds the list, and one click brings it back', () => {
                   documentElement: { style: { setProperty() {} } } },
       curView: 'explorer', Math,
     };
-    const { wireAsideFold } = load([sliceConst(`apps/${app}/graphview.js`, 'MIN'),
-                                    sliceConst(`apps/${app}/graphview.js`, 'KEEP'),
-                                    sliceConst(`apps/${app}/graphview.js`, 'DRAG'),
+    const { wireAsideFold } = load([gcon(app, 'MIN'),
+                                    gcon(app, 'KEEP'),
+                                    gcon(app, 'DRAG'),
                                     // setFolded writes the control's own label, which lives in MSG
                                     // because it is the aria-label and the title of one element.
-                                    sliceConst(`apps/${app}/graphview.js`, 'MSG'),
-                                    sliceFn(`apps/${app}/graphview.js`, 'asideWidth'),
-                                    sliceFn(`apps/${app}/graphview.js`, 'wireAsideFold')], ctx);
+                                    gcon(app, 'MSG'),
+                                    gfn(app, 'asideWidth'),
+                                    gfn(app, 'wireAsideFold')], ctx);
     wireAsideFold();
 
     const click = (x = 10) => {
@@ -1224,9 +1237,9 @@ test('the list resizes within bounds, and a container with no width is not a bou
   // column to its minimum, which is a measurement being read as a constraint. Found in a preview
   // whose JS context reported innerWidth 0 while the page rendered fine.
   for (const app of ['crm', 'analytics']) {
-    const { asideWidth } = load([sliceConst(`apps/${app}/graphview.js`, 'MIN'),
-                                 sliceConst(`apps/${app}/graphview.js`, 'KEEP'),
-                                 sliceFn(`apps/${app}/graphview.js`, 'asideWidth')], { Math });
+    const { asideWidth } = load([gcon(app, 'MIN'),
+                                 gcon(app, 'KEEP'),
+                                 gfn(app, 'asideWidth')], { Math });
     assert.equal(asideWidth(500, 1240), 500, `${app}: a width that fits is not honoured`);
     assert.equal(asideWidth(100, 1240), 220, `${app}: the column can be dragged below its minimum`);
     assert.equal(asideWidth(1200, 1240), 980, `${app}: the detail can be squeezed to nothing`);
@@ -1249,7 +1262,7 @@ test('the list folds to zero on both sides, min-width included', () => {
     // It is a mark, so the name has to live where a screen reader can reach it.
     const btn = css.match(/<button id="asidebtn"[\s\S]*?>/);
     assert.ok(btn && /aria-label="Hide the list"/.test(btn[0]), `${app}: the fold control has no name`);
-    assert.match(read(`apps/${app}/graphview.js`), /classList\.toggle\('no-aside'/, `${app}: nothing toggles it`);
+    assert.match(gsrc(app), /classList\.toggle\('no-aside'/, `${app}: nothing toggles it`);
 
     // Explorer only - and by placement, not by a guard. It is a tab on the column, so it sits inside
     // #v-explorer and cannot appear in the three views that have no list. It shipped in all four on
@@ -1284,7 +1297,7 @@ test('a selection that cannot be projected takes the projections with it', () =>
     get curView() { return 'er'; },
     get sel() { return globalThis.__sel; },
   };
-  const { updateProjectableTabs } = load([sliceFn('apps/crm/graphview.js', 'updateProjectableTabs')], ctx);
+  const { updateProjectableTabs } = load([gfn('crm', 'updateProjectableTabs')], ctx);
 
   globalThis.__sel = 'Invoices';
   updateProjectableTabs();
@@ -1693,7 +1706,7 @@ test('a filter changes the graph, not only what is painted of it', () => {
   // drawing stayed exactly as large, so nothing became more readable. The layout was computed once
   // for every node and latched behind a boolean; filtering then drew a subset of a diagram laid out
   // for a set it no longer was.
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   assert.ok(!/\blet\b[^\n]*\blaidOut\b\s*=\s*false/.test(src), 'the layout still latches behind a boolean');
   assert.ok(/laidOutKey/.test(src), 'nothing records which set the positions belong to');
   const er = src.slice(src.indexOf('function erLayout('), src.indexOf('\n}', src.indexOf('function erLayout(')));
@@ -1721,7 +1734,7 @@ test('the force layout carries the structure instead of drawing a ring', () => {
   //
   // The replacement is Fruchterman-Reingold, whose two forces are derived from one ideal distance
   // rather than from three constants tuned at about fifty nodes.
-  const src = read('apps/crm/graphview.js');
+  const src = gsrc('crm');
   const s = src.slice(src.indexOf('function settle('), src.indexOf('\n}', src.indexOf('function settle(')));
   assert.ok(!/maxR/.test(s), 'the radius clamp is back, and it is what made the layout a circle');
   assert.ok(/Math\.sqrt\(area \/ n\)/.test(s), 'the ideal distance is not derived from the area');
@@ -1735,10 +1748,10 @@ test('the force layout carries the structure instead of drawing a ring', () => {
 test('the layout is reproducible: the same set comes out the same way', () => {
   // The starting ring used Math.random(), so switching a chip off and back on rearranged a diagram
   // the reader had already learnt. Hashed per id instead - which also makes the PDF reproducible.
-  const src = read('apps/crm/graphview.js');
+  const src = gsrc('crm');
   const seed = src.slice(src.indexOf('function seedRing('), src.indexOf('\n}', src.indexOf('function seedRing(')));
   assert.ok(!/Math\.random/.test(seed), 'the ring is seeded randomly, so the same filter draws differently');
-  const { jitter } = load([sliceFn('apps/crm/graphview.js', 'jitter')], { Math });
+  const { jitter } = load([gfn('crm', 'jitter')], { Math });
   assert.equal(jitter('ns.alpha', 'x'), jitter('ns.alpha', 'x'), 'the scatter is not a function of the id');
   assert.notEqual(jitter('ns.alpha', 'x'), jitter('ns.alpha', 'y'), 'both axes get the same offset');
   assert.notEqual(jitter('ns.alpha', 'x'), jitter('ns.beta', 'x'), 'two nodes get the same offset');
@@ -1752,7 +1765,7 @@ test('a status line counts what is on screen, on both sides of the window', () =
   // not shrink when filtered: a number that is not about what is being looked at. And it is counted
   // from the graph, never from the layout arrays - those are filled later, which is why the schema
   // side alone reported «0 of 90 modules» while the call graph was right.
-  const src = read('apps/crm/graphview.js');
+  const src = gsrc('crm');
   const sc = src.slice(src.indexOf('function statCounts('), src.indexOf('\n}', src.indexOf('function statCounts(')));
   assert.ok(!/\bnodesA\b/.test(sc), 'the counts read layout state that is empty when the line is first written');
   assert.ok(/passKind/.test(sc), 'the counts ignore the chips');
@@ -1764,10 +1777,10 @@ test('a status line counts what is on screen, on both sides of the window', () =
   };
   const hiddenKinds = new Set(), onlyConds = new Set();
   const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds, Set, Object };
-  const { statCounts } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                               sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
-                               sliceFn('apps/crm/graphview.js', 'passKind'),
-                               sliceFn('apps/crm/graphview.js', 'statCounts')], ctx);
+  const { statCounts } = load([gcon('crm', 'KINDOF'),
+                               gcon('crm', 'CONDITION_KEYS'),
+                               gfn('crm', 'passKind'),
+                               gfn('crm', 'statCounts')], ctx);
   assert.deepEqual([statCounts(null).n, statCounts(null).e], [3, 1], 'the unfiltered counts are wrong');
   hiddenKinds.add('connections');
   assert.deepEqual([statCounts(null).n, statCounts(null).e], [2, 1], 'switching a kind off does not change the count');
@@ -1781,8 +1794,8 @@ test('Relations is the third projection of the focus, not a catalogue beside it'
   // a long time; the table never joined them.
   const N = { a: {}, b: {}, c: {} };
   const ctx = { N, curFocus: 'a', egoSet: new Set(['a', 'b']), scopeAll: false, relFilter: 'all', relQ: '' };
-  const { relPass, relScoped } = load([sliceConst('apps/crm/graphview.js', 'relScoped'),
-                                       sliceFn('apps/crm/graphview.js', 'relPass')],
+  const { relPass, relScoped } = load([gcon('crm', 'relScoped'),
+                                       gfn('crm', 'relPass')],
     Object.assign(ctx, { passKind: () => true, Set }));
   assert.ok(relScoped(), 'a focus with a neighbourhood does not scope the table');
   assert.equal(relPass({ call: true, from: 'a', to: 'b' }), true, 'a call inside the neighbourhood is dropped');
@@ -1798,7 +1811,7 @@ test('Relations is the third projection of the focus, not a catalogue beside it'
   // to the chrome it became a duplicate switch for a single state, which is what its own comment
   // had been written to avoid.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/graphview.js`).replace(/^\s*\/\/.*$/gm, '');
+    const src = gsrc(app).replace(/^\s*\/\/.*$/gm, '');
     const rr = src.slice(src.indexOf('function relRender('), src.indexOf('\n}', src.indexOf('function relRender(')));
     assert.ok(!/relall/.test(rr), `${app}: the table still carries a second control for the scope`);
     // ...but it still says which of the four things narrowed it
@@ -1812,7 +1825,7 @@ test('the diagram lends its layout budget to nobody, and says so when it decline
   // state because the *diagram* could not lay that many out - a table pays no such cost. The limit
   // belongs where the cost is, and the diagram re-asserts it for itself rather than blocking a view
   // that was never going to be slow.
-  const src = read('apps/crm/graphview.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = gsrc('crm').replace(/^\s*\/\/.*$/gm, '');
   const ss = src.slice(src.indexOf('function setScope('), src.indexOf('\n}', src.indexOf('function setScope(')));
   // The limit it keeps to itself is the *readability* one now. That is the same case one layer on:
   // borrowing the compute budget here is what let a 1200-node hairball be drawn at all, and borrowing
@@ -1831,7 +1844,7 @@ test('the functions drawing has one name, and the code does not write the old on
   // wrote the other over it on every open - the trap this repository already records about labels
   // that live in the markup and are rebuilt by the code that updates state. It reached the user
   // twice, which is the failure.
-  const js = read('apps/crm/graphview.js');
+  const js = gsrc('crm');
   // Into `#ertabname`, not onto the tab itself: the tab carries the count beside the name now, and
   // `textContent` on the parent would wipe it out on every open - which is this same trap, one element
   // up, and is why the assertion names the child rather than being relaxed to match either.
@@ -1862,7 +1875,7 @@ test('every element the diagram window reaches for is in its own markup', () => 
   // two ends and what each of them says is how many boxes that end would take away.
   const RUNTIME = new Set(['back', 'chipall', 'chipnone', 'down', 'erpickcut', 'erpickcut2', 'erpicksnip', 'layzone', 'up']);
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    const js = gsrc(app), html = read(`apps/${app}/graphview.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
     const used = new Set([...js.matchAll(/\$\('([^']+)'\)/g), ...js.matchAll(/getElementById\('([^']+)'\)/g)]
       .map((m) => m[1]));
@@ -1896,7 +1909,7 @@ test('every element the side panel reaches for is in its own markup', () => {
 test('the Visual view is gone from Analytics too, and the shared machinery is not', () => {
   // It went from the CRM when it turned out to be a weaker drawing of what the boxed diagram already
   // shows. Leaving it on one side made the twins two different products in the window they share.
-  const js = read('apps/analytics/graphview.js'), html = read('apps/analytics/graphview.html');
+  const js = gsrc('analytics'), html = read('apps/analytics/graphview.html');
   for (const dead of ['v-visual', 'vistools', 'visScope', 'visReset', 'fitBtn', 'focusBtn', 'labelBtn',
                       'id="cv"', 'id="tip"', 'data-v="visual"']) {
     assert.ok(!html.includes(dead), `the markup still carries ${dead}`);
@@ -1933,11 +1946,11 @@ test('the diagram never draws a box with nothing left to link it', () => {
     // further down - it was the half that let orphans back in.
     const ctx = { N, edgesA, DATA: { kind: app === 'crm' ? 'calls' : 'schema' },
                   hiddenKinds, onlyConds, egoSet: null, Set, Object };
-    const { linkedUnderFilter } = load([sliceConst(`apps/${app}/graphview.js`, 'KINDOF'),
-                                        sliceConst(`apps/${app}/graphview.js`, 'CONDITION_KEYS'),
-                                        sliceFn(`apps/${app}/graphview.js`, 'passKind'),
-                                        sliceConst(`apps/${app}/graphview.js`, 'erCandidate'),
-                                        sliceFn(`apps/${app}/graphview.js`, 'linkedUnderFilter')], ctx);
+    const { linkedUnderFilter } = load([gcon(app, 'KINDOF'),
+                                        gcon(app, 'CONDITION_KEYS'),
+                                        gfn(app, 'passKind'),
+                                        gcon(app, 'erCandidate'),
+                                        gfn(app, 'linkedUnderFilter')], ctx);
     assert.equal([...linkedUnderFilter()].sort().join(''), 'abcd', `${app}: an unfiltered graph already drops something`);
     // switch off the kind `c` belongs to: d loses its only link and must go with it
     hiddenKinds.add(N.c[kindOf]);
@@ -1957,9 +1970,9 @@ test('the two diagram limits are the measurements, and neither is doing the othe
   // wait and seven is a hang, so 400 is the largest round size measured under two. CROWDED_NODES
   // advises and is measured on quality - five generated graphs per size come out with no box covering
   // another up to 80. Moving either means measuring that one again.
-  const d = (app) => +read(`apps/${app}/graphview.js`).match(/const DRAW_MAX_NODES = (\d+)/)[1];
-  const c = (app) => +read(`apps/${app}/graphview.js`).match(/const CROWDED_NODES = (\d+)/)[1];
-  const s2 = (app) => +read(`apps/${app}/graphview.js`).match(/const SPIN_NODES = (\d+)/)[1];
+  const d = (app) => +gsrc(app).match(/const DRAW_MAX_NODES = (\d+)/)[1];
+  const c = (app) => +gsrc(app).match(/const CROWDED_NODES = (\d+)/)[1];
+  const s2 = (app) => +gsrc(app).match(/const SPIN_NODES = (\d+)/)[1];
   // 800, not the 400 the profile alone suggested: a real org reported 725 boxes, so 400 satisfied the
   // criterion and refused the user it was written for. 800 covers that with headroom, at about 3.6
   // seconds behind a spinner. Moving it again means another reading, from a profile or from an org.
@@ -1969,7 +1982,7 @@ test('the two diagram limits are the measurements, and neither is doing the othe
   assert.equal(c('crm'), c('analytics'), 'the twins disagree about where it gets crowded');
   assert.equal(s2('crm'), s2('analytics'), 'the twins disagree about when to show a spinner');
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     assert.ok(c(app) < d(app), `${app}: the advice is above the ceiling, so it is never given`);
     assert.ok(s2(app) < d(app), `${app}: the spinner threshold is above the ceiling, so it never fires`);
     // The old pair is gone rather than left beside the new one, or one of them is always true.
@@ -2016,7 +2029,7 @@ test('the focus is chrome, and the diagram no longer owns the control for it', (
   // group beside the tabs now, the same shape the chips use, and it carries the depth with it:
   // leaving that behind would have recreated the same problem one control over.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
     assert.ok(!html.includes('id="erScope"'), `${app}: the diagram still owns the scope button`);
     assert.ok(!html.includes('id="erReset"'), `${app}: the diagram still owns the reset button`);
     const head = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
@@ -2038,7 +2051,7 @@ test('the status line stops repeating what the focus group already says', () => 
   // status line is the duplication this project keeps having to remove - and the line has facts of
   // its own that were being crowded out.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     const ego = js.slice(js.indexOf('function egoStat('), js.indexOf('\n}', js.indexOf('function egoStat(')));
     assert.ok(!/Focus: /.test(ego), `${app}: the status line still names the focus`);
     assert.ok(!/depth \$\{egoDepth\}/.test(ego), `${app}: the status line still prints the depth`);
@@ -2056,7 +2069,7 @@ test('the focus chip wears the focused item\'s own colour, not a colour of its o
   // wired to that dimension - the mistake this window has already made once, with the dot that was
   // coloured by namespace while the chips filtered on category.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
     const chip = html.slice(html.indexOf('id="focusnode"') - 40, html.indexOf('id="focusnode"') + 60);
     assert.ok(!/--hue:#/.test(chip), `${app}: the focus chip still carries an authored colour`);
     assert.ok(!/data-hue="focus"/.test(chip), `${app}: the focus chip claims a kind called «focus»`);
@@ -2201,7 +2214,7 @@ test('the arrowhead is the same size on screen at any zoom', () => {
   // measured on the sample org, 20.6px across on a focused view and **3.3px** on the whole org.
   // Direction is half of what an edge says, so a three-pixel triangle is not there in any sense.
   for (const app of ['crm', 'analytics']) {
-    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const html = read(`apps/${app}/graphview.html`), js = gsrc(app);
     assert.ok(/id="erarrow"[^>]*markerUnits="userSpaceOnUse"/.test(html),
       `${app}: the marker still scales with each link's stroke width, and one marker cannot be four sizes`);
     assert.ok(/id="erarrow"[^>]*viewBox="0 0 7 6"/.test(html),
@@ -2252,7 +2265,7 @@ test('an arc leaves and arrives on the side that faces the other box', () => {
   // parallel to the edge it landed on. The head then lay against the box and was painted over by
   // it, because #erboxes comes after #ersvg. Measured on that case: dx=0, dy=-320.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     const fn = js.slice(js.indexOf('function erEdgePoints('), js.indexOf('\n}', js.indexOf('function erEdgePoints(')));
     assert.ok(/Math\.abs\(bcy - acy\) > Math\.abs\(bcx - acx\)/.test(fn),
       `${app}: the side is not chosen by the dominant direction`);
@@ -2263,7 +2276,7 @@ test('an arc leaves and arrives on the side that faces the other box', () => {
   }
 
   // the geometry itself, run rather than read
-  const { erEdgePoints } = load([sliceFn('apps/crm/graphview.js', 'erEdgePoints')], { Math });
+  const { erEdgePoints } = load([gfn('crm', 'erEdgePoints')], { Math });
   const A = { x: 100, y: 400, w: 200, h: 40 };
   const above = { x: 100, y: 40, w: 200, h: 40 };     // straight above: the reported case
   const beside = { x: 600, y: 400, w: 200, h: 40 };   // to the side: what already worked
@@ -2283,7 +2296,7 @@ test('the orphan cascade is computed on the set that will actually be drawn', ()
   // Reported: focus a standalone function, switch the standalone chip off, and five boxes stayed
   // with nothing attached, each held in by an edge to a connection outside the neighbourhood.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     assert.ok(/const erCandidate = \(id\) => !!\(N\[id\] && passKind\(N\[id\]\) && \(!egoSet \|\| egoSet\.has\(id\)\)\)/.test(js),
       `${app}: the candidate set does not include the focus neighbourhood`);
     const lk = js.slice(js.indexOf('function linkedUnderFilter('), js.indexOf('\n}', js.indexOf('function linkedUnderFilter(')));
@@ -2308,11 +2321,11 @@ test('the orphan cascade is computed on the set that will actually be drawn', ()
   // the neighbourhood holds `s` but not the connection it links to - the reported shape
   const ctx = { N, edgesA, DATA: { kind: 'calls' }, hiddenKinds, onlyConds,
                 egoSet: new Set(['f', 'g', 's']), Set, Object };
-  const { linkedUnderFilter } = load([sliceConst('apps/crm/graphview.js', 'KINDOF'),
-                                      sliceConst('apps/crm/graphview.js', 'CONDITION_KEYS'),
-                                      sliceFn('apps/crm/graphview.js', 'passKind'),
-                                      sliceConst('apps/crm/graphview.js', 'erCandidate'),
-                                      sliceFn('apps/crm/graphview.js', 'linkedUnderFilter')], ctx);
+  const { linkedUnderFilter } = load([gcon('crm', 'KINDOF'),
+                                      gcon('crm', 'CONDITION_KEYS'),
+                                      gfn('crm', 'passKind'),
+                                      gcon('crm', 'erCandidate'),
+                                      gfn('crm', 'linkedUnderFilter')], ctx);
   assert.equal([...linkedUnderFilter()].sort().join(''), 'fg',
     's is kept for a partner the neighbourhood excludes');
 });
@@ -2402,7 +2415,7 @@ test('a window resize re-fits the diagram, unless the view is the reader\'s own'
   // would be the window overruling them. Measured on the sample org: fitted 0.109, the reader zooms
   // to 0.119, a resize keeps 0.119; Fit hands it back and the next resize follows again.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/graphview.js`);
+    const js = gsrc(app);
     assert.ok(/window\.addEventListener\('resize'/.test(js), `${app}: nothing listens for a resize`);
     const h = js.slice(js.indexOf("window.addEventListener('resize'"));
     assert.ok(/curView === 'er' && !erUserMoved/.test(h.slice(0, 300)),
@@ -3169,7 +3182,14 @@ test('every message named is defined, and every message defined is named', () =>
   assert.ok(files.length >= 20, `id=glob found only ${files.length} shipped scripts - the walk is wrong`);
   const findings = [];
   for (const rel of files) {
-    const src = read(rel);
+    // A graph window is one program in two files: graphlogic.js holds what both products compute
+    // identically and names the messages the window defines, and the table itself cannot move there
+    // because its wording differs per product. So the pair is read together - splitting a file must
+    // not turn one of its own messages into an undefined one.
+    const mate = rel.endsWith('/graphlogic.js') ? rel.replace('/graphlogic.js', '/graphview.js')
+      : rel.endsWith('/graphview.js') ? rel.replace('/graphview.js', '/graphlogic.js') : null;
+    let src = read(rel);
+    if (mate) src += '\n' + read(mate);
     const used = new Set([...src.matchAll(/\bMSG\.(\w+)/g)].map((m) => m[1]));
     const at = src.indexOf('const MSG = {');
     if (at < 0) {
@@ -3268,7 +3288,7 @@ test('the function search accepts every name a function answers to', () => {
   }
   assert.ok(/FN_NAMES\.some\(/.test(src), 'id=crm the tree filter stopped deriving from FN_NAMES');
   // and the diagram window has to agree, or the same box behaves differently in two places
-  const gv = read('apps/crm/graphview.js');
+  const gv = gsrc('crm');
   const line = gv.split('\n').find((l) => /return !q \|\|/.test(l));
   assert.ok(line, 'id=graphview the node search is gone');
   for (const k of ['n.name', 'n.display_name', 'n.api_name']) {

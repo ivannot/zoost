@@ -28,6 +28,18 @@ import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, read, load } from './slice.mjs';
 import vm from 'node:vm';
 
+/** A named function out of the graph window, wherever it now lives.
+ *
+ * Everything both products compute identically and that touches no DOM moved into graphlogic.js, so
+ * a test that named graphview.js would have gone red for a file split rather than for a defect. It
+ * still throws when neither file has it: a rename must not quietly drop the cover, which is the one
+ * property sliceFn is there for.
+ */
+function gfn(app, name) {
+  try { return sliceFn(`apps/${app}/graphlogic.js`, name); }
+  catch { return sliceFn(`apps/${app}/graphview.js`, name); }
+}
+
 /** erFit() lifted out of an app's graph window, over a panel of a stated size.
  *
  * The globals are the ones the function reads. `state` is the context object itself, so an
@@ -52,7 +64,7 @@ function fitter(app, panel, geom = { maxX: 553, maxY: 494 }, hidden = []) {
     erApply: () => { applied++; },
   };
   const ctx = vm.createContext(state);
-  vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erFit'), ctx);
+  vm.runInContext(gfn(app, 'erFit'), ctx);
   return { fit: () => vm.runInContext('erFit()', ctx), state, applied: () => applied };
 }
 
@@ -222,7 +234,7 @@ function laidOut(app, levels, margin = 36) {
   // erPinnedNow went the same way the moment a loaded arrangement needed a narrower pinned set than
   // a live one: erLayout calls it, and the slice that left it behind threw three lines in.
   vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf', 'erPinnedNow']
-    .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+    .map((f) => gfn(app, f)).join('\n\n'), ctx);
   vm.runInContext('erLayout()', ctx);
   const p = state.erPos;
   const ext = {
@@ -355,7 +367,7 @@ function scatter(n, spanX, spanY, seed = 5) {
 
 function collide(app, { pos, ids }, margin = 28, pinned) {
   const ctx = vm.createContext({ erPos: pos });
-  vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'collideBoxes'), ctx);
+  vm.runInContext(gfn(app, 'collideBoxes'), ctx);
   ctx.list = ids; ctx.margin = margin;
   // Passed through as a real Set built inside the context, because a Set made out here is a Set from
   // another realm and `pinned.size` would read fine while `pinned.has` looked at nothing.
@@ -441,7 +453,7 @@ for (const app of ['crm', 'analytics']) {
       },
       erIds: ['a', 'b', 'c', 'd'],
     });
-    vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'erCovers'), ctx);
+    vm.runInContext(gfn(app, 'erCovers'), ctx);
     assert.equal(vm.runInContext("erCovers('a')", ctx), 2, 'a covers b and d');
     assert.equal(vm.runInContext("erCovers('c')", ctx), 0, 'c covers nothing');
     assert.equal(vm.runInContext("erCovers('nope')", ctx), 0, 'a box with no position counts nothing');
@@ -471,7 +483,7 @@ for (const app of ['crm', 'analytics']) {
       'a drop remembers only the box that moved, so the arrangement around it is lost');
     const up = js.slice(js.indexOf("addEventListener('mouseup'"), js.indexOf("addEventListener('mouseup'") + 900);
     assert.ok(/erIds\.forEach/.test(up), 'the drop does not walk every box when it remembers positions');
-    const lay = sliceFn(`apps/${app}/graphview.js`, 'erLayout');
+    const lay = gfn(app, 'erLayout');
     assert.ok(/erHeld\[id\]/.test(lay) && /erPos\[id\]\.x = h\.x/.test(lay),
       'the layout does not hand a hand-placed box back to where it was put');
     assert.ok(lay.indexOf('erHeld') < lay.indexOf('collideBoxes'),
@@ -529,7 +541,7 @@ for (const app of ['crm', 'analytics']) {
     };
     const ctx = vm.createContext(state);
     vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf', 'erPinnedNow']
-      .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+      .map((f) => gfn(app, f)).join('\n\n'), ctx);
     vm.runInContext('erLayout()', ctx);
     assert.equal(state.erLastKept, 1, 'the layout handed nothing back, so an arrangement is lost');
     // The whole drawing is shifted to a 40px origin at the end, so the held box keeps its *offset*
@@ -580,7 +592,7 @@ for (const app of ['crm', 'analytics']) {
       ekey: (a, b) => a + SEP + b,
     });
     vm.runInContext(['erSideOf', 'erComputeSlots', 'erEdgePoints']
-      .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+      .map((f) => gfn(app, f)).join('\n\n'), ctx);
     const at = (pairs, a, b) => {
       ctx.pairs = pairs;
       const slots = vm.runInContext('erComputeSlots(pairs)', ctx);
@@ -628,7 +640,7 @@ function remover(app, ids, edges, focus) {
   });
   vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ekey'), ctx);
   vm.runInContext(['erReach', 'erWouldGo', 'erHiddenSet', 'erWouldShowSet', 'erWouldShow', 'erUnhide']
-    .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
+    .map((f) => gfn(app, f)).join('\n\n'), ctx);
   const run = (src) => vm.runInContext(src, ctx);
   return {
     ctx,
@@ -731,14 +743,14 @@ for (const app of ['crm', 'analytics']) {
     // The rule lives in erMarkD now and markAt asks it, because the arcs stop at the circle's rim and
     // therefore need the same number: two copies of it would let a mark grow while the arc did not,
     // which puts the arrowhead straight back under the control it was moved out from.
-    const md = sliceFn(`apps/${app}/graphview.js`, 'erMarkD');
+    const md = gfn(app, 'erMarkD');
     assert.ok(/Math\.max\(MARK_MIN, Math\.min\(MARK_D, gap - 1\)\)/.test(md), 'the width no longer follows the gap');
     assert.ok(/erMarkD\(S, stay === a \? B : A, slot\)/.test(mk), 'the mark is sized by its own copy of the rule');
     // The head stands off the box by the circle's width, and it is moved by refX rather than by
     // shortening the paths. That is the whole point: a path is fixed when it is drawn, while both the
     // circle and the head keep a constant size on screen - so a shortened path came apart from the
     // circle as soon as the reader zoomed, which is how the first attempt was reported.
-    const sz = sliceFn(`apps/${app}/graphview.js`, 'erSizeArrows');
+    const sz = gfn(app, 'erSizeArrows');
     assert.ok(/refX/.test(sz), 'the arrowhead is anchored on the box edge, under the fold control');
     assert.ok(/MARK_MIN \/ 2/.test(sz) && /Math\.min\(MARK_MAX, k\)/.test(sz),
       'the setback does not follow the same counter-scaling as the circle it stands off');
@@ -772,8 +784,8 @@ for (const app of ['crm', 'analytics']) {
     });
     vm.runInContext([sliceConst(`apps/${app}/graphview.js`, 'MSG'),
       sliceConst(`apps/${app}/graphview.js`, 'TIP_MAX'),
-      sliceFn(`apps/${app}/graphview.js`, 'erTipIds'),
-      sliceFn(`apps/${app}/graphview.js`, 'erTipText')].join('\n\n'), ctx);
+      gfn(app, 'erTipIds'),
+      gfn(app, 'erTipText')].join('\n\n'), ctx);
     const tip = (set, first, back) => { ctx.s = new Set(set); ctx.f = first; ctx.b = back; return vm.runInContext('erTipText(s, f, b)', ctx); };
 
     // one box: the name, and nothing to count
@@ -797,7 +809,10 @@ for (const app of ['crm', 'analytics']) {
   test(`${app}: hovering a control outlines what would go, and lets go of it`, () => {
     // The other half of the same answer: the list is for what is off screen, the outline for what is
     // on it. Rebuilt with the boxes, so it cannot outlive the render that drew them.
-    const js = read(`apps/${app}/graphview.js`), html = read(`apps/${app}/graphview.html`);
+    // Both files: what draws the outline stayed with the drawing, what decides to ask for it moved
+    // into graphlogic.js, and this test is about the two agreeing.
+    const js = read(`apps/${app}/graphview.js`) + read(`apps/${app}/graphlogic.js`);
+    const html = read(`apps/${app}/graphview.html`);
     assert.ok(/\.erbox\.willgo\{[^}]*dashed/.test(html), 'nothing marks the boxes a control would take');
     assert.ok(/erFlag = \(set\) => \{/.test(js) && /boxEl\.set\(id, div\)/.test(js),
       'the outline is not built from the boxes the render just drew');
@@ -960,7 +975,7 @@ for (const app of ['crm', 'analytics']) {
   const arr = (...names) => {
     const ctx = vm.createContext({ JSON, Object, Array, Number, Math, Set });
     for (const n of ['serializeArrangement', 'parseArrangement', 'matchArrangement'])
-      vm.runInContext(sliceFn(`apps/${app}/graphview.js`, n), ctx);
+      vm.runInContext(gfn(app, n), ctx);
     vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ARR_V'), ctx);
     return ctx;
   };
@@ -1066,7 +1081,7 @@ for (const app of ['crm', 'analytics']) {
     // somewhere else. Every id in it failed to match, which is true and is not the reason - and the
     // file is the one thing that knows the reason.
     const js = read(`apps/${app}/graphview.js`);
-    const fn = sliceFn(`apps/${app}/graphview.js`, 'erApplyArrangement');
+    const fn = gfn(app, 'erApplyArrangement');
     assert.ok(/arrWrongWorkspace/.test(fn), 'a foreign workspace is reported as "nothing matched"');
     assert.ok(fn.indexOf('elsewhere') < fn.indexOf('matchArrangement'),
       'the workspace is decided after the ids, so the symptom is reported before the cause');
