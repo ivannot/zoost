@@ -324,6 +324,21 @@ These all failed **silently**, with no console error. They are the expensive kin
   Its `links` reference nodes and columns **by array index**; those indices mean nothing outside the
   response and are resolved to view ids and column names before travelling any further.
 
+**A read that fails and a file that is not there arrive as the same fact, and the empty state then
+names the wrong cause.** Reported on Analytics: a workspace with every file on disk was announced as
+«Nothing pulled yet», which sends the reader to press Pull all on a workspace that has already been
+pulled - and pulling changes nothing, so the panel is now lying twice. One line did it,
+`readJson(rel, fallback)` swallowing every exception into the fallback. It is fixed there: anything
+that is not `NotFoundError` leaves a trace, and the empty state names the file and what the browser
+called the failure.
+
+**The same shape is still in the CRM panel and has not been reproduced.** `functions/index.json` is
+read inside a bare `try { … } catch {}`, and the meta walk swallows per-file failures the same way,
+so an unreadable workspace there would also come out as an empty one. It is left alone deliberately:
+the load path is different enough - it walks the directory rather than reading one index - that a fix
+written from the Analytics symptom would be a guess, and this project does not ship guesses. Reproduce
+it first: make the folder unreadable between two opens, and see which sentence the panel chooses.
+
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are
 the places to look first when something "does nothing".
