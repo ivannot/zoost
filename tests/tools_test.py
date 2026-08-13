@@ -37,6 +37,7 @@ import htmlcheck            # noqa: E402
 import featurecheck         # noqa: E402
 import namecheck            # noqa: E402
 import sitemap              # noqa: E402
+import twincheck            # noqa: E402
 
 
 class BareNames(unittest.TestCase):
@@ -2529,6 +2530,47 @@ class NothingIsPublishedThatNobodyUses(unittest.TestCase):
             self.assertNotIn('?v=', data['logo'],
                              'a digest here is one nothing maintains - stamp.py rewrites href, src '
                              'and og:image, never a JSON string, so it would rot in silence')
+
+
+class TheTwinLedgerSaysWhereBothSidesArrived(unittest.TestCase):
+    """twincheck compared how many sides of a twin pair had moved, and never whether they still
+    agreed afterwards. So the expensive shape - the same fix applied to both copies, differently -
+    arrived as «the ledger is 1 pair(s) behind ... then --accept», which is not merely quiet: it
+    is the checker recommending the one action that records the divergence as the new normal.
+    Measured against the previous version by planting that exact defect in erCovers.
+
+    Two hashes per side, so a pair is (crm, analytics) and a state is whether they match."""
+
+    A, B, C = ('aaaa', 1), ('bbbb', 1), ('cccc', 1)
+
+    def report(self, now, was):
+        return '\n'.join(twincheck.drift_report(now, was))
+
+    def test_both_sides_moved_apart_from_identical(self):
+        out = self.report({'f': (self.B, self.C)}, {'f': ('aaaa', 'aaaa')})
+        self.assertIn('no longer agree', out, 'a fix applied twice, differently, passed as diligence')
+        self.assertNotIn('--accept', out, 'it still points at the button that would make it permanent')
+
+    def test_both_sides_moved_together_is_only_the_ledger_being_behind(self):
+        # The good case, and it must stay quiet apart from the bookkeeping line - a check that
+        # cannot pass is not strict, it is broken.
+        out = self.report({'f': (self.B, self.B)}, {'f': ('aaaa', 'aaaa')})
+        self.assertNotIn('no longer agree', out)
+        self.assertIn('ledger is 1 pair(s) behind', out)
+
+    def test_a_pair_already_divergent_is_left_alone(self):
+        # Two functions that share a name. Telling them to agree would be the check inventing a
+        # rule the code never had.
+        out = self.report({'f': (self.B, self.C)}, {'f': ('aaaa', 'zzzz')})
+        self.assertNotIn('no longer agree', out)
+
+    def test_reconciling_a_divergent_pair_is_not_a_finding(self):
+        out = self.report({'f': (self.B, self.B)}, {'f': ('aaaa', 'zzzz')})
+        self.assertNotIn('no longer agree', out)
+
+    def test_one_sided_change_still_reads_as_half_done(self):
+        out = self.report({'f': (self.B, self.A)}, {'f': ('aaaa', 'aaaa')})
+        self.assertIn('crm moved, analytics did not', out)
 
 
 class TheMapNamesTheWholeRepository(unittest.TestCase):

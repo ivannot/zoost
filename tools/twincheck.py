@@ -339,6 +339,58 @@ def twins():
     return {n: (side['crm'][n], side['analytics'][n]) for n in sorted(set(side['crm']) & set(side['analytics']))}
 
 
+def drift_report(now, was):
+    """What the ledger says has happened to the twin functions since it was last read.
+
+    A function rather than a loop inside main() because it is the part of this checker with rules
+    in it, and a checker that reports success over the thing it exists to catch is worse than none
+    - which this repository has already had happen twice. Pure: two ledgers in, lines out.
+    """
+    drift, fresh, both = [], [], 0
+    for name, ((ac, _), (bc, _)) in sorted(now.items()):
+        if name not in was:
+            fresh.append(name)
+            continue
+        moved = [s for s, o, n in (('crm', was[name][0], ac), ('analytics', was[name][1], bc)) if o != n]
+        if len(moved) == 1:
+            other = 'analytics' if moved[0] == 'crm' else 'crm'
+            what = 'was identical, now differs' if was[name][0] == was[name][1] else 'changed'
+            drift.append(f'  {name:24s} {what} - {moved[0]} moved, {other} did not')
+        elif moved:
+            # Both sides moved, which is the twin rule being honoured - unless they moved *apart*.
+            # Only the number of sides that moved used to be compared, never where they arrived, so
+            # the one case worth catching read exactly like the good one: a pair that was
+            # byte-identical, got the same fix twice, and got it twice *differently*. That shape is
+            # expensive because it looks like diligence - both files edited, both in the same commit
+            # - and the difference between the copies is now something nobody chose. A one-sided
+            # change at least announces itself as half-done; this announced itself as finished.
+            #
+            # Worse than under-reported, it was mis-routed: the line below says «read them, then
+            # --accept», so following the checker's own advice recorded the divergence as the new
+            # normal. Measured by planting exactly that defect against the previous version.
+            #
+            # Only the identical -> divergent transition is a finding. A pair that was already
+            # divergent is two functions that share a name, and telling them to agree would be the
+            # check inventing a rule the code never had; a pair that was divergent and is now
+            # identical is somebody reconciling them, which is the outcome this file wants.
+            if was[name][0] == was[name][1] and ac != bc:
+                drift.append(f'  {name:24s} was identical - both sides moved, and they no longer agree')
+            else:
+                both += 1
+    for name in sorted(set(was) - set(now)):
+        drift.append(f'  {name:24s} no longer a twin - removed or renamed on one side')
+    # A pair that moved on both sides honoured the twin rule, so it is not a drift. But leaving it
+    # unrecorded is not harmless: the next one-sided change would then be measured against a state
+    # two commits old and read as having moved on both sides too, which is silence exactly where
+    # this check is supposed to speak. So being behind is itself a finding, cleared by --accept.
+    if both:
+        drift.append(f'  the ledger is {both} pair(s) behind - both sides moved; read them, then --accept')
+    if fresh and was:
+        drift.append(f'  {len(fresh)} new twin function(s) not in the ledger: {", ".join(fresh[:6])}'
+                     + (' …' if len(fresh) > 6 else ''))
+    return drift
+
+
 def read_ledger():
     if not LEDGER.exists():
         return {}
@@ -449,29 +501,7 @@ def main():
     chars = sum(v[0][1] for v in ident.values())
     print(f'  {len(now)} function names defined in both products; {len(ident)} byte-identical '
           f'({chars:,} characters of deliberate copy) - tools/twins.txt holds them')
-    drift, fresh, both = [], [], 0
-    for name, ((ac, _), (bc, _)) in sorted(now.items()):
-        if name not in was:
-            fresh.append(name)
-            continue
-        moved = [s for s, o, n in (('crm', was[name][0], ac), ('analytics', was[name][1], bc)) if o != n]
-        if len(moved) == 1:
-            other = 'analytics' if moved[0] == 'crm' else 'crm'
-            what = 'was identical, now differs' if was[name][0] == was[name][1] else 'changed'
-            drift.append(f'  {name:24s} {what} - {moved[0]} moved, {other} did not')
-        elif moved:
-            both += 1
-    for name in sorted(set(was) - set(now)):
-        drift.append(f'  {name:24s} no longer a twin - removed or renamed on one side')
-    # A pair that moved on both sides honoured the twin rule, so it is not a drift. But leaving it
-    # unrecorded is not harmless: the next one-sided change would then be measured against a state
-    # two commits old and read as having moved on both sides too, which is silence exactly where
-    # this check is supposed to speak. So being behind is itself a finding, cleared by --accept.
-    if both:
-        drift.append(f'  the ledger is {both} pair(s) behind - both sides moved; read them, then --accept')
-    if fresh and was:
-        drift.append(f'  {len(fresh)} new twin function(s) not in the ledger: {", ".join(fresh[:6])}'
-                     + (' …' if len(fresh) > 6 else ''))
+    drift = drift_report(now, was)
     print('\n'.join(drift) if drift else '  no one-sided change, and the ledger is current')
     if not was:
         print(f'  (first run: {len(now)} pairs recorded)')
