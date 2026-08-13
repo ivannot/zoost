@@ -2749,6 +2749,141 @@ class TheStoreReadingIsShapedBeforeItIsPublished(unittest.TestCase):
         self.assertIsNone(self.s.shape({'takenDown': True}))
 
 
+class NothingShippedCanWriteToZoho(unittest.TestCase):
+    """«No write path to Zoho» is the first non-negotiable in CLAUDE.md, and until now it was prose:
+    a contributor - or a session here - could add a POST to a CRM endpoint and nothing but a reader's
+    attention stood in the way. This repository has already written down what happens to a rule that
+    lives only as prose. An outside audit asked for exactly this and it was the one finding with no
+    counter-argument.
+
+    The check reads every `fetch(` in the shipped code, takes the call whole, and decides by where it
+    goes: the two AI hosts the manifests declare may use any method - they are POST by nature and the
+    key travels in the body - and everything else, which is Zoho, must be a GET.
+
+    The single exception is named rather than pattern-matched, because an exception that is a regular
+    expression is a hole: `/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD` computes the ER model and
+    creates nothing, and it is already the one absolute this project walks back in its own words -
+    «Zoost never writes to Zoho» fell to an authenticated POST whose URL contains CREATE.
+    """
+
+    AI_HOSTS = ('api.anthropic.com', 'api.openai.com')
+
+    # A file may hold one non-GET helper towards Zoho only if every endpoint it is ever handed is
+    # named here. Keying the exception on the *call site* was the first version and it did not hold:
+    # the fetch says `BASE + path`, so the URL is not there to check - and an allowlist that matches
+    # the helper rather than its arguments would let a second endpoint through the same door for
+    # ever. What is exceptional is the endpoint, so the endpoint is what is written down.
+    ALLOWED_POST = {
+        'analytics/content-bridge.js': {
+            'helper': 'post',
+            'endpoints': ('/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD',),
+            'why': 'computes the ER model of a workspace and creates nothing - the endpoint is '
+                   'named CREATE, which is the one absolute this project walks back in its own words',
+        },
+    }
+
+    def calls(self, src: str):
+        """Every fetch(...) with its argument text, taken by walking the brackets."""
+        out = []
+        for m in re.finditer(r'\bfetch\s*\(', src):
+            depth, i = 0, m.end() - 1
+            while i < len(src):
+                if src[i] == '(':
+                    depth += 1
+                elif src[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            out.append(src[m.end():i])
+        return out
+
+    def test_every_shipped_fetch_to_zoho_is_a_read(self):
+        seen = 0
+        for f in sorted((ROOT / 'apps').rglob('*.js')):
+            rel = '/'.join(f.relative_to(ROOT / 'apps').parts)
+            src = f.read_text(encoding='utf-8')
+            for call in self.calls(src):
+                seen += 1
+                m = re.search(r"method:\s*'([A-Z]+)'", call)
+                method = m.group(1) if m else 'GET'
+                # The host is not always written at the call: the OpenAI one is `OPENAI_BASE +
+                # '/chat/completions'`, and reading the call text alone said «a POST to Zoho» about
+                # the AI provider. So single-quoted constants of the file are resolved first - the
+                # indirection is one hop by convention here, and a check that cannot see through it
+                # would be answered by moving a URL into a variable.
+                # It is two hops, not one - `const base = OPENAI_BASE` and `const OPENAI_BASE =
+                # 'https://api.openai.com/v1'` - so the widening runs until it stops growing rather
+                # than once. A fixed number of rounds is the same guess one level up.
+                defs = dict(re.findall(r"const (\w+)\s*=\s*'([^']+)'", src))
+                defs.update(dict(re.findall(r"const (\w+)\s*=\s*(\w+);", src)))
+                widened, before = call, None
+                while widened != before:
+                    before = widened
+                    for name, val in defs.items():
+                        if re.search(r'\b' + name + r'\b', widened) and val not in widened:
+                            widened += ' ' + val
+                if method == 'GET' or any(h in widened for h in self.AI_HOSTS):
+                    continue          # a read, or one of the two declared AI hosts, whose job is a POST
+                self.assertIn(rel, self.ALLOWED_POST,
+                              f'{rel}: a {method} towards Zoho - «no write path to Zoho» is the first '
+                              f'non-negotiable. If it writes nothing, name its endpoints in '
+                              f'ALLOWED_POST with the reason. Call: {call.strip()[:100]}')
+        self.assertGreater(seen, 4, 'no fetch call was found at all, so this asserted nothing')
+
+    def test_the_one_non_read_helper_reaches_only_the_endpoints_named_here(self):
+        # The helper is generic - `post(path, params)` - so what keeps the guarantee is not its
+        # existence but its call sites. A second endpoint handed to it is a write path nobody
+        # declared, and it is exactly the change this catches.
+        for rel, rule in self.ALLOWED_POST.items():
+            src = (ROOT / 'apps' / rel).read_text(encoding='utf-8')
+            sites = [m.group(1) for m in
+                     re.finditer(rule['helper'] + r"\(\s*'([^']+)'", src)]
+            self.assertTrue(sites, f'{rel}: {rule["helper"]}() is never called - drop it from ALLOWED_POST')
+            for path in sites:
+                self.assertTrue(any(path.startswith(e) for e in rule['endpoints']),
+                                f'{rel}: {rule["helper"]}() is handed {path}, which is not one of the '
+                                f'endpoints declared here. Allowed because: {rule["why"]}')
+
+    def test_the_page_world_message_is_a_hint_and_is_checked_as_one(self):
+        """The one channel that crosses from the page into the extension: `hook.js` sees a save and
+        posts a notice, the isolated bridge forwards it, the panel re-reads that function from Zoho.
+        Anything running in the Zoho page can send it, so what matters is what it is allowed to be.
+
+        An outside audit raised this and was half right: the target origin was '*', which is now
+        `location.origin`; the receiver, which it said validated nothing, was already checking that
+        the sender is this window. Both halves are asserted here because each is one edit from
+        disappearing, and the shape of the check is invisible in a review of either file alone.
+        """
+        hook = (ROOT / 'apps' / 'crm' / 'hook.js').read_text(encoding='utf-8')
+        self.assertIn('location.origin);', hook, "hook.js posts to '*' again")
+        self.assertNotIn("}, '*')", hook, "hook.js posts to '*' again")
+        bridge = (ROOT / 'apps' / 'crm' / 'content-bridge.js').read_text(encoding='utf-8')
+        listener = bridge[bridge.index("addEventListener('message'"):][:700]
+        self.assertIn('ev.source !== window', listener, 'the bridge accepts a message from any frame')
+        self.assertRegex(listener, r"d\.source !== 'DELUGE_IDE_HOOK'", 'the bridge accepts any shape')
+        self.assertRegex(listener, r'\\d\{1,20\}', 'the bridge forwards an id it has not looked at')
+
+    def test_nothing_injected_into_the_page_drives_it(self):
+        """«Never click-and-hope» as an assertion. `chrome.scripting.executeScript` is the one call
+        that can put code inside Zoho's page, and the rule is that what goes in either *reads* or is
+        one of our own two files. A `func:` that clicks or dispatches an event would be the synthetic
+        driving this project removed in 1.1.0, arriving through a different door.
+        """
+        for f in sorted((ROOT / 'apps').rglob('*.js')):
+            src = f.read_text(encoding='utf-8')
+            for m in re.finditer(r'executeScript\s*\(\s*\{(.*?)\}\s*\)', src, re.S):
+                call = m.group(1)
+                if 'files:' in call:
+                    self.assertRegex(call, r"files:\s*\['(hook|content-bridge)\.js'\]",
+                                     f'{f.name}: injects a file that is not one of ours')
+                if 'func:' in call:
+                    for verb in ('.click(', 'dispatchEvent', '.submit(', '.value ='):
+                        self.assertNotIn(verb, call,
+                                         f'{f.name}: injected code drives the page ({verb}) - the rule '
+                                         'is read, or reach it by URL')
+
+
 class TheScrollingRowDoesNotShaveItsOwnLabel(unittest.TestCase):
     """`.wsgroup` scrolls sideways when the buttons cannot fit, and `overflow-x:auto` beside an
     `overflow-y:visible` computes the visible axis to `auto` as well - so the row clips vertically

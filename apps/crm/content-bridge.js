@@ -595,10 +595,17 @@
     return { failures, usage, runs, credits, at: iso(to) };
   }
 
+  // The MAIN world is the page's, so anything running in it can send this - the check is what the
+  // message is allowed to *be*, not who it claims to be from. Source must be this window, the shape
+  // must be exact, and the id must be digits: what it buys is that the panel re-reads one function
+  // from Zoho by id, and a forged one can therefore only ask for a re-read of something that exists.
+  // Nothing here writes, and nothing downstream takes the payload as content.
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (d && d.source === 'DELUGE_IDE_HOOK' && d.type === 'saved') chrome.runtime.sendMessage({ type: 'saved', id: d.id }).catch(() => {});
+    if (!d || d.source !== 'DELUGE_IDE_HOOK' || d.type !== 'saved') return;
+    if (!/^\d{1,20}$/.test(String(d.id || ''))) return;
+    chrome.runtime.sendMessage({ type: 'saved', id: String(d.id) }).catch(() => {});
   });
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     // Only a real CRM-origin frame acts. With all_frames:true the scripts also load into sandboxed /

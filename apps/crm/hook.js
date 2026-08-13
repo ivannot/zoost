@@ -8,9 +8,15 @@
 (() => {
   if (window.__zoostHook) return; window.__zoostHook = true;
   const RE = /\/crm\/v\d+\/settings\/functions\/(\d+)\b/;
+  // `location.origin` rather than '*': this message goes to a listener in the isolated world of the
+  // same document, so the narrower target costs nothing and stops the notice being readable by a
+  // frame that happens to be listening. It is a hint, not an authority - the receiver checks that
+  // the sender is this window and that the id is digits, and re-reads the function from Zoho itself.
+  // Raised by an outside audit, which was right about the '*' and wrong about the receiver: source
+  // was already checked. Neither half is worth much alone.
   const notify = (id) => {
     try {
-      window.postMessage({ source: 'DELUGE_IDE_HOOK', type: 'saved', id: String(id) }, '*');
+      window.postMessage({ source: 'DELUGE_IDE_HOOK', type: 'saved', id: String(id) }, location.origin);
     } catch (_) {}
   };
 
