@@ -342,33 +342,38 @@ it first: make the folder unreadable between two opens, and see which sentence t
 **A render that takes a hundred seconds is waiting, not working, and the wait is one per browser.**
 `chrome --headless --screenshot` starts a browser per image. The first capture in any browser costs
 about forty-five seconds here while the compositor produces its first frame; every capture after it
-costs three tenths of a second — measured inside one browser: 45s, then 0.3s, 0.3s. Twenty-seven
-images therefore cost twenty-seven warm-ups, which is the whole of the thirty-four minutes that set
+costs three tenths of a second - measured inside one browser: 45s, then 0.3s, 0.3s. Twenty-seven
+images therefore cost twenty-seven warm-ups, which was the whole of the thirty-four minutes that set
 used to take. What gave it away was the elapsed seconds per shot, once they were printed: a metronome
 of 101s, 1s, 101s, 1s. **A number that repeats to the tenth is a timeout, not work.** Chrome's own log
-names it — `CompositorAnimationObserver is active for too long (73.7s)` — and everything plausible was
-tried and measured against it: a dedicated profile (real, 14.66s against 0.37s on a trivial page, and
+names it - `CompositorAnimationObserver is active for too long (73.7s)` - and everything plausible was
+tried against it and measured: a dedicated profile (real, 14.66s against 0.37s on a trivial page, and
 it does not move the renders), the scale, the virtual time budget, old headless against new,
 background networking, occluded-window backgrounding, `--timeout`. None of them.
 
-The parallelism now in `siteimg.py` and `shots.py` overlaps those waits — 39 minutes to 8 — and is a
-workaround, which its own comment says. **The fix is one browser driven across every page**, and it
-was taken far enough to know it works and why it is not committed:
+It is one browser now, driven over the protocol by `tools/capture.mjs`, and the set renders in about
+three minutes instead of thirty-nine. Three things had to be right, and each was found by a wrong
+attempt first:
 
-  - the viewport must be set by **sizing the window at launch**. `Emulation.setDeviceMetricsOverride`
-    lays the page out differently and produced a picture differing on 10.010% of its pixels, scattered
-    over 1121 rows; `Browser.setWindowBounds` is accepted at runtime and does nothing. A window sized
-    at launch gives a file **byte-identical** to `--screenshot`, verified with `tools/pngsame.py`.
-  - how much taller than its viewport the window has to be is a property of the installed Chrome — 87
-    CSS pixels today — so it has to be probed and applied, not written down.
-  - what is **not** solved is when to capture. `--virtual-time-budget` runs the clock forward, so a
-    timer set for eight seconds fires at once and one budget covers every page; a real browser has no
-    such clock. A fixed wait of 4-6s left six of twenty-seven images different, and "two identical
-    captures 400ms apart" is worse — twenty-one differed, because these pages are *still* right after
-    load, before the shot script has done anything. The criterion has to survive that: the page saying
-    it has finished, or stability required over long enough to cover the stub's own delays.
+  - **the viewport is set by sizing the window at launch.** `Emulation.setDeviceMetricsOverride` lays
+    the page out differently and produced a picture differing on 10.010% of its pixels, scattered over
+    1121 rows; `Browser.setWindowBounds` is accepted at runtime and does nothing. How much bigger than
+    its viewport the window has to be is a property of the installed Chrome, so it is probed rather
+    than written down.
+  - **when to capture is asked of the page.** `--virtual-time-budget` ran the clock forward, so one
+    number covered every page; a real browser has no such clock. A fixed 4-6s wait left six of the
+    twenty-seven different, and "two identical captures 400ms apart" left twenty-one, because these
+    pages are perfectly still right after load, before the shot script has run. The stub counts the
+    timers and frames it has outstanding in `__zoostPending` and the renderer waits for zero, for the
+    fonts, and *then* for two identical captures - neither test is sufficient alone, since the counter
+    cannot see work driven by events and the stillness test cannot see work not yet started.
+  - **and rendering several at a time cost the determinism it was buying speed with.** Six at a time,
+    two of twenty-seven came out different between consecutive runs; one at a time, two consecutive
+    runs of the whole set are identical image for image. `ZOOST_RENDER_JOBS` still raises it.
 
-Serially, through one browser, the set rendered in 265s against 2337s. It is worth finishing.
+Four images changed once when this landed, by antialiasing alone - 6-9% of pixels at a worst channel
+difference of 24-38 out of 255, which is edges of text and not content. `tools/pngsame.py` is what
+makes that sentence sayable rather than hopeful.
 
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are

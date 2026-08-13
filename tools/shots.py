@@ -19,6 +19,9 @@ was taken against the org this is developed on and then blurred, and a blurred s
 advertisement for a tool whose whole subject is reading clearly.
 """
 import json
+import atexit
+import socket
+import urllib.request
 import os
 import pathlib
 import shutil
@@ -127,7 +130,40 @@ SHOTS = [
     """),
 ]
 
-STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+STUB = """// **When is the picture final?** Under `--virtual-time-budget` that question answered itself: the
+// clock ran forward, so every timer had already fired by the time the capture happened and one
+// number covered every page. Driving a real browser there is no such clock, and guessing from
+// outside does not work - a fixed wait left six of twenty-seven images different, and waiting for
+// two identical captures left twenty-one, because these pages are perfectly still right after load,
+// before the shot script has done anything at all.
+//
+// So the page answers instead. Every `setTimeout` and `requestAnimationFrame` scheduled from here on
+// is counted, and `__zoostPending` is what is left outstanding; the renderer waits for it to reach
+// zero. `setInterval` is deliberately not counted - the panel polls its context every few seconds,
+// so a counter that included it would never reach zero and the wait would be a wait for the cap.
+//
+// First in the file, before anything else runs, or the work scheduled by whatever ran earlier is
+// invisible to it.
+(function pending() {{
+  let out = 0;
+  const ST = window.setTimeout, RAF = window.requestAnimationFrame;
+  window.setTimeout = function (fn, ms) {{
+    if (typeof fn !== 'function') return ST.apply(window, arguments);
+    out++;
+    const rest = Array.prototype.slice.call(arguments, 2);
+    return ST.call(window, function () {{
+      try {{ fn.apply(this, rest); }} finally {{ out--; }}
+    }}, ms);
+  }};
+  window.requestAnimationFrame = function (fn) {{
+    out++;
+    return RAF.call(window, function (t) {{
+      try {{ fn(t); }} finally {{ out--; }}
+    }});
+  }};
+  Object.defineProperty(window, '__zoostPending', {{ get: () => out }});
+}})();
+// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
 // ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
 // crm-health at 2x - five identical renders and a sixth that was not - which is why the published
 // WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
@@ -156,10 +192,15 @@ window.addEventListener('load', () => setTimeout(() => {{
 # takes options.
 SCALE = 1
 
-# Several at a time, for the reason measured in siteimg.py: the heavy pages spend about a hundred
-# seconds waiting for a compositor frame that never comes, and four of them in parallel finish in the
-# time one of them takes alone. Threads, because every worker is a subprocess.run.
-JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "6"))
+# Serial by default, and that is the conclusion rather than the starting point. When every image
+# meant its own browser, six at a time took the set from 39 minutes to 8 by overlapping the warm-ups;
+# with one browser there is one warm-up and the overlapping buys about a minute - and it costs the
+# thing that matters more. Measured: rendered six at a time, two of twenty-seven images came out
+# different between two consecutive runs, because concurrent captures contend for the machine and a
+# page can look still while it is only starved. Rendered one at a time, two consecutive runs of the
+# whole set are identical, image for image. `ZOOST_RENDER_JOBS` still raises it for anyone who wants
+# the minute and can live without that.
+JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "1"))
 
 
 # Every Chrome here gets a profile of its own, and it is worth the paragraph because the cost was
@@ -171,6 +212,95 @@ JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "6"))
 # away, because work does not take exactly the same number of seconds twice; a timeout does. The
 # profile goes inside the staging directory that is already created and removed per shot, so nothing
 # survives the run.
+
+
+
+# ---- one browser for the whole run -------------------------------------------------------------
+#
+# `chrome --headless --screenshot` starts a browser per image, and the first capture in any browser
+# costs about forty-five seconds here while the compositor produces its first frame; every capture
+# after it costs three tenths of a second. That is the whole of the thirty-four minutes this set used
+# to take - twenty-seven warm-ups, one per image - and it is why the parallelism that came before this
+# helped: it overlapped the waits rather than removing them.
+#
+# So: one Chrome, kept alive, driven over the DevTools protocol by tools/capture.mjs. The window is
+# sized at launch, because that is the only way that produces the same picture - see the note at the
+# top of capture.mjs for what emulating the metrics and setting the bounds afterwards each did
+# instead. How much taller than its viewport the window has to be is asked of the browser rather than
+# written down, since it is a property of the Chrome that happens to be installed.
+_browser = None
+
+
+def _browser_for(width: int, height: int, scale: float):
+    """A running Chrome whose page viewport is exactly width x height at this scale."""
+    global _browser
+    key = (width, height, scale)
+    if _browser and _browser[0] == key:
+        return _browser[1]
+    _browser_stop()
+    profile = tempfile.mkdtemp(prefix="zoost-shots-")
+    # The window asked for and the viewport wanted are two different numbers, and the first version
+    # compared the second attempt's viewport against the *adjusted window* - throwing away the run
+    # that had got it exactly right. They are kept apart.
+    win_w, win_h = width, height
+    seen = "?"
+    for _ in range(3):
+        with socket.socket() as s:                 # a free port, asked of the operating system
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        proc = subprocess.Popen(
+            [CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+             f"--window-size={win_w},{win_h}", f"--force-device-scale-factor={scale}",
+             f"--remote-debugging-port={port}", f"--user-data-dir={profile}", "about:blank"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ws = _ws_url(port)
+        seen = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, "--probe"],
+                              capture_output=True, text=True, check=True).stdout.strip()
+        w, h = (int(x) for x in seen.split("x"))
+        if (w, h) == (width, height):
+            _browser = (key, (ws, proc, profile))
+            return _browser[1]
+        # The window is taller than the page by whatever chrome this build draws. Measured once,
+        # applied once, and checked - rather than a constant that a Chrome update would falsify.
+        proc.terminate(); proc.wait(timeout=10)
+        win_w += width - w
+        win_h += height - h
+    raise SystemExit(f"could not get a {width}x{height} viewport out of Chrome (last: {seen})")
+
+
+def _ws_url(port: int) -> str:
+    for _ in range(200):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=1) as r:
+                return json.load(r)["webSocketDebuggerUrl"]
+        except Exception:                          # noqa: BLE001 - it is starting; ask again
+            time.sleep(0.05)
+    raise SystemExit("Chrome did not open a debugging port")
+
+
+def _browser_stop():
+    global _browser
+    if not _browser:
+        return
+    _, (_, proc, profile) = _browser
+    proc.terminate()
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+    shutil.rmtree(profile, ignore_errors=True)
+    _browser = None
+
+
+atexit.register(_browser_stop)
+
+
+def capture(page: pathlib.Path, dest: pathlib.Path, wait_ms: int, width=1280, height=800):
+    """One screenshot of a staged page, through the browser that is already running."""
+    ws, _, _ = _browser_for(width, height, SCALE)
+    subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, page.as_uri(),
+                    str(dest), str(wait_ms)], check=True, capture_output=True)
+    return dest
 
 
 def files_under(base: pathlib.Path, prefix: str):
@@ -203,15 +333,44 @@ def render(shot):
                         encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--user-data-dir=" + str(stage / "_profile"),
-                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
-                        "--virtual-time-budget=9000", "--screenshot=" + str(dest),
-                        page.as_uri()], check=True, capture_output=True)
+        capture(page, dest, 60000)
     return dest
 
 
-PANEL_STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+PANEL_STUB = """// **When is the picture final?** Under `--virtual-time-budget` that question answered itself: the
+// clock ran forward, so every timer had already fired by the time the capture happened and one
+// number covered every page. Driving a real browser there is no such clock, and guessing from
+// outside does not work - a fixed wait left six of twenty-seven images different, and waiting for
+// two identical captures left twenty-one, because these pages are perfectly still right after load,
+// before the shot script has done anything at all.
+//
+// So the page answers instead. Every `setTimeout` and `requestAnimationFrame` scheduled from here on
+// is counted, and `__zoostPending` is what is left outstanding; the renderer waits for it to reach
+// zero. `setInterval` is deliberately not counted - the panel polls its context every few seconds,
+// so a counter that included it would never reach zero and the wait would be a wait for the cap.
+//
+// First in the file, before anything else runs, or the work scheduled by whatever ran earlier is
+// invisible to it.
+(function pending() {{
+  let out = 0;
+  const ST = window.setTimeout, RAF = window.requestAnimationFrame;
+  window.setTimeout = function (fn, ms) {{
+    if (typeof fn !== 'function') return ST.apply(window, arguments);
+    out++;
+    const rest = Array.prototype.slice.call(arguments, 2);
+    return ST.call(window, function () {{
+      try {{ fn.apply(this, rest); }} finally {{ out--; }}
+    }}, ms);
+  }};
+  window.requestAnimationFrame = function (fn) {{
+    out++;
+    return RAF.call(window, function (t) {{
+      try {{ fn(t); }} finally {{ out--; }}
+    }});
+  }};
+  Object.defineProperty(window, '__zoostPending', {{ get: () => out }});
+}})();
+// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
 // ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
 // crm-health at 2x - five identical renders and a sixth that was not - which is why the published
 // WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
@@ -292,16 +451,45 @@ def render_panel(shot):
             encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--user-data-dir=" + str(stage / "_profile"),
-                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
-                        "--virtual-time-budget=12000", "--screenshot=" + str(dest),
-                        page.as_uri()], check=True, capture_output=True)
+        capture(page, dest, 60000)
     return dest
 
 
 
-OPTIONS_STUB = """// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
+OPTIONS_STUB = """// **When is the picture final?** Under `--virtual-time-budget` that question answered itself: the
+// clock ran forward, so every timer had already fired by the time the capture happened and one
+// number covered every page. Driving a real browser there is no such clock, and guessing from
+// outside does not work - a fixed wait left six of twenty-seven images different, and waiting for
+// two identical captures left twenty-one, because these pages are perfectly still right after load,
+// before the shot script has done anything at all.
+//
+// So the page answers instead. Every `setTimeout` and `requestAnimationFrame` scheduled from here on
+// is counted, and `__zoostPending` is what is left outstanding; the renderer waits for it to reach
+// zero. `setInterval` is deliberately not counted - the panel polls its context every few seconds,
+// so a counter that included it would never reach zero and the wait would be a wait for the cap.
+//
+// First in the file, before anything else runs, or the work scheduled by whatever ran earlier is
+// invisible to it.
+(function pending() {{
+  let out = 0;
+  const ST = window.setTimeout, RAF = window.requestAnimationFrame;
+  window.setTimeout = function (fn, ms) {{
+    if (typeof fn !== 'function') return ST.apply(window, arguments);
+    out++;
+    const rest = Array.prototype.slice.call(arguments, 2);
+    return ST.call(window, function () {{
+      try {{ fn.apply(this, rest); }} finally {{ out--; }}
+    }}, ms);
+  }};
+  window.requestAnimationFrame = function (fn) {{
+    out++;
+    return RAF.call(window, function (t) {{
+      try {{ fn(t); }} finally {{ out--; }}
+    }});
+  }};
+  Object.defineProperty(window, '__zoostPending', {{ get: () => out }});
+}})();
+// A screenshot of a running animation is a different screenshot every time: `.spin` rotates for
 // ever, the assistant's waiting dots pulse, and a focused search box blinks a caret. Measured on
 // crm-health at 2x - five identical renders and a sixth that was not - which is why the published
 // WebP kept changing by a few dozen bytes while the picture looked the same. It is also a better
@@ -356,11 +544,7 @@ def render_options(shot):
                         encoding="utf-8")
         OUT.mkdir(parents=True, exist_ok=True)
         dest = OUT / (key + ".png")
-        subprocess.run([CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-                        "--user-data-dir=" + str(stage / "_profile"),
-                        "--window-size=1280,800", f"--force-device-scale-factor={SCALE}",
-                        "--virtual-time-budget=12000", "--screenshot=" + str(dest),
-                        page.as_uri()], check=True, capture_output=True)
+        capture(page, dest, 60000)
     return dest
 
 

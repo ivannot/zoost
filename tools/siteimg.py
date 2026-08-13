@@ -40,24 +40,15 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 OUT = ROOT / "site" / "img"
 LEDGER = ROOT / "tools" / "imgstamp.json"
-# Rendered several at a time, and the reason is measured rather than assumed. A single shot of the
-# heavier pages takes about 100 seconds here and the same shot takes half a second on the next run -
-# the same command, the same page, its own profile. Chrome's own log says what the wait is: the
-# compositor never goes idle («CompositorAnimationObserver is active for too long (73.7s)»), so the
-# screenshot sits waiting for a quiet frame that does not come, and gives up on a timeout. Everything
-# that could plausibly have caused it was tried and measured: a dedicated profile, the render scale,
-# the virtual time budget, old headless against new, background networking, occluded-window
-# backgrounding, --timeout. None of them move it.
-#
-# What does move it is that the wait costs nothing but wall clock. **Four of the slow shots in
-# parallel finish in 78 seconds - less than one of them alone** - and the four images come out
-# byte-identical to the serial ones. So the fix is not to make each render faster, which nothing here
-# can do, but to stop queueing behind an idle wait.
-#
-# Threads rather than processes because every worker is a `subprocess.run`: the GIL is released for
-# the whole of it. The default is deliberately modest - each Chrome is a few hundred megabytes, and
-# this runs on a machine somebody is also using.
-JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "6"))
+# Serial by default, and that is the conclusion rather than the starting point. When every image
+# meant its own browser, six at a time took the set from 39 minutes to 8 by overlapping the warm-ups;
+# with one browser there is one warm-up and the overlapping buys about a minute - and it costs the
+# thing that matters more. Measured: rendered six at a time, two of twenty-seven images came out
+# different between two consecutive runs, because concurrent captures contend for the machine and a
+# page can look still while it is only starved. Rendered one at a time, two consecutive runs of the
+# whole set are identical, image for image. `ZOOST_RENDER_JOBS` still raises it for anyone who wants
+# the minute and can live without that.
+JOBS = int(os.environ.get("ZOOST_RENDER_JOBS", "1"))
 
 WIDTH = 1760      # 2x the 880px the content column reaches at its widest
 QUALITY = 80
