@@ -3377,6 +3377,14 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   assert.ok(/e\.name !== 'NotFoundError'/.test(rj),
     'every failure still becomes the fallback, so unreadable and absent are one fact');
   assert.ok(/readFailed = \{ rel/.test(rj), 'a failed read leaves nothing behind to report');
+  // The state that was circular: the panel re-requests the folder permission only while it believes
+  // it has none, so a cached "granted" that the browser disagrees with means no click ever asks for
+  // it back - Refresh included. A NotAllowedError is the browser saying that verdict is wrong.
+  assert.ok(/e\.name === 'NotAllowedError'\) rootGranted = false/.test(rj),
+    'a lapsed permission leaves the panel believing it still has one');
+  const click = js.slice(js.indexOf("document.addEventListener('click'"));
+  assert.ok(/if \(!root \|\| rootGranted\) return;/.test(click),
+    'the re-grant on click no longer depends on the verdict this now corrects');
   const load = sliceFn('apps/analytics/sidepanel.js', 'loadFromDisk');
   assert.ok(/readFailed = null;/.test(load), 'the load starts from an old failure');
   assert.ok(/diskUnreadable = views\.length \? null : readFailed;/.test(load),

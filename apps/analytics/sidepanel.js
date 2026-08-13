@@ -203,7 +203,13 @@ async function readFile(rel) {
 let readFailed = null;
 const readJson = async (rel, fallback) => {
   try { return JSON.parse(await readFile(rel)); } catch (e) {
-    if (e && e.name !== 'NotFoundError') readFailed = { rel, name: (e && e.name) || 'Error' };
+    // `NotAllowedError` is Chrome saying the folder permission has lapsed, and it is proof that the
+    // cached verdict in `rootGranted` is wrong. Leaving that verdict alone is what made the state
+    // circular: the panel only re-requests permission while it believes it has none, so believing it
+    // has some meant no click - Refresh included - ever asked for it back. Reported exactly that way:
+    // «the message is clearer but pressing Refresh changes nothing».
+    if (e && e.name === 'NotAllowedError') rootGranted = false;
+    else if (e && e.name !== 'NotFoundError') readFailed = { rel, name: (e && e.name) || 'Error' };
     return fallback;
   }
 };
