@@ -1936,6 +1936,28 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         self.assertIn('is not mounted', out.stderr)
         self.assertIn('ZOOST_TEST_DIR', out.stderr)
 
+    def test_a_mount_point_with_nothing_behind_it_is_not_a_folder(self):
+        # The state that actually happened, and that the check above cannot see. With
+        # `x-systemd.automount` the mount point answers stat() whether or not the mount works: the
+        # kernel triggers it on first access, and with the host's sync client down the device is
+        # absent, leaving an empty directory that passes every test a shell can make. `-d` said yes,
+        # the first write failed, and the battery printed a raw mkdir error at the top of its output
+        # while the extension on the other machine stayed at yesterday's build for a morning.
+        #
+        # /proc stands in for it: a directory that certainly exists and certainly refuses a mkdir.
+        auto = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
+                              capture_output=True, text=True, cwd=ROOT,
+                              env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
+        self.assertEqual(auto.returncode, 0, 'a mount that is not there failed the battery')
+        self.assertEqual(auto.stdout.strip(), '', 'it wrote a path it never copied to')
+        self.assertIn('nothing is mounted on it', auto.stderr,
+                      f'--auto blamed the script instead of the mount: {auto.stderr!r}')
+        asked = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')],
+                               capture_output=True, text=True, cwd=ROOT,
+                               env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
+        self.assertEqual(asked.returncode, 1)
+        self.assertIn('Nothing was copied', asked.stderr)
+
     def tracked(self):
         out = subprocess.run(['git', '-C', str(ROOT), 'ls-files'], capture_output=True, text=True)
         for rel in out.stdout.splitlines():

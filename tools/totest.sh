@@ -73,7 +73,23 @@ if [ ! -d "$(dirname "$DEST")" ]; then
   echo "  the synced folder is not mounted on this machine, or ZOOST_TEST_DIR in tools/machine.env is stale." >&2
   exit 1
 fi
-mkdir -p "$DEST/apps"
+# And the check above cannot see the state that actually happened. With `x-systemd.automount` the
+# mount point answers stat() whether or not the mount behind it works: the kernel triggers the mount
+# on the first access, and when the host's sync client is not running the device is simply absent -
+# «special device ... does not exist», in the journal and nowhere this script can see - leaving an
+# empty directory that is a directory by every test it can make. So `-d` passes, and what fails is
+# the first write.
+#
+# Left to `set -e` that failure leaves the battery printing a raw mkdir error, which reads as this
+# script being broken rather than as the mirror not being written. It is the same distinction as
+# above and gets the same treatment: one line saying which of the two it is, and never a failure of
+# the battery, because a cloud drive that is not running is not a defect in this repository.
+if ! mkdir -p "$DEST/apps" 2>/dev/null; then
+  echo "$(dirname "$DEST") is there but nothing is mounted on it - the host's sync client is probably not running" >&2
+  [ -n "$AUTO" ] && exit 0
+  echo "  start it on the host, then run this again. Nothing was copied." >&2
+  exit 1
+fi
 
 # The destination is very likely a cloud-sync filesystem, and those are not ordinary ones: Google
 # Drive's virtual drive refuses the temporary files rsync writes before renaming them into place, and
