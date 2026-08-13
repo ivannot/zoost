@@ -135,9 +135,13 @@ cat <<EOF
 
   Next:
     1.  git push --follow-tags
-    2.  wait for the 'release' workflow, then open the GitHub Release it created
-    3.  DOWNLOAD the .zip asset from that Release and upload THAT to the Chrome Web Store
+    2.  wait for two workflows: 'release' builds it twice, signs a provenance statement and
+        publishes the Release - and 'store upload' then puts that archive on the item as a
+        **draft**, by itself. Nobody downloads or uploads anything by hand.
+    3.  open the dashboard: check the draft is there, upload dist/store/$APP/1..5.png if the
+        interface moved, paste anything the listing needs, then press Submit for review
     4.  paste the RELEASES.md row from the Release body, commit, push$SHOTS_NOTE
 
-  Step 3 is the whole point. A local build is not the artifact anyone can trace.
+  What reaches the Store is the archive CI built and signed. A local build is not the artifact
+  anyone can trace, and nothing in this chain uploads one - which is why step 2 has no work in it.
 EOF

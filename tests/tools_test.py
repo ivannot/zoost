@@ -1043,6 +1043,32 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('tools/shots.py', sh, 'it does not name the command that renders them')
         self.assertIn('$SHOTS_NOTE', sh, 'the note is built and never printed')
 
+    def test_the_gates_are_in_ci_and_not_only_on_this_machine(self):
+        # The suite and auditcheck ran in tools/release.sh and nowhere else, so they were gates on
+        # the machine that types the tag rather than on the tag: `git tag && git push --follow-tags`
+        # from muscle memory, or from a checkout that never ran them, and CI would build, sign and
+        # publish a Release of a commit nobody had verified. Provenance guaranteed by the machine,
+        # quality by convention. Reported in a review of the chain, and true.
+        wf = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        self.assertIn('bash tests/run.sh', wf, 'the suite does not run in CI')
+        self.assertIn('tools/auditcheck.py --before-tag', wf, 'the claims are not checked in CI')
+        # and before anything public exists, or they are a report rather than a gate
+        self.assertLess(wf.index('bash tests/run.sh'), wf.index('Build twice'),
+                        'the suite runs after the build, so a red suite still produces an archive')
+        self.assertLess(wf.index('auditcheck'), wf.index('Publish the Release'),
+                        'the claims are checked after the Release is published')
+
+    def test_release_sh_does_not_send_the_human_to_do_the_machine_s_job(self):
+        # store-upload.yml puts the archive on the item as a draft by itself, on workflow_run. The
+        # printed steps still said «DOWNLOAD the .zip asset and upload THAT», which is the pattern
+        # this repository has already corrected between two pages - two descriptions of two different
+        # release chains - this time inside the tool's own output.
+        sh = (ROOT / 'tools/release.sh').read_text(encoding='utf-8')
+        self.assertNotIn('DOWNLOAD the .zip asset', sh,
+                         'the steps still tell the reader to upload what store-upload already did')
+        self.assertIn('draft', sh, 'nothing says the package arrives on its own')
+        self.assertIn('Submit for review', sh, 'the one human decision is not named')
+
     def test_the_workflow_reads_the_same_path(self):
         # One path, two readers: the tagging step and the workflow that publishes. If they disagree,
         # release.sh passes and the run fails after the tag is public.

@@ -93,6 +93,16 @@ jobs:
             exit 1
           fi
 
+      - name: The suite and the claims, before anything public exists
+        run: |
+          # These run in tools/release.sh too, and that was the whole of it: the gates lived on the
+          # machine that types the tag. `git tag && git push --follow-tags` from muscle memory, or
+          # from a checkout that never ran them, and CI would publish a signed Release of a commit
+          # nobody had verified - provenance guaranteed by the machine, quality by convention.
+          # Two minutes here makes them unskippable. Reported in a review of the chain.
+          bash tests/run.sh
+          python3 tools/auditcheck.py --before-tag
+
       - name: Build twice and prove the two are identical
         id: build
         run: |
