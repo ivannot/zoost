@@ -1687,13 +1687,34 @@ function erApply() {
 // `markerUnits="userSpaceOnUse"`, or the size would also multiply by each link's stroke width - four
 // different values here - and one marker cannot be four sizes. The `viewBox` is what lets the width
 // change without the shape or `refX` moving with it, so the tip still lands on the box edge.
-const ARROW = { erarrow: [9, 8], erarrowsel: [12, 9] };
+//
+// It also has to stand off the box by the width of the circle that now sits there. The fold control is
+// centred on the point where the arc meets the box - which is where the arc ends - so the head was
+// drawn underneath it and reported as barely visible. The head is the only part of an arc that says
+// which way the relation points, so that is the diagram losing a fact.
+//
+// Moved by `refX` rather than by shortening every path, and the difference is not tidiness. Both the
+// circle and the head keep a constant size *on screen*, so in the drawing's own units both change
+// with the zoom - while a path is geometry, fixed when it is drawn. Shortened paths therefore came
+// apart from the circles the moment the reader zoomed: reported, with a picture, as arrows floating
+// a few pixels off. `refX` is read from the marker at paint time and this runs on every erApply, so
+// the head follows the zoom exactly as the circle does, and the arc still runs to the box edge -
+// under the circle, where nobody can see it.
+//
+// The setback uses MARK_MIN, the *smallest* a circle gets: one marker serves every arc, the circles
+// vary by a pixel and a half either way, and the error worth having is a head tucked a hair under a
+// wide circle rather than one floating off a narrow one.
+const ARROW = { erarrow: [9, 8, 7], erarrowsel: [12, 9, 8] };
 function erSizeArrows() {
   const k = 1 / Math.max(erScale, 0.02);
-  for (const [id, [w, h]] of Object.entries(ARROW)) {
+  const back = erPrintFull ? 0 : (MARK_MIN / 2) * Math.min(MARK_MAX, k);
+  for (const [id, [w, h, vb]] of Object.entries(ARROW)) {
     const m = document.getElementById(id); if (!m) continue;
     m.setAttribute('markerWidth', (w * k).toFixed(2));
     m.setAttribute('markerHeight', (h * k).toFixed(2));
+    // refX is in viewBox units and the viewBox maps onto markerWidth, so a step of one user unit is
+    // vb / (w * k) of them. At refX = vb the tip sits on the path's end, which is the box edge.
+    m.setAttribute('refX', (vb * (1 + back / (w * k))).toFixed(3));
   }
 }
 // A control has to stay the size of the pointer that presses it, which is the argument the arrowheads
@@ -1718,19 +1739,12 @@ function erSizeMarks() {
   if (m) m.style.setProperty('--mkz', Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02)).toFixed(3));
 }
 // How wide one mark comes out, from the room its side has. It is asked in two places now that the
-// arcs stop at the circle instead of under it - markAt draws it, the link pass shortens itself by it
-// - and a mark that grew while the arc did not would put the arrowhead straight back where it was
-// hidden. One answer, so the two cannot disagree.
+// arcs stand off it - markAt draws the circle and erSizeArrows sets the head back by MARK_MIN.
 function erMarkD(S, other, slot) {
   const side = erSideOf(S, other);
   const along = (side === 't' || side === 'b') ? S.w : S.h;
   const gap = along / ((slot ? slot.n : 1) + 1);
   return Math.max(MARK_MIN, Math.min(MARK_D, gap - 1));
-}
-// The same circle in the drawing's own units, which is what an arc is measured in: `--mkz` keeps the
-// mark a constant size on screen, so at half zoom it covers twice as much of the diagram.
-function erMarkR(S, other, slot) {
-  return erMarkD(S, other, slot) / 2 * Math.min(MARK_MAX, 1 / Math.max(erScale, 0.02));
 }
 // The colour a node wears on the diagram - the header of its box, and now the badge the tooltip puts
 // its name in. One helper and not two answers: «which colour is this node» written twice is two
@@ -1819,25 +1833,8 @@ function erRender() {
     if (!shown.has(a) || !shown.has(b)) return;
     const A = erPos[a], B = erPos[b];
     const ek = ekey(a, b);
-    const [ex1, ey1, ex2, ey2, axis] = erEdgePoints(A, B,
+    const [x1, y1, x2, y2, axis] = erEdgePoints(A, B,
       erSlotMap.get(ek + '\u0001' + a), erSlotMap.get(ek + '\u0001' + b));
-    // The fold control is a circle centred on the point where the arc meets the box, so the last few
-    // pixels of the arc - and the arrowhead, which is the only part carrying the direction - were
-    // drawn underneath it: reported as the arrows being barely visible. The arc stops at the rim
-    // instead, at both ends, so the head sits against the control rather than behind it.
-    //
-    // Never shortened past half the span: two boxes almost touching would otherwise have their arc
-    // turned inside out, and an arc pointing backwards is worse than one with a hidden head. The
-    // marks are not printed, so a print asks for the full-length arcs and gets them.
-    let [x1, y1, x2, y2] = [ex1, ey1, ex2, ey2];
-    if (!erPrintFull) {
-      const ra = erMarkR(A, B, erSlotMap.get(ek + '\u0001' + a));
-      const rb = erMarkR(B, A, erSlotMap.get(ek + '\u0001' + b));
-      const span = axis === 'v' ? Math.abs(ey2 - ey1) : Math.abs(ex2 - ex1);
-      const k = Math.min(1, span / (2 * (ra + rb) || 1));
-      if (axis === 'v') { const s = Math.sign(ey2 - ey1) || 1; y1 += s * ra * k; y2 -= s * rb * k; }
-      else { const s = Math.sign(ex2 - ex1) || 1; x1 += s * ra * k; x2 -= s * rb * k; }
-    }
     const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
     const curve = axis === 'v' ? `C${x1},${my} ${x2},${my} ${x2},${y2}` : `C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
     const hot = (a === sel || b === sel);
@@ -2406,11 +2403,11 @@ let _prevDocTitle = null;
 // redrawn again after it, which is cheap next to what printing itself costs.
 window.addEventListener('beforeprint', () => {
   _prevDocTitle = document.title; document.title = pdfTitle();
-  if (curView === 'er' && erIds.length) { erPrintFull = true; erRender(); }
+  erPrintFull = true; erSizeArrows();
 });
 window.addEventListener('afterprint', () => {
   if (_prevDocTitle != null) { document.title = _prevDocTitle; _prevDocTitle = null; }
-  if (erPrintFull) { erPrintFull = false; erRender(); }
+  erPrintFull = false; erSizeArrows();
 });
 
 // Visible attribution (also appears in the printed PDF)

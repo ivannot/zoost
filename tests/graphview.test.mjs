@@ -725,10 +725,18 @@ for (const app of ['crm', 'analytics']) {
     const md = sliceFn(`apps/${app}/graphview.js`, 'erMarkD');
     assert.ok(/Math\.max\(MARK_MIN, Math\.min\(MARK_D, gap - 1\)\)/.test(md), 'the width no longer follows the gap');
     assert.ok(/erMarkD\(S, stay === a \? B : A, slot\)/.test(mk), 'the mark is sized by its own copy of the rule');
-    assert.ok(/erMarkR\(A, B,/.test(js) && /erMarkR\(B, A,/.test(js),
-      'the arcs no longer stop at the circles, so the arrowheads are drawn under them');
-    assert.ok(/if \(!erPrintFull\) \{/.test(js) && /erPrintFull = true; erRender\(\)/.test(js),
-      'a print keeps the room left for circles it does not draw');
+    // The head stands off the box by the circle's width, and it is moved by refX rather than by
+    // shortening the paths. That is the whole point: a path is fixed when it is drawn, while both the
+    // circle and the head keep a constant size on screen - so a shortened path came apart from the
+    // circle as soon as the reader zoomed, which is how the first attempt was reported.
+    const sz = sliceFn(`apps/${app}/graphview.js`, 'erSizeArrows');
+    assert.ok(/refX/.test(sz), 'the arrowhead is anchored on the box edge, under the fold control');
+    assert.ok(/MARK_MIN \/ 2/.test(sz) && /Math\.min\(MARK_MAX, k\)/.test(sz),
+      'the setback does not follow the same counter-scaling as the circle it stands off');
+    assert.ok(!/erPrintFull \? 0 : 0/.test(sz) && /erPrintFull \? 0/.test(sz),
+      'a print keeps room for a circle it does not draw');
+    assert.ok(/erPrintFull = true; erSizeArrows\(\)/.test(js) && /erPrintFull = false; erSizeArrows\(\)/.test(js),
+      'the print state is entered or left without the arrowheads being told');
     assert.ok(!/folded \? MARK_D/.test(mk), 'the + is sized by a different rule from the -');
     assert.ok(/folded \? '\+' : '\\u2212'/.test(mk), 'the + carries something other than a +');
   });
