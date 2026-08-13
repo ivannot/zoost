@@ -44,7 +44,7 @@ const MSG = {
   tabCount: (n) => `${n} tables to draw`,
   tabCrowded: (n) => `${n} tables - past the ${CROWDED_NODES} this diagram has been measured to draw without boxes covering each other, so expect it crowded. It is still drawn: switch a category off above, or pick a table to focus on, to bring it down.`,
   tabOver: (n) => `${n} tables - more than the ${drawMax} this diagram is set to lay out. Switch a category off above, or pick a table to focus on.`,
-  tooMany: (n) => `<b>Too many to lay out.</b> ${n} tables are on the tab above and the ceiling is ${drawMax}, which is 400 by default because that is what was measured: past it the layout takes longer than anyone waits - 1200 comes to about seven seconds - and what it produces cannot be read anyway. Switch a category off above, or pick one table to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits. Past ${CROWDED_NODES} it is drawn but crowded, which the number says before you ask for it.`,
+  tooMany: (n) => `<b>Too many to lay out.</b> ${n} tables are on the tab above and the ceiling is ${drawMax}, which is ${DRAW_MAX_NODES} by default because that is what was measured: past it the layout takes longer than anyone waits - 1200 comes to about seven seconds - and what it produces cannot be read anyway. Switch a category off above, or pick one table to focus on: the number beside the tab comes down as you do, and the diagram draws itself as soon as it fits. Past ${CROWDED_NODES} it is drawn but crowded, which the number says before you ask for it.`,
   showList: 'Show the list',
 };
 // Tolerant of a missing node: the callers pass N[id] and an id can outlive its node when a graph

@@ -870,3 +870,23 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// The ceiling was raised from 400 to 800 when a real org reported 725 boxes. Both settings pages
+// were corrected and so were all four guides; the sentence the diagram itself shows when it refuses
+// to draw kept saying 400, in both products, for as long as that took to be noticed. Nobody could
+// have caught it by reading the paragraph that changed - it is the same claim in a place that does
+// not look like the others, which is the enumeration trap this repository keeps meeting.
+//
+// So the number is not compared, it is forbidden: the message states the default by interpolating
+// the constant that is the default, and a literal there cannot be right for long.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the refusal states the ceiling from the constant, not from memory`, () => {
+    const js = read(`apps/${app}/graphview.js`);
+    const msg = js.slice(js.indexOf('  tooMany:'), js.indexOf('\n', js.indexOf('  tooMany:')));
+    assert.ok(msg, 'the refusal message is not where this expects it');
+    assert.ok(/which is \$\{DRAW_MAX_NODES\} by default/.test(msg),
+      'the default ceiling is written out as a number, so it can disagree with the code again');
+    assert.ok(!/\b(400|800)\b/.test(msg.replace(/\$\{[^}]*\}/g, '')),
+      'a bare ceiling figure is back in the message');
+  });
+}
