@@ -2153,6 +2153,11 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
         self.assertIn(': > "$DEST/.zoost-writable"', sh, 'the probe writes nothing again')
         self.assertIn('rm -f "$DEST/.zoost-writable"', sh, 'the probe leaves its file behind')
+        # And it asks only when something has already failed. The far side of that folder is watched
+        # by a sync client, so a probe on the happy path is two events per battery run - a file
+        # created and deleted, forwarded to another machine - about a question the copy itself answers.
+        self.assertLess(sh.index('COPIED=$(rsync'), sh.index('if ! probe_writable'),
+                        'the probe runs before the copy, so every good run writes for nothing')
 
         # refuses: /proc/zoost-test can be stat'd as absent and never created
         red = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,

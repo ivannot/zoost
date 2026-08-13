@@ -86,20 +86,19 @@ fi
 # above and gets the same treatment: one line saying which of the two it is, and never a failure of
 # the battery, because a cloud drive that is not running is not a defect in this repository.
 #
-# And the probe has to be a **write that actually happens**. It used to be `mkdir -p "$DEST/apps"`,
-# which was one only by accident: the layer below the destination did not exist yet, so creating it
-# wrote. Now that the two extensions sit at the top of that folder there is no such layer, and
-# `mkdir -p` on a path that is already there succeeds without touching the filesystem - so it would
-# have answered "yes" for a share that had gone read-only, or for the empty directory an automount
-# leaves behind. A file created and removed answers the question that is actually being asked: can
-# this run write here, now.
-if ! (mkdir -p "$DEST" && : > "$DEST/.zoost-writable") 2>/dev/null; then
-  echo "$(dirname "$DEST") is there but nothing usable is mounted on it - the share is unreachable, or the host's sync client is not running" >&2
-  [ -n "$AUTO" ] && exit 0
-  echo "  bring it back, then run this again. Nothing was copied." >&2
-  exit 1
-fi
-rm -f "$DEST/.zoost-writable"
+# **The question is asked with a write, and only once something has already gone wrong.** It used to
+# be `mkdir -p "$DEST/apps"`, which wrote only by accident - that layer did not exist yet - and with
+# the extensions now at the top of the folder there is nothing left to create, so `mkdir -p` succeeds
+# without touching the filesystem and would answer "yes" for a share gone read-only and for the empty
+# directory an automount leaves behind.
+#
+# A file created and removed does answer it, and doing that on every run is the wrong place for it:
+# the far side of this folder is watched by a sync client, so a probe on the happy path is two events
+# per battery run, forwarded to another machine, about a question nobody asked. The copy below is
+# itself a write - when it works there was nothing to establish - so the probe lives in the failure
+# branch, where it separates «this share cannot be written» from «rsync could not do it this way».
+probe_writable() { ( : > "$DEST/.zoost-writable" ) 2>/dev/null && rm -f "$DEST/.zoost-writable"; }
+mkdir -p "$DEST" 2>/dev/null || true
 
 # The destination is very likely a cloud-sync filesystem, and those are not ordinary ones: Google
 # Drive's virtual drive refuses the temporary files rsync writes before renaming them into place, and
@@ -129,6 +128,15 @@ if command -v rsync >/dev/null &&
    COPIED=$(rsync $RSYNC_FLAGS apps/crm apps/analytics "$DEST/" 2>/dev/null); then
   :
 else
+  # Which of the two failures is it? A share that cannot be written is not a defect in this
+  # repository and must not read as one - and falling back would then `rm -rf` two folders it cannot
+  # replace, which is the worst available answer.
+  if ! probe_writable; then
+    echo "$(dirname "$DEST") is there but nothing usable is mounted on it - the share is unreachable, or the sync client on the host is not running" >&2
+    [ -n "$AUTO" ] && exit 0
+    echo "  bring it back, then run this again. Nothing was copied." >&2
+    exit 1
+  fi
   # Loud, because it deletes: whoever is watching that folder should know why it emptied.
   echo "  rsync could not write there, falling back to delete-and-copy" >&2
   rm -rf "$DEST/crm" "$DEST/analytics"
