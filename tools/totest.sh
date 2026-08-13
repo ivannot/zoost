@@ -12,13 +12,14 @@
 # edited there is gone at the next run. Fix things in the repository; this is a copy.
 #
 # The destination is **not written down in this repository**, and that is the point. It is a property
-# of one machine - a drive letter, a mount point, whichever cloud folder that machine syncs - so a
-# path committed here is a path that is wrong on the next machine while looking perfectly right on
-# this one. It lives in `tools/machine.env`, which is git-ignored, and every tracked file uses a
+# of one machine - a drive letter, a mount point, whichever folder that machine shares - so a path
+# committed here is a path that is wrong on the next machine while looking perfectly right on this
+# one. It has already moved once, from a cloud-sync folder to a share on the network, and nothing in
+# this file changed with it. It lives in `tools/machine.env`, which is git-ignored, and every tracked file uses a
 # placeholder; a test reads the values out of that file and fails if any of them has leaked into
 # something tracked.
 #
-#   tools/machine.env       ZOOST_TEST_DIR='/path/to/the/synced/folder/zoost-test'
+#   tools/machine.env       ZOOST_TEST_DIR='/path/to/the/folder/the/browser/can/see'
 #
 # `--auto` is how `tests/run.sh` calls it: do nothing, quietly, where there is nothing to do. Asked
 # directly it says what is missing and how to fix it, because a copy that reports success over a
@@ -56,7 +57,7 @@ DEST="${1:-${ZOOST_TEST_DIR:-}}"
 if [ -z "$DEST" ]; then
   [ -n "$AUTO" ] && exit 0
   echo "no destination for the extensions. Write it once, in tools/machine.env (not tracked):"
-  echo "  ZOOST_TEST_DIR='/path/to/the/synced/folder/zoost-test'"
+  echo "  ZOOST_TEST_DIR='/path/to/the/folder/the/browser/can/see'"
   echo "or pass the destination as an argument."
   exit 1
 fi
@@ -84,12 +85,21 @@ fi
 # script being broken rather than as the mirror not being written. It is the same distinction as
 # above and gets the same treatment: one line saying which of the two it is, and never a failure of
 # the battery, because a cloud drive that is not running is not a defect in this repository.
-if ! mkdir -p "$DEST/apps" 2>/dev/null; then
-  echo "$(dirname "$DEST") is there but nothing is mounted on it - the host's sync client is probably not running" >&2
+#
+# And the probe has to be a **write that actually happens**. It used to be `mkdir -p "$DEST/apps"`,
+# which was one only by accident: the layer below the destination did not exist yet, so creating it
+# wrote. Now that the two extensions sit at the top of that folder there is no such layer, and
+# `mkdir -p` on a path that is already there succeeds without touching the filesystem - so it would
+# have answered "yes" for a share that had gone read-only, or for the empty directory an automount
+# leaves behind. A file created and removed answers the question that is actually being asked: can
+# this run write here, now.
+if ! (mkdir -p "$DEST" && : > "$DEST/.zoost-writable") 2>/dev/null; then
+  echo "$(dirname "$DEST") is there but nothing usable is mounted on it - the share is unreachable, or the host's sync client is not running" >&2
   [ -n "$AUTO" ] && exit 0
-  echo "  start it on the host, then run this again. Nothing was copied." >&2
+  echo "  bring it back, then run this again. Nothing was copied." >&2
   exit 1
 fi
+rm -f "$DEST/.zoost-writable"
 
 # The destination is very likely a cloud-sync filesystem, and those are not ordinary ones: Google
 # Drive's virtual drive refuses the temporary files rsync writes before renaming them into place, and
@@ -106,20 +116,47 @@ fi
 # Without times, rsync's usual size-and-date shortcut cannot work either, so it compares content:
 # `--checksum` on fifty small files costs nothing and copies only what actually changed. A second run
 # writes nothing at all, which is what a sync folder should see.
+#
+# **`--delete` reaches inside the directories being transferred and no further**, which is what makes
+# writing into a folder that also holds other things safe - measured rather than assumed, because the
+# destination stopped having a layer of its own to be scoped by: a bystander file left beside the two
+# extensions survives, a file removed from an app is removed from its copy. The version of this
+# comment that claimed otherwise was written first and disproven in ten seconds; a test now holds the
+# behaviour, since the guarantee is rsync's and not ours.
+RSYNC_FLAGS="-rl --delete $COMPARE --no-perms --no-owner --no-group --no-times --inplace -i"
 COPIED=''
 if command -v rsync >/dev/null &&
-   COPIED=$(rsync -rl --delete "$COMPARE" --no-perms --no-owner --no-group --no-times --inplace -i \
-         apps/crm apps/analytics "$DEST/apps/" 2>/dev/null); then
+   COPIED=$(rsync $RSYNC_FLAGS apps/crm apps/analytics "$DEST/" 2>/dev/null); then
   :
 else
   # Loud, because it deletes: whoever is watching that folder should know why it emptied.
   echo "  rsync could not write there, falling back to delete-and-copy" >&2
-  rm -rf "$DEST/apps/crm" "$DEST/apps/analytics"
-  cp -R apps/crm apps/analytics "$DEST/apps/"
+  rm -rf "$DEST/crm" "$DEST/analytics"
+  cp -R apps/crm apps/analytics "$DEST/"
   COPIED='(everything)'
 fi
 
-printf '%s\n' "$DEST/apps/crm" "$DEST/apps/analytics"
+# The other thing that has to reach a machine with a browser on it: the screenshots that go on the
+# two Store listings. `tools/shots.py` renders them into `dist/store/<app>/1..5.png` - the whole of
+# what `dist/` keeps between runs - and uploading them means opening one folder and taking what is in
+# it, which cannot be done from the machine that renders them.
+#
+# Only ever copied when they exist. A run that has not rendered any leaves whatever is over there
+# alone rather than deleting it: the last rendered set is the one that was uploaded, and an empty
+# folder would say "nothing to upload" about a listing that has images on it.
+IMGS=''
+if [ -d dist/store ]; then
+  mkdir -p "$DEST/store"
+  COPIED="$COPIED$(rsync $RSYNC_FLAGS dist/store/ "$DEST/store/" 2>/dev/null || true)"
+  IMGS=$(find "$DEST/store" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+fi
+
+printf '%s\n' "$DEST/crm" "$DEST/analytics"
+if [ -n "$IMGS" ]; then
+  echo "$DEST/store  ($IMGS image(s), the set to upload)"
+elif [ -z "$AUTO" ]; then
+  echo "$DEST/store  (nothing rendered yet - python3 tools/shots.py writes them)"
+fi
 # The count is the point: "nothing to do" is what an unchanged run should say, and a number that is
 # suddenly every file is the shape of the defect above coming back.
 if [ "$COPIED" = '(everything)' ]; then

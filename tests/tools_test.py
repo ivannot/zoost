@@ -1996,8 +1996,11 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
                          .splitlines() if not l.lstrip().startswith('#'))
         # The short-flag cluster only. A looser pattern over the line matched `--delete`, which has a
         # t in it: a check that fires on the wrong thing gets loosened until it fires on nothing.
-        m = re.search(r'rsync\s+-([a-zA-Z]+)\s', code)
-        self.assertIsNotNone(m, 'no rsync call found')
+        # The cluster is where it is defined, which is no longer always on the `rsync` line: two calls
+        # share one RSYNC_FLAGS. A test that reads only the call site would go quiet the day the flags
+        # move, which is the failure mode of asserting on a shape rather than on a value.
+        m = re.search(r'(?:rsync|RSYNC_FLAGS=")\s*-([a-zA-Z]+)\s', code)
+        self.assertIsNotNone(m, 'no rsync flags found')
         self.assertNotIn('t', m.group(1), f'-{m.group(1)} asks for times, which the destination refuses')
         self.assertNotIn('-a ', code, '-a implies times as well')
         self.assertIn('--no-times', code)
@@ -2031,7 +2034,7 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         # It deletes. Whoever is watching that folder should be told why it emptied, rather than
         # discovering it.
         sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
-        i = sh.index('rm -rf "$DEST/apps/crm"')
+        i = sh.index('rm -rf "$DEST/crm"')
         self.assertIn('echo', sh[max(0, i - 300):i], 'the fallback deletes without a word')
 
     def test_an_unchanged_run_writes_nothing(self):
@@ -2102,13 +2105,100 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
                               env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
         self.assertEqual(auto.returncode, 0, 'a mount that is not there failed the battery')
         self.assertEqual(auto.stdout.strip(), '', 'it wrote a path it never copied to')
-        self.assertIn('nothing is mounted on it', auto.stderr,
+        self.assertIn('nothing usable is mounted on it', auto.stderr,
                       f'--auto blamed the script instead of the mount: {auto.stderr!r}')
         asked = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')],
                                capture_output=True, text=True, cwd=ROOT,
                                env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
         self.assertEqual(asked.returncode, 1)
         self.assertIn('Nothing was copied', asked.stderr)
+
+    def test_the_images_to_upload_travel_with_the_extensions(self):
+        """The screenshots that go on the two listings are rendered here and uploaded from a machine
+        with a browser and a dashboard open, so they have the same problem the extensions have: the
+        machine that makes them is not the machine that needs them. They ride the same mirror, under
+        `store/`, and they are copied only when they exist - a run that rendered none must leave the
+        last rendered set alone, because that is the set the listing carries and an empty folder would
+        say "nothing to upload" about a listing that has images on it.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / 'mirror'
+            env = {**os.environ, 'ZOOST_TEST_DIR': str(dest)}
+            out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                                 text=True, cwd=ROOT, env=env)
+            self.assertEqual(out.returncode, 0, out.stderr)
+            rendered = sorted((ROOT / 'dist' / 'store').glob('*/*.png')) if (ROOT / 'dist' / 'store').is_dir() else []
+            if rendered:
+                self.assertEqual(sorted(p.name for p in (dest / 'store').glob('*/*.png')),
+                                 sorted(p.name for p in rendered),
+                                 'the images to upload did not travel with the extensions')
+                self.assertIn('the set to upload', out.stdout, 'it copied them without saying so')
+            else:
+                self.assertFalse((dest / 'store').exists(),
+                                 'it made an empty folder that reads as "nothing to upload"')
+                self.assertIn('nothing rendered yet', out.stdout,
+                              'asked directly, it said nothing about the images at all')
+
+    def test_the_probe_is_a_write_and_it_takes_itself_away(self):
+        """`mkdir -p "$DEST/apps"` was a write only by accident - the layer under the destination did
+        not exist yet, so creating it wrote. With the two extensions at the top of that folder there
+        is no such layer, and `mkdir -p` on a path that is already there succeeds without touching
+        anything: it would have answered "yes" for a share gone read-only and for the empty directory
+        an automount leaves behind, which is the exact state this check exists for.
+
+        Both halves are proven, because a gate that always refuses looks identical to a strict one:
+        it refuses a directory that exists and cannot be written, and it allows one that can - and in
+        the allowing case it leaves nothing of its own behind.
+        """
+        sh = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+        self.assertIn(': > "$DEST/.zoost-writable"', sh, 'the probe writes nothing again')
+        self.assertIn('rm -f "$DEST/.zoost-writable"', sh, 'the probe leaves its file behind')
+
+        # refuses: /proc/zoost-test can be stat'd as absent and never created
+        red = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                             text=True, cwd=ROOT,
+                             env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
+        self.assertEqual(red.returncode, 1, 'a destination that cannot be written was accepted')
+
+        # allows, and the folder afterwards holds the two extensions and nothing else
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / 'mirror'
+            green = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                                   text=True, cwd=ROOT,
+                                   env={**os.environ, 'ZOOST_TEST_DIR': str(dest)})
+            self.assertEqual(green.returncode, 0, f'a writable destination was refused: {green.stderr}')
+            left = sorted(p.name for p in dest.iterdir())
+            self.assertNotIn('.zoost-writable', left, 'the probe left its file in the mirror')
+            self.assertLessEqual(set(left), {'crm', 'analytics', 'store'},
+                                 f'the mirror holds something nobody asked for: {left}')
+            self.assertIn('crm', left, 'the mirror is missing an extension')
+
+    def test_delete_cannot_reach_past_what_it_is_replacing(self):
+        """The destination used to have an `apps/` layer of its own, and now the two extensions sit at
+        the top of a folder that also holds the Store images - and, on a network share, whatever else
+        someone puts beside them. So the question «how far does `--delete` reach» stopped being
+        academic. The answer is that it reaches inside the directories being transferred and no
+        further: a bystander file survives, a file gone from an app is gone from its copy.
+
+        That is rsync's guarantee rather than ours, which is exactly why it is asserted here. The
+        comment in `totest.sh` first said the opposite - that a single call would wipe the folder -
+        and this test was written to prove it before the claim was measured and found false. Holding
+        a borrowed guarantee is the point: it is the one that would be expensive to discover.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / 'mirror'
+            dest.mkdir()
+            bystander = dest / 'notes.txt'
+            bystander.write_text('not ours', encoding='utf-8')
+            (dest / 'crm').mkdir()
+            stale = dest / 'crm' / 'gone-from-the-source.js'
+            stale.write_text('//', encoding='utf-8')
+            out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                                 text=True, cwd=ROOT,
+                                 env={**os.environ, 'ZOOST_TEST_DIR': str(dest)})
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertTrue(bystander.exists(), 'the mirror deleted a file that was never ours')
+            self.assertFalse(stale.exists(), 'a file gone from the source survived inside the mirror')
 
     def tracked(self):
         out = subprocess.run(['git', '-C', str(ROOT), 'ls-files'], capture_output=True, text=True)

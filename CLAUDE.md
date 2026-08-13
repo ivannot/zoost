@@ -636,14 +636,17 @@ file with no ordering is a repository that goes wrong, and the machine doing the
 pays for it.
 
 What the other machine needs is not the repository - it is `apps/<app>/`, which is what Chrome reads
-when you load an unpacked extension. `bash tools/totest.sh` copies exactly those two directories into
-the synced folder, one direction, `--delete`, and the other machine loads the extension from there.
-Testing what is still on the working tree is the whole reason a `git pull` on the other side would
-not do.
+when you load an unpacked extension, and `dist/store/<app>/1..5.png`, which is what the dashboard
+asks for. `bash tools/totest.sh` writes exactly those into that folder as `crm/`, `analytics/` and
+`store/`, one direction, `--delete`, and the other machine loads the extension from there. Testing
+what is still on the working tree is the whole reason a `git pull` on the other side would not do.
+The images are copied only when they exist: a run that rendered none leaves the last set alone,
+because that is the set the listing carries.
 
 **Where that folder actually is, is not in this repository.** It is a drive letter and a mount point -
 a property of one machine - so a path committed here is one that is wrong on the next machine while
-looking perfectly right on this one. `ZOOST_TEST_DIR` lives in **`tools/machine.env`**, which is
+looking perfectly right on this one. It has already moved once, from a cloud-sync folder to a share
+on the network, and no tracked file changed with it. `ZOOST_TEST_DIR` lives in **`tools/machine.env`**, which is
 git-ignored and is the single place any such value goes; every tracked file says the placeholder.
 **The values belong to a machine, the schema does not**: `tools/machine.env.example` is tracked,
 lists every key with what happens when it is unset, and a test derives the keys from the tools that
@@ -836,7 +839,9 @@ What that request means, in order. Do all of it without being asked:
    `dist/store/<app>/1.png` .. `5.png` - a folder per product, the file named by its slot and nothing
    else, so uploading is opening one folder and taking what is in it - in the order the Store shows them - the interface first,
    then the rest of the interface, then the diagrams - and prints the digest of the set against
-   `store/<app>/screenshots.json`, which records what is on the listing. This is part of every
+   `store/<app>/screenshots.json`, which records what is on the listing. **The folder to open is on
+   the mirror, not here**: `tools/totest.sh` carries them across as `store/<app>/`, because the
+   machine that renders them is not the one with the dashboard open. This is part of every
    release for both products, not an occasional tidy-up: the Zoost Analytics listing sat on one image
    from its first submission because nothing measured it. The names are numbers on purpose; see
    `store/assets.md`.
