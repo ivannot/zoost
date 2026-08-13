@@ -164,11 +164,6 @@
   .sortdir:hover{border-color:var(--sel)}
 
   #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
-  #mmoverlay{display:none;position:absolute;inset:0;z-index:6;background:var(--bg);align-items:center;justify-content:center;padding:24px;text-align:center}
-  #mmoverlay.show{display:flex}
-  #mmoverlay .mmob{max-width:280px;display:flex;flex-direction:column;gap:8px}
-  #mmoverlay .t{color:#f0b483;font-size:14px;font-weight:600}
-  #mmoverlay .s{color:var(--muted);font-size:12px;line-height:1.5}
 
   .vtbl{width:100%;border-collapse:collapse;font:11.5px var(--sans)}
   .vtbl th{position:sticky;top:0;z-index:2;background:#141b29;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;text-transform:uppercase;font-size:9.5px;letter-spacing:.3px}
@@ -387,7 +382,6 @@
   <button class="sortdir" id="sortdir" title="Ascending / descending">&#8593;</button>
 </div>
 
-  <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho Analytics tab and the local workspace are different workspaces. Browsing is disabled to avoid mixing them - align them using the action above.</div></div></div>
 
   <!-- Deliberately empty: the CRM's tree is too. An empty state has to say *why* it is empty, which
        only the code knows - a copy of that sentence in the markup is a second source of truth, and it

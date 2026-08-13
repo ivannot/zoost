@@ -41,6 +41,17 @@ const isSample = () => !!(bound && bound.sample);
 // reason rather than left to 404, because «nothing talks to the platform» has to be true of the
 // navigations too, or it is not the claim the guide makes. It reads as `if (sampleRefuse()) return;`
 // at each site - one sentence, in one place, instead of the same string copied at seven of them.
+// Everything that reads or writes through Zoho asks this first, at the moment it would act. It used
+// to be enough that the control was disabled or covered - which is protection by position on screen,
+// and it held only until somebody put a Zoho-bound action somewhere nobody had thought about. One
+// had already got out: a click on a row of the tree that is not downloaded yet fetches that function
+// from Zoho, and nothing but the mismatch overlay stood in front of it. Reported as a rule rather
+// than as a bug: «since Pull is disabled, everything that talks to Zoho should be».
+function mismatchRefuse() {
+  if (zohoReady()) return false;
+  setStatus(MSG.mismatchRefused, 'warn');
+  return true;
+}
 function sampleRefuse() {
   if (!isSample()) return false;
   setStatus(MSG.sampleNoOrg, 'warn');
@@ -85,6 +96,7 @@ function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on
 // A literal that appears once stays where it is used - a constant read by one caller is indirection
 // with nothing to hold together. tests/panel.test.mjs enforces the rule in the other direction.
 const MSG = {
+  mismatchRefused: 'The active tab is a different org from this workspace - nothing here reads Zoho until they match.',
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   wrongTab: 'Active Zoho tab does not match this workspace.',
@@ -596,6 +608,13 @@ async function ensureBridge(tabId) {
   }
 }
 async function toBridge(msg) {
+  // The last line, below every disabled control and every guard above it. The panel speaks to the
+  // tab that is open, so a command that is not the context probe must not travel while that tab is a
+  // different org from the workspace this panel is bound to - whatever removed the `disabled`, and
+  // whoever called the function directly. `context` is how the mismatch is detected in the first
+  // place, so it is the one thing that always goes; and a panel with nothing bound yet is creating
+  // its first workspace, which is not a mismatch.
+  if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
   const id = await zohoTabId(); if (!id) throw new Error(MSG.noTab);
   await ensureBridge(id); const fid = await crmFrameId(id); return chrome.tabs.sendMessage(id, msg, { frameId: fid });
 }
@@ -653,7 +672,6 @@ async function refreshContext() {
   const mmbar = $('mmbar');
   mmbar.classList.toggle('show', mm || sampleMm);
   mmbar.classList.toggle('soft', sampleMm);
-  $('mmoverlay').classList.toggle('show', mm);
   if (mm) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); }
   if (mm || sampleMm) {
     $('mmtext').textContent = sampleMm
@@ -1462,6 +1480,7 @@ async function contentSearch() {
 
 // ---------- pull / graph ----------
 async function pullAll() {
+  if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
@@ -2487,6 +2506,7 @@ async function buildGraphFor(kind) {
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
 async function syncOne(id) {
+  if (mismatchRefuse()) return;
   if (!dir || !(await hasPerm(dir))) return;
   await refreshContext();
   if (!guardOk()) { setStatus(`Save ignored: active ${envOf(lastCtx?.origin)}/org ${lastCtx?.org} ≠ workspace ${envOf(bound?.base)}/org ${bound?.org}.`, 'warn'); return; }
@@ -3206,6 +3226,7 @@ async function pullEverything() {
 
 // ---------- modules: pull ----------
 async function pullModules() {
+  if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
@@ -3350,6 +3371,7 @@ function renderModules() {
   }
 }
 async function resyncModule(m) {
+  if (mismatchRefuse()) return;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return; }
   if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
   setStatus(`Resyncing ${m.api_name}…`, 'busy');
@@ -3664,6 +3686,7 @@ function isTransient(msg) {
 }
 const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
+  if (mismatchRefuse()) return false;
   if (!dir) return false;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
   const info = index.get(entry.id) || {};
@@ -4548,6 +4571,7 @@ function renderWorkflows() {
   });
 }
 async function downloadOneWf(entry) {
+  if (mismatchRefuse()) return false;
   if (!dir) return false;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
   try {
@@ -4577,6 +4601,7 @@ async function downloadMissingWf() {
   setPullBusy(false); $('missing').disabled = false;
 }
 async function pullSchedules() {
+  if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
@@ -4592,6 +4617,7 @@ async function pullSchedules() {
 }
 // Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
+  if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
@@ -4683,6 +4709,7 @@ async function loadActionsIndex() {
   return Array.isArray(idx) ? idx : [];
 }
 async function pullActions() {
+  if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
@@ -5072,6 +5099,7 @@ function runtimeSummary(n) {
            : 'Read from Zoho \u00b7 nothing failing there';
 }
 async function pullFailures() {
+  if (mismatchRefuse()) return;
   try {
     pullActive = true;
     await requirePerm(dir);
@@ -5103,6 +5131,7 @@ async function loadFailuresIndex() {
 }
 
 async function pullWorkflows() {
+  if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(dir);
@@ -5224,6 +5253,7 @@ function renderWorkflowDetail(rule) {
   return h + `</div>`;
 }
 async function loadWorkflowUsage(id, outEl, btn) {
+  if (mismatchRefuse()) return;
   btn.disabled = true; outEl.textContent = 'Loading executions\u2026';
   const fmt = (d) => d.toISOString().slice(0, 10);
   const till = new Date(), from = new Date(Date.now() - 30 * 864e5);

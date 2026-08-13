@@ -99,11 +99,6 @@
   @keyframes sp{to{transform:rotate(360deg)}}
   /* main split */
   #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
-  #mmoverlay{display:none;position:absolute;inset:0;z-index:6;background:var(--bg);align-items:center;justify-content:center;padding:24px;text-align:center}
-  #mmoverlay.show{display:flex}
-  #mmoverlay .mmob{max-width:280px;display:flex;flex-direction:column;gap:8px}
-  #mmoverlay .t{color:#f0b483;font-size:14px;font-weight:600}
-  #mmoverlay .s{color:var(--muted);font-size:12px;line-height:1.5}
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
   #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
   #belowbar{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
@@ -552,7 +547,6 @@
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 
   <div id="main">
-    <div id="mmoverlay"><div class="mmob"><div class="t">Environment mismatch</div><div class="s">The Zoho tab and the local workspace point to different orgs. Browsing is disabled to avoid mixing environments - align them using the actions above.</div></div></div>
     <div id="tree"></div>
     <div id="resizer"></div>
     <div id="preview">

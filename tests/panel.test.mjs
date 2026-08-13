@@ -2543,10 +2543,12 @@ test('a sample workspace states the discrepancy, and only the blocking differs',
   // line in the workspace half is too quiet for that - reading invented data while looking at a
   // real org is exactly what the mismatch bar exists to say. So it is said.
   //
-  // What is *not* the same is the overlay. A real mismatch can be resolved and browsing until it is
-  // means reading org A's mirror while looking at org B; a sample will never match anything,
-  // everything Zoho-bound is already refused for it, and blocking it would make it unusable the
-  // whole time a Zoho tab is open. Say it, do not stop it.
+  // The overlay that used to make the difference is gone: it curtained off the list on a real
+  // mismatch, which was protection by position on screen - and it was carrying more weight than
+  // anyone had noticed, since a click on an undownloaded row reaches Zoho and nothing else stood in
+  // front of it. Every path to the platform refuses on its own now, so both states are *said* and
+  // neither is stopped. What still differs is the bar: softer for a sample, and without the offer to
+  // switch to a Zoho org that a sample does not have.
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
     const html = read(`apps/${app}/sidepanel.html`);
@@ -2554,8 +2556,6 @@ test('a sample workspace states the discrepancy, and only the blocking differs',
       `${app}: nothing detects a sample sitting beside a real tab`);
     assert.ok(/classList\.toggle\('show', mm \|\| sampleMm\)/.test(js),
       `${app}: the bar stays hidden for a sample`);
-    assert.ok(/mmoverlay'\)\.classList\.toggle\('show', mm\)/.test(js),
-      `${app}: the overlay blocks a sample, which makes it unusable while any tab is open`);
     assert.ok(/classList\.toggle\('soft', sampleMm\)/.test(js),
       `${app}: the two situations look identical, so a reader cannot tell them apart`);
     assert.ok(/#mmbar\.soft\{/.test(html), `${app}: the softer bar has no style, so it renders as the hard one`);
@@ -3427,5 +3427,61 @@ for (const app of ['crm', 'analytics']) {
       'the sample branch still sends the reader to Pull all');
     // Ordering: the folder and the permission still come first - they block the sample too.
     assert.ok(why.indexOf('rootGranted') < at, 'the sample is blamed before a folder nobody granted');
+  });
+}
+
+// «Since Pull is disabled, everything that talks to Zoho should be» - and the protection has to be
+// where the action starts, not where the control happens to sit. It was positional: an opaque
+// overlay covered the list, and a click on a row of the tree that is not downloaded yet fetches that
+// function from Zoho with nothing else in front of it. The overlay is gone, so every path that
+// reaches the platform refuses on its own.
+for (const [app, fns] of [
+  ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne']],
+  ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
+]) {
+  test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
+    const js = read(`apps/${app}/sidepanel.js`);
+    // The set is derived from the transport, so a path added tomorrow is measured rather than
+    // remembered: everything that reaches the platform goes through toBridge.
+    const reach = new Set();
+    for (const m of js.matchAll(/toBridge\(/g)) {
+      const head = Math.max(js.lastIndexOf('\nasync function ', m.index), js.lastIndexOf('\nfunction ', m.index));
+      if (head > 0) reach.add(js.slice(head, js.indexOf('(', head)).split(' ').pop());
+    }
+    for (const fn of fns) {
+      const body = sliceFn(`apps/${app}/sidepanel.js`, fn);
+      assert.ok(/if \(mismatchRefuse\(\)\) return/.test(body), `${fn} reaches Zoho without asking`);
+    }
+    // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
+    // at all, so they are the two that must not refuse.
+    const unguarded = [...reach].filter((f) => !fns.includes(f) && !['toBridge', 'getContext', 'addWorkspace'].includes(f));
+    assert.deepEqual(unguarded, [], `these reach Zoho and nothing was said about them: ${unguarded}`);
+  });
+
+  test(`${app}: the mismatch is stated, not curtained off`, () => {
+    const html = read(`apps/${app}/sidepanel.html`), js = read(`apps/${app}/sidepanel.js`);
+    assert.ok(!/mmoverlay/.test(html) && !/mmoverlay/.test(js),
+      'the list is still covered, so what protects the reader is where things sit on screen');
+    assert.ok(/id="mmbar"/.test(html), 'nothing says the two are different');
+  });
+}
+
+// Asked for as a rule, by somebody who edits the DOM to remove `disabled` and sees what happens:
+// «bisogna aggiungere un controllo che quelle funzioni non possano essere invocate». So the refusal
+// is at the action - above - and again at the transport, which is the only door to the platform.
+// Two of them, because a guard on the caller can be forgotten on the next caller, and one in the
+// door cannot.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: nothing reaches the platform through a mismatch, whatever the buttons say`, () => {
+    const send = sliceFn(`apps/${app}/sidepanel.js`, 'toBridge');
+    assert.ok(/msg\.cmd !== 'context' && bound && !guardOk\(\)/.test(send),
+      'the transport lets anything through, so removing a disabled attribute is enough');
+    assert.ok(/throw new Error\(MSG\.mismatchRefused\)/.test(send),
+      'the refusal is silent or unnamed at the door');
+    // The two exemptions, stated rather than discovered: the probe that detects the mismatch, and a
+    // panel that has nothing bound yet and is creating its first workspace.
+    assert.ok(/cmd !== 'context'/.test(send), 'the probe that detects the mismatch is refused by it');
+    assert.ok(/&& bound &&/.test(send), 'a panel with no workspace bound cannot create its first');
   });
 }

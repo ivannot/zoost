@@ -48,6 +48,7 @@ const PULL_SV = 1;                            // pull schema version; bump when 
 // worded one way in Zoost CRM and another in Zoost Analytics. ↻ Refresh is the control that re-asks.
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
   errPrefix: 'Error: ',
@@ -444,6 +445,13 @@ async function ensureBridge(tabId) {
   }
 }
 async function toBridge(msg) {
+  // The last line, below every disabled control and every guard above it. The panel speaks to the
+  // tab that is open, so a command that is not the context probe must not travel while that tab is a
+  // different workspace from the one this panel is bound to - whatever removed the `disabled`, and
+  // whoever called the function directly. `context` is how the mismatch is detected in the first
+  // place, so it is the one thing that always goes; and a panel with nothing bound yet is creating
+  // its first workspace, which is not a mismatch.
+  if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
   const id = await analyticsTabId();
   if (id == null) throw new Error('The active tab is not Zoho Analytics.');
   await ensureBridge(id);
@@ -474,6 +482,17 @@ const guardOk = () => !isSample() && !!(bound && ctx && ctx.workspace && String(
 // exist: refused with a reason rather than left to 404, because «nothing talks to the platform» has
 // to be true of the navigations too, or it is not the claim the guide makes. It reads as
 // `if (sampleRefuse()) return;` at each site, instead of the same string copied at both of them.
+// Everything that reads or writes through Zoho asks this first, at the moment it would act. It used
+// to be enough that the control was disabled or covered - which is protection by position on screen,
+// and it held only until somebody put a Zoho-bound action somewhere nobody had thought about. One
+// had already got out: a click on a row of the tree that is not downloaded yet fetches that function
+// from Zoho, and nothing but the mismatch overlay stood in front of it. Reported as a rule rather
+// than as a bug: «since Pull is disabled, everything that talks to Zoho should be».
+function mismatchRefuse() {
+  if (guardOk()) return false;
+  status(MSG.mismatchRefused, 'warn');
+  return true;
+}
 function sampleRefuse() {
   if (!isSample()) return false;
   status('This is the sample workspace - there is no Zoho Analytics workspace to open.', 'warn');
@@ -496,7 +515,7 @@ async function refreshContext() {
     // reported as the overlay coming back in the middle of writing the sample and then leaving
     // again. A state that has to hold across time is a term in the condition, never an assignment.
     $('offoverlay').classList.toggle('show', !isSample() && !sampleBusy);
-    $('mmbar').classList.remove('show'); $('mmoverlay').classList.remove('show');
+    $('mmbar').classList.remove('show');
     el.className = 'offzoho'; who.innerHTML = 'Not on a Zoho Analytics tab'; bnd.innerHTML = localLbl;
     return updateButtons();
   }
@@ -529,9 +548,7 @@ async function refreshContext() {
   const mm = !!(bound && ctx && ctx.workspace && !guardOk() && !isSample());
   $('mmbar').classList.toggle('show', mm || sampleMm);
   $('mmbar').classList.toggle('soft', sampleMm);
-  $('mmoverlay').classList.toggle('show', mm);
   if (mm || sampleMm) {
-    if (mm) { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); }
     $('mmtext').textContent = sampleMm
       ? `You are looking at the sample workspace - invented data - while the tab is workspace ${ctx.workspace}. Nothing here comes from it, and nothing here can reach it.`
       : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
@@ -651,6 +668,7 @@ function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Rea
 
 // ---------- pull ----------
 async function pullAll() {
+  if (mismatchRefuse()) return;
   const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, 'Pulling…');
@@ -713,6 +731,7 @@ async function pullAll() {
 // Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
 // items that failed, and `pullOne()` re-reads a single view from its detail pane.
 async function pullOne(id) {
+  if (mismatchRefuse()) return;
   const v = viewById().get(id);
   if (!v) return;
   setBusy(true, `Re-reading «${v.name}»…`);
@@ -737,6 +756,7 @@ async function pullOne(id) {
 }
 
 async function retryFailed() {
+  if (mismatchRefuse()) return;
   const ids = [...new Set(pullFailed.map((f) => f.id))];
   if (!ids.length) return;
   const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
