@@ -27,6 +27,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
 import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -159,6 +160,16 @@ def need(binary: str) -> str:
     return path
 
 
+def say(*a, **k):
+    """Print where the run has got to, immediately.
+
+    `flush` is not decoration: stdout is block-buffered whenever it is not a terminal, so every
+    progress line a background run writes sits in a 4KB buffer until the process exits - which is
+    the same as printing nothing, exactly when somebody is asking whether it is still alive.
+    """
+    print(*a, flush=True, **k)
+
+
 def main() -> int:
     cwebp, dwebp = need("cwebp"), need("dwebp")
     shots.SCALE = 2                       # a retina source; see the module docstring
@@ -170,17 +181,25 @@ def main() -> int:
     # bytes. Measured across the whole set: a run that changes nothing now takes about a second.
     was = json.loads(LEDGER.read_text(encoding="utf-8")) if LEDGER.exists() else {}
     force = "--force" in sys.argv
-    print(f"{'image':22} {'rendered':>13} {'published':>10}")
+    say(f"{'image':22} {'rendered':>13} {'published':>10}")
     every = shots.SHOTS + shots.PANELS + shots.OPTIONS
     kept = unchanged = 0
-    for shot in every:
+    for i, shot in enumerate(every, 1):
         key = shot[0]
+        # Said *before* the work and flushed, which is the whole point. The line used to be printed
+        # after the render, and stdout block-buffers when it is not a terminal, so a run redirected
+        # to a file produced nothing at all until it exited: thirty-four minutes in which a working
+        # run and a hung one looked identical. Asked for as a rule - «un task monolitico che giri per
+        # tanti minuti e' indistinguibile da uno stuck».
+        say(f"  [{i:>2}/{len(every)}] {key:20}", end="")
+        t0 = time.monotonic()
         digest = source_digest(shot[1], shot[-1])
         dest = OUT / (key + ".webp")
         if not force and dest.exists() and (was.get(key) or {}).get("from") == digest:
             stamp[key] = {"app": shot[1], "from": digest}
             total += dest.stat().st_size
             kept += 1
+            say(f" {'':>8}    {dest.stat().st_size // 1024:>8} KB  unchanged source")
             continue
         png = (shots.render_options if shot in shots.OPTIONS else
                shots.render_panel if shot in shots.PANELS else shots.render)(shot)
@@ -199,7 +218,8 @@ def main() -> int:
             fresh.replace(dest)
         total += dest.stat().st_size
         stamp[key] = {"app": shot[1], "from": digest}
-        print(f"  {key:20} {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}")
+        say(f" {raw // 1024:>8} KB {dest.stat().st_size // 1024:>8} KB{note}"
+            f"  {time.monotonic() - t0:.0f}s")
     # The card, under the guard the screenshots are under. It was rendered unconditionally on every
     # run - four seconds of Chrome to produce, most of the time, the same picture - and because
     # `--screenshot=` writes the file whatever comes out, a run that changed nothing could still

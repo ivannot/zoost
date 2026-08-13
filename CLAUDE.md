@@ -540,6 +540,18 @@ Those have consequences outside the repository.
 This project was built by argument, not by dictation, and that is why it holds together. Keep it
 that way.
 
+**Anything that can run for more than a few seconds says where it has got to, and flushes.** A silent
+process and a hung one are the same thing from outside, and the difference is only learnt afterwards.
+`siteimg.py` rendered 27 images for **thirty-four minutes** without emitting a line, and the only way
+to tell it was alive was to look at Chrome's process table and the mtimes of the files it had not
+written yet. Two halves, and the second is the one that gets forgotten: **print a line per unit of
+work before doing it, and `flush=True`** - stdout is block-buffered whenever it is not a terminal, so
+a background run's progress sits in a 4KB buffer until the process exits, which is the same as
+printing nothing exactly when somebody is asking. Put the elapsed seconds on the line too: the first
+run with them showed one shot at 85s beside another at 1s, a spread nobody had suspected and nothing
+could have reported. Reported as a rule - «un task monolitico che gira per tanti minuti e'
+indistinguibile da uno stuck».
+
 **Everything that can be automated is automated, and what is left is stated.** The author's rule, and
 it is the general form of what this file already does in a dozen places: the sitemap is derived, the
 dates and versions on the page are written by a tool, the store fields are counted against their

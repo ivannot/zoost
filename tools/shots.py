@@ -24,6 +24,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -574,6 +575,12 @@ def current(app: str, keys) -> bool:
     return all(by_key.get(k) == source_digest(app, dict(ALL)[k][-1]) for k in keys)
 
 
+def say(*a, **k):
+    """Print where the run has got to, immediately - see the note in the loop below for why `flush`
+    is the load-bearing half of this."""
+    print(*a, flush=True, **k)
+
+
 def main():
     """No arguments renders what the Store takes; a name renders that one, to be looked at.
 
@@ -590,18 +597,24 @@ def main():
         want = [k for keys in STORE.values() for k in keys]
         for app, keys in STORE.items():
             if not force and current(app, keys):
-                print(f"  {app}: unchanged, the five published images are still what this renders")
+                say(f"  {app}: unchanged, the five published images are still what this renders")
                 want = [k for k in want if k not in keys]
     rendered = {}
     if want and not pathlib.Path(CHROME).exists():
         sys.exit("Chrome not found at " + CHROME)
-    for shot in SHOTS + PANELS + OPTIONS:
-        if shot[0] not in want:
-            continue
+    todo = [s for s in SHOTS + PANELS + OPTIONS if s[0] in want]
+    for i, shot in enumerate(todo, 1):
+        # Said before the render and flushed. Each of these is a headless Chrome and takes tens of
+        # seconds; printed afterwards, and block-buffered as stdout is whenever it is not a terminal,
+        # the whole run was silent until it exited - which is indistinguishable from a hung one, and
+        # was for forty minutes. The elapsed seconds are on the line for the same reason: a shot that
+        # is slower than its siblings is the first thing you want to know.
+        say("  [{:>2}/{}] {:<16} ".format(i, len(todo), shot[0]), end="")
+        t0 = time.monotonic()
         dest = (render_options if shot in OPTIONS else render_panel if shot in PANELS else render)(shot)
         out = subprocess.run(["file", "-b", str(dest)], capture_output=True, text=True).stdout.strip()
         ok = "1280 x 800" in out and "RGB" in out and "RGBA" not in out
-        print("{:<16} {}  {}".format(shot[0], "ok " if ok else "BAD", out))
+        say("{}  {}  {:.0f}s".format("ok " if ok else "BAD", out, time.monotonic() - t0))
         if not ok:
             sys.exit("that is not what the Store accepts - see store/assets.md")
         rendered[shot[0]] = dest

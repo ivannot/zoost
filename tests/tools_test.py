@@ -966,6 +966,20 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('No release notes', out.stdout,
                       'an empty notes file satisfied the check, which is the same as no notes')
 
+    def test_the_long_renders_say_where_they_are(self):
+        # A silent process and a hung one are the same thing from outside. siteimg rendered 27 images
+        # for thirty-four minutes without a line, and the only way to tell it was alive was Chrome's
+        # process table. Two halves are asserted because the second is the one that gets forgotten:
+        # the line has to be printed *before* the work, and it has to be flushed - stdout is
+        # block-buffered whenever it is not a terminal, so an unflushed line reaches the log only
+        # when the process exits, which is exactly when nobody needs it any more.
+        for tool in ('siteimg.py', 'shots.py'):
+            src = (ROOT / 'tools' / tool).read_text(encoding='utf-8')
+            self.assertIn('print(*a, flush=True, **k)', src, f'{tool}: progress can sit in a buffer')
+            self.assertIn('end=""', src, f'{tool}: the line is printed after the work, not before it')
+            self.assertIn('time.monotonic()', src, f'{tool}: nothing says how long a unit took')
+            self.assertNotIn('\n    print(f"  {key:20}', src, f'{tool}: an unflushed print is back')
+
     def test_it_says_when_the_listing_pictures_are_of_another_version(self):
         # The screenshots on the listing are pictures of an interface, and a release that changed one
         # has to replace them. That step lived only in the routine - so it depended on somebody
