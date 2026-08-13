@@ -1307,6 +1307,11 @@ const erPos = {};
 let erIds = [];
 let erEmph = 'modules';   // 'relations' = modules demoted to labels, relation names in the foreground
 let erMaxX = 0, erMaxY = 0;
+// Where the drawing actually starts, which is not the origin. The layout leaves a 40px margin and a
+// reader can drag a box anywhere, so framing from 0 counted that margin on one side only - 379px of
+// air against 341 - and counted a dragged box's whole excursion as drawing. What needs a corner
+// rather than an extent (the printed page, the canvas) clamps this at 0 where it uses it.
+let erMinX = 0, erMinY = 0;
 // Readability vs. compactness has no single right answer across graphs, so the trade-off is
 // exposed as runtime controls instead of being guessed once at build time.
 const ER_PRESET = {
@@ -2053,6 +2058,32 @@ function erMarkD(S, other, slot) {
 // its name in. One helper and not two answers: «which colour is this node» written twice is two
 // answers waiting to disagree, and the second one would be in a tooltip nobody diffs against a box.
 // Analytics only ever draws a schema, so the first branch is the whole of it there.
+// The colour a node wears, as a value rather than as a class. The fold marks paint themselves with
+// the colour of the box at the *other* end of their arc, and that box is very often not on the
+// drawing at all - which is exactly when knowing its colour is worth something. Read out of the
+// stylesheet the first time it is asked, so --box-std and --box-cus stay declared in one place.
+let _boxCol = null;
+function erNodeCol(n) {
+  if (DATA.kind !== 'schema') return NSCOL(KINDOF(n));
+  if (!_boxCol) {
+    const cs = getComputedStyle(document.documentElement);
+    _boxCol = { std: cs.getPropertyValue('--box-std').trim() || '#3b82f6',
+                cus: cs.getPropertyValue('--box-cus').trim() || '#a78bfa' };
+  }
+  return n && n.namespace === 'custom' ? _boxCol.cus : _boxCol.std;
+}
+// Black or white on that colour, whichever can be read on it - sRGB relative luminance, the same
+// arithmetic every contrast tool uses. A `-` in the diagram's violet was legible on white and is not
+// legible on half the hues a box can wear, and the mark is 16px across: there is no room for a
+// second look.
+function erInk(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return '#0f172a';
+  const v = parseInt(m[1], 16);
+  const ch = [(v >> 16) & 255, (v >> 8) & 255, v & 255]
+    .map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
+  return (0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]) > 0.45 ? '#0f172a' : '#ffffff';
+}
 function erPaint(el, n) {
   if (DATA.kind === 'schema') { el.classList.add(n.namespace === 'custom' ? 'custom' : 'standard'); return; }
   el.classList.add('hued');
@@ -2078,10 +2109,16 @@ function erRender() {
   });
   const boxes = $('erboxes'); boxes.innerHTML = '';
   const boxEl = new Map();          // so a control can outline what it is about to take away
-  let maxX = 0, maxY = 0;
+  // Both ends of the drawing, not just the far one. Everything here used to be measured from the
+  // origin outwards on the assumption that the layout puts the drawing there - which it does, until
+  // the reader drags a box left of it. Then the frame, the page and the canvas were all sized for a
+  // rectangle that started at 0 while the drawing started somewhere else. Reported as Fit resizing
+  // and not centring.
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   erIds.forEach((id) => {
     if (gone.has(id)) return;
     const n = N[id], p = erPos[id], s = erBoxSize(n);
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
     maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h);
     const div = document.createElement('div');
     const pickIds = erSelEdge ? erSelEdge.split('\u0000') : null;
@@ -2228,7 +2265,12 @@ function erRender() {
     const S = stay === a ? A : B, slot = stay === a ? sa : sb;
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = 'ermk ' + (folded ? 'back' : 'fold');
+    // The arc runs a -> b, so the mark standing on `a` is where it leaves and the one on `b` is where
+    // it arrives. Both are drawn for every arc, which is what makes the pair readable at a glance.
+    el.className = 'ermk ' + (folded ? 'back' : 'fold') + (stay === a ? ' out' : ' in');
+    const fill = erNodeCol(N[away]);
+    el.style.setProperty('--mkfill', fill);
+    el.style.setProperty('--mkink', erInk(fill));
     el.style.left = (stay === a ? pt[0] : pt[2]) + 'px';
     el.style.top = (stay === a ? pt[1] : pt[3]) + 'px';
     el.style.setProperty('--d', erMarkD(S, stay === a ? B : A, slot).toFixed(1) + 'px');
@@ -2289,6 +2331,7 @@ function erRender() {
     labels.forEach((L) => {
       const picked = erSelEdge === L.key, dimmed = erSelEdge && !picked;
       const x = L.cx - L.w / 2, y = L.cy - L.h / 2;
+      minX = Math.min(minX, x); minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + L.w); maxY = Math.max(maxY, y + L.h);
       // leader line back to the edge it belongs to, when the label had to move
       if (Math.hypot(L.cx - L.ax, L.cy - L.ay) > 14) {
@@ -2322,8 +2365,14 @@ function erRender() {
       svg.appendChild(g);
     });
   }
-  erMaxX = maxX; erMaxY = maxY;
-  svg.setAttribute('width', maxX + 60); svg.setAttribute('height', maxY + 60);
+  erMaxX = Number.isFinite(maxX) ? maxX : 0;
+  erMaxY = Number.isFinite(maxY) ? maxY : 0;
+  erMinX = Number.isFinite(minX) ? minX : 0;
+  erMinY = Number.isFinite(minY) ? minY : 0;
+  // The canvas is a rectangle from the origin, whatever the drawing does - it cannot have negative
+  // width - so this is the one place that still clamps. What the drawing *is* stays in erMin/erMax,
+  // because that is what has to be framed and printed.
+  svg.setAttribute('width', Math.max(0, erMaxX) + 60); svg.setAttribute('height', Math.max(0, erMaxY) + 60);
   erPickCard();
 }
 // Whether the reader has moved the diagram since it was last fitted. A window resize re-fits, which
@@ -2352,11 +2401,23 @@ function erFit() {
   // at the far edge and Fit would zoom out to include it. `erMaxX` is already measured over what was
   // drawn; this is the boxes themselves, in case the last render did not reach them.
   const goneNow = erHiddenSet();
-  let maxX = erMaxX, maxY = erMaxY;
-  erIds.forEach((id) => { const p = erPos[id]; if (!p || goneNow.has(id)) return; maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); });
+  let minX = erMinX, minY = erMinY, maxX = erMaxX, maxY = erMaxY;
+  erIds.forEach((id) => {
+    const p = erPos[id]; if (!p || goneNow.has(id)) return;
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h);
+  });
   const pad = 40;
-  erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (maxX || 1), (vh - pad * 2) / (maxY || 1))));
-  erTx = (vw - maxX * erScale) / 2; erTy = (vh - maxY * erScale) / 2; erApply();
+  // The drawing's own width, not its distance from the origin. Those are the same number only while
+  // every box sits right of and below 0, which is true of a diagram nobody has arranged and false the
+  // moment one is: a box dragged 600px to the left left the fit framing 600px of empty canvas and
+  // pushed the drawing against the edge - 17px of margin on one side against 341 on the other,
+  // measured. The offset then has to undo the corner as well as centre the width.
+  const w = maxX - minX, h = maxY - minY;
+  erScale = Math.max(0.02, Math.min(1.4, Math.min((vw - pad * 2) / (w || 1), (vh - pad * 2) / (h || 1))));
+  erTx = (vw - w * erScale) / 2 - minX * erScale;
+  erTy = (vh - h * erScale) / 2 - minY * erScale;
+  erApply();
   erUserMoved = false;
 }
 // How many boxes the diagram would draw right now, on the tab that draws them. `erCandidate` already
@@ -2695,9 +2756,15 @@ window.addEventListener('beforeprint', () => {
   if (curView !== 'er') return;
   // What is folded away is not on the page, so it may not size the page either - same reason as erFit.
   const goneNow = erHiddenSet();
-  let maxX = erMaxX, maxY = erMaxY;
-  erIds.forEach((id) => { const p = erPos[id]; if (p && !goneNow.has(id)) { maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h); } });
-  const W = Math.ceil(maxX + 40), H = Math.ceil(maxY + 40);
+  let minX = erMinX, minY = erMinY, maxX = erMaxX, maxY = erMaxY;
+  erIds.forEach((id) => {
+    const p = erPos[id]; if (!p || goneNow.has(id)) return;
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h);
+  });
+  // Same correction as the fit: the page is as big as the drawing, not as big as the distance from a
+  // corner the drawing may not start at.
+  const W = Math.ceil(maxX - Math.min(0, minX) + 40), H = Math.ceil(maxY - Math.min(0, minY) + 40);
   _erStyle = document.createElement('style');
   _erStyle.textContent = `@page{size:${W}px ${H}px;margin:0}
     @media print{

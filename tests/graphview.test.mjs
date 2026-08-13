@@ -38,6 +38,10 @@ function fitter(app, panel, geom = { maxX: 553, maxY: 494 }, hidden = []) {
   let applied = 0;
   const state = {
     erMaxX: geom.maxX, erMaxY: geom.maxY, erIds: geom.ids || [], erPos: geom.pos || {},
+    // Where the drawing starts. It was framed from the origin, which is only the same thing while
+    // every box sits right of and below it - false the moment a reader drags one, and the reported
+    // symptom was Fit resizing without centring.
+    erMinX: geom.minX || 0, erMinY: geom.minY || 0,
     // A folded box keeps its position, so the fit has to be told what is not drawn. Stubbed rather
     // than lifted: erHiddenSet reaches for the cuts, the edges and every node, and what this file is
     // about is the arithmetic that turns a measurement into a scale.
@@ -906,5 +910,34 @@ for (const app of ['crm', 'analytics']) {
       'the default ceiling is written out as a number, so it can disagree with the code again');
     assert.ok(!/\b(400|800)\b/.test(msg.replace(/\$\{[^}]*\}/g, '')),
       'a bare ceiling figure is back in the message');
+  });
+}
+
+// Fit resizes and does not centre - reported, and true of every diagram anyone had arranged. The
+// frame was computed from the drawing's *extent from the origin* rather than from the drawing, which
+// are the same number only while every box sits right of and below 0. Drag one box 600px to the left
+// and the fit reserved 600px of empty canvas: measured on screen at 17px of margin against 341.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the fit frames the drawing, not its distance from the origin`, () => {
+    // Two diagrams of identical size, one of them shifted bodily into negative coordinates. A frame
+    // that describes the drawing has to give both the same scale and put both in the middle.
+    // The seeds are what the last render measured, so they carry the shift too - a drawing wholly
+    // left of the origin has a negative maximum, and clamping that at 0 was the other half of the
+    // same mistake.
+    const geom = (dx) => ({
+      maxX: dx + 500, maxY: dx + 300, minX: dx, minY: dx, ids: ['a', 'b'],
+      pos: { a: { x: dx, y: dx, w: 200, h: 100 }, b: { x: dx + 300, y: dx + 200, w: 200, h: 100 } },
+    });
+    const at0 = fitter(app, REAL, geom(0)); at0.fit();
+    const shifted = fitter(app, REAL, geom(-600)); shifted.fit();
+    assert.ok(Math.abs(at0.state.erScale - shifted.state.erScale) < 1e-9,
+      `moving a drawing changed its scale: ${at0.state.erScale} then ${shifted.state.erScale}`);
+    // Centred means the same room either side: left is erTx + minX*scale, right is what is left over.
+    for (const [name, f, dx] of [['at the origin', at0, 0], ['shifted left', shifted, -600]]) {
+      const s = f.state.erScale;
+      const left = f.state.erTx + dx * s;
+      const right = REAL.w - (f.state.erTx + (dx + 500) * s);
+      assert.ok(Math.abs(left - right) < 0.5, `${name}: ${Math.round(left)}px of margin against ${Math.round(right)}px`);
+    }
   });
 }

@@ -298,12 +298,20 @@
   #ermarks.dragging{display:none}
   /* The width comes from the drawing: `markAt` sets --d from the gap between two landing points on
      that side, so a rim carrying thirteen arcs gets thirteen marks that touch nothing. */
+  /* Two channels, because the mark answers two questions and the glyph only answers one of them. The
+     ring says which way the relation runs - light where it leaves this box, dark where it arrives -
+     and the fill is the colour of the box at the *other* end, which on a folded branch is the only
+     way to know what the `+` is holding, since that box is not on the drawing. The glyph takes black
+     or white from its own fill, so it stays readable on every hue a box can wear, and the hairline
+     outside the ring keeps a light one visible against the canvas. */
   .ermk{position:absolute;transform:translate(-50%,-50%) scale(var(--mkz,1));display:flex;align-items:center;justify-content:center;
-        width:var(--d,16px);height:var(--d,16px);border-radius:50%;border:1px solid #cdc2f2;background:#fff;color:#7c3aed;
-        font:600 calc(var(--d,16px) * 0.66)/1 var(--sans);cursor:pointer;box-shadow:0 1px 3px rgba(20,30,50,.16);padding:0}
-  .ermk:hover{border-color:#7c3aed;background:#f6f2fe;z-index:1}
-  .ermk.back{border-color:#e8b563;background:#fffbeb;color:#92400e}
-  .ermk.back:hover{border-color:#d97706;background:#fef3c7}
+        width:var(--d,16px);height:var(--d,16px);border-radius:50%;border:2px solid #cdc2f2;
+        background:var(--mkfill,#fff);color:var(--mkink,#7c3aed);
+        font:700 calc(var(--d,16px) * 0.62)/1 var(--sans);cursor:pointer;
+        box-shadow:0 0 0 1px rgba(15,23,42,.32),0 1px 3px rgba(20,30,50,.16);padding:0}
+  .ermk.out{border-color:#f8fafc}
+  .ermk.in{border-color:#0f172a}
+  .ermk:hover{z-index:1;box-shadow:0 0 0 2px rgba(124,58,237,.6),0 2px 7px rgba(20,30,50,.26)}
   /* On paper a `-` is a control nobody can press, and a `+` is the only thing saying boxes are missing
      from the page - which the reader of a PDF needs more than the reader at the window does. */
   @media print{ .ermk.fold{display:none} .ermk.back{cursor:default} }
