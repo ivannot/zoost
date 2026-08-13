@@ -1693,8 +1693,23 @@ function erBoxSize(n) {
 // the canvas until nothing overlapped was measured too, and it reaches zero at every size by dropping
 // the fit to 2%, which trades a readable diagram for an unreadable one. The ceiling is arithmetic and
 // is written down in docs/diagrams.md: 200 boxes need 4.2 times the panel's area.
-function collideBoxes(list, margin) {
+//
+// `pinned` is the set of ids that may not be moved - the boxes the reader placed. Without it the
+// comment in erLayout ("newcomers make room around an arrangement rather than the arrangement being
+// computed away") described an intention the code did not have: held positions were written back
+// and then this pass ran over everything, with nothing distinguishing a box somebody dragged there
+// from one the layout guessed. Omit the argument and the behaviour is exactly what it was, which is
+// what keeps the rendered diagrams identical where no arrangement exists.
+//
+// Two rules follow from "may not be moved", and the second is the one worth stating: when only one
+// of a pair is pinned the other takes the **whole** push, so a pair separates in the same number of
+// passes as before rather than half as fast; and when both are pinned the overlap is left alone. It
+// is counted, so the pass still knows it is there, but it is not resolved - the reader put those two
+// boxes where they are and is already told when one covers another. Tidying that away would be this
+// pass overruling a placement, which is the thing the pinning exists to stop.
+function collideBoxes(list, margin, pinned) {
   if (list.length < 2) return;
+  const isPin = pinned && pinned.size ? (id) => pinned.has(id) : () => false;
   let cw = 0, ch = 0;
   list.forEach((id) => { const p = erPos[id]; if (p) { cw = Math.max(cw, p.w); ch = Math.max(ch, p.h); } });
   cw += margin; ch += margin;
@@ -1741,9 +1756,12 @@ function collideBoxes(list, margin) {
         // `ox` carries the margin, so the boxes themselves overlap only once it exceeds it. Sitting
         // inside the margin is close, not hidden, and close is not what this counts.
         if (ox > margin && oy > margin) hits++;
+        const pa = isPin(a), pb = isPin(b);
+        if (pa && pb) continue;           // theirs to keep: counted above, and left where they are
         moved = true;
-        if (ox < oy) { const p = (dx < 0 ? -1 : 1) * ox / 2 * damp; A.x -= p; B.x += p; }
-        else { const p = (dy < 0 ? -1 : 1) * oy / 2 * damp; A.y -= p; B.y += p; }
+        const share = pa || pb ? 2 : 1;   // one side cannot move, so the other takes the whole push
+        if (ox < oy) { const p = (dx < 0 ? -1 : 1) * ox / 2 * damp * share; if (!pa) A.x -= p; if (!pb) B.x += p; }
+        else { const p = (dy < 0 ? -1 : 1) * oy / 2 * damp * share; if (!pa) A.y -= p; if (!pb) B.y += p; }
       }
     }
     if (!best || hits < best.hits || (hits === best.hits && area < best.area)) best = { hits, area, snap: start };
@@ -1845,13 +1863,14 @@ function erLayout() {
   // that has left the screen keeps its entry, so switching a category off and on again finds it again.
   erFitToArcs(edgesAmong(erIds));
   erLastKept = 0;
+  const erPinned = new Set();
   if (erArranged) {
     erIds.forEach((id) => {
       const h = erHeld[id];
-      if (h && erPos[id]) { erPos[id].x = h.x; erPos[id].y = h.y; erLastKept++; }
+      if (h && erPos[id]) { erPos[id].x = h.x; erPos[id].y = h.y; erLastKept++; erPinned.add(id); }
     });
   }
-  collideBoxes(erIds, erP.margin);   // labels live between the boxes, they need the room
+  collideBoxes(erIds, erP.margin, erPinned);   // labels live between the boxes, they need the room
   let minX = Infinity, minY = Infinity;
   erIds.forEach((id) => { minX = Math.min(minX, erPos[id].x); minY = Math.min(minY, erPos[id].y); });
   erIds.forEach((id) => { erPos[id].x -= minX - 40; erPos[id].y -= minY - 40; });
@@ -2370,6 +2389,9 @@ function erResize() {
     p.w = s.w; p.h = s.h;
   });
   erFitToArcs(edgesAmong(erIds));
+  // Deliberately not pinned, unlike the layout above: this overlap was made by the labels changing
+  // size, not by the reader, and a box hidden under another is a correctness problem whoever caused
+  // it. What the reader placed is still never placed *again* - only nudged clear of what grew.
   collideBoxes(erIds, erP.margin);
   erRender();
 }

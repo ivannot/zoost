@@ -344,11 +344,14 @@ function scatter(n, spanX, spanY, seed = 5) {
   return { pos, ids };
 }
 
-function collide(app, { pos, ids }, margin = 28) {
+function collide(app, { pos, ids }, margin = 28, pinned) {
   const ctx = vm.createContext({ erPos: pos });
   vm.runInContext(sliceFn(`apps/${app}/graphview.js`, 'collideBoxes'), ctx);
   ctx.list = ids; ctx.margin = margin;
-  vm.runInContext('collideBoxes(list, margin)', ctx);
+  // Passed through as a real Set built inside the context, because a Set made out here is a Set from
+  // another realm and `pinned.size` would read fine while `pinned.has` looked at nothing.
+  ctx.pinnedIds = pinned || null;
+  vm.runInContext('collideBoxes(list, margin, pinnedIds ? new Set(pinnedIds) : undefined)', ctx);
   return pos;
 }
 
@@ -812,5 +815,58 @@ for (const app of ['crm', 'analytics']) {
       'the pan branch does not preventDefault, so the drag selects the labels it crosses');
     // preventDefault keeps the focus where it was, which the default mousedown would have moved.
     assert.ok(/act\.blur\(\)/.test(down), 'clicking the drawing no longer takes the caret out of the search box');
+  });
+}
+
+// A box the reader dragged there may not be moved by the collision pass. The comment in erLayout
+// had claimed this for as long as arrangements have been kept - "newcomers make room around an
+// arrangement rather than the arrangement being computed away" - while collideBoxes took a list and
+// a margin and nothing else, so held positions were written back and then pushed around like any
+// other. Found by reading the code against a proposal that assumed the pinning already existed.
+for (const app of ['crm', 'analytics']) {
+  const two = () => ({
+    ids: ['a', 'b'],
+    pos: { a: { x: 100, y: 100, w: 190, h: 80 }, b: { x: 120, y: 110, w: 190, h: 80 } },
+  });
+
+  test(`${app}: a pinned box does not move, and its neighbour takes the whole push`, () => {
+    const g = two();
+    const before = { ...g.pos.a };
+    const out = collide(app, g, 28, ['a']);
+    assert.deepEqual({ x: out.a.x, y: out.a.y }, { x: before.x, y: before.y },
+      'the pass moved a box the reader had placed');
+    assert.ok(Math.abs(out.b.x - 120) > 1 || Math.abs(out.b.y - 110) > 1,
+      'the free box did not move, so the overlap was never resolved');
+    assert.equal(overlapCount(out, g.ids), 0, 'they still overlap');
+  });
+
+  test(`${app}: two pinned boxes are left overlapping rather than tidied apart`, () => {
+    // Their overlap is the reader's, and it is already reported to them when it happens. Resolving
+    // it here would be the pass overruling a placement - and it must still terminate.
+    const g = two();
+    const out = collide(app, g, 28, ['a', 'b']);
+    assert.deepEqual(out.a, { x: 100, y: 100, w: 190, h: 80 });
+    assert.deepEqual(out.b, { x: 120, y: 110, w: 190, h: 80 });
+  });
+
+  test(`${app}: with nothing pinned the pass is what it always was`, () => {
+    // The back-compatibility guarantee, and the reason the rendered diagrams do not move: an
+    // absent set and an empty one have to be the same run.
+    const omitted = collide(app, scatter(40, 900, 700), 28);
+    const empty = collide(app, scatter(40, 900, 700), 28, []);
+    assert.deepEqual(empty, omitted, 'an empty pinned set changed the layout');
+  });
+
+  test(`${app}: newcomers make room around an arrangement`, () => {
+    // The whole point, in the shape it actually happens: a diagram the reader has arranged, then a
+    // category switched on that brings boxes nobody placed.
+    const g = scatter(24, 700, 500);
+    const held = g.ids.slice(0, 20);
+    const kept = Object.fromEntries(held.map((id) => [id, { ...g.pos[id] }]));
+    const out = collide(app, g, 28, held);
+    for (const id of held) {
+      assert.deepEqual({ x: out[id].x, y: out[id].y }, { x: kept[id].x, y: kept[id].y },
+        `${id} was placed by the reader and the pass moved it`);
+    }
   });
 }
