@@ -160,6 +160,8 @@
   @media (prefers-reduced-motion:reduce){ .busy i{animation-duration:2.4s} }
   @media print{ .busy{display:none !important} }
   .hint2{position:absolute;bottom:10px;left:12px;font:11px var(--sans);color:var(--muted)}
+  .hint2.warn{color:#92400e;background:#fef3c7;border:1px solid #e8b563;border-radius:6px;
+              padding:3px 9px;font-weight:600;box-shadow:0 2px 8px rgba(20,30,50,.14)}
   #s-ws{color:var(--muted)} #s-ws b{color:var(--ink)}
   .srcwrap{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .srchead{background:#f6f8fb;border-bottom:1px solid var(--line);padding:6px 10px;font:11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
@@ -229,6 +231,18 @@
   #ertools button:disabled{opacity:.4;cursor:default}
   #erlay{position:absolute;top:48px;left:10px;z-index:7;display:none;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:10px 12px;width:262px}
   #erlay.on{display:block}
+  /* The toolbar had eight controls in a row and was becoming a wall - reported. What a reader does
+     *to a file* is one idea and it groups, where Emphasis, Fields, Re-layout and Fit each say
+     something about the state of the drawing and have to stay legible without opening anything.
+     Same panel mechanics as Layout, so there is one popup in this window and not two kinds. */
+  #erfile{position:absolute;top:48px;left:10px;z-index:8;display:none;background:#fff;
+          border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 24px rgba(20,30,50,.14);padding:5px}
+  #erfile.on{display:block}
+  #erfile .mrow{display:block;width:100%;min-width:190px;text-align:left;border:0;background:none;
+                font:12px var(--sans);color:var(--ink);padding:7px 10px;border-radius:6px;cursor:pointer}
+  #erfile .mrow:hover{background:#f3f0fd;color:#5b21b6}
+  #erfile .msep{height:1px;background:var(--line);margin:4px 6px}
+  @media print{ #erfile{display:none !important} }
   #erlay .lrow{display:flex;align-items:center;gap:8px;margin:6px 0}
   #erlay label{font:11.5px var(--sans);color:var(--muted);flex:0 0 88px}
   #erlay input[type=range]{flex:1;min-width:0;accent-color:#d97706}
@@ -391,13 +405,17 @@
     </div>
     <div class="view" id="v-er">
       <div id="ertools">
+        <button id="erFileBtn" title="Save the picture, or the arrangement you made of it">File ▾</button>
         <button id="erLayBtn" title="Layout controls: spacing, spread, label size">Layout ⚙</button>
         <button id="erEmph" title="Relation-first rendering: modules shrink to labels, relation API names take the foreground">Emphasis: modules</button>
         <button id="erAll">Fields: key</button>
         <button id="erRelay" title="Throw away the arrangement and lay the diagram out again">Re-layout</button><button id="erFit2">Fit</button>
-        <button id="erPdf">Save PDF</button>
-        <button id="erArrSave" title="Write this arrangement to a file you can open again, keep beside the mirror, or hand to somebody else">Save arrangement</button>
-        <button id="erArrLoad" title="Put a saved arrangement back on this diagram. The diagram as it is now wins every disagreement, and what is lost is counted">Load arrangement</button>
+      </div>
+      <div id="erfile">
+        <button class="mrow" id="erPdf">Save PDF</button>
+        <div class="msep"></div>
+        <button class="mrow" id="erArrSave" title="Write this arrangement to a file you can open again, keep beside the mirror, or hand to somebody else">Save arrangement…</button>
+        <button class="mrow" id="erArrLoad" title="Put a saved arrangement back on this diagram. The diagram as it is now wins every disagreement, and what is lost is counted">Load arrangement…</button>
       </div>
       <div id="erlay">
         <div class="lhead" id="erlayHead"></div>

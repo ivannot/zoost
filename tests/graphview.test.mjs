@@ -1038,3 +1038,42 @@ for (const app of ['crm', 'analytics']) {
     assert.deepEqual(m.pinned, [], 'a renamed box was pinned to the old one\'s place');
   });
 }
+
+// Eight controls in one row was reported as a wall. What a reader does *to a file* groups; Emphasis,
+// Fields, Re-layout and Fit each state something about the drawing and have to stay legible without
+// opening anything. And a menu is exactly the kind of thing that reads correctly in the markup and
+// never appears, so the wiring is asserted as well as the shape.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the file actions live in one menu, not loose in the toolbar`, () => {
+    const html = read(`apps/${app}/graphview.html`), js = read(`apps/${app}/graphview.js`);
+    const tools = html.slice(html.indexOf('<div id="ertools">'), html.indexOf('</div>', html.indexOf('<div id="ertools">')));
+    assert.ok(/id="erFileBtn"/.test(tools), 'there is no File menu');
+    for (const id of ['erPdf', 'erArrSave', 'erArrLoad']) {
+      assert.ok(!tools.includes(`id="${id}"`), `id=${id} is still a button of its own in the toolbar`);
+      assert.ok(html.slice(html.indexOf('<div id="erfile">')).includes(`id="${id}"`), `id=${id} is not in the menu`);
+    }
+    assert.ok(/#erfile\.on\{display:block\}/.test(html), 'the menu has no open state');
+    assert.ok(/@media print\{ #erfile\{display:none !important\} \}/.test(html), 'a menu is printed');
+    // Opening one popup closes the other, and using or leaving the menu closes it.
+    assert.ok(/\$\('erfile'\)\.classList\.remove\('on'\)/.test(js), 'Layout opens on top of an open File menu');
+    assert.ok(/\$\('erlay'\)\.classList\.remove\('on'\)/.test(js), 'File opens on top of an open Layout panel');
+    assert.ok(/getBoundingClientRect\(\)\.left[\s\S]{0,120}v-er'\)\.getBoundingClientRect\(\)\.left/.test(js),
+      'the menu is placed by an offset measured against the wrong box');
+  });
+
+  test(`${app}: an arrangement from another workspace says so, by name`, () => {
+    // Reported: saved one, changed workspace, loaded it, and nothing on screen said the file belonged
+    // somewhere else. Every id in it failed to match, which is true and is not the reason - and the
+    // file is the one thing that knows the reason.
+    const js = read(`apps/${app}/graphview.js`);
+    const fn = sliceFn(`apps/${app}/graphview.js`, 'erApplyArrangement');
+    assert.ok(/arrWrongWorkspace/.test(fn), 'a foreign workspace is reported as "nothing matched"');
+    assert.ok(fn.indexOf('elsewhere') < fn.indexOf('matchArrangement'),
+      'the workspace is decided after the ids, so the symptom is reported before the cause');
+    assert.ok(/erHint\(elsewhere \? MSG\.arrWrongWorkspace\(fileWs, hereWs\) : MSG\.arrNothingMatched, true\)/.test(fn),
+      'a refusal is shown in the same grey as a running commentary');
+    // and the line itself has a state a reader notices
+    assert.ok(/h\.classList\.toggle\('warn', !!warn\)/.test(js), 'erHint cannot mark a message as one to notice');
+    assert.ok(/\.hint2\.warn\{/.test(read(`apps/${app}/graphview.html`)), 'the noticeable state is not drawn');
+  });
+}

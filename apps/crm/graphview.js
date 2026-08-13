@@ -23,7 +23,12 @@ const MSG = {
   // would report a clean load and say nothing about the thing worth knowing. A number, not a grade.
   arrArcs: (d) => ` \u00b7 the diagram has ${Math.abs(d)} ${Math.abs(d) === 1 ? 'relation' : 'relations'} `
     + (d > 0 ? 'more' : 'fewer') + ' than when this was saved',
-  arrOtherWorkspace: ' \u00b7 saved from another workspace, so the names had to match on their own',
+  // Naming the workspace it came from, because «nothing here matches» is true and is not the
+  // reason. Reported: saved one arrangement, changed workspace, loaded it, and nothing said
+  // the file belonged somewhere else - which is the one fact the file actually carries.
+  arrOtherWorkspace: (was) => ` \u00b7 saved from ${was}, so only names that match on their own came back`,
+  arrWrongWorkspace: (was, now) => `That arrangement was saved from ${was}, and this diagram is ${now}. `
+    + 'Nothing in it belongs to this one.',
   arrWrongKind: (was) => `This file arranges ${was || 'a different diagram'}, and this window is not drawing one.`,
   arrNothingMatched: 'Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.',
   arrBadFile: {
@@ -2661,7 +2666,15 @@ function erCovers(id) {
   });
   return k;
 }
-function erHint(text) { const h = document.querySelector('#v-er .hint2'); if (h) h.textContent = text; }
+// The line the diagram talks in. `warn` is for the states a reader has to notice rather than read:
+// a load that refused, or one that came back with something missing. It was 11px of grey at the far
+// corner from the button that had just been pressed, and a whole workspace mismatch went unseen in it.
+function erHint(text, warn) {
+  const h = document.querySelector('#v-er .hint2');
+  if (!h) return;
+  h.textContent = text;
+  h.classList.toggle('warn', !!warn);
+}
 let erDown = false, erDragged = false, erSx = 0, erSy = 0, erT0x = 0, erT0y = 0;
 document.addEventListener('mousedown', (e) => {
   if (curView !== 'er' || e.target.closest('#ertools') || e.target.closest('#ermarks')) return;
@@ -2753,7 +2766,7 @@ window.addEventListener('resize', () => {
 document.addEventListener('dblclick', (e) => {
   if (curView !== 'er') return;
   const t = e.target;
-  if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erpick')
+  if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erfile') || t.closest('#erpick')
       || t.closest('.erbox') || t.closest('.erhit'))) return;
   const rect = $('v-er').getBoundingClientRect();
   // Where the click landed in the drawing's own coordinates, before the transform.
@@ -2829,8 +2842,33 @@ function erInitControls() {
   $('erLayBtn').onclick = () => {
     const on = $('erlay').classList.toggle('on');
     $('erLayBtn').classList.toggle('on', on);
+    if (on) { $('erfile').classList.remove('on'); $('erFileBtn').classList.remove('on'); }
     if (on) erUpdateControlVis();
   };
+  // Anchored under its own button rather than at a fixed left, because it is not the first control
+  // in the row and a menu that opens somewhere else is a menu nobody connects to what they pressed.
+  $('erFileBtn').onclick = () => {
+    const p = $('erfile');
+    const on = p.classList.toggle('on');
+    $('erFileBtn').classList.toggle('on', on);
+    if (on) {
+      // Measured against the view, which is what the panel is positioned inside. offsetLeft is
+      // relative to the toolbar instead, so the menu opened a toolbar's padding away from its
+      // own button - close enough to look intentional and wrong at every window width.
+      p.style.left = Math.round($('erFileBtn').getBoundingClientRect().left
+                                - $('v-er').getBoundingClientRect().left) + 'px';
+      $('erlay').classList.remove('on'); $('erLayBtn').classList.remove('on');
+    }
+  };
+  // A menu closes when it has been used, and when the reader goes elsewhere. Capture, because the
+  // canvas stops a click from travelling and this has to hear it either way.
+  document.addEventListener('click', (e) => {
+    if (curView !== 'er') return;
+    const p = $('erfile');
+    if (!p || !p.classList.contains('on')) return;
+    if (e.target.closest && e.target.closest('#erFileBtn')) return;
+    p.classList.remove('on'); $('erFileBtn').classList.remove('on');
+  }, true);
   erParamsToUI(); erUpdateControlVis();
 }
 // Keyed by kind: a spread tuned on an ER diagram of 87 modules is the wrong starting point for a
@@ -2854,7 +2892,7 @@ $('erpickx').onclick = () => erClearPick();
 $('v-er').addEventListener('click', (e) => {
   if (erDragged) return;
   const t = e.target;
-  if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erpick') || t.closest('.erbox'))) return;
+  if (t.closest && (t.closest('#ertools') || t.closest('#erlay') || t.closest('#erfile') || t.closest('#erpick') || t.closest('.erbox'))) return;
   erClearPick();
 });
 $('erAll').onclick = () => { erAll = !erAll; $('erAll').textContent = 'Fields: ' + (erAll ? 'all' : 'key'); erResize(); };
@@ -2993,7 +3031,7 @@ $('erArrLoad').onclick = async () => {
     erHint(friendlyArrError(e)); return;
   }
   const read = parseArrangement(text, drawMax);
-  if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs); return; }
+  if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs, true); return; }
   erApplyArrangement(read.file);
 };
 // The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
@@ -3001,10 +3039,19 @@ $('erArrLoad').onclick = async () => {
 // diagram does not degrade - it means nothing.
 function erApplyArrangement(file) {
   if ((file.app && file.app !== APP) || (file.kind && file.kind !== ((DATA && DATA.kind) || ''))) {
-    erHint(MSG.arrWrongKind(file.kind)); return;
+    erHint(MSG.arrWrongKind(file.kind), true); return;
   }
+  // The workspace before the ids, because it is the reason and they are only the symptom. Where a
+  // diagram is keyed by names rather than by ids the same file is a gift - arrange against one org,
+  // read it in another - so this refuses only when nothing came back, and otherwise says it plainly
+  // and carries on.
+  const fileWs = (file.workspace || '').split('/')[0];
+  const hereWs = erArrWorkspace().split('/')[0];
+  const elsewhere = !!(file.workspace && file.workspace !== erArrWorkspace());
   const m = matchArrangement(file, erIds);
-  if (!m.matched.length) { erHint(MSG.arrNothingMatched); return; }
+  if (!m.matched.length) {
+    erHint(elsewhere ? MSG.arrWrongWorkspace(fileWs, hereWs) : MSG.arrNothingMatched, true); return;
+  }
   // Positions first: every box the file knows goes back where it was, whether or not it was chosen
   // by hand. What the flag decides is only who may be nudged aside to make room for a newcomer.
   erHeld = {};
@@ -3032,7 +3079,8 @@ function erApplyArrangement(file) {
   // they cannot see is not an arrangement either.
   erFit();
   const arcs = edgesAmong(erIds).length;
+  const lost = m.stale.length || elsewhere || (file.arcs && arcs !== file.arcs);
   erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
-    + (file.workspace && file.workspace !== erArrWorkspace() ? MSG.arrOtherWorkspace : '')
-    + (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : ''));
+    + (elsewhere ? MSG.arrOtherWorkspace(fileWs) : '')
+    + (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : ''), !!lost);
 }
