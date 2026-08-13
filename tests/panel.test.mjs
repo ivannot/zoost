@@ -3395,3 +3395,19 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   assert.ok(/Refresh/.test(why.slice(why.indexOf('diskUnreadable'))),
     'the unreadable state names no control to press');
 });
+
+// The mismatch bar told the reader that everything was disabled, in both products, word for word.
+// It never was: Pull and the per-type pulls go dead because they would act on the wrong workspace,
+// while Health, the diagram, the exports and the assistant read the mirror on disk and stay usable -
+// which is the whole premise of a local mirror. The sentence was the one thing telling them
+// otherwise, and it is what a reader forms their idea of the state from.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the mismatch bar does not claim more is off than is off`, () => {
+    const js = read(`apps/${app}/sidepanel.js`);
+    assert.ok(!/Everything is disabled/.test(js), 'the bar claims the local views are off too');
+    assert.ok(/what is already mirrored stays readable/.test(js),
+      'the bar does not say that the mirror is still readable');
+    // and what is actually refused is refused in one place, by the guard, rather than per button
+    assert.ok(/guardOk\(\)/.test(js), 'nothing decides what a mismatch refuses');
+  });
+}

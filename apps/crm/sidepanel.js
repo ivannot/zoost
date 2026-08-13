@@ -658,7 +658,7 @@ async function refreshContext() {
   if (mm || sampleMm) {
     $('mmtext').textContent = sampleMm
       ? `You are looking at the sample workspace - invented data - while the Zoho tab is \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}). Nothing here comes from it, and nothing here can reach it.`
-      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${bound.instance || '?'}\u00bb (org ${bound.org}). Everything is disabled until they match.`;
+      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${bound.instance || '?'}\u00bb (org ${bound.org}). Pulling is off until they match; what is already mirrored stays readable.`;
     // «Switch tab» is meaningless for a sample: there is no Zoho org to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
     $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.instance || '?'}\u00bb \u2197`;

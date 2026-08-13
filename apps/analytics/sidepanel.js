@@ -534,7 +534,7 @@ async function refreshContext() {
     if (mm) { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); }
     $('mmtext').textContent = sampleMm
       ? `You are looking at the sample workspace - invented data - while the tab is workspace ${ctx.workspace}. Nothing here comes from it, and nothing here can reach it.`
-      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Everything is disabled until they match.`;
+      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
     // The first is meaningless for a sample: there is no Zoho Analytics workspace to switch to.
