@@ -57,6 +57,11 @@
   .slid .lt{flex:0 0 130px;margin:0}
   .slid input[type=range]{flex:1;accent-color:var(--sel)}
   .slid .val{flex:0 0 44px;text-align:right;font:12px var(--mono);color:#f0a8c8}
+  /* The sliders all show something like "28px", so a fixed 44px keeps their values in a column.
+     The ceiling says "boxes (measured)" and wrapped onto two lines in all that empty space -
+     reported with a picture. Widened here rather than by loosening .val, which would take the
+     column the sliders line up in away from them. */
+  .slid #vDrawMax{flex:0 0 auto;white-space:nowrap}
   .ck{display:flex;gap:9px;align-items:flex-start;padding:6px 0;font-size:13px;cursor:pointer;line-height:1.45}
   .ck input{margin-top:3px;accent-color:var(--sel)}
   .legal{font-size:12px;color:var(--muted);line-height:1.6;border-left:2px solid var(--border);padding-left:11px}
