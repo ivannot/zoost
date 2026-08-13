@@ -322,8 +322,11 @@
   .erbox .erhdr small{opacity:.85;font-weight:500;font-size:10px}
   /* The two schema colours are declared once: the box header wears them, and so does the badge the
      tooltip puts a name in - a second hex for the same thing is a second answer waiting to drift. */
-  :root{--box-std:#3b82f6;--box-cus:#a78bfa}
-  .erbox.standard .erhdr{background:var(--box-std)} .erbox.custom .erhdr{background:var(--box-cus)}
+  /* One rule for every box, in both products. The schema branch used to add `custom` or `standard` -
+     the CRM's two namespaces - which in a workspace whose namespaces are `table` and `query` matched
+     neither, so every box came out the same colour and a query table looked like a table. Reported.
+     The hue comes from --n-<namespace>, which both products already declare and which the filter
+     chips already wear, so the diagram and the chips cannot disagree. */
   /* What a control is about to take, said where the reader is looking rather than in the browser's own
      tooltip - which cannot be styled, and a name without its colour is a name you have to go and look
      up. Each box is a badge in the colour it wears on the diagram, so the list and the drawing are one
@@ -336,7 +339,7 @@
   #ertip .tt1 b{color:var(--ink)}
   #ertip .ttl{display:flex;flex-direction:column;gap:3px}
   #ertip .tb{border-radius:6px;padding:2px 7px;color:#fff;font:600 11px var(--mono);word-break:break-word}
-  #ertip .tb.standard{background:var(--box-std)} #ertip .tb.custom{background:var(--box-cus)}
+
   #ertip .tb.hued{background:var(--kind)}
   #ertip .ttm{margin-top:6px;color:var(--muted)}
   @media print{ #ertip{display:none !important} }
@@ -440,6 +443,8 @@
         <button id="nameToggle" title="Node labels: the display label or the internal api_name">Name: display</button>
         <button id="erRelay" title="Throw away the arrangement and lay the diagram out again">Re-layout</button><button id="erFit2">Fit</button>
         <button id="erPdf">Save PDF</button>
+        <button id="erArrSave" title="Write this arrangement to a file you can open again, keep beside the mirror, or hand to somebody else">Save arrangement</button>
+        <button id="erArrLoad" title="Put a saved arrangement back on this diagram. The diagram as it is now wins every disagreement, and what is lost is counted">Load arrangement</button>
       </div>
       <div id="erlay">
         <div class="lhead" id="erlayHead"></div>

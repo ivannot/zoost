@@ -14,6 +14,26 @@ const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '
 // quiet when only one of them is edited. A literal used once stays where it is used;
 // tests/panel.test.mjs enforces the rule in the other direction, over every shipped script.
 const MSG = {
+  // Loading an arrangement onto a diagram the mirror has moved on. Three numbers rather than a
+  // verdict: the reader is the one who knows whether it is worth arranging again.
+  arrLoaded: (kept, fresh, stale) => `${kept} where you put ${kept === 1 ? 'it' : 'them'}`
+    + (fresh ? ` \u00b7 ${fresh} new, placed by the layout` : '')
+    + (stale ? ` \u00b7 ${stale} in the file ${stale === 1 ? 'is' : 'are'} gone from this diagram` : ''),
+  // Every id still matches and the relationships do not: the insidious one, because the line above
+  // would report a clean load and say nothing about the thing worth knowing. A number, not a grade.
+  arrArcs: (d) => ` \u00b7 the diagram has ${Math.abs(d)} ${Math.abs(d) === 1 ? 'relation' : 'relations'} `
+    + (d > 0 ? 'more' : 'fewer') + ' than when this was saved',
+  arrOtherWorkspace: ' \u00b7 saved from another workspace, so the names had to match on their own',
+  arrWrongKind: (was) => `This file arranges ${was || 'a different diagram'}, and this window is not drawing one.`,
+  arrNothingMatched: 'Nothing in that file is on this diagram - it was saved from a different graph, or everything in it has since been renamed.',
+  arrBadFile: {
+    notJson: 'That file is not readable as an arrangement.',
+    notOurs: 'That is not a Zoost arrangement.',
+    newer: 'That arrangement was written by a newer version of Zoost than this one.',
+    noPositions: 'That arrangement has no positions in it.',
+    tooBig: 'That arrangement holds more boxes than this diagram is set to draw.',
+  },
+  arrSaved: (n) => `Arrangement saved: ${n} ${n === 1 ? 'box' : 'boxes'}.`,
   cutDo: (name, k) => (k > 1
     ? `Hide ${name} and the ${k - 1} ${k === 2 ? 'box' : 'boxes'} that came with it`
     : `Hide ${name}`),
@@ -986,7 +1006,7 @@ function egoStat() {
   }
   const allN = egoSet ? egoSet.size : DATA.counts.nodes;
   const allE = egoSet ? edgesA.filter(([a, b]) => egoSet.has(a) && egoSet.has(b)).length : DATA.counts.edges;
-  $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to re-center</span>${orphanNote()}`;
+  $('statline').innerHTML = `${statOf(egoSet, allN, allE)} \u00b7 <span style=\"color:#94a3b8\">click a box to focus it</span>${orphanNote()}`;
   erCountRefresh();
 }
 function setDepth(d) {
@@ -1572,7 +1592,7 @@ function erLayout() {
       if (h && erPos[id]) { erPos[id].x = h.x; erPos[id].y = h.y; erLastKept++; erPinned.add(id); }
     });
   }
-  collideBoxes(erIds, erP.margin, erPinned);   // labels live between the boxes, they need the room
+  collideBoxes(erIds, erP.margin, erPinnedNow(erPinned));   // labels live between the boxes, they need the room
   let minX = Infinity, minY = Infinity;
   erIds.forEach((id) => { minX = Math.min(minX, erPos[id].x); minY = Math.min(minY, erPos[id].y); });
   erIds.forEach((id) => { erPos[id].x -= minX - 40; erPos[id].y -= minY - 40; });
@@ -1759,15 +1779,8 @@ function erMarkD(S, other, slot) {
 // the colour of the box at the *other* end of their arc, and that box is very often not on the
 // drawing at all - which is exactly when knowing its colour is worth something. Read out of the
 // stylesheet the first time it is asked, so --box-std and --box-cus stay declared in one place.
-let _boxCol = null;
 function erNodeCol(n) {
-  if (DATA.kind !== 'schema') return NSCOL(KINDOF(n));
-  if (!_boxCol) {
-    const cs = getComputedStyle(document.documentElement);
-    _boxCol = { std: cs.getPropertyValue('--box-std').trim() || '#3b82f6',
-                cus: cs.getPropertyValue('--box-cus').trim() || '#a78bfa' };
-  }
-  return n && n.namespace === 'custom' ? _boxCol.cus : _boxCol.std;
+  return n ? NSCOL(KINDOF(n)) : '';
 }
 // Black or white on that colour, whichever can be read on it - sRGB relative luminance, the same
 // arithmetic every contrast tool uses. A `-` in the diagram's violet was legible on white and is not
@@ -1782,7 +1795,6 @@ function erInk(hex) {
   return (0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]) > 0.45 ? '#0f172a' : '#ffffff';
 }
 function erPaint(el, n) {
-  if (DATA.kind === 'schema') { el.classList.add(n.namespace === 'custom' ? 'custom' : 'standard'); return; }
   el.classList.add('hued');
   el.style.setProperty('--kind', NSCOL(KINDOF(n)));
 }
@@ -2215,6 +2227,105 @@ let erLastKept = 0;        // how many the last layout handed back, so the hint 
 // placed by the layout, and `Re-layout` is the way to start over. Reported: "il chip ha cambiato di
 // stato pur non applicando il filtro".
 let erHeld = {};           // id -> { x, y }, as the reader left it
+
+// ---- an arrangement, written down ------------------------------------------------------------
+//
+// Twenty minutes of deciding which two boxes have to sit side by side is work, and until now it died
+// with the window. `Save PDF` kept the picture; nothing kept the *arrangement*, so it could not be
+// picked up again, handed to somebody else, or kept beside the mirror it describes.
+//
+// Three pure functions, so the part with rules in it can be tested without a browser, and written
+// word for word in both products - which the twin ledger then holds without anyone maintaining a
+// list. Everything that touches the DOM stays outside them.
+//
+// What the file does *not* carry is as deliberate as what it does. No zoom or pan: that is where you
+// were looking, not what you built. No undo history: replaying a story is fragile where replaying its
+// effects is not. No box sizes: a size comes from the content and the label mode, so a stored one is
+// a lie waiting for a rename. And no display names anywhere - ids and numbers only, so a file that
+// arrives from somebody else cannot put text on the screen.
+const ARR_V = 1;
+
+// Canonical on purpose: keys sorted, coordinates whole pixels, one box to a line. Two saves of the
+// same arrangement have to produce the same bytes, or "you can diff two of these" is a claim the
+// format does not keep - and sub-pixel jitter on every line is what it would produce instead.
+function serializeArrangement(st) {
+  const q = JSON.stringify;
+  const moved = new Set(st.moved || []);
+  const ids = Object.keys(st.positions || {}).sort();
+  const pos = ids.map((id) => `    ${q(id)}: [${Math.round(st.positions[id].x)}, ${Math.round(st.positions[id].y)}, ${moved.has(id) ? 1 : 0}]`);
+  const folds = (st.folds || []).map((f) => `    [${q(f[0])}, ${q(f[1])}, ${q(f[2])}]`).sort();
+  const wrap = (lines) => (lines.length ? '\n' + lines.join(',\n') + '\n  ' : '');
+  return [
+    '{',
+    `  "zoost": "arrangement",`,
+    `  "v": ${ARR_V},`,
+    `  "app": ${q(st.app)},`,
+    `  "kind": ${q(st.kind)},`,
+    `  "workspace": ${q(st.workspace || '')},`,
+    `  "context": {"focus": ${q(st.focus || '')}, "depth": ${st.depth | 0}, `
+      + `"emphasis": ${q(st.emphasis || '')}, "names": ${q(st.names || '')}, "arcs": ${st.arcs | 0}},`,
+    `  "positions": {${wrap(pos)}},`,
+    `  "folds": [${wrap(folds)}],`,
+    `  "saved_at": ${q(st.savedAt || '')}`,
+    '}',
+    '',
+  ].join('\n');
+}
+
+// Declared keys only, and every number checked. A file is the one thing here that arrives from
+// outside the extension, so it is read the way `erKnownParams` reads a stored blob: what is not
+// recognised is dropped rather than trusted, and a malformed one produces a sentence rather than an
+// exception nobody sees.
+function parseArrangement(text, cap) {
+  let o;
+  try { o = JSON.parse(text); } catch (e) { return { ok: false, reason: 'notJson' }; }
+  if (!o || typeof o !== 'object' || o.zoost !== 'arrangement') return { ok: false, reason: 'notOurs' };
+  if (!(o.v <= ARR_V)) return { ok: false, reason: 'newer' };
+  const src = (o.positions && typeof o.positions === 'object') ? o.positions : null;
+  if (!src) return { ok: false, reason: 'noPositions' };
+  const positions = {}, moved = [];
+  let n = 0;
+  for (const id of Object.keys(src)) {
+    const p = src[id];
+    if (!Array.isArray(p) || p.length < 2) continue;
+    const x = Number(p[0]), y = Number(p[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (cap && ++n > cap) return { ok: false, reason: 'tooBig' };
+    positions[id] = { x, y };
+    if (p[2]) moved.push(id);
+  }
+  if (!Object.keys(positions).length) return { ok: false, reason: 'noPositions' };
+  const ctx = (o.context && typeof o.context === 'object') ? o.context : {};
+  const folds = Array.isArray(o.folds) ? o.folds.filter((f) => Array.isArray(f) && f.length === 3
+    && f.every((s) => typeof s === 'string')) : [];
+  return { ok: true, file: {
+    v: o.v | 0,
+    app: typeof o.app === 'string' ? o.app : '',
+    kind: typeof o.kind === 'string' ? o.kind : '',
+    workspace: typeof o.workspace === 'string' ? o.workspace : '',
+    focus: typeof ctx.focus === 'string' ? ctx.focus : '',
+    depth: Number.isFinite(ctx.depth) ? ctx.depth | 0 : 0,
+    emphasis: typeof ctx.emphasis === 'string' ? ctx.emphasis : '',
+    names: typeof ctx.names === 'string' ? ctx.names : '',
+    arcs: Number.isFinite(ctx.arcs) ? ctx.arcs | 0 : 0,
+    savedAt: typeof o.saved_at === 'string' ? o.saved_at : '',
+    positions, moved, folds,
+  } };
+}
+
+// The graph is the truth and the file is an intention applied to it, so every id is sorted into one
+// of three piles and every loss is a number somebody is told. Nothing is guessed: a box that was
+// renamed is a box that went and a box that arrived, because a position moved onto a renamed box
+// would put it where a *different* one used to be - which misstates the topology the reader built.
+// Between losing work and inventing meaning, this loses the work.
+function matchArrangement(file, drawn) {
+  const here = new Set(drawn);
+  const moved = new Set(file.moved || []);
+  const matched = [], fresh = [], stale = [];
+  for (const id of Object.keys(file.positions)) (here.has(id) ? matched : stale).push(id);
+  for (const id of drawn) if (!file.positions[id]) fresh.push(id);
+  return { matched, fresh, stale, pinned: matched.filter((id) => moved.has(id)) };
+}
 // A box the reader moved rises above the rest and stays there. Without it, dropping one onto a cluster
 // can put it *under* boxes it was moved to sit beside - and the reader has just said which one matters.
 // The order is kept rather than a single flag, so the last thing moved is the thing on top. Reported.
@@ -2302,6 +2413,7 @@ document.addEventListener('mouseup', () => {
         if (q) erHeld[other] = { x: q.x, y: q.y };
       });
       erRaised.set(id, ++erRaiseN);
+      erPinOnly = null;   // touched by hand: it is their arrangement again, not the file's
       erRender();                                   // the arcs follow the new position, once
       const k = erCovers(id);
       erHint(label(N[id]) + ' ' + (k ? MSG.dropCovers(k) : MSG.dropClear));
@@ -2483,3 +2595,120 @@ window.addEventListener('afterprint', () => {
   const url = PRODUCT_URL ? ` \u00b7 <a href="${escA(PRODUCT_URL)}">${PRODUCT_URL}</a>` : '';
   el.innerHTML = `${PRODUCT_NAME}${url} \u00b7 Created by ${PRODUCT_AUTHOR} \u00b7 Apache-2.0 \u00b7 Independent, unofficial tool - not affiliated with Zoho Corporation \u00b7 provided AS IS, no warranty`;
 })();
+
+// Which boxes the layout may not move. Normally that is everything the reader is holding: a drag
+// keeps every box on screen where it is, because an arrangement is the relationships between them
+// and re-placing the other three hundred destroys it. A *loaded* arrangement is the one exception -
+// there the file says which boxes somebody actually chose to move, and only those are held against
+// the layout, so a box that was placed automatically once can be placed automatically again to leave
+// room for a newcomer. Set by the load, and dropped the moment the reader drags anything, because
+// from then on it is their arrangement again.
+// One description for both pickers: the same sentence written twice is two sentences one
+// careless edit away from disagreeing, which is what the message check exists to catch.
+const ARR_TYPES = [{ description: 'Zoost arrangement', accept: { 'application/json': ['.json'] } }];
+let erPinOnly = null;
+function erPinnedNow(held) {
+  return new Set(erPinOnly ? Object.keys(held).filter((id) => erPinOnly.has(id)) : Object.keys(held));
+}
+// Which product wrote the file. Taken from the manifest's own name and reduced to letters rather
+// than written out, because a shipped file may name its own product and nothing else - and a line
+// that branched on the other one's name would be exactly that. The value only changes if the product
+// is renamed, which is a deliberate act.
+const APP = (chrome.runtime.getManifest().name || '').replace(/[^a-z]/gi, '').toLowerCase();
+// What identifies the diagram a file was saved from. Not for display - it decides whether a file may
+// be applied at all - so it is built from the two things the mirror is keyed by and nothing else.
+function erArrWorkspace() {
+  const ws = (DATA && DATA.workspace) || {};
+  return (ws.instance || '') + '/' + (ws.org || '');
+}
+function erArrState() {
+  const pos = {};
+  erIds.forEach((id) => { const p = erPos[id]; if (p) pos[id] = { x: p.x, y: p.y }; });
+  const folds = [];
+  erCut.forEach((away, k) => { const [a, b] = k.split(' '); folds.push([a, b, away]); });
+  return {
+    app: APP, kind: (DATA && DATA.kind) || '', workspace: erArrWorkspace(),
+    focus: curFocus || '', depth: egoDepth, emphasis: erEmph, names: nameMode,
+    arcs: edgesAmong(erIds).length,
+    positions: pos, moved: [...erRaised.keys()], folds,
+    savedAt: new Date().toISOString(),
+  };
+}
+// A name to start from, which the reader is expected to type over: the same diagram has several
+// readings - one arranged for a presentation, one for chasing a problem - and the filename is the
+// whole of that versioning. Nothing inside the file carries a title, so renaming one can never
+// break it.
+function erArrName() {
+  const ws = (DATA && DATA.workspace) || {};
+  return `arrangement-${ws.instance || 'org'}-${(DATA && DATA.kind) || 'diagram'}-${curFocus || 'whole'}.json`;
+}
+$('erArrSave').onclick = async () => {
+  if (curView !== 'er' || !erIds.length) return;
+  const st = erArrState();
+  const text = serializeArrangement(st);
+  try {
+    const h = await window.showSaveFilePicker({ suggestedName: erArrName(), types: ARR_TYPES });
+    const w = await h.createWritable();
+    await w.write(text); await w.close();
+    erHint(MSG.arrSaved(Object.keys(st.positions).length));
+  } catch (e) {
+    // A picker the reader closed is not a failure, and saying so would be noise on a deliberate act.
+    if (e && e.name === 'AbortError') return;
+    erHint(friendlyArrError(e));
+  }
+};
+const friendlyArrError = (e) => (e && e.message ? e.message : String(e));
+$('erArrLoad').onclick = async () => {
+  if (curView !== 'er') return;
+  let text;
+  try {
+    const [h] = await window.showOpenFilePicker({ types: ARR_TYPES, multiple: false });
+    text = await (await h.getFile()).text();
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    erHint(friendlyArrError(e)); return;
+  }
+  const read = parseArrangement(text, drawMax);
+  if (!read.ok) { erHint(MSG.arrBadFile[read.reason] || MSG.arrBadFile.notOurs); return; }
+  erApplyArrangement(read.file);
+};
+// The graph is the truth, the file is an intention applied to it, and every disagreement resolves in
+// favour of the graph with the loss named. Refusals first, because a file from another kind of
+// diagram does not degrade - it means nothing.
+function erApplyArrangement(file) {
+  if ((file.app && file.app !== APP) || (file.kind && file.kind !== ((DATA && DATA.kind) || ''))) {
+    erHint(MSG.arrWrongKind(file.kind)); return;
+  }
+  const m = matchArrangement(file, erIds);
+  if (!m.matched.length) { erHint(MSG.arrNothingMatched); return; }
+  // Positions first: every box the file knows goes back where it was, whether or not it was chosen
+  // by hand. What the flag decides is only who may be nudged aside to make room for a newcomer.
+  erHeld = {};
+  m.matched.forEach((id) => {
+    const p = file.positions[id];
+    erHeld[id] = { x: p.x, y: p.y };
+    if (erPos[id]) { erPos[id].x = p.x; erPos[id].y = p.y; }
+  });
+  erArranged = true;
+  erPinOnly = new Set(m.pinned);
+  erRaised = new Map(); erRaiseN = 0;
+  m.pinned.forEach((id) => erRaised.set(id, ++erRaiseN));
+  // The folds the file carried, and only where the arc it names is still there: a fold replayed onto
+  // a branch that has changed hides something the reader never chose to hide.
+  erCut = new Map();
+  const known = new Set(erIds);
+  file.folds.forEach(([a, b, away]) => {
+    if (!known.has(a) && !known.has(b)) return;
+    if (!edgesA.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) return;
+    erCut.set(ekey(a, b), away);
+  });
+  erLaidOut = false;
+  erShow();
+  // Framed, not restored: where the reader was looking is not part of what they built, but a drawing
+  // they cannot see is not an arrangement either.
+  erFit();
+  const arcs = edgesAmong(erIds).length;
+  erHint(MSG.arrLoaded(m.matched.length, m.fresh.length, m.stale.length)
+    + (file.workspace && file.workspace !== erArrWorkspace() ? MSG.arrOtherWorkspace : '')
+    + (file.arcs && arcs !== file.arcs ? MSG.arrArcs(arcs - file.arcs) : ''));
+}

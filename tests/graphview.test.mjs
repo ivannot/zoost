@@ -205,6 +205,9 @@ function laidOut(app, levels, margin = 36) {
     // free-variable trap, for the third time in one day: a slice runs in a bare context and anything
     // the function reaches for has to be there or it throws three lines in.
     erArranged: false, erHeld: {}, erLastKept: 0,
+    // null is the live state: everything the reader is holding is held against the layout. A
+    // loaded arrangement narrows it to the boxes the file says somebody actually chose.
+    erPinOnly: null,
     // erLayout grows a box until its arcs have room to land apart, so it reaches for these too.
     edgesAmong: () => [],
     erVisibleIds: () => ids,
@@ -216,7 +219,9 @@ function laidOut(app, levels, margin = 36) {
   // ReferenceError three lines in - the free-variable trap this repository has already recorded once,
   // and it fired again here the moment the pass was extracted into its own function. The suite caught
   // it, which is the argument for the suite.
-  vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf']
+  // erPinnedNow went the same way the moment a loaded arrangement needed a narrower pinned set than
+  // a live one: erLayout calls it, and the slice that left it behind threw three lines in.
+  vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf', 'erPinnedNow']
     .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
   vm.runInContext('erLayout()', ctx);
   const p = state.erPos;
@@ -520,10 +525,10 @@ for (const app of ['crm', 'analytics']) {
       erP: { margin: 36, spread: 42, gap: 8, fs: 10, sub: true },
       erVisibleIds: () => ids, erConcentric: () => true,
       erBoxSize: () => ({ w: 190, h: 64 }),
-      erArranged: true, erHeld: held, erLastKept: 0, edgesAmong: () => [],
+      erArranged: true, erHeld: held, erLastKept: 0, edgesAmong: () => [], erPinOnly: null,
     };
     const ctx = vm.createContext(state);
-    vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf']
+    vm.runInContext(['erLayout', 'collideBoxes', 'erFitToArcs', 'erSideCounts', 'erSideOf', 'erPinnedNow']
       .map((f) => sliceFn(`apps/${app}/graphview.js`, f)).join('\n\n'), ctx);
     vm.runInContext('erLayout()', ctx);
     assert.equal(state.erLastKept, 1, 'the layout handed nothing back, so an arrangement is lost');
@@ -806,9 +811,13 @@ for (const app of ['crm', 'analytics']) {
       'the card buttons do not open the same panel');
     // and the badge wears the colour its box wears, from the one helper that decides it
     assert.ok(/if \(N\[id\]\) erPaint\(b, N\[id\]\)/.test(js), 'the names in the panel carry no colour');
-    assert.ok(/#ertip \.tb\.standard\{background:var\(--box-std\)\}/.test(html)
-      && /\.erbox\.standard \.erhdr\{background:var\(--box-std\)\}/.test(html),
+    // One place is now literally one variable: both read --kind, which is set from --n-<namespace>.
+    // The pair of classes this used to check were the CRM's two namespaces, and a workspace whose
+    // namespaces are `table` and `query` matched neither - every box came out the same colour.
+    assert.ok(/#ertip \.tb\.hued\{background:var\(--kind\)\}/.test(html)
+      && /\.erbox\.hued \.erhdr\{background:var\(--kind\)\}/.test(html),
       'the badge and the box header no longer read the same colour from one place');
+    assert.ok(!/--box-std|--box-cus/.test(html), 'the two-namespace colouring is back');
     assert.ok(/#ertip\{[^}]*pointer-events:none/.test(html), 'the panel can stand between the reader and the control');
   });
 }
@@ -904,7 +913,9 @@ for (const app of ['crm', 'analytics']) {
 for (const app of ['crm', 'analytics']) {
   test(`${app}: the refusal states the ceiling from the constant, not from memory`, () => {
     const js = read(`apps/${app}/graphview.js`);
-    const msg = js.slice(js.indexOf('  tooMany:'), js.indexOf('\n', js.indexOf('  tooMany:')));
+    // Anchored on the line start: a second message called tooMany - the one about a file being
+    // bigger than the ceiling - was found first and quietly moved this check onto the wrong string.
+    const msg = js.slice(js.indexOf('\n  tooMany:') + 1, js.indexOf('\n', js.indexOf('\n  tooMany:') + 1));
     assert.ok(msg, 'the refusal message is not where this expects it');
     assert.ok(/which is \$\{DRAW_MAX_NODES\} by default/.test(msg),
       'the default ceiling is written out as a number, so it can disagree with the code again');
@@ -939,5 +950,91 @@ for (const app of ['crm', 'analytics']) {
       const right = REAL.w - (f.state.erTx + (dx + 500) * s);
       assert.ok(Math.abs(left - right) < 0.5, `${name}: ${Math.round(left)}px of margin against ${Math.round(right)}px`);
     }
+  });
+}
+
+// An arrangement is work, and until now it died with the window. These three carry it to a file and
+// back: pure, so they are tested here rather than reasoned about, and written word for word in both
+// products so the twin ledger holds them without anyone keeping a list.
+for (const app of ['crm', 'analytics']) {
+  const arr = (...names) => {
+    const ctx = vm.createContext({ JSON, Object, Array, Number, Math, Set });
+    for (const n of ['serializeArrangement', 'parseArrangement', 'matchArrangement'])
+      vm.runInContext(sliceFn(`apps/${app}/graphview.js`, n), ctx);
+    vm.runInContext(sliceConst(`apps/${app}/graphview.js`, 'ARR_V'), ctx);
+    return ctx;
+  };
+  const state = {
+    app, kind: 'schema', workspace: 'inst/1234567890', focus: 'Orders', depth: 2,
+    emphasis: 'modules', names: 'display', arcs: 12, savedAt: '2026-08-13T09:00:00Z',
+    positions: { b: { x: 10.4, y: 20.6 }, a: { x: -5, y: 0 } }, moved: ['a'],
+    folds: [['a', 'b', 'b']],
+  };
+
+  test(`${app}: the same arrangement always writes the same bytes`, () => {
+    // Diffable is a claim the format has to keep: sorted keys, whole pixels, one box to a line.
+    const c = arr();
+    c.st = state;
+    const once = vm.runInContext('serializeArrangement(st)', c);
+    const twice = vm.runInContext('serializeArrangement({...st, positions: {a: st.positions.a, b: st.positions.b}})', c);
+    assert.equal(once, twice, 'two saves of one arrangement differ');
+    assert.ok(once.indexOf('"a": [-5, 0, 1]') > 0, `the moved flag or the rounding is wrong:\n${once}`);
+    assert.ok(once.indexOf('"b": [10, 21, 0]') > 0, 'coordinates are not rounded to whole pixels');
+    assert.ok(once.indexOf('"a"') < once.indexOf('"b"'), 'the boxes are not written in a fixed order');
+  });
+
+  test(`${app}: what it writes is what it reads`, () => {
+    const c = arr();
+    c.st = state;
+    // Through JSON on the way out: an object built inside the context belongs to another realm, and
+    // a strict deepEqual compares prototypes as well as structure.
+    const round = JSON.parse(vm.runInContext('JSON.stringify(parseArrangement(serializeArrangement(st)))', c));
+    assert.equal(round.ok, true, `a file it wrote came back as ${round.reason}`);
+    assert.deepEqual(round.file.moved, ['a']);
+    assert.deepEqual(round.file.positions.b, { x: 10, y: 21 });
+    assert.deepEqual(round.file.folds, [['a', 'b', 'b']]);
+    assert.equal(round.file.arcs, 12, 'the arc count is what says the relationships have moved on');
+    assert.equal(round.file.focus, 'Orders');
+  });
+
+  test(`${app}: a file it cannot use says which of the reasons it is`, () => {
+    const c = arr();
+    const why = (text, cap) => { c.t = text; c.cap = cap || 0; return vm.runInContext('parseArrangement(t, cap)', c); };
+    assert.equal(why('{oops').reason, 'notJson');
+    assert.equal(why('{"hello": 1}').reason, 'notOurs');
+    assert.equal(why('{"zoost":"arrangement","v":99,"positions":{"a":[1,2,0]}}').reason, 'newer');
+    assert.equal(why('{"zoost":"arrangement","v":1}').reason, 'noPositions');
+    assert.equal(why('{"zoost":"arrangement","v":1,"positions":{"a":["x","y",0]}}').reason, 'noPositions',
+      'a coordinate that is not a number was taken as one');
+    assert.equal(why('{"zoost":"arrangement","v":1,"positions":{"a":[1,2,0],"b":[3,4,0]}}', 1).reason, 'tooBig',
+      'a file larger than the diagram will draw was accepted');
+    // and a good one is not refused, which is the half that gets forgotten
+    assert.equal(why('{"zoost":"arrangement","v":1,"positions":{"a":[1,2,1]}}').ok, true);
+  });
+
+  test(`${app}: the graph is the truth and every loss is counted`, () => {
+    const c = arr();
+    c.file = { positions: { gone: { x: 0, y: 0 }, kept: { x: 5, y: 5 }, placed: { x: 9, y: 9 } },
+               moved: ['kept'] };
+    c.drawn = ['kept', 'placed', 'arrived'];
+    const m = JSON.parse(vm.runInContext('JSON.stringify(matchArrangement(file, drawn))', c));
+    assert.deepEqual(m.matched.sort(), ['kept', 'placed'], 'the boxes the file and the graph share');
+    assert.deepEqual(m.fresh, ['arrived'], 'a box the file never saw is not handed to the layout');
+    assert.deepEqual(m.stale, ['gone'], 'a position with nothing to attach to is not counted as lost');
+    // Only what the reader moved is held against the layout. The rest was placed for them once and
+    // may be placed for them again, which is what leaves room for a newcomer.
+    assert.deepEqual(m.pinned, ['kept'], 'a box the layout placed is being pinned as if chosen');
+  });
+
+  test(`${app}: a renamed box loses its position rather than inheriting a stranger's`, () => {
+    // The one case where a guess would be worse than a loss: the position is still there, and a box
+    // sitting where a *different* one used to sit misstates the topology the reader built.
+    const c = arr();
+    c.file = { positions: { Ordini: { x: 0, y: 0 } }, moved: ['Ordini'] };
+    c.drawn = ['Orders'];
+    const m = JSON.parse(vm.runInContext('JSON.stringify(matchArrangement(file, drawn))', c));
+    assert.deepEqual(m.stale, ['Ordini']);
+    assert.deepEqual(m.fresh, ['Orders']);
+    assert.deepEqual(m.pinned, [], 'a renamed box was pinned to the old one\'s place');
   });
 }
