@@ -787,3 +787,30 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/#ertip\{[^}]*pointer-events:none/.test(html), 'the panel can stand between the reader and the control');
   });
 }
+
+// Dragging the sheet used to leave every label it crossed highlighted, until the next click cleared
+// it - reported. The cause was one line: the branch that starts a pan did not preventDefault, while
+// the branch just above it, the one that drags a box, always had. The browser keeps a selection it
+// was allowed to start, so the difference was invisible until somebody dragged the background.
+//
+// Held here as source rather than behaviour: a real drag needs a browser, and this suite has none.
+// What it does hold is the pair - the same defect existed in both apps, because the two files are
+// the same code - and the shape of the guard, which is a whitelist. A blacklist would have to name
+// the toolbar, the layout sliders, the picker and the hint line, and a list of exclusions is exactly
+// what has drifted between these two apps before.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: panning the ER sheet does not select the text it passes over`, () => {
+    const js = read(`apps/${app}/graphview.js`);
+    const at = js.indexOf('let erDown = false');
+    assert.ok(at > 0, 'the pan state is not where this expects it');
+    const down = js.slice(at, js.indexOf("addEventListener('mousemove'", at));
+    // The whitelist: what pans is the canvas, not everything that is not a panel.
+    assert.ok(/e\.target !== \$\('v-er'\) && !e\.target\.closest\('#ervp'\)/.test(down),
+      'a pan can start from anywhere in the view, sliders and hint line included');
+    // Two preventDefault: one in the box branch, one in the pan branch. One of them is the bug.
+    assert.equal((down.match(/e\.preventDefault\(\)/g) || []).length, 2,
+      'the pan branch does not preventDefault, so the drag selects the labels it crosses');
+    // preventDefault keeps the focus where it was, which the default mousedown would have moved.
+    assert.ok(/act\.blur\(\)/.test(down), 'clicking the drawing no longer takes the caret out of the search box');
+  });
+}

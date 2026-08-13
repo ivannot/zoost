@@ -2144,6 +2144,20 @@ document.addEventListener('mousedown', (e) => {
     e.preventDefault();
     return;
   }
+  // Panning, and only from the drawing itself. The browser begins a text selection on any mousedown
+  // it is allowed to keep, so a pan left every label it crossed highlighted until the next click -
+  // reported. The box branch above never showed it because it calls preventDefault; this one did not.
+  //
+  // What may pan is listed rather than what may not. The layout sliders, the picker and the hint line
+  // all sit inside #v-er, so a blacklist would have to name each of them - and a list of exclusions is
+  // exactly the shape this project has already watched drift between the two apps. The canvas is
+  // #ervp, plus the empty ground of the view itself when the drawing is smaller than the window.
+  if (e.target !== $('v-er') && !e.target.closest('#ervp')) return;
+  e.preventDefault();
+  // preventDefault also keeps the focus where it was, which the default mousedown would have moved:
+  // clicking the drawing has always taken the caret out of the search field, and still does.
+  const act = document.activeElement;
+  if (act && act !== document.body && typeof act.blur === 'function') act.blur();
   erDown = true; erDragged = false; erSx = e.clientX; erSy = e.clientY; erT0x = erTx; erT0y = erTy;
 });
 document.addEventListener('mousemove', (e) => {
