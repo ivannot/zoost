@@ -111,6 +111,20 @@ on the Release, not a local build. Verify with:
   gh attestation verify zoost-$APP-$VERSION-store.zip --repo ivannot/zoost
   tools/verify.sh $APP $VERSION"
 
+# The screenshots on the listing are pictures of an interface, and a release that changed one has to
+# replace them. That step lived only in the routine, so it depended on somebody remembering it at the
+# end of a long day - which is how a listing ends up showing a product two versions old, and how this
+# one did: Analytics was carrying 1.23.0's pictures into a 1.26.0 release, and the CRM's set had no
+# recorded version at all. Whether they *look* different cannot be known without rendering them;
+# whether they were taken of a different version can, and that is the question worth asking here.
+SHOTS_VER=$(python3 -c "import json,sys;print(json.load(open('store/'+sys.argv[1]+'/screenshots.json')).get('version','unknown'))" "$APP" 2>/dev/null || echo unknown)
+SHOTS_NOTE=""
+if [ "$SHOTS_VER" != "$VERSION" ]; then
+  SHOTS_NOTE="
+    !   the screenshots on the listing are of $SHOTS_VER and this release is $VERSION:
+        python3 tools/shots.py    then upload dist/store/$APP/1..5.png beside the package"
+fi
+
 cat <<EOF
 
   tag        $TAG   (local — not pushed)
@@ -123,7 +137,7 @@ cat <<EOF
     1.  git push --follow-tags
     2.  wait for the 'release' workflow, then open the GitHub Release it created
     3.  DOWNLOAD the .zip asset from that Release and upload THAT to the Chrome Web Store
-    4.  paste the RELEASES.md row from the Release body, commit, push
+    4.  paste the RELEASES.md row from the Release body, commit, push$SHOTS_NOTE
 
   Step 3 is the whole point. A local build is not the artifact anyone can trace.
 EOF

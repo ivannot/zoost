@@ -966,6 +966,24 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         self.assertIn('No release notes', out.stdout,
                       'an empty notes file satisfied the check, which is the same as no notes')
 
+    def test_it_says_when_the_listing_pictures_are_of_another_version(self):
+        # The screenshots on the listing are pictures of an interface, and a release that changed one
+        # has to replace them. That step lived only in the routine - so it depended on somebody
+        # remembering it at the end of a long day, and it was missed on exactly the release that
+        # changed both interfaces: Analytics was carrying 1.23.0's pictures into 1.26.0 and the CRM's
+        # set had no recorded version at all. Reported as a rule: «non sono io a dovertelo chiedere,
+        # e' un automatismo».
+        #
+        # What is asserted is the derivation, not the wording: the version the listing records
+        # against the version being tagged, and the note only when they differ - a reminder that
+        # fires every time is one nobody reads.
+        sh = (ROOT / 'tools/release.sh').read_text(encoding='utf-8')
+        self.assertIn('screenshots.json', sh, 'nothing reads what the listing carries')
+        self.assertIn('if [ "$SHOTS_VER" != "$VERSION" ]', sh,
+                      'the reminder is unconditional, so it is noise on every release that needs none')
+        self.assertIn('tools/shots.py', sh, 'it does not name the command that renders them')
+        self.assertIn('$SHOTS_NOTE', sh, 'the note is built and never printed')
+
     def test_the_workflow_reads_the_same_path(self):
         # One path, two readers: the tagging step and the workflow that publishes. If they disagree,
         # release.sh passes and the run fails after the tag is public.
