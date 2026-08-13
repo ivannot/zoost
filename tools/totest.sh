@@ -152,10 +152,19 @@ fi
 # Only ever copied when they exist. A run that has not rendered any leaves whatever is over there
 # alone rather than deleting it: the last rendered set is the one that was uploaded, and an empty
 # folder would say "nothing to upload" about a listing that has images on it.
+#
+# The same two ways of writing, because a destination that refuses rsync refuses it for these too -
+# and the first version of this copied the extensions by hand and left the images to an rsync that
+# was not going to run, so they would have gone missing without a word on exactly the destination the
+# fallback exists for. Found by running the suite on a machine with no rsync at all.
 IMGS=''
 if [ -d dist/store ]; then
-  mkdir -p "$DEST/store"
-  COPIED="$COPIED$(rsync $RSYNC_FLAGS dist/store/ "$DEST/store/" 2>/dev/null || true)"
+  if [ "$COPIED" != '(everything)' ] && out=$(rsync $RSYNC_FLAGS dist/store/ "$DEST/store/" 2>/dev/null); then
+    COPIED="$COPIED$out"
+  else
+    rm -rf "$DEST/store"
+    cp -R dist/store "$DEST/"
+  fi
   IMGS=$(find "$DEST/store" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
 fi
 

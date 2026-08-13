@@ -2021,6 +2021,8 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
                             'both comparisons on one call: the stricter one wins and force does nothing')
 
     def test_force_actually_rewrites(self):
+        if not shutil.which('rsync'):
+            self.skipTest('no rsync here - what this asserts about is rsync writing only what changed')
         with tempfile.TemporaryDirectory() as tmp:
             env = {**os.environ, 'ZOOST_TEST_DIR': str(Path(tmp) / 'zoost-test')}
             run = lambda *a: subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), *a],
@@ -2029,6 +2031,40 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             self.assertIn('nothing, already in step', run().stdout)
             forced = run('--force')
             self.assertRegex(forced.stdout, r'wrote: \d+ file', f'--force wrote nothing: {forced.stdout}')
+
+    def test_without_rsync_it_copies_everything_and_says_so(self):
+        """The two cases above are about rsync writing only what changed, so on a machine without
+        rsync they were asserting the wrong thing and going red for it - reported from a container
+        that has no rsync, where the suite read as «the sync tool is broken» rather than «this
+        machine copies the other way». They skip now, and the other way is asserted here instead:
+        the tool still mirrors both extensions, loudly, because that path deletes before it copies.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / 'bin'
+            fake.mkdir()
+            # A stub rather than a stripped PATH: the script needs git, grep and the rest, and
+            # removing those measures the sandbox instead of the tool - which is how the first
+            # version of this experiment produced twenty misleading errors.
+            (fake / 'rsync').write_text('#!/bin/sh\nexit 1\n', encoding='utf-8')
+            (fake / 'rsync').chmod(0o755)
+            dest = Path(tmp) / 'mirror'
+            out = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                                 text=True, cwd=ROOT,
+                                 env={**os.environ, 'PATH': f"{fake}:{os.environ['PATH']}",
+                                      'ZOOST_TEST_DIR': str(dest)})
+            self.assertEqual(out.returncode, 0, out.stderr)
+            self.assertIn('falling back to delete-and-copy', out.stderr,
+                          'it deleted and recopied both extensions without a word')
+            self.assertIn('wrote: everything', out.stdout)
+            for app in ('crm', 'analytics'):
+                self.assertTrue((dest / app / 'manifest.json').is_file(),
+                                f'{app} did not reach the mirror without rsync')
+            # And the images, which the first version of the fallback left to an rsync that was never
+            # going to run: they would have gone missing without a word on exactly the destination
+            # this path exists for.
+            if (ROOT / 'dist' / 'store').is_dir():
+                self.assertTrue(sorted((dest / 'store').glob('*/*.png')),
+                                'the images to upload did not reach the mirror without rsync')
 
     def test_the_destructive_fallback_says_so(self):
         # It deletes. Whoever is watching that folder should be told why it emptied, rather than
@@ -2040,6 +2076,8 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
     def test_an_unchanged_run_writes_nothing(self):
         # The number is the guard: "nothing to do" is what an unchanged run should say, and every
         # file, every time, is the shape of the defect coming back.
+        if not shutil.which('rsync'):
+            self.skipTest('no rsync here - what this asserts about is rsync writing only what changed')
         with tempfile.TemporaryDirectory() as tmp:
             env = {**os.environ, 'ZOOST_TEST_DIR': str(Path(tmp) / 'zoost-test')}
             first = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], cwd=ROOT,
