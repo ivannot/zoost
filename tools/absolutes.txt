@@ -282,6 +282,9 @@ e2962f186cc6eb0b  site/how-to.html: Whether you should is a different question, 
 594fe33f16d22f4f  site/index.html: And with Zoost you can see all of it at once.
 c03de625dbaec76b  site/index.html: Each Zoost keeps its own subfolder inside it, so a single folder serves them all and the two never meet.
 fa7c3c02eeb3c83e  site/index.html: Every figure says what it does not cover, right beside itself.
+2ff03cad17324dce  site/index.html: For somebody who works in Zoho every day: what can it actually do - the capabilities you find implemented, not the ones described; where is it weak; what would frustrate them on a large, untidy organisation; and would you recommend it to them?
+a13c0794a211b477  site/index.html: How to judge it without me Every command is on the nerd page , and with them a prompt you can paste into whichever assistant you use: it reads the whole repository and answers at three levels - what this is in plain language, what it can do for somebody who works in Zoho every day, and what you need if you are the one approving it.
+9ab0c7d73b34616a  site/index.html: It asks what this is and whether it is any good before it asks whether it is safe, because that is the order the questions arrive in, and it asks for the places the claims fail rather than for approval, which would be worth nothing: Read the source of this Chrome extension and describe it at three levels, from the code rather than from the README.
 9363d78429d0bd6f  site/index.html: It uses their session and their permissions, and can do nothing they could not do.
 9e62568da47ddfbf  site/index.html: Its source is the next tab along, where every call that resolves to a function you have is a link through to it.
 3f119e77b69090c8  site/index.html: Never the data itself - in Zoho CRM no contacts, no deals, no notes; in Zoho Analytics never the rows inside a table.
@@ -290,11 +293,13 @@ c551b0dd44894a52  site/index.html: Nothing reaches the platform, and you delete 
 93ac8ae99db8aa51  site/index.html: Numbers without a grade You get counts and lists, never a score.
 f7ed85dc5c973391  site/index.html: One working folder holds every client at once, each bound to the org, host and instance it came from.
 4b6d45be914eb022  site/index.html: Open the sample workspace → invented data · no Zoho org · nothing to connect The workbenches Zoost CRM on the Chrome Web Store Zoost - workbench for Zoho CRM Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
+135aa431071a6eaf  site/index.html: Or have an assistant read all of it Everything on this page is a claim.
 5e0e0b80dbfa59c1  site/index.html: The hosts are the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, one.zoho.* , and api.anthropic.com / api.openai.com .
 4c9d56d3a080d520  site/index.html: The only exception is the optional AI assistant, and only if you give it your own key - what it adds, and when it is not worth one .
 42a7f66e15f228f4  site/index.html: The same shape of tool one product over: the workspace drawn, every join written the way Zoho Analytics writes it.
 5ae675e2916926d0  site/index.html: The two AI hosts are reached only if someone turns the assistant on.
-a6f522a8122de52b  site/index.html: The workbenches What every Zoost has in common Try it with invented data Free · Apache-2.0 · no account You are about to change one function What else moves?
+03b6370f78671137  site/index.html: The workbenches What every Zoost has in common Try it with invented data Free · Apache-2.0 · no account · source you can read, all of it You are about to change one function What else moves?
+83f6512088081de4  site/index.html: Then finish with three things: anything the copy claims that the code does not have, what you cannot decide from the source alone, and what you would want to test in a running browser.
 468ad9a55a40758b  site/index.html: Then, and only then, the parts it needs go to Anthropic or OpenAI.
 7b8a966d5bc6b5f4  site/index.html: What every Zoost has in common It only reads No Zoost calls an endpoint that creates, edits or deletes anything in Zoho.
 42e8cb1d23151817  site/index.html: What it asks Chrome for Four permissions - sidePanel , storage , scripting , tabs - and a named list of hosts, never <all_urls> .
@@ -633,6 +638,8 @@ cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa �
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
 4bd2a0ffb11f67f9  site/it/index.html: Accanto a ogni cifra c'è scritto di cosa non tiene conto.
 e305005289b6cce5  site/it/index.html: Apri il workspace di test → dati inventati · nessuna org Zoho · niente da collegare I workbench Workbench sta per banco da lavoro, non per editor: qui quello che hai costruito lo guardi e lo misuri, a scriverlo continui dentro Zoho.
+61278caab7b2aeb6  site/it/index.html: Chiede cos'è e se è fatto bene prima di chiedere se è sicuro, perché è l'ordine in cui le domande arrivano davvero, e chiede i punti in cui le affermazioni cadono invece di chiedere conferme, che non varrebbero niente: Leggi il sorgente di questa estensione Chrome e descrivila su tre livelli, partendo dal codice e non dal README.
+68ac75626bef8cad  site/it/index.html: Come giudicarlo senza di me Ogni comando sta sulla pagina nerd , e con loro un prompt da incollare nell'assistente che usi: legge l'intero repository e risponde su tre livelli - cos'è in parole semplici, cosa sa fare per chi lavora dentro Zoho tutti i giorni, e quello che serve a chi la deve approvare.
 7fabb845bd0e0b21  site/it/index.html: Come si comincia Provalo senza collegare niente.
 7075499851f47f5a  site/it/index.html: Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.
 9c601c624f1839a2  site/it/index.html: Cosa chiede a Chrome Quattro permessi - sidePanel , storage , scripting , tabs - e un elenco di host scritti uno per uno, mai <all_urls> .
@@ -641,9 +648,11 @@ e305005289b6cce5  site/it/index.html: Apri il workspace di test → dati inventa
 7484efe1d1261339  site/it/index.html: Cosa scrive Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.
 b2fef69cd7a5a239  site/it/index.html: Dalla tua macchina non esce niente Nessun server, nessun account da creare, nessuna telemetria.
 e8c5467deb460f00  site/it/index.html: E con Zoost puoi vederlo tutto insieme.
+4871a0236c3859d6  site/it/index.html: Ecco come controllarla senza credere a me e senza installare niente.
 92f7b70c5471d7f8  site/it/index.html: Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, one.zoho.* e api.anthropic.com / api.openai.com .
 e0e6002ea5da7e44  site/it/index.html: Gratis, aperti, tuoi da forkare Apache-2.0, nessun passaggio di build, nessuna dipendenza.
-40c400b91514d7e8  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Provalo su dati inventati Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
+b52421c7f5d7a0a8  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Provalo su dati inventati Gratuiti · Apache-2.0 · nessun account · sorgente leggibile, tutto quanto Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
+502f74fe244baa11  site/it/index.html: Il sorgente viene distribuito non minificato, senza bundler e senza dipendenze, quindi tutte e due le estensioni stanno in una lettura sola - ed è una proprietà che vale la pena esercitare, invece che dichiarare.
 d9f4f6b767ca61a8  site/it/index.html: Installala dal Chrome Web Store: ci sono tutte e due.
 537ee5ed2ca8d648  site/it/index.html: L'albero, i diagrammi, l'audit e gli export funzionano tutti su quello - senza una scheda Zoho e senza account.
 c6d18549d4b2235f  site/it/index.html: L'unica eccezione Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria.
@@ -655,6 +664,8 @@ a1ee46619266380e  site/it/index.html: Mai i dati veri e propri : in Zoho CRM né
 af2806f93183ad0e  site/it/index.html: Niente raggiunge la piattaforma, e lo cancelli cancellando la cartella.
 ac41dd8fe645f1af  site/it/index.html: Ogni Zoost ci si crea la sua sottocartella, così ne basta una per tutti senza che si pestino i piedi.
 b6ed3c577870d050  site/it/index.html: Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.
+cbb11e384fe96b65  site/it/index.html: Oppure fallo leggere tutto a un assistente Tutto quello che c'è in questa pagina è un'affermazione.
+4c13a35739269015  site/it/index.html: Per chi lavora dentro Zoho tutti i giorni: cosa sa fare davvero - le funzionalità che trovi implementate, non quelle descritte; dove è debole; cosa darebbe fastidio su un'organizzazione grande e disordinata; e la consiglieresti?
 383a4e845941f24f  site/it/index.html: Puoi controllare, non solo fidarti Ogni release la costruisce GitHub a partire da un commit taggato - due volte, per dimostrare che gli stessi sorgenti danno gli stessi byte - e poi la firma.
 3ea835a3579db3e3  site/it/index.html: Se sei sulla scheda sbagliata, tutto quello che tocca Zoho resta spento finché le due cose non coincidono.
 cee6466af7993ab2  site/it/index.html: Sta tutto sulla pagina nerd , che è dove deve stare.
@@ -669,11 +680,13 @@ ac8cc9b7b85fd67c  site/it/index.html: Usa la sua sessione e i suoi permessi; non
 ade412e82303203f  site/it/index.html: Zoost CRM sul Chrome Web Store Zoost - workbench for Zoho CRM Le funzioni Deluge come file da mettere sotto Git, la ricerca full-text su tutte in una volta, il grafo di chi chiama chi, lo schema dei moduli con i layout, gli API name delle related list che tocca sempre andare a ripescare, i workflow, le schedulazioni e il catalogo delle connessioni.
 e32a3b1c5bd6e896  site/it/index.html: Zoost porta l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa: chi chiama chi, chi dipende da chi e cosa non serve più a nessuno.
 49983475f95ff67d  site/it/nerd.html: Chi lo ha battuto è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.
+f4dce595924508b1  site/it/nerd.html: Come distingue «Zoho non ha restituito niente» da «Zoho ha rifiutato» e da «la risposta non era nella forma che il codice legge»?
 483013f913d99628  site/it/nerd.html: Come legge Zoho Analytics Prende il workspace dall'URL della scheda su cui sei - /workspace/{id} - quindi non c'è niente da estrarre, quindi niente da sbagliare.
 08459da24ef9cf4d  site/it/nerd.html: Come legge Zoho CRM Legge due identificativi - l'id della tua org e quello dell'utente - dall'HTML della pagina, perché nessun endpoint li offre.
 040d5ef05b212b8d  site/it/nerd.html: Cosa non dimostra niente di tutto questo Il caricamento sul Chrome Web Store lo fa un workflow leggendo l'asset della Release, quindi il file che Google riceve è quello costruito e firmato; resta a mano il click su Submit, che non sposta byte.
 368fbba3c7362f30  site/it/nerd.html: Cosa non viene mai chiamato Nessuna delle due estensioni chiama un endpoint che crea, modifica o cancella qualcosa.
 60bc5dc5f24ce0ce  site/it/nerd.html: Cosa è promesso e cosa no Quelle interfacce interne non portano nessuna promessa di compatibilità.
+b4ea9b5a13232975  site/it/nerd.html: Dichiara di non scrivere mai su Zoho.
 38ee39dac2a2a25a  site/it/nerd.html: Dodici file per Zoho CRM e dieci per Zoho Analytics, nessun bundler e nessun minificatore, una build riprodotta due volte su una macchina che non è la mia e firmata, un hash che verifichi con un comando: niente di tutto questo ti chiede di fidarti di come il codice è stato prodotto.
 c67472ee59ec19d3  site/it/nerd.html: Due endpoint di Zoho Analytics restano deliberatamente intoccati, per lo stesso motivo tutti e due: restituiscono i tuoi dati.
 c94108102978562a  site/it/nerd.html: E un'attestazione dice chi ha costruito un file, mai che quel file sia buono.
@@ -683,6 +696,7 @@ b602ba9098ebef76  site/it/nerd.html: Google pubblica giorni dopo l'invio, non mi
 8f8ee752d82c5346  site/it/nerd.html: Il suo URL contiene CREATE e non crea niente: calcola e restituisce il modello.
 269b6c4f23f7c5c7  site/it/nerd.html: In questa pagina Interfacce non documentate O certi, o fermi Cosa non viene mai chiamato Cosa è promesso e cosa no Come viene costruita una release Verificalo tu Cosa non dimostra niente di tutto questo Interfacce non documentate Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge.
 dbe3c715ed89cdc9  site/it/nerd.html: L'archivio allegato alla Release è il file inviato al Chrome Web Store - mai una build fatta su un portatile.
+9b08e0b1e3c13ca9  site/it/nerd.html: L'assistente AI facoltativo dovrebbe essere l'unica eccezione, e solo dopo che qualcuno ha inserito una chiave propria.
 8b77b52aa9ec1a19  site/it/nerd.html: La nomino qui perché chi va a controllare alla lettera l'affermazione «in sola lettura» se la troverà davanti, e trovarla senza preavviso si leggerebbe come una bugia colta sul fatto invece che per quello che è.
 14ac0af47f90e547  site/it/nerd.html: La pagina nerd Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ognuna di queste cose senza doverti fidare della mia parola.
 bf1b349c86f1f0c2  site/it/nerd.html: La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
@@ -698,6 +712,8 @@ e29f01092166be20  site/it/nerd.html: Ora la build marca ogni file con la data de
 200ce27aec50985a  site/it/nerd.html: Quindi le definizioni dei report restano non coperte , e ogni superficie lo dice invece di lasciar credere che il mirror sia completo.
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
 8b65eed0c207c257  site/it/nerd.html: Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
+9d6b38a92a0d3c4a  site/it/nerd.html: Trova ogni richiesta che non sia una GET e dimmi a cosa serve ciascuna.
+9dc80820439a0939  site/it/nerd.html: Tutto quello che chiede sta in questa pagina, quindi la sua risposta e questa pagina si possono confrontare riga per riga - che è l'unico motivo per lanciarli tutti e due.
 0615b2c5d8138bb4  site/it/nerd.html: Verificalo tu gh attestation verify <file> --repo ivannot/zoost chiede a GitHub se ha costruito esattamente quell'archivio tools/verify.sh lo ricostruisce sulla tua macchina e confronta gli hash RELEASES.md commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di non poter verificare, e perché llms.txt la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto invece di riassumere la pagina Nessuno dei due comandi ti chiede di fidarti di me.
 5a96417e721b15e9  site/it/nerd.html: Zoost dichiara di non leggere mai le tue righe, quindi non lo chiama.
 2097a55846824c2f  site/it/privacy.html: 4.3 Gli export I file di export vengono scritti nella tua cartella di lavoro e non vanno da nessuna parte da soli.
@@ -814,8 +830,12 @@ d6c76ca7065f7dc7  site/nerd.html: And an attestation says who built a file, neve
 37a380d22fdb0174  site/nerd.html: Check it yourself gh attestation verify <file> --repo ivannot/zoost asks GitHub whether it built that exact archive tools/verify.sh rebuilds it on your machine and compares the hashes RELEASES.md commit, tag and SHA-256 of every submitted version - including the two entries it says it cannot verify, and why llms.txt the same map written for an assistant asked to assess the product rather than summarise the landing page Neither command asks you to take my word for it.
 e45c8a1f9d8896da  site/nerd.html: Diffing against that one gives a mismatch that says nothing about either file.
 3331fd75e1f749b2  site/nerd.html: Every GitHub Action is pinned to a commit hash, never to a moving tag.
+cae0e87ab612b8a7  site/nerd.html: Everything it asks about is in this page, so its answer and this page can be compared line by line - which is the only reason to run both.
+5080823837bda788  site/nerd.html: Find every request that is not a GET and say what each one is for.
 63588171fe620c14  site/nerd.html: Guessing at a parameter to suppress the data is exactly where a read-only claim gets broken by accident.
+7c0698220398204f  site/nerd.html: How does it tell «Zoho returned nothing» apart from «Zoho refused» and from «the response was not the shape this reads»?
 9b17fcbe480b3753  site/nerd.html: It is named here because anyone checking the read-only claim literally will find it, and finding it unannounced would read as a caught lie rather than as what it is.
+a17c97c442623dd6  site/nerd.html: It says it never writes to Zoho.
 1576bd97d81a8c38  site/nerd.html: Its URL contains CREATE and it creates nothing - it computes and returns the model.
 359064d6d5840f09  site/nerd.html: Nothing is guaranteed - the licence says so and so does this page.
 dd791388d10b6429  site/nerd.html: On this page Undocumented interfaces Certain, or stopped What is never called What is promised, and what is not How a release is built Check it yourself What none of it proves Undocumented interfaces Neither Zoho CRM nor Zoho Analytics publishes an API for most of what Zoost reads.
@@ -823,9 +843,11 @@ f93b6fd1c2c89486  site/nerd.html: Reading Zoho Analytics Takes the workspace fro
 769af6a698ce2f2e  site/nerd.html: Reproducibility is load-bearing rather than decorative: publishing a SHA-256 is worth nothing if two builds of the same commit differ, and mine did, because zip stores each file's mtime and walks the directory in filesystem order.
 f216a3fc063092a9  site/nerd.html: So report definitions stay uncovered , and every surface says so rather than implying the mirror is complete.
 780ca681dd3de010  site/nerd.html: Sometimes it will not be, and then the feature will say plainly that it cannot do the thing rather than guess.
+4291ca85e338248e  site/nerd.html: Tell me what contradicts those claims, what you cannot decide from the source alone, and what you would want to test in a running browser.
 49759cb1911bb4d0  site/nerd.html: The archive attached to the Release is the file submitted to the Chrome Web Store - never a build from a laptop.
 5c4f78e11d5a97d3  site/nerd.html: The build now stamps every file with the commit's own date, sorts the file list, and passes -X .
 76cf2582b0cd5564  site/nerd.html: The exceptions are narrow, deliberate and written down: a bounded wait for a known element after a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a deterministic 4xx), and recovery by an action that was measured to work - the first /deluge/ call after a fresh login is refused, any ordinary Zoho CRM call fixes it, and that was reproduced deliberately rather than guessed at.
+0a49847bbc90460d  site/nerd.html: The optional AI assistant is supposed to be the only exception, and only once someone enters their own key.
 2efe0b9d3934f4bb  site/nerd.html: What is never called Neither extension calls an endpoint that creates, edits or deletes anything.
 f516b3a1a25a4a16  site/nerd.html: What is still not covered is the far end: Google repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
 e6d1abbcefdbea2e  site/nerd.html: Zoost states it never reads your rows, so it does not call it.
