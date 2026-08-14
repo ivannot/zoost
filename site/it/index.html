@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:03c89a14531f7270 -->
+<!-- translated-from: site/index.html sha256:3c7db6292ea7ab9d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -224,26 +224,33 @@
 
 <section id="ask-an-assistant">
   <div class="wrap">
-    <h2>Oppure fallo leggere tutto a un assistente</h2>
+    <h2>Prima di credere a quello che c'è scritto qui</h2>
     <p class="lead" style="margin-top:-6px">Tutto quello che c'è in questa pagina è un'affermazione.
-      Ecco come controllarla senza credere a me e senza installare niente.</p>
-    <p>Il sorgente viene distribuito non minificato, senza bundler e senza dipendenze, quindi tutte e
-      due le estensioni stanno in una lettura sola - ed è una proprietà che vale la pena esercitare,
-      invece che dichiarare. Incolla questo nell'assistente che usi già. Chiede cos'è e se è fatto
-      bene <em>prima</em> di chiedere se è sicuro, perché è l'ordine in cui le domande arrivano
-      davvero, e chiede i punti in cui le affermazioni cadono invece di chiedere conferme, che non
-      varrebbero niente. Non nomina nessuna pagina di questo sito: tutto quello con cui confronta il
-      codice - il README, la descrizione dentro ogni manifest - sta dentro il repository, quindi
-      risponde per intero anche a un assistente che non riesce a raggiungere zoost.it. E gli dice di
-      fermarsi se non riesce a entrare, che è il caso da presidiare: chi non riesce a leggere il
-      repository altrimenti risponde a memoria, e quella risposta è identica a una vera.</p>
-    <pre class="ask"><code>Leggi il sorgente di questo repository e descrivilo su tre livelli.
-Rispondi dal codice che riesci davvero a leggere lì dentro.
+      Fattela rileggere - tutta, da una macchina, senza installare niente.</p>
+    <p>Zoost è piccolo, ed è pubblicato esattamente com'è stato scritto: niente di compresso,
+      niente di nascosto. Quindi un assistente riesce a leggerlo tutto e a dirti cosa ha trovato.
+      Copia il riquadro qui sotto dentro quello che usi già - ChatGPT, Claude, Gemini, Copilot,
+      quello che è. Non serve che tu capisca cosa c'è scritto dentro il riquadro: è rivolto alla
+      macchina, non a te.</p>
+    <p>Fa tre domande, per tre persone diverse: cos'è e se vale dieci minuti, cosa sa fare davvero
+      per chi sta dentro Zoho tutto il giorno, e cosa deve sapere chi la deve autorizzare. In
+      quest'ordine, perché è l'ordine in cui le domande vengono. E chiede dove le risposte
+      <em>non</em> corrispondono a quello che viene promesso, perché un prompt che va a caccia di
+      complimenti non varrebbe niente.</p>
+    <p>Indica due posti, perché il confronto è tutto il senso: le promesse stanno su questo sito,
+      le risposte stanno nel codice, e l'uno che controlla l'altro vale più di ciascuno da solo. Gli
+      assistenti non riescono ad aprire le stesse cose, quindi la prima cosa che chiede è proprio
+      quella - usali tutti e due se ci arrivi, uno solo se arrivi a uno solo, e dillo. E se non
+      arriva a nessuno dei due, fermati: uno che non ha letto niente risponde lo stesso, a memoria, e
+      quella risposta sembra identica a una vera.</p>
+    <pre class="ask"><code>Guarda questi due e descrivi su tre livelli quello che trovi.
 
-Repository: https://github.com/ivannot/zoost
-Contiene due estensioni Chrome: apps/crm e apps/analytics.
+Il codice:    https://github.com/ivannot/zoost
+              (due estensioni Chrome: apps/crm e apps/analytics)
+Le promesse:  https://zoost.it
 
-Se non riesci ad aprire il repository, dillo e fermati. Non rispondere
+Comincia dicendo quale dei due sei davvero riuscito ad aprire. Se solo
+uno, usa quello e dillo. Se nessuno dei due, fermati lì - non rispondere
 con quello che già sai.
 
 1. In parole semplici, per chi non scrive codice:
@@ -259,16 +266,16 @@ con quello che già sai.
    cosa esce dalla macchina e quando, quali host può raggiungere, se
    qualcosa scrive dentro Zoho, cosa conserva e dove.
 
-Chiudi con tre cose: quello che README.md o la descrizione dentro i due
-manifest.json promettono e il codice non ha, quello che non puoi
-stabilire dal solo sorgente, e quello che vorresti provare in un browser
-in esecuzione.</code></pre>
-    <p class="note" style="margin-top:16px">La chiusura è la parte da tenere. Leggere stabilisce cosa
-      fa il codice; non stabilisce cosa risponde Zoho, cosa impone Chrome a runtime, né cosa fa una
-      persona con un file esportato - e un assistente ti darà comunque un riassunto sicuro di sé,
-      quindi conviene chiedergli quel confine apertamente. Un prompt più stretto, per smontare le
-      affermazioni tecniche una per una, sta sulla <a href="/it/nerd#ask-an-assistant">pagina
-      nerd</a>.</p>
+Chiudi con tre cose: quello che viene promesso - sul sito, nel README o
+nella descrizione dentro i due manifest.json - e il codice non ha; quello
+che non puoi stabilire soltanto leggendo; e quello che vorresti provare
+in un browser in esecuzione.</code></pre>
+    <p class="note" style="margin-top:16px">L'ultima domanda del riquadro è quella da leggere con
+      attenzione. Leggere ti dice cosa un programma è fatto per fare; non ti dice cosa risponderà
+      Zoho domani, né cosa fa una persona con un file dopo che l'ha salvato - e un assistente suona
+      altrettanto sicuro nei due casi, quindi gli viene chiesto di dire dove finisce quello che sa.
+      Se vuoi la versione tecnica, con ogni affermazione smontata una per una, sta sulla
+      <a href="/it/nerd#ask-an-assistant">pagina nerd</a>.</p>
   </div>
 </section>
 
