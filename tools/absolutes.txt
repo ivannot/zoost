@@ -632,7 +632,7 @@ ea63ec5c2bd41777  site/it/emergency.html: Una fix per qualcosa in cui non sei ma
 cc99104c77f43506  site/it/how-to.html: Cosa fa → Leggi la guida → Installa ↗ Zoost - workbench for Zoho Analytics Cartella di lavoro e workspace, il pull di un workspace in un colpo solo, la struttura di una tabella con le sue chiavi esterne, il diagramma ER, l'SQL delle query table come file, l'elenco di quello da cui non dipende più niente, gli export e l'assistente AI.
 22de86cc7cb6ec83  site/it/how-to.html: Zoost - workbench for Zoho CRM Cartella di lavoro e workspace, il pull di funzioni, schema dei moduli e automazioni, il grafo delle chiamate e il diagramma ER, la ricerca full-text su tutte le funzioni, il controllo di salute, gli export e l'assistente AI.
 4bd2a0ffb11f67f9  site/it/index.html: Accanto a ogni cifra c'è scritto di cosa non tiene conto.
-58553885b52fba34  site/it/index.html: Apri il workspace campione → dati inventati · nessuna org Zoho · niente da collegare I workbench Workbench sta per banco da lavoro, non per editor: qui quello che hai costruito lo guardi e lo misuri, a scriverlo continui dentro Zoho.
+e305005289b6cce5  site/it/index.html: Apri il workspace di test → dati inventati · nessuna org Zoho · niente da collegare I workbench Workbench sta per banco da lavoro, non per editor: qui quello che hai costruito lo guardi e lo misuri, a scriverlo continui dentro Zoho.
 7fabb845bd0e0b21  site/it/index.html: Come si comincia Provalo senza collegare niente.
 7075499851f47f5a  site/it/index.html: Continui a lavorare dove hai sempre lavorato: questa è solo la finestra da cui lo vedi.
 9c601c624f1839a2  site/it/index.html: Cosa chiede a Chrome Quattro permessi - sidePanel , storage , scripting , tabs - e un elenco di host scritti uno per uno, mai <all_urls> .
@@ -643,7 +643,7 @@ b2fef69cd7a5a239  site/it/index.html: Dalla tua macchina non esce niente Nessun 
 e8c5467deb460f00  site/it/index.html: E con Zoost puoi vederlo tutto insieme.
 92f7b70c5471d7f8  site/it/index.html: Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, one.zoho.* e api.anthropic.com / api.openai.com .
 e0e6002ea5da7e44  site/it/index.html: Gratis, aperti, tuoi da forkare Apache-2.0, nessun passaggio di build, nessuna dipendenza.
-58937eca37b94468  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Provalo con dati inventati Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
+40c400b91514d7e8  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Provalo su dati inventati Gratuiti · Apache-2.0 · nessun account Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
 d9f4f6b767ca61a8  site/it/index.html: Installala dal Chrome Web Store: ci sono tutte e due.
 537ee5ed2ca8d648  site/it/index.html: L'albero, i diagrammi, l'audit e gli export funzionano tutti su quello - senza una scheda Zoho e senza account.
 c6d18549d4b2235f  site/it/index.html: L'unica eccezione Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria.
@@ -767,7 +767,7 @@ d1652d0620bfa30a  site/it/try.html: Non c'è da nessuna parte il nome di un port
 e2583e54a1cd965c  site/it/try.html: Non scarica niente, perché non c'è niente da cui scaricare.
 05a254562c7f0a56  site/it/try.html: Non ti blocca - un sample non corrisponderà mai a nessuna organizzazione; bloccare lo renderebbe inutilizzabile - ma non ti lascia dimenticare.
 5dc37ec412d9169d  site/it/try.html: Ogni altra pagina di questo sito sostiene che Zoost meriti fiducia.
-c795b28c21c3227a  site/it/try.html: Perché questo è un argomento di sicurezza, non una comodità Un workspace di prova è l'unico modo di rispondere alla domanda «ma questa cosa qui che fa?» senza prima averle dato qualcosa da leggere.
+ddcadf34df758bb0  site/it/try.html: Perché questo è un argomento di sicurezza, non una comodità Un workspace di test è l'unico modo di rispondere alla domanda «ma questa cosa qui che fa?» senza prima averle dato qualcosa da leggere.
 df3d5f711ef63a2d  site/it/try.html: Provalo su dati inventati Tutte e due le estensioni sanno scrivere un workspace di dati inventati in una cartella che scegli tu, poi lavorarci esattamente come farebbero su uno vero.
 0ca84ee44a09f798  site/it/try.html: Se ne esiste già uno il pulsante diventa Open sample workspace e apre quello che c'è - e finché Chrome non ha dato al pannello l'accesso alla cartella non dice né una cosa né l'altra, perché in quel momento non ha guardato e nessuna delle due affermazioni sarebbe giustificata.
 6d78b43fadd51c28  site/it/try.html: Se sei tu ad autorizzare l'installazione Puoi fare tutta la valutazione da solo, su una macchina senza nessuna sessione Zoho aperta.
