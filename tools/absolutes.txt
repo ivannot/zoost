@@ -362,7 +362,7 @@ ee942d284e4ff507  site/it/analytics.html: Cerchi dentro tutte le query in una vo
 04f6cb0ace53613e  site/it/analytics.html: Con una chiave tua, un assistente che esplora il tuo workspace - e mai le tue righe, perché Zoost non le legge.
 3f63c9ab631e0302  site/it/analytics.html: Cosa c'è dentro Tutte le viste, in un elenco solo Tipo, cartella, proprietario, numero di colonne e date - ordinabili e cercabili dentro i nomi delle colonne , così trovi quale tabella porta un certo campo.
 92f60e030c00bae1  site/it/analytics.html: Cosa hai costruito tu e cosa ci ha messo Zoho In un workspace collegato metà delle tabelle sono arrivate da una sincronizzazione e non sono mai state tue.
-d52fc79b9dc37e6b  site/it/analytics.html: Cosa non fa Non chiama nessun endpoint di scrittura Non crea, non modifica e non cancella una vista.
+8483288c0ab1e40d  site/it/analytics.html: Cosa non fa Non chiama nessun endpoint di scrittura Non crea, non modifica e non cancella nessuna vista.
 1d8172c11bfc5f5b  site/it/analytics.html: Cosa non serve più a nessuno La risposta di Zoho Analytics stessa sulle dipendenze, chiesta una volta per tutto invece che una vista per volta.
 2a55a06433fe644e  site/it/analytics.html: Export e un assistente opzionale Tutto il workspace come un unico file HTML, o in Markdown - che si porta dietro i vincoli del dialetto SQL di Zoho Analytics, così un assistente non scrive query che non possono girare.
 cc2544fe1ab8ca68  site/it/analytics.html: Gira tutto dentro il tuo browser, con la sessione Zoho che hai già aperta.
@@ -715,11 +715,9 @@ c94108102978562a  site/it/nerd.html: E un'attestazione dice chi ha costruito un 
 b602ba9098ebef76  site/it/nerd.html: Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi sempre avanti rispetto a quello che lo Store distribuisce.
 2525c9769acdba30  site/it/nerd.html: Il CSRF segue il metodo HTTP invece del percorso: ogni POST porta X-ZCSRF-TOKEN , nessuna GET lo fa, misurato su una cattura di 104 richieste senza eccezioni.
 a53a31a747a1b5bc  site/it/nerd.html: Il codice: https://github.com/ivannot/zoost (due estensioni Chrome: apps/crm e apps/analytics) Le affermazioni: https://zoost.it/it/nerd , il README e il campo description dentro ogni manifest.json Di' prima quali di questi sei riuscito ad aprire.
-8f8ee752d82c5346  site/it/nerd.html: Il suo URL contiene CREATE e non crea niente: calcola e restituisce il modello.
 269b6c4f23f7c5c7  site/it/nerd.html: In questa pagina Interfacce non documentate O certi, o fermi Cosa non viene mai chiamato Cosa è promesso e cosa no Come viene costruita una release Verificalo tu Cosa non dimostra niente di tutto questo Interfacce non documentate Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge.
 dbe3c715ed89cdc9  site/it/nerd.html: L'archivio allegato alla Release è il file inviato al Chrome Web Store - mai una build fatta su un portatile.
 9b08e0b1e3c13ca9  site/it/nerd.html: L'assistente AI facoltativo dovrebbe essere l'unica eccezione, e solo dopo che qualcuno ha inserito una chiave propria.
-8b77b52aa9ec1a19  site/it/nerd.html: La nomino qui perché chi va a controllare alla lettera l'affermazione «in sola lettura» se la troverà davanti, e trovarla senza preavviso si leggerebbe come una bugia colta sul fatto invece che per quello che è.
 14ac0af47f90e547  site/it/nerd.html: La pagina nerd Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ognuna di queste cose senza doverti fidare della mia parola.
 bf1b349c86f1f0c2  site/it/nerd.html: La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
 8915a0339d71b387  site/it/nerd.html: Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un 4xx deterministico), e il recupero tramite un'azione che è stata misurata - la prima chiamata /deluge/ dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema; questo è stato riprodotto apposta invece che ipotizzato.
@@ -859,7 +857,6 @@ cae0e87ab612b8a7  site/nerd.html: Everything it asks about is in this page, so i
 7c0698220398204f  site/nerd.html: How does it tell «Zoho returned nothing» apart from «Zoho refused» and from «the response was not the shape this reads»?
 9b17fcbe480b3753  site/nerd.html: It is named here because anyone checking the read-only claim literally will find it, and finding it unannounced would read as a caught lie rather than as what it is.
 a17c97c442623dd6  site/nerd.html: It says it never writes to Zoho.
-1576bd97d81a8c38  site/nerd.html: Its URL contains CREATE and it creates nothing - it computes and returns the model.
 359064d6d5840f09  site/nerd.html: Nothing is guaranteed - the licence says so and so does this page.
 dd791388d10b6429  site/nerd.html: On this page Undocumented interfaces Certain, or stopped What is never called What is promised, and what is not How a release is built Check it yourself What none of it proves Undocumented interfaces Neither Zoho CRM nor Zoho Analytics publishes an API for most of what Zoost reads.
 f93b6fd1c2c89486  site/nerd.html: Reading Zoho Analytics Takes the workspace from the URL of the tab you are on - /workspace/{id} - so there is nothing to scrape and nothing to pick wrong.
