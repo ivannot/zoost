@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:e4621f7d7717a46d -->
+<!-- translated-from: site/index.html sha256:2a46fef795756753 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -51,6 +51,10 @@
        font:13.5px/1.75 var(--mono);color:var(--ink);overflow-x:auto}
   .dep b{color:var(--teal);font-weight:600}
   .dep i{color:var(--muted);font-style:normal}
+  pre.ask{margin:14px 0 0;padding:14px 16px;background:#0f1826;border:1px solid var(--line);
+    border-radius:10px;overflow-x:auto}
+  pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);background:none;border:0;
+    padding:0;white-space:pre}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
   .card p{margin:0;color:var(--muted);font-size:14.5px}
   .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
@@ -129,7 +133,7 @@
       <a class="btn p" href="#the-workbenches">I workbench</a>
       <a class="btn" href="#in-common">Cosa hanno in comune tutti gli Zoost</a>
       <a class="btn" href="/it/try">Provalo su dati inventati</a>
-      <span class="meta">Gratuiti · Apache-2.0 · nessun account</span>
+      <span class="meta">Gratuiti · Apache-2.0 · nessun account · sorgente leggibile, tutto quanto</span>
     </div>
     <p class="note" style="margin-top:22px" data-it-only>Il sito è tutto in italiano, guide e privacy policy comprese; la
       <a href="/llms.txt" hreflang="en">mappa per gli assistenti</a> resta in inglese, perché a
@@ -218,6 +222,48 @@
     </div>
 </section>
 
+<section id="ask-an-assistant">
+  <div class="wrap">
+    <h2>Oppure fallo leggere tutto a un assistente</h2>
+    <p class="lead" style="margin-top:-6px">Tutto quello che c'è in questa pagina è un'affermazione.
+      Ecco come controllarla senza credere a me e senza installare niente.</p>
+    <p>Il sorgente viene distribuito non minificato, senza bundler e senza dipendenze, quindi tutte e
+      due le estensioni stanno in una lettura sola - ed è una proprietà che vale la pena esercitare,
+      invece che dichiarare. Incolla questo nell'assistente che usi già. Chiede cos'è e se è fatto
+      bene <em>prima</em> di chiedere se è sicuro, perché è l'ordine in cui le domande arrivano
+      davvero, e chiede i punti in cui le affermazioni cadono invece di chiedere conferme, che non
+      varrebbero niente:</p>
+    <pre class="ask"><code>Leggi il sorgente di questa estensione Chrome e descrivila su tre
+livelli, partendo dal codice e non dal README.
+
+Repository: https://github.com/ivannot/zoost
+Le due estensioni sono apps/crm e apps/analytics.
+
+1. In parole semplici, per chi non scrive codice:
+   cos'è, a chi serve, cosa cambia per quella persona se la installa,
+   e le diresti che vale dieci minuti del suo tempo?
+
+2. Per chi lavora dentro Zoho tutti i giorni:
+   cosa sa fare davvero - le funzionalità che trovi implementate, non
+   quelle descritte; dove è debole; cosa darebbe fastidio su
+   un'organizzazione grande e disordinata; e la consiglieresti?
+
+3. Per chi deve approvarla:
+   cosa esce dalla macchina e quando, quali host può raggiungere, se
+   qualcosa scrive dentro Zoho, cosa conserva e dove.
+
+Chiudi con tre cose: quello che i testi promettono e il codice non ha,
+quello che non puoi stabilire dal solo sorgente, e quello che vorresti
+provare in un browser in esecuzione.</code></pre>
+    <p class="note" style="margin-top:16px">La chiusura è la parte da tenere. Leggere stabilisce cosa
+      fa il codice; non stabilisce cosa risponde Zoho, cosa impone Chrome a runtime, né cosa fa una
+      persona con un file esportato - e un assistente ti darà comunque un riassunto sicuro di sé,
+      quindi conviene chiedergli quel confine apertamente. Un prompt più stretto, per smontare le
+      affermazioni tecniche una per una, sta sulla <a href="/it/nerd#ask-an-assistant">pagina
+      nerd</a>.</p>
+  </div>
+</section>
+
 <section id="in-common">
   <div class="wrap">
     <h2>Cosa hanno in comune tutti gli Zoost</h2>
@@ -299,7 +345,7 @@
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code> e <code>api.anthropic.com</code> / <code>api.openai.com</code>. Su <code>one.zoho.*</code> non gira nessuno script nostro: sta lì solo perché il pannello capisca a quale org appartiene una scheda Zoho One. I due host AI si raggiungono solo se qualcuno accende l'assistente. Il manifest fa fede.</td></tr>
 <tr><td class="k">Come verificarlo</td><td>Quattordici file di JavaScript in chiaro per Zoho CRM, undici per Zoho Analytics. Nessun bundler, nessun minificatore: quello che leggi è quello che gira. Ogni release la costruisce GitHub due volte e la firma; un comando verifica il file pubblicato.</td></tr>
-        <tr><td class="k">Come controllarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a> - e con loro un prompt da incollare nell'assistente che usi, perché legga l'intero repository e ti dica dove queste affermazioni non reggono. È abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>
+        <tr><td class="k">Come giudicarlo senza di me</td><td>Ogni comando sta sulla <a href="/it/nerd#check-it-yourself">pagina nerd</a>, e con loro un prompt da incollare nell'assistente che usi: legge l'intero repository e risponde su tre livelli - cos'è in parole semplici, cosa sa fare per chi lavora dentro Zoho tutti i giorni, e quello che serve a chi la deve approvare. Compreso dove le affermazioni non reggono. È abbastanza corto da leggere in una volta sola, che è il motivo per cui viene distribuito non minificato.</td></tr>
       </tbody>
     </table>
     <p class="note" style="margin-top:20px">Il dettaglio, endpoint per endpoint, sta sulla

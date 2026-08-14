@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:37ca7e6dfef5d4f7 -->
+<!-- translated-from: site/nerd.html sha256:37b0cf5ec1589d92 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -181,36 +181,34 @@
     <a href="/it/emergency">in caso di emergenza</a> è la pagina che spiega come: lo stesso archivio
     firmato, usato senza aspettare la coda.</p>
 
-  <h3 id="ask-an-assistant">Oppure dai l'intero repository a un assistente</h3>
-  <p>Tutto quello che sta sopra ti chiede di eseguire qualcosa. Questo chiede invece a una macchina di
-    leggere, e qui si può fare per un motivo che non è retorico: il sorgente viene distribuito non
-    minificato, senza bundler e senza dipendenze, quindi ci sta tutto in una lettura sola. Incolla
-    questo nell'assistente che usi già - è scritto per cercare i punti in cui le affermazioni cadono,
-    perché un prompt che chiede conferme non varrebbe niente:</p>
+  <h3 id="ask-an-assistant">Lo stesso, chiesto a un assistente</h3>
+  <p>Un prompt più stretto di quello sulla <a href="/it/">home page</a>, per chi è già arrivato fin
+    qui: smonta le affermazioni tecniche una per una invece di descrivere il prodotto. Tutto quello che
+    chiede sta in questa pagina, quindi la sua risposta e questa pagina si possono confrontare riga per
+    riga - che è l'unico motivo per lanciarli tutti e due.</p>
   <pre class="ask"><code>Leggi il sorgente di questa estensione Chrome e dimmi dove le sue
-affermazioni non reggono.
+affermazioni tecniche non reggono.
 
 Repository: https://github.com/ivannot/zoost
 Le due estensioni sono apps/crm e apps/analytics.
 
 Rispondi dal codice, non dal README:
-1. Dichiara di non scrivere mai su Zoho. Trova ogni richiesta che non sia
-   una GET e dimmi a cosa serve ciascuna.
-2. Quali host puo' raggiungere? Confrontalo con quello che dichiarano i
-   manifest.
+1. Dichiara di non scrivere mai su Zoho. Trova ogni richiesta che non
+   sia una GET e dimmi a cosa serve ciascuna.
+2. Quali host può raggiungere? Confrontalo con quello che dichiarano i
+   due manifest e con i quattro permessi Chrome che chiedono.
 3. Cosa esce dalla macchina, e a quali condizioni? L'assistente AI
-   dovrebbe essere l'unica eccezione, e solo dopo che si e' inserita una
-   chiave.
-4. Cosa conserva, e dove?
+   facoltativo dovrebbe essere l'unica eccezione, e solo dopo che
+   qualcuno ha inserito una chiave propria.
+4. Cosa conserva, dove, e che fine fa una chiave API salvata quando la
+   protezione con passphrase è attiva e quando non lo è.
+5. Come distingue «Zoho non ha restituito niente» da «Zoho ha rifiutato»
+   e da «la risposta non era nella forma che il codice legge»?
 
 Dimmi cosa contraddice queste affermazioni, cosa non puoi stabilire dal
-solo sorgente e cosa vorresti comunque provare in un browser in esecuzione.</code></pre>
-  <p class="note">L'ultima riga è quella che conta. Leggere stabilisce cosa fa il codice; non
-    stabilisce cosa risponde Zoho, cosa impone Chrome a runtime, né cosa fa una persona con un file
-    esportato - e un assistente ti darà comunque un riassunto sicuro di sé, quindi conviene chiederglielo
-    apertamente.</p>
+solo sorgente e cosa vorresti provare in un browser in esecuzione.</code></pre>
 
-  <h2 id="what-none-of-it-proves">Cosa non dimostra niente di tutto questo</h2>
+<h2 id="what-none-of-it-proves">Cosa non dimostra niente di tutto questo</h2>
   <p>Il caricamento sul Chrome Web Store lo fa un workflow leggendo l'asset della Release, quindi il
     file che Google riceve è quello costruito e firmato; resta a mano il click su Submit, che non
     sposta byte. Quello che non è coperto è l'altro capo: Google reimpacchetta e rifirma ogni

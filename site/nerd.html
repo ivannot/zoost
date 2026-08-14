@@ -181,33 +181,34 @@
     <a href="/emergency">in case of emergency</a> is the page for that: the same signed archive, run
     without waiting for the queue.</p>
 
-  <h3 id="ask-an-assistant">Or hand the whole repository to an assistant</h3>
-  <p>Everything above asks you to run something. This asks a machine to read instead, which is
-    possible here for a reason that is not rhetorical: the source ships unminified, with no bundler
-    and no dependencies, so all of it fits in one reading. Paste this into whichever assistant you
-    already use - it is written to look for the places the claims fail, because a prompt asking for
-    approval would be worth nothing:</p>
-  <pre class="ask"><code>Read the source of this Chrome extension and tell me where its claims fail.
+  <h3 id="ask-an-assistant">The same, asked of an assistant</h3>
+  <p>A narrower prompt than the one on the <a href="/#ask-an-assistant">home page</a>, for a reader who
+    is already this far down: it takes the technical claims apart one at a time rather than describing
+    the product. Everything it asks about is in this page, so its answer and this page can be compared
+    line by line - which is the only reason to run both.</p>
+  <pre class="ask"><code>Read the source of this Chrome extension and tell me where its
+technical claims fail.
 
 Repository: https://github.com/ivannot/zoost
 The two extensions are apps/crm and apps/analytics.
 
 From the code, not from the README:
-1. It says it never writes to Zoho. Find every request that is not a GET,
+1. It says it never writes to Zoho. Find every request that is not a GET
    and say what each one is for.
-2. Which hosts can it reach at all? Compare that with what the manifests declare.
-3. What leaves the machine, and under what conditions? The AI assistant is
-   supposed to be the only exception, and only once a key is entered.
-4. What does it store, and where?
+2. Which hosts can it reach at all? Compare that with what the two
+   manifests declare, and with the four Chrome permissions they ask for.
+3. What leaves the machine, and under what conditions? The optional AI
+   assistant is supposed to be the only exception, and only once someone
+   enters their own key.
+4. What does it store, where, and what happens to a stored API key when
+   the passphrase protection is on and when it is off.
+5. How does it tell «Zoho returned nothing» apart from «Zoho refused»
+   and from «the response was not the shape this reads»?
 
-Tell me what contradicts those claims, what you cannot decide from the source
-alone, and what you would still want to test in a running browser.</code></pre>
-  <p class="note">The last line is the one that matters. Reading settles what the code does; it does
-    not settle what Zoho answers, what Chrome enforces at runtime, or what a person does with an
-    export - and an assistant will hand you a confident summary either way, so it is worth asking it
-    that question explicitly.</p>
+Tell me what contradicts those claims, what you cannot decide from the
+source alone, and what you would want to test in a running browser.</code></pre>
 
-  <h2 id="what-none-of-it-proves">What none of it proves</h2>
+<h2 id="what-none-of-it-proves">What none of it proves</h2>
   <p>The upload to the Chrome Web Store is a workflow reading the Release asset, so the file Google
     receives is the one that was built and signed; what is still by hand is pressing Submit, which
     moves no bytes. What is still not covered is the far end: Google repackages and re-signs every
