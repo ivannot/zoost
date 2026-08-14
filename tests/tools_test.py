@@ -2884,6 +2884,44 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                                          'is read, or reach it by URL')
 
 
+class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
+    """«The sensitive part is opt-in and flagged when selected - Deluge source code in Zoost CRM, the
+    SQL of your query tables in Zoost Analytics» - §4.3 of the privacy policy, and the same sentence
+    on the CRM page and in the README. It was false: both panels initialised the export scope from
+    SCOPE_FULL, so a first export carried the source unless somebody noticed the tick and cleared it.
+
+    Found by an assistant reading the repository against the site - the check the home page now hands
+    to readers - which is the argument for handing it out: nothing here compares prose against code,
+    and a person re-reading their own promises does not see them.
+
+    The test is keyed to the promise, not to the constant: what it holds is that the key naming the
+    sensitive section is off in whatever the panel starts from, and that the claim still exists to be
+    kept. If the claim is ever withdrawn, this fails and says so.
+    """
+
+    SENSITIVE = {'crm': 'code', 'analytics': 'sql'}
+
+    def test_the_promise_is_still_made(self):
+        privacy = (ROOT / 'site' / 'privacy.html').read_text(encoding='utf-8')
+        self.assertIn('the sensitive part is opt-in', privacy,
+                      'the privacy policy no longer makes the promise this test keeps')
+
+    def test_the_first_export_does_not_carry_it(self):
+        for app, key in self.SENSITIVE.items():
+            src = (ROOT / 'apps' / app / 'sidepanel.js').read_text(encoding='utf-8')
+            m = re.search(r'const SCOPE_DEFAULT = Object\.assign\(\{\}, SCOPE_FULL, \{([^}]*)\}\)', src)
+            self.assertIsNotNone(m, f'{app}: there is no SCOPE_DEFAULT, so the scope starts from SCOPE_FULL')
+            self.assertRegex(m.group(1), rf'{key}:\s*false',
+                             f'{app}: {key} is not turned off in the default export scope')
+            # and nothing initialises a scope from SCOPE_FULL any more - the whole point is that an
+            # omitted key must not mean «include the sensitive section».
+            for line in src.splitlines():
+                code = line.split('//')[0]
+                if 'Object.assign({}, SCOPE_FULL' in code and 'SCOPE_DEFAULT =' not in code:
+                    self.assertIn('pspFull', code,
+                                  f'{app}: a scope is built from SCOPE_FULL outside the «Full» button: {line.strip()[:90]}')
+
+
 class AnItalianPageDoesNotSendYouToTheEnglishOne(unittest.TestCase):
     """A CTA added to the Italian homepage pointed at `/try` instead of `/it/try`, so the one button
     inviting somebody to try the product took them out of their language. Reported by the author.

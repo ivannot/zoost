@@ -1850,9 +1850,13 @@ function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear 
 const SCOPE_KEYS = ['views', 'structure', 'relations', 'sql', 'lineage', 'health'];
 const SCOPE_FULL = { views: true, structure: true, relations: true, sql: true, lineage: true, health: true };
 const SCOPE_SAFE = { views: true, structure: true, relations: true, sql: false, lineage: true, health: true };
-let expScope = Object.assign({}, SCOPE_FULL);
+// The same promise as the CRM's, kept the same way: §4.3 of the privacy policy names «the SQL of your
+// query tables» as the sensitive half of an Analytics export, so it starts unticked. Everything else
+// stays on.
+const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { sql: false });
+let expScope = Object.assign({}, SCOPE_DEFAULT);
 async function loadScope() {
-  try { const v = await window.idbHandle.get('exportScopeAnalytics'); if (v) expScope = Object.assign({}, SCOPE_FULL, v); } catch (_) {}
+  try { const v = await window.idbHandle.get('exportScopeAnalytics'); if (v) expScope = Object.assign({}, SCOPE_DEFAULT, v); } catch (_) {}
 }
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });

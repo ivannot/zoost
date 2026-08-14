@@ -185,7 +185,9 @@
         <ul>
           <li>One <code>.sql</code> per query table - the only thing here somebody actually wrote, and the part
             <code>git diff</code> can answer about.</li>
-          <li>Search across every query at once.</li>
+          <li>Search across every query at once - with grep, your editor or anything else, because they
+            are files on your disk. The panel's own search covers names, folders and columns; it does not
+            read inside the SQL.</li>
           <li>Each records the tables it reads and which of their columns it touches, so
             <em>if I drop this column, what breaks</em> has an answer.</li>
         </ul>

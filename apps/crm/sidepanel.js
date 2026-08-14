@@ -254,16 +254,23 @@ const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'wor
 // report says how many it withheld so nobody reads a blank as an absence.
 const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, health: true };
 const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, health: false };
-let expScope = Object.assign({}, SCOPE_FULL);
+// **The sensitive section starts unticked, and that is a promise being kept rather than a taste.**
+// The site, the README and §4.3 of the privacy policy all say the same thing - «the sensitive part is
+// opt-in and flagged when selected» - and this line said the opposite: the first export a person ever
+// made arrived with the whole Deluge source in it unless they noticed and cleared it. Found by an
+// assistant reading the repository against the site, which is the check the front page now hands out.
+// Everything else stays on: what is being defended is the source code, not the export's usefulness.
+const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { code: false });
+let expScope = Object.assign({}, SCOPE_DEFAULT);
 // What the dialog is editing right now, and which of its boxes were cleared *for* the user because
 // the data behind them is behind. Kept apart from expScope for one reason: the export dialog saves
 // what you leave it with, so mutating the defaults to warn about staleness rewrote them - one
 // export and the settings had silently lost Functions and Workflows. A transient warning must never
 // become a stored preference. Same lost-update shape as two copies of the settings page.
-let dlgScope = Object.assign({}, SCOPE_FULL);
+let dlgScope = Object.assign({}, SCOPE_DEFAULT);
 let dlgAutoCleared = new Set();
 async function loadScope() {
-  try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_FULL, st.exportScope); } catch (_) {}
+  try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_DEFAULT, st.exportScope); } catch (_) {}
 }
 // The tab preference, and the access verdicts recorded for the workspace that is open. Two sources
 // because they are two different kinds of fact: what you chose (per install) and what Zoho allows
@@ -3830,7 +3837,7 @@ function freshnessLine() {
 }
 
 function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope) {
-  scope = Object.assign({}, SCOPE_FULL, scope || {});
+  scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   if (!scope.functions) fns = [];
   if (!scope.modules) mods = [];
   wfs = scope.workflows ? (wfs || []) : []; scheds = scope.schedules ? (scheds || []) : [];
@@ -4209,7 +4216,7 @@ async function loadExportData() {
 }
 function _mdCell(x) { return String(x == null ? '' : x).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
 function buildExportMarkdown(d, scope) {
-  scope = Object.assign({}, SCOPE_FULL, scope || {});
+  scope = Object.assign({}, SCOPE_DEFAULT, scope || {});
   let { mods, g, wfs, scheds, conns, fails, acts } = d;
   if (!scope.modules) mods = [];
   if (!scope.workflows) wfs = [];
