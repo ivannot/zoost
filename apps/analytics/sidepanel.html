@@ -158,6 +158,15 @@
   .controls{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:#131a27;flex-wrap:wrap}
   .findgrp{display:flex;align-items:stretch;flex:1;min-width:190px;background:#0f1826;border:1px solid var(--border);border-radius:7px;overflow:hidden}
   .findgrp:focus-within{border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-soft)}
+  /* The CRM's search-mode chip, kept byte-identical: it is the same control answering the same
+     question one product over, and two of these drifting apart is the thing the twin ledger exists
+     to catch. */
+  .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
+  .smode:hover{background:#1e2a3d;color:var(--ink)}
+  .smode.on{background:var(--sel);color:#fff;border-left-color:var(--sel)}
+  .sqlhit{font:11px var(--mono);color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sqlhit mark{background:var(--sel);color:#fff;border-radius:2px;padding:0 1px}
+  .sqlhit .n{color:var(--sel-text);margin-right:6px}
   .findwrap{position:relative;flex:1;min-width:90px;display:flex}
   .findwrap input{width:100%;padding:6px 26px 6px 10px;background:transparent;border:0;color:var(--ink);font:12px var(--sans);outline:none}
   .findwrap .fx{position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer}
@@ -371,6 +380,7 @@
 <div class="controls">
   <div class="findgrp">
     <div class="findwrap"><input id="find" type="search" placeholder="Find…" autocomplete="off"><span class="fx" id="findclear" title="Clear">✕</span></div>
+    <button id="smode" class="smode" title="What the search looks at: names, folders and columns, or the full text of every query's SQL">in: names</button>
   </div>
 </div>
 <div class="controls">

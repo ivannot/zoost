@@ -3606,3 +3606,48 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(escHtml(''), '');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Searching inside the SQL, which the site promised and the panel could not do. `sqlHit` is the
+// whole of the matching: what a term does inside one query - how many times, and the first line it
+// is on - so the list can show where the match is instead of only that there was one.
+{
+  const { sqlHit } = load([sliceFn('apps/analytics/sidepanel.js', 'sqlHit')]);
+  const SQL = 'SELECT a.x\nFROM "Orders" o\nJOIN "Accounts" a ON a.id = o.acc\nWHERE o.total > 0';
+
+  test('a term that is not there is not a match', () => {
+    assert.equal(sqlHit(SQL, 'zzz'), null);
+    assert.equal(sqlHit('', 'JOIN'), null);
+    assert.equal(sqlHit(SQL, ''), null);
+    assert.equal(sqlHit(null, 'JOIN'), null);
+  });
+
+  test('it says how many times, and on which line the first one is', () => {
+    const h = sqlHit(SQL, 'JOIN');
+    assert.equal(h.count, 1);
+    assert.equal(h.lineNo, 3);
+    assert.ok(h.line.startsWith('JOIN "Accounts"'), h.line);
+  });
+
+  test('the count is every occurrence, not every line', () => {
+    assert.equal(sqlHit('a x a x a', 'a').count, 3);
+    assert.equal(sqlHit('aaaa', 'aa').count, 2, 'overlapping matches are counted once each');
+  });
+
+  test('case does not matter, because nobody types SQL in one case', () => {
+    const h = sqlHit(SQL, 'join');
+    assert.equal(h.count, 1);
+    assert.equal(h.lineNo, 3);
+  });
+
+  test('the line is trimmed and bounded, so one long query cannot fill the list', () => {
+    const long = 'x'.repeat(400) + 'needle';
+    const h = sqlHit('   ' + long + '   ', 'needle');
+    assert.ok(h.line.length <= 160, h.line.length);
+    assert.equal(h.line[0], 'x', 'the line was not trimmed');
+  });
+
+  test('a match on the first line is line 1, not line 0', () => {
+    assert.equal(sqlHit('SELECT 1', 'SELECT').lineNo, 1);
+  });
+}

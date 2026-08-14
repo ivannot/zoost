@@ -781,6 +781,17 @@ PANELS = [
     ("analytics-ai", "analytics", "analytics/sample-workspace", """
         setTimeout(() => document.getElementById('askai').click(), 1400);
     """),
+    ("analytics-search", "analytics", "analytics/sample-workspace", """
+        // The twin of crm-search, one product over: the scope switch on, and a term that is inside
+        // the queries rather than in their names - which is the whole difference the switch makes.
+        setTimeout(() => {
+          document.getElementById('smode').click();
+          setTimeout(() => {
+            const f = document.getElementById('find');
+            f.value = 'JOIN'; f.dispatchEvent(new Event('input'));
+          }, 1200);
+        }, 1400);
+    """),
     ("analytics-lineage", "analytics", "analytics/sample-workspace", """
         setTimeout(() => {
           const el = [...document.querySelectorAll('#list tbody tr')].find((e) => /Revenue_By_Region/.test(e.textContent));

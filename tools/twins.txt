@@ -156,7 +156,7 @@ refreshContext	3275e0a27f4d	09196a24e765	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
 relRender	65b6796a1174	479e5c41dd33	divergent
 renameWorkspace	e0685ddb2452	31b53c1010c7	divergent
-render	1f1f526caa02	832b88a8f3a0	divergent
+render	1f1f526caa02	b706d7abf71d	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	962f31f75f7d	f67417c0398c	divergent

@@ -841,6 +841,13 @@ async function loadFromDisk() {
   schema = (s && s.tables) || {}; relations = (s && s.relations) || [];
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
   sqls = {};
+  sqlCache = null; sqlUnread = 0;
+  if (searchMode === 'sql') {
+    searchMode = 'name';
+    $('smode').textContent = 'in: names';
+    $('smode').classList.remove('on');
+    $('find').placeholder = 'Find\u2026';
+  }
   const index = await readJson('sql/index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
@@ -974,12 +981,62 @@ function renderTypeFilter() {
   sel.value = typeFilter || '';
 }
 
+// ---- searching inside the SQL ------------------------------------------------------------------
+// `in: names` looks at what the list already shows - name, folder, column names. `in: SQL` looks
+// inside the queries themselves, which is what «search across every query at once» has always meant
+// to a reader and what this panel could not do: the text is not in memory, it is read per view when
+// you open one. So the first search of a session reads every .sql file once and keeps it.
+let searchMode = 'name';        // 'name' | 'sql'
+let sqlCache = null;            // Map(id -> text), built once per workspace
+let sqlUnread = 0;              // files that would not open, reported rather than counted as misses
+let _sqlSearchT = null;
+
+// What a term does inside one query: how many times, and the first line it is on. A declaration
+// rather than an arrow because `tests/slice.mjs` lifts it out and runs it alone.
+function sqlHit(text, term) {
+  if (!text || !term) return null;
+  const lc = text.toLowerCase(), t = term.toLowerCase();
+  let idx = lc.indexOf(t);
+  if (idx < 0) return null;
+  let count = 0, i = idx;
+  while (i >= 0) { count++; i = lc.indexOf(t, i + t.length); }
+  const start = text.lastIndexOf('\n', idx) + 1;
+  let end = text.indexOf('\n', idx);
+  if (end < 0) end = text.length;
+  return { count, line: text.slice(start, end).trim().slice(0, 160), lineNo: text.slice(0, idx).split('\n').length };
+}
+
+// Read every query's file once. A view whose file will not open is counted, never silently dropped:
+// «no match» and «never read» are the distinction this panel exists to keep.
+async function ensureSqlCache() {
+  if (sqlCache) return sqlCache;
+  const ids = Object.keys(sqls).filter((id) => sqls[id] && sqls[id].stem);
+  if (ids.length) status(`Reading the SQL of ${ids.length} quer${ids.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
+  const m = new Map();
+  sqlUnread = 0;
+  for (const id of ids) {
+    if (typeof sqls[id].sql === 'string') { m.set(id, sqls[id].sql); continue; }
+    try {
+      const text = await readFile(`sql/${sqls[id].stem}.sql`);
+      sqls[id].sql = text;                       // the detail pane wants it too, and now has it
+      m.set(id, text);
+    } catch (_) { sqlUnread++; }
+  }
+  sqlCache = m;
+  if (ids.length) status(`${m.size} quer${m.size === 1 ? 'y' : 'ies'} read${sqlUnread ? ` \u00b7 ${sqlUnread} could not be opened` : ''}.`, sqlUnread ? 'warn' : '');
+  return sqlCache;
+}
+
 function visibleViews() {
   const q = $('find').value.trim().toLowerCase();
   let out = views;
   if (typeFilter === ORPHANS) out = out.filter(isOrphanCandidate);
   else if (typeFilter) out = out.filter((v) => v.type === typeFilter);
-  if (q) {
+  if (q && searchMode === 'sql') {
+    // Only what has SQL can match, and only what has been read: a query whose file would not open is
+    // counted by ensureSqlCache() and reported, not quietly turned into «no match».
+    out = out.filter((v) => sqlCache && sqlHit(sqlCache.get(v.id), q));
+  } else if (q) {
     out = out.filter((v) => {
       if ((v.name || '').toLowerCase().includes(q) || (v.folderName || '').toLowerCase().includes(q)) return true;
       const t = schema[v.id];                  // searching a column name finds the tables that have it
@@ -1102,13 +1159,24 @@ function render() {
     // the view the structure comes from.
     return `<span title="${escA('columns inherited from ' + src.name + ' - this view has none of its own')}" style="color:var(--muted)">(${schema[src.id].columns.length})</span>`;
   };
+  // In SQL mode the row says where the term is, the way the CRM's search results do: the line, its
+  // number, and how many times the term appears in that query.
+  const sqlLine = (v) => {
+    if (searchMode !== 'sql' || !sqlCache) return '';
+    const q2 = $('find').value.trim();
+    const h = q2 ? sqlHit(sqlCache.get(v.id), q2) : null;
+    if (!h) return '';
+    const re = new RegExp('(' + q2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    return `<div class="sqlhit"><span class="n">${h.lineNo}</span>${esc(h.line).replace(re, '<mark>$1</mark>')}`
+      + (h.count > 1 ? ` <span class="n">\u00d7${h.count}</span>` : '') + '</div>';
+  };
   list.innerHTML = `<table class="vtbl">
     <thead><tr>
       <th>View</th><th>Type</th><th class="num" title="Columns. A number in brackets is inherited: the view has none of its own, and the count is the view it is built on.">Cols</th>
       <th class="num" title="As Zoho words it, in your interface language - not sortable, see the note below">Design</th>
       <th class="num">Data</th>${deps ? '<th class="num" title="How many views read from it, plus the dashboards it appears on - the Lineage tab breaks the same figure down">Read by</th>' : ''}
     </tr></thead><tbody>${rows.map((v) => `<tr data-id="${escA(v.id)}"${v.id === selectedId ? ' class="sel"' : ''}>
-      <td><div class="vname">${esc(v.name)}</div><div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Zoho Analytics flags this as a system table - it came from a connected source, you did not build it">system</span>' : ''}</div></td>
+      <td><div class="vname">${esc(v.name)}</div>${sqlLine(v)}<div class="vsub">${esc(v.folderName || '—')}${v.owner ? ' · ' + esc(v.owner) : ''}${v.system ? ' · <span class="sysflag" title="Zoho Analytics flags this as a system table - it came from a connected source, you did not build it">system</span>' : ''}</div></td>
       <td><span class="vtype">${esc(v.type)}</span></td>
       <td class="num">${colCount(v)}</td>
       ${v.designModifiedAt
@@ -2280,6 +2348,14 @@ $('pull').onclick = pullAll;
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
 $('gozoho').onclick = openZohoHome;
 $('find').oninput = render;
+$('smode').onclick = async () => {
+  searchMode = searchMode === 'name' ? 'sql' : 'name';
+  $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';
+  $('smode').classList.toggle('on', searchMode === 'sql');
+  $('find').placeholder = searchMode === 'name' ? 'Find\u2026' : 'Find inside the SQL\u2026';
+  if (searchMode === 'sql') await ensureSqlCache();
+  render();
+};
 $('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };
 $('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };
