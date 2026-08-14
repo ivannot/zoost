@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:2a46fef795756753 -->
+<!-- translated-from: site/index.html sha256:03c89a14531f7270 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -232,12 +232,19 @@
       invece che dichiarare. Incolla questo nell'assistente che usi già. Chiede cos'è e se è fatto
       bene <em>prima</em> di chiedere se è sicuro, perché è l'ordine in cui le domande arrivano
       davvero, e chiede i punti in cui le affermazioni cadono invece di chiedere conferme, che non
-      varrebbero niente:</p>
-    <pre class="ask"><code>Leggi il sorgente di questa estensione Chrome e descrivila su tre
-livelli, partendo dal codice e non dal README.
+      varrebbero niente. Non nomina nessuna pagina di questo sito: tutto quello con cui confronta il
+      codice - il README, la descrizione dentro ogni manifest - sta dentro il repository, quindi
+      risponde per intero anche a un assistente che non riesce a raggiungere zoost.it. E gli dice di
+      fermarsi se non riesce a entrare, che è il caso da presidiare: chi non riesce a leggere il
+      repository altrimenti risponde a memoria, e quella risposta è identica a una vera.</p>
+    <pre class="ask"><code>Leggi il sorgente di questo repository e descrivilo su tre livelli.
+Rispondi dal codice che riesci davvero a leggere lì dentro.
 
 Repository: https://github.com/ivannot/zoost
-Le due estensioni sono apps/crm e apps/analytics.
+Contiene due estensioni Chrome: apps/crm e apps/analytics.
+
+Se non riesci ad aprire il repository, dillo e fermati. Non rispondere
+con quello che già sai.
 
 1. In parole semplici, per chi non scrive codice:
    cos'è, a chi serve, cosa cambia per quella persona se la installa,
@@ -252,9 +259,10 @@ Le due estensioni sono apps/crm e apps/analytics.
    cosa esce dalla macchina e quando, quali host può raggiungere, se
    qualcosa scrive dentro Zoho, cosa conserva e dove.
 
-Chiudi con tre cose: quello che i testi promettono e il codice non ha,
-quello che non puoi stabilire dal solo sorgente, e quello che vorresti
-provare in un browser in esecuzione.</code></pre>
+Chiudi con tre cose: quello che README.md o la descrizione dentro i due
+manifest.json promettono e il codice non ha, quello che non puoi
+stabilire dal solo sorgente, e quello che vorresti provare in un browser
+in esecuzione.</code></pre>
     <p class="note" style="margin-top:16px">La chiusura è la parte da tenere. Leggere stabilisce cosa
       fa il codice; non stabilisce cosa risponde Zoho, cosa impone Chrome a runtime, né cosa fa una
       persona con un file esportato - e un assistente ti darà comunque un riassunto sicuro di sé,

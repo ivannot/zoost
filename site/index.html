@@ -223,12 +223,19 @@
       Paste this into whichever assistant you already use. It asks what this is and whether it is any
       good <em>before</em> it asks whether it is safe, because that is the order the questions arrive
       in, and it asks for the places the claims fail rather than for approval, which would be worth
-      nothing:</p>
-    <pre class="ask"><code>Read the source of this Chrome extension and describe it at three
-levels, from the code rather than from the README.
+      nothing. It names no page of this site: everything it checks against - the README, the
+      description in each manifest - is inside the repository, so an assistant that cannot reach
+      zoost.it can still answer in full. And it tells the assistant to stop if it cannot get in,
+      which is the failure worth guarding: one that cannot read the repository will otherwise answer
+      from memory, and that answer looks exactly like a real one.</p>
+    <pre class="ask"><code>Read the source of this repository and describe it at three levels.
+Answer from the code you can actually read there.
 
 Repository: https://github.com/ivannot/zoost
-The two extensions are apps/crm and apps/analytics.
+It holds two Chrome extensions: apps/crm and apps/analytics.
+
+If you cannot open the repository, say so and stop. Do not answer from
+what you already know about it.
 
 1. In plain language, for somebody who does not write code:
    what is it, who is it for, what changes for them if they install it,
@@ -243,9 +250,10 @@ The two extensions are apps/crm and apps/analytics.
    what leaves the machine and when, which hosts it can reach, whether
    anything writes back to Zoho, what it stores and where.
 
-Then finish with three things: anything the copy claims that the code
-does not have, what you cannot decide from the source alone, and what
-you would want to test in a running browser.</code></pre>
+Then finish with three things: anything README.md or the description in
+either manifest.json promises that the code does not have, what you
+cannot decide from the source alone, and what you would want to test in
+a running browser.</code></pre>
     <p class="note" style="margin-top:16px">The closing paragraph is the part to keep. Reading settles
       what the code does; it does not settle what Zoho answers, what Chrome enforces at runtime, or
       what somebody does with an export - and an assistant will hand you a confident summary either

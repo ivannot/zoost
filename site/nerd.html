@@ -186,13 +186,15 @@
     is already this far down: it takes the technical claims apart one at a time rather than describing
     the product. Everything it asks about is in this page, so its answer and this page can be compared
     line by line - which is the only reason to run both.</p>
-  <pre class="ask"><code>Read the source of this Chrome extension and tell me where its
-technical claims fail.
+  <pre class="ask"><code>Read the source of this repository and tell me where its technical
+claims fail. The claims are in README.md and in the description field of
+each manifest.json; everything else, answer from the code.
 
 Repository: https://github.com/ivannot/zoost
-The two extensions are apps/crm and apps/analytics.
+It holds two Chrome extensions: apps/crm and apps/analytics.
 
-From the code, not from the README:
+If you cannot open the repository, say so and stop.
+
 1. It says it never writes to Zoho. Find every request that is not a GET
    and say what each one is for.
 2. Which hosts can it reach at all? Compare that with what the two
