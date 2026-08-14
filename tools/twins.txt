@@ -112,6 +112,7 @@ fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	9e24470bc84d	5e9b454554e7	divergent
 grantRoot	784657581fed	4ec64827ffe9	divergent
+graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	2d3e00ec6edc	c9709b0f9729	divergent
 hueFor	14a512e6b267	14a512e6b267	identical
 initPositions	523e3eabcde3	523e3eabcde3	identical
@@ -125,7 +126,7 @@ linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
 loadAi	11213ff11144	540bb62a7764	divergent
 loadDc	4e2ba588f615	9527b138e9ce	divergent
 loadLay	589802a799f7	589802a799f7	identical
-loadScope	1467e55a3ee1	5515d0f9bf5c	divergent
+loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
 loadZohoDc	83d8c8288511	83d8c8288511	identical
 loseLock	5267c941abee	5267c941abee	identical
 markDirty	e539acbb45b6	e539acbb45b6	identical
@@ -138,7 +139,7 @@ mismatchRefuse	375f245e1392	fda4a5879a7f	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	2db7e2f6dc3e	0c5941e396f4	divergent
-openSchemaGraph	3daec24cbeef	2c9aa0d997a2	divergent
+openSchemaGraph	9545037888e6	e4371e17f2c3	divergent
 openSettings	3d3a7403cfeb	3d3a7403cfeb	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent

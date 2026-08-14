@@ -146,10 +146,13 @@
       </tr>
       <tr>
         <td class="p" data-label="Where">chrome.storage.session</td>
-        <td data-label="What">Only the API key, and only while it is unlocked - that is, only if you turned on passphrase
-          protection. Held in memory, never written to disk.</td>
-        <td data-label="Why">So the passphrase is typed once per browser session rather than once per question. Cleared when
-          the browser closes.</td>
+        <td data-label="What">Two things, both in memory and never written to disk. The API key, and only while it is
+          unlocked - that is, only if you turned on passphrase protection. And, from the moment you open a
+          diagram, the drawing it is given: the boxes, their names and kinds, and the arrows between them.
+          <b>Not</b> the Deluge source - it used to travel with that payload, and now it does not.</td>
+        <td data-label="Why">So the passphrase is typed once per browser session rather than once per question, and so the
+          diagram window has something to draw. Both are gone when the browser closes; the drawing is also
+          replaced every time you open another one.</td>
       </tr>
       <tr>
         <td class="p" data-label="Where">IndexedDB</td>

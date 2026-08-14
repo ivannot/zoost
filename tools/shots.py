@@ -204,7 +204,11 @@ STUB = """// **When is the picture final?** Under `--virtual-time-budget` that q
 }})();
 window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: () => {{}} }},
-  storage: {{ local: {{ get: async () => ({{ graphData: {data} }}), set: async () => {{}} }} }},
+  // The window reads the drawing from `session` - it is a hand-off, not a setting, and it stopped
+  // carrying the Deluge source when it moved there. `local` answers empty, so a page that went back
+  // to reading it would draw nothing and the shot would fail, which is the direction to fail in.
+  storage: {{ session: {{ get: async () => ({{ graphData: {data} }}), set: async () => {{}} }},
+              local: {{ get: async () => ({{}}), set: async () => {{}} }} }},
 }};
 window.addEventListener('load', () => setTimeout(() => {{
   try {{ {script} }} catch (e) {{ document.title = 'SHOT ERROR: ' + e.message; }}

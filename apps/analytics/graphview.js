@@ -115,7 +115,7 @@ const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
-  const store = await chrome.storage.local.get('graphData');
+  const store = await chrome.storage.session.get('graphData');
   DATA = store.graphData;
   if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));

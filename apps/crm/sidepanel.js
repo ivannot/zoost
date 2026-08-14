@@ -269,8 +269,28 @@ let expScope = Object.assign({}, SCOPE_DEFAULT);
 // become a stored preference. Same lost-update shape as two copies of the settings page.
 let dlgScope = Object.assign({}, SCOPE_DEFAULT);
 let dlgAutoCleared = new Set();
+// **A preference saved before the default was fixed is cleared once, and only once.** The dialog used
+// to open with the source ticked, so «code: true» in somebody's stored scope is at least as likely to
+// be the old default as a decision - and the promise the site, the README and the privacy policy all
+// make is that including it is a decision. So a scope with no `sv` has the sensitive section turned
+// off, is written back stamped, and is never touched again: whatever the user chooses from then on
+// stands, including turning it straight back on.
+//
+// Migration that deletes itself, as this repository asks: when nobody can still be carrying an
+// unstamped scope, the three lines go and nothing else has to change.
+const SCOPE_SV = 2;
 async function loadScope() {
-  try { const st = await chrome.storage.local.get('exportScope'); if (st && st.exportScope) expScope = Object.assign({}, SCOPE_DEFAULT, st.exportScope); } catch (_) {}
+  try {
+    const st = await chrome.storage.local.get('exportScope');
+    if (!st || !st.exportScope) return;
+    const saved = st.exportScope;
+    if (saved.sv !== SCOPE_SV) {
+      saved.code = false;
+      saved.sv = SCOPE_SV;
+      await chrome.storage.local.set({ exportScope: saved });
+    }
+    expScope = Object.assign({}, SCOPE_DEFAULT, saved);
+  } catch (_) {}
 }
 // The tab preference, and the access verdicts recorded for the workspace that is open. Two sources
 // because they are two different kinds of fact: what you chose (per install) and what Zoho allows
@@ -917,6 +937,25 @@ function fnStats(src) {
 const statsLabel = (s) => `${s.lines} lines · ${(s.chars / 1024).toFixed(1)} KB · ${s.apiCalls} API call${s.apiCalls === 1 ? '' : 's'}`;
 
 // ---------- graph cache ----------
+// What the diagram window is given, which is less than what the panel holds. `source_code` is put
+// back onto the graph nodes by loadGraph() for the assistant and the Markdown export - both of which
+// read it from memory - and the window has never touched it: it draws names, kinds and arrows. So it
+// is stripped here rather than shipped and forgotten, because the payload crosses into storage and
+// what crosses a boundary is what has to be justified.
+//
+// And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
+// setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
+// structure resting on disk until the next diagram replaces it.
+function graphForWindow(g) {
+  const out = Object.assign({}, g, { nodes: {} });
+  for (const [id, n] of Object.entries(g.nodes || {})) {
+    const copy = Object.assign({}, n);
+    delete copy.source_code;
+    out.nodes[id] = copy;
+  }
+  return out;
+}
+
 async function loadGraph() {
   const nodes = [];
   for await (const p of walk(dir)) {
@@ -1686,7 +1725,7 @@ async function openGraph() {
     await requirePerm(dir);
     setStatus('Building graph…', 'busy'); await refreshContext(); const g = await callGraphWithContext();
     g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.local.set({ graphData: g });
+    await chrome.storage.session.set({ graphData: graphForWindow(g) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Graph: ${g.counts.nodes} nodes, ${g.counts.edges} edges.`, 'ok');
   } catch (e) { setStatus(MSG.graphErr + e.message, 'bad'); }
@@ -2517,7 +2556,7 @@ async function buildGraphFor(kind) {
     const g = kind === 'schema' ? await buildSchemaGraph() : await callGraphWithContext();
     if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
     g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.local.set({ graphData: g });
+    await chrome.storage.session.set({ graphData: graphForWindow(g) });
     setStatus(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
@@ -3659,7 +3698,7 @@ async function openCallFocus(id, depth) {
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });
     gg.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.local.set({ graphData: gg });
+    await chrome.storage.session.set({ graphData: graphForWindow(gg) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     const n = g.nodes[id];
     setStatus(`Graph of ${id} (depth ${gg.depth}): calls ${n.calls.length}, called by ${n.called_by.length}.`, 'ok');
@@ -3674,7 +3713,7 @@ async function openSchemaFocus(apiName, depth) {
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
     if (g.nodes[apiName].unreadable) throw new Error(`Zoho would not describe ${apiName}, so it has no fields and no relations to draw.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
-    await chrome.storage.local.set({ graphData: g });
+    await chrome.storage.session.set({ graphData: graphForWindow(g) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Relations of ${apiName} (depth ${g.depth}): ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
   } catch (e) { setStatus('Relations graph error: ' + e.message, 'bad'); }
@@ -3685,7 +3724,7 @@ async function openSchemaGraph() {
     setStatus('Building schema graph…', 'busy'); await refreshContext();
     const g = await buildSchemaGraph();
     if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet - click Pull in Modules mode.'));
-    await chrome.storage.local.set({ graphData: g });
+    await chrome.storage.session.set({ graphData: graphForWindow(g) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     setStatus(`Schema: ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
   } catch (e) { setStatus('Schema graph error: ' + e.message, 'bad'); }

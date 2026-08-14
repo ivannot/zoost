@@ -1390,13 +1390,32 @@ function buildSchemaGraph() {
   };
 }
 
+// What the diagram window is given, which is less than what the panel holds. `source_code` is put
+// back onto the graph nodes by loadGraph() for the assistant and the Markdown export - both of which
+// read it from memory - and the window has never touched it: it draws names, kinds and arrows. So it
+// is stripped here rather than shipped and forgotten, because the payload crosses into storage and
+// what crosses a boundary is what has to be justified.
+//
+// And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
+// setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
+// structure resting on disk until the next diagram replaces it.
+function graphForWindow(g) {
+  const out = Object.assign({}, g, { nodes: {} });
+  for (const [id, n] of Object.entries(g.nodes || {})) {
+    const copy = Object.assign({}, n);
+    delete copy.source_code;
+    out.nodes[id] = copy;
+  }
+  return out;
+}
+
 async function openSchemaGraph(focusId, depth) {
   try {
     if (!Object.keys(schema).length) throw new Error('nothing pulled yet - run Pull all first');
     const g = buildSchemaGraph();
     if (!g.counts.nodes) throw new Error('no tables in this workspace');
     if (focusId && g.nodes[focusId]) { g.focus = focusId; g.depth = Math.max(1, depth || 2); }
-    await chrome.storage.local.set({ graphData: g });
+    await chrome.storage.session.set({ graphData: graphForWindow(g) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     status(`Schema: ${g.counts.nodes} tables, ${g.counts.edges} relations.`, 'ok');
   } catch (e) { status('Schema graph error: ' + (e.message || e), 'bad'); }
@@ -1922,9 +1941,18 @@ const SCOPE_SAFE = { views: true, structure: true, relations: true, sql: false, 
 // query tables» as the sensitive half of an Analytics export, so it starts unticked. Everything else
 // stays on.
 const SCOPE_DEFAULT = Object.assign({}, SCOPE_FULL, { sql: false });
+const SCOPE_SV = 2;
 let expScope = Object.assign({}, SCOPE_DEFAULT);
 async function loadScope() {
-  try { const v = await window.idbHandle.get('exportScopeAnalytics'); if (v) expScope = Object.assign({}, SCOPE_DEFAULT, v); } catch (_) {}
+  // The twin of the CRM's, for the same reason and with the same one-shot stamp: a scope saved while
+  // the dialog opened with the SQL ticked is not evidence that anybody chose it.
+  try {
+    const v = await window.idbHandle.get('exportScopeAnalytics');
+    if (v) {
+      if (v.sv !== SCOPE_SV) { v.sql = false; v.sv = SCOPE_SV; await window.idbHandle.set('exportScopeAnalytics', v); }
+      expScope = Object.assign({}, SCOPE_DEFAULT, v);
+    }
+  } catch (_) {}
 }
 function scopeToUI() {
   SCOPE_KEYS.forEach((k) => { const e = $('sc_' + k); if (e) e.checked = !!expScope[k]; });

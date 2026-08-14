@@ -1004,25 +1004,27 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
     dir: {}, hasPerm: async () => true,
     callGraphWithContext: async () => ({ counts: { nodes: 3 } }),
     buildSchemaGraph: async () => ({ counts: { nodes: 5 } }),
-    chrome: { storage: { local: { set: async () => {} } } },
+    // `session`, because the graph payload is a hand-off to a window rather than a setting and
+    // moved there when it stopped carrying the Deluge source with it.
+    chrome: { storage: { local: { set: async () => {} }, session: { set: async () => {} } } },
     setStatus: () => {}, bound: null, lastCtx: null,
   }, over);
 
   let ctx = mk({});
-  let { buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx);
+  let { buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor'), sliceFn('apps/crm/sidepanel.js', 'graphForWindow')], ctx);
   assert.deepEqual({ ...(await buildGraphFor('schema')) }, { ok: true });
 
   ctx = mk({ dir: null });
-  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor'), sliceFn('apps/crm/sidepanel.js', 'graphForWindow')], ctx));
   assert.match((await buildGraphFor('calls')).error, /no working folder/, 'a missing folder is not reported');
 
   ctx = mk({ hasPerm: async () => false });
-  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor'), sliceFn('apps/crm/sidepanel.js', 'graphForWindow')], ctx));
   const lapsed = (await buildGraphFor('calls')).error;
   assert.match(lapsed, /re-granting/, 'a lapsed folder does not name the remedy');
 
   ctx = mk({ callGraphWithContext: async () => ({ counts: { nodes: 0 } }) });
-  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor')], ctx));
+  ({ buildGraphFor } = load([sliceFn('apps/crm/sidepanel.js', 'buildGraphFor'), sliceFn('apps/crm/sidepanel.js', 'graphForWindow')], ctx));
   assert.match((await buildGraphFor('calls')).error, /no functions pulled/, 'an empty graph is handed over as if it were one');
 });
 
@@ -3649,5 +3651,104 @@ for (const app of ['crm', 'analytics']) {
 
   test('a match on the first line is line 1, not line 0', () => {
     assert.equal(sqlHit('SELECT 1', 'SELECT').lineNo, 1);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// What the diagram window is handed. Reported by an assistant reading the repository, and the day
+// before I had called the same finding false: `graph-core.js` does delete the source from every
+// node - which is what I measured - and then `loadGraph()` puts it straight back as `source_code`,
+// for the assistant and the Markdown export, both of which read it from memory. So every «open the
+// diagram» wrote a copy of every Deluge function into chrome.storage.local, and left it there.
+//
+// The window has never read it: `source_code` appears nowhere in either graphview.js. So it is
+// stripped, and the payload moved to session storage, which is memory.
+{
+  const { graphForWindow } = load([sliceFn('apps/crm/sidepanel.js', 'graphForWindow')]);
+
+  test('the payload carries no source, and keeps everything else', () => {
+    const g = { counts: { nodes: 1 }, focus: 'a.b', nodes: {
+      'a.b': { id: 'a.b', name: 'b', calls: ['c.d'], stats: { lines: 4 }, source_code: 'info "secret";' },
+      'c.d': { id: 'c.d', name: 'd', calls: [] },
+    } };
+    const out = graphForWindow(g);
+    assert.equal('source_code' in out.nodes['a.b'], false, 'the source is still in the payload');
+    assert.equal(out.nodes['a.b'].name, 'b');
+    assert.equal(out.nodes['a.b'].stats.lines, 4);
+    assert.equal(out.nodes['a.b'].calls[0], 'c.d');
+    assert.equal(out.focus, 'a.b');
+    assert.equal(out.counts.nodes, 1);
+  });
+
+  test('the graph the panel is holding is not changed by handing it over', () => {
+    // The panel goes on using source_code after the window opens - the assistant reads it - so a
+    // payload built by deleting in place would have taken the AI context with it.
+    const g = { nodes: { 'a.b': { source_code: 'x' } } };
+    graphForWindow(g);
+    assert.equal(g.nodes['a.b'].source_code, 'x');
+  });
+
+  test('nothing writes a graph to storage.local, and the window reads session', () => {
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      const win = read(`apps/${app}/graphview.js`);
+      assert.ok(!/storage\.local\.set\(\{\s*graphData/.test(panel),
+                `${app}: a graph is still written to storage.local, where it stays on disk`);
+      const writes = panel.match(/storage\.session\.set\(\{ graphData: [^}]*\}\)/g) || [];
+      assert.ok(writes.length, `${app}: no graph is handed to the window at all`);
+      writes.forEach((w) => assert.ok(/graphForWindow\(/.test(w),
+        `${app}: a payload skips graphForWindow, so it may carry the source: ${w}`));
+      assert.ok(/storage\.session\.get\('graphData'\)/.test(win),
+                `${app}: the window still reads the graph from local storage`);
+      assert.ok(!/source_code/.test(win), `${app}: the window reads source_code, so stripping it breaks it`);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A preference saved before the default was fixed. The dialog used to open with the sensitive
+// section ticked, so a stored `code: true` is at least as likely to be that old default as somebody's
+// decision - and the promise on three surfaces is that including it *is* a decision. It is cleared
+// once, stamped, and never touched again.
+{
+  const mkChrome = (stored) => {
+    const store = { exportScope: stored };
+    return { store, chrome: { storage: { local: {
+      get: async () => ({ exportScope: store.exportScope }),
+      set: async (o) => Object.assign(store, o),
+    } } } };
+  };
+
+  const loadFor = (stored) => {
+    const { store, chrome } = mkChrome(stored);
+    const ctx = { chrome, SCOPE_FULL: { functions: true, code: true, modules: true },
+                  SCOPE_DEFAULT: { functions: true, code: false, modules: true }, expScope: null };
+    const { loadScope } = load([sliceConst('apps/crm/sidepanel.js', 'SCOPE_SV'),
+                                sliceFn('apps/crm/sidepanel.js', 'loadScope')], ctx);
+    return { run: () => loadScope(), ctx, store };
+  };
+
+  test('an old scope loses the source once, and is stamped so it is not touched again', async () => {
+    const { run, ctx, store } = loadFor({ functions: true, code: true, modules: false });
+    await run();
+    assert.equal(store.exportScope.code, false, 'the old preference kept the source ticked');
+    assert.ok(store.exportScope.sv, 'nothing marks it as migrated, so it would be cleared for ever');
+    assert.equal(store.exportScope.modules, false, 'the rest of the choice was overwritten too');
+  });
+
+  test('a choice made after the fix is left alone, including turning it back on', async () => {
+    const { run, store } = loadFor({ functions: true, code: true, modules: true, sv: 2 });
+    await run();
+    assert.equal(store.exportScope.code, true,
+                 'a deliberate «yes, include the source» was cleared - the migration is not one-shot');
+  });
+
+  test('both products carry the same stamp and clear their own sensitive key', () => {
+    for (const [app, key] of [['crm', 'code'], ['analytics', 'sql']]) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      assert.match(src, /const SCOPE_SV = 2;/, `${app}: no version on the stored scope`);
+      assert.ok(src.includes('sv !== SCOPE_SV'), `${app}: nothing checks the stamp`);
+      assert.ok(src.includes(`${key} = false`), `${app}: the migration clears the wrong key`);
+    }
   });
 }

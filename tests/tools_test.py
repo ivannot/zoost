@@ -2137,19 +2137,34 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         # the first write failed, and the battery printed a raw mkdir error at the top of its output
         # while the extension on the other machine stayed at yesterday's build for a morning.
         #
-        # /proc stands in for it: a directory that certainly exists and certainly refuses a mkdir.
-        auto = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
-                              capture_output=True, text=True, cwd=ROOT,
-                              env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
-        self.assertEqual(auto.returncode, 0, 'a mount that is not there failed the battery')
-        self.assertEqual(auto.stdout.strip(), '', 'it wrote a path it never copied to')
-        self.assertIn('nothing usable is mounted on it', auto.stderr,
-                      f'--auto blamed the script instead of the mount: {auto.stderr!r}')
-        asked = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')],
-                               capture_output=True, text=True, cwd=ROOT,
-                               env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
-        self.assertEqual(asked.returncode, 1)
-        self.assertIn('Nothing was copied', asked.stderr)
+        # It used to stand `/proc` in for that state - a directory that exists and refuses a mkdir -
+        # and that is a property of Linux, not of the tool: on macOS there is no /proc at all, so the
+        # script correctly said «is not mounted» and the assertion, which was waiting for the other
+        # sentence, failed on somebody else's laptop. Reported from macOS. A directory this test makes
+        # and takes the write bit off is the same shape, on any machine.
+        with tempfile.TemporaryDirectory() as tmp:
+            hold = pathlib.Path(tmp) / 'mountpoint'
+            hold.mkdir()
+            hold.chmod(0o500)                       # there, and refusing to be written in
+            dest = str(hold / 'zoost-test')
+            try:
+                if os.access(hold, os.W_OK):        # root, or a filesystem that ignores the mode
+                    self.skipTest('this user can write into a directory with no write bit - '
+                                  'the state being tested cannot be built here')
+                auto = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh'), '--auto'],
+                                      capture_output=True, text=True, cwd=ROOT,
+                                      env={**os.environ, 'ZOOST_TEST_DIR': dest})
+                self.assertEqual(auto.returncode, 0, 'a mount that is not there failed the battery')
+                self.assertEqual(auto.stdout.strip(), '', 'it wrote a path it never copied to')
+                self.assertIn('nothing usable is mounted on it', auto.stderr,
+                              f'--auto blamed the script instead of the mount: {auto.stderr!r}')
+                asked = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')],
+                                       capture_output=True, text=True, cwd=ROOT,
+                                       env={**os.environ, 'ZOOST_TEST_DIR': dest})
+                self.assertEqual(asked.returncode, 1)
+                self.assertIn('Nothing was copied', asked.stderr)
+            finally:
+                hold.chmod(0o700)                   # or the temporary directory cannot be removed
 
     def test_the_images_to_upload_travel_with_the_extensions(self):
         """The screenshots that go on the two listings are rendered here and uploaded from a machine
@@ -2197,11 +2212,20 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
         self.assertLess(sh.index('COPIED=$(rsync'), sh.index('if ! probe_writable'),
                         'the probe runs before the copy, so every good run writes for nothing')
 
-        # refuses: /proc/zoost-test can be stat'd as absent and never created
-        red = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
-                             text=True, cwd=ROOT,
-                             env={**os.environ, 'ZOOST_TEST_DIR': '/proc/zoost-test'})
-        self.assertEqual(red.returncode, 1, 'a destination that cannot be written was accepted')
+        # refuses: a directory that is there and will not be written in - made here rather than
+        # borrowed from the host, so the case exists on every machine and not only on Linux.
+        with tempfile.TemporaryDirectory() as tmp:
+            hold = pathlib.Path(tmp) / 'mountpoint'
+            hold.mkdir()
+            hold.chmod(0o500)
+            try:
+                if not os.access(hold, os.W_OK):
+                    red = subprocess.run(['bash', str(ROOT / 'tools' / 'totest.sh')], capture_output=True,
+                                         text=True, cwd=ROOT,
+                                         env={**os.environ, 'ZOOST_TEST_DIR': str(hold / 'zoost-test')})
+                    self.assertEqual(red.returncode, 1, 'a destination that cannot be written was accepted')
+            finally:
+                hold.chmod(0o700)
 
         # allows, and the folder afterwards holds the two extensions and nothing else
         with tempfile.TemporaryDirectory() as tmp:
