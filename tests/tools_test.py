@@ -2884,6 +2884,33 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                                          'is read, or reach it by URL')
 
 
+class AnItalianPageDoesNotSendYouToTheEnglishOne(unittest.TestCase):
+    """A CTA added to the Italian homepage pointed at `/try` instead of `/it/try`, so the one button
+    inviting somebody to try the product took them out of their language. Reported by the author.
+
+    It is a whole class rather than a slip: every Italian page is written beside its English twin,
+    the paths differ only by a prefix, and nothing looks wrong in the markup. So it is derived - any
+    link from `site/it/` to a path that *has* an Italian version is a finding - with the two
+    deliberate exceptions named: the language switch, which says `hreflang="en"` and exists to leave
+    Italian, and `/llms.txt`, which is written for machines and stays in English on purpose.
+    """
+
+    def test_every_link_that_could_stay_in_italian_does(self):
+        it = ROOT / 'site' / 'it'
+        pages = {p.name for p in it.glob('*.html')}
+        findings = []
+        for p in sorted(it.glob('*.html')):
+            html = p.read_text(encoding='utf-8')
+            for m in re.finditer(r'<a\b[^>]*href="(/[^"#]*)"[^>]*>', html):
+                tag, href = m.group(0), m.group(1)
+                if href.startswith('/it/') or 'hreflang="en"' in tag or href == '/llms.txt':
+                    continue
+                target = (href.strip('/') or 'index') + '.html'
+                if target in pages:
+                    findings.append(f'site/it/{p.name}: {href} leaves Italian, and /it{href} exists')
+        self.assertEqual(findings, [], '\n'.join(findings))
+
+
 class TheScrollingRowDoesNotShaveItsOwnLabel(unittest.TestCase):
     """`.wsgroup` scrolls sideways when the buttons cannot fit, and `overflow-x:auto` beside an
     `overflow-y:visible` computes the visible axis to `auto` as well - so the row clips vertically
