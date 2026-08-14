@@ -22,6 +22,10 @@
 <meta name="theme-color" content="#0d121c">
 <link rel="stylesheet" href="/site.css?v=d8d78b9b2e">
 <style>
+  pre.ask{margin:14px 0 0;padding:14px 16px;background:#0f1826;border:1px solid var(--line);
+    border-radius:10px;overflow-x:auto}
+  pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);background:none;border:0;
+    padding:0;white-space:pre}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -176,6 +180,32 @@
     out and the Chrome Web Store has not caught up with it yet,
     <a href="/emergency">in case of emergency</a> is the page for that: the same signed archive, run
     without waiting for the queue.</p>
+
+  <h3 id="ask-an-assistant">Or hand the whole repository to an assistant</h3>
+  <p>Everything above asks you to run something. This asks a machine to read instead, which is
+    possible here for a reason that is not rhetorical: the source ships unminified, with no bundler
+    and no dependencies, so all of it fits in one reading. Paste this into whichever assistant you
+    already use - it is written to look for the places the claims fail, because a prompt asking for
+    approval would be worth nothing:</p>
+  <pre class="ask"><code>Read the source of this Chrome extension and tell me where its claims fail.
+
+Repository: https://github.com/ivannot/zoost
+The two extensions are apps/crm and apps/analytics.
+
+From the code, not from the README:
+1. It says it never writes to Zoho. Find every request that is not a GET,
+   and say what each one is for.
+2. Which hosts can it reach at all? Compare that with what the manifests declare.
+3. What leaves the machine, and under what conditions? The AI assistant is
+   supposed to be the only exception, and only once a key is entered.
+4. What does it store, and where?
+
+Tell me what contradicts those claims, what you cannot decide from the source
+alone, and what you would still want to test in a running browser.</code></pre>
+  <p class="note">The last line is the one that matters. Reading settles what the code does; it does
+    not settle what Zoho answers, what Chrome enforces at runtime, or what a person does with an
+    export - and an assistant will hand you a confident summary either way, so it is worth asking it
+    that question explicitly.</p>
 
   <h2 id="what-none-of-it-proves">What none of it proves</h2>
   <p>The upload to the Chrome Web Store is a workflow reading the Release asset, so the file Google

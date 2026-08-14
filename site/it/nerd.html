@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:15ec20094a6f43f9 -->
+<!-- translated-from: site/nerd.html sha256:37ca7e6dfef5d4f7 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -23,6 +23,10 @@
 <meta name="theme-color" content="#0d121c">
 <link rel="stylesheet" href="/site.css?v=d8d78b9b2e">
 <style>
+  pre.ask{margin:14px 0 0;padding:14px 16px;background:#0f1826;border:1px solid var(--line);
+    border-radius:10px;overflow-x:auto}
+  pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);background:none;border:0;
+    padding:0;white-space:pre}
   .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
   .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
   .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
@@ -176,6 +180,35 @@
     fix è uscita e il Chrome Web Store non l'ha ancora recuperata,
     <a href="/it/emergency">in caso di emergenza</a> è la pagina che spiega come: lo stesso archivio
     firmato, usato senza aspettare la coda.</p>
+
+  <h3 id="ask-an-assistant">Oppure dai l'intero repository a un assistente</h3>
+  <p>Tutto quello che sta sopra ti chiede di eseguire qualcosa. Questo chiede invece a una macchina di
+    leggere, e qui si può fare per un motivo che non è retorico: il sorgente viene distribuito non
+    minificato, senza bundler e senza dipendenze, quindi ci sta tutto in una lettura sola. Incolla
+    questo nell'assistente che usi già - è scritto per cercare i punti in cui le affermazioni cadono,
+    perché un prompt che chiede conferme non varrebbe niente:</p>
+  <pre class="ask"><code>Leggi il sorgente di questa estensione Chrome e dimmi dove le sue
+affermazioni non reggono.
+
+Repository: https://github.com/ivannot/zoost
+Le due estensioni sono apps/crm e apps/analytics.
+
+Rispondi dal codice, non dal README:
+1. Dichiara di non scrivere mai su Zoho. Trova ogni richiesta che non sia
+   una GET e dimmi a cosa serve ciascuna.
+2. Quali host puo' raggiungere? Confrontalo con quello che dichiarano i
+   manifest.
+3. Cosa esce dalla macchina, e a quali condizioni? L'assistente AI
+   dovrebbe essere l'unica eccezione, e solo dopo che si e' inserita una
+   chiave.
+4. Cosa conserva, e dove?
+
+Dimmi cosa contraddice queste affermazioni, cosa non puoi stabilire dal
+solo sorgente e cosa vorresti comunque provare in un browser in esecuzione.</code></pre>
+  <p class="note">L'ultima riga è quella che conta. Leggere stabilisce cosa fa il codice; non
+    stabilisce cosa risponde Zoho, cosa impone Chrome a runtime, né cosa fa una persona con un file
+    esportato - e un assistente ti darà comunque un riassunto sicuro di sé, quindi conviene chiederglielo
+    apertamente.</p>
 
   <h2 id="what-none-of-it-proves">Cosa non dimostra niente di tutto questo</h2>
   <p>Il caricamento sul Chrome Web Store lo fa un workflow leggendo l'asset della Release, quindi il
