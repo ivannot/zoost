@@ -748,7 +748,7 @@ e8dd0961cd74def9  site/it/privacy.html: Allo sviluppatore non arriva mai niente.
 b5896d1e9b1c9dcf  site/it/privacy.html: Cartella locale (File System Access) Zoho Analytics La struttura del workspace: l'elenco delle viste con tipo, cartella, proprietario e date; le colonne e i tipi di dato di ogni tabella e query table; le relazioni fra loro; il grafo delle dipendenze; e l'SQL di ogni query table come file .sql a sé.
 7083a6aff3a69b4d  site/it/privacy.html: Cosa raccoglie lo sviluppatore Niente.
 22c96fb783aaedf2  site/it/privacy.html: Cosa viene conservato, e dove Tutto quello che Zoost conserva sta sul computer che stai usando.
-c04e424280b6f242  site/it/privacy.html: Così la passphrase si digita una volta per sessione del browser invece che a ogni domanda.
+ce8e2ce503739506  site/it/privacy.html: Così la passphrase si digita una volta per sessione del browser invece che a ogni domanda, e così la finestra del diagramma ha qualcosa da disegnare.
 1b33b152d4287674  site/it/privacy.html: Di conseguenza lo sviluppatore non vende, non condivide, non trasferisce e non tratta in nessun altro modo i tuoi dati personali, perché non ne riceve nessuno.
 94a62cbf85d52025  site/it/privacy.html: Differiscono soltanto per quali host possono raggiungere: quella per Zoho CRM elenca i data center di Zoho CRM e delle sandbox e quelli di Zoho One, quella per Zoho Analytics elenca i data center di Zoho Analytics.
 8edf18f7c26c16ff  site/it/privacy.html: Disattivare la protezione richiede la passphrase in uso, perché rimettere la chiave in chiaro vuol dire prima decifrarla; se è sbagliata o assente non viene cambiato niente e la chiave cifrata viene conservata invece che buttata.
@@ -780,15 +780,15 @@ a0294b8c08526d36  site/it/privacy.html: Puoi cancellare tutto in qualsiasi momen
 c865f2d8a26e2388  site/it/privacy.html: Quali estensioni copre Questa policy copre tutte le estensioni della famiglia Zoost.
 81a846c5af407b27  site/it/privacy.html: Sono estensioni separate con permessi separati, ma si comportano in modo identico sotto ogni aspetto descritto in questo documento: nessun server, nessun account, nessuna telemetria, un mirror locale in una cartella che scegli tu e un assistente AI opzionale che parla soltanto con un provider che configuri tu.
 2810ed53a7e5f987  site/it/privacy.html: Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna profilazione, nessuna mailing list, niente di qui viene collegato a quello che fa l'estensione.
+ae1c04402ccfdb64  site/it/privacy.html: Spariscono tutte e due alla chiusura del browser; il disegno viene anche sostituito ogni volta che ne apri un altro.
 ad8e501106468a03  site/it/privacy.html: Su una macchina personale digitare una passphrase a ogni sessione serve a poco; su una condivisa o gestita serve molto.
 1023e13d1b30e5d5  site/it/privacy.html: Sui dati che Zoost tocca lo sviluppatore non effettua nessun trattamento : non ne riceve, non ne conserva, non ha accesso alla cartella in cui l'estensione scrive, non gestisce nessun servizio a cui qualcosa possa arrivare.
-932741f128240d87  site/it/privacy.html: Tenuta in memoria, mai scritta su disco.
 b01b3fa98774bfea  site/it/privacy.html: Tutte e due elencano api.anthropic.com e api.openai.com , usati soltanto dall'assistente facoltativo e soltanto se lo configuri.
 97aa3860c4db89b5  site/it/privacy.html: Vengono letti da Zoho e scritti sul disco di quella persona; allo sviluppatore non ne arriva niente, e il titolare del trattamento resta la tua organizzazione, come lo era già dentro Zoho.
 a22a430091243655  site/it/privacy.html: Zoost Analytics può mandare nomi di viste, nomi di colonne, relazioni e l'SQL delle tue query table - e mai le righe dentro le tue tabelle , perché non le legge: gli endpoint che restituiscono i valori delle celle deliberatamente non vengono chiamati.
 de52838845b160c7  site/it/privacy.html: Zoost non chiede nessun accesso alla cronologia di navigazione, ai segnalibri, ai download, alle password salvate o a qualsiasi sito diverso da quelli elencati sopra.
 d8f6f183e44acc78  site/it/privacy.html: Zoost non ha server, non ha account, non ha analytics e non ha nessuna forma di tracciamento.
-d4df21cfb34db8fb  site/it/privacy.html: chrome.storage.session Soltanto la chiave API, e solo mentre è sbloccata: cioè solo se hai attivato la protezione con passphrase.
+ff661b77a8be190b  site/it/privacy.html: chrome.storage.session Due cose, tutte e due in memoria e mai scritte su disco.
 07add6ba9b51ad4d  site/it/privacy.html: tabs - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics, appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato per sbaglio contro una sandbox.
 101df12639f67e0d  site/it/try.html: A cosa risponde invece è a ogni domanda sul comportamento - che poi sono quelle che decidono se una cosa si può installare tranquillamente.
 e0bca0509f3c1890  site/it/try.html: Cosa vale mentre un sample è aperto: Non viene chiesto niente a nessuno.
@@ -876,11 +876,11 @@ f516b3a1a25a4a16  site/nerd.html: What is still not covered is the far end: Goog
 e6d1abbcefdbea2e  site/nerd.html: Zoost states it never reads your rows, so it does not call it.
 9df22ecc3408ccf1  site/privacy.html: 4.2 The AI provider - only if you enable it Read this before enabling the assistant The AI assistant is off by default and requires you to enter your own API key.
 8ceaaa09f8a1ffac  site/privacy.html: A policy can only be tightened this way: Chrome refuses a manifest that tries to relax the first two.
+908699c727db4b03  site/privacy.html: Both are gone when the browser closes; the drawing is also replaced every time you open another one.
 abd504c9d56f1430  site/privacy.html: Both list api.anthropic.com and api.openai.com , used only by the optional assistant and only if you configure it.
 71825457ca6a5346  site/privacy.html: Both list nine data centres each, the Saudi, British and Emirati ones included: an account may live on any of them, and an extension that cannot reach yours is inert on it.
 e4b28888185ddc3c  site/privacy.html: Data held inside your Zoho products remains governed by your own agreement with Zoho and by your organisation's policies; this document covers only what the Zoost extensions do with it.
 7a6ce1f53c77c616  site/privacy.html: For Zoost CRM that content is Deluge source code , module schemas, workflow definitions, connection names and their connectors (never their secrets or tokens, which Zoost never reads), and your questions.
-4b4478d162693424  site/privacy.html: Held in memory, never written to disk.
 60c455ecbebfa716  site/privacy.html: Host access to api.anthropic.com and api.openai.com - the only two AI destinations the extension can reach, used solely by the optional AI assistant and only after you configure it.
 76a76e0bc554e0be  site/privacy.html: It also lists one.zoho.* and one.zohocloud.ca , which it does not read: those are there only so the panel can tell that the tab you are on belongs to Zoho One, and which org it is.
 389a352da0513cdf  site/privacy.html: It can never send the rows inside a table, because it never reads them - so the assistant knows your workspace's structure and never its values.
@@ -896,6 +896,7 @@ c66b24fee8d18488  site/privacy.html: Nothing about you is sent to Google or GitH
 4c424647d30b07f5  site/privacy.html: Nothing is ever sent to the developer.
 ef3943dc37db7802  site/privacy.html: Privacy policy Zoost - Chrome extensions · Last updated: The short version The developer collects nothing.
 eb6722150f64170a  site/privacy.html: So you do not have to re-pick the folder every time.
+ee21670d48568582  site/privacy.html: The API key, and only while it is unlocked - that is, only if you turned on passphrase protection.
 427b328b75d91df1  site/privacy.html: The developer of Zoost is not a party to it, cannot see it and has no control over it.
 f7c2debacbfc9fdb  site/privacy.html: The developer therefore does not sell, share, transfer or otherwise process your personal data, because it never receives any.
 ba1d5b7b41adda10  site/privacy.html: The key is then encrypted with a passphrase only you know - PBKDF2-SHA256 over 250,000 iterations, then AES-GCM-256, both from the browser's own Web Crypto - and what sits on disk is ciphertext.
@@ -911,7 +912,7 @@ ccfb7214b5cb4c79  site/privacy.html: Which extensions this covers This policy co
 d76ab061eb0df075  site/privacy.html: You can erase all of it at any time by removing the extension and deleting the working folder.
 2426c0482698d9ae  site/privacy.html: Your API key is stored on your machine in chrome.storage.local , which is where a Chrome extension keeps its settings, and it is sent only to the provider it belongs to.
 1d98511c7eb01419  site/privacy.html: Zoost Analytics can send view names, column names, relations and the SQL of your query tables - and never the rows inside your tables , because it does not read them: the endpoints that return cell values are deliberately not called.
-f5ad9c4a71edc781  site/privacy.html: chrome.storage.session Only the API key, and only while it is unlocked - that is, only if you turned on passphrase protection.
+3c36ade63d268673  site/privacy.html: chrome.storage.session Two things, both in memory and never written to disk.
 b65c6155ad052c27  site/privacy.html: tabs - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a production workspace can never be synced against a sandbox by mistake.
 08e2ef5430e859e5  site/try.html: Chrome asks for permission on that folder and on nothing else.
 b3214e36a311cb05  site/try.html: Every other page here argues that Zoost is worth trusting.
