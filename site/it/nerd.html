@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:881c2fad58c362ae -->
+<!-- translated-from: site/nerd.html sha256:c3677c682276943d -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -99,9 +99,13 @@
       ogni POST porta <code>X-ZCSRF-TOKEN</code>, nessuna GET lo fa, misurato su una cattura di 104
       richieste senza eccezioni.</p>
     <p>Il modello ER viene da una POST a <code>ZDBCreateERD.ma</code>. Il suo URL contiene
-      <code>CREATE</code> e non crea niente: calcola e restituisce il modello. La nomino qui perché chi va a controllare alla lettera l'affermazione «in sola lettura» se la
-      troverà davanti, e trovarla
-      senza preavviso si leggerebbe come una bugia colta sul fatto invece che per quello che è.</p>
+    <code>CREATE</code>, e quello che torna indietro è il modello: la schermata del diagramma di Zoho
+    Analytics fa la stessa chiamata. Quello che si può stabilire da qui è cosa fa Zoost - una richiesta,
+    e la risposta tenuta sul tuo disco. Cosa conservi un server dopo non è una cosa che un'estensione
+    del browser possa dimostrare, quindi non viene affermata: se quella distinzione conta per la tua
+    valutazione, confronta il workspace prima e dopo, e l'audit trail se il tuo piano ne ha uno. È
+    nominata qui perché chi controlla alla lettera l'affermazione «non scrive» la troverà, e trovarla
+    non annunciata sembrerebbe una bugia colta sul fatto invece di quello che è.</p>
   </div>
 
   <h2 id="certain-or-stopped">O certi, o fermi</h2>

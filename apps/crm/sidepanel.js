@@ -1566,6 +1566,11 @@ async function pullAll() {
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
+    // The page loop has a ceiling like every other one here, and unlike every other one it was not
+    // being said: the bridge returned `capped` and nothing read it, so a list that stopped early
+    // looked exactly like a census. That is the one thing a mirror may never do, and it was
+    // introduced the day the ceiling was - reported by an assistant reading the repository.
+    if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
     await noteAccess('functions', null);
   } catch (e) { await notePullFailure('functions', e); } finally { pullActive = false; }
 }

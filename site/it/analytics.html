@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/analytics.html sha256:c0048c7eccac5866 -->
+<!-- translated-from: site/analytics.html sha256:c312963ffdc2aeed -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost Analytics - guarda la forma di un workspace</title>
@@ -255,10 +255,12 @@
     <div class="why">
       <div>
         <h3>Non chiama nessun endpoint di scrittura</h3>
-        <p>Non crea, non modifica e non cancella una vista. Uno degli endpoint che chiama è una POST il cui URL
-          contiene <code>CREATE</code> - <code>ZDBCreateERD.ma</code>, la chiamata che restituisce il modello ER del
-          workspace. Calcola; non crea. La nomino qui perché chi va a controllare se la troverà davanti.
-          Zoho Analytics è dove costruisci; questo è dove guardi quello che hai costruito.</p>
+        <p>Non crea, non modifica e non cancella nessuna vista. Un endpoint che chiama è una POST il cui
+          URL contiene <code>CREATE</code> - <code>ZDBCreateERD.ma</code>, la chiamata che restituisce il
+          modello ER del workspace, la stessa che fa la schermata del diagramma di Zoho Analytics. Da qui
+          esce quella richiesta; cosa conservi un server dopo non è una cosa che un'estensione possa
+          dimostrare, e <a href="/it/nerd#undocumented-interfaces">la pagina nerd</a> lo dice invece di
+          sorvolare.</p>
       </div>
       <div>
         <h3>Non legge mai le tue righe</h3>

@@ -178,26 +178,6 @@
     };
     return { folder: ns.replace(/[^\w.\-]/g, '_'), stem, dg: fn.script || fn.workflow || '', meta };
   }
-  async function pullAll() {
-    let start = 1, raw = [], pages = 0, capped = false;
-    while (true) {
-      const path = `/crm/v2/settings/functions?type=org&start=${start}&limit=${PAGE}&language=deluge`;
-      const page = list(await api(path), 'functions', path);
-      raw = raw.concat(page); if (page.length < PAGE) break; start += PAGE;
-      if (++pages >= MAX_PAGES) { capped = true; break; }
-    }
-    const all = raw.filter((f) => f.source !== 'extension'); const files = [];
-    for (let i = 0; i < all.length; i++) {
-      const f = all[i];
-      try {
-        const d = await api(`/crm/v2/settings/functions/${f.id}?category=${encodeURIComponent(f.category)}&language=deluge&source=${encodeURIComponent(f.source)}`);
-        const fn = list(d, 'functions', 'functions/' + f.id)[0]; if (fn) files.push(toFile(fn, { namespace: f.workflow?.namespace || f.category }));
-      } catch (_) {}
-      chrome.runtime.sendMessage({ type: 'pullProgress', done: i + 1, total: all.length }).catch(() => {});
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    return { total: raw.length, readable: all.length, skipped: raw.length - all.length, files, capped };
-  }
   // Metadata-only list (fast, no code) - used to show all functions immediately, then download each on demand.
   async function listFunctions() {
     let start = 1, raw = [], pages = 0, capped = false;
@@ -658,7 +638,6 @@
     forbidden: !!(e && e.forbidden), code: (e && e.code) || null, detail: (e && e.detail) || null });
 
     if (msg?.cmd === 'context') { const c = context(); if (/^https:\/\/crm(sandbox)?\.zoho/.test(c.origin || '') && c.instance) sendResponse(c); return; }   // only the real CRM APP frame answers (CRM origin + a resolved instance) - skips wrapper service frames
-    if (msg?.cmd === 'pullAll') { pullAll().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'listFunctions') { listFunctions().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'listWorkflows') { listWorkflows().then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }
     if (msg?.cmd === 'fetchWorkflow') { fetchWorkflow(msg.id).then((r) => sendResponse({ ok: true, ...r })).catch(fail(sendResponse)); return true; }

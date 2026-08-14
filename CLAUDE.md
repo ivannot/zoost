@@ -729,7 +729,8 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
 - **An absolute claim invites a literal check, and a literal check is what this project asks for.**
   `llms.txt` moves an assistant from summarising the page to verifying it sentence by sentence, and in
   that mode every absolute is a target. "Zoost never writes to Zoho" fell to one authenticated POST
-  whose URL contains `CREATE` — it computes the ER model and creates nothing, but the guarantee is a
+  whose URL contains `CREATE` — it returns the ER model, and «creates nothing» is not something a
+  client can establish about somebody else's server, so what is claimed is what Zoost sends. The guarantee is a
   property of *which endpoints we call*, not one the browser enforces. Say the precise thing instead:
   it is less elegant and it cannot be knocked down. Where an absolute already exists, name the
   exception yourself — a reader who finds it after reading "certain, or stopped" concludes the

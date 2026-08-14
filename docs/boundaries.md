@@ -79,8 +79,10 @@ The product's first non-negotiable is that nothing here writes to Zoho. It is en
 `tests/tools_test.py`, not by reading: every `fetch` in the shipped code is read whole, constants are
 resolved so a URL moved into a variable cannot hide, and anything that is not a GET must be either one
 of the two declared AI hosts or an endpoint named in an allowlist with its reason. Today that
-allowlist holds exactly one entry - `ZDBCreateERD`, which computes the ER model of a workspace and
-creates nothing - and handing a second endpoint to the same helper fails the suite.
+allowlist holds exactly one entry - `ZDBCreateERD`, the call that returns a workspace's ER model and
+the one Analytics' own diagram screen makes. What is asserted is what Zoost sends, not what Zoho
+keeps: a browser extension cannot establish the second, and this note does not pretend it can.
+Handing a second endpoint to the same helper fails the suite.
 
 The same test asserts that nothing injected into the page drives it: an injected file must be one of
 our two, and an injected function must not click, dispatch an event or set a value. That is the "never

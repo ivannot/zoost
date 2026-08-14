@@ -99,7 +99,11 @@
       path: every POST carries <code>X-ZCSRF-TOKEN</code>, no GET does, measured across a
       104-request capture with no exceptions.</p>
     <p>The ER model comes from one POST to <code>ZDBCreateERD.ma</code>. Its URL contains
-      <code>CREATE</code> and it creates nothing - it computes and returns the model. It is named here
+      <code>CREATE</code>, and what comes back is the model - Zoho Analytics' own diagram screen
+    makes the same call. What can be established from here is what Zoost does: one request, and the
+    answer kept on your disk. What a server keeps afterwards is not something a browser extension can
+    prove, so it is not claimed: if that distinction matters to your review, compare the workspace
+    before and after, and your plan's audit trail if it has one. It is named here
       because anyone checking the read-only claim literally will find it, and finding it unannounced
       would read as a caught lie rather than as what it is.</p>
   </div>

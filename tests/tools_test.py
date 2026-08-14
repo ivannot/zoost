@@ -2786,7 +2786,9 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
 
     The single exception is named rather than pattern-matched, because an exception that is a regular
     expression is a hole: `/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD` computes the ER model and
-    creates nothing, and it is already the one absolute this project walks back in its own words -
+    returns the ER model - and what a server keeps afterwards is not observable from a browser, so the
+    reason recorded here is about what Zoost sends. It is already the one absolute this project walks
+    back in its own words -
     «Zoost never writes to Zoho» fell to an authenticated POST whose URL contains CREATE.
     """
 
@@ -2801,7 +2803,7 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
         'analytics/content-bridge.js': {
             'helper': 'post',
             'endpoints': ('/ZDBCreateERD.ma?ZDBACTION=CREATEDATABASEERD',),
-            'why': 'computes the ER model of a workspace and creates nothing - the endpoint is '
+            'why': 'returns a workspace ER model, the same call the Analytics diagram screen makes - '
                    'named CREATE, which is the one absolute this project walks back in its own words',
         },
     }
@@ -2906,6 +2908,36 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                         self.assertNotIn(verb, call,
                                          f'{f.name}: injected code drives the page ({verb}) - the rule '
                                          'is read, or reach it by URL')
+
+
+class APartialListNeverLooksLikeACensus(unittest.TestCase):
+    """Every page loop in the bridge has a ceiling, and every one of them reports hitting it - except
+    the functions list, whose ceiling was added the day before and whose `capped` nothing read. So a
+    list that stopped early arrived looking exactly like a complete one, in the area that is the whole
+    product. Reported by an assistant reading the repository; the defect was mine, one commit old.
+
+    The check is the pairing rather than the count: for each command whose answer can carry `capped`,
+    the panel's caller has to mention it. A ceiling that is never spoken is worse than no ceiling -
+    a runaway loop at least announces itself by never finishing.
+    """
+
+    def test_every_cap_the_bridge_can_report_is_read_by_the_panel(self):
+        bridge = (ROOT / 'apps' / 'crm' / 'content-bridge.js').read_text(encoding='utf-8')
+        panel = (ROOT / 'apps' / 'crm' / 'sidepanel.js').read_text(encoding='utf-8')
+        cmds = []
+        for m in re.finditer(r"msg\?\.cmd === '(\w+)'\) \{ (\w+)\(", bridge):
+            cmd, fn = m.group(1), m.group(2)
+            body = re.search(r'\n  async function ' + fn + r'\(.*?\n  \}', bridge, re.S)
+            if body and 'capped' in body.group(0):
+                cmds.append(cmd)
+        self.assertTrue(cmds, 'no command reports a ceiling at all - this test now asserts nothing')
+        for cmd in cmds:
+            i = panel.find(f"cmd: '{cmd}'")
+            self.assertGreater(i, 0, f'{cmd} is never called from the panel')
+            window = panel[i:i + 4000]
+            self.assertIn('capped', window,
+                          f'{cmd} can stop early and the panel never says so - a partial list that '
+                          'reads as a census is the one thing a mirror may not do')
 
 
 class TheSensitiveHalfOfAnExportIsOptIn(unittest.TestCase):
