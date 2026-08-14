@@ -87,7 +87,7 @@ a2f4a27fc1aa173c  site/analytics.html: Every view with its type and dates, the c
 34d0256cce032b73  site/analytics.html: Foreign keys on every column, both ways : what it points at, and what points at it.
 91140679c8fd6a14  site/analytics.html: It does not validate SQL Zoost never runs, checks or deploys a query.
 1918e52328c4c44c  site/analytics.html: It never reads your rows Structure, relations, SQL and metadata only.
-91d5aece144cdc5e  site/analytics.html: Search across every query at once - with grep, your editor or anything else, because they are files on your disk.
+8fda39de2c45ece6  site/analytics.html: Search across every query at once, from the panel: the in: SQL switch beside the search box looks inside all of them and shows the matching line.
 4aba2b016babbc75  site/analytics.html: Structure, even for reports Columns and Zoho data types for every table and query table.
 ff208410a7fb84a2  site/analytics.html: The SQL, as files One .sql per query table - the only thing here somebody actually wrote, and the part git diff can answer about.
 f690eee4ea0c680a  site/analytics.html: The endpoints that return cell values exist, and are deliberately not called - which is also why the AI assistant can never tell you what is in the data.
@@ -124,9 +124,11 @@ b6b409d1ed7037d2  site/docs-analytics.html: Anthropic (Claude) - full agent Runs
 87d15ed6eaea33ee  site/docs-analytics.html: Before Chrome has given the panel access to the working folder it cannot tell, so it says neither and reads just Sample workspace ; clicking asks for access first, then does whichever is right.
 b20d942d94753e86  site/docs-analytics.html: Beside the button is a picklist of every data centre, because after signing out of one account which account you want next is a choice.
 4b09e612ba69c27f  site/docs-analytics.html: Candidates, never a verdict.
+b17613a26d4f42a6  site/docs-analytics.html: Chapter 8: in: SQL looks inside every query in the workspace at once - here the seven that join something, each with the line the term is on.
 b128849879a42286  site/docs-analytics.html: Columns shows every column with its Zoho data type.
 f3af8f2c364588a9  site/docs-analytics.html: Every figure states what it does not cover, next to itself.
 24feb815f1ec68eb  site/docs-analytics.html: Every tool call is shown in the chat, so you can see what it looked at before answering.
+092f406f0dd5c7ed  site/docs-analytics.html: Find has a scope switch attached to it, the same one Zoost CRM's function list has: in: names matches view names, folders and column names, and in: SQL searches inside every query in the workspace at once .
 0f06b1e154d24679  site/docs-analytics.html: For reports and dashboards Zoho Analytics only gives text in your interface language, so it is shown exactly as it sends it , in italics, never parsed, and sorted last.
 71a3df6ec276a6f6  site/docs-analytics.html: Health ♥ opens the audit in the panel: views nothing depends on, tables in no relation at all, tables Zoho put there rather than you, views with no description, and anything that could not be read in the last pull.
 e4977826910cf340  site/docs-analytics.html: If Zoost cannot reach a data-bearing view through what the report is built on, it says so rather than showing an empty table.
@@ -143,7 +145,7 @@ c97ddcf4e88db2b5  site/docs-analytics.html: MD ( Export Markdown ) produces the 
 2b49a27cdee9b978  site/docs-analytics.html: Move to another workspace and every Zoho-bound action is disabled until the tab and the folder agree again.
 38ebd58849240f29  site/docs-analytics.html: Naming a workspace The name in the workspace list comes from the platform, and the platform is not always helpful: Zoho Analytics names the first workspace of every account the same way, so two projects can arrive on disk looking identical.
 503f2e7127394d7c  site/docs-analytics.html: Nothing goes to the developer.
-19250b999b73f778  site/docs-analytics.html: On disk every query is its own file, so grep and git log -p work on them like any other source.
+3b2a6d6f40596df6  site/docs-analytics.html: On disk every query is its own file too, so grep and git log -p work on them like any other source - the same search, from the other side.
 7fed3f5b16504cbf  site/docs-analytics.html: Per window, not remembered, and only there: the other two views have no list.
 b79fe41d9d34be67  site/docs-analytics.html: Pick Nothing depends on in the Type filter to see only the candidates.
 f944da6c2df85337  site/docs-analytics.html: Pulling Pull all reads the whole workspace in one pass: the list of views, the columns and types of every table and query table, the relations between them, the SQL of each query table, and the dependency graph.
@@ -156,6 +158,7 @@ f1608bbd1ea626f8  site/docs-analytics.html: The Markdown carries one thing the H
 30ea005ff05d3472  site/docs-analytics.html: The assistant is told what Zoho documents about query-table SQL - SELECT only, double-quoted identifiers, no correlated sub-queries, non-recursive CTEs capped at three, three levels of query-over-query.
 e26a820e83f13220  site/docs-analytics.html: The browser asks for permission; it is the only way an extension may write files, and it applies to that folder alone.
 3cc7cee9aff74867  site/docs-analytics.html: The chips above the tabs are the filter and the colour key at once, grouped by what they ask: Views is which kinds are on screen and every one of them starts on, so switching one off removes it; Only narrows to tables that are also a hub, an orphan or a system table, and starts empty.
+0fd9fa42e904a9a7  site/docs-analytics.html: The first search of a session reads every .sql file once - the panel says how many, and says so again if any of them would not open, because a query it could not read is not a query with no match.
 00c6c6e5a78e3d87  site/docs-analytics.html: The window also has a Relations tab: one row per join, searchable by table, column or join, and every join copyable.
 aeaf04ab914655cf  site/docs-analytics.html: The worst it can do to your workspace is nothing.
 31c35d662b06b969  site/docs-analytics.html: There is nothing to pick and nothing to pick wrong.
@@ -355,7 +358,7 @@ a840e6ed5656ec2e  site/it/ai.html: È l'unico limite di questa pagina che non di
 9b6c34ea17891718  site/it/ai.html: È sempre aggiornato.
 14f9b1cf5a700a9b  site/it/analytics.html: Candidati da guardare, mai un verdetto.
 f615a57530811d45  site/it/analytics.html: Candidati, mai un verdetto - un link condiviso o un export schedulato sono invisibili a quel grafo: il numero lo dice.
-56986cc9ebc050a7  site/it/analytics.html: Cerchi dentro tutte le query in una volta sola - con grep, con il tuo editor o con quello che preferisci, perché sono file sul tuo disco.
+ee942d284e4ff507  site/it/analytics.html: Cerchi dentro tutte le query in una volta sola, dal pannello: il selettore in: SQL accanto alla casella di ricerca entra dentro tutte e ti mostra la riga che corrisponde.
 04f6cb0ace53613e  site/it/analytics.html: Con una chiave tua, un assistente che esplora il tuo workspace - e mai le tue righe, perché Zoost non le legge.
 3f63c9ab631e0302  site/it/analytics.html: Cosa c'è dentro Tutte le viste, in un elenco solo Tipo, cartella, proprietario, numero di colonne e date - ordinabili e cercabili dentro i nomi delle colonne , così trovi quale tabella porta un certo campo.
 92f60e030c00bae1  site/it/analytics.html: Cosa hai costruito tu e cosa ci ha messo Zoho In un workspace collegato metà delle tabelle sono arrivate da una sincronizzazione e non sono mai state tue.
@@ -424,6 +427,7 @@ a6984aa1990f784e  site/it/docs-analytics.html: Ambra con una fila di azioni vuol
 8a1aaa31f108856a  site/it/docs-analytics.html: Anthropic (Claude) - agente completo Gira con strumenti in sola lettura sul mirror locale: legge una struttura, segue una chiave esterna, apre l'SQL di una query, cerca fra le colonne e dice cosa dipende da cosa, scegliendo da sé quali usare.
 b4a67f06699ae600  site/it/docs-analytics.html: Anthropic (Claude) OpenAI (ChatGPT) Modalità Agente con strumenti in sola lettura Passaggio singolo Cosa vede Quello che decide di aprire: struttura, chiavi esterne, SQL e lineage di qualsiasi vista, più la ricerca su colonne e SQL L'indice del workspace e la vista aperta in quel momento Avanzamento Ogni chiamata a uno strumento compare nella chat mentre avviene Un indicatore «thinking…» finché non arriva la risposta Va bene per «Cosa legge da questa tabella?», «esiste già una query che unisce queste due?» Domande circoscritte sulla vista che hai davanti Quale scegliere Claude per tutto quello che richiede di guardarsi intorno - «cosa legge da questa tabella», «esiste già una query che unisce queste due» - perché sono domande che costano più letture.
 9cf0c290f8be0c1f  site/it/docs-analytics.html: Candidati, mai un verdetto.
+ae8073dce66fd03e  site/it/docs-analytics.html: Capitolo 8: in: SQL guarda dentro tutte le query del workspace in una volta sola - qui le sette che fanno una join, ognuna con la riga in cui sta il termine.
 b661b3fd9789d19a  site/it/docs-analytics.html: Chiedigli «come esporto questo?», «cosa succede se premo Health?» oppure «può cambiare qualcosa dentro Zoho Analytics?» e risponde dal pannello, senza mandarti da nessuna parte.
 9b3f5e3912bf5a27  site/it/docs-analytics.html: Clicca un arco per isolare una relazione e mandare indietro tutto il resto - il modo più economico di leggere un diagramma affollato.
 de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con il suo tipo di dato Zoho.
@@ -431,6 +435,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 12c8d1eed86f4989  site/it/docs-analytics.html: Cosa non serve più a nessuno 10.
 41c67ef7c1ce43dd  site/it/docs-analytics.html: Cosa non serve più a nessuno Il pull fa a Zoho Analytics la sua stessa domanda sulle dipendenze, per ogni vista.
 72cb73fa0f15f925  site/it/docs-analytics.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: Zoho Analytics chiama allo stesso modo il primo workspace di ogni account, quindi due progetti possono arrivare su disco identici.
+d79edb55c6033a38  site/it/docs-analytics.html: Find ha attaccato un selettore, lo stesso che ha l'elenco delle funzioni di Zoost CRM: in: names cerca nei nomi delle viste, nelle cartelle e nei nomi delle colonne, in: SQL cerca dentro tutte le query del workspace in una volta sola .
 22971d7bf7185e3c  site/it/docs-analytics.html: Gli export HTML ( Export HTML ) produce un unico file autoconsistente con tutto quello che mostra il pannello.
 285233dc658d9179  site/it/docs-analytics.html: Il browser chiede il permesso: è l'unico modo in cui un'estensione può scrivere file, e vale solo per quella cartella.
 36771197b4dc8de0  site/it/docs-analytics.html: Il diagramma ER ER diagram apre tutto il workspace in una finestra a sé; lo stesso pulsante nel dettaglio di una tabella apre la stessa finestra centrata su quella tabella, a profondità 2.
@@ -438,6 +443,7 @@ de3f0c80d85e716a  site/it/docs-analytics.html: Columns mostra ogni colonna con i
 8ee19b1593b9cd1a  site/it/docs-analytics.html: Il pull Pull all legge tutto il workspace in un passaggio: l'elenco delle viste, le colonne e i tipi di ogni tabella e query table, le relazioni fra loro, l'SQL di ogni query table e il grafo delle dipendenze.
 63783a6966eb8c5a  site/it/docs-analytics.html: L'opzione SQL sta rientrata sotto Structure perché ne dipende, ed è segnalata ogni volta: è la parte che qualcuno ha scritto.
 0ed5a31bb52ce3b8  site/it/docs-analytics.html: La finestra ha anche una scheda Relations : una riga per join, cercabile per tabella, colonna o join, e ogni join si può copiare.
+58c33674a63858cd  site/it/docs-analytics.html: La prima ricerca della sessione legge una volta tutti i file .sql - il pannello dice quanti sono, e lo dice anche se qualcuno non si è aperto, perché una query che non è riuscito a leggere non è una query senza risultati.
 f05d39b851f9d8ed  site/it/docs-analytics.html: La sua identità è l' id del workspace scritto in .zoost.json , mai il nome della cartella - rinomina l'uno o l'altro e non perdi niente.
 a68b09b3d913dd3a  site/it/docs-analytics.html: Le chip sopra le schede sono insieme il filtro e la legenda dei colori, raggruppate per la domanda che pongono: Views è quali tipi sono a schermo e partono tutti accesi, quindi spegnerne uno lo toglie; Only restringe alle tabelle che sono anche hub, orfane o di sistema, e parte vuoto.
 ef030f782238fe9f  site/it/docs-analytics.html: Leggere il workspace L'elenco è fatto di tutte le viste.
@@ -453,6 +459,7 @@ dd2390c5e9059aa7  site/it/docs-analytics.html: Non parla mai con Zoho.
 6f10e4fba26f67ae  site/it/docs-analytics.html: Non può andare a leggere niente da sé, quindi ti dirà cosa gli manca invece di andarselo a prendere.
 550c28967ad111ce  site/it/docs-analytics.html: Ogni chiamata a uno strumento compare nella chat, così vedi cosa ha guardato prima di rispondere.
 3266ab8327e6b6bf  site/it/docs-analytics.html: Ogni cifra dichiara, lì accanto, cosa non copre.
+f236e536d49e64c2  site/it/docs-analytics.html: Ogni voce che corrisponde mostra la riga in cui sta il termine e quante volte compare in quella query.
 fdcebd8f0351284b  site/it/docs-analytics.html: Passa a un altro workspace e ogni azione che parla con Zoho resta disattivata finché la scheda e la cartella non tornano d'accordo.
 898d72fe7fa1922b  site/it/docs-analytics.html: Per report e dashboard Zoho Analytics restituisce solo testo nella lingua della tua interfaccia, quindi viene mostrato esattamente come lo manda , in corsivo, mai interpretato e ordinato per ultimo.
 f4c001840de5a26b  site/it/docs-analytics.html: Quando ne carichi una su un diagramma che nel frattempo è cambiato, vince il diagramma di oggi e ogni perdita viene contata : una tabella sparita perde la sua posizione, una nuova viene piazzata dal layout attorno a quello che hai tenuto, e una rinominata perde la posizione invece di ereditare quella di un'altra - un riquadro messo dove ne stava un altro racconterebbe una forma che non hai costruito.
