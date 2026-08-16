@@ -32,6 +32,22 @@ about *one area* belongs in that area's note, where it will be read by whoever o
 else. Writing it here because it is fresh is how the file got to 280k: nothing is ever wrong in the
 moment it is added, and the cost lands on a session months later that reads half a file.
 
+**Measure the instrument before you believe it about the product.** A generated org of 5,000
+functions - `node tools/bigorg.mjs <dir> 5000`, which replicates what the shipped sample generator
+writes - said the panel took forty seconds to open. It did not: `tools/fsshim.js`, the render
+harness's in-memory file system, resolved every path by scanning all 10,000 of its keys, and the
+whole of those forty seconds was there. The panel was blamed twice before the tool was measured.
+**A slow tool does not look like a slow tool; it looks like a slow product.**
+
+What the same benchmark then measured, honestly: opening a 5,000-function workspace cost **60,015
+file-system calls**, of which 40,000 were the call graph being built speculatively for two numbers in
+a badge. It is **8** now - `functions/meta-index.json`, written by the pull and checked against the
+folder walk on every load - and the badges wait to be asked for above `STATS_LIMIT`. The numbers that
+matter are the *calls*, not the milliseconds: the harness cannot model what the File System Access
+API charges per file, so the only honest claim is the shape. **Whether a real org of that size is
+comfortable in a real Chrome is still unmeasured**, and saying otherwise would be exactly the kind of
+green light this file exists to refuse.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

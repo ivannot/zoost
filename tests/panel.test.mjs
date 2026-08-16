@@ -4601,9 +4601,28 @@ test('code is shown the same way in both products: lines as written, box scrolls
   test('the index is read before anything is drawn, and the metas after', () => {
     const idxAt = load.indexOf("readFile('functions/index.json')");
     const firstPaint = load.indexOf('renderTree()');
-    const metaLoop = load.indexOf('metaPaths.slice');
+    const metaLoop = load.indexOf('metaPathsToRead.slice');
     assert.ok(idxAt > 0 && firstPaint > idxAt, 'the tree is drawn before the index is read');
     assert.ok(metaLoop > firstPaint, 'the metas are still read before the first paint');
+  });
+
+  test('a summary spares the metas entirely on the second open', () => {
+    // Measured on a generated org of 5,000 functions: 60,015 file-system calls on the first open,
+    // eight on the next. The summary is a cache and is treated as one - checked against the folder
+    // walk, and rewritten when it no longer describes what is there.
+    assert.ok(/const META_INDEX = 'functions\/meta-index\.json'/.test(src), 'no summary is written');
+    assert.ok(/readFile\(META_INDEX\)/.test(load), 'the load does not read it');
+    assert.ok(/function saveMetaIndex/.test(src), 'nothing writes it');
+    const code = load.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(/missing\.push\(mp\)/.test(code), 'it is believed instead of checked against the walk');
+  });
+
+  test('the size badges are not built speculatively on a large workspace', () => {
+    // Building the call graph reads every source - 40,000 calls on five thousand functions - and it
+    // used to happen on every open for two numbers in a badge. Above the limit it waits to be asked.
+    assert.ok(/const STATS_LIMIT = \d+/.test(src), 'the graph is built on every open again');
+    const at = src.indexOf('async function attachFnStats');
+    assert.ok(/treeData\.length > STATS_LIMIT/.test(src.slice(at, at + 400)), 'the limit is not applied');
   });
 
   test('the metas are read in tranches, with a yield between them', () => {

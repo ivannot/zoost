@@ -16,6 +16,11 @@
 // Writes are kept in memory and thrown away. Nothing on disk is touched.
 (function () {
   const tree = {};   // path -> text
+  // Instrumentation, because «is the panel slow» is a question about *how many* calls it makes as
+  // much as about how long each one takes. A benchmark reads window.__zoostFsCalls; nothing in the
+  // product knows this exists.
+  const calls = { getFile: 0, getFileHandle: 0, getDirectoryHandle: 0, entries: 0, write: 0 };
+  window.__zoostFsCalls = calls;
 
   // An index beside the tree, so a path costs a lookup rather than a scan.
   //
@@ -50,12 +55,13 @@
       kind: 'file',
       name: path.split('/').pop(),
       async getFile() {
+        calls.getFile++;
         if (!(path in tree)) throw Object.assign(new Error('NotFoundError'), { name: 'NotFoundError' });
         const text = tree[path];
         return { text: async () => text, size: text.length, name: path.split('/').pop() };
       },
       async createWritable() {
-        return { write: async (c) => { tree[path] = String(c); note(path); }, close: async () => {} };
+        return { write: async (c) => { calls.write++; tree[path] = String(c); note(path); }, close: async () => {} };
       },
     };
   }
@@ -67,6 +73,7 @@
       async queryPermission() { return 'granted'; },
       async requestPermission() { return 'granted'; },
       async getDirectoryHandle(name, opts) {
+        calls.getDirectoryHandle++;
         const p = path ? path + '/' + name : name;
         if (!isDir(p) && !(opts && opts.create)) {
           throw Object.assign(new Error('NotFoundError'), { name: 'NotFoundError' });
@@ -74,6 +81,7 @@
         return dirHandle(p);
       },
       async getFileHandle(name, opts) {
+        calls.getFileHandle++;
         const p = path ? path + '/' + name : name;
         if (!(p in tree)) {
           if (!(opts && opts.create)) throw Object.assign(new Error('NotFoundError'), { name: 'NotFoundError' });
@@ -94,6 +102,7 @@
         }
       },
       async *entries() {
+        calls.entries++;
         for (const n of under(path)) {
           const p = path ? path + '/' + n : n;
           yield [n, isDir(p) ? dirHandle(p) : fileHandle(p)];

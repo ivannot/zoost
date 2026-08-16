@@ -161,6 +161,9 @@ const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': 
 // used, and the two graph windows already did it this way.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
+// What the pull leaves so the next open does not have to read every meta. A cache beside the
+// index, checked against the folder walk on every load - see rebuildTree().
+const META_INDEX = 'functions/meta-index.json';
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); }
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
@@ -923,15 +926,41 @@ async function rebuildTree() {
   }
   renderTree(); updateMissingButton();
 
-  // ---- 3. the metas fill in what only they know, a tranche at a time -------------------------------
-  // The schema version behind the stale mark and the date the sort uses live nowhere else. Reading
-  // them is the expensive half, so it happens after the tree is on screen, in batches, with a yield
-  // between them: the panel answers a click, a search and a tab change throughout.
+  // ---- 3. what only the metas know, from the summary the pull leaves behind ----------------------
+  // `functions/meta-index.json` holds the stale mark, the modified date, the namespace and the
+  // display name, keyed by source path. One read instead of one per function - and it is checked
+  // against the walk rather than believed: anything it does not describe is read from its own meta,
+  // which is what makes a hand-pulled function, an older mirror and a file copied in by somebody
+  // else all come out right.
+  let summary = null;
+  try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
+  if (!current()) return;
+  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const missing = [];
+  for (const mp of metaPaths) {
+    const dg = mp.replace(/\.meta\.json$/, '.dg');
+    const s = known[dg];
+    const row = byPath.get(dg);
+    if (!s || !row) { missing.push(mp); continue; }
+    row.downloaded = true;
+    row.stale = (s.sv || 0) < META_SV;
+    row.updatedTime = s.updatedTime || null;
+    if (s.namespace) row.namespace = s.namespace;
+    if (s.display_name) row.display_name = s.display_name;
+  }
+  // The summary is only worth rewriting when it is wrong: something new to describe, or something it
+  // still describes that has gone. Otherwise opening the panel would write to the workspace every
+  // time, which is a change to a folder the reader has under version control.
+  let stale_summary = missing.length > 0 || Object.keys(known).length !== metaPaths.length;
+  if (missing.length) setStatus(`${treeData.length} functions - reading ${missing.length} detail(s)\u2026`, 'busy');
+  renderTree();
+
   const TRANCHE = 120;
   let done = 0, lastPaint = 0;
-  for (let i = 0; i < metaPaths.length; i += TRANCHE) {
+  const metaPathsToRead = missing;
+  for (let i = 0; i < metaPathsToRead.length; i += TRANCHE) {
     if (!current()) return;
-    const batch = metaPaths.slice(i, i + TRANCHE);
+    const batch = metaPathsToRead.slice(i, i + TRANCHE);
     await Promise.all(batch.map(async (mp) => {
       try {
         const meta = JSON.parse(await readFile(mp));
@@ -961,19 +990,54 @@ async function rebuildTree() {
     // reads a badge. The last redraw happens below, unconditionally, so nothing is left half-drawn.
     const now = Date.now();
     if (now - lastPaint > 250 && viewMode === 'functions') { renderTree(); lastPaint = now; }
-    if (done < metaPaths.length) setStatus(`${treeData.length} functions - reading details ${done}/${metaPaths.length}\u2026`, 'busy');
+    if (done < metaPathsToRead.length) setStatus(`${treeData.length} functions - reading details ${done}/${metaPathsToRead.length}\u2026`, 'busy');
     await new Promise((r) => setTimeout(r, 0));   // let the panel answer whatever the reader is doing
   }
   if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
+  if (stale_summary) await saveMetaIndex(metaPaths);
   const dl = treeData.filter((e) => e.downloaded).length;
   setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok');
   await refreshContext();
 }
 
+/** Write the summary the load above reads. Built from the rows in memory, which have just been
+ *  brought up to date, so it costs no reading - and it is written at the end of the load rather than
+ *  at the end of each pull, because every pull ends by rebuilding the tree. One hook instead of
+ *  three, and no path where a pull updates the mirror and forgets the summary.
+ *
+ *  A failure here is not worth a message: the summary is a cache, the next load simply reads the
+ *  metas again. What would be worth a message is the panel appearing to work while the mirror is
+ *  wrong, which is why nothing else depends on this file. */
+async function saveMetaIndex(metaPaths) {
+  try {
+    const files = {};
+    const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
+    treeData.forEach((r) => {
+      if (!onDisk.has(r.path)) return;
+      files[r.path] = { id: String(r.id), sv: r.stale ? 1 : META_SV, updatedTime: r.updatedTime || null,
+                        namespace: r.namespace || '', display_name: r.display_name || '' };
+    });
+    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+  } catch (_) {}
+}
+
 // The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first
 // render instead of blocking it - the graph gets built anyway the moment a function is opened.
+// Above this many functions the badges wait to be asked for. Measured on a generated org: building
+// the call graph reads every source - 40,000 file-system calls on five thousand functions - and it
+// used to happen on every open, for two numbers in a badge nobody had asked to see. It still happens
+// the moment anything actually needs the graph: the diagram, the audit, the assistant, a search
+// through the sources. What is refused here is doing it *speculatively* on a workspace where it is
+// expensive.
+const STATS_LIMIT = 1200;
+
 async function attachFnStats() {
+  if (treeData.length > STATS_LIMIT && !graphCache) {
+    // Said rather than left to be noticed: a missing badge with no explanation reads as a defect.
+    setStatus(`${treeData.length} functions - size and call counts appear when the diagram, the audit or a code search builds the map.`, 'ok');
+    return;
+  }
   try {
     const g = await ensureGraph();
     const byFile = {}; Object.values(g.nodes).forEach((n) => { if (n.file) byFile[n.file] = n.stats; });

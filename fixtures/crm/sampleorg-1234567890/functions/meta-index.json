@@ -1,0 +1,846 @@
+{
+  "v": 1,
+  "sv": 2,
+  "files": {
+    "functions/standalone/log.dg": {
+      "id": "9000",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Log"
+    },
+    "functions/standalone/format_Money.dg": {
+      "id": "9001",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Format money"
+    },
+    "functions/standalone/is_Business_Day.dg": {
+      "id": "9002",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Is business day"
+    },
+    "functions/standalone/org_Settings.dg": {
+      "id": "9003",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Org settings"
+    },
+    "functions/standalone/calc_Tax.dg": {
+      "id": "9004",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Calc tax"
+    },
+    "functions/standalone/apply_Discount.dg": {
+      "id": "9005",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Apply discount"
+    },
+    "functions/standalone/build_Invoice.dg": {
+      "id": "9006",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Build invoice"
+    },
+    "functions/standalone/reserve_Stock.dg": {
+      "id": "9007",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Reserve stock"
+    },
+    "functions/standalone/release_Stock.dg": {
+      "id": "9008",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Release stock"
+    },
+    "functions/standalone/plan_Shipment.dg": {
+      "id": "9009",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Plan shipment"
+    },
+    "functions/standalone/track_Parcel.dg": {
+      "id": "9010",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Track parcel"
+    },
+    "functions/standalone/escalate_Ticket.dg": {
+      "id": "9011",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Escalate ticket"
+    },
+    "functions/standalone/reconcile_Payments.dg": {
+      "id": "9012",
+      "sv": 1,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Reconcile payments"
+    },
+    "functions/standalone/build_Cohort.dg": {
+      "id": "9013",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Build cohort"
+    },
+    "functions/standalone/legacy_Helper.dg": {
+      "id": "9014",
+      "sv": 1,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Legacy helper"
+    },
+    "functions/automation/on_Order_Create.dg": {
+      "id": "9015",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "On order create"
+    },
+    "functions/automation/recalc_Totals.dg": {
+      "id": "9016",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Recalc totals"
+    },
+    "functions/automation/on_Deal_Won.dg": {
+      "id": "9017",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "On deal won"
+    },
+    "functions/automation/on_Contact_Merge.dg": {
+      "id": "9018",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "On contact merge"
+    },
+    "functions/schedule/dunning_Run.dg": {
+      "id": "9019",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Dunning run"
+    },
+    "functions/schedule/sync_Payments.dg": {
+      "id": "9020",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Sync payments"
+    },
+    "functions/schedule/nightly_Dispatch.dg": {
+      "id": "9021",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Nightly dispatch"
+    },
+    "functions/schedule/close_Stale_Tickets.dg": {
+      "id": "9022",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Close stale tickets"
+    },
+    "functions/schedule/push_Accounts.dg": {
+      "id": "9023",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Push accounts"
+    },
+    "functions/schedule/pull_Catalogue.dg": {
+      "id": "9024",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Pull catalogue"
+    },
+    "functions/schedule/weekly_Digest.dg": {
+      "id": "9025",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Weekly digest"
+    },
+    "functions/button/open_Ticket.dg": {
+      "id": "9026",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Open ticket"
+    },
+    "functions/button/export_Csv.dg": {
+      "id": "9027",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Export csv"
+    },
+    "functions/button/recalc_Order.dg": {
+      "id": "9028",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Recalc order"
+    },
+    "functions/validation_rule/validate_Order.dg": {
+      "id": "9029",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Validate order"
+    },
+    "functions/validation_rule/check_Credit_Limit.dg": {
+      "id": "9030",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Check credit limit"
+    },
+    "functions/automation/notify_Owner.dg": {
+      "id": "9031",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Notify owner"
+    },
+    "functions/schedule/notify_Owner.dg": {
+      "id": "9032",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Notify owner"
+    },
+    "functions/standalone/assign_Vendors.dg": {
+      "id": "9033",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign vendors"
+    },
+    "functions/standalone/rebuild_Leads.dg": {
+      "id": "9034",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild leads"
+    },
+    "functions/standalone/dedupe_Campaigns.dg": {
+      "id": "9035",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Dedupe campaigns"
+    },
+    "functions/standalone/rebuild_Vendors.dg": {
+      "id": "9036",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild vendors"
+    },
+    "functions/automation/sync_Subscriptions.dg": {
+      "id": "9037",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Sync subscriptions"
+    },
+    "functions/button/refresh_Pricebooks.dg": {
+      "id": "9038",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Refresh pricebooks"
+    },
+    "functions/standalone/convert_Tickets.dg": {
+      "id": "9039",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Convert tickets"
+    },
+    "functions/validation_rule/rebuild_Pricebooks.dg": {
+      "id": "9040",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Rebuild pricebooks"
+    },
+    "functions/automation/archive_Tickets.dg": {
+      "id": "9041",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Archive tickets"
+    },
+    "functions/schedule/archive_Orders.dg": {
+      "id": "9042",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Archive orders"
+    },
+    "functions/schedule/clean_Invoices.dg": {
+      "id": "9043",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Clean invoices"
+    },
+    "functions/schedule/notify_Vendors.dg": {
+      "id": "9044",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Notify vendors"
+    },
+    "functions/button/fetch_Accounts.dg": {
+      "id": "9045",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Fetch accounts"
+    },
+    "functions/automation/refresh_Tickets.dg": {
+      "id": "9046",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Refresh tickets"
+    },
+    "functions/standalone/enrich_Territories.dg": {
+      "id": "9047",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Enrich territories"
+    },
+    "functions/automation/clean_Accounts.dg": {
+      "id": "9048",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Clean accounts"
+    },
+    "functions/standalone/split_Tickets.dg": {
+      "id": "9049",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Split tickets"
+    },
+    "functions/validation_rule/audit_Shipments.dg": {
+      "id": "9050",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Audit shipments"
+    },
+    "functions/standalone/merge_Shipments.dg": {
+      "id": "9051",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Merge shipments"
+    },
+    "functions/standalone/rebuild_Shipments.dg": {
+      "id": "9052",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild shipments"
+    },
+    "functions/standalone/rebuild_Tickets.dg": {
+      "id": "9053",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild tickets"
+    },
+    "functions/automation/clean_Subscriptions.dg": {
+      "id": "9054",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Clean subscriptions"
+    },
+    "functions/schedule/validate_Territories.dg": {
+      "id": "9055",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Validate territories"
+    },
+    "functions/automation/fetch_Vendors.dg": {
+      "id": "9056",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Fetch vendors"
+    },
+    "functions/standalone/archive_Products.dg": {
+      "id": "9057",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Archive products"
+    },
+    "functions/validation_rule/dedupe_Quotes.dg": {
+      "id": "9058",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Dedupe quotes"
+    },
+    "functions/standalone/sync_Vendors.dg": {
+      "id": "9059",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Sync vendors"
+    },
+    "functions/automation/clean_Campaigns.dg": {
+      "id": "9060",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Clean campaigns"
+    },
+    "functions/schedule/assign_Orders.dg": {
+      "id": "9061",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Assign orders"
+    },
+    "functions/standalone/notify_Quotes.dg": {
+      "id": "9062",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Notify quotes"
+    },
+    "functions/button/validate_Quotes.dg": {
+      "id": "9063",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Validate quotes"
+    },
+    "functions/standalone/merge_Territories.dg": {
+      "id": "9064",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Merge territories"
+    },
+    "functions/schedule/convert_Vendors.dg": {
+      "id": "9065",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Convert vendors"
+    },
+    "functions/standalone/validate_Accounts.dg": {
+      "id": "9066",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Validate accounts"
+    },
+    "functions/standalone/enrich_Products.dg": {
+      "id": "9067",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Enrich products"
+    },
+    "functions/standalone/push_Orders.dg": {
+      "id": "9068",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Push orders"
+    },
+    "functions/standalone/refresh_Quotes.dg": {
+      "id": "9069",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Refresh quotes"
+    },
+    "functions/standalone/assign_Subscriptions.dg": {
+      "id": "9070",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign subscriptions"
+    },
+    "functions/standalone/fetch_Products.dg": {
+      "id": "9071",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Fetch products"
+    },
+    "functions/standalone/split_Accounts.dg": {
+      "id": "9072",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Split accounts"
+    },
+    "functions/standalone/rebuild_Invoices.dg": {
+      "id": "9073",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild invoices"
+    },
+    "functions/standalone/clean_Deals.dg": {
+      "id": "9074",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Clean deals"
+    },
+    "functions/standalone/clean_Accounts.dg": {
+      "id": "9075",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Clean accounts"
+    },
+    "functions/standalone/fetch_Tickets.dg": {
+      "id": "9076",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Fetch tickets"
+    },
+    "functions/button/notify_Quotes.dg": {
+      "id": "9077",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Notify quotes"
+    },
+    "functions/standalone/assign_Orders.dg": {
+      "id": "9078",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign orders"
+    },
+    "functions/automation/fetch_Leads.dg": {
+      "id": "9079",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Fetch leads"
+    },
+    "functions/standalone/refresh_Subscriptions.dg": {
+      "id": "9080",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Refresh subscriptions"
+    },
+    "functions/schedule/sync_Pricebooks.dg": {
+      "id": "9081",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Sync pricebooks"
+    },
+    "functions/standalone/assign_Tickets.dg": {
+      "id": "9082",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign tickets"
+    },
+    "functions/automation/split_Products.dg": {
+      "id": "9083",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Split products"
+    },
+    "functions/schedule/rebuild_Territories.dg": {
+      "id": "9084",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Rebuild territories"
+    },
+    "functions/validation_rule/sync_Contacts.dg": {
+      "id": "9085",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Sync contacts"
+    },
+    "functions/schedule/enrich_Subscriptions.dg": {
+      "id": "9086",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Enrich subscriptions"
+    },
+    "functions/standalone/audit_Deals.dg": {
+      "id": "9087",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Audit deals"
+    },
+    "functions/schedule/split_Vendors.dg": {
+      "id": "9088",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Split vendors"
+    },
+    "functions/standalone/audit_Shipments.dg": {
+      "id": "9089",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Audit shipments"
+    },
+    "functions/standalone/archive_Campaigns.dg": {
+      "id": "9090",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Archive campaigns"
+    },
+    "functions/button/refresh_Invoices.dg": {
+      "id": "9091",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Refresh invoices"
+    },
+    "functions/schedule/refresh_Pricebooks.dg": {
+      "id": "9092",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Refresh pricebooks"
+    },
+    "functions/automation/assign_Deals.dg": {
+      "id": "9093",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Assign deals"
+    },
+    "functions/button/sync_Products.dg": {
+      "id": "9094",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Sync products"
+    },
+    "functions/automation/enrich_Accounts.dg": {
+      "id": "9095",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Enrich accounts"
+    },
+    "functions/automation/dedupe_Quotes.dg": {
+      "id": "9096",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Dedupe quotes"
+    },
+    "functions/standalone/fetch_Invoices.dg": {
+      "id": "9097",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Fetch invoices"
+    },
+    "functions/automation/enrich_Pricebooks.dg": {
+      "id": "9098",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Enrich pricebooks"
+    },
+    "functions/standalone/rebuild_Campaigns.dg": {
+      "id": "9099",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Rebuild campaigns"
+    },
+    "functions/standalone/fetch_Accounts.dg": {
+      "id": "9100",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Fetch accounts"
+    },
+    "functions/standalone/audit_Pricebooks.dg": {
+      "id": "9101",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Audit pricebooks"
+    },
+    "functions/automation/notify_Contacts.dg": {
+      "id": "9102",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "automation",
+      "display_name": "Notify contacts"
+    },
+    "functions/schedule/sync_Invoices.dg": {
+      "id": "9103",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "schedule",
+      "display_name": "Sync invoices"
+    },
+    "functions/standalone/assign_Pricebooks.dg": {
+      "id": "9104",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign pricebooks"
+    },
+    "functions/standalone/merge_Vendors.dg": {
+      "id": "9105",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Merge vendors"
+    },
+    "functions/button/enrich_Contacts.dg": {
+      "id": "9106",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Enrich contacts"
+    },
+    "functions/validation_rule/archive_Leads.dg": {
+      "id": "9107",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "validation_rule",
+      "display_name": "Archive leads"
+    },
+    "functions/standalone/sync_Accounts.dg": {
+      "id": "9108",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Sync accounts"
+    },
+    "functions/button/assign_Invoices.dg": {
+      "id": "9109",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Assign invoices"
+    },
+    "functions/standalone/audit_Campaigns.dg": {
+      "id": "9110",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Audit campaigns"
+    },
+    "functions/standalone/validate_Contacts.dg": {
+      "id": "9111",
+      "sv": 2,
+      "updatedTime": "2026-07-04T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Validate contacts"
+    },
+    "functions/standalone/convert_Orders.dg": {
+      "id": "9112",
+      "sv": 2,
+      "updatedTime": "2026-07-05T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Convert orders"
+    },
+    "functions/standalone/push_Tickets.dg": {
+      "id": "9113",
+      "sv": 2,
+      "updatedTime": "2026-07-06T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Push tickets"
+    },
+    "functions/standalone/notify_Invoices.dg": {
+      "id": "9114",
+      "sv": 2,
+      "updatedTime": "2026-07-07T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Notify invoices"
+    },
+    "functions/standalone/assign_Accounts.dg": {
+      "id": "9115",
+      "sv": 2,
+      "updatedTime": "2026-07-08T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Assign accounts"
+    },
+    "functions/standalone/audit_Contacts.dg": {
+      "id": "9116",
+      "sv": 2,
+      "updatedTime": "2026-07-09T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Audit contacts"
+    },
+    "functions/standalone/push_Deals.dg": {
+      "id": "9117",
+      "sv": 2,
+      "updatedTime": "2026-07-01T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Push deals"
+    },
+    "functions/standalone/notify_Tickets.dg": {
+      "id": "9118",
+      "sv": 2,
+      "updatedTime": "2026-07-02T09:00:00+00:00",
+      "namespace": "standalone",
+      "display_name": "Notify tickets"
+    },
+    "functions/button/refresh_Quotes.dg": {
+      "id": "9119",
+      "sv": 2,
+      "updatedTime": "2026-07-03T09:00:00+00:00",
+      "namespace": "button",
+      "display_name": "Refresh quotes"
+    }
+  }
+}

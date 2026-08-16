@@ -316,6 +316,20 @@
       say(i + 1, list.length, 'functions');
     });
     J('functions/index.json', index);
+    // The summary a pull leaves behind, so the sample workspace has the shape of a real mirror and
+    // not one file fewer. The panel checks it against the folder anyway - see rebuildTree() - but a
+    // sample that is missing what every pulled workspace has would send the first-time reader
+    // looking for a difference that is not there.
+    const metaIndex = {};
+    list.forEach(([ns, name], i) => {
+      const api = snake(name);
+      metaIndex['functions/' + ns + '/' + api + '.dg'] = {
+        id: String(9000 + i), sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 2,
+        updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
+        namespace: ns, display_name: labelOf(name),
+      };
+    });
+    J('functions/meta-index.json', { v: 1, sv: 2, files: metaIndex });
 
     // Forty plausible values, composed rather than invented one at a time - the same rule the
     // function names follow.
