@@ -1534,12 +1534,17 @@ function buildTypeChips() {
 }
 $('nameToggle').onclick = () => {
   if (navOpenNow()) {
+    // Both namings at once. It moved the functions and left the modules on whatever the Modules tab
+    // was set to, so half the chain answered the button and half ignored it - reported. A module has
+    // three names and a function two, so «internal» here means the api name for both, which is the
+    // pair a reader is actually switching between. What cannot follow is a rule, a schedule, an
+    // action or a connection: Zoho gives each of those exactly one name.
     nameMode = nameMode === 'internal' ? 'display' : 'internal';
+    moduleNameMode = nameMode === 'internal' ? 'api' : 'display';
     $('nameToggle').textContent = MSG.namePrefix + nameMode;
-    // The list behind is redrawn too, even though it cannot be seen: there is one naming, and coming
-    // out of the history onto a tree still labelled the old way is the two lists disagreeing again -
-    // the very thing this control was just taught to keep in step.
-    renderNav(); renderTree();
+    // The lists behind are redrawn too, though they cannot be seen: there is one naming, and coming
+    // out of the history onto a tree still labelled the old way is the two lists disagreeing again.
+    renderNav(); renderTree(); renderModules();
     return;
   }
   if (viewMode === 'functions') {

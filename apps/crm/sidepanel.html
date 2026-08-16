@@ -14,6 +14,7 @@
     --bg:#0d121c; --tree:#0f1622; --surface:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
     --border:#26303f; --line:#1e2735; --sel:#3b82f6;--accent:#3b82f6; --sel-soft:#16263f;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --rest:#a78bfa;
+    --hist:#67e8f9; --hist-line:#2b7c8c; --hist-fill:rgba(34,211,238,.14);   /* the history: a colour used for nothing else */
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
   }
   *{box-sizing:border-box}
@@ -456,6 +457,14 @@
   #navview .nvx{cursor:pointer;color:var(--muted);font-size:15px}
   #navview .nvx:hover{color:var(--ink)}
   #navbody{flex:1;min-height:0;overflow:auto;padding:4px 0}
+  /* A visible bar, because the platform's is not: the box does scroll - measured, 1168px of steps in
+     378px - and «it has no scrollbar» is what an invisible one looks like. The workspace strip has
+     had this treatment since it was written. */
+  #navbody::-webkit-scrollbar{width:9px}
+  #navbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+  #navbody::-webkit-scrollbar-thumb:hover{background:var(--hist-line)}
+  #navbody::-webkit-scrollbar-track{background:transparent}
+  #navbody{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
   #navbody .nvrow{display:flex;gap:10px;align-items:baseline;padding:7px 12px;cursor:pointer;
     border-bottom:1px solid var(--line);font:12px var(--sans)}
   #navbody .nvrow:hover{background:var(--tree)}
@@ -466,15 +475,16 @@
   #navbody .nvnone{padding:16px 12px;color:var(--muted)}
   /* The tab that opens it, drawn with the tabs and never one of them: it is a view of where you have
      been, not an area of the org. */
-  .moderow{display:flex;align-items:center;gap:6px}
-  .moderow .modebar{flex:1;min-width:0}
   /* It stands with the tabs, so it takes their box: measured against a segment rather than given
      a height of its own, which is how it came out 15px beside their 27. */
-  /* The same box as a tab, because it stands among them: the declarations are `.seg`'s, minus the
-     `flex:1` that makes a tab share the row. Its «on» is a tab's «active», for the same reason. */
-  .navseg{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;flex:none;
-    background:#0f1826;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;font-size:11px}
-  .navseg.on{background:#33415e;border-color:#4a5a7e;color:#fff}
+  /* The history control. Cyan is not in the button grammar (blue = Zoho, light blue = opens a page
+     there, teal = local artefact, violet = in-panel view, amber = assistant) and that is the point:
+     a list of where you have been reaches nothing and produces nothing. Same colour in both products
+     - it is a role, not a product identity - and it stands beside AI in both, so it is in one place. */
+  .navseg{display:inline-flex;align-items:center;justify-content:center;flex:none;
+    background:var(--hist-fill);border:1px solid var(--hist-line);color:var(--hist)}
+  .navseg:hover:not(:disabled){background:rgba(34,211,238,.24);border-color:var(--hist)}
+  .navseg.on{background:var(--hist-line);border-color:var(--hist);color:#e6feff}
   /* The three ways of moving through the chain. Drawn rather than typed - reported as too small,
      and a size asked for in pixels is only a size when we draw the shape; a glyph's ink belongs to
      whatever font the machine happens to have. Bigger than the toolbar's marks on purpose: these are
@@ -487,10 +497,12 @@
      background - reported: «non sembra cliccabile ma lo e'». The cursor was already a
      pointer over the whole icon (measured), so what was missing is the affordance, not the
      handler: a hit area of its own, 22px square, that lights up under the mouse. */
-  #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none;align-items:center;justify-content:center;
-    width:22px;height:22px;border-radius:6px;background:rgba(127,127,127,.10)}
+  /* The same fill as the history control they belong to: they were lighting up in the blue that
+     means «opens Zoho», which is a promise about somewhere else. */
+  #pvhead .back{cursor:pointer;color:var(--hist);flex:none;display:none;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;background:var(--hist-fill);border:1px solid transparent}
   #pvhead .back.show{display:inline-flex}
-  #pvhead .back:hover{color:var(--ink);background:var(--sel)}
+  #pvhead .back:hover{color:var(--hist);background:var(--hist-fill);border-color:var(--hist-line)}
   #pvhead .back .mk{pointer-events:none}   /* the span takes the click, so the cursor cannot differ over the drawing */
   #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
   /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
@@ -606,15 +618,14 @@
       <button id="graph" class="lbtn icon" aria-label="Wiring" title="Wiring - what fires what across the org, in its own window" disabled><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
       <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
       <button id="askai" class="abtn" disabled title="Ask AI about this org">AI</button>
+      <button id="navtab" class="navseg" style="display:none" title="History - everywhere you have been, most recent first" aria-label="History" aria-pressed="false"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg></button>
     </fieldset>
   </div>
   <div id="belowbar">
   <!-- Built from the TABS registry in sidepanel.js: which segments exist, and in what order, depends
        on the user's settings and on what the org's roles actually grant. Empty in the markup on
        purpose - five hard-coded buttons here is what made the set impossible to reorder. -->
-  <!-- The tabs, and beside them the history: it is a view of the same items from another angle,
-       so it belongs in this row and never inside #modebar, which is rebuilt from the registry. -->
-  <div class="moderow"><div class="modebar" id="modebar"></div><button id="navtab" class="navseg" style="display:none" title="History - everywhere you have been, most recent first" aria-label="History" aria-pressed="false"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg></button></div>
+  <div class="modebar" id="modebar"></div>
   <div class="bar">
     <!-- Pull and Refresh are always present → fixed on the left (Pull 1st, Refresh 2nd), so Refresh
          never shifts when tab-specific buttons appear/disappear to its right. -->

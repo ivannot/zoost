@@ -130,8 +130,6 @@ EXPECTED = {
     ('.zbtn:hover:not(:disabled)', 'border-color'): 'ditto',
     ('.aimsg.user .aitext', 'color'): 'a light tint of each product accent',
     (':root', '--accent'): 'the accent is the product colour: blue in CRM, teal in Analytics',
-    ('.navseg', 'font-size'): "the CRM's stands among the tabs and takes their 11px; the Analytics one stands among ordinary buttons and takes theirs",
-    ('.navseg', 'background'): "the history control takes the ground of the row it stands in - the tab strip in the CRM, the toolbar in Analytics",
     ('#healthbody', 'flex'): 'the Analytics health view is a flex column and its body must fill it',
     ('#healthbody', 'color'): 'base typography, which the CRM inherits from elsewhere',
     ('#healthbody', 'font-size'): 'ditto',

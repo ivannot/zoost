@@ -4419,6 +4419,43 @@ test('crm: the arrows open a row the way that row opens', () => {
     }
   });
 
+  test('the history control has a colour of its own, and the arrows borrow it', () => {
+    // Asked for by name: «un colore non usato altrove». The button grammar is five colours already -
+    // Zoho, opens-a-page-there, local artefact, in-panel view, assistant - and a list of where you
+    // have been is none of them. The arrows take the same fill: they were lighting up in the blue
+    // that means «opens Zoho», which is a promise about somewhere else.
+    for (const app of ['crm', 'analytics']) {
+      const css = read(`apps/${app}/sidepanel.html`);
+      assert.ok(/--hist:/.test(css), `${app}: the history has no colour of its own`);
+      const seg = css.slice(css.indexOf('.navseg{'), css.indexOf('.navseg:hover'));
+      assert.ok(/var\(--hist-fill\)/.test(seg), `${app}: the control does not use it`);
+      const back = css.slice(css.indexOf('.back{', css.indexOf('#navbody')), css.indexOf('.back.show'));
+      assert.ok(!/var\(--sel\)|var\(--accent\)/.test(back),
+                `${app}: the arrows still take the colour that means «opens Zoho»`);
+    }
+  });
+
+  test('the history box can scroll, and says so visibly', () => {
+    // Measured before it was believed: 40 steps in a side-panel-sized window give 1168px of rows in a
+    // 378px box, so it scrolled all along - what was missing was a bar you can see and grab.
+    for (const app of ['crm', 'analytics']) {
+      const css = read(`apps/${app}/sidepanel.html`);
+      const rule = css.slice(css.indexOf('#navbody{'), css.indexOf('#navbody{') + 200);
+      assert.ok(/overflow:\s*auto/.test(rule), `${app}: the history box cannot scroll`);
+      assert.ok(css.includes('#navbody::-webkit-scrollbar'), `${app}: its scrollbar is the invisible one`);
+    }
+  });
+
+  test('Name moves every naming the chain shows', () => {
+    // It moved the functions and left the modules on whatever the Modules tab was set to, so half the
+    // chain answered the button - reported. The kinds that cannot follow have one name each.
+    const js = read('apps/crm/sidepanel.js');
+    const at = js.indexOf('if (navOpenNow()) {', js.indexOf("$('nameToggle').onclick"));
+    const body = js.slice(at, at + 900);
+    assert.ok(/nameMode = /.test(body), 'the function naming does not move');
+    assert.ok(/moduleNameMode = /.test(body), 'the module naming does not move with it');
+  });
+
   test('the search filters the history while it is the thing on screen', () => {
     // Asked for: the view sits where a list sits, so it answers the same box. Both panels, because a
     // search that works in one product and not in the other is the drift the twins rule exists for.

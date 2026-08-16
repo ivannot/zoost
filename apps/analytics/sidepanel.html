@@ -23,6 +23,7 @@
     --border:#26303f; --line:#1e2735; --sel:#dc2d7a; --sel-soft:#3a1226; --tree:#0f1622;
     --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
     --accent:#dc2d7a;
+    --hist:#67e8f9; --hist-line:#2b7c8c; --hist-fill:rgba(34,211,238,.14);   /* the history: a colour used for nothing else */
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --sans:system-ui,sans-serif;
   }
   *{box-sizing:border-box}
@@ -219,10 +220,11 @@
      background - reported: «non sembra cliccabile ma lo e'». The cursor was already a
      pointer over the whole icon (measured), so what was missing is the affordance, not the
      handler: a hit area of its own, 22px square, that lights up under the mouse. */
-  .dhead .back{cursor:pointer;color:var(--accent);flex:none;display:none;align-items:center;justify-content:center;
-    width:22px;height:22px;border-radius:6px;background:rgba(127,127,127,.10)}
+  /* The same fill as the history control they belong to - see the twin. */
+  .dhead .back{cursor:pointer;color:var(--hist);flex:none;display:none;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;background:var(--hist-fill);border:1px solid transparent}
   .dhead .back.show{display:inline-flex}
-  .dhead .back:hover{color:var(--ink);background:var(--accent)}
+  .dhead .back:hover{color:var(--hist);background:var(--hist-fill);border-color:var(--hist-line)}
   .dhead .back .mk{pointer-events:none}   /* the span takes the click, so the cursor cannot differ over the drawing */
   .dhead .dt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
   /* The chain, as a panel in the flow. It was a positioned layer and a resize left it beside
@@ -242,6 +244,14 @@
   #navview .nvx{cursor:pointer;color:var(--muted);font-size:15px}
   #navview .nvx:hover{color:var(--ink)}
   #navbody{flex:1;min-height:0;overflow:auto;padding:4px 0}
+  /* A visible bar, because the platform's is not: the box does scroll - measured, 1168px of steps in
+     378px - and «it has no scrollbar» is what an invisible one looks like. The workspace strip has
+     had this treatment since it was written. */
+  #navbody::-webkit-scrollbar{width:9px}
+  #navbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+  #navbody::-webkit-scrollbar-thumb:hover{background:var(--hist-line)}
+  #navbody::-webkit-scrollbar-track{background:transparent}
+  #navbody{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
   #navbody .nvrow{display:flex;gap:10px;align-items:baseline;padding:7px 12px;cursor:pointer;
     border-bottom:1px solid var(--line);font:12px var(--sans)}
   #navbody .nvrow:hover{background:var(--tree)}
@@ -254,12 +264,14 @@
      been, not an area of the org. */
   /* It stands in the toolbar here and beside the tabs in the CRM, so each takes the ground of the
      row it is in - declared in tools/twincheck.py rather than forced to match. */
-  /* Neutral on purpose, and last in the row: the coloured buttons beside it each say what they talk
-     to - Zoho, a local artefact, the assistant - and a list of where you have already been talks to
-     nothing. Its «on» is the same neutral, a shade up. */
-  .navseg{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;flex:none;
-    background:#22304a;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer}
-  .navseg.on{background:#33415e;border-color:#4a5a7e;color:#fff}
+  /* The history control. Cyan is not in the button grammar (blue = Zoho, light blue = opens a page
+     there, teal = local artefact, violet = in-panel view, amber = assistant) and that is the point:
+     a list of where you have been reaches nothing and produces nothing. Same colour in both products
+     - it is a role, not a product identity - and it stands beside AI in both, so it is in one place. */
+  .navseg{display:inline-flex;align-items:center;justify-content:center;flex:none;
+    background:var(--hist-fill);border:1px solid var(--hist-line);color:var(--hist)}
+  .navseg:hover:not(:disabled){background:rgba(34,211,238,.24);border-color:var(--hist)}
+  .navseg.on{background:var(--hist-line);border-color:var(--hist);color:#e6feff}
   .dhead .dx{cursor:pointer;color:var(--muted);font-size:15px;padding:0 4px}
   .dhead .dx:hover{color:var(--ink)}
   .dtabs{display:flex;gap:3px;padding:5px 7px;border-bottom:1px solid var(--line);background:#131a27;align-items:center}

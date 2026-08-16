@@ -46,6 +46,15 @@ CRM = """
     if (!shown('pvback')) say('back is not offered after two steps');
     if (shown('pvfwd')) say('forward is painted with nothing ahead');
     if (!shown('navtab')) say('the history is not offered from the tab row with two steps in it');
+    // It stands with AI and Health, not near them: same row, same height. It was in the tab strip,
+    // where `fitTabs()` shrinks the segments by measuring and left it the odd one out - and the first
+    // move out of there dragged the whole tab row into the toolbar with it, which this would have
+    // caught on the spot.
+    const bx = (id) => $(id).getBoundingClientRect();
+    for (const id of ['askai', 'health']) {
+      if (Math.abs(bx('navtab').top - bx(id).top) > 1) say(`the history control is ${Math.round(bx('navtab').top - bx(id).top)}px off ${id}`);
+      if (Math.abs(bx('navtab').height - bx(id).height) > 1) say(`the history control is ${bx('navtab').height}px against ${id}'s ${bx(id).height}px`);
+    }
     const mk = $('pvback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     if (mk.getBoundingClientRect().width < 15) say('the arrows are smaller than asked for: ' + mk.getBoundingClientRect().width);
@@ -120,6 +129,11 @@ CRM = """
     for (const id of ['modebar', 'find', 'nameToggle']) {
       if ($(id).offsetParent === null) say(`${id} went away with the list`);
     }
+    // The box scrolls when there is more chain than room, and the bar is visible rather than the
+    // platform's invisible one - «il box history non ha la scrollbar», measured before being fixed.
+    const nb = $('navbody');
+    if (getComputedStyle(nb).overflowY !== 'auto') say('the history box cannot scroll at all');
+
     // and Name acts on the chain while the chain is what is on screen - on a row that *is* a
     // function, since a rule has one name and could never follow it.
     const fRow = () => [...document.querySelectorAll('#navbody .nvrow')]
@@ -251,6 +265,15 @@ AN = """
     const shown = (id) => getComputedStyle($(id)).display !== 'none';
     if (!shown('dback')) say('back is not offered after two steps');
     if (shown('dfwd')) say('forward is painted with nothing ahead');
+    // It stands with AI and Health, not near them: same row, same height. It was in the tab strip,
+    // where `fitTabs()` shrinks the segments by measuring and left it the odd one out - and the first
+    // move out of there dragged the whole tab row into the toolbar with it, which this would have
+    // caught on the spot.
+    const bx = (id) => $(id).getBoundingClientRect();
+    for (const id of ['askai', 'health']) {
+      if (Math.abs(bx('navtab').top - bx(id).top) > 1) say(`the history control is ${Math.round(bx('navtab').top - bx(id).top)}px off ${id}`);
+      if (Math.abs(bx('navtab').height - bx(id).height) > 1) say(`the history control is ${bx('navtab').height}px against ${id}'s ${bx(id).height}px`);
+    }
     const mk = $('dback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     const mw = mk.getBoundingClientRect();
