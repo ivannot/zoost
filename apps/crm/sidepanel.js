@@ -1114,17 +1114,80 @@ function graphForWindow(g) {
   return out;
 }
 
+/** The call graph, from what was written down when the sources were last read.
+ *
+ *  It used to read every `.dg` and every `.meta.json` - two files per function, 40,000 file-system
+ *  calls on an org of five thousand - and parse the sources again each time. What the parse produces
+ *  per function is now kept in `functions/meta-index.json`: the references the parser saw and the
+ *  size counts. Both are *readings* of one file, so they age exactly when that file changes, which
+ *  the walk detects. The resolution of a reference into an edge still happens on every build,
+ *  because it depends on the whole workspace.
+ *
+ *  A source the summary does not describe is read and parsed as before, and the summary is brought
+ *  up to date afterwards. So a hand-pulled function, an older mirror or a file somebody dropped in
+ *  all produce the same graph as a full read - proven in the suite by building it both ways.
+ */
 async function loadGraph() {
   const nodes = [];
+  let summary = null;
+  try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
+  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  let read = 0;
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;
+    const cached = known[p];
+    if (cached && Array.isArray(cached.refs) && cached.stats) {
+      nodes.push({ namespace: cached.namespace || p.split('/')[0],
+                   name: cached.name || p.split('/').pop().replace(/\.dg$/, ''),
+                   api_name: cached.api_name || p.split('/').pop().replace(/\.dg$/, ''),
+                   display_name: cached.display_name, category: cached.category, source: cached.source,
+                   description: cached.description || '', rest: !!cached.rest,
+                   associated_place: cached.associated_place || null, file: p,
+                   return_type: cached.return_type || '', params: cached.params || [],
+                   connections: cached.connections || [], updatedTime: cached.updatedTime || null,
+                   modified_by: cached.modified_by || null,
+                   refs: cached.refs, stats: cached.stats, dg: '' });
+      continue;
+    }
+    read++;
     const dg = await readFile(p); let meta = {}; try { meta = JSON.parse(await readFile(p.replace(/\.dg$/, '.meta.json'))); } catch {}
-    nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, file: p });
+    nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
-  const g = window.buildGraph(nodes);
-  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; g.nodes[id].stats = fnStats(nd.dg); } });
+  const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs } : n)));
+  // What the parser saw, written down for the next build. Only when something had to be read: a
+  // graph built entirely from the summary has nothing new to say, and rewriting the file on every
+  // open would touch a folder the reader may have under version control.
+  if (read) await saveGraphFacts(nodes, g);
+  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; // The counts come from the source when it was read, and from the summary when it was not -
+  // the same numbers either way, since `fnStats()` is a pure reading of that text and what the
+  // summary holds is the result of having run it.
+  g.nodes[id].stats = nd.stats || fnStats(nd.dg); } });
   g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
   return g;
+}
+/** Keep, per function, exactly what a source read produced: the references the parser found and the
+ *  size counts. Everything else in the graph is computed from those two and from the workspace as a
+ *  whole, so nothing here is a stored judgement - only a stored reading. */
+async function saveGraphFacts(nodes, g) {
+  try {
+    let summary = null;
+    try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
+    const files = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+    nodes.forEach((nd) => {
+      if (!nd.file) return;
+      const node = g.nodes[nd.namespace + '.' + nd.name];
+      const entry = files[nd.file] || (files[nd.file] = {});
+      entry.namespace = nd.namespace; entry.name = nd.name; entry.api_name = nd.api_name;
+      entry.display_name = nd.display_name; entry.category = nd.category; entry.source = nd.source;
+      entry.rest = !!nd.rest; entry.associated_place = nd.associated_place || null;
+      entry.return_type = nd.return_type || ''; entry.params = nd.params || [];
+      entry.connections = nd.connections || []; entry.updatedTime = nd.updatedTime || null;
+      entry.modified_by = nd.modified_by || null; entry.description = nd.description || '';
+      entry.refs = (node && node.refs) ? node.refs : (nd.refs || []);
+      entry.stats = nd.stats || (node && node.stats) || null;
+    });
+    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+  } catch (_) {}
 }
 async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
 function makeCallResolver(g) {
@@ -2007,10 +2070,29 @@ function runSearch() {
   if (searchMode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
   else renderTree();
 }
+/** Every source, once. Searching text means having read it - there is no index that spares this, and
+ *  writing one would be a second answer to «what does this function say» that could disagree with the
+ *  file. What can be spared is the *waiting*: the reads happen in tranches with a yield between them,
+ *  the status line counts them off, and the cache is kept for the rest of the session, so this is
+ *  paid once per workspace and never again until a pull changes something.
+ *
+ *  Measured on a generated org of 5,000 functions: 20,000 file-system calls the first time, none
+ *  after. Before this, the panel simply stopped answering for the whole of it.
+ */
 async function getCodeCache() {
   if (codeCache) return codeCache;
   const m = new Map();
-  for (const e of treeData) { if (!e.downloaded) continue; try { m.set(e.id, await readFile(e.path)); } catch (_) {} }
+  const rows = treeData.filter((e) => e.downloaded);
+  const TRANCHE = 120;
+  for (let i = 0; i < rows.length; i += TRANCHE) {
+    await Promise.all(rows.slice(i, i + TRANCHE).map(async (e) => {
+      try { m.set(e.id, await readFile(e.path)); } catch (_) {}
+    }));
+    if (rows.length > TRANCHE) {
+      setStatus(`Reading sources ${Math.min(i + TRANCHE, rows.length)}/${rows.length}\u2026`, 'busy');
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
   codeCache = m; return m;
 }
 async function contentSearch() {

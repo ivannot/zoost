@@ -48,6 +48,21 @@ API charges per file, so the only honest claim is the shape. **Whether a real or
 comfortable in a real Chrome is still unmeasured**, and saying otherwise would be exactly the kind of
 green light this file exists to refuse.
 
+**What the summary holds is a reading, never a judgement.** `functions/meta-index.json` keeps, per
+function, what opening its files produced: the stale mark, the modified date, the *references* the
+parser found in the source, and the size counts. It does **not** keep edges - an edge is a reference
+resolved against the whole workspace, and that answer changes the day a function is added or renamed,
+so a stored edge would be a cached verdict with nothing to say when it went stale. The resolution runs
+on every build, from one extractor: `buildGraph()` hands back what it read so the panel writes down
+the parser's own findings rather than running a second regex over the same text. A test builds the
+graph both ways and compares it node for node, because the whole point of the shortcut is that nobody
+should have to wonder whether it sees something different.
+
+Measured on 5,000 functions: opening 60,015 file-system calls -> **8** warm; the diagram 40,014 ->
+**17** after the first build; a code search 60,012 -> **0** after the first. What stays is reading
+each source once - searching text means having read it - and that now happens in tranches with the
+count on screen instead of a dead panel.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

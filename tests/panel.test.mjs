@@ -4649,3 +4649,70 @@ test('code is shown the same way in both products: lines as written, box scrolls
     assert.ok(/byId\.get\(/.test(code), 'the id lookup is not a map');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The graph built from the summary is the graph built from the sources. Not argued - built both ways
+// from the same workspace and compared node for node, because the whole point of writing the
+// parser's findings down is that nobody has to wonder whether the shortcut sees something different.
+{
+  const gc = read('apps/crm/graph-core.js');
+
+  test('buildGraph takes the references it is handed, and hands back the ones it found', () => {
+    assert.ok(/Array\.isArray\(n\._refs\)/.test(gc), 'the builder cannot be given references');
+    assert.ok(/n\.refs = refs\.slice\(\)/.test(gc), 'it does not hand back what it read');
+  });
+
+  test('from sources and from references, the same graph', () => {
+    // The file wraps itself in an IIFE and hangs the function on `window`, so it is *run* the way the
+    // browser runs it rather than sliced: `load()` lifts declarations, and an IIFE is not one.
+    const w = {};
+    new Function('window', read('apps/crm/graph-core.js'))(w);
+    const buildGraph = w.buildGraph;
+    assert.ok(typeof buildGraph === 'function', 'graph-core no longer publishes buildGraph');
+    const src = (dg) => dg;
+    const input = [
+      { namespace: 'standalone', name: 'log', api_name: 'log', dg: 'void log(){}' },
+      { namespace: 'standalone', name: 'calcTax', api_name: 'calc_Tax',
+        dg: 'void calcTax(){ standalone.log(); standalone.missing(); }' },
+      { namespace: 'automation', name: 'onOrder', api_name: 'on_Order',
+        dg: 'void onOrder(){ standalone.calcTax(); standalone.calcTax(); }' },
+    ];
+    const fromSource = buildGraph(input.map((n) => ({ ...n })));
+    // the same input, but with the sources thrown away and the references handed in
+    const withRefs = input.map((n) => {
+      const id = n.namespace + '.' + n.name;
+      return { ...n, dg: '', _refs: fromSource.nodes[id].refs };
+    });
+    const fromRefs = buildGraph(withRefs);
+    const strip = (g) => JSON.stringify({
+      counts: g.counts,
+      nodes: Object.fromEntries(Object.entries(g.nodes).map(([k, n]) =>
+        [k, { calls: n.calls, called_by: n.called_by, unresolved: n.unresolved,
+              ambiguous: n.ambiguous, dead_suspect: n.dead_suspect }])),
+    });
+    assert.equal(strip(fromRefs), strip(fromSource),
+                 'the graph from the summary is not the graph from the sources');
+  });
+
+  test('the panel keeps references, never edges', () => {
+    // An edge is a reference *resolved against the whole workspace*, and that answer changes when a
+    // function is added or renamed - a name unique today is ambiguous tomorrow. Storing edges would
+    // be a cached judgement, and nothing would say when it went stale.
+    const js = read('apps/crm/sidepanel.js');
+    const at = js.indexOf('async function saveGraphFacts');
+    const body = js.slice(at, at + 1400).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(/entry\.refs = /.test(body), 'the references are not written down');
+    assert.ok(!/entry\.calls|entry\.called_by|entry\.edges/.test(body), 'a resolved edge is being stored');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Reading every source is what «search inside the code» means; blocking the panel for it is not.
+test('the sources are read in tranches, and the reader is told', () => {
+  const js = read('apps/crm/sidepanel.js');
+  const at = js.indexOf('async function getCodeCache');
+  const body = js.slice(at, at + 900).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(/TRANCHE/.test(body), 'the whole workspace is read in one go again');
+  assert.ok(/setTimeout\(r, 0\)/.test(body), 'nothing yields, so the panel is dead for the duration');
+  assert.ok(/Reading sources/.test(body), 'it says nothing while it does it');
+});
