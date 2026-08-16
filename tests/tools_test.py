@@ -855,6 +855,8 @@ class WhatsNew(unittest.TestCase):
         self.assertEqual(rows, [['abc123', 'A subject'], ['def456', 'Another subject']])
 
     def test_it_reports_this_repository_today(self):
+        if shallow_clone():
+            self.skipTest('shallow clone - what changed since a tag is a question about history')
         # The range is the app's **first** tag rather than its newest, and that is the whole point of
         # this case. Asking since the newest tag went red the day a release was cut - no commit has
         # touched the app since, correctly - and a test that fails for a benign reason is one whose
@@ -1319,6 +1321,21 @@ class DatesAreDerived(unittest.TestCase):
         self.assertFalse(self.find('404.html', '<p><code>4 March 2026</code></p>'))
 
 
+def shallow_clone() -> bool:
+    """Is this checkout missing its history? Then a check derived from git cannot be run.
+
+    Not an excuse: two checks here are *derived from the repository's history* - the sitemap's
+    lastmod per file, and what `whatsnew.py` reports since a tag - and in a `--depth 1` clone both
+    are asking questions the clone cannot answer. They failed the first release that ran the battery
+    in CI, where checkout is shallow by default, and passed on every machine with a real clone: a
+    verdict that depends on how the repository was fetched. The workflow now fetches the lot; this
+    is the other half, so that anybody with a shallow clone is told which it is.
+    """
+    out = subprocess.run(['git', 'rev-parse', '--is-shallow-repository'],
+                         cwd=ROOT, capture_output=True, text=True)
+    return out.stdout.strip() == 'true'
+
+
 class SitemapIsDerived(unittest.TestCase):
     """Every field in the sitemap was typed by hand, and the dates had drifted three days behind.
 
@@ -1329,6 +1346,8 @@ class SitemapIsDerived(unittest.TestCase):
     """
 
     def test_the_committed_file_is_what_the_site_derives(self):
+        if shallow_clone():
+            self.skipTest('shallow clone - lastmod is derived from each file\'s history, which is not here')
         out = subprocess.run([sys.executable, str(ROOT / 'tools/sitemap.py'), '--check'],
                              capture_output=True, text=True)
         self.assertEqual(out.returncode, 0, out.stdout)

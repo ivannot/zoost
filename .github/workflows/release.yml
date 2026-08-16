@@ -53,6 +53,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
         with:
           ref: ${{ inputs.tag || github.ref }}
+          # The whole history, because the gate below runs the battery and two of its checks are
+          # *derived from git*: the sitemap's lastmod per file, and what whatsnew reports since a
+          # tag. A depth-1 checkout has neither, so both failed here while passing on every machine
+          # with a clone - the first release to run the gate died on it. `fetch-depth: 0` costs a few
+          # seconds; the alternative is a check that only pretends to run.
+          fetch-depth: 0
 
       - name: Read the app and version out of the tag
         id: tag
