@@ -50,6 +50,7 @@ computeMaxDepth	30efce461424	30efce461424	identical
 conflictBox	ecb43a011b8e	ecb43a011b8e	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
+dirFor	ed62bc61e9b4	ed62bc61e9b4	identical
 dropWorkspaceState	d8ed5ac69a44	768de73a06e2	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
 emptyReason	f7a750117acd	edc245701f46	divergent
@@ -159,7 +160,7 @@ pdfTitle	93b3d0697faa	d692e674db7f	divergent
 pickRoot	cd92b6382197	f43eb72e1a77	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 pullAll	a648389fddcd	0a40bd90b9d8	divergent
-readFile	1522334e8fac	1522334e8fac	identical
+readFile	ec9fffb8ee13	ec9fffb8ee13	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	07f0e3628c81	09196a24e765	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
@@ -210,7 +211,7 @@ wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	aec6f1b54698	aec6f1b54698	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
-writeFile	63a3801c7dea	63a3801c7dea	identical
+writeFile	b261151281b2	b261151281b2	identical
 writeSampleWorkspace	af9f7648decc	5a7d8829ecce	divergent
 wsLine	f5ef6e5dc8e9	f5ef6e5dc8e9	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent

@@ -495,6 +495,28 @@ function showAbout() {
 function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
 
 // ---------- filesystem ----------
+// The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
+// root again - two calls to the browser's file system before the one that does the work - so half of
+// what a pull and a load spend is asking for the same directory over and over. Measured: writing a
+// function cost 8 calls, of which 4 were this.
+//
+// Handles are per working folder, so the cache is dropped whenever that changes; a stale handle is
+// worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
+// checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
+// back by us.
+let _dirCache = new Map();
+const forgetDirs = () => { _dirCache = new Map(); };
+async function dirFor(parts, create) {
+  const key = parts.join('/');
+  // The cache answers for writes too: a folder that has been created once exists, and asking the
+  // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
+  // was set left a pull paying full price for every file it wrote - half of the eight calls each.
+  if (_dirCache.has(key)) return _dirCache.get(key);
+  let d = dir;
+  for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
+  _dirCache.set(key, d);
+  return d;
+}
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
 const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) === 'granted';
 // The guard every pull, graph and export opens with. It throws rather than returning false, so the
@@ -505,14 +527,14 @@ const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) ==
 // that differs between one report of a lapsed permission and another.
 async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
 async function writeFile(rel, content) {
-  const parts = rel.split('/'); let d = dir;
-  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+  const parts = rel.split('/');
+  const d = await dirFor(parts.slice(0, -1), true);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
 }
 async function readFile(rel) {
-  const parts = rel.split('/'); let d = dir;
-  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p);
+  const parts = rel.split('/');
+  const d = await dirFor(parts.slice(0, -1), false);
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
 }
@@ -3596,7 +3618,7 @@ async function activate(w, viaGesture) {
   // setEnabled(true), so `isSample()` was still answering about the *previous* workspace and the
   // per-type Pull came back on - «fields first, state second», which this repository already
   // records in its mirror image. The two are one fact about one workspace; they move together.
-  dir = w.handle; activeWsId = w.id; bound = w.binding || null;
+  dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
   await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   oldLayout = await hasOldLayout(w.handle);
   // Not on a re-activation of the workspace already open - regranting a folder must not throw
@@ -3667,14 +3689,14 @@ async function loadWorkspaces() {
   wsList = [];
   if (!root) {
     sel.innerHTML = '<option value="">No working folder</option>';
-    dir = null; setEnabled(false); updateWsButtons();
+    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus('Pick a working folder to start - every workspace lives inside it.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
   rootGranted = await hasPerm(root);
   if (!rootGranted) {
     sel.innerHTML = `<option value="">${root.name} - access not granted</option>`;
-    dir = null; setEnabled(false); updateWsButtons();
+    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
@@ -3708,7 +3730,7 @@ async function loadWorkspaces() {
       }
     } catch (_) {}
     sel.innerHTML = `<option value="">${root.name}/${APP_DIR} - no workspaces yet</option>`;
-    dir = null; setEnabled(false); updateWsButtons();
+    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus(stray
       ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
@@ -3810,6 +3832,7 @@ $('wsdel').onclick = async () => {
       const base = await appRoot(false);
       if (!base) { setStatus('Could not open the workspace folder.', 'warn'); return; }
       await base.removeEntry(w.name, { recursive: true });   // delete inside crm/, never at the root
+      forgetDirs();   // the folders we remembered are gone with it
     await window.idbHandle.set('activeWs', null);
     currentPath = null; $('preview').classList.remove('show');
     setStatus(`Removed ${w.name}.`, 'ok');

@@ -186,15 +186,38 @@ const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) ==
 // mirror-writing entry points; this one guarded two of five, and pullAll, pullOne and retryFailed
 // wrote straight to disk. Same wording as the twin, so one message covers both products.
 async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
+// The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
+// root again - two calls to the browser's file system before the one that does the work - so half of
+// what a pull and a load spend is asking for the same directory over and over. Measured: writing a
+// function cost 8 calls, of which 4 were this.
+//
+// Handles are per working folder, so the cache is dropped whenever that changes; a stale handle is
+// worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
+// checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
+// back by us.
+let _dirCache = new Map();
+const forgetDirs = () => { _dirCache = new Map(); };
+async function dirFor(parts, create) {
+  const key = parts.join('/');
+  // The cache answers for writes too: a folder that has been created once exists, and asking the
+  // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
+  // was set left a pull paying full price for every file it wrote - half of the eight calls each.
+  if (_dirCache.has(key)) return _dirCache.get(key);
+  let d = dir;
+  for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
+  _dirCache.set(key, d);
+  return d;
+}
+
 async function writeFile(rel, content) {
-  const parts = rel.split('/'); let d = dir;
-  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+  const parts = rel.split('/');
+  const d = await dirFor(parts.slice(0, -1), true);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
 }
 async function readFile(rel) {
-  const parts = rel.split('/'); let d = dir;
-  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p);
+  const parts = rel.split('/');
+  const d = await dirFor(parts.slice(0, -1), false);
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
 }
@@ -312,7 +335,7 @@ async function refreshWorkspaces() {
     : `Working folder: ${root.name} - click to choose a different one`;
   if (root && !rootGranted) {
     sel.innerHTML = '<option value="">access not granted</option>';
-    dir = null; bound = null;
+    dir = null; bound = null; forgetDirs();
     // Word for word the CRM's. The blocker is one click, and saying nothing here left the status line
     // reading "Ready." while nothing could be read at all.
     status('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
@@ -336,7 +359,7 @@ async function refreshWorkspaces() {
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} - no workspaces yet</option>`;
     if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own - move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
-    dir = null; bound = null; render(); return updateButtons();
+    dir = null; bound = null; forgetDirs(); forgetDirs(); render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
   // The list is real now, so the remembered answer is refreshed from it - including to null,
@@ -381,7 +404,7 @@ function resetView() {
 
 async function selectWorkspace(w) {
   const sameWs = bound && bound.workspace === w.id;
-  dir = w.handle;
+  dir = w.handle; forgetDirs();
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
   await window.idbHandle.set('activeWsAnalytics', w.id);
   // Not on a re-selection of the workspace already open - regranting a folder must not throw
@@ -405,7 +428,7 @@ async function addWorkspace() {
     if (!base) throw new Error(`could not create the ${APP_DIR}/ folder`);
     const folder = stemOf(info.name || 'workspace', info.workspace);
     const h = await base.getDirectoryHandle(folder, { create: true });
-    dir = h;
+    dir = h; forgetDirs();
     await patchCfg({ workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV, lastPull: null });
     setBusy(false, `Workspace «${info.name || info.workspace}» created. Press Pull all.`);
     $('status').className = 'ok';
@@ -428,7 +451,7 @@ async function delWorkspace() {
     if (!base) { status('Could not open the workspace folder.', 'warn'); return; }
     await base.removeEntry(w.folder, { recursive: true });   // delete inside analytics/, never at the root
     await window.idbHandle.set('activeWsAnalytics', null);
-    dir = null; bound = null;
+    dir = null; bound = null; forgetDirs();
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
     $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; navClear();
     status(`Removed ${w.folder}.`, 'ok');
