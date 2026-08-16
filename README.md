@@ -88,8 +88,12 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   - as a searchable Explorer and a visual node-link graph (drag a box to arrange it, take a box off
     the drawing from the circle where an arc meets it, save the arrangement to a file and load it
     back, Save PDF).
-- **Hypertext code**: in the preview, calls to custom functions are clickable - jump to the
-  definition and back.
+- **Hypertext, everywhere**: a name that identifies something the panel can show is a link - a call
+  in the code, a rule under **Used in**, an entry in the lineage tab, a foreign key. What has no
+  page here stays plain text rather than leading nowhere; a custom button offers its module instead,
+  which is where it lives. And because following links is only half of it, the detail pane keeps a
+  **history** like a browser's: back, forward, and the whole chain to jump into (Alt+← / Alt+→). It
+  spans the tabs and is cleared only by changing workspace.
 - **Module schema & ER diagram**: browse fields (type, lookup, picklist) and view foreign-key
   relationships as an entity-relationship diagram (pan / zoom / fit / drag a box to arrange it / take a
   box off the drawing / save and reload the arrangement as a file / Save PDF).
@@ -305,6 +309,7 @@ environments.
 
 **Preview** (resizable)
 - Functions: highlighted code, line numbers, a **Called by** bar, clickable custom-function calls,
+  a history (◂ ▸ ⋯) over everything you have opened,
   and **Find in Zoho ↗** (filters the Zoho functions list to it; you open it from Zoho's own ⋯ menu).
   It also lists the **connections** the function uses (click one to filter the tree to every function
   that uses it) and its last-modified author and date.

@@ -229,7 +229,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <figure class="shot">
     <img src="/img/analytics-lineage.webp?v=4007c309e2" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Lineage tab of a query table, showing which columns it reads and from where.">
-    <figcaption>Lineage: for a query table, which columns it reads and from which view - the chain Zoho Analytics does not draw.</figcaption>
+    <figcaption>Lineage: for a query table, which columns it reads and from which view - the chain Zoho Analytics does not draw. Every name in it is a link to that view, as are the foreign keys under <b class="ui">Columns</b>.</figcaption>
   </figure>
 
   <h2 id="structure">6. Structure and foreign keys</h2>
@@ -326,6 +326,15 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     move the selection through the views the filters have left standing and open each one as a click
     would, <b class="ui">Home</b> and <b class="ui">End</b> go to the two ends. It used to scroll and
     nothing else, which is all a browser knows about a list.</p>
+  <p>Following a link is only half of it, so the pane keeps a <b>history</b>, exactly as a browser
+    does: <b class="ui">◂</b> goes back a step, <b class="ui">▸</b> forward again, and
+    <b class="ui">⋯</b> opens the whole chain - every item you have opened, most recent first, with
+    the one you are on marked - so you can jump straight to a step several back instead of pressing
+    back four times. <b class="ui">Alt</b> with <b class="ui">←</b> or <b class="ui">→</b> does the
+    same from the keyboard. Each control appears only when it has somewhere to take you.
+    The chain spans the tabs, so a rule you reached from a function is one step away from it; closing
+    the pane keeps it, and only changing workspace clears it - the steps would name another org's
+    files.</p>
   <p>The SQL in the panel is coloured: comments, strings, numbers, the names Zoho writes in double
     quotes, and a fixed list of keywords. Only those. A word that could be a column, a function from
     a dialect nobody here has read end to end, a name that merely looks reserved - left plain, because

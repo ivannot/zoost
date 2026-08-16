@@ -428,7 +428,21 @@
      «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
      module moved everything below it by 7px. The height of the taller state, held. */
   #pvhead{display:flex;gap:8px;align-items:center;min-height:36px;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
+  /* «name in Module»: the joining word is quiet so the two names stay the readable part. */
+  .apwrap .apin{color:var(--muted);font-style:italic}
+  #pvhead{position:relative}
   #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none} #pvhead .back.show{display:inline}
+  /* The chain hangs under the header it belongs to. Capped and scrollable rather than allowed to
+     grow: fifty steps of a walk is a list, not a page. */
+  #pvchainmenu{display:none;position:absolute;top:100%;left:6px;z-index:40;min-width:220px;max-width:92%;
+    max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.38);padding:4px}
+  #pvchainmenu.show{display:block}
+  #pvchainmenu .nvrow{display:flex;gap:8px;align-items:baseline;padding:4px 8px;border-radius:6px;cursor:pointer;font:11px var(--sans)}
+  #pvchainmenu .nvrow:hover{background:var(--tree)}
+  #pvchainmenu .nvrow.at{background:var(--sel-soft)}
+  #pvchainmenu .nvk{color:var(--muted);flex:none;font-size:10px;text-transform:uppercase;letter-spacing:.04em;min-width:62px}
+  #pvchainmenu .nvl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
   /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
      in the element that also holds the name - so the one part worth reading, the file name,
@@ -569,7 +583,10 @@
     <div id="resizer"></div>
     <div id="preview">
       <div id="pvhead">
-        <span class="back" id="pvback" title="Back">◂</span>
+        <span class="back" id="pvback" title="Back (Alt+←)" aria-label="Back">◂</span>
+        <span class="back" id="pvfwd" title="Forward (Alt+→)" aria-label="Forward">▸</span>
+        <span class="back" id="pvchain" title="Everywhere you have been - click a step to go there" aria-label="History">⋯</span>
+        <div id="pvchainmenu"></div>
         <span id="pvname"></span>
         <span id="pvfile"></span>
         <span class="reveal" id="pvreveal" title="Open in Zoho">Open in Zoho ↗</span>

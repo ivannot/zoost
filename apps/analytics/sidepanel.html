@@ -205,6 +205,20 @@
   #list{flex:1 1 auto;overflow:auto;padding:0 0 4px;min-height:60px;background:var(--tree)}
   .dhead{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
   .dhead .dt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .dhead{position:relative}
+  /* Present only when it can do something - this panel's rule for Clear and for Forget. */
+  .dhead .back{cursor:pointer;color:var(--accent);flex:none;display:none;font-size:13px;padding:0 1px}
+  .dhead .back.show{display:inline}
+  #dchainmenu{display:none;position:absolute;top:100%;left:6px;z-index:40;min-width:220px;max-width:92%;
+    max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.38);padding:4px}
+  #dchainmenu.show{display:block}
+  #dchainmenu .nvrow{display:flex;gap:8px;align-items:baseline;padding:4px 8px;border-radius:6px;cursor:pointer;font:11px var(--sans)}
+  /* The list's own row colours, not invented ones: this is a history of that list and reads as it. */
+  #dchainmenu .nvrow:hover{background:var(--tree)}
+  #dchainmenu .nvrow.at{background:var(--sel-soft)}
+  #dchainmenu .nvk{color:var(--muted);flex:none;font-size:10px;text-transform:uppercase;letter-spacing:.04em;min-width:62px}
+  #dchainmenu .nvl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dhead .dx{cursor:pointer;color:var(--muted);font-size:15px;padding:0 4px}
   .dhead .dx:hover{color:var(--ink)}
   .dtabs{display:flex;gap:3px;padding:5px 7px;border-bottom:1px solid var(--line);background:#131a27;align-items:center}
@@ -436,7 +450,7 @@
 
   <div id="resizer"></div>
   <div id="detail">
-    <div class="dhead"><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram - opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror - &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><button id="dzoho" class="znav" style="height:22px;padding:0 8px;font-size:11px" title="Open this view in Zoho Analytics" aria-label="Open in Zoho">Open in Zoho ↗</button><span class="dx" id="dclose" title="Close">&times;</span></div>
+    <div class="dhead"><span class="back" id="dback" title="Back (Alt+←)" aria-label="Back">◂</span><span class="back" id="dfwd" title="Forward (Alt+→)" aria-label="Forward">▸</span><span class="back" id="dchain" title="Everywhere you have been - click a step to go there" aria-label="History">⋯</span><div id="dchainmenu"></div><span class="dt" id="dtitle"></span><button id="dgraph" class="lbtn" style="height:22px;padding:0 8px;font-size:11px" title="ER diagram - opened on this table, in its own window" aria-label="ER diagram"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button><button id="dpull" class="zbtn" style="height:22px;padding:0 8px;font-size:11px" title="Pull only this view into the local mirror - &ldquo;Pull all&rdquo; does every view" aria-label="Pull"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><button id="dzoho" class="znav" style="height:22px;padding:0 8px;font-size:11px" title="Open this view in Zoho Analytics" aria-label="Open in Zoho">Open in Zoho ↗</button><span class="dx" id="dclose" title="Close">&times;</span></div>
     <div class="dtabs">
       <button class="dtab active" id="tab_cols" data-tab="cols">Columns</button>
       <button class="dtab" id="tab_sql" data-tab="sql">SQL</button>

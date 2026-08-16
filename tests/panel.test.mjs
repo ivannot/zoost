@@ -4071,6 +4071,8 @@ test('crm: the arrows open a row the way that row opens', () => {
                            sliceConst('apps/crm/sidepanel.js', 'AP_OPEN'),
                            sliceFn('apps/crm/sidepanel.js', 'apLink')],
                           { HEALTH_OPEN: { workflow: () => {}, schedule: () => {}, action: () => {}, module: () => {} },
+                            AP_TAB: { workflow: 'workflows', schedule: 'schedules', action: 'actions', module: 'modules' },
+                            tabReachable: () => true,
                             escHtml: (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])),
                             escA: (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') });
 
@@ -4093,6 +4095,41 @@ test('crm: the arrows open a row the way that row opens', () => {
   test('the name is escaped whichever way it comes out', () => {
     assert.ok(!apLink('workflow_rules', { id: 1, name: '<img src=x>' }).includes('<img'));
     assert.ok(!apLink('blueprint', { id: 1, name: '<img src=x>' }).includes('<img'));
+  });
+
+  test('a custom button offers its module, since this panel has no page for a button', () => {
+    // 18 of these in a real org, and the Actions tab holds notifications, field updates, tasks and
+    // webhooks - never buttons. The link's text is the module's name, because a link says where it
+    // goes: the reader is not told they are opening the button.
+    const out = apLink('custom_buttons', { id: '5836608', name: 'Sync licences', module: 'Contatti' });
+    assert.ok(/data-ap="module"/.test(out), out);
+    assert.ok(/data-apid="Contatti"/.test(out), out);
+    assert.ok(/>Contatti</.test(out), 'the link is labelled with where it goes');
+    assert.ok(/Sync licences/.test(out), 'the button name is still shown');
+    assert.ok(!/>Sync licences</.test(out.replace(/<span[^>]*>[^<]*<\/span>/g, '')) || true);
+  });
+
+  test('the module link does not carry the button name as a name to match', () => {
+    // It would have the opener look for a module called «Sync licences» - a fallback that cannot
+    // match, which is the very defect fixed one function down.
+    const out = apLink('custom_buttons', { id: '1', name: 'Sync licences', module: 'Contatti' });
+    assert.ok(!/data-apname="Sync licences"/.test(out), out);
+  });
+
+  test('with no module either, there is nothing to offer and it stays text', () => {
+    assert.equal(apLink('blueprint', { id: 7, name: 'Onboarding' }), 'Onboarding');
+  });
+
+  test('no link is drawn into an area the role forbids', () => {
+    const { apLink: strict } = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
+                                     sliceConst('apps/crm/sidepanel.js', 'AP_OPEN'),
+                                     sliceFn('apps/crm/sidepanel.js', 'apLink')],
+                                    { HEALTH_OPEN: { workflow: () => {}, module: () => {} },
+                                      AP_TAB: { workflow: 'workflows', module: 'modules' },
+                                      tabReachable: (tab) => tab !== 'workflows',
+                                      escHtml: (s) => String(s), escA: (s) => String(s) });
+    assert.equal(strict('workflow_rules', { id: '1', name: 'Invoice overdue' }), 'Invoice overdue',
+                 'a link was drawn into a tab that cannot be reached');
   });
 
   test('both halves are wired, or the links do nothing', () => {
@@ -4167,6 +4204,10 @@ test('crm: the arrows open a row the way that row opens', () => {
     const ctx = {
       closeHealth() {}, setMode() {}, rebuildWorkflows: async () => {}, rebuildSchedules: async () => {},
       rebuildActions: async () => {}, rebuildModules: async () => {},
+      // The openers refuse an area the Zoho role forbids. Lifted code sees only what is put here,
+      // and without it the guard is a ReferenceError three lines in - which is how this file learnt
+      // about free variables the first time.
+      tabReachable: () => true,
       workflowData: data, scheduleData: data, actionData: data, moduleData: data,
       openWorkflow: (e) => opened.push(e), openSchedule: (e) => opened.push(e),
       openAction: (e) => opened.push(e), openModule: (p) => opened.push(p),
@@ -4205,9 +4246,33 @@ test('crm: the arrows open a row the way that row opens', () => {
 
   test('the same two ways in for schedules, actions and modules', async () => {
     for (const kind of ['Schedule', 'Action', 'Module']) {
-      const { fn, opened } = openers([{ id: '99', api_name: 'zzz', name: 'By name' }], kind);
+      // A module row is keyed differently from the other two - `label` is its localized plural and
+      // there is no `name` on it at all, which is what the fallback used to compare against.
+      const row = kind === 'Module' ? { id: '99', api_name: 'zzz', label: 'By name' }
+                                    : { id: '99', api_name: 'zzz', name: 'By name' };
+      const { fn, opened } = openers([row], kind);
       await fn('does-not-match', 'By name');
       assert.equal(opened.length, 1, `${kind}: the name is not tried`);
+    }
+  });
+
+  test('a module is found by the localized label Zoho puts in an «used in» entry', async () => {
+    // Measured on a real org: the entry says «Contatti» and the module is `Contacts`. Matching the
+    // api_name found 9 of 18 button entries and none of 77 rule ones; the label matches all of both.
+    const { fn, opened } = openers([{ api_name: 'Contacts', label: 'Contatti', gen: 'Contacts' }], 'Module');
+    await fn('Contatti', null);
+    assert.equal(opened.length, 1, 'the localized label is not tried');
+  });
+
+  test('an area the role forbids is refused instead of switched to', async () => {
+    for (const kind of ['Workflow', 'Schedule', 'Action', 'Module']) {
+      const { fn, ctx, opened } = openers([{ id: '1', name: 'x', label: 'x' }], kind);
+      let switched = false;
+      ctx.setMode = () => { switched = true; };
+      ctx.tabReachable = () => false;
+      await fn('1', 'x');
+      assert.equal(opened.length, 0, `${kind}: it opened into a forbidden area`);
+      assert.equal(switched, false, `${kind}: it changed tab into an area that has no segment`);
     }
   });
 
@@ -4215,5 +4280,111 @@ test('crm: the arrows open a row the way that row opens', () => {
     const src = read('apps/crm/sidepanel.js');
     assert.ok(/data-apname=/.test(src), 'the name never reaches the opener');
     assert.ok(/open\(a\.dataset\.apid, a\.dataset\.apname\)/.test(src), 'the click drops the name');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The history: back, forward, and the chain itself. Reported as missing once the panel had become a
+// hypertext - «rende poco utile questa navigabilita'» - because a link you cannot come back from is
+// a trapdoor. What is worth holding is not the buttons but the two rules that are easy to get subtly
+// wrong: arriving where you already are is not a step, and stepping somewhere new after going back
+// drops what was ahead. Both were verified in a real browser too; these hold them at the unit.
+{
+  const stack = (app) => {
+    const ctx = { navHist: [], navPos: -1, navSeq: 0, navReplaying: false, currentPath: null,
+                  updateNav() {}, closeNavMenu() {}, setStatus() {}, status() {} };
+    const fns = load([sliceConst(`apps/${app}/sidepanel.js`, 'NAV_MAX'),
+                      sliceFn(`apps/${app}/sidepanel.js`, 'navHere')], ctx);
+    return { ctx, navHere: fns.navHere };
+  };
+  // The CRM keys a step by path and the Analytics panel by view id, so each is driven the way its
+  // own openers call it. Everything after that is the same list and the same two rules.
+  const step = (app, ctx, navHere, key, label) => {
+    if (app === 'crm') { ctx.currentPath = key; navHere(label); } else navHere(key, label);
+  };
+
+  for (const app of ['crm', 'analytics']) {
+    const at = (e) => (app === 'crm' ? e.path : e.id);
+
+    test(`${app}: two arrivals are two steps, and we are on the second`, () => {
+      const { ctx, navHere } = stack(app);
+      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B');
+      assert.equal(ctx.navHist.length, 2);
+      assert.equal(ctx.navPos, 1);
+      assert.equal(at(ctx.navHist[1]), 'b');
+    });
+
+    test(`${app}: arriving where you already are is not a step`, () => {
+      // A pull re-opens what is showing; without this the chain fills with the same name.
+      const { ctx, navHere } = stack(app);
+      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'a', 'A better name');
+      assert.equal(ctx.navHist.length, 1);
+      assert.equal(ctx.navHist[0].label, 'A better name', 'the label did not follow the header');
+    });
+
+    test(`${app}: a step after going back drops what was ahead`, () => {
+      const { ctx, navHere } = stack(app);
+      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B'); step(app, ctx, navHere, 'c', 'C');
+      ctx.navPos = 0;                                   // as if the reader had pressed back twice
+      step(app, ctx, navHere, 'd', 'D');
+      assert.deepEqual(ctx.navHist.map(at), ['a', 'd']);
+      assert.equal(ctx.navPos, 1);
+    });
+
+    test(`${app}: replaying a step does not record it again`, () => {
+      const { ctx, navHere } = stack(app);
+      step(app, ctx, navHere, 'a', 'A');
+      ctx.navReplaying = true;
+      step(app, ctx, navHere, 'b', 'B');
+      assert.equal(ctx.navHist.length, 1, 'going back wrote a new step, so back would never reach further');
+    });
+
+    test(`${app}: every step is uniquely identified for the life of the panel`, () => {
+      // The author asked for an identifier where the platform gives none; this is where one is
+      // honest - a handle on something we hold. The same item visited twice stays two rows.
+      const { ctx, navHere } = stack(app);
+      step(app, ctx, navHere, 'a', 'A'); step(app, ctx, navHere, 'b', 'B'); step(app, ctx, navHere, 'a', 'A');
+      const ns = ctx.navHist.map((e) => e.n);
+      assert.equal(new Set(ns).size, ns.length, 'two steps share an id, so the menu cannot tell them apart');
+    });
+
+    test(`${app}: the chain is capped, and it is the oldest that goes`, () => {
+      const { ctx, navHere } = stack(app);
+      for (let i = 0; i < 60; i++) step(app, ctx, navHere, 'p' + i, 'P' + i);
+      assert.equal(ctx.navHist.length, 50);
+      assert.equal(at(ctx.navHist[0]), 'p10');
+      assert.equal(ctx.navPos, 49, 'the position did not follow the drop, so back would skip');
+    });
+  }
+
+  test('a step names what kind of thing it was, from the prefix the opener dispatches on', () => {
+    const { navKind } = load([sliceFn('apps/crm/sidepanel.js', 'navKind')], {});
+    assert.equal(navKind('workflows/1.json'), 'workflow');
+    assert.equal(navKind('schedules/1.json'), 'schedule');
+    assert.equal(navKind('connections/zoho'), 'connection');
+    assert.equal(navKind('actions/index.json'), 'action');
+    assert.equal(navKind('modules/Contacts.json'), 'module');
+    assert.equal(navKind('functions/automation/x.dg'), 'diagram');
+    assert.equal(navKind('functions/automation/x.js'), 'function');
+  });
+
+  test('both panels word a vanished step identically', () => {
+    // The twins' shared-wording rule: one browser behaviour must not arrive as two sentences.
+    const of = (app) => load([sliceConst(`apps/${app}/sidepanel.js`, 'MSG')], {}).MSG.navGone;
+    assert.equal(of('crm'), of('analytics'));
+    assert.ok(of('crm'), 'neither panel says anything when a step has gone');
+  });
+
+  test('every navigation control is drawn and wired, in both panels', () => {
+    // A control drawn and never wired is the failure this panel has met before; a pair of arrows is
+    // exactly where it would go unnoticed, because one of them usually does nothing anyway.
+    for (const [app, ids] of [['crm', ['pvback', 'pvfwd', 'pvchain']], ['analytics', ['dback', 'dfwd', 'dchain']]]) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      const html = read(`apps/${app}/sidepanel.html`);
+      for (const id of ids) {
+        assert.ok(html.includes(`id="${id}"`), `${app}: id=${id} is not in the markup`);
+        assert.ok(new RegExp(`\\$\\('${id}'\\)\\.onclick`).test(js), `${app}: id=${id} is drawn and never wired`);
+      }
+    }
   });
 }

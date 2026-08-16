@@ -243,8 +243,10 @@ git commit -m "baseline"</code></pre>
     on, and the report then carries that date. Both reports state the per-area dates in any case: the
     fact is yours to weigh, and hiding it would be the one thing worse than an old chapter.</p>
   <ul>
-    <li>In a function's code, calls to other custom functions are <b>clickable</b> - jump to the definition,
-      then use <b class="ui">◂ back</b>.</li>
+    <li>In a function's code, calls to other custom functions are <b>clickable</b> - jump to the
+      definition, then come back with <b class="ui">◂</b>. So are the rules, schedules and actions
+      under <b>Used in</b>; a custom button has no page here, so its <b>module</b> is offered
+      instead - the link is labelled with where it goes.</li>
     <li>The preview header shows where a function is wired across the org (blueprint, button, schedule…).</li>
     <li>It also lists the <b>connections</b> the function uses and who last changed it - click a connection
       to filter the tree to every function that uses it (no more "find in file" for a connection name).</li>
@@ -276,6 +278,15 @@ git commit -m "baseline"</code></pre>
     <b class="ui">↓</b> walk the functions that are on screen - what the search and the type filter
     have left, never inside a collapsed group - and open each as a click would;
     <b class="ui">Home</b> and <b class="ui">End</b> go to the two ends.</p>
+  <p>Following a link is only half of it, so the pane keeps a <b>history</b>, exactly as a browser
+    does: <b class="ui">◂</b> goes back a step, <b class="ui">▸</b> forward again, and
+    <b class="ui">⋯</b> opens the whole chain - every item you have opened, most recent first, with
+    the one you are on marked - so you can jump straight to a step several back instead of pressing
+    back four times. <b class="ui">Alt</b> with <b class="ui">←</b> or <b class="ui">→</b> does the
+    same from the keyboard. Each control appears only when it has somewhere to take you. A step into an area your Zoho role does not grant is refused with a reason rather than opened onto an empty list.
+    The chain spans the tabs, so a rule you reached from a function is one step away from it; closing
+    the pane keeps it, and only changing workspace clears it - the steps would name another org's
+    files.</p>
 
   <figure class="shot">
     <img src="/img/crm-search.webp?v=62d2b116ed" width="1760" height="1100" loading="lazy" decoding="async"

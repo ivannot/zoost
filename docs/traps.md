@@ -378,3 +378,29 @@ makes that sentence sayable rather than hopeful.
 The pattern behind most of these: a value crossing a boundary — between languages, between
 contexts, between code branches — and being interpreted differently on the other side. Those are
 the places to look first when something "does nothing".
+
+## Zoho's ids across a boundary: three records where a reader sees one
+
+A function's `associated_place` says where that function is used. Measured on a real org of 270
+functions, against the mirror those same pulls wrote:
+
+  - **workflow rules: 0 of 77 matched by id, 77 of 77 by name.** Zoho puts an *action* record between
+    a rule and the function it fires, and the id in that entry is the action's. The numbers even look
+    right - the rule is `...21172047` and the entry says `...21172030`, adjacent because they were
+    allocated together - which is what makes this so easy to believe.
+  - **the reverse direction is no better: 0 of 93 by id, 93 by name.** A rule's own JSON lists its
+    actions as `{name, id, type: 'functions'}`, and that id is the action's too. So neither end of the
+    relation carries the other's key, and searching all 519 files of the mirror for one of those ids
+    finds it only in the function meta that carried it.
+  - **schedules are the exception: 2 of 2 by id.** Which is the trap's other half - the same field is
+    exact for one kind and wrong for another, so a lookup that works is not evidence.
+  - **`module` is the *localized* label.** «Contatti» where the api name is `Contacts`, so matching it
+    against the mirror's index found 9 of 18 button entries and none of 77 rule ones. The panel's
+    `moduleData.label` is that same localized plural, and against it the match is 18 of 18 and 77 of
+    77, with no two modules sharing a label in that org.
+
+The consequence is a design rule, not a fix: **id first, name second, and refuse when the name is
+ambiguous.** Minting an identifier of our own does not help here and was considered - to attach the
+same id to both records you must already know they are the same record, which is the question. A
+generated id is a handle on something we hold (the history's steps are keyed by one), never a join
+between two records the platform declines to join.

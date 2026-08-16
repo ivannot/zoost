@@ -62,6 +62,13 @@ EQUIV = {
     'tree': 'list',          # the scrolling list of items
     'preview': 'detail',     # the pane below the draggable split
     'findx': 'findclear',    # the search box's clear affordance
+    # The history controls. Named after the pane each sits in - `pv` for the CRM's preview, `d` for
+    # the Analytics detail - which is the same divergence as #preview / #detail one line up, so it
+    # is declared the same way rather than renamed on one side alone.
+    'pvback': 'dback',       # back one step
+    'pvfwd': 'dfwd',         # forward one step
+    'pvchain': 'dchain',     # the chain itself, to jump to a step
+    'pvchainmenu': 'dchainmenu',
 }
 
 # Elements that exist in one product because the other has no such concept. Each owes a reason.

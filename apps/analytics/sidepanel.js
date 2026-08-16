@@ -51,6 +51,7 @@ const MSG = {
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
+  navGone: 'That step is not in this workspace any more.',
   errPrefix: 'Error: ',
 };
 
@@ -427,7 +428,7 @@ async function delWorkspace() {
     await window.idbHandle.set('activeWsAnalytics', null);
     dir = null; bound = null;
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
-    $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null;
+    $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; navClear();
     status(`Removed ${w.folder}.`, 'ok');
     await refreshWorkspaces();
     render();
@@ -866,7 +867,9 @@ async function loadFromDisk() {
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   diskUnreadable = views.length ? null : readFailed;
-  selectedId = null; $('detail').classList.remove('show'); $('resizer').classList.remove('show');
+  // Another workspace on disk: the chain is dropped, because every step in it is a view id that
+  // belongs to the one being left. This and the removal below are the only places that forget.
+  selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
 }
@@ -1223,6 +1226,10 @@ async function openDetail(id) {
   selectedId = id;
   const v = viewById().get(id);
   if (!v) return;
+  // Every way in passes through here - a row click, an arrow key, a foreign key, a lineage entry -
+  // so the history is complete without any of them knowing it exists. The kind is carried too, so
+  // the chain reads «query table Funnel» rather than a bare name.
+  navHere(id, v.name); { const e = navHist[navPos]; if (e) e.kind = v.type; }
   $('detail').classList.add('show'); $('resizer').classList.add('show');
   $('dtitle').textContent = v.name;
   // A Zoho read, so it is worded and coloured like every other Zoho read: "Pull", .zbtn. The ↻ glyph
@@ -2483,6 +2490,72 @@ function stepSelection(delta, edge) {
   revealRow(el, $('list'), 'thead');
 }
 
+// ---------- history: the chain you have walked, and the way back up it ----------
+// The twin of the CRM panel's, and the same argument: the lineage tab and the foreign keys made this
+// a hypertext, and a hypertext you cannot come back through is a set of trapdoors. Back, forward,
+// and the chain itself - «back» alone reaches the previous step and the author asked to be able to
+// climb the whole thing.
+//
+// The handle is the view id, because that is what this panel opens everything by. `n` is a runtime
+// identifier minted here: it keys the menu's rows, so the same view visited twice stays two steps of
+// a walk rather than collapsing into one.
+const NAV_MAX = 50;
+let navHist = [], navPos = -1, navReplaying = false, navSeq = 0;
+
+function navHere(id, label) {
+  if (navReplaying || !id) return;
+  const cur = navHist[navPos];
+  if (cur && String(cur.id) === String(id)) { if (label) cur.label = label; updateNav(); return; }
+  // A new step drops what was ahead - the forward arrow means «where I came back from».
+  navHist = navHist.slice(0, navPos + 1);
+  navHist.push({ n: ++navSeq, id: String(id), label: label || String(id), kind: '' });
+  if (navHist.length > NAV_MAX) navHist.shift();
+  navPos = navHist.length - 1;
+  updateNav();
+}
+function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
+
+/** Go to step `i`. The position moves even when the view has gone - a workspace can be pulled again
+ *  with one fewer query in it - and the status line says so, the same as the twin. */
+async function navTo(i) {
+  if (i < 0 || i >= navHist.length || i === navPos) return;
+  const e = navHist[i];
+  navPos = i; closeNavMenu(); updateNav();
+  navReplaying = true;
+  try {
+    if (viewById().get(e.id)) await openDetail(e.id);
+    else status(MSG.navGone, 'warn');
+  } finally { navReplaying = false; }
+}
+
+function updateNav() {
+  $('dback').classList.toggle('show', navPos > 0);
+  $('dfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
+  $('dchain').classList.toggle('show', navHist.length > 1);
+}
+function closeNavMenu() { $('dchainmenu').classList.remove('show'); }
+function toggleNavMenu() {
+  const m = $('dchainmenu');
+  if (m.classList.contains('show')) { closeNavMenu(); return; }
+  // Newest first: the reader is looking for where they were a moment ago. The step they are on is
+  // marked rather than left out.
+  m.innerHTML = navHist.map((e, i) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(String(e.id))}">`
+    + `<span class="nvk">${esc(e.kind || 'view')}</span><span class="nvl">${esc(e.label)}</span></div>`).reverse().join('');
+  m.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
+  m.classList.add('show');
+}
+
+$('dback').onclick = () => navTo(navPos - 1);
+$('dfwd').onclick = () => navTo(navPos + 1);
+$('dchain').onclick = (e) => { e.stopPropagation(); toggleNavMenu(); };
+document.addEventListener('click', (e) => { if (!$('dchainmenu').contains(e.target)) closeNavMenu(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('dchainmenu').classList.contains('show')) { closeNavMenu(); return; }
+  if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
+});
+
 $('list').addEventListener('keydown', (e) => {
   // A field wants its own arrows - the search box is one line above this, and Tab reaches it.
   const t = e.target;
@@ -2542,7 +2615,8 @@ $('about').onclick = showAbout;
 $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;
 $('scrim').onclick = () => { closeAbout(); closeScope(false); };
-$('dclose').onclick = () => { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; render(); };
+// Closing the pane does not forget where you have been: reopening anything continues the chain.
+$('dclose').onclick = () => { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; updateNav(); render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
   b.onclick = async () => {
     if (b.disabled) return;

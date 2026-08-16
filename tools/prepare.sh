@@ -31,6 +31,9 @@ python3 tools/sitemap.py
 step 'the battery'
 bash tests/run.sh
 
+step 'the panels, driven — what a unit test cannot see: a click, a key, the state afterwards'
+python3 tools/probe.py
+
 step 'images again — the derived checks, now that the pages are stamped'
 python3 tools/imgcheck.py
 

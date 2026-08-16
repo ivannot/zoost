@@ -43,6 +43,7 @@ clearFocus	e18fb77e57ea	e18fb77e57ea	identical
 closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	8e2a65db1025	8e2a65db1025	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
+closeNavMenu	742c8ebc1cd2	444938104810	divergent
 closeScope	7e880dca67a7	9961035b74ab	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
@@ -136,6 +137,9 @@ markOwn	7986da9d2681	7986da9d2681	identical
 matchArrangement	a8f7bcc97145	a8f7bcc97145	identical
 mergeKeys	ad756dd98e9a	ad756dd98e9a	identical
 mismatchRefuse	375f245e1392	fda4a5879a7f	divergent
+navClear	743d2462fe92	743d2462fe92	identical
+navHere	2092c0b8f91e	a5194a785aef	divergent
+navTo	8a84fcd2aaf1	90018b58a0d7	divergent
 noFocusHere	a28b950d2cfe	1692cf472065	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
@@ -161,7 +165,7 @@ renameWorkspace	e0685ddb2452	31b53c1010c7	divergent
 render	1f1f526caa02	b706d7abf71d	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 requirePerm	8477c2cb408e	8477c2cb408e	identical
-resetView	962f31f75f7d	f67417c0398c	divergent
+resetView	1c1970bc462f	f67417c0398c	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
@@ -190,8 +194,10 @@ textWidth	81d2d194f73e	81d2d194f73e	identical
 toBridge	52df3ac517f0	6afde4d5fbe5	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	8780db5203e0	e7a00b84968a	divergent
+toggleNavMenu	29b6169484db	af7c23ddb7b3	divergent
 tooWideToDraw	6f257c252542	a7bebcb40ac5	divergent
 updateDepthUI	77a910d07585	77a910d07585	identical
+updateNav	47725cc82651	0de80259740d	divergent
 updateQx	25d9e1054d45	25d9e1054d45	identical
 updateSampleButtons	3d754198fba8	3d754198fba8	identical
 updateScopeUI	df33d4b78b99	75ff890b9278	divergent

@@ -64,7 +64,7 @@ let zohoDc = 'zoho.com';
 let connectionFilter = null, connFilterSet = null;   // when set, the functions tree shows only functions using that connection
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
 let treeSortDir = 'asc';      // 'asc' | 'desc' - defaults per sort: A→Z for names, biggest-first for numbers
-let currentPath = null, pvHist = [];
+let currentPath = null;
 // `viewMode` opens on whatever tab the user put first, decided once in renderTabs() the first time
 // the row is drawn. It used to be hard-coded to 'functions', so reordering the tabs moved the
 // segments and left the panel showing the same one it always had - the preference was honoured in
@@ -100,6 +100,7 @@ const MSG = {
   actNotPulled: 'Actions have not been pulled into this workspace yet - press Pull here first.',
   modNotHere: 'That module is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Modules.',
   modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull here first.',
+  navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
   wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
   schNotHere: 'That schedule is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Schedules.',
@@ -1013,6 +1014,7 @@ function pvFileOf(path) {
   return { name: 'index.json', title: `${parts.slice(0, -1).join('/')}/index.json - one row inside it` };
 }
 function setPvName(label, path) {
+  navLabel(label);   // the chain shows what the header shows - one name, decided in one place
   const f = pvFileOf(path);
   // A function's name *is* its file name, so printing both would say it twice. Derived from the two
   // strings rather than decided per tab, which is how the tabs drifted apart in the first place.
@@ -1022,7 +1024,7 @@ function setPvName(label, path) {
   $('pvfile').textContent = f && !same ? f.name : '';
   $('pvfile').title = f && !same ? f.title : '';
 }
-function updateBack() { $('pvback').classList.toggle('show', pvHist.length > 0); }
+
 // The list follows whatever the preview is showing. Marking the row was already here; what was
 // missing is everything a reader needs for that mark to *mean* anything - it was reported as the
 // selection staying uncoordinated after jumping from one function to another through a call in the
@@ -1047,11 +1049,13 @@ function syncTreeTo(path) {
   revealRow(row, $('tree'), '.grp');
 }
 
-function openFromTree(path) { pvHist = []; openFile(path); }
-async function openFile(path, push = false, line = null) {
+function openFromTree(path) { openFile(path); }
+async function openFile(path, line = null) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
-  if (push && currentPath && currentPath !== path) pvHist.push(currentPath);
-  currentPath = path; updateBack(); if ($('status').className) setStatus('', '');
+  // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
+  // something each caller decides - every arrival is a step, which is what made the old one useless
+  // the moment the reader changed tab.
+  currentPath = path; navHere(path.split('/').pop()); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
@@ -1063,7 +1067,7 @@ async function openFile(path, push = false, line = null) {
   const _g = await ensureGraph().catch(() => null);
   const _resolve = _g ? makeCallResolver(_g) : null;
   $('pvcode').innerHTML = window.highlightDeluge ? window.highlightDeluge(code, _resolve) : escHtml(code);
-  $('pvcode').querySelectorAll('a.c-link').forEach((a) => { a.onclick = () => openFile(a.dataset.file, true); });
+  $('pvcode').querySelectorAll('a.c-link').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
@@ -1174,7 +1178,7 @@ async function showCallers(path) {
     if (node.updatedTime) modBits.push(escHtml(String(node.updatedTime).slice(0, 16)));
     if (modBits.length) html += `<div class="modline">Last modified ${modBits.join(' \u00b7 ')}</div>`;
     box.innerHTML = html;
-    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file, true)));
+    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file)));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
     // «Used in …»: the rule or the schedule that fires this function, opened where it lives.
     box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
@@ -1198,8 +1202,11 @@ async function showCallers(path) {
     }
   } catch { box.className = ''; }
 }
-$('pvback').onclick = () => { const p = pvHist.pop(); updateBack(); if (p) openFile(p, false); };
-$('pvx').onclick = () => { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; pvHist = []; updateBack(); };
+
+// Closing the pane does not forget where you have been - reopening anything continues the same
+// chain, the way shutting a window does not clear a browser's history. Only leaving the workspace
+// does, below, because there the steps would point at another org's files.
+$('pvx').onclick = () => { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; updateNav(); };
 
 // resizable split
 let dragY = false;
@@ -1579,6 +1586,112 @@ function stepSelection(delta, edge) {
   // have just stepped up onto.
   revealRow(el, $('tree'), '.grp');
 }
+
+// ---------- history: the chain you have walked, and the way back up it ----------
+// A browser's three: back, forward, and the list itself, because «back» alone only reaches the step
+// before - the author asked to be able to «risalire la catena», which is the list.
+//
+// Keyed by `currentPath`, which every opener in this panel sets and whose prefix says what kind of
+// thing it is; `navOpen()` is that discrimination once, in the order `aiFocusLabel()` already uses.
+// A new tab joins the history by setting `currentPath` like its siblings, with nothing to add here.
+const NAV_MAX = 50;
+let navHist = [], navPos = -1, navReplaying = false, navSeq = 0;
+
+/** Record where we have just arrived. Called by the openers, so every way in is covered - a click in
+ *  the tree, an arrow key, a search result, a link in a code pane or in «Used in». A step onto the
+ *  item already showing is not a step: re-opening after a pull would otherwise fill the chain with
+ *  the same name. `n` is the unique runtime id - the menu's key, and the reason a place visited
+ *  twice stays two rows rather than collapsing into one. */
+function navHere(label) {
+  if (navReplaying || !currentPath) return;
+  const cur = navHist[navPos];
+  if (cur && cur.path === currentPath) { if (label) cur.label = label; updateNav(); return; }
+  // Stepping somewhere new drops what was ahead, exactly as a browser does: the forward arrow means
+  // «where I came back from», and after a turn there is no such place any more.
+  navHist = navHist.slice(0, navPos + 1);
+  navHist.push({ n: ++navSeq, path: currentPath, label: label || currentPath.split('/').pop() });
+  if (navHist.length > NAV_MAX) navHist.shift();
+  navPos = navHist.length - 1;
+  updateNav();
+}
+/** The name the header ended up showing is the name the chain shows. Openers know their item's real
+ *  name at different moments - some after reading the file - so the label is taken from the one
+ *  funnel they all pass through rather than from six call sites that could each forget. */
+function navLabel(name) {
+  const cur = navHist[navPos];
+  if (cur && name) { cur.label = name; updateNav(); }
+}
+function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
+
+async function navOpen(p) {
+  const find = (arr) => (arr || []).find((x) => x.path === p);
+  const gone = () => setStatus(MSG.navGone, 'warn');
+  // A step can point into an area the role has stopped granting - the mirror still has the files,
+  // the tab is gone. Same refusal as every other jump, from the one guard.
+  if (!tabReachable(navKind(p) === 'function' || navKind(p) === 'diagram' ? 'functions' : navKind(p) + 's')) return;
+  if (p.startsWith('workflows/')) { setMode('workflows'); await rebuildWorkflows(); const e = find(workflowData); return e ? openWorkflow(e) : gone(); }
+  if (p.startsWith('schedules/')) { setMode('schedules'); await rebuildSchedules(); const e = find(scheduleData); return e ? openSchedule(e) : gone(); }
+  if (p.startsWith('connections/')) { setMode('connections'); await rebuildConnections(); const e = find(connectionData); return e ? openConnection(e) : gone(); }
+  if (p.startsWith('actions/')) { setMode('actions'); await rebuildActions(); const e = find(actionData); return e ? openAction(e) : gone(); }
+  if (p.startsWith('modules/')) { setMode('modules'); await rebuildModules(); return openModule(p); }
+  setMode('functions'); return openFile(p);
+}
+
+/** Go to step `i`. The position moves even when the item turns out not to be there any more - the
+ *  same thing a browser does with a page that has since 404'd, and the status line says which it
+ *  was. Pretending the step never existed would be worse: the chain is a record of where the reader
+ *  went, not a claim that all of it still exists. */
+async function navTo(i) {
+  if (i < 0 || i >= navHist.length || i === navPos) return;
+  const e = navHist[i];
+  navPos = i; closeNavMenu(); updateNav();
+  navReplaying = true;
+  try { await navOpen(e.path); } finally { navReplaying = false; }
+}
+
+// Each control is there only when it can do something, which is this panel's rule for the retry
+// button, for Clear and for Forget. An arrow greyed out is a control saying «not now» in a place
+// where nothing is ever going to make it work except walking somewhere first.
+function updateNav() {
+  $('pvback').classList.toggle('show', navPos > 0);
+  $('pvfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
+  $('pvchain').classList.toggle('show', navHist.length > 1);
+}
+function closeNavMenu() { $('pvchainmenu').classList.remove('show'); }
+function toggleNavMenu() {
+  const m = $('pvchainmenu');
+  if (m.classList.contains('show')) { closeNavMenu(); return; }
+  // Newest first, which is the order the reader is thinking in: they are looking for where they were
+  // a moment ago, not for where they started. The step they are on is marked rather than removed -
+  // a chain with a hole where «here» should be is a chain nobody can read.
+  m.innerHTML = navHist.map((e, i) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(e.path)}">`
+    + `<span class="nvk">${escHtml(navKind(e.path))}</span><span class="nvl">${escHtml(e.label)}</span></div>`).reverse().join('');
+  m.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
+  m.classList.add('show');
+}
+// What kind of thing a step was, from the same prefix navOpen() dispatches on - so the chain reads
+// «workflow Invoice overdue» rather than a bare name that could be any of six things.
+function navKind(p) {
+  if (p.startsWith('workflows/')) return 'workflow';
+  if (p.startsWith('schedules/')) return 'schedule';
+  if (p.startsWith('connections/')) return 'connection';
+  if (p.startsWith('actions/')) return 'action';
+  if (p.startsWith('modules/')) return 'module';
+  return p.endsWith('.dg') ? 'diagram' : 'function';
+}
+
+$('pvback').onclick = () => navTo(navPos - 1);
+$('pvfwd').onclick = () => navTo(navPos + 1);
+$('pvchain').onclick = (e) => { e.stopPropagation(); toggleNavMenu(); };
+document.addEventListener('click', (e) => { if (!$('pvchainmenu').contains(e.target)) closeNavMenu(); });
+// Alt+arrows, because that is what a browser answers to and the hands already know it. Left alone
+// inside a field, where the arrows belong to the text.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('pvchainmenu').classList.contains('show')) { closeNavMenu(); return; }
+  if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
+});
 
 $('tree').addEventListener('keydown', (e) => {
   const t = e.target;
@@ -1993,9 +2106,9 @@ function renderHealthView() {
     if (open) open(a.dataset.id); else setStatus(`Nothing to open for a ${a.dataset.kind}.`, 'warn');
   }));
 }
-function healthOpenFn(file, line) { closeHealth(); if (viewMode !== 'functions') { setMode('functions'); } openFile(file, true, line || null); }
+function healthOpenFn(file, line) { closeHealth(); if (!tabReachable('functions')) return; if (viewMode !== 'functions') { setMode('functions'); } openFile(file, line || null); }
 async function healthOpenAction(key, name) {
-  closeHealth(); setMode('actions'); await rebuildActions();
+  closeHealth(); if (!tabReachable('actions')) return; setMode('actions'); await rebuildActions();
   const [kind, ...rest] = String(key).split(':'); const id = rest.join(':');
   // Same two ways in as the rules above: an «used in» entry keys itself Zoho's way, and the name is
   // what the reader clicked. `key` may be a bare id when it comes from there rather than kind:id.
@@ -2005,9 +2118,14 @@ async function healthOpenAction(key, name) {
   if (e) openAction(e); else setStatus(actionData.length ? MSG.actNotHere : MSG.actNotPulled, 'warn');
 }
 async function healthOpenModule(api, name) {
-  closeHealth(); setMode('modules'); await rebuildModules();
-  const e = moduleData.find((m) => m.api_name === api)
-    || (name && moduleData.find((m) => (m.name || m.api_name || '') === name));
+  closeHealth(); if (!tabReachable('modules')) return; setMode('modules'); await rebuildModules();
+  // `label` is the localized plural Zoho puts in an «used in» entry - «Contatti» for `Contacts` -
+  // and `gen` is the generated name. The fallback used to read `m.name`, which no row of moduleData
+  // has, so every by-name attempt compared against undefined and failed silently.
+  const key = String(api == null ? '' : api);
+  const e = moduleData.find((m) => m.api_name === key)
+    || moduleData.find((m) => (m.label || '') === key) || moduleData.find((m) => (m.gen || '') === key)
+    || (name && moduleData.find((m) => (m.label || m.api_name || '') === name));
   if (e) openModule(e.path); else setStatus(moduleData.length ? MSG.modNotHere : MSG.modNotPulled, 'warn');
 }
 // By id, then by name. Zoho keys a function's «used in» entry its own way, and a rule that is
@@ -2015,14 +2133,27 @@ async function healthOpenModule(api, name) {
 // sentence about the wrong question. The name is what the reader clicked, so it is what the second
 // attempt uses, and the message says which of the two things is actually missing.
 async function healthOpenWorkflow(id, name) {
-  closeHealth(); setMode('workflows'); await rebuildWorkflows();
-  const e = workflowData.find((w) => String(w.id) === String(id))
-    || (name && workflowData.find((w) => (w.name || '') === name));
-  if (e) openWorkflow(e);
-  else setStatus(workflowData.length ? MSG.wfNotHere : MSG.wfNotPulled, 'warn');
+  closeHealth(); if (!tabReachable('workflows')) return; setMode('workflows'); await rebuildWorkflows();
+  // Measured on a real org rather than assumed: of 77 «used in» references to workflow rules, **none**
+  // matched the rules index by id and every one matched by name - Zoho's id there is not the rule's.
+  // For schedules the same field is the schedule's own id, and both of the two references matched. So
+  // the id is tried first, because where it is right it is exact, and the name second.
+  //
+  // And only when the name identifies one rule. Names were unique in that org - 106 of 106 - but that
+  // is a fact about one workspace, not a guarantee: with two rules sharing a name, opening either
+  // would be a guess, so the list is filtered to that name instead and the reader picks.
+  const e = workflowData.find((w) => String(w.id) === String(id));
+  const byName = name ? workflowData.filter((w) => (w.name || '') === name) : [];
+  if (e || byName.length === 1) { openWorkflow(e || byName[0]); return; }
+  if (byName.length > 1) {
+    $('find').value = name; runSearch();
+    setStatus(`${byName.length} workflows are called «${name}» - listed, so you can pick the one you meant.`, 'warn');
+    return;
+  }
+  setStatus(workflowData.length ? MSG.wfNotHere : MSG.wfNotPulled, 'warn');
 }
 async function healthOpenSchedule(id, name) {
-  closeHealth(); setMode('schedules'); await rebuildSchedules();
+  closeHealth(); if (!tabReachable('schedules')) return; setMode('schedules'); await rebuildSchedules();
   const e = scheduleData.find((x) => String(x.id) === String(id))
     || (name && scheduleData.find((x) => (x.name || '') === name));
   if (e) openSchedule(e);
@@ -2033,19 +2164,50 @@ async function healthOpenSchedule(id, name) {
 // One entry of «Used in …»: a link when this panel can open that kind of thing, plain text when it
 // cannot. The kind Zoho writes is plural and its own - `workflow_rules`, `schedules` - so it is
 // mapped here rather than matched loosely, and an unknown kind falls through to text.
+// Which tab each opener lands on. Deliberately a map beside AP_OPEN rather than a string inside each
+// opener: the two lists have to stay in step, and side by side a missing row is visible.
+const AP_TAB = { workflow: 'workflows', schedule: 'schedules', action: 'actions', module: 'modules' };
+/** Whether a jump into `tab` can land. An area the Zoho role forbids has no segment and can never be
+ *  pulled, so arriving there shows an empty list with no way back to it - the panel looking lost
+ *  instead of saying what happened. Hiding a tab in Settings is *not* this: `renderTabs()` puts that
+ *  segment back for as long as the reader is on it, which is the case this used to be confused with.
+ */
+function tabReachable(tab, quiet) {
+  if (!tab || !isForbidden(tab)) return true;
+  if (!quiet) setStatus(`${tabLabel(tab)}: your Zoho role does not grant access to that area, so it cannot be opened.`, 'warn');
+  return false;
+}
 const AP_OPEN = { workflow_rules: 'workflow', workflow: 'workflow', schedules: 'schedule',
                   schedule: 'schedule', actions: 'action', module: 'module', modules: 'module' };
 function apLink(kind, p) {
   const opener = AP_OPEN[kind];
   const id = p && (p.id != null ? String(p.id) : '');
   const label = (p && (p.name || p.label)) || '(unnamed)';
-  if (!opener || !id || !HEALTH_OPEN[opener]) return escHtml(label);
+  const name = (p && p.name) || '';
+  // The name is passed per call, never closed over: on the module link below the name in scope is
+  // the *button's*, and sending it as the module's would have the opener look for a module called
+  // «Sincronizza licenze Microsoft» - a fallback that cannot match, which is the same defect this
+  // change fixes one function down.
+  const link = (op, key, text, why, nm) => `<a class="aplink" data-ap="${escA(op)}" data-apid="${escA(String(key))}"`
+    + `${nm ? ` data-apname="${escA(nm)}"` : ''} title="${escA(why)}">${escHtml(text)}</a>`;
   // The name travels beside the id, because the id is Zoho's and not necessarily the one the rules
-  // index is keyed by: a function's `associated_place` names where it is used, and what that entry
-  // calls its id is Zoho's business. Reported from a real org - the rule existed and the panel said
-  // «not found in this workspace», which is a true statement about the wrong key.
-  return `<a class="aplink" data-ap="${escA(opener)}" data-apid="${escA(id)}" `
-    + `data-apname="${escA(label)}" title="${escA(MSG.openThis + opener)}">${escHtml(label)}</a>`;
+  // index is keyed by. Measured: of 77 references to workflow rules in a real org, none matched by
+  // id and every one matched by name.
+  //
+  // A tab the org's role forbids is not offered at all: refusing after the click would be a control
+  // saying «no» for a reason nothing on screen shows.
+  if (opener && id && HEALTH_OPEN[opener] && tabReachable(AP_TAB[opener], true)) {
+    return link(opener, id, label, MSG.openThis + opener, name);
+  }
+  // No page for this kind of thing - a custom button is the measured case, 18 of them in that org
+  // and nothing in this panel that shows one. Its module *is* here, so that is what is offered, and
+  // the link's text is the module's name and not the button's: a link says where it goes.
+  const mod = (p && p.module) || '';
+  if (mod && tabReachable('modules', true)) {
+    return `${escHtml(label)} <span class="apin">in</span> `
+      + link('module', mod, mod, `Zoost has no page for a ${kind.replace(/s$/, '').replace(/_/g, ' ')} - this opens its module`, mod);
+  }
+  return escHtml(label);
 }
 const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule,
                       action: healthOpenAction, module: healthOpenModule };
@@ -2698,7 +2860,6 @@ function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear 
 // chrome.storage.onChanged.
 function aiOpenSettings() { openSettings('#ai'); }   // sent from the assistant, so land on its section
 
-
 // ---------- save-sync ----------
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'saved') syncOne(msg.id);
@@ -3053,7 +3214,7 @@ function dropWorkspaceState() {
 function resetView() {
   $('find').value = '';
   connectionFilter = null; connFilterSet = null;
-  currentPath = null; pvHist = []; updateBack();
+  currentPath = null; navClear();
   $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   // An overlay is a view of the workspace too. Health is rebuilt rather than closed, because
   // closing it would answer «what is wrong here» by taking the question away; the assistant's
@@ -3078,7 +3239,9 @@ async function activate(w, viaGesture) {
     resetView();
     if (n) setStatus(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other org.`, 'warn');
   }
-  currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
+  // A different workspace: the chain is dropped, because every step in it names a file in the org
+  // the reader has just left. This is the one place that forgets.
+  currentPath = null; navClear(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
   // Carrying the previous org's answers over would hide a tab in an org that grants it - the same
   // class of mistake the environment guard exists to prevent, one field further in.
@@ -3294,6 +3457,13 @@ function setMode(mode) {
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
+  // A jump can land on a tab the reader hid in Settings - a health row, an «Used in» link, a step of
+  // the history. `renderTabs()` gives the tab you are *on* a segment even when it is hidden, and
+  // that promise was written in its comment while nothing here called it: the row kept the old set,
+  // so the panel showed a list with no segment lit and read as having lost its place. Only when the
+  // segment is actually missing, so an ordinary switch does not rebuild the row. Walked rather than
+  // selected, because a selector built from a value is what the markup checker exists to refuse.
+  if (![...$('modebar').querySelectorAll('.seg')].some((b) => b.dataset.tab === mode)) renderTabs();
   const _typeLabel = tabLabel(mode).toLowerCase();
   // The label is in the markup and stays there - writing textContent here replaced the mark with
   // the word on every mode change, so the button reverted the moment anyone touched a segment.
@@ -3319,7 +3489,9 @@ function setMode(mode) {
     ? 'ER diagram - modules and the relations between them, in its own window'
     : 'Wiring - what fires what across the org: functions, workflows, schedules, actions, connections and the modules they touch, in its own window';
   $('nameToggle').textContent = MSG.namePrefix + (mode === 'functions' ? nameMode : moduleNameMode);
-  currentPath = null; pvHist = []; updateBack(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
+  // Changing tab closes the pane and keeps the chain: the whole point of a history that spans the
+  // tabs is that a workflow reached from a function is one step away from it, not a fresh start.
+  currentPath = null; updateNav(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
   rebuildActive();
 }
 // Rebuild the segment row from the registry. Called whenever the set can have changed: at start-up,
@@ -3694,7 +3866,7 @@ function renderLayoutView(layout) {
 }
 async function openModule(path, layoutId) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh.', 'bad'); return; }
-  currentPath = path; pvHist = []; updateBack(); if ($('status').className) setStatus('', '');
+  currentPath = path; navHere(); if ($('status').className) setStatus('', '');
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
   const nav = moduleNavigable(m);
@@ -4661,7 +4833,7 @@ async function refreshSchedules() {
   setStatus(`${scheduleData.length} schedules.`, 'ok');
 }
 async function openSchedule(e) {
-  currentPath = e.path; pvHist = []; updateBack();
+  currentPath = e.path; navHere(e.name);
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
@@ -5093,7 +5265,7 @@ function mappingHtml(m) {
 // are shown as they are, minus the punctuation that only means «this is a placeholder».
 const prettyTrigger = (t) => String(t || '').replace(/^\$\{!?/, '').replace(/\}$/, '') || 'the trigger';
 function openAction(a) {
-  currentPath = a.path; pvHist = []; updateBack();
+  currentPath = a.path; navHere(a.name || a.id);
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === a.path));
   setPvName(a.name || a.id, 'actions/index.json');
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);
@@ -5235,7 +5407,7 @@ async function refreshConnections() {
   await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
 }
 function openConnection(c) {
-  currentPath = c.path; pvHist = []; updateBack();
+  currentPath = c.path; navHere(c.label || c.name);
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
   setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
@@ -5254,7 +5426,7 @@ function openConnection(c) {
   if (c.scopes && c.scopes.length) h += `<details class="wfraw"><summary>Scopes (${c.scopes.length})</summary><pre>${escHtml(c.scopes.join('\n'))}</pre></details>`;
   h += '</div>';
   $('pvtable').innerHTML = h;
-  $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file, true); }));
+  $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file); }));
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
 }
 /** A timestamp the reader can act on. The failures endpoint answers with two forms of the same
@@ -5382,7 +5554,7 @@ async function openWorkflowInZoho(id) {
 async function openWorkflow(e) {
   if (!e.downloaded) { const ok = await downloadOneWf(e); updateRow(e); updateMissingButton(); if (!ok) { setStatus('Could not download this workflow.', 'warn'); return; } }
   let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus(MSG.readFailed + err.message, 'bad'); return; }
-  currentPath = e.path; pvHist = []; updateBack();
+  currentPath = e.path; navHere(e.name);
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers

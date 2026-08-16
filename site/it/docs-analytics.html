@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:a62b2882b0163e48 -->
+<!-- translated-from: site/docs-analytics.html sha256:2d572290ed931983 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -247,7 +247,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   <figure class="shot">
     <img src="/img/analytics-lineage.webp?v=4007c309e2" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
-    <figcaption>Lineage: per una query table, quali colonne legge e da quale vista - la catena che Zoho Analytics non disegna.</figcaption>
+    <figcaption>Lineage: per una query table, quali colonne legge e da quale vista - la catena che Zoho Analytics non disegna. Ogni nome e' un link a quella vista, come le chiavi esterne sotto <b class="ui">Columns</b>.</figcaption>
   </figure>
 
   <h2 id="structure">6. Struttura e chiavi esterne</h2>
@@ -346,6 +346,16 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     spostano la selezione fra le viste che i filtri hanno lasciato e ne aprono una come farebbe un
     clic, <b class="ui">Home</b> e <b class="ui">End</b> vanno ai due estremi. Prima scorreva e
     basta, che è tutto quello che un browser sa fare di un elenco.</p>
+  <p>Seguire un link e' solo meta' del lavoro, quindi il riquadro tiene una <b>cronologia</b>, come
+    fa un browser: <b class="ui">◂</b> torna indietro di un passo, <b class="ui">▸</b> va avanti e
+    <b class="ui">⋯</b> apre l'intera catena - tutto quello che hai aperto, dal piu' recente, con
+    evidenziato il punto in cui sei - cosi' puoi saltare direttamente a un passo di qualche tappa fa
+    invece di premere quattro volte indietro. <b class="ui">Alt</b> con <b class="ui">←</b> o
+    <b class="ui">→</b> fa lo stesso da tastiera. Ogni comando compare solo quando ha davvero dove
+    portarti.
+    La catena attraversa le schede, quindi una regola raggiunta da una funzione e' a un passo da
+    essa; chiudere il riquadro non la perde, e solo il cambio di workspace la azzera - i passi
+    nominerebbero i file di un'altra organizzazione.</p>
   <p>L'SQL dentro il pannello è colorato: commenti, stringhe, numeri, i nomi che Zoho scrive fra
     virgolette doppie e un elenco fisso di parole chiave. Solo quelli. Una parola che potrebbe essere
     una colonna, una funzione di un dialetto che qui nessuno ha letto per intero, un nome che sembra
