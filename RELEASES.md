@@ -38,6 +38,9 @@ installed extension and diff it against the tag. See *What this cannot prove*.
 |---|---|---|---|---|
 | analytics | 1.0.0 | `analytics-v1.0.0` | `b3db394` | *not reproducible - see below* |
 | crm | 1.9.0 | `crm-v1.9.0` | `dd94209` | `f34c5ce4a5a38d2f080b29f00e9c8d016dd74bfc84eb2575485c4e1b5ac6344e` |
+| crm | 1.11.0 | `crm-v1.11.0` | `c226a5c` | `554e1e57df816b09f8b9e349614a9efc5920449c52c66cc3c8ecfc753480026e` |
+| analytics | 1.7.0 | `analytics-v1.7.0` | `c226a5c` | `95659118aed2f3f29b4b1cffe2318f186ffd52553dfdc48347d72e892a07b78c` |
+| analytics | 1.7.1 | `analytics-v1.7.1` | `037c50b` | `fd06cc3c70ea8d99d25d7fabc02790ca0dd02c993e5f3c1bb747518dd8f008c5` |
 | analytics | 1.8.0 | `analytics-v1.8.0` | `6000f1f` | `6c2ad99e6767bbcdd10c933633c27989ef1d16a26926e2e2853d3c1204cd1f15` |
 | crm | 1.38.4 | `crm-v1.38.4` | `6df6603` | `5818741130e1b683b9e784402b591493e03803fb9f086204391b808ddc4e1045` |
 | analytics | 1.22.4 | `analytics-v1.22.4` | `3d03074` | `a6c8d4c0935c44851e706d8b809c01eb8be0489e4a259e5f7dcf04ce81181781` |

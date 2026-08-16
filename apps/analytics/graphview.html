@@ -199,16 +199,12 @@
   .rtbl th{position:sticky;top:0;background:#f6f8fb;color:var(--muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;letter-spacing:.3px;z-index:1}
   .rtbl td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
   .rtbl tr:hover{background:#f7faff}
-  .rtbl .rname{font:13px var(--mono);font-weight:700;color:#b45309;cursor:pointer;white-space:nowrap}
-  .rtbl .rname:hover{text-decoration:underline}
   .rtbl .mod{font:11.5px var(--mono);color:#64748b;cursor:pointer}
   .rtbl .mod:hover{color:var(--sel);text-decoration:underline}
   .rtbl .rlab{color:#475569}
-  .rtbl .rtype{font:10.5px var(--sans);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
   .rtbl .snip{font:11px var(--mono);color:#334155;background:#f6f8fb;border:1px solid var(--line);border-radius:6px;padding:4px 7px;cursor:pointer;display:inline-block;white-space:nowrap}
   .rtbl .snip:hover{border-color:var(--sel);background:#eef3fb}
   .rtbl tr.sys td{background:#fcfcfd;color:#94a3b8}
-  .rtbl tr.sys .rname{color:#94a3b8;font-weight:600}
   #relhint{padding:9px 14px;font:11px var(--sans);color:var(--muted);border-top:1px solid var(--line);background:var(--surface)}
   /* The count of boxes the diagram would draw, on the tab that draws them, and amber once it is past
      what can be drawn without boxes covering each other. A colour and a number, not a verdict: the
@@ -264,7 +260,6 @@
   #erpick .pkcut{margin-top:8px}
   #erpick .pkcut button{font:12px var(--sans);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 9px;cursor:pointer;color:var(--ink)}
   #erpick .pkcut button:hover{border-color:var(--sel)}
-  #erpick .pkno{font:11px var(--sans);color:var(--muted)}
   #ervp{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
   #ersvg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
   /* Folding a branch, on the branch. The circle sits where the arc meets the box that stays: `-` while
@@ -348,7 +343,6 @@
   #erpick .pksnip{font:11.5px var(--mono);background:#fffbeb;border:1px solid #f0d9a8;border-radius:7px;padding:6px 8px;cursor:pointer;word-break:break-all;color:#7c4a10}
   #erpick .pksnip:hover{border-color:#d97706;background:#fef3c7}
   #erpick .pkx{position:absolute;top:6px;right:9px;color:#b9c2cf;cursor:pointer;font-size:14px;line-height:1}
-  #erpick .pkalt{margin-top:6px;font:11px var(--mono);color:#94a3b8}
   @media print{ #erpick{display:none !important} }
   .erbox .errow{display:flex;gap:8px;padding:2px 9px;border-top:1px solid #eef1f6}
   .erbox .errow .fn{color:#33415a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -371,11 +365,11 @@
     </div>
     <div class="chips" id="chips" role="group" aria-label="Filter what is shown"></div>
     <div class="tabrow">
-      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none"><span id="ertabname">ER diagram</span><b class="tc" id="ertabn"></b></span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
+      <div class="tabs"><span class="tab" data-v="explorer" aria-selected="true">Explorer</span><span class="tab" data-v="er" id="ertab" style="display:none"><span>ER diagram</span><b class="tc" id="ertabn"></b></span><span class="tab" data-v="rel" id="reltab" style="display:none">Relations</span></div>
       <!-- The focus is the whole window's context - all three views project it - so it is
            chrome, beside the tabs, and not a button inside one of the views. Its own group,
            the same shape the chips use, because it answers its own question. -->
-      <span class="dim focusg" id="focusg">
+      <span id="focusg" class="dim focusg">
         <span class="dimt">Focus</span>
         <span class="chip" id="focusnode" role="button"></span>
         <span class="chip" id="focusall" role="button">Everything</span>

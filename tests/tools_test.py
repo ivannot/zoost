@@ -3318,6 +3318,34 @@ class NothingHerePublishes(unittest.TestCase):
                          'the download still reads an input that an automatic run does not have')
 
 
+
+class ShippedFilesAreText(unittest.TestCase):
+    """No control byte in anything we ship, because a tool that meets one stops reading.
+
+    A single raw NUL sat in `graphlogic.js` - a fold key joined with `'\0'` typed rather than
+    escaped, while the same value was written `\u0000` in four other places in the same file. It
+    cost nothing at runtime and everything to a reader: `file` reported the file as data, `grep`
+    treated it as binary and skipped all 31KB of it in silence, and a review of the shipped code
+    came within one measurement of reporting a function as missing because grep could not see it.
+
+    Tab, newline and carriage return are text. Everything else below 0x20 is not.
+    """
+
+    def test_no_control_bytes_in_shipped_or_site_files(self):
+        allowed = {0x09, 0x0a, 0x0d}
+        findings = []
+        for base, globs in ((ROOT / "apps", ("*.js", "*.html", "*.json")),
+                            (ROOT / "site", ("*.js", "*.html", "*.css", "*.txt", "*.json")),
+                            (ROOT / "tools", ("*.py", "*.sh", "*.mjs", "*.js")),
+                            (ROOT / "tests", ("*.py", "*.mjs", "*.sh"))):
+            for g in globs:
+                for f in base.rglob(g):
+                    raw = f.read_bytes()
+                    bad = {b for b in raw if b < 0x20 and b not in allowed}
+                    if bad:
+                        findings.append(f"{f.relative_to(ROOT)}: {[hex(b) for b in sorted(bad)]}")
+        self.assertEqual(findings, [], "a control byte makes the file binary to ordinary tools")
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

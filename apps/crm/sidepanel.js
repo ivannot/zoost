@@ -258,7 +258,6 @@ const LEGAL_DISCLAIMER = 'Independent, unofficial tool. Not affiliated with, end
   + 'Licensed under the Apache License 2.0 and provided AS IS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. '
   + 'The author accepts no liability for any loss, damage or data issue arising from its use, and is under no obligation to provide support or maintenance. '
   + 'Deciding what may be extracted from Zoho CRM, and where it may be sent, is the sole responsibility of the user and of the organisation whose data it is.';
-const LEGAL_LINE = `Created by ${PRODUCT_AUTHOR} \u00b7 ${PRODUCT_LICENSE} \u00b7 Independent, unofficial tool - not affiliated with Zoho Corporation.`;
 
 // ---------- export scope ----------
 // Coarse on purpose: sections, never single modules. A per-module allow-list would be a
@@ -950,7 +949,6 @@ function fnStats(src) {
     apiCalls: invokeurl + zohoAny,     // outbound calls; each one is work Zoho meters
   };
 }
-const statsLabel = (s) => `${s.lines} lines · ${(s.chars / 1024).toFixed(1)} KB · ${s.apiCalls} API call${s.apiCalls === 1 ? '' : 's'}`;
 
 // ---------- graph cache ----------
 // What the diagram window is given, which is less than what the panel holds. `source_code` is put
@@ -5583,16 +5581,6 @@ function fmtDate(iso) {
   if (isNaN(d)) return String(iso || '');
   return d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-/** The page that lists failed executions, and where the re-run button lives. Built from the binding
- *  rather than clicked to, like every other navigation here. */
-async function openFailuresPage() {
-  if (sampleRefuse()) return;
-  const base = bound?.base || lastCtx?.origin, inst = bound?.instance || lastCtx?.instance;
-  if (!base || !inst) { setStatus(MSG.noTab, 'warn'); return; }
-  const url = `${base}/crm/${inst}/settings/functions?tab=failures`;
-  const id = await zohoTabId();
-  if (id) await chrome.tabs.update(id, { url, active: true }); else await chrome.tabs.create({ url });
-}
 
 // ---------- execution failures (and the last 24 hours of run counts) ----------
 //
@@ -5656,12 +5644,6 @@ async function pullFailures() {
     if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
   } catch (e) { await notePullFailure('failures', e); }
   finally { pullActive = false; }
-}
-async function loadFailuresIndex() {
-  try {
-    const d = JSON.parse(await readFile('failures/index.json'));
-    return (d && typeof d === 'object' && Array.isArray(d.failures)) ? d : { at: null, usage: null, failures: [] };
-  } catch (_) { return { at: null, usage: null, failures: [] }; }
 }
 
 async function pullWorkflows() {

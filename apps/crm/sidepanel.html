@@ -192,8 +192,6 @@
   #healthbody a{color:var(--accent);text-decoration:none;cursor:pointer} #healthbody a:hover{text-decoration:underline}
   .hrow .meta{color:var(--muted);font-size:10.5px}
   .hnone{font-size:11px;color:#54d199}
-  .hdiv{margin:16px 0 8px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink)}
-  .hdiv .hd2{font-weight:400;color:var(--muted);font-size:10.5px}
   /* The status line lives inside #belowbar and this view covers it, so anything setStatus()
      says while the health view is open is written where nobody can see it. A verdict about
      an action goes beside the control that started it. */
@@ -205,15 +203,7 @@
   .htab.on{color:var(--ink);border-color:var(--accent);background:#16233a}
   .htab .htn{font:10px var(--mono);background:var(--bg);border-radius:9px;padding:0 6px;color:var(--muted)}
   .htab.on .htn{color:var(--accent)}
-  .htoolbar{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-  .htoolbar .selall{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer}
-  .htoolbar .selinfo{font-size:11px;color:var(--muted);flex:1}
-  .hbulk{background:var(--surface);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer}
-  .hbulk:disabled{opacity:.45;cursor:default}
   .hrow .hcontent{flex:1;min-width:0}
-  .hrow .hck{margin:0;flex:0 0 auto}
-  .hact{cursor:pointer;font-size:10.5px;color:var(--muted);flex:0 0 auto;user-select:none}
-  .hact.ignore:hover{color:#f59e0b} .hact.restore:hover{color:var(--accent)}
   #tree{flex:1 1 auto;overflow:auto;padding:0 0 4px;min-height:60px;background:var(--tree)}
   .grp{font:10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:7px 10px 5px;cursor:pointer;display:flex;align-items:center;gap:6px;background:#0b1220;position:sticky;top:0;z-index:3;box-shadow:0 1px 0 var(--line)}
   .grp .chev{transition:transform .12s;color:#5b6b82} .grp.collapsed .chev{transform:rotate(-90deg)}
@@ -410,7 +400,6 @@
   .wf-fn{display:inline-block;background:rgba(59,111,224,.18);color:#82d2ff;border:1px solid var(--sel);border-radius:5px;padding:1px 6px;margin:2px 3px 0 0;font-size:11px;cursor:pointer}
   .wf-fn:hover{background:var(--sel);color:#fff}
   .connfns{padding:6px 10px 2px}
-  .wslbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;align-self:center;margin-right:2px}
   .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;margin-right:5px;vertical-align:middle}
   .rlbl.remote{background:#1e3a5f;color:#8ec5ff}
   .rlbl.local{background:#2a2140;color:#c9b3ff}
@@ -667,7 +656,7 @@
     </div>
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
-  <div class="controls" id="chiprow"><div class="chips" id="typechips"></div></div>
+  <div class="controls"><div class="chips" id="typechips"></div></div>
 
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 

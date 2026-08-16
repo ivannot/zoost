@@ -2554,9 +2554,6 @@ function navWhen(ms) {
   return sameDay ? t : `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ${t}`;
 }
 function closeNavMenu() { navShow(false); }
-// Open it, or draw it again where it already is - the second is what the name toggle needs, and
-// without it the chain kept the old names until it was closed and reopened.
-function redrawNavMenu() { if (navOpenNow()) renderNav(); }
 const navOpenNow = () => $('navview').classList.contains('show');
 // Copy the code that is on screen. `textContent` rather than the source variable: what the reader is
 // looking at is what lands in the clipboard, and the highlighting comes back off by itself. The mark

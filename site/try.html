@@ -74,7 +74,7 @@
     your working folder and fills it with files in the exact shape a real pull produces. Nothing is
     downloaded, because there is nothing to download from.</p>
 
-  <h3>Zoost CRM - 293 files</h3>
+  <h3>Zoost CRM - 295 files</h3>
   <table data-labelled data-cols="3" class="num">
     <thead><tr><th>What it holds</th><th>Files</th><th>Why that many</th></tr></thead>
     <tbody>
@@ -83,6 +83,8 @@
     <tr><td data-label="What it holds">10 workflows</td><td data-label="Files">11</td><td data-label="Why that many">a file each plus the index; some have actions that fire after a delay</td></tr>
     <tr><td data-label="What it holds">7 schedules</td><td data-label="Files">1</td><td data-label="Why that many">they live in the index rather than in files of their own, each pointing at the function it runs</td></tr>
     <tr><td data-label="What it holds">6 connections</td><td data-label="Files">1</td><td data-label="Why that many">the index again - one of them used by nothing, so the audit has something to find</td></tr>
+    <tr><td data-label="What it holds">14 automation actions</td><td data-label="Files">1</td><td data-label="Why that many">the index again - notifications, field updates, tasks and webhooks, which are what a workflow rule fires when it does not call a function</td></tr>
+    <tr><td data-label="What it holds">what Zoho reports at runtime</td><td data-label="Files">1</td><td data-label="Why that many"><code>failures/index.json</code> - failed executions, run counts and credit usage, so the health view has a measured half and not only static ones</td></tr>
     <tr><td data-label="What it holds">the workspace config</td><td data-label="Files">1</td><td data-label="Why that many"><code>.zoost.json</code>, which is where <code>sample: true</code> lives</td></tr>
     </tbody>
   </table>

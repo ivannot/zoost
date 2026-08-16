@@ -644,7 +644,11 @@ function erArrState() {
   const pos = {};
   erIds.forEach((id) => { const p = erPos[id]; if (p) pos[id] = { x: p.x, y: p.y }; });
   const folds = [];
-  erCut.forEach((away, k) => { const [a, b] = k.split(' '); folds.push([a, b, away]); });
+  // A NUL joins the two ids of a fold, and it is written as an escape rather than typed: as a
+  // raw byte it made this file *binary* to every ordinary tool - `file` called it data and
+  // `grep` skipped all 31KB of it in silence, which is how a review of the shipped code came
+  // to miss it. Same value, same behaviour, and readable by everything.
+  erCut.forEach((away, k) => { const [a, b] = k.split('\u0000'); folds.push([a, b, away]); });
   return {
     app: APP, kind: (DATA && DATA.kind) || '', workspace: erArrWorkspace(),
     focus: curFocus || '', depth: egoDepth, emphasis: erEmph, names: nameMode,

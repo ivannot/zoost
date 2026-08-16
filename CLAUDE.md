@@ -32,6 +32,17 @@ about *one area* belongs in that area's note, where it will be read by whoever o
 else. Writing it here because it is fresh is how the file got to 280k: nothing is ever wrong in the
 moment it is added, and the cost lands on a session months later that reads half a file.
 
+**And every so often, sweep rather than check.** The battery answers questions somebody thought to
+ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
+lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because
+a name built at run time looks identical to a dead one - and `python3 tools/samplecheck.py` (which
+*is* in the battery) holds the sample page to what `+ Sample` actually writes. The first sweep of this
+kind found a raw NUL byte in a shipped file that had been making `grep` skip 31KB of it in silence,
+two dead functions, a helper copied to a product that cannot call it, and a table on `try.html` that
+did not add up to its own heading. **Read every line before acting**: that same sweep also "found"
+seven numbers that were right, by counting `fixtures/` - the edge-case tree - instead of the sample a
+reader receives, and putting them back cost more than the real findings.
+
 **The room left is printed on every run: `python3 tools/notescheck.py`, and it is in `tests/run.sh`.**
 The budget is 100,000 characters, two thirds of the 150,000 at which this file stops being read. It
 fires early on purpose - splitting a topic out and giving it an index row takes judgement, and a gate
@@ -199,7 +210,7 @@ grep -rn "schedules\|Schedules" README.md site/ store/     # pick any establishe
 Walk each hit and decide — include, or consciously not. Then the reverse pass: read each surface top
 to bottom and check that every claim on it is still true of the code (verify in the source, do not
 assume). Do this across `README.md`, `site/index.html`, `site/docs-crm.html`, `site/privacy.html` (what
-is stored and where it travels) and `store/store-listing.md`. Only then is the change done.
+is stored and where it travels) and `store/<app>/store-listing.md`. Only then is the change done.
 
 If a change touches what data leaves the machine, `site/privacy.html` and the Web Store data
 disclosures are not optional follow-ups. They are part of the change.
@@ -529,7 +540,7 @@ another instance of the pattern already named here: a value crossing a boundary 
 differently on the other side. Split on `\n`, separate with a tab.
 
 **A release with user-visible change → store copy as well.** Regenerate whatever in
-`store/store-listing.md` no longer matches: description, single purpose, permission
+`store/<app>/store-listing.md` no longer matches: description, single purpose, permission
 justifications. Hand me the finished text ready to paste, and tell me which dashboard fields to
 change alongside the package — they are reviewed together, and an inconsistency between manifest,
 description and privacy policy is what delays or fails a review.
