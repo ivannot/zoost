@@ -446,3 +446,36 @@ footer .legal{line-height:1.65;margin:10px 0 0}
 .toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;margin:26px 0 0}
 .toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
 .toc li{margin:4px 0;font-size:14px;break-inside:avoid}
+
+/* ---- the blocks every page carried its own copy of ----------------------------------------
+ * Twenty rules that fourteen pages each wrote out in full. They keep the order the pages had, and
+ * they come last in this file - which is where they were, since an inline <style> sits after this
+ * sheet and a rule that won there still wins here.
+ *
+ * Two kinds were left in their pages, each for a reason a screenshot taught rather than a rule of
+ * thumb. **Bare element selectors** - `section`, `h3` - reach every page from here, and hoisting
+ * `h3` restyled three pages that had never asked for it. **Classes this sheet already styles under
+ * a `.doc` scope** - `.card`, `.meta`, `.k`, `.num` - would leak a landing page's design into every
+ * guide: two designs sharing one name, which is a decision and not a clean-up.
+ */
+.gsw{display:inline-flex;gap:0;margin:18px 0 0;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.gsw a{padding:7px 16px;font:600 13.5px var(--sans);color:var(--muted);text-decoration:none;background:var(--surface)}
+.gsw a:hover{color:var(--ink)}
+.cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px}
+.dep b{color:var(--teal);font-weight:600}
+.dep i{color:var(--muted);font-style:normal}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:26px}
+.why h3{font-size:15.5px}
+.why p{margin:0;color:var(--muted);font-size:14.5px}
+.steps b{color:var(--ink)}
+.prod{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:20px}
+.prod .ph{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.prod .ph img,.prod .ph .cpic{width:38px;height:38px;border-radius:9px}
+.prod .ph h3{margin:0}
+.prod .full{margin:-4px 0 0;font-size:13.5px;color:var(--muted)}
+.prod .st.live{color:#83d8c6;border-color:#2f6f62}
+.prod .st.wip{color:#f0a44a;border-color:#6b4a1c}
+.prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+.prod .plinks a{color:var(--sel-text);text-decoration:none;font-weight:600}
+.prod .plinks a:hover{text-decoration:underline}

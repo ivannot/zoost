@@ -47,16 +47,9 @@ site:.card	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.h
 site:.card li	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card ul	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.cta	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.dep b	site/index.html,site/it/index.html
-site:.dep i	site/index.html,site/it/index.html
 site:.doc .tools	site/ai.html,site/it/ai.html
 site:.doc .tools code	site/ai.html,site/it/ai.html
-site:.grid	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.gsw	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
-site:.gsw a	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
 site:.gsw a.on	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
-site:.gsw a:hover	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
 site:.hero	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.hero h1	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.hero h1 span	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
@@ -69,21 +62,7 @@ site:.num td,.num th	site/it/try.html,site/try.html
 site:.num td:first-child	site/it/try.html,site/try.html
 site:.num td:nth-child(2)	site/it/try.html,site/try.html
 site:.num th	site/it/try.html,site/try.html
-site:.prod	site/index.html,site/it/index.html
 site:.prod .card	site/index.html,site/it/index.html
-site:.prod .full	site/index.html,site/it/index.html
-site:.prod .ph	site/index.html,site/it/index.html
-site:.prod .ph h3	site/index.html,site/it/index.html
-site:.prod .ph img,.prod .ph .cpic	site/index.html,site/it/index.html
-site:.prod .plinks	site/index.html,site/it/index.html
-site:.prod .plinks a	site/index.html,site/it/index.html
-site:.prod .plinks a:hover	site/index.html,site/it/index.html
-site:.prod .st.live	site/index.html,site/it/index.html
-site:.prod .st.wip	site/index.html,site/it/index.html
-site:.steps b	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.why	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.why h3	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.why p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:h3	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:header .brand	site/site.css
 site:header nav a.nprod	site/site.css
