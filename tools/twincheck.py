@@ -88,6 +88,11 @@ PRODUCT_ONLY = {
         'retry': 'retry failed items; the CRM has #missing for the same idea',
         'statustext': 'the CRM writes into #status directly instead of a child span',
         'dbody': 'detail pane body',
+        'dzoho': 'opens this view in Zoho Analytics by its own address - /workspace/<id>/view/<id>, '
+                 'one shape for every kind of view. The CRM has no equivalent on purpose: its «Go to» '
+                 'drove the editor through a localized label and was removed in 1.1.0, and what stands '
+                 'in its place is #pvfind, which filters the functions list and leaves the last click '
+                 'to the reader',
         'dclose': 'detail pane close',
         'dgraph': 'open the ER diagram focused on this table',
         'dpull': 'pull this one view',
