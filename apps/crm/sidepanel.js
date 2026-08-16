@@ -96,6 +96,7 @@ function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on
 // A literal that appears once stays where it is used - a constant read by one caller is indirection
 // with nothing to hold together. tests/panel.test.mjs enforces the rule in the other direction.
 const MSG = {
+  openThis: 'Open this ',   // two places compose their own ending onto it
   mismatchRefused: 'The active tab is a different org from this workspace - nothing here reads Zoho until they match.',
   noTab: 'No Zoho CRM tab open.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
@@ -1108,8 +1109,14 @@ async function showCallers(path) {
     const ap = node.associated_place || [];
     if (ap.length) {
       const byType = {};
-      ap.forEach((p) => (byType[p._type || 'other'] ||= []).push(p.name || '(unnamed)'));
-      html += '<div class="apwrap">' + Object.keys(byType).sort().map((t) => `<b>Used in ${escHtml(t)} (${byType[t].length}):</b> ${byType[t].map(escHtml).join(', ')}`).join('<br>') + '</div>';
+      // The whole entry is kept, not just its name: the id is what makes the name a link.
+      ap.forEach((p) => (byType[p._type || 'other'] ||= []).push(p));
+      // The names of the things that fire this function are links when this panel has somewhere to
+      // take you: a workflow rule opens in the Workflows tab, a schedule in Schedules. `HEALTH_OPEN`
+      // already maps a kind to its opener - it exists so that a group naming a new kind gets one
+      // rather than silently rendering an unclickable name - and this is that map used a second
+      // time. A kind with no opener stays plain, because a link that leads nowhere is worse.
+      html += '<div class="apwrap">' + Object.keys(byType).sort().map((t) => `<b>Used in ${escHtml(t)} (${byType[t].length}):</b> ${byType[t].map((p) => apLink(t, p)).join(', ')}`).join('<br>') + '</div>';
     } else if (!callers.length && !node.rest) {
       html += ' <span class="orphan">\u00b7 no known usage (orphan candidate)</span>';
     }
@@ -1161,6 +1168,11 @@ async function showCallers(path) {
     box.innerHTML = html;
     box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file, true)));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
+    // «Used in …»: the rule or the schedule that fires this function, opened where it lives.
+    box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
+      const open = HEALTH_OPEN[a.dataset.ap];
+      if (open) open(a.dataset.apid);
+    }));
     // The same control the Modules preview carries, next to the same kind of fact: the references
     // are listed above it, this draws them. Absent when there is nothing to draw - a function
     // nobody calls and that calls nothing is a single box and no arrows.
@@ -1989,6 +2001,19 @@ async function healthOpenWorkflow(id) { closeHealth(); setMode('workflows'); awa
 async function healthOpenSchedule(id) { closeHealth(); setMode('schedules'); await rebuildSchedules(); const e = scheduleData.find((x) => String(x.id) === String(id)); if (e) openSchedule(e); else setStatus('Schedule not found in this workspace.', 'warn'); }
 // Which finding opens what. One entry per kind a health row can name, so a group that starts
 // naming a new kind gets its opener here rather than silently rendering an unclickable name.
+// One entry of «Used in …»: a link when this panel can open that kind of thing, plain text when it
+// cannot. The kind Zoho writes is plural and its own - `workflow_rules`, `schedules` - so it is
+// mapped here rather than matched loosely, and an unknown kind falls through to text.
+const AP_OPEN = { workflow_rules: 'workflow', workflow: 'workflow', schedules: 'schedule',
+                  schedule: 'schedule', actions: 'action', module: 'module', modules: 'module' };
+function apLink(kind, p) {
+  const opener = AP_OPEN[kind];
+  const id = p && (p.id != null ? String(p.id) : '');
+  const label = (p && (p.name || p.label)) || '(unnamed)';
+  if (!opener || !id || !HEALTH_OPEN[opener]) return escHtml(label);
+  return `<a class="aplink" data-ap="${escA(opener)}" data-apid="${escA(id)}" `
+    + `title="${escA(MSG.openThis + opener)}">${escHtml(label)}</a>`;
+}
 const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule,
                       action: healthOpenAction, module: healthOpenModule };
 function toggleHealth() { if ($('healthview').classList.contains('show')) closeHealth(); else openHealth(); }
@@ -5045,7 +5070,7 @@ function openAction(a) {
   const canOpen = !!actionUrl(a);
   $('pvreveal').style.display = canOpen ? '' : 'none';
   $('pvreveal').textContent = 'Open in Zoho \u2197';
-  $('pvreveal').title = 'Open this ' + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
+  $('pvreveal').title = MSG.openThis + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
   $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;

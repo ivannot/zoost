@@ -1,168 +1,52 @@
 {
-  "counts": {
-    "dead_suspects": 12,
-    "edges": 22,
-    "nodes": 19,
-    "unresolved": 0
-  },
-  "depth": null,
-  "edges": [
-    [
-      "Assets",
-      "Accounts"
-    ],
-    [
-      "Assets",
-      "Products"
-    ],
-    [
-      "Cases",
-      "Accounts"
-    ],
-    [
-      "Cases",
-      "Contacts"
-    ],
-    [
-      "Contacts",
-      "Accounts"
-    ],
-    [
-      "Contracts",
-      "Accounts"
-    ],
-    [
-      "Contracts",
-      "Quotes"
-    ],
-    [
-      "Deals",
-      "Accounts"
-    ],
-    [
-      "Deals",
-      "Contacts"
-    ],
-    [
-      "Invoices",
-      "Accounts"
-    ],
-    [
-      "Invoices",
-      "Orders"
-    ],
-    [
-      "Orders",
-      "Accounts"
-    ],
-    [
-      "Orders",
-      "Quotes"
-    ],
-    [
-      "Pricebooks",
-      "Products"
-    ],
-    [
-      "Quotes",
-      "Deals"
-    ],
-    [
-      "Quotes",
-      "Accounts"
-    ],
-    [
-      "Shipments",
-      "Orders"
-    ],
-    [
-      "Subscriptions",
-      "Accounts"
-    ],
-    [
-      "Subscriptions",
-      "Products"
-    ],
-    [
-      "Tickets",
-      "Accounts"
-    ],
-    [
-      "Tickets",
-      "Contacts"
-    ],
-    [
-      "Tickets",
-      "Products"
-    ]
-  ],
-  "focus": null,
   "kind": "schema",
   "nodes": {
     "Accounts": {
-      "ambiguous": [],
+      "id": "Accounts",
+      "name": "Accounts",
       "api_name": "Accounts",
-      "associated_place": null,
-      "called_by": [
-        "Assets",
-        "Cases",
-        "Contacts",
-        "Contracts",
-        "Deals",
-        "Invoices",
-        "Orders",
-        "Quotes",
-        "Subscriptions",
-        "Tickets"
-      ],
-      "calls": [],
-      "category": "standard",
-      "dead_suspect": false,
-      "description": "",
-      "display_name": "Accounts",
       "fields": [
         {
           "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7000",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7000"
         },
         {
           "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7001",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7001"
         },
         {
           "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7002",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7002"
         },
         {
           "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7003",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -204,943 +88,245 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7003"
         },
         {
           "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7004",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7004"
         },
         {
           "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7005",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7005"
         }
       ],
-      "file": "modules/Accounts.json",
-      "id": "Accounts",
-      "layoutDetail": true,
       "layouts": [
         {
           "id": "3000",
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         },
         {
           "id": "3100",
           "name": "Compact",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 1
         },
         {
           "id": "3200",
           "name": "Retired",
-          "visible": false
+          "visible": false,
+          "status": "inactive",
+          "sections": 0
         }
       ],
-      "name": "Accounts",
-      "namespace": "standard",
-      "params": [],
       "related_lists": [
         {
           "api_name": "Contacts_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Contacts",
-          "linking_module": null,
           "module": "Contacts",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Deals_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Deals",
-          "linking_module": null,
           "module": "Deals",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Quotes_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Quotes",
-          "linking_module": null,
           "module": "Quotes",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Invoices_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Invoices",
-          "linking_module": null,
           "module": "Invoices",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Orders_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Orders",
-          "linking_module": null,
           "module": "Orders",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Tickets_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Tickets",
-          "linking_module": null,
           "module": "Tickets",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Subscriptions_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Subscriptions",
-          "linking_module": null,
           "module": "Subscriptions",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Cases_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Cases",
-          "linking_module": null,
           "module": "Cases",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Contracts_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Contracts",
-          "linking_module": null,
           "module": "Contracts",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Assets_of_Accounts",
-          "connected_module": null,
-          "id": "8000",
           "label": "Assets",
-          "linking_module": null,
           "module": "Assets",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8000",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
           "connected_module": null,
+          "linking_module": null,
           "id": "8500",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Assets": {
-      "ambiguous": [],
-      "api_name": "Assets",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [
-        "Accounts",
-        "Products"
-      ],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Assets",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7340",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7341",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7342",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7343",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7344",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7345",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7346",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7347",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7348",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "External_Ref",
-          "custom": true,
-          "data_type": "text",
-          "id": "7349",
-          "label": "External Ref",
-          "length": 255,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Notes",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7350",
-          "label": "Notes",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7840",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Product_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7841",
-          "label": "Product",
-          "length": null,
-          "lookup": "Products",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Assets.json",
-      "id": "Assets",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3017",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Assets",
-      "namespace": "custom",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8517",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Campaigns": {
-      "ambiguous": [],
-      "api_name": "Campaigns",
-      "associated_place": null,
-      "called_by": [],
       "calls": [],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Campaigns",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7200",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7201",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7202",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7203",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7204",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7205",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7206",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7207",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7208",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "External_Ref",
-          "custom": false,
-          "data_type": "text",
-          "id": "7209",
-          "label": "External Ref",
-          "length": 255,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        }
+      "called_by": [
+        "Contacts",
+        "Deals",
+        "Quotes",
+        "Invoices",
+        "Orders",
+        "Cases",
+        "Tickets",
+        "Subscriptions",
+        "Contracts",
+        "Assets"
       ],
-      "file": "modules/Campaigns.json",
-      "id": "Campaigns",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3010",
-          "name": "Standard",
-          "visible": true
-        },
-        {
-          "id": "3210",
-          "name": "Retired",
-          "visible": false
-        }
-      ],
-      "name": "Campaigns",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8510",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        },
-        {
-          "api_name": "Campaign_Products",
-          "connected_module": null,
-          "id": "8610",
-          "label": "Campaign products",
-          "linking_module": "Campaign_Product_Link",
-          "module": "Products",
-          "src": "api",
-          "type": "multiselect",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Cases": {
-      "ambiguous": [],
-      "api_name": "Cases",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [
-        "Accounts",
-        "Contacts"
-      ],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Cases",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7220",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7221",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7222",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7223",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7224",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7225",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7226",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7227",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7228",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "External_Ref",
-          "custom": false,
-          "data_type": "text",
-          "id": "7229",
-          "label": "External Ref",
-          "length": 255,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Notes",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7230",
-          "label": "Notes",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7720",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Contact_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7721",
-          "label": "Contact",
-          "length": null,
-          "lookup": "Contacts",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Cases.json",
-      "id": "Cases",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3011",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Cases",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8511",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
     },
     "Contacts": {
-      "ambiguous": [],
+      "id": "Contacts",
+      "name": "Contacts",
       "api_name": "Contacts",
-      "associated_place": null,
-      "called_by": [
-        "Cases",
-        "Deals",
-        "Tickets"
-      ],
-      "calls": [
-        "Accounts"
-      ],
-      "category": "standard",
-      "dead_suspect": false,
-      "description": "",
-      "display_name": "Contacts",
       "fields": [
         {
           "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7020",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7020"
         },
         {
           "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7021",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7021"
         },
         {
           "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7022",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7022"
         },
         {
           "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7023",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -1182,178 +368,171 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7023"
         },
         {
           "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7024",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7024"
         },
         {
           "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7025",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7025"
         },
         {
           "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7026",
           "label": "Opened On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7026"
         },
         {
           "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7520",
           "label": "Account",
+          "data_type": "lookup",
           "length": null,
-          "lookup": "Accounts",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7520"
         }
       ],
-      "file": "modules/Contacts.json",
-      "id": "Contacts",
-      "layoutDetail": true,
       "layouts": [
         {
           "id": "3001",
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         }
       ],
-      "name": "Contacts",
-      "namespace": "standard",
-      "params": [],
       "related_lists": [
         {
           "api_name": "Deals_of_Contacts",
-          "connected_module": null,
-          "id": "8001",
           "label": "Deals",
-          "linking_module": null,
           "module": "Deals",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Tickets_of_Contacts",
-          "connected_module": null,
-          "id": "8001",
           "label": "Tickets",
-          "linking_module": null,
           "module": "Tickets",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Cases_of_Contacts",
-          "connected_module": null,
-          "id": "8001",
           "label": "Cases",
-          "linking_module": null,
           "module": "Cases",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8001",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8501",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8501",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Contracts": {
-      "ambiguous": [],
-      "api_name": "Contracts",
-      "associated_place": null,
-      "called_by": [],
       "calls": [
-        "Accounts",
-        "Quotes"
+        "Accounts"
       ],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Contracts",
+      "called_by": [
+        "Deals",
+        "Cases",
+        "Tickets"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Leads": {
+      "id": "Leads",
+      "name": "Leads",
+      "api_name": "Leads",
       "fields": [
         {
           "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7320",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7040"
         },
         {
           "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7321",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7041"
         },
         {
           "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7322",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7042"
         },
         {
           "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7323",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -1395,1238 +574,352 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7043"
         },
         {
           "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7324",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7044"
         },
         {
           "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7325",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7045"
         },
         {
           "api_name": "Opened_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7326",
           "label": "Opened On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7046"
         },
         {
           "api_name": "Closed_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7327",
           "label": "Closed On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7047"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3002",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8502",
+          "src": "api"
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Deals": {
+      "id": "Deals",
+      "name": "Deals",
+      "api_name": "Deals",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7060"
         },
         {
-          "api_name": "Priority",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7328",
-          "label": "Priority",
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
+          "custom": false,
+          "mandatory": true,
           "lookup": null,
+          "picklist": [],
+          "id": "7061"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7062"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7063"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7064"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7065"
         },
         {
-          "api_name": "External_Ref",
-          "custom": true,
-          "data_type": "text",
-          "id": "7329",
-          "label": "External Ref",
-          "length": 255,
-          "lookup": null,
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7066"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7067"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7068"
         },
         {
           "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7820",
           "label": "Account",
+          "data_type": "lookup",
           "length": null,
-          "lookup": "Accounts",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7560"
         },
         {
-          "api_name": "Quote_Ref",
-          "custom": false,
+          "api_name": "Contact_Ref",
+          "label": "Contact",
           "data_type": "lookup",
-          "id": "7821",
-          "label": "Quote",
           "length": null,
-          "lookup": "Quotes",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7561"
         }
       ],
-      "file": "modules/Contracts.json",
-      "id": "Contracts",
-      "layoutDetail": true,
       "layouts": [
         {
-          "id": "3016",
+          "id": "3003",
           "name": "Standard",
-          "visible": true
-        },
-        {
-          "id": "3116",
-          "name": "Compact",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         }
       ],
-      "name": "Contracts",
-      "namespace": "custom",
-      "params": [],
       "related_lists": [
         {
-          "api_name": "Attachments",
+          "api_name": "Quotes_of_Deals",
+          "label": "Quotes",
+          "module": "Quotes",
+          "type": "default",
+          "visible": true,
           "connected_module": null,
-          "id": "8516",
-          "label": "Attachments",
           "linking_module": null,
+          "id": "8003",
+          "src": "api"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8503",
+          "src": "api"
         }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Deals": {
-      "ambiguous": [],
-      "api_name": "Deals",
-      "associated_place": null,
-      "called_by": [
-        "Quotes"
       ],
       "calls": [
         "Accounts",
         "Contacts"
       ],
-      "category": "standard",
-      "dead_suspect": false,
-      "description": "",
-      "display_name": "Deals",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7060",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7061",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7062",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7063",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7064",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7065",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7066",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7067",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7068",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7560",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Contact_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7561",
-          "label": "Contact",
-          "length": null,
-          "lookup": "Contacts",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Deals.json",
-      "id": "Deals",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3003",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Deals",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Quotes_of_Deals",
-          "connected_module": null,
-          "id": "8003",
-          "label": "Quotes",
-          "linking_module": null,
-          "module": "Quotes",
-          "src": "api",
-          "type": "default",
-          "visible": true
-        },
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8503",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Invoices": {
-      "ambiguous": [],
-      "api_name": "Invoices",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [
-        "Accounts",
-        "Orders"
-      ],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Invoices",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7120",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7121",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7122",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7123",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7124",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7125",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7620",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Order_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7621",
-          "label": "Order",
-          "length": null,
-          "lookup": "Orders",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Invoices.json",
-      "id": "Invoices",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3006",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Invoices",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8506",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Leads": {
-      "ambiguous": [],
-      "api_name": "Leads",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Leads",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7040",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7041",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7042",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7043",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7044",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7045",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7046",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7047",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Leads.json",
-      "id": "Leads",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3002",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Leads",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8502",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Ledger": {
-      "ambiguous": [],
-      "api_name": "Ledger",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [],
-      "category": "custom",
-      "dead_suspect": false,
-      "description": "",
-      "display_name": "Ledger",
-      "fields": [],
-      "file": "modules/Ledger.json",
-      "id": "Ledger",
-      "layoutDetail": false,
-      "layouts": [],
-      "name": "Ledger",
-      "namespace": "custom",
-      "params": [],
-      "related_lists": [],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": {
-        "at": "2026-08-07T10:00:00.000Z",
-        "code": "INVALID_MODULE",
-        "message": "operation cannot be performed for hidden module",
-        "status": 400
-      },
-      "unresolved": []
-    },
-    "Orders": {
-      "ambiguous": [],
-      "api_name": "Orders",
-      "associated_place": null,
       "called_by": [
-        "Invoices",
-        "Shipments"
-      ],
-      "calls": [
-        "Accounts",
         "Quotes"
       ],
-      "category": "standard",
       "dead_suspect": false,
-      "description": "",
-      "display_name": "Sales Orders",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7140",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7141",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7142",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7143",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7144",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7145",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7146",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7640",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Quote_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7641",
-          "label": "Quote",
-          "length": null,
-          "lookup": "Quotes",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Orders.json",
-      "id": "Orders",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3007",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Orders",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Invoices_of_Orders",
-          "connected_module": null,
-          "id": "8007",
-          "label": "Invoices",
-          "linking_module": null,
-          "module": "Invoices",
-          "src": "api",
-          "type": "default",
-          "visible": true
-        },
-        {
-          "api_name": "Shipments_of_Orders",
-          "connected_module": null,
-          "id": "8007",
-          "label": "Shipments",
-          "linking_module": null,
-          "module": "Shipments",
-          "src": "api",
-          "type": "default",
-          "visible": true
-        },
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8507",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Pricebooks": {
-      "ambiguous": [],
-      "api_name": "Pricebooks",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [
-        "Products"
-      ],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Price Books",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7180",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7181",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7182",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7183",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7184",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7185",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7186",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7187",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7188",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Product_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7680",
-          "label": "Product",
-          "length": null,
-          "lookup": "Products",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Pricebooks.json",
-      "id": "Pricebooks",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3009",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Pricebooks",
-      "namespace": "standard",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8509",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
+      "unresolved": [],
+      "ambiguous": []
     },
     "Products": {
-      "ambiguous": [],
+      "id": "Products",
+      "name": "Products",
       "api_name": "Products",
-      "associated_place": null,
-      "called_by": [
-        "Assets",
-        "Pricebooks",
-        "Subscriptions",
-        "Tickets"
-      ],
-      "calls": [],
-      "category": "standard",
-      "dead_suspect": false,
-      "description": "",
-      "display_name": "Products",
       "fields": [
         {
           "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7080",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7080"
         },
         {
           "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7081",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7081"
         },
         {
           "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7082",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7082"
         },
         {
           "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7083",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -2668,234 +961,486 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7083"
         },
         {
           "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7084",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7084"
         },
         {
           "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7085",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7085"
         },
         {
           "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7086",
           "label": "Opened On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7086"
         },
         {
           "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7087",
           "label": "Closed On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7087"
         },
         {
           "api_name": "Priority",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7088",
           "label": "Priority",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7088"
         },
         {
           "api_name": "External_Ref",
-          "custom": false,
-          "data_type": "text",
-          "id": "7089",
           "label": "External Ref",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7089"
         }
       ],
-      "file": "modules/Products.json",
-      "id": "Products",
-      "layoutDetail": true,
       "layouts": [
         {
           "id": "3004",
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         },
         {
           "id": "3104",
           "name": "Compact",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 1
         }
       ],
-      "name": "Products",
-      "namespace": "standard",
-      "params": [],
       "related_lists": [
         {
           "api_name": "Tickets_of_Products",
-          "connected_module": null,
-          "id": "8004",
           "label": "Tickets",
-          "linking_module": null,
           "module": "Tickets",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Subscriptions_of_Products",
-          "connected_module": null,
-          "id": "8004",
           "label": "Subscriptions",
-          "linking_module": null,
           "module": "Subscriptions",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Assets_of_Products",
-          "connected_module": null,
-          "id": "8004",
           "label": "Assets",
-          "linking_module": null,
           "module": "Assets",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Pricebooks_of_Products",
-          "connected_module": null,
-          "id": "8004",
           "label": "Pricebooks",
-          "linking_module": null,
           "module": "Pricebooks",
-          "src": "api",
           "type": "default",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8004",
+          "src": "api"
         },
         {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8504",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8504",
+          "src": "api"
         },
         {
           "api_name": "Campaign_Products",
-          "connected_module": null,
-          "id": "8604",
           "label": "Campaign products",
-          "linking_module": "Campaign_Product_Link",
           "module": "Campaigns",
-          "src": "api",
           "type": "multiselect",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": "Campaign_Product_Link",
+          "id": "8604",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
+      "calls": [],
+      "called_by": [
+        "Pricebooks",
+        "Tickets",
+        "Subscriptions",
+        "Assets"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
     },
     "Quotes": {
-      "ambiguous": [],
+      "id": "Quotes",
+      "name": "Quotes",
       "api_name": "Quotes",
-      "associated_place": null,
-      "called_by": [
-        "Contracts",
-        "Orders"
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7100"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7101"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7102"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7103"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7104"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7105"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7106"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7107"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7108"
+        },
+        {
+          "api_name": "External_Ref",
+          "label": "External Ref",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7109"
+        },
+        {
+          "api_name": "Notes",
+          "label": "Notes",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7110"
+        },
+        {
+          "api_name": "Deal_Ref",
+          "label": "Deal",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Deals",
+          "picklist": [],
+          "id": "7600"
+        },
+        {
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7601"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3005",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        },
+        {
+          "id": "3205",
+          "name": "Retired",
+          "visible": false,
+          "status": "inactive",
+          "sections": 0
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Orders_of_Quotes",
+          "label": "Orders",
+          "module": "Orders",
+          "type": "default",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8005",
+          "src": "api"
+        },
+        {
+          "api_name": "Contracts_of_Quotes",
+          "label": "Contracts",
+          "module": "Contracts",
+          "type": "default",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8005",
+          "src": "api"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8505",
+          "src": "api"
+        }
       ],
       "calls": [
         "Deals",
         "Accounts"
       ],
-      "category": "standard",
+      "called_by": [
+        "Orders",
+        "Contracts"
+      ],
       "dead_suspect": false,
-      "description": "",
-      "display_name": "Quotes",
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Invoices": {
+      "id": "Invoices",
+      "name": "Invoices",
+      "api_name": "Invoices",
       "fields": [
         {
           "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7100",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7120"
         },
         {
           "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7101",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7121"
         },
         {
           "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7102",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7122"
         },
         {
           "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7103",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -2937,230 +1482,135 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7123"
         },
         {
           "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7104",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7124"
         },
         {
           "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7105",
           "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7106",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7107",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": false,
           "data_type": "picklist",
-          "id": "7108",
-          "label": "Priority",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
-        },
-        {
-          "api_name": "External_Ref",
-          "custom": false,
-          "data_type": "text",
-          "id": "7109",
-          "label": "External Ref",
-          "length": 255,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Notes",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7110",
-          "label": "Notes",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Deal_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7600",
-          "label": "Deal",
-          "length": null,
-          "lookup": "Deals",
-          "mandatory": false,
-          "picklist": []
+          ],
+          "id": "7125"
         },
         {
           "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7601",
           "label": "Account",
+          "data_type": "lookup",
           "length": null,
-          "lookup": "Accounts",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7620"
+        },
+        {
+          "api_name": "Order_Ref",
+          "label": "Order",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Orders",
+          "picklist": [],
+          "id": "7621"
         }
       ],
-      "file": "modules/Quotes.json",
-      "id": "Quotes",
-      "layoutDetail": true,
       "layouts": [
         {
-          "id": "3005",
+          "id": "3006",
           "name": "Standard",
-          "visible": true
-        },
-        {
-          "id": "3205",
-          "name": "Retired",
-          "visible": false
+          "visible": true,
+          "status": "active",
+          "sections": 2
         }
       ],
-      "name": "Quotes",
-      "namespace": "standard",
-      "params": [],
       "related_lists": [
         {
-          "api_name": "Orders_of_Quotes",
-          "connected_module": null,
-          "id": "8005",
-          "label": "Orders",
-          "linking_module": null,
-          "module": "Orders",
-          "src": "api",
-          "type": "default",
-          "visible": true
-        },
-        {
-          "api_name": "Contracts_of_Quotes",
-          "connected_module": null,
-          "id": "8005",
-          "label": "Contracts",
-          "linking_module": null,
-          "module": "Contracts",
-          "src": "api",
-          "type": "default",
-          "visible": true
-        },
-        {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8505",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8506",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Shipments": {
-      "ambiguous": [],
-      "api_name": "Shipments",
-      "associated_place": null,
-      "called_by": [],
       "calls": [
+        "Accounts",
         "Orders"
       ],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Shipments",
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Orders": {
+      "id": "Orders",
+      "name": "Orders",
+      "api_name": "Orders",
       "fields": [
         {
           "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7240",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7140"
         },
         {
           "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7241",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7141"
         },
         {
           "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7242",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7142"
         },
         {
           "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7243",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -3202,139 +1652,1145 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7143"
         },
         {
           "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7244",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7144"
         },
         {
           "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7245",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": false,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7145"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7146"
+        },
+        {
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7640"
+        },
+        {
+          "api_name": "Quote_Ref",
+          "label": "Quote",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Quotes",
+          "picklist": [],
+          "id": "7641"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3007",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Invoices_of_Orders",
+          "label": "Invoices",
+          "module": "Invoices",
+          "type": "default",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8007",
+          "src": "api"
+        },
+        {
+          "api_name": "Shipments_of_Orders",
+          "label": "Shipments",
+          "module": "Shipments",
+          "type": "default",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8007",
+          "src": "api"
+        },
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8507",
+          "src": "api"
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Quotes"
+      ],
+      "called_by": [
+        "Invoices",
+        "Shipments"
+      ],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Vendors": {
+      "id": "Vendors",
+      "name": "Vendors",
+      "api_name": "Vendors",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7160"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7161"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7162"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7163"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7164"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7165"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7166"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7167"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3008",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        },
+        {
+          "id": "3108",
+          "name": "Compact",
+          "visible": true,
+          "status": "active",
+          "sections": 1
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8508",
+          "src": "api"
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Pricebooks": {
+      "id": "Pricebooks",
+      "name": "Pricebooks",
+      "api_name": "Pricebooks",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7180"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7181"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7182"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7183"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7184"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7185"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7186"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7187"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7188"
+        },
+        {
+          "api_name": "Product_Ref",
+          "label": "Product",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7680"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3009",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8509",
+          "src": "api"
+        }
+      ],
+      "calls": [
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Campaigns": {
+      "id": "Campaigns",
+      "name": "Campaigns",
+      "api_name": "Campaigns",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7200"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7201"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7202"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7203"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7204"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7205"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7206"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7207"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7208"
+        },
+        {
+          "api_name": "External_Ref",
+          "label": "External Ref",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7209"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3010",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        },
+        {
+          "id": "3210",
+          "name": "Retired",
+          "visible": false,
+          "status": "inactive",
+          "sections": 0
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8510",
+          "src": "api"
+        },
+        {
+          "api_name": "Campaign_Products",
+          "label": "Campaign products",
+          "module": "Products",
+          "type": "multiselect",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": "Campaign_Product_Link",
+          "id": "8610",
+          "src": "api"
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Cases": {
+      "id": "Cases",
+      "name": "Cases",
+      "api_name": "Cases",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7220"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": false,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7221"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7222"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7223"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7224"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7225"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7226"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7227"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7228"
+        },
+        {
+          "api_name": "External_Ref",
+          "label": "External Ref",
+          "data_type": "text",
+          "length": 255,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7229"
+        },
+        {
+          "api_name": "Notes",
+          "label": "Notes",
+          "data_type": "textarea",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7230"
+        },
+        {
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7720"
+        },
+        {
+          "api_name": "Contact_Ref",
+          "label": "Contact",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7721"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3011",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8511",
+          "src": "api"
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Contacts"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Shipments": {
+      "id": "Shipments",
+      "name": "Shipments",
+      "api_name": "Shipments",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7240"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7241"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7242"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7243"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7244"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7245"
         },
         {
           "api_name": "Order_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7740",
           "label": "Order",
+          "data_type": "lookup",
           "length": null,
-          "lookup": "Orders",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Orders",
+          "picklist": [],
+          "id": "7740"
         }
       ],
-      "file": "modules/Shipments.json",
-      "id": "Shipments",
-      "layoutDetail": true,
       "layouts": [
         {
           "id": "3012",
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         },
         {
           "id": "3112",
           "name": "Compact",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 1
         }
       ],
-      "name": "Shipments",
-      "namespace": "custom",
-      "params": [],
       "related_lists": [
         {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8512",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8512",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Subscriptions": {
-      "ambiguous": [],
-      "api_name": "Subscriptions",
-      "associated_place": null,
-      "called_by": [],
       "calls": [
-        "Accounts",
-        "Products"
+        "Orders"
       ],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Subscriptions",
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Tickets": {
+      "id": "Tickets",
+      "name": "Tickets",
+      "api_name": "Tickets",
       "fields": [
         {
           "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7280",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": true,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7260"
         },
         {
           "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7281",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7261"
         },
         {
           "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7282",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7262"
         },
         {
           "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7283",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -3376,564 +2832,158 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7263"
         },
         {
           "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7284",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7264"
         },
         {
           "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7285",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7265"
         },
         {
           "api_name": "Opened_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7286",
           "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": true,
           "data_type": "date",
-          "id": "7287",
-          "label": "Closed On",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7266"
         },
         {
           "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7780",
           "label": "Account",
+          "data_type": "lookup",
           "length": null,
-          "lookup": "Accounts",
+          "custom": false,
           "mandatory": false,
-          "picklist": []
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7760"
+        },
+        {
+          "api_name": "Contact_Ref",
+          "label": "Contact",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Contacts",
+          "picklist": [],
+          "id": "7761"
         },
         {
           "api_name": "Product_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7781",
           "label": "Product",
+          "data_type": "lookup",
           "length": null,
+          "custom": false,
+          "mandatory": false,
           "lookup": "Products",
-          "mandatory": false,
-          "picklist": []
+          "picklist": [],
+          "id": "7762"
         }
       ],
-      "file": "modules/Subscriptions.json",
-      "id": "Subscriptions",
-      "layoutDetail": true,
       "layouts": [
         {
-          "id": "3014",
+          "id": "3013",
           "name": "Standard",
-          "visible": true
+          "visible": true,
+          "status": "active",
+          "sections": 2
         }
       ],
-      "name": "Subscriptions",
-      "namespace": "custom",
-      "params": [],
       "related_lists": [
         {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8514",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Territories": {
-      "ambiguous": [],
-      "api_name": "Territories",
-      "associated_place": null,
-      "called_by": [],
-      "calls": [],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Territories",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7300",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7301",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7302",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7303",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7304",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7305",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7306",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Closed_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7307",
-          "label": "Closed On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Priority",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7308",
-          "label": "Priority",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        }
-      ],
-      "file": "modules/Territories.json",
-      "id": "Territories",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3015",
-          "name": "Standard",
-          "visible": true
-        },
-        {
-          "id": "3215",
-          "name": "Retired",
-          "visible": false
-        }
-      ],
-      "name": "Territories",
-      "namespace": "custom",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
+          "visible": true,
           "connected_module": null,
-          "id": "8515",
-          "label": "Attachments",
           "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
+          "id": "8513",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Tickets": {
-      "ambiguous": [],
-      "api_name": "Tickets",
-      "associated_place": null,
-      "called_by": [],
       "calls": [
         "Accounts",
         "Contacts",
         "Products"
       ],
-      "category": "custom",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Support Tickets",
-      "fields": [
-        {
-          "api_name": "Name",
-          "custom": true,
-          "data_type": "text",
-          "id": "7260",
-          "label": "Name",
-          "length": 255,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Owner",
-          "custom": true,
-          "data_type": "ownerlookup",
-          "id": "7261",
-          "label": "Owner",
-          "length": null,
-          "lookup": null,
-          "mandatory": true,
-          "picklist": []
-        },
-        {
-          "api_name": "Description",
-          "custom": true,
-          "data_type": "textarea",
-          "id": "7262",
-          "label": "Description",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Status",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7263",
-          "label": "Status",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "New",
-            "Qualified",
-            "Contacted",
-            "Proposal sent",
-            "Negotiation",
-            "On hold",
-            "Stage 1 - awaiting review",
-            "Stage 2 - awaiting review",
-            "Stage 3 - awaiting review",
-            "Stage 4 - awaiting review",
-            "Stage 5 - awaiting review",
-            "Stage 6 - awaiting review",
-            "Stage 7 - awaiting review",
-            "Stage 8 - awaiting review",
-            "Stage 9 - awaiting review",
-            "Stage 10 - awaiting review",
-            "Stage 11 - awaiting review",
-            "Stage 12 - awaiting review",
-            "Stage 13 - awaiting review",
-            "Stage 14 - awaiting review",
-            "Stage 15 - awaiting review",
-            "Stage 16 - awaiting review",
-            "Stage 17 - awaiting review",
-            "Stage 18 - awaiting review",
-            "Stage 19 - awaiting review",
-            "Stage 20 - awaiting review",
-            "Stage 21 - awaiting review",
-            "Stage 22 - awaiting review",
-            "Stage 23 - awaiting review",
-            "Stage 24 - awaiting review",
-            "Stage 25 - awaiting review",
-            "Stage 26 - awaiting review",
-            "Stage 27 - awaiting review",
-            "Stage 28 - awaiting review",
-            "Stage 29 - awaiting review",
-            "Stage 30 - awaiting review",
-            "Stage 31 - awaiting review",
-            "Stage 32 - awaiting review",
-            "Stage 33 - awaiting review",
-            "Stage 34 - awaiting review"
-          ]
-        },
-        {
-          "api_name": "Amount",
-          "custom": true,
-          "data_type": "currency",
-          "id": "7264",
-          "label": "Amount",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Currency",
-          "custom": true,
-          "data_type": "picklist",
-          "id": "7265",
-          "label": "Currency",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": [
-            "One",
-            "Two",
-            "Three"
-          ]
-        },
-        {
-          "api_name": "Opened_On",
-          "custom": true,
-          "data_type": "date",
-          "id": "7266",
-          "label": "Opened On",
-          "length": null,
-          "lookup": null,
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Account_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7760",
-          "label": "Account",
-          "length": null,
-          "lookup": "Accounts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Contact_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7761",
-          "label": "Contact",
-          "length": null,
-          "lookup": "Contacts",
-          "mandatory": false,
-          "picklist": []
-        },
-        {
-          "api_name": "Product_Ref",
-          "custom": false,
-          "data_type": "lookup",
-          "id": "7762",
-          "label": "Product",
-          "length": null,
-          "lookup": "Products",
-          "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Tickets.json",
-      "id": "Tickets",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3013",
-          "name": "Standard",
-          "visible": true
-        }
-      ],
-      "name": "Tickets",
-      "namespace": "custom",
-      "params": [],
-      "related_lists": [
-        {
-          "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8513",
-          "label": "Attachments",
-          "linking_module": null,
-          "module": "Attachments",
-          "src": "api",
-          "type": "system",
-          "visible": true
-        }
-      ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
-    },
-    "Vendors": {
-      "ambiguous": [],
-      "api_name": "Vendors",
-      "associated_place": null,
       "called_by": [],
-      "calls": [],
-      "category": "standard",
-      "dead_suspect": true,
-      "description": "",
-      "display_name": "Vendors",
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Subscriptions": {
+      "id": "Subscriptions",
+      "name": "Subscriptions",
+      "api_name": "Subscriptions",
       "fields": [
         {
           "api_name": "Name",
-          "custom": false,
-          "data_type": "text",
-          "id": "7160",
           "label": "Name",
+          "data_type": "text",
           "length": 255,
-          "lookup": null,
+          "custom": true,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7280"
         },
         {
           "api_name": "Owner",
-          "custom": false,
-          "data_type": "ownerlookup",
-          "id": "7161",
           "label": "Owner",
+          "data_type": "ownerlookup",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": true,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7281"
         },
         {
           "api_name": "Description",
-          "custom": false,
-          "data_type": "textarea",
-          "id": "7162",
           "label": "Description",
+          "data_type": "textarea",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7282"
         },
         {
           "api_name": "Status",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7163",
           "label": "Status",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "New",
             "Qualified",
@@ -3975,97 +3025,786 @@
             "Stage 32 - awaiting review",
             "Stage 33 - awaiting review",
             "Stage 34 - awaiting review"
-          ]
+          ],
+          "id": "7283"
         },
         {
           "api_name": "Amount",
-          "custom": false,
-          "data_type": "currency",
-          "id": "7164",
           "label": "Amount",
+          "data_type": "currency",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7284"
         },
         {
           "api_name": "Currency",
-          "custom": false,
-          "data_type": "picklist",
-          "id": "7165",
           "label": "Currency",
+          "data_type": "picklist",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
+          "lookup": null,
           "picklist": [
             "One",
             "Two",
             "Three"
-          ]
+          ],
+          "id": "7285"
         },
         {
           "api_name": "Opened_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7166",
           "label": "Opened On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
+          "lookup": null,
+          "picklist": [],
+          "id": "7286"
         },
         {
           "api_name": "Closed_On",
-          "custom": false,
-          "data_type": "date",
-          "id": "7167",
           "label": "Closed On",
+          "data_type": "date",
           "length": null,
-          "lookup": null,
+          "custom": true,
           "mandatory": false,
-          "picklist": []
-        }
-      ],
-      "file": "modules/Vendors.json",
-      "id": "Vendors",
-      "layoutDetail": true,
-      "layouts": [
-        {
-          "id": "3008",
-          "name": "Standard",
-          "visible": true
+          "lookup": null,
+          "picklist": [],
+          "id": "7287"
         },
         {
-          "id": "3108",
-          "name": "Compact",
-          "visible": true
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7780"
+        },
+        {
+          "api_name": "Product_Ref",
+          "label": "Product",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7781"
         }
       ],
-      "name": "Vendors",
-      "namespace": "standard",
-      "params": [],
+      "layouts": [
+        {
+          "id": "3014",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
       "related_lists": [
         {
           "api_name": "Attachments",
-          "connected_module": null,
-          "id": "8508",
           "label": "Attachments",
-          "linking_module": null,
           "module": "Attachments",
-          "src": "api",
           "type": "system",
-          "visible": true
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8514",
+          "src": "api"
         }
       ],
-      "rest": false,
-      "return_type": null,
-      "touched_by": [],
-      "unreadable": null,
-      "unresolved": []
+      "calls": [
+        "Accounts",
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Territories": {
+      "id": "Territories",
+      "name": "Territories",
+      "api_name": "Territories",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7300"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7301"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7302"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7303"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7304"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7305"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7306"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7307"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7308"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3015",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        },
+        {
+          "id": "3215",
+          "name": "Retired",
+          "visible": false,
+          "status": "inactive",
+          "sections": 0
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8515",
+          "src": "api"
+        }
+      ],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Contracts": {
+      "id": "Contracts",
+      "name": "Contracts",
+      "api_name": "Contracts",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7320"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7321"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7322"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7323"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7324"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7325"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7326"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7327"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7328"
+        },
+        {
+          "api_name": "External_Ref",
+          "label": "External Ref",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7329"
+        },
+        {
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7820"
+        },
+        {
+          "api_name": "Quote_Ref",
+          "label": "Quote",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Quotes",
+          "picklist": [],
+          "id": "7821"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3016",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        },
+        {
+          "id": "3116",
+          "name": "Compact",
+          "visible": true,
+          "status": "active",
+          "sections": 1
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8516",
+          "src": "api"
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Quotes"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Assets": {
+      "id": "Assets",
+      "name": "Assets",
+      "api_name": "Assets",
+      "fields": [
+        {
+          "api_name": "Name",
+          "label": "Name",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7340"
+        },
+        {
+          "api_name": "Owner",
+          "label": "Owner",
+          "data_type": "ownerlookup",
+          "length": null,
+          "custom": true,
+          "mandatory": true,
+          "lookup": null,
+          "picklist": [],
+          "id": "7341"
+        },
+        {
+          "api_name": "Description",
+          "label": "Description",
+          "data_type": "textarea",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7342"
+        },
+        {
+          "api_name": "Status",
+          "label": "Status",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "New",
+            "Qualified",
+            "Contacted",
+            "Proposal sent",
+            "Negotiation",
+            "On hold",
+            "Stage 1 - awaiting review",
+            "Stage 2 - awaiting review",
+            "Stage 3 - awaiting review",
+            "Stage 4 - awaiting review",
+            "Stage 5 - awaiting review",
+            "Stage 6 - awaiting review",
+            "Stage 7 - awaiting review",
+            "Stage 8 - awaiting review",
+            "Stage 9 - awaiting review",
+            "Stage 10 - awaiting review",
+            "Stage 11 - awaiting review",
+            "Stage 12 - awaiting review",
+            "Stage 13 - awaiting review",
+            "Stage 14 - awaiting review",
+            "Stage 15 - awaiting review",
+            "Stage 16 - awaiting review",
+            "Stage 17 - awaiting review",
+            "Stage 18 - awaiting review",
+            "Stage 19 - awaiting review",
+            "Stage 20 - awaiting review",
+            "Stage 21 - awaiting review",
+            "Stage 22 - awaiting review",
+            "Stage 23 - awaiting review",
+            "Stage 24 - awaiting review",
+            "Stage 25 - awaiting review",
+            "Stage 26 - awaiting review",
+            "Stage 27 - awaiting review",
+            "Stage 28 - awaiting review",
+            "Stage 29 - awaiting review",
+            "Stage 30 - awaiting review",
+            "Stage 31 - awaiting review",
+            "Stage 32 - awaiting review",
+            "Stage 33 - awaiting review",
+            "Stage 34 - awaiting review"
+          ],
+          "id": "7343"
+        },
+        {
+          "api_name": "Amount",
+          "label": "Amount",
+          "data_type": "currency",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7344"
+        },
+        {
+          "api_name": "Currency",
+          "label": "Currency",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7345"
+        },
+        {
+          "api_name": "Opened_On",
+          "label": "Opened On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7346"
+        },
+        {
+          "api_name": "Closed_On",
+          "label": "Closed On",
+          "data_type": "date",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7347"
+        },
+        {
+          "api_name": "Priority",
+          "label": "Priority",
+          "data_type": "picklist",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [
+            "One",
+            "Two",
+            "Three"
+          ],
+          "id": "7348"
+        },
+        {
+          "api_name": "External_Ref",
+          "label": "External Ref",
+          "data_type": "text",
+          "length": 255,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7349"
+        },
+        {
+          "api_name": "Notes",
+          "label": "Notes",
+          "data_type": "textarea",
+          "length": null,
+          "custom": true,
+          "mandatory": false,
+          "lookup": null,
+          "picklist": [],
+          "id": "7350"
+        },
+        {
+          "api_name": "Account_Ref",
+          "label": "Account",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Accounts",
+          "picklist": [],
+          "id": "7840"
+        },
+        {
+          "api_name": "Product_Ref",
+          "label": "Product",
+          "data_type": "lookup",
+          "length": null,
+          "custom": false,
+          "mandatory": false,
+          "lookup": "Products",
+          "picklist": [],
+          "id": "7841"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "3017",
+          "name": "Standard",
+          "visible": true,
+          "status": "active",
+          "sections": 2
+        }
+      ],
+      "related_lists": [
+        {
+          "api_name": "Attachments",
+          "label": "Attachments",
+          "module": "Attachments",
+          "type": "system",
+          "visible": true,
+          "connected_module": null,
+          "linking_module": null,
+          "id": "8517",
+          "src": "api"
+        }
+      ],
+      "calls": [
+        "Accounts",
+        "Products"
+      ],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": []
+    },
+    "Ledger": {
+      "id": "Ledger",
+      "name": "Ledger",
+      "api_name": "Ledger",
+      "fields": [],
+      "layouts": [],
+      "related_lists": [],
+      "calls": [],
+      "called_by": [],
+      "dead_suspect": false,
+      "unresolved": [],
+      "ambiguous": [],
+      "unreadable": {
+        "status": 400,
+        "code": "INVALID_MODULE",
+        "at": "2026-08-07T10:00:00.000Z",
+        "message": "operation cannot be performed for hidden module"
+      }
     }
+  },
+  "edges": [],
+  "focus": null,
+  "depth": 2,
+  "counts": {
+    "nodes": 19,
+    "edges": 22,
+    "dead_suspects": 0,
+    "unresolved": 0
   },
   "workspace": {
     "instance": "sampleorg",
-    "org": "1234567890"
+    "org": "1234567890",
+    "label": "Sample org"
   }
 }

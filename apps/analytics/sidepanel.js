@@ -1323,11 +1323,19 @@ async function renderDetail(v) {
   // lineage
   const d = deps ? deps[v.id] : null;
   if (!d) { body.innerHTML = '<div class="dpad"><div class="empty" style="padding:0"><b>No lineage for this view.</b> Use Pull above to fetch just this one.</div></div>'; return; }
+  // Every name that is a view in this workspace is a link to it - what reads from this, what it
+  // reads, the dashboards it appears on. The Relations tab has worked this way since it was written
+  // and the lineage did not, so the one box that answers «what depends on this» could not take you
+  // to any of it. A name the panel cannot open stays plain: a link that leads nowhere is worse than
+  // text.
+  const goTo = (id, label) => (m.has(String(id))
+    ? `<a class="fk" data-go="${escA(String(id))}" title="Open ${escA(label)}">${esc(label)}</a>`
+    : esc(label));
   const li = (arr) => arr.length
-    ? `<ul>${arr.map((x) => `<li>${esc(nameOf(x.id, m))} <span class="lv">level ${x.level}</span></li>`).join('')}</ul>`
+    ? `<ul>${arr.map((x) => `<li>${goTo(x.id, nameOf(x.id, m))} <span class="lv">level ${x.level}</span></li>`).join('')}</ul>`
     : '<div class="none">none</div>';
   const dash = d.dashboards.length
-    ? `<ul>${d.dashboards.map((x) => `<li>${esc(nameOf(x, m))}</li>`).join('')}</ul>`
+    ? `<ul>${d.dashboards.map((x) => `<li>${goTo(x, nameOf(x, m))}</li>`).join('')}</ul>`
     : '<div class="none">none</div>';
   const q = sqls[v.id];
   const cols = q && q.sources
@@ -1335,7 +1343,7 @@ async function renderDetail(v) {
     // detail pane that throws half-drawn is not the place to find out that something did not. The
     // count is omitted rather than shown as zero - «0 columns involved» is a measurement, and this
     // would be the absence of one.
-    ? Object.entries(q.sources).map(([tid, s]) => `<li>${esc((s && s.name) || nameOf(tid, m))}${s && Array.isArray(s.columns) ? ` <span class="lv">${s.columns.length} columns involved</span>` : ''}</li>`).join('')
+    ? Object.entries(q.sources).map(([tid, s]) => `<li>${goTo(tid, (s && s.name) || nameOf(tid, m))}${s && Array.isArray(s.columns) ? ` <span class="lv">${s.columns.length} columns involved</span>` : ''}</li>`).join('')
     : '';
   body.innerHTML = '<div class="dpad">'
     + `<div class="lin"><h5>Reads from</h5>${li(d.parents)}</div>`
@@ -1343,6 +1351,9 @@ async function renderDetail(v) {
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
     + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
     + '</div>';
+  // Wired like the Relations tab's: naming a view and not taking you to it is the half a reader
+  // notices. Reported for this box, in its general form - it should read like any hypertext.
+  body.querySelectorAll('a.fk[data-go]').forEach((a2) => { a2.onclick = () => openDetail(a2.dataset.go); });
 }
 
 // Local only. Re-reads the mirror from disk, or takes the chance to re-grant a lapsed folder

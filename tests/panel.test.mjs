@@ -4057,3 +4057,56 @@ test('crm: the arrows open a row the way that row opens', () => {
   assert.ok(/el\.click\(\)/.test(body), 'the step still opens every row as a function');
   assert.ok(!/openFromTree\(/.test(body), 'openFromTree is still called for rows that are not files');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «You should be able to jump from one element to another as in any hypertext» - the author, after
+// finding two boxes that named things and would not take you to them: the workflows a CRM function
+// is used in, and every entry in the Analytics lineage tab. The rule is general, so the test is
+// about the rule: a name the panel can open is a link, and a name it cannot stays text, because a
+// link that leads nowhere is worse than none.
+{
+  // The MSG block travels with the function, as the other lifted helpers here do: the wording lives
+  // in the shipped constant and a test that restated it would be proving its own copy.
+  const { apLink } = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
+                           sliceConst('apps/crm/sidepanel.js', 'AP_OPEN'),
+                           sliceFn('apps/crm/sidepanel.js', 'apLink')],
+                          { HEALTH_OPEN: { workflow: () => {}, schedule: () => {}, action: () => {}, module: () => {} },
+                            escHtml: (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])),
+                            escA: (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') });
+
+  test('a workflow rule is a link to the rule', () => {
+    const out = apLink('workflow_rules', { id: 4002, name: 'Invoice overdue' });
+    assert.match(out, /data-ap="workflow"/);
+    assert.match(out, /data-apid="4002"/);
+    assert.match(out, />Invoice overdue</);
+  });
+
+  test('a kind this panel cannot open stays text', () => {
+    const out = apLink('blueprint', { id: 7, name: 'Onboarding' });
+    assert.equal(out, 'Onboarding', out);
+  });
+
+  test('a name with no id stays text, because there is nowhere to go', () => {
+    assert.equal(apLink('workflow_rules', { name: 'Nameless rule' }), 'Nameless rule');
+  });
+
+  test('the name is escaped whichever way it comes out', () => {
+    assert.ok(!apLink('workflow_rules', { id: 1, name: '<img src=x>' }).includes('<img'));
+    assert.ok(!apLink('blueprint', { id: 1, name: '<img src=x>' }).includes('<img'));
+  });
+
+  test('both halves are wired, or the links do nothing', () => {
+    const crm = read('apps/crm/sidepanel.js');
+    assert.ok(/a\.aplink\[data-ap\]/.test(crm), 'crm: the «Used in» links are drawn and never wired');
+    const an = read('apps/analytics/sidepanel.js');
+    const i = an.indexOf('<h5>Reads from</h5>');
+    assert.ok(/a\.fk\[data-go\]/.test(an.slice(i, i + 900)), 'analytics: the lineage links are not wired');
+  });
+
+  test('the sample says where a function is used, so the picture can show it', () => {
+    // It said `associated_place: null` for every function, so the line that lists them - and now the
+    // links in it - had nothing to draw from and no render could exercise them.
+    const src = read('apps/crm/sample-org.js');
+    assert.ok(/associated_place: usedIn\[/.test(src), 'the sample is back to knowing nothing about usage');
+  });
+}

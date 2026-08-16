@@ -91,14 +91,21 @@ function callGraph(files, meta) {
         if (a.type === 'function' && a.name) fns.push(a.name);
       }
     }
+    // `entity` as well as `category`, because the panel writes both and they answer different
+    // questions - what kind of *thing* this is, and what kind of that thing. Without it a workflow
+    // node read as a function, and a test asking «is every function's namespace one Deluge knows»
+    // failed on a rule whose namespace is correctly the module it fires on. The fixture was
+    // describing a shape the product does not produce, which is the defect class this repository
+    // met twice this week on the Analytics side.
     nodes['wf:' + w.id] = { id: 'wf:' + w.id, name: w.name, display_name: w.name,
-                            namespace: w.module, category: 'workflows', calls: fns, called_by: [],
+                            namespace: w.module, category: 'workflows', entity: 'workflows',
+                            calls: fns, called_by: [],
                             params: [], return_type: '', rest: false, dead_suspect: false,
                             unresolved: [], ambiguous: [] };
   }
   for (const s of read('schedules/index.json')) {
     nodes['sch:' + s.id] = { id: 'sch:' + s.id, name: s.name, display_name: s.name,
-                             namespace: 'schedules', category: 'schedules',
+                             namespace: 'schedules', category: 'schedules', entity: 'schedules',
                              calls: [], called_by: [], params: [],
                              return_type: '', rest: false, dead_suspect: false,
                              unresolved: [], ambiguous: [] };
@@ -106,7 +113,7 @@ function callGraph(files, meta) {
   for (const c of read('connections/index.json')) {
     const id = 'conn:' + c.name;
     nodes[id] = { id, name: c.label, display_name: c.label, namespace: 'connections',
-                  category: 'connections', calls: [], called_by: [], params: [], return_type: '',
+                  category: 'connections', entity: 'connections', calls: [], called_by: [], params: [], return_type: '',
                   rest: false, dead_suspect: false, unresolved: [], ambiguous: [] };
 
   }

@@ -201,6 +201,15 @@
     ['Accounts', 'Credit limit changed', 'validation_rule.checkCreditLimit', false],
     ['Quotes', 'Quote accepted', 'automation.onOrderCreate', false],
   ];
+  // Which rule fires which function, keyed the way Zoho keys `associated_place`: a function's own
+  // metadata says where it is used, and the sample said `null` for every one of them - so the panel's
+  // «Used in workflow_rules (2): …» line, and the links it now carries, had nothing to draw from and
+  // no picture could show them. The ids are the ones the workflow files are written with.
+  const usedIn = {};
+  WORKFLOWS.forEach(([, name, fn], i) => {
+    if (!fn) return;
+    (usedIn[fn] ||= []).push({ _type: 'workflow_rules', id: String(4000 + i), name: name });   // the id the workflow files carry
+  });
   const SCHEDULES = [
     ['Nightly dispatch', 'schedule.nightlyDispatch', 'Every day at 02:00'],
     ['Dunning run', 'schedule.dunningRun', 'Every day at 06:00'],
@@ -288,7 +297,7 @@
         return_type: params.length ? 'map' : 'void',
         params: params.map((p) => ({ name: p, type: 'string' })),
         description: '', updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
-        modified_by: AUTHOR, associated_place: null, workflow: '',
+        modified_by: AUTHOR, associated_place: usedIn[ns + '.' + name] || null, workflow: '',
         rest_api: (name === 'exportCsv' || name === 'openTicket')
           ? [{ type: 'GET', active: true }] : [],
         connections: CONNECTIONS.filter((c) => c[2].includes(ns + '.' + name))

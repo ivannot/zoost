@@ -16,7 +16,13 @@
   "description": "",
   "updatedTime": "2026-07-04T09:00:00+00:00",
   "modified_by": "Sample User",
-  "associated_place": null,
+  "associated_place": [
+    {
+      "_type": "workflow_rules",
+      "id": "4008",
+      "name": "Credit limit changed"
+    }
+  ],
   "workflow": "",
   "rest_api": [],
   "connections": [],
