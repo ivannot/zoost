@@ -479,3 +479,14 @@ footer .legal{line-height:1.65;margin:10px 0 0}
 .prod .plinks{margin-top:auto;padding-top:6px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
 .prod .plinks a{color:var(--sel-text);text-decoration:none;font-weight:600}
 .prod .plinks a:hover{text-decoration:underline}
+/* The hero, the buttons and the guide switcher: the same seven rules in six pages each. This sheet
+ * names `.hero .eyebrow` and `.btn` only in a comment, so nothing here collides with them - which
+ * a cruder reading of «does site.css mention this class» had got wrong, holding them back for a
+ * conflict that does not exist. */
+.hero{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+.hero h1 span{color:var(--muted)}
+.hero p.lead{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:64ch;margin:0 0 28px}
+.btn:hover{border-color:var(--sel)}
+.btn.p{background:var(--sel);border-color:var(--sel);color:#fff}
+.gsw a.on{background:var(--sel);color:#fff}

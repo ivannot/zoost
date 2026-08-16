@@ -41,19 +41,12 @@ crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
 crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.html
 crm:header	apps/crm/graphview.html,apps/crm/options.html
 crm:header h1	apps/crm/graphview.html,apps/crm/options.html
-site:.btn.p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.btn:hover	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card li	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.card ul	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.doc .tools	site/ai.html,site/it/ai.html
 site:.doc .tools code	site/ai.html,site/it/ai.html
-site:.gsw a.on	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
-site:.hero	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.hero h1	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.hero h1 span	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
-site:.hero p.lead	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.k	site/index.html,site/it/index.html
 site:.meta	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:.note.warn	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
