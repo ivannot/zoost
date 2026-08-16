@@ -107,6 +107,15 @@
   #aiview .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
   #aiview .aihead .aisp{flex:1}
   #aiview .aiicon{cursor:pointer;color:var(--muted);font-size:14px}
+  /* Two glyphs, two different amounts of ink inside the same line box - ⚙ paints much smaller than
+     ✕ at the same declared size, and each sits differently against its own baseline. Nudging one by
+     a pixel is fitting the font rather than the layout, so instead they get a box of their own and
+     are centred inside it: whatever a font does with them, the two boxes are the same and the row
+     agrees with itself. `Clear` keeps the plain rule, because it is a word and a fixed width would
+     clip it. Reported as «the gear is too small and they are not all centred». */
+  #aiview #aigear, #aiview #aix{display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;line-height:1}
+  #aiview #aigear{font-size:17px}
   #aiview .aiicon:hover{color:var(--ink)}
   /* Chrome, not content: the context line sits on the panel background so the message bubbles -
      which are --surface - read as raised above it. It used to share both the background and the

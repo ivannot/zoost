@@ -112,13 +112,16 @@ document.addEventListener('click', (e) => {
 // Uniqueness by construction is still not enough on its own, which is why options.js also refuses to
 // save over a value that changed underneath it. A window can be closed and reopened, the extension
 // reloaded, and the panel itself writes some of these keys.
-async function openSettings() {
-  const url = chrome.runtime.getURL('options.html');
+// `where` is a fragment - '#ai' from the assistant - so a reader sent to change one thing lands on
+// it instead of at the top of a page about eight. An already-open settings window is focused *and*
+// moved, because otherwise the second ask does nothing visible and reads as a broken button.
+async function openSettings(where) {
+  const url = chrome.runtime.getURL('options.html') + (where || '');
   try {
-    const open = await chrome.tabs.query({ url });
+    const open = await chrome.tabs.query({ url: chrome.runtime.getURL('options.html') });
     if (open && open.length) {
       await chrome.windows.update(open[0].windowId, { focused: true });
-      await chrome.tabs.update(open[0].id, { active: true });
+      await chrome.tabs.update(open[0].id, { active: true, url });
       return;
     }
     await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
@@ -1889,7 +1892,7 @@ async function aiSend() {
   aiEngineChrome();
   if (aiLocked(cfg)) { aiShowLock(true); return; }
   if (!(await aiEnsureFiles())) { status('Folder access needs re-granting - press \u21bb Refresh, then ask again.', 'warn'); return; }
-  if (!aiActiveReady(cfg)) { openSettings(); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
+  if (!aiActiveReady(cfg)) { openSettings('#ai'); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
   aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); status('AI thinking…', 'busy');
@@ -2485,7 +2488,7 @@ $('health').onclick = () => ($('healthview').classList.contains('show') ? closeH
 $('askai').onclick = toggleAI;
 $('aix').onclick = closeAI;
 $('aiclear').onclick = aiClear;
-$('aigear').onclick = () => openSettings();
+$('aigear').onclick = () => openSettings('#ai');
 $('ainotex').onclick = () => $('ainote').classList.remove('show');
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('aisend').onclick = aiSend;

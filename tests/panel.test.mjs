@@ -3972,7 +3972,8 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
     for (const [app, sticky] of [['analytics', 'thead'], ['crm', '.grp']]) {
       const src = read(`apps/${app}/sidepanel.js`);
       const i = src.indexOf('function stepSelection');
-      const body = src.slice(i, i + 1600);
+      const body = src.slice(i, src.indexOf('\nfunction ', i + 10))
+        .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
       assert.ok(body.includes('revealRow(') && body.includes(`'${sticky}'`),
                 `${app}: the row is not revealed under its own sticky header`);
       assert.ok(!/scrollIntoView/.test(body), `${app}: still aligning to the edge, header or no header`);
@@ -4039,3 +4040,20 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
     assert.ok(/revealRow\(/.test(body), 'opening a view from a link marks a row nobody can see');
   });
 }
+
+test('crm: the arrows open a row the way that row opens', () => {
+  // The tree is the functions list in one mode and modules, workflows, schedules, actions or
+  // connections in the others. Stepping called openFromTree() on all of them, which reads a .dg
+  // file - so in the Actions tab an arrow answered «A requested file or directory could not be
+  // found at the time an operation was processed». Reported from there. A click is the one thing
+  // every row already knows how to be.
+  // Comments stripped first: this file explains at length why the row is clicked, and an assertion
+  // over the prose would find the very name it is asserting is gone. The trap this repository
+  // already recorded about the duplicate-message check.
+  const src = read('apps/crm/sidepanel.js');
+  const i = src.indexOf('function stepSelection');
+  const body = src.slice(i, src.indexOf('\nfunction ', i + 10))
+    .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  assert.ok(/el\.click\(\)/.test(body), 'the step still opens every row as a function');
+  assert.ok(!/openFromTree\(/.test(body), 'openFromTree is still called for rows that are not files');
+});

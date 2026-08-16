@@ -258,6 +258,14 @@ async function currentAi() {
   return { anthropic: c.anthropic || {}, openai: c.openai || {} };
 }
 
+// Whether a provider has anything stored at all - a key in the clear, or one behind a passphrase.
+// Both count: forgetting is about what is on this machine, not about which form it took.
+function showForget(prov, stored) {
+  const btn = $(prov === 'anthropic' ? 'ai_a_forget' : 'ai_o_forget');
+  if (!btn) return;
+  btn.style.display = (stored && (stored.apiKey || stored.apiKeyEnc)) ? '' : 'none';
+}
+
 async function loadAi() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   const cfg = {
@@ -283,6 +291,10 @@ async function loadAi() {
     if (prov.apiKeyEnc) { $(id).value = ''; $(id).placeholder = 'stored encrypted - type it again to replace it'; }
   });
   aiStored = { anthropic: cfg.anthropic, openai: cfg.openai };
+  // Absent when there is nothing to forget. The same rule as the panel's retry and Clear buttons:
+  // a control that can do nothing goes away rather than sitting there, because offering to remove
+  // what is not there is an answer to a question nobody asked. Reported.
+  showForget('anthropic', cfg.anthropic); showForget('openai', cfg.openai);
   prevEngine = cfg.active;
   aiForget.clear();
   wireForget('anthropic', 'ai_a_key', 'ai_a_model'); wireForget('openai', 'ai_o_key', 'ai_o_model');

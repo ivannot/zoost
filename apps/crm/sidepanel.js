@@ -208,13 +208,16 @@ document.addEventListener('click', (e) => {
 // Uniqueness by construction is still not enough on its own, which is why options.js also refuses to
 // save over a value that changed underneath it. A window can be closed and reopened, the extension
 // reloaded, and the panel itself writes some of these keys.
-async function openSettings() {
-  const url = chrome.runtime.getURL('options.html');
+// `where` is a fragment - '#ai' from the assistant - so a reader sent to change one thing lands on
+// it instead of at the top of a page about eight. An already-open settings window is focused *and*
+// moved, because otherwise the second ask does nothing visible and reads as a broken button.
+async function openSettings(where) {
+  const url = chrome.runtime.getURL('options.html') + (where || '');
   try {
-    const open = await chrome.tabs.query({ url });
+    const open = await chrome.tabs.query({ url: chrome.runtime.getURL('options.html') });
     if (open && open.length) {
       await chrome.windows.update(open[0].windowId, { focused: true });
-      await chrome.tabs.update(open[0].id, { active: true });
+      await chrome.tabs.update(open[0].id, { active: true, url });
       return;
     }
     await chrome.windows.create({ url, type: 'popup', width: 880, height: 900 });
@@ -1546,7 +1549,12 @@ function stepSelection(delta, edge) {
   const el = rows[i];
   if (!el || el === cur) return;
   stepAnchor = el.dataset.path;
-  openFromTree(el.dataset.path);
+  // **The row is clicked, not opened as a function.** This list is the functions tree in one mode
+  // and modules, workflows, schedules, actions or connections in the others, and each row already
+  // carries what opening it means. Calling openFromTree() on all of them read an action's row as a
+  // path to a .dg file and answered «A requested file or directory could not be found» - reported
+  // from the Actions tab. A click is the one thing every row knows how to be.
+  el.click();
   // The group header is sticky here, and it is the previous group's label that covers the row you
   // have just stepped up onto.
   revealRow(el, $('tree'), '.grp');
@@ -2630,7 +2638,7 @@ function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear 
 // AI configuration lives in the options page now: the side panel is 400px wide and these are
 // set-once fields. openSettings() focuses the one settings window; the panel picks the change up via
 // chrome.storage.onChanged.
-function aiOpenSettings() { openSettings(); }
+function aiOpenSettings() { openSettings('#ai'); }   // sent from the assistant, so land on its section
 
 
 // ---------- save-sync ----------

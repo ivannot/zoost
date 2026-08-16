@@ -19,7 +19,7 @@ aiMarkdown	918eb66d4c46	78b0950dfcb4	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
 aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
 aiRunAnthropicAgent	5549bfdae903	dd002ecee16d	divergent
-aiSend	fe86ff34ce9a	6caf5e3df99e	divergent
+aiSend	fe86ff34ce9a	d37c549dd7eb	divergent
 aiShowLock	9e9fad6d251c	9e9fad6d251c	identical
 aiStreamAnthropic	b0b989fb4051	b0b989fb4051	identical
 aiToolArg	8fc8ff0203b7	0b09a0bc91bf	divergent
@@ -123,7 +123,7 @@ knownSample	459c41b78d33	e5b6c71b1533	divergent
 layToUI	d3151f0c87f6	d3151f0c87f6	identical
 layoutZoneHtml	c3b79caff8de	59b769693ab7	divergent
 linkedUnderFilter	c56b421e0c46	c56b421e0c46	identical
-loadAi	11213ff11144	540bb62a7764	divergent
+loadAi	e9574ddbd60c	deddc32d7750	divergent
 loadDc	4e2ba588f615	9527b138e9ce	divergent
 loadLay	589802a799f7	589802a799f7	identical
 loadScope	65604bbb3e2a	8e8b4ff1ea82	divergent
@@ -141,7 +141,7 @@ noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	2db7e2f6dc3e	0c5941e396f4	divergent
 openSchemaGraph	9545037888e6	a7c076c85bf1	divergent
-openSettings	3d3a7403cfeb	3d3a7403cfeb	identical
+openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
 orphanedByFilter	e72e15998354	6d10f2be0633	divergent
@@ -176,12 +176,13 @@ setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	cde7a07ce71f	aa578e8faf85	divergent
 showEmergency	8b9ac1ed618e	8b9ac1ed618e	identical
+showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 srcBlock	411409a2d53a	411409a2d53a	identical
 statCounts	87b246d2040f	87b246d2040f	identical
 statOf	2ef352c8af46	37de86ac019c	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
-stepSelection	b80ac6c96a0e	060e86ed5417	divergent
+stepSelection	01087cab90ac	060e86ed5417	divergent
 switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical

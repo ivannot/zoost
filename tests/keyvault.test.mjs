@@ -652,7 +652,9 @@ function runLoadAi(app, stored) {
   const fields = {};
   const el = (id) => (fields[id] ||= {
     value: '', textContent: '', placeholder: '', checked: false, hidden: false, dataset: {},
-    options: [], classList: { add() {}, remove() {}, toggle() {} },
+    // `style`, because a control that hides itself is a control: the Forget buttons decide their own
+    // display, and a stub without it fails as «cannot set property of undefined» three tests away.
+    style: {}, options: [], classList: { add() {}, remove() {}, toggle() {} },
     focus() {}, select() {}, closest: () => ({ hidden: false }),
   });
   // The engine dropdown is the one element with real content, because markEngineOptions() rewrites it.
@@ -675,7 +677,7 @@ function runLoadAi(app, stored) {
     if (m) vm.runInContext(m[0], ctx);
   }
   for (const fn of ['wireForget', 'engineIncomplete', 'markEngineOptions', 'aiNeedCurrent',
-                    'syncLockRow', 'markEngine', 'loadAi']) {
+                    'syncLockRow', 'markEngine', 'showForget', 'loadAi']) {
     const i = src.indexOf(`function ${fn}(`);
     if (i < 0) throw new Error(`${app}/options.js: ${fn}() not found — renamed or removed. Fix the test or restore the cover.`);
     const start = src.lastIndexOf('\n', i) + 1;
@@ -806,5 +808,59 @@ test('the options page is what calls it', async () => {
     assert.ok(i > 0, `${app}: the forget branch is gone`);
     assert.ok(/ZOOST_KEYVAULT\.forget\(prov\)/.test(src.slice(i, i + 400)),
               `${app}: forgetting a key leaves the plaintext in the session cache`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Forget, on a provider with nothing stored. The convention this repository states for the panel's
+// retry button - absent, not greyed - and breaks on a settings page nobody had applied it to.
+// Reported, like the Clear button before it.
+test('Forget is there only when something is stored', () => {
+  for (const app of ['crm', 'analytics']) {
+    const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.js'), 'utf8');
+    const i = src.indexOf('function showForget');
+    assert.ok(i > 0, `${app}: nothing decides whether Forget is shown`);
+    const body = src.slice(i, i + 500);
+    assert.ok(/apiKey \|\| stored\.apiKeyEnc|apiKeyEnc/.test(body),
+              `${app}: a key behind a passphrase does not count as something to forget`);
+    assert.ok(/display = .* \? '' : 'none'/.test(body), `${app}: it is greyed rather than absent`);
+    assert.ok(/showForget\('anthropic'.*showForget\('openai'|showForget\('anthropic'[\s\S]{0,120}showForget\('openai'/.test(src),
+              `${app}: only one of the two providers is decided`);
+  }
+});
+
+test('the assistant sends you to the part of the settings it means', () => {
+  // A long page about eight things, opened from the chat because of one of them. The fragment lands
+  // the reader on it, and an already-open window is moved rather than merely focused - otherwise
+  // asking twice does nothing visible and reads as a broken button.
+  for (const app of ['crm', 'analytics']) {
+    const panel = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
+    assert.ok(/openSettings\('#ai'\)/.test(panel), `${app}: the gear opens the top of the page`);
+    const i = panel.indexOf('async function openSettings');
+    const body = panel.slice(i, i + 700);
+    assert.ok(/getURL\('options\.html'\) \+ \(where \|\| ''\)/.test(body), `${app}: the fragment is dropped`);
+    assert.ok(/active: true, url/.test(body), `${app}: a settings window already open is not moved to it`);
+    const opts = fs.readFileSync(path.join(ROOT, 'apps', app, 'options.html'), 'utf8');
+    assert.ok(/<h2 id="ai">/.test(opts), `${app}: there is nothing for the fragment to land on`);
+  }
+});
+
+test('the gear is not a speck beside the cross', () => {
+  // Same declared size, and a glyph's ink is its own business: ⚙ painted far smaller than ✕, so the
+  // control that leads somewhere looked like an accident next to the one that closes.
+  for (const app of ['crm', 'analytics']) {
+    const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
+    const m = html.match(/#aiview #aigear\{([^}]*)\}/);
+    assert.ok(m, `${app}: the gear is back to the shared icon size`);
+    const size = /font-size:(\d+)px/.exec(m[1]);
+    assert.ok(size && Number(size[1]) > 14, `${app}: ${m[1]} is no larger than the icons beside it`);
+    // And both glyphs sit in a box of their own rather than on their own baselines: measured in the
+    // shipped panel, title, badge, Clear, gear and cross now share one vertical centre to a tenth of
+    // a pixel. A per-glyph nudge would be fitting the font instead of the layout.
+    const box = html.match(/#aiview #aigear, #aiview #aix\{([^}]*)\}/s);
+    assert.ok(box, `${app}: the two icons are not boxed together`);
+    assert.ok(/align-items:center/.test(box[1]) && /width:20px/.test(box[1]),
+              `${app}: the box does not centre them: ${box[1]}`);
+    assert.ok(!/top:\s*-?\d+px/.test(m[1]), `${app}: the gear is still nudged by hand`);
   }
 });
