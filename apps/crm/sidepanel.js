@@ -1478,6 +1478,46 @@ $('nameToggle').onclick = () => {
     renderModules();
   }
 };
+// ---- keyboard: the selection follows the arrows ------------------------------------------------
+// The twin of the Analytics panel's, against the tree instead of a table: up and down used to
+// scroll, and what a reader wants is the next function *open*. Only rows that are on screen take
+// part - a collapsed group's children are not there to be stepped onto, and neither is anything the
+// search or the type filter has taken away.
+let stepAnchor = null;      // where the keyboard is, which the DOM learns a tick later
+function stepSelection(delta, edge) {
+  const rows = [...$('tree').querySelectorAll('.f[data-path]')].filter((el) => el.offsetParent !== null);
+  if (!rows.length) return;
+  // The anchor is remembered here, not read back from the tree. Opening a function reads its file,
+  // so `aria-selected` lands a tick later: holding the arrow down asked the DOM where it was before
+  // the DOM knew, found nothing, and started from the top again - every press selecting the first
+  // row. Measured by pressing twice and landing on row one. The attribute is still the truth for a
+  // screen reader; this is just what the keyboard steps from.
+  const cur = rows.find((r) => r.dataset.path === stepAnchor)
+    || $('tree').querySelector('.f[data-path][aria-selected="true"]');
+  let i;
+  if (edge === 'first') i = 0;
+  else if (edge === 'last') i = rows.length - 1;
+  else {
+    const at = cur ? rows.indexOf(cur) : -1;
+    i = at < 0 ? (delta > 0 ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, at + delta));
+  }
+  const el = rows[i];
+  if (!el || el === cur) return;
+  stepAnchor = el.dataset.path;
+  openFromTree(el.dataset.path);
+  if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+}
+
+$('tree').addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+  const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+  const edge = { Home: 'first', End: 'last' }[e.key];
+  if (!step && !edge) return;
+  e.preventDefault();
+  stepSelection(step || 0, edge);
+});
+
 $('find').oninput = runSearch;
 $('findx').onclick = () => { $('find').value = ''; runSearch(); $('find').focus(); };
 $('smode').onclick = () => {

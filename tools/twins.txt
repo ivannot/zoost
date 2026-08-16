@@ -180,6 +180,7 @@ srcBlock	411409a2d53a	411409a2d53a	identical
 statCounts	87b246d2040f	87b246d2040f	identical
 statOf	2ef352c8af46	37de86ac019c	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
+stepSelection	54b0c7e0a274	3cd85879a888	divergent
 switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical

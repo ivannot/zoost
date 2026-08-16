@@ -2394,6 +2394,46 @@ $('pull').onclick = pullAll;
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
 $('gozohodc').onchange = () => { $('gozohodc').dataset.touched = '1'; };
 $('gozoho').onclick = openZohoHome;
+// ---- keyboard: the selection follows the arrows ------------------------------------------------
+// Up and down used to scroll the list, because that is what a browser does with a scrollable box.
+// What a reader wants is the next view *open* - the same thing a click does - and the list is what
+// the panel is for. Reported as missing.
+//
+// Only rows that are actually on screen take part: `visibleViews()` is what the filters and the
+// search have left standing, and stepping onto something the reader has filtered away would be the
+// list disagreeing with itself.
+function stepSelection(delta, edge) {
+  const rows = visibleViews();
+  if (!rows.length) return;
+  let i;
+  if (edge === 'first') i = 0;
+  else if (edge === 'last') i = rows.length - 1;
+  else {
+    const at = rows.findIndex((v) => v.id === selectedId);
+    // Nothing selected yet: down starts at the top, up at the bottom - the two ends a reader means.
+    i = at < 0 ? (delta > 0 ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, at + delta));
+  }
+  const v = rows[i];
+  if (!v || v.id === selectedId) return;
+  openDetail(v.id);
+  // Walked rather than selected: an id in a selector wants CSS.escape, which reads like the HTML
+  // escaping used everywhere else here and is a different thing - and the checker was right to ask
+  // which. Comparing the dataset removes the question.
+  const el = [...$('list').querySelectorAll('tr[data-id]')].find((r) => r.dataset.id === String(v.id));
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+}
+
+$('list').addEventListener('keydown', (e) => {
+  // A field wants its own arrows - the search box is one line above this, and Tab reaches it.
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+  const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+  const edge = { Home: 'first', End: 'last' }[e.key];
+  if (!step && !edge) return;
+  e.preventDefault();          // or the list scrolls under a selection that is already in view
+  stepSelection(step || 0, edge);
+});
+
 $('find').oninput = render;
 $('smode').onclick = async () => {
   searchMode = searchMode === 'name' ? 'sql' : 'name';

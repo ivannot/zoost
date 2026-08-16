@@ -407,7 +407,9 @@
   <!-- Deliberately empty: the CRM's tree is too. An empty state has to say *why* it is empty, which
        only the code knows - a copy of that sentence in the markup is a second source of truth, and it
        is the one on screen at startup, so fixing the other one changed nothing. -->
-  <div id="list"></div>
+  <!-- tabindex so the list can hold the focus: without it the keyboard cannot address the
+       thing the whole panel is about, and arrows only scroll. -->
+  <div id="list" tabindex="0"></div>
 
   <div id="aiview">
     <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>

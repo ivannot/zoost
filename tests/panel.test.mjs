@@ -3811,3 +3811,95 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(highlightSql(''), '');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Arrow keys move the selection, not only the scrollbar. Reported as missing: with the focus on the
+// list, up and down scrolled - which is all a browser knows about a scrollable div - while what a
+// reader wants is the next item *open*, the same thing a click does.
+//
+// The stepping is lifted and run: what it must get right is which rows take part (only what the
+// filters left standing), where it starts when nothing is selected, and that it stops at the ends
+// instead of wrapping - a list that jumps from bottom to top loses you your place.
+{
+  const rows = (...names) => names.map((n) => ({ id: n, name: n }));
+  function drive(visible, selected) {
+    const opened = [];
+    const ctx = {
+      visibleViews: () => visible,
+      selectedId: selected,
+      openDetail: (id) => { ctx.selectedId = id; opened.push(id); },
+      // The list is walked now rather than queried by a built selector, so the stub answers with
+      // rows: none here, because what these cases are about is which item is chosen, not scrolling.
+      $: () => ({ querySelectorAll: () => [] }),
+    };
+    const { stepSelection } = load([sliceFn('apps/analytics/sidepanel.js', 'stepSelection')], ctx);
+    return { step: stepSelection, opened, ctx };
+  }
+
+  test('down from nothing starts at the top, up from nothing at the bottom', () => {
+    let d = drive(rows('a', 'b', 'c'), null); d.step(1); assert.deepEqual(d.opened, ['a']);
+    d = drive(rows('a', 'b', 'c'), null); d.step(-1); assert.deepEqual(d.opened, ['c']);
+  });
+
+  test('it steps one at a time, and opens what it lands on', () => {
+    const d = drive(rows('a', 'b', 'c'), 'a');
+    d.step(1); d.step(1);
+    assert.deepEqual(d.opened, ['b', 'c']);
+  });
+
+  test('the ends hold: it does not wrap round', () => {
+    const d = drive(rows('a', 'b', 'c'), 'c');
+    d.step(1);
+    assert.deepEqual(d.opened, [], 'down from the last row wrapped to the first');
+    const u = drive(rows('a', 'b', 'c'), 'a');
+    u.step(-1);
+    assert.deepEqual(u.opened, [], 'up from the first row wrapped to the last');
+  });
+
+  test('Home and End go to the two ends', () => {
+    let d = drive(rows('a', 'b', 'c'), 'b'); d.step(0, 'first'); assert.deepEqual(d.opened, ['a']);
+    d = drive(rows('a', 'b', 'c'), 'b'); d.step(0, 'last'); assert.deepEqual(d.opened, ['c']);
+  });
+
+  test('an empty list is not a special case that throws', () => {
+    const d = drive([], null);
+    d.step(1); d.step(-1); d.step(0, 'last');
+    assert.deepEqual(d.opened, []);
+  });
+
+  test('only what is on screen takes part', () => {
+    // The filtered-out rows are simply not in what visibleViews() returns, which is the point: the
+    // keyboard cannot step onto something the reader has filtered away.
+    const d = drive(rows('a', 'c'), 'a');
+    d.step(1);
+    assert.deepEqual(d.opened, ['c']);
+  });
+
+  test('both panels wire the same four keys, and leave fields alone', () => {
+    for (const [app, list] of [['analytics', 'list'], ['crm', 'tree']]) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      const i = src.indexOf(`$('${list}').addEventListener('keydown'`);
+      assert.ok(i > 0, `${app}: the list does not listen for keys`);
+      const h = src.slice(i, i + 700);
+      for (const k of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
+        assert.ok(h.includes(k), `${app}: ${k} does nothing`);
+      }
+      assert.ok(/INPUT/.test(h), `${app}: a key typed in a field would be stolen from it`);
+      assert.ok(/preventDefault/.test(h), `${app}: the list scrolls as well as selecting`);
+      const html = read(`apps/${app}/sidepanel.html`);
+      assert.ok(new RegExp(`id="${list}"[^>]*tabindex`).test(html),
+                `${app}: the list cannot hold the focus, so the keys never reach it`);
+    }
+  });
+
+  test('crm: the keyboard remembers where it is rather than asking the tree', () => {
+    // Opening a function reads its file, so the tree marks the row a tick later: asking the DOM
+    // where it was made every press start from the top again. Measured by pressing twice and
+    // landing on row one.
+    const src = read('apps/crm/sidepanel.js');
+    assert.ok(/let stepAnchor = null/.test(src), 'the anchor is gone, so holding the arrow stalls');
+    const i = src.indexOf('function stepSelection');
+    assert.ok(/stepAnchor = el\.dataset\.path/.test(src.slice(i, i + 1400)),
+              'the anchor is never moved, so it is decorative');
+  });
+}

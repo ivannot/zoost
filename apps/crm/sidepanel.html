@@ -554,7 +554,9 @@
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 
   <div id="main">
-    <div id="tree"></div>
+    <!-- tabindex so the list can hold the focus: without it the keyboard cannot address the
+       thing the whole panel is about, and arrows only scroll. -->
+  <div id="tree" tabindex="0"></div>
     <div id="resizer"></div>
     <div id="preview">
       <div id="pvhead">
