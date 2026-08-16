@@ -189,6 +189,9 @@ const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
   // workflows, schedules and connections became nodes.
   $('q').placeholder = (DATA.kind === 'schema' ? 'Search module\u2026' : 'Search anything here\u2026') + '  (/ to focus)';
   buildChips(); render(); initPositions(); wireSubject(); graphStat(); updateScopeUI();
+  // Guarded here since this window was written; what it did not do is say anything when the guard
+  // fired, so an unanswerable request looked exactly like an ordinary whole-graph view.
+  if (DATA.focus && !N[DATA.focus]) noFocusHere(DATA.focus);
   if (DATA.focus && N[DATA.focus]) {
     curFocus = DATA.focus; computeMaxDepth();
     egoDepth = Math.max(1, Math.min(maxEgoDepth, DATA.depth || 2));
@@ -1048,7 +1051,11 @@ function statOf(set, allN, allE) {
   const c = statCounts(set);
   const nf = c.n !== allN ? ` <span style="color:#94a3b8">of ${allN}</span>` : '';
   const ef = c.e !== allE ? ` <span style="color:#94a3b8">of ${allE}</span>` : '';
-  return `<b>${c.n}</b>${nf} ${NOUN().n} \u00b7 <b>${c.e}</b>${ef} ${NOUN().e}`;
+  // A reason when the answer is one box with nothing around it, the same as its twin: the count on
+  // its own reads as a fault rather than as the finding it is.
+  const alone = c.n === 1 && c.e === 0 && curFocus;
+  return `<b>${c.n}</b>${nf} ${NOUN().n} \u00b7 <b>${c.e}</b>${ef} ${NOUN().e}`
+    + (alone ? ' <span style="color:#94a3b8">- it takes part in none, so there is nothing to draw around it</span>' : '');
 }
 // The whole-graph line, with no focus on it. Lifted out of the init block so the chips can put it
 // back: it was written once at startup and then never again, so filtering changed the drawing
@@ -1071,6 +1078,18 @@ function orphanNote() {
   const k = orphanedByFilter();
   return k ? ` \u00b7 <span style="color:#94a3b8">${k} not drawn - nothing links them</span>` : '';
 }
+// Asked to centre on something this diagram does not contain. Never silently: the whole point of
+// opening it focused was to look at that one thing, so the window says which it was and what it is
+// showing instead - and it stays on the whole workspace, which is at least an answer.
+function noFocusHere(id) {
+  const line = document.getElementById('statline');
+  if (!line) return;
+  // What it was called, when the caller knew: an id is not something a reader can act on.
+  const name = String(DATA.focusName || id);
+  line.innerHTML = `<b>Nothing to focus on.</b> ${name} is not in this diagram - `
+    + `nothing names it, so it is not one of the boxes this graph is made of. Showing everything instead.`;
+}
+
 function egoStat() {
   if (!curFocus) return;
   if (scopeAll) {
@@ -1349,8 +1368,15 @@ const erCandidate = (id) => !!(N[id] && passKind(N[id]) && (!egoSet || egoSet.ha
 function erVisibleIds() {
   // A table or module with no field to show has nothing to draw and stays out - the behaviour that
   // was already here, and a different question from having no link left.
+  // **The thing you asked to look at is always drawn.** The field filter decides what is *listed
+  // inside* a box, and it was deciding whether the box exists at all: a query table with no lookup
+  // and no column called Name, Owner or id left nothing to list, so it was dropped - and focusing on
+  // it from the Explorer, which does list it, produced an empty sheet with no explanation. Measured
+  // on a real workspace of 377 views: 86 of the 135 entities with columns were outside the diagram
+  // for that reason. The `relations` branch below has always kept the focus for exactly this reason;
+  // this one had not, which is the same guard present on one path and missing on its twin.
   if (DATA.kind === 'schema' && erEmph !== 'relations') {
-    return nodesA.filter((id) => erCandidate(id) && erFieldsFor(N[id]).length > 0);
+    return nodesA.filter((id) => erCandidate(id) && (erFieldsFor(N[id]).length > 0 || id === curFocus));
   }
   const linked = linkedUnderFilter();
   return nodesA.filter((id) => erCandidate(id) && (linked.has(id) || id === curFocus));

@@ -104,7 +104,7 @@ erTipText	b770d433afce	b770d433afce	identical
 erToggleCut	0b670af6490c	0b670af6490c	identical
 erUnhide	aeec288aee06	aeec288aee06	identical
 erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
-erVisibleIds	c0535e2bf8be	18d29a8da398	divergent
+erVisibleIds	c7dab4f9b7b9	fd30dec0e9c6	divergent
 erWouldGo	9cd722f5fad5	9cd722f5fad5	identical
 erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
@@ -136,10 +136,11 @@ markOwn	7986da9d2681	7986da9d2681	identical
 matchArrangement	a8f7bcc97145	a8f7bcc97145	identical
 mergeKeys	ad756dd98e9a	ad756dd98e9a	identical
 mismatchRefuse	375f245e1392	fda4a5879a7f	divergent
+noFocusHere	a28b950d2cfe	1692cf472065	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	2db7e2f6dc3e	0c5941e396f4	divergent
-openSchemaGraph	9545037888e6	e4371e17f2c3	divergent
+openSchemaGraph	9545037888e6	a7c076c85bf1	divergent
 openSettings	3d3a7403cfeb	3d3a7403cfeb	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
@@ -177,7 +178,7 @@ showEmergency	8b9ac1ed618e	8b9ac1ed618e	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 srcBlock	411409a2d53a	411409a2d53a	identical
 statCounts	87b246d2040f	87b246d2040f	identical
-statOf	4ebf9c260c6b	583f6174f839	divergent
+statOf	2ef352c8af46	37de86ac019c	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
 switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical

@@ -1224,10 +1224,24 @@ async function openDetail(id) {
   // the depth stays adjustable there.
   const chain = structureChain(v, viewById());
   const srcId = chain ? chain[chain.length - 1].id : null;
-  $('dgraph').disabled = !srcId || !relationsOf(srcId).length;
-  $('dgraph').title = srcId && relationsOf(srcId).length
-    ? 'ER diagram - opened on this table, in its own window'
-    : 'ER diagram - this table takes part in no relation, so there is nothing to draw';
+  // Two different «no»s, and they were one. A table can be in the diagram and take part in no
+  // relation - then there is nothing to draw around it. A view can be absent from the diagram
+  // altogether, because `schema` is built from the ER model Zoho Analytics returns and that model
+  // does not carry every view: asking to centre on one of those opened an empty window, which is
+  // what was reported. Neither is offered, and each says which it is.
+  // Offered whenever the diagram contains the view, relations or not. «No relation» was treated as
+  // «nothing to show» and the button was greyed out - but the entity is the answer: the window draws
+  // it alone and says that nothing links to it, which is a finding rather than an absence. Reported
+  // twice in one session: first as an empty sheet, then as a button that would not open it.
+  const inDiagram = !!(srcId && schema[srcId]);
+  $('dgraph').disabled = !inDiagram;
+  $('dgraph').title = !srcId
+    ? 'ER diagram - nothing here has a structure to draw'
+    : !inDiagram
+      ? 'ER diagram - this view is not in the ER model Zoho Analytics returns, so the diagram does not contain it'
+      : relationsOf(srcId).length
+        ? 'ER diagram - opened on this table, in its own window'
+        : 'ER diagram - opened on this table; it takes part in no relation, so it is drawn on its own';
   $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
@@ -1415,6 +1429,9 @@ async function openSchemaGraph(focusId, depth) {
     const g = buildSchemaGraph();
     if (!g.counts.nodes) throw new Error('no tables in this workspace');
     if (focusId && g.nodes[focusId]) { g.focus = focusId; g.depth = Math.max(1, depth || 2); }
+    // The name travels with the id, because the window can only report what it was handed: asked to
+    // centre on a view the diagram does not contain, it would otherwise have to name a number.
+    else if (focusId) { g.focus = focusId; g.focusName = nameOf(focusId, viewById()); }
     await chrome.storage.session.set({ graphData: graphForWindow(g) });
     await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
     status(`Schema: ${g.counts.nodes} tables, ${g.counts.edges} relations.`, 'ok');

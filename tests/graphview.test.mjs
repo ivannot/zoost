@@ -1092,3 +1092,54 @@ for (const app of ['crm', 'analytics']) {
     assert.ok(/\.hint2\.warn\{/.test(read(`apps/${app}/graphview.html`)), 'the noticeable state is not drawn');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A focus on something the diagram does not contain. Reported from Zoho Analytics: clicking some
+// query tables opened the ER window on an empty page with no count beside the chip, and other
+// queries were fine - no pattern the author could see from outside.
+//
+// The pattern is that `schema` is built from the nodes of the ER model Zoho Analytics returns, so a
+// view that model does not carry is not a node here. The window took DATA.focus on trust and
+// computed the neighbourhood of an id that does not exist. The CRM's copy of that block has checked
+// `N[DATA.focus]` since it was written; the Analytics one never did - a guard on one twin and not
+// the other, which is the divergence this repository keeps meeting.
+//
+// Asserted on the source because that block is top-level code in a browser window: what it holds is
+// that the guard exists on both sides, that neither is silent when it fires, and that the message
+// can name the view rather than an id.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: an impossible focus is refused, and said`, () => {
+    const src = read(`apps/${app}/graphview.js`);
+    assert.ok(/DATA\.focus && N\[DATA\.focus\]/.test(src),
+              `${app}: the incoming focus is taken on trust, so a missing node draws an empty sheet`);
+    assert.ok(/DATA\.focus && !N\[DATA\.focus\]\) noFocusHere/.test(src),
+              `${app}: the focus is dropped without a word - a blank answer to a specific question`);
+    assert.ok(/function noFocusHere\(/.test(src), `${app}: nothing says it`);
+    const say = src.slice(src.indexOf('function noFocusHere('), src.indexOf('function noFocusHere(') + 700);
+    assert.ok(/DATA\.focusName/.test(say), `${app}: the message names an id rather than the view`);
+    assert.ok(/statline/.test(say), `${app}: the message is not written anywhere a reader looks`);
+  });
+}
+
+test('analytics: the panel does not offer a diagram that cannot contain the view', () => {
+  const src = read('apps/analytics/sidepanel.js');
+  const i = src.indexOf("$('dgraph').disabled");
+  assert.ok(i > 0, 'the ER button is gone');
+  const block = src.slice(i - 400, i + 700);
+  assert.ok(/schema\[srcId\]/.test(block),
+            'the button is offered for a view that is not in the ER model, which opens an empty window');
+  assert.ok(/not in the ER model/.test(block), 'the two different «no»s are still one message');
+});
+
+test('analytics: the panel opens the diagram for an entity with no relations', () => {
+  // «No relation» is not «nothing to show»: the window draws that entity alone and says nothing
+  // links to it, which is the finding somebody focusing it was asking for. Greying the button out
+  // hid that answer, and it was reported as a bug twice in one session - first as an empty sheet,
+  // then as a button that would not open.
+  const src = read('apps/analytics/sidepanel.js');
+  const i = src.indexOf("$('dgraph').disabled");
+  const line = src.slice(i, src.indexOf('\n', i));
+  assert.ok(!/relationsOf/.test(line),
+            `the button still refuses a view with no relations: ${line.trim()}`);
+  assert.ok(/inDiagram/.test(line), 'the button no longer checks that the diagram contains the view');
+});
