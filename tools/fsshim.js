@@ -17,19 +17,33 @@
 (function () {
   const tree = {};   // path -> text
 
-  const norm = (p) => p.replace(/^\/+|\/+$/g, '');
-  const under = (prefix) => {
-    const p = prefix ? norm(prefix) + '/' : '';
-    const names = new Set();
-    for (const k of Object.keys(tree)) {
-      if (!k.startsWith(p)) continue;
-      const rest = k.slice(p.length);
-      if (!rest) continue;
-      names.add(rest.split('/')[0]);
+  // An index beside the tree, so a path costs a lookup rather than a scan.
+  //
+  // It did scan: `under()` and `isDir()` walked every key of the workspace on every call, which is
+  // fine for the 293-file sample this was written for and quadratic on anything real. Benchmarking
+  // the panel against a generated org of 5,000 functions, the load took forty seconds - and all of
+  // it was *here*: 14,000 reads, each resolving two or three directory levels, each level walking
+  // 10,000 keys. The panel was blamed twice before the instrument was measured, which is the whole
+  // reason this comment is long: a slow tool does not look like a slow tool, it looks like a slow
+  // product.
+  const kids = new Map();     // directory -> Set of the names directly inside it
+  const dirs = new Set();     // every directory that exists because something is under it
+  const note = (path) => {
+    const parts = path.split('/');
+    for (let i = 0; i < parts.length; i++) {
+      const parent = parts.slice(0, i).join('/');
+      if (!kids.has(parent)) kids.set(parent, new Set());
+      kids.get(parent).add(parts[i]);
+      if (i < parts.length - 1) dirs.add(parts.slice(0, i + 1).join('/'));
     }
-    return [...names].sort();
   };
-  const isDir = (path) => Object.keys(tree).some((k) => k.startsWith(norm(path) + '/'));
+  const forget = (path) => {           // rebuilt rather than unpicked: removal is rare and exact
+    kids.clear(); dirs.clear();
+    for (const k of Object.keys(tree)) note(k);
+  };
+  const norm = (p) => p.replace(/^\/+|\/+$/g, '');
+  const under = (prefix) => [...(kids.get(norm(prefix || '')) || [])].sort();
+  const isDir = (path) => dirs.has(norm(path));
 
   function fileHandle(path) {
     return {
@@ -41,7 +55,7 @@
         return { text: async () => text, size: text.length, name: path.split('/').pop() };
       },
       async createWritable() {
-        return { write: async (c) => { tree[path] = String(c); }, close: async () => {} };
+        return { write: async (c) => { tree[path] = String(c); note(path); }, close: async () => {} };
       },
     };
   }
@@ -63,7 +77,7 @@
         const p = path ? path + '/' + name : name;
         if (!(p in tree)) {
           if (!(opts && opts.create)) throw Object.assign(new Error('NotFoundError'), { name: 'NotFoundError' });
-          tree[p] = '';
+          tree[p] = ''; note(p);
         }
         return fileHandle(p);
       },
@@ -71,6 +85,7 @@
         const p = path ? path + '/' + name : name;
         delete tree[p];
         for (const k of Object.keys(tree)) if (k.startsWith(p + '/')) delete tree[k];
+        forget();
       },
       async *values() {
         for (const n of under(path)) {
@@ -99,8 +114,8 @@
 
   window.showDirectoryPicker = async () => dirHandle('');
   window.__fsshim = {
-    load(files) { Object.assign(tree, files); },
-    clear() { for (const k of Object.keys(tree)) delete tree[k]; },
+    load(files) { Object.assign(tree, files); for (const k of Object.keys(files)) note(k); },
+    clear() { for (const k of Object.keys(tree)) delete tree[k]; forget(); },
     root: () => dirHandle(''),
     dump: () => Object.keys(tree).sort(),
   };

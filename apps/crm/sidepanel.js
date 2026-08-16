@@ -103,6 +103,7 @@ const MSG = {
   openInZoho: 'Open in Zoho \u2197',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   copyFailed: 'Could not copy: ',
+  loadingTree: 'Loading tree\u2026',
   navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
   wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
@@ -857,38 +858,117 @@ function renderTree() {
     list.forEach((e) => tree.appendChild(fnRowEl(e)));
   });
 }
+// Which load is the current one. A refresh, a change of workspace or a pull can overtake one that
+// is still reading tranches; without a token the two interleave and the older one writes its rows
+// over the newer one's.
+let treeLoad = 0;
+
 async function rebuildTree() {
   if (!dir) return;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
-  setStatus('Loading tree…', 'busy'); graphCache = null; aiModCache = null; aiConnCache = null; const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
-  // scan disk: which functions are already downloaded (have a .meta.json), keyed by id
-  const downloadedById = new Map(); const metaPaths = [];
-  for await (const p of walk(dir)) { if (p.startsWith('functions/') && p.endsWith('.meta.json')) metaPaths.push(p); }
-  for (const mp of metaPaths) {
-    try {
-      const meta = JSON.parse(await readFile(mp)); const dgPath = mp.replace(/\.meta\.json$/, '.dg');
-      downloadedById.set(String(meta.id), { path: dgPath, category: meta.category, source: meta.source, name: meta.name, rest: (meta.rest_api || []).some((r) => r.active), namespace: meta.nameSpace || dgPath.split('/')[0], display_name: meta.display_name, sv: meta.sv || 0, updatedTime: meta.updatedTime || null });
-    } catch (_) {}
-  }
-  // the list index shows ALL functions (including not-yet-downloaded); fall back to on-disk meta for legacy workspaces
-  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch {}
+  const mine = ++treeLoad;
+  const current = () => mine === treeLoad;
+  setStatus(MSG.loadingTree, 'busy');
+  graphCache = null; aiModCache = null; aiConnCache = null;
+  const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  if (!current()) return;
+
+  // ---- 1. the index draws the tree ---------------------------------------------------------------
+  // One read. It lists every function, downloaded or not, with the fields a row shows - so the panel
+  // is usable before a single meta has been opened.
+  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch (_) {}
+  if (!current()) return;
   index = new Map();
+  const byPath = new Map(), byId = new Map();
   if (idx && idx.length) {
     treeData = idx.map((e) => {
-      const id = String(e.id); const d = downloadedById.get(id);
-      const path = d ? d.path : `functions/${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
+      const id = String(e.id);
+      const path = `functions/${sanitize(e.namespace)}/${sanitize(e.api_name)}.dg`;
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
-      return { path, api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && d.namespace) || e.namespace, rest: e.rest, id, category: e.category, source: e.source, downloaded: !!d, stale: !!d && (d.sv || 0) < META_SV, error: false, updatedTime: (d && d.updatedTime) || null };
+      const row = { path, api_name: e.api_name, display_name: e.display_name || e.api_name,
+                    namespace: e.namespace, rest: e.rest, id, category: e.category, source: e.source,
+                    downloaded: false, stale: false, error: false, updatedTime: null };
+      byPath.set(path, row); byId.set(id, row);
+      return row;
     });
+    renderTree();
+    setStatus(`${treeData.length} functions - reading what is on disk\u2026`, 'busy');
   } else {
-    treeData = [...downloadedById.entries()].map(([id, d]) => {
-      index.set(id, { path: d.path, category: d.category, source: d.source, name: d.name, rest: d.rest });
-      return { path: d.path, api_name: d.path.split('/').pop().replace(/\.dg$/, ''), display_name: d.display_name || d.path.split('/').pop().replace(/\.dg$/, ''), namespace: d.namespace, rest: d.rest, id, category: d.category, source: d.source, downloaded: true, stale: (d.sv || 0) < META_SV, error: false, updatedTime: d.updatedTime || null };
+    treeData = [];
+  }
+
+  // ---- 2. the walk says what is on disk -----------------------------------------------------------
+  // Names only: `walk()` yields paths and opens nothing. A function the index does not know about is
+  // still shown - a workspace pulled by an older version, or one the index has fallen behind.
+  const metaPaths = [];
+  for await (const p of walk(dir)) {
+    if (!p.startsWith('functions/') || !p.endsWith('.meta.json')) continue;
+    metaPaths.push(p);
+    const dg = p.replace(/\.meta\.json$/, '.dg');
+    const row = byPath.get(dg);
+    if (row) row.downloaded = true;
+  }
+  if (!current()) return;
+  if (!treeData.length) {
+    // No index: a legacy workspace, or one whose index could not be read. The tree is what is on
+    // disk, and the metas below are the only source for it - so it stays empty until they arrive.
+    metaPaths.forEach((p) => {
+      const dg = p.replace(/\.meta\.json$/, '.dg');
+      const row = { path: dg, api_name: dg.split('/').pop().replace(/\.dg$/, ''),
+                    display_name: dg.split('/').pop().replace(/\.dg$/, ''), namespace: dg.split('/')[1],
+                    rest: false, id: dg, category: '', source: '', downloaded: true, stale: false,
+                    error: false, updatedTime: null };
+      byPath.set(dg, row); treeData.push(row);
     });
   }
+  renderTree(); updateMissingButton();
+
+  // ---- 3. the metas fill in what only they know, a tranche at a time -------------------------------
+  // The schema version behind the stale mark and the date the sort uses live nowhere else. Reading
+  // them is the expensive half, so it happens after the tree is on screen, in batches, with a yield
+  // between them: the panel answers a click, a search and a tab change throughout.
+  const TRANCHE = 120;
+  let done = 0, lastPaint = 0;
+  for (let i = 0; i < metaPaths.length; i += TRANCHE) {
+    if (!current()) return;
+    const batch = metaPaths.slice(i, i + TRANCHE);
+    await Promise.all(batch.map(async (mp) => {
+      try {
+        const meta = JSON.parse(await readFile(mp));
+        const dg = mp.replace(/\.meta\.json$/, '.dg');
+        // By path, then by id - both from a Map. The second lookup used to be a `treeData.find()`,
+        // which is linear, and it fires exactly when the two disagree: a file whose name the index
+        // does not predict. On a workspace of five thousand that turned the load into twenty-five
+        // million comparisons - forty seconds of them - while a hundred functions never noticed.
+        // Measured on a generated org, which is the only place a cliff like that shows up before a
+        // user finds it.
+        const row = byPath.get(dg) || byId.get(String(meta.id));
+        if (!row) return;
+        row.downloaded = true;
+        row.stale = (meta.sv || 0) < META_SV;
+        row.updatedTime = meta.updatedTime || null;
+        row.namespace = meta.nameSpace || row.namespace;
+        if (meta.display_name) row.display_name = meta.display_name;
+        const known = index.get(String(meta.id));
+        if (known) { known.category = meta.category; known.source = meta.source; known.name = meta.name; }
+      } catch (_) { /* a meta that will not parse leaves its row as the index described it */ }
+    }));
+    done += batch.length;
+    if (!current()) return;
+    // Redrawing after every tranche is what a first version did, and on five thousand rows it cost
+    // more than the reading: forty-two redraws of the whole tree, about a second each. The rows are
+    // refined in place; the picture catches up four times a second, which is faster than anyone
+    // reads a badge. The last redraw happens below, unconditionally, so nothing is left half-drawn.
+    const now = Date.now();
+    if (now - lastPaint > 250 && viewMode === 'functions') { renderTree(); lastPaint = now; }
+    if (done < metaPaths.length) setStatus(`${treeData.length} functions - reading details ${done}/${metaPaths.length}\u2026`, 'busy');
+    await new Promise((r) => setTimeout(r, 0));   // let the panel answer whatever the reader is doing
+  }
+  if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
   const dl = treeData.filter((e) => e.downloaded).length;
-  setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok'); await refreshContext();
+  setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok');
+  await refreshContext();
 }
 
 // The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first

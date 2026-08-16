@@ -4583,3 +4583,50 @@ test('code is shown the same way in both products: lines as written, box scrolls
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The tree is drawn from the index, and the details arrive behind it. Written against a generated
+// org of 5,000 functions: the old path walked the folder, then read and parsed *every* meta before
+// drawing a row - about five browser file-system calls each, since `readFile()` resolves a path one
+// directory handle at a time. Nothing was on screen until the last one came back.
+//
+// What is held here is the shape, because the timing cannot be: the render harness uses an in-memory
+// file system, so it cannot model what the File System Access API charges per file. (It also taught
+// its own lesson - the shim resolved every path by scanning all 10,000 keys, and forty seconds of
+// «the panel is slow» turned out to be the instrument. It is indexed now.)
+{
+  const src = read('apps/crm/sidepanel.js');
+  const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('async function attachFnStats'));
+
+  test('the index is read before anything is drawn, and the metas after', () => {
+    const idxAt = load.indexOf("readFile('functions/index.json')");
+    const firstPaint = load.indexOf('renderTree()');
+    const metaLoop = load.indexOf('metaPaths.slice');
+    assert.ok(idxAt > 0 && firstPaint > idxAt, 'the tree is drawn before the index is read');
+    assert.ok(metaLoop > firstPaint, 'the metas are still read before the first paint');
+  });
+
+  test('the metas are read in tranches, with a yield between them', () => {
+    assert.ok(/TRANCHE = \d+/.test(load), 'nothing batches the reads');
+    assert.ok(/await new Promise\(\(r\) => setTimeout\(r, 0\)\)/.test(load),
+              'the loop never yields, so the panel is blocked for the whole read');
+  });
+
+  test('a load that has been overtaken stops', () => {
+    // Two loads interleaving is how the older one writes its rows over the newer one's; a refresh,
+    // a change of workspace and a pull can all start a second one.
+    assert.ok(/const mine = \+\+treeLoad/.test(load), 'a load carries no token');
+    assert.equal((load.match(/if \(!current\(\)\) return;/g) || []).length >= 5, true,
+                 'the token is taken and then not checked between the slow steps');
+  });
+
+  test('nothing in the load is linear in the number of functions', () => {
+    // `treeData.find()` inside the per-file loop is O(n) and fires exactly when the path the index
+    // predicts and the file on disk disagree - 25 million comparisons on five thousand functions.
+    // The comments go first: this assertion read its own explanation and failed on the word it forbids,
+    // which this repository has met before.
+    const code = load.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(!/treeData\.find\(/.test(code), 'a linear scan is back inside the per-file loop');
+    assert.ok(/byId\.get\(/.test(code), 'the id lookup is not a map');
+  });
+}
