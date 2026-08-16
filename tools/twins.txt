@@ -17,7 +17,7 @@ aiLockMsg	27ab8454c641	27ab8454c641	identical
 aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
 aiMarkdown	918eb66d4c46	78b0950dfcb4	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
-aiRenderMessages	dafcb7c960cf	70a81f5c4d89	divergent
+aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
 aiRunAnthropicAgent	5549bfdae903	dd002ecee16d	divergent
 aiSend	fe86ff34ce9a	6caf5e3df99e	divergent
 aiShowLock	9e9fad6d251c	9e9fad6d251c	identical
@@ -162,6 +162,7 @@ render	1f1f526caa02	b706d7abf71d	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	962f31f75f7d	f67417c0398c	divergent
+revealRow	6b2397b90c08	6b2397b90c08	identical
 runHeavy	d57f2b30ff86	d57f2b30ff86	identical
 sampleRefuse	43a02be4e60b	e1eebc3b450a	divergent
 scopeFromUI	3a730daf94e4	c83939bc53c4	divergent
@@ -180,7 +181,7 @@ srcBlock	411409a2d53a	411409a2d53a	identical
 statCounts	87b246d2040f	87b246d2040f	identical
 statOf	2ef352c8af46	37de86ac019c	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
-stepSelection	54b0c7e0a274	3cd85879a888	divergent
+stepSelection	b80ac6c96a0e	060e86ed5417	divergent
 switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical

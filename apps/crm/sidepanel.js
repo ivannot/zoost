@@ -1484,6 +1484,24 @@ $('nameToggle').onclick = () => {
 // part - a collapsed group's children are not there to be stepped onto, and neither is anything the
 // search or the type filter has taken away.
 let stepAnchor = null;      // where the keyboard is, which the DOM learns a tick later
+// Bring a row fully into view, under whatever is stuck to the top of the list. `scrollIntoView`
+// with `block: 'nearest'` aligns to the container's edge and knows nothing about a sticky header -
+// so stepping upwards parked the selected row exactly underneath it, half visible. Reported after
+// the arrows landed: the movement was right and the row was not all there.
+//
+// The header is measured rather than assumed: it is a column row in one product and a group label
+// in the other, both `position: sticky`, and both change height with the font a reader has set.
+function revealRow(el, box, stickySel) {
+  if (!el || !box) return;
+  const b = box.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const st = stickySel ? box.querySelector(stickySel) : null;
+  const cover = st ? st.getBoundingClientRect().height : 0;
+  const top = b.top + cover;              // the first line the reader can actually see
+  if (r.top < top) box.scrollTop -= (top - r.top);
+  else if (r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom);
+}
+
 function stepSelection(delta, edge) {
   const rows = [...$('tree').querySelectorAll('.f[data-path]')].filter((el) => el.offsetParent !== null);
   if (!rows.length) return;
@@ -1505,7 +1523,9 @@ function stepSelection(delta, edge) {
   if (!el || el === cur) return;
   stepAnchor = el.dataset.path;
   openFromTree(el.dataset.path);
-  if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  // The group header is sticky here, and it is the previous group's label that covers the row you
+  // have just stepped up onto.
+  revealRow(el, $('tree'), '.grp');
 }
 
 $('tree').addEventListener('keydown', (e) => {
@@ -2481,6 +2501,12 @@ async function aiCall(cfg, messages, system) {
 let aiBusy = false;
 function aiRenderMessages() {
   const box = $('aimsgs');
+  // **Absent, not present-and-pointless, when there is nothing to clear.** Every other control here
+  // disappears rather than sitting there greyed: the retry button, the per-mode rows. This one stayed
+  // on an empty conversation, offering to remove nothing. Reported by the author, who had written the
+  // convention it was breaking.
+  $('aiclear').style.display = aiMessages.length ? '' : 'none';
+
   if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this org\'s Deluge - I can open functions, trace callers, read module schemas, and search the code.</div></div>'; return; }
   box.innerHTML = aiMessages.map((m) => m.role === 'tool' ? `<div class="aitool">${escHtml(m.content)}</div>` : `<div class="aimsg ${m.role}"><div class="airole">${m.role === 'user' ? 'You' : 'AI'}</div><div class="aitext">${m.role === 'assistant' ? aiMarkdown(m.content) : escHtml(m.content).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (aiBusy ? '<div class="aiwait"><i></i><i></i><i></i> thinking\u2026</div>' : '');

@@ -3832,7 +3832,9 @@ for (const app of ['crm', 'analytics']) {
       // rows: none here, because what these cases are about is which item is chosen, not scrolling.
       $: () => ({ querySelectorAll: () => [] }),
     };
-    const { stepSelection } = load([sliceFn('apps/analytics/sidepanel.js', 'stepSelection')], ctx);
+    // `stepSelection` reveals the row it lands on, so the helper it calls comes with it.
+    const { stepSelection } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow'),
+                                    sliceFn('apps/analytics/sidepanel.js', 'stepSelection')], ctx);
     return { step: stepSelection, opened, ctx };
   }
 
@@ -3901,5 +3903,79 @@ for (const app of ['crm', 'analytics']) {
     const i = src.indexOf('function stepSelection');
     assert.ok(/stepAnchor = el\.dataset\.path/.test(src.slice(i, i + 1400)),
               'the anchor is never moved, so it is decorative');
+  });
+}
+
+test('Clear is absent while there is nothing to clear, in both panels', () => {
+  // The convention this repository already applies to the retry button: a control that can do
+  // nothing goes away rather than sitting there greyed, because a greyed button still says «there
+  // is something here you cannot have». Clear stayed on an empty conversation, offering to remove
+  // nothing. Reported by the author, against his own rule.
+  for (const app of ['crm', 'analytics']) {
+    const js = read(`apps/${app}/sidepanel.js`);
+    const i = js.indexOf('function aiRenderMessages');
+    assert.ok(i > 0, `${app}: the conversation is not rendered here any more`);
+    const body = js.slice(i, i + 900);
+    assert.ok(/aiclear'\)\.style\.display = aiMessages\.length/.test(body),
+              `${app}: Clear is shown whatever the conversation holds`);
+    const html = read(`apps/${app}/sidepanel.html`);
+    assert.ok(/id="aiclear"[^>]*display:none/.test(html),
+              `${app}: it is visible in the markup, so it flashes before the first render hides it`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The selected row, fully visible. `scrollIntoView({ block: 'nearest' })` aligns to the container's
+// edge and knows nothing about a header stuck to the top of it, so stepping upwards parked the row
+// exactly underneath: measured in the shipped panel, 24px of a 37px row hidden - the header's own
+// height. Reported after the arrows landed, in those words: the movement was right and the row was
+// not all there.
+{
+  const rect = (top, bottom) => ({ top, bottom, height: bottom - top });
+  function scroller({ box, row, header = 0, scrollTop = 100 }) {
+    const el = { getBoundingClientRect: () => rect(row[0], row[1]) };
+    const container = {
+      scrollTop,
+      getBoundingClientRect: () => rect(box[0], box[1]),
+      querySelector: () => (header ? { getBoundingClientRect: () => rect(box[0], box[0] + header) } : null),
+    };
+    const { revealRow } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow')]);
+    revealRow(el, container, 'thead');
+    return container.scrollTop;
+  }
+
+  test('a row under the sticky header is pulled out from under it', () => {
+    // The header covers the first 24px of the box; the row starts 10px in, so 14 are hidden.
+    assert.equal(scroller({ box: [0, 300], row: [10, 47], header: 24 }), 100 - 14);
+  });
+
+  test('a row below the fold is brought up by exactly what is missing', () => {
+    assert.equal(scroller({ box: [0, 300], row: [290, 327], header: 24 }), 100 + 27);
+  });
+
+  test('a row already fully visible is left alone', () => {
+    assert.equal(scroller({ box: [0, 300], row: [100, 137], header: 24 }), 100);
+    assert.equal(scroller({ box: [0, 300], row: [24, 61], header: 24 }), 100, 'flush under the header counts as visible');
+  });
+
+  test('with no header it still uses the box edge', () => {
+    assert.equal(scroller({ box: [0, 300], row: [-5, 32], header: 0 }), 95);
+  });
+
+  test('nothing to reveal is not a special case that throws', () => {
+    const { revealRow } = load([sliceFn('apps/analytics/sidepanel.js', 'revealRow')]);
+    revealRow(null, null, 'thead');
+    revealRow({ getBoundingClientRect: () => rect(0, 10) }, null, 'thead');
+  });
+
+  test('both panels reveal rather than scrollIntoView', () => {
+    for (const [app, sticky] of [['analytics', 'thead'], ['crm', '.grp']]) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      const i = src.indexOf('function stepSelection');
+      const body = src.slice(i, i + 1600);
+      assert.ok(body.includes('revealRow(') && body.includes(`'${sticky}'`),
+                `${app}: the row is not revealed under its own sticky header`);
+      assert.ok(!/scrollIntoView/.test(body), `${app}: still aligning to the edge, header or no header`);
+    }
   });
 }

@@ -1867,6 +1867,12 @@ async function aiCall(cfg, messages, system) {
 
 function aiRenderMessages() {
   const box = $('aimsgs');
+  // **Absent, not present-and-pointless, when there is nothing to clear.** Every other control here
+  // disappears rather than sitting there greyed: the retry button, the per-mode rows. This one stayed
+  // on an empty conversation, offering to remove nothing. Reported by the author, who had written the
+  // convention it was breaking.
+  $('aiclear').style.display = aiMessages.length ? '' : 'none';
+
   if (!aiMessages.length && !aiBusy) { box.innerHTML = '<div class="aimsg assistant"><div class="aitext">Ask me anything about this workspace - I can read structures, follow foreign keys, open the SQL of a query table, search columns, and say what depends on what.</div></div>'; return; }
   box.innerHTML = aiMessages.map((m) => m.role === 'tool' ? `<div class="aitool">${esc(m.content)}</div>` : `<div class="aimsg ${m.role}"><div class="airole">${m.role === 'user' ? 'You' : 'AI'}</div><div class="aitext">${m.role === 'assistant' ? aiMarkdown(m.content) : esc(m.content).replace(/\n/g, '<br>')}</div></div>`).join('')
     + (aiBusy ? '<div class="aiwait"><i></i><i></i><i></i> thinking…</div>' : '');
@@ -2402,6 +2408,24 @@ $('gozoho').onclick = openZohoHome;
 // Only rows that are actually on screen take part: `visibleViews()` is what the filters and the
 // search have left standing, and stepping onto something the reader has filtered away would be the
 // list disagreeing with itself.
+// Bring a row fully into view, under whatever is stuck to the top of the list. `scrollIntoView`
+// with `block: 'nearest'` aligns to the container's edge and knows nothing about a sticky header -
+// so stepping upwards parked the selected row exactly underneath it, half visible. Reported after
+// the arrows landed: the movement was right and the row was not all there.
+//
+// The header is measured rather than assumed: it is a column row in one product and a group label
+// in the other, both `position: sticky`, and both change height with the font a reader has set.
+function revealRow(el, box, stickySel) {
+  if (!el || !box) return;
+  const b = box.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const st = stickySel ? box.querySelector(stickySel) : null;
+  const cover = st ? st.getBoundingClientRect().height : 0;
+  const top = b.top + cover;              // the first line the reader can actually see
+  if (r.top < top) box.scrollTop -= (top - r.top);
+  else if (r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom);
+}
+
 function stepSelection(delta, edge) {
   const rows = visibleViews();
   if (!rows.length) return;
@@ -2420,7 +2444,7 @@ function stepSelection(delta, edge) {
   // escaping used everywhere else here and is a different thing - and the checker was right to ask
   // which. Comparing the dataset removes the question.
   const el = [...$('list').querySelectorAll('tr[data-id]')].find((r) => r.dataset.id === String(v.id));
-  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  revealRow(el, $('list'), 'thead');
 }
 
 $('list').addEventListener('keydown', (e) => {
