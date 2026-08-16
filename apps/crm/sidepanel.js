@@ -96,6 +96,14 @@ function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on
 // A literal that appears once stays where it is used - a constant read by one caller is indirection
 // with nothing to hold together. tests/panel.test.mjs enforces the rule in the other direction.
 const MSG = {
+  actNotHere: 'That action is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Actions.',
+  actNotPulled: 'Actions have not been pulled into this workspace yet - press Pull here first.',
+  modNotHere: 'That module is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Modules.',
+  modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull here first.',
+  wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
+  wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
+  schNotHere: 'That schedule is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Schedules.',
+  schNotPulled: 'Schedules have not been pulled into this workspace yet - press Pull here first.',
   openThis: 'Open this ',   // two places compose their own ending onto it
   mismatchRefused: 'The active tab is a different org from this workspace - nothing here reads Zoho until they match.',
   noTab: 'No Zoho CRM tab open.',
@@ -1171,7 +1179,7 @@ async function showCallers(path) {
     // «Used in …»: the rule or the schedule that fires this function, opened where it lives.
     box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
       const open = HEALTH_OPEN[a.dataset.ap];
-      if (open) open(a.dataset.apid);
+      if (open) open(a.dataset.apid, a.dataset.apname);
     }));
     // The same control the Modules preview carries, next to the same kind of fact: the references
     // are listed above it, this draws them. Absent when there is nothing to draw - a function
@@ -1986,19 +1994,40 @@ function renderHealthView() {
   }));
 }
 function healthOpenFn(file, line) { closeHealth(); if (viewMode !== 'functions') { setMode('functions'); } openFile(file, true, line || null); }
-async function healthOpenAction(key) {
+async function healthOpenAction(key, name) {
   closeHealth(); setMode('actions'); await rebuildActions();
   const [kind, ...rest] = String(key).split(':'); const id = rest.join(':');
-  const e = actionData.find((a) => a.kind === kind && String(a.id) === id);
-  if (e) openAction(e); else setStatus('Action not found in this workspace.', 'warn');
+  // Same two ways in as the rules above: an «used in» entry keys itself Zoho's way, and the name is
+  // what the reader clicked. `key` may be a bare id when it comes from there rather than kind:id.
+  const e = actionData.find((a) => a.kind === kind && String(a.id) === id)
+    || actionData.find((a) => String(a.id) === String(key))
+    || (name && actionData.find((a) => (a.name || '') === name));
+  if (e) openAction(e); else setStatus(actionData.length ? MSG.actNotHere : MSG.actNotPulled, 'warn');
 }
-async function healthOpenModule(api) {
+async function healthOpenModule(api, name) {
   closeHealth(); setMode('modules'); await rebuildModules();
-  const e = moduleData.find((m) => m.api_name === api);
-  if (e) openModule(e.path); else setStatus('Module not found in this workspace.', 'warn');
+  const e = moduleData.find((m) => m.api_name === api)
+    || (name && moduleData.find((m) => (m.name || m.api_name || '') === name));
+  if (e) openModule(e.path); else setStatus(moduleData.length ? MSG.modNotHere : MSG.modNotPulled, 'warn');
 }
-async function healthOpenWorkflow(id) { closeHealth(); setMode('workflows'); await rebuildWorkflows(); const e = workflowData.find((w) => String(w.id) === String(id)); if (e) openWorkflow(e); else setStatus('Workflow not found in this workspace.', 'warn'); }
-async function healthOpenSchedule(id) { closeHealth(); setMode('schedules'); await rebuildSchedules(); const e = scheduleData.find((x) => String(x.id) === String(id)); if (e) openSchedule(e); else setStatus('Schedule not found in this workspace.', 'warn'); }
+// By id, then by name. Zoho keys a function's «used in» entry its own way, and a rule that is
+// plainly in the mirror was being reported as absent because the two keys did not match - a true
+// sentence about the wrong question. The name is what the reader clicked, so it is what the second
+// attempt uses, and the message says which of the two things is actually missing.
+async function healthOpenWorkflow(id, name) {
+  closeHealth(); setMode('workflows'); await rebuildWorkflows();
+  const e = workflowData.find((w) => String(w.id) === String(id))
+    || (name && workflowData.find((w) => (w.name || '') === name));
+  if (e) openWorkflow(e);
+  else setStatus(workflowData.length ? MSG.wfNotHere : MSG.wfNotPulled, 'warn');
+}
+async function healthOpenSchedule(id, name) {
+  closeHealth(); setMode('schedules'); await rebuildSchedules();
+  const e = scheduleData.find((x) => String(x.id) === String(id))
+    || (name && scheduleData.find((x) => (x.name || '') === name));
+  if (e) openSchedule(e);
+  else setStatus(scheduleData.length ? MSG.schNotHere : MSG.schNotPulled, 'warn');
+}
 // Which finding opens what. One entry per kind a health row can name, so a group that starts
 // naming a new kind gets its opener here rather than silently rendering an unclickable name.
 // One entry of «Used in …»: a link when this panel can open that kind of thing, plain text when it
@@ -2011,8 +2040,12 @@ function apLink(kind, p) {
   const id = p && (p.id != null ? String(p.id) : '');
   const label = (p && (p.name || p.label)) || '(unnamed)';
   if (!opener || !id || !HEALTH_OPEN[opener]) return escHtml(label);
+  // The name travels beside the id, because the id is Zoho's and not necessarily the one the rules
+  // index is keyed by: a function's `associated_place` names where it is used, and what that entry
+  // calls its id is Zoho's business. Reported from a real org - the rule existed and the panel said
+  // «not found in this workspace», which is a true statement about the wrong key.
   return `<a class="aplink" data-ap="${escA(opener)}" data-apid="${escA(id)}" `
-    + `title="${escA(MSG.openThis + opener)}">${escHtml(label)}</a>`;
+    + `data-apname="${escA(label)}" title="${escA(MSG.openThis + opener)}">${escHtml(label)}</a>`;
 }
 const HEALTH_OPEN = { workflow: healthOpenWorkflow, schedule: healthOpenSchedule,
                       action: healthOpenAction, module: healthOpenModule };

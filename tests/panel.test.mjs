@@ -4154,3 +4154,66 @@ test('crm: the arrows open a row the way that row opens', () => {
     assert.ok(/display = zurl \? '' : 'none'/.test(body), 'it is greyed rather than absent');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «Workflow not found in this workspace» about a rule that is plainly there. Reported from a real
+// org: a function's «Used in» entry keys itself Zoho's way, the rules index is keyed by the rule's
+// own id, and the two need not be the same number - so the panel answered a true sentence to the
+// wrong question. The name the reader clicked is the second way in, and the message now says which
+// of two different things is missing: the mirror has no such rule, or Workflows were never pulled.
+{
+  const openers = (data, kind) => {
+    const opened = [];
+    const ctx = {
+      closeHealth() {}, setMode() {}, rebuildWorkflows: async () => {}, rebuildSchedules: async () => {},
+      rebuildActions: async () => {}, rebuildModules: async () => {},
+      workflowData: data, scheduleData: data, actionData: data, moduleData: data,
+      openWorkflow: (e) => opened.push(e), openSchedule: (e) => opened.push(e),
+      openAction: (e) => opened.push(e), openModule: (p) => opened.push(p),
+      said: null, setStatus(m) { ctx.said = m; },
+    };
+    const { MSG } = load([sliceConst('apps/crm/sidepanel.js', 'MSG')]);
+    Object.assign(ctx, { MSG });
+    const fns = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
+                      sliceFn('apps/crm/sidepanel.js', `healthOpen${kind}`)], ctx);
+    return { fn: fns[`healthOpen${kind}`], ctx, opened, MSG };
+  };
+
+  test('a rule found by id opens', async () => {
+    const { fn, opened } = openers([{ id: '4002', name: 'Invoice overdue' }], 'Workflow');
+    await fn('4002', 'Invoice overdue');
+    assert.equal(opened.length, 1);
+  });
+
+  test('a rule whose id does not match is found by the name that was clicked', async () => {
+    const { fn, opened } = openers([{ id: '99', name: 'Invoice overdue' }], 'Workflow');
+    await fn('4002', 'Invoice overdue');
+    assert.equal(opened.length, 1, 'the rule is there under another id and was still reported missing');
+  });
+
+  test('with rules pulled and no match, it says the mirror does not have it', async () => {
+    const { fn, ctx, MSG } = openers([{ id: '1', name: 'Something else' }], 'Workflow');
+    await fn('4002', 'Invoice overdue');
+    assert.equal(ctx.said, MSG.wfNotHere);
+  });
+
+  test('with nothing pulled, it says that instead - a different thing to do', async () => {
+    const { fn, ctx, MSG } = openers([], 'Workflow');
+    await fn('4002', 'Invoice overdue');
+    assert.equal(ctx.said, MSG.wfNotPulled);
+  });
+
+  test('the same two ways in for schedules, actions and modules', async () => {
+    for (const kind of ['Schedule', 'Action', 'Module']) {
+      const { fn, opened } = openers([{ id: '99', api_name: 'zzz', name: 'By name' }], kind);
+      await fn('does-not-match', 'By name');
+      assert.equal(opened.length, 1, `${kind}: the name is not tried`);
+    }
+  });
+
+  test('the link carries the name, or there is nothing to try', () => {
+    const src = read('apps/crm/sidepanel.js');
+    assert.ok(/data-apname=/.test(src), 'the name never reaches the opener');
+    assert.ok(/open\(a\.dataset\.apid, a\.dataset\.apname\)/.test(src), 'the click drops the name');
+  });
+}
