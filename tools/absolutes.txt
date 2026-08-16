@@ -945,7 +945,7 @@ bfc95cca0b3471b7  store/analytics/store-listing.md: Ask Zoho Analytics its own d
 5ef9cd611c3fefcc  store/analytics/store-listing.md: Nothing is sent anywhere, and there is no remote storage of any kind.
 abbba3f0345616b7  store/analytics/store-listing.md: Nothing is sent to the developer, and the rows inside tables are never sent, because the extension does not read them.
 4380abf95010f821  store/analytics/store-listing.md: One pull writes the whole workspace to disk: the view census, the column structure of every table and query table, the relations, and one .sql file per query table.
-cadd7b7db3c35226  store/analytics/store-listing.md: Read in the panel, written to disk one file each, and searchable across all of them at once.
+a11504616cb6a77c  store/analytics/store-listing.md: Read in the panel, written to disk one file each, and searched across all of them at once - the "in: SQL" switch beside the search box looks inside every query in the workspace and shows the line each match is on.
 961fadcb7d488cf2  store/analytics/store-listing.md: Stated as candidates, never as a verdict: a shared link, a scheduled export, an embedded report or an API consumer is invisible to that graph, and Zoost says so next to the number.
 8a49ce9c473c8de3  store/analytics/store-listing.md: Structure, relations, SQL and metadata only.
 f7452b4afb8df770  store/analytics/store-listing.md: Tabs on other sites are never read.
