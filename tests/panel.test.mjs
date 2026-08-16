@@ -4110,3 +4110,47 @@ test('crm: the arrows open a row the way that row opens', () => {
     assert.ok(/associated_place: usedIn\[/.test(src), 'the sample is back to knowing nothing about usage');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «Open in Zoho» for a view. The address shape was not inferred: it was read out of a browser -
+// /workspace/<workspace>/view/<view>, one shape for a table, a query table, a report or a dashboard
+// - which is the only way this repository allows a platform navigation to exist. No synthetic
+// clicks, nothing that depends on Zoho's markup or on the interface language.
+{
+  const url = (bound, id) => {
+    const { viewUrl } = load([sliceFn('apps/analytics/sidepanel.js', 'viewUrl')], { bound });
+    return viewUrl(id);
+  };
+  const WS = { origin: 'https://analytics.zoho.eu', workspace: '177856000000004002' };
+
+  test('the address is the workspace it is bound to, plus the view', () => {
+    assert.equal(url(WS, '177856000002498563'),
+                 'https://analytics.zoho.eu/workspace/177856000000004002/view/177856000002498563');
+  });
+
+  test('the data centre travels with the workspace, not with the tab', () => {
+    // A panel bound to one workspace opens that one's views while the tab is elsewhere - the origin
+    // is the mirror's own, which is what makes this an address and not a search.
+    assert.match(url({ origin: 'https://analytics.zoho.com', workspace: '1' }, '2'),
+                 /^https:\/\/analytics\.zoho\.com\/workspace\/1\/view\/2$/);
+  });
+
+  test('nothing to point at gives no address rather than a broken one', () => {
+    assert.equal(url(null, '2'), null);
+    assert.equal(url(WS, ''), null);
+    assert.equal(url({ origin: '', workspace: '1' }, '2'), null);
+  });
+
+  test('an id is escaped into the path', () => {
+    assert.ok(!/[ "]/.test(url(WS, 'a b"c')), url(WS, 'a b"c'));
+  });
+
+  test('the sample offers nothing to open, because there is nothing behind it', () => {
+    const src = read('apps/analytics/sidepanel.js');
+    const i = src.indexOf("$('dzoho')");
+    const body = src.slice(i - 400, i + 300);
+    assert.ok(/isSample\(\) \? null : viewUrl/.test(body),
+              'the sample would open an address that cannot exist');
+    assert.ok(/display = zurl \? '' : 'none'/.test(body), 'it is greyed rather than absent');
+  });
+}

@@ -626,6 +626,17 @@ const homeUrl = () => {
     || dcOf(bound && bound.origin) || dcOf(ctx && ctx.origin) || zohoDc;
   return `https://analytics.${dc}/`;
 };
+// Where a view lives in Zoho Analytics. One shape for everything - a table, a query table, a report,
+// a dashboard - read out of the address bar rather than guessed at:
+//   https://analytics.<dc>/workspace/<workspace id>/view/<view id>
+// Built from what the mirror already knows, which is what makes it a navigation and not a search:
+// no synthetic clicks, nothing that depends on Zoho's markup or on the interface language. The
+// origin is the workspace's own, so a panel bound to one workspace opens that one's views even while
+// the tab is somewhere else.
+function viewUrl(id) {
+  if (!bound || !bound.origin || !bound.workspace || !id) return null;
+  return `${bound.origin}/workspace/${bound.workspace}/view/${encodeURIComponent(String(id))}`;
+}
 const workspaceUrl = () => (bound && bound.origin && bound.workspace
   ? `${bound.origin}/workspace/${bound.workspace}` : homeUrl());
 async function switchTab() {
@@ -1246,6 +1257,12 @@ async function openDetail(id) {
         ? 'ER diagram - opened on this table, in its own window'
         : 'ER diagram - opened on this table; it takes part in no relation, so it is drawn on its own';
   $('dgraph').onclick = () => openSchemaGraph(srcId, 2);
+  // Absent on a sample: there is no Zoho Analytics view behind invented data, and a button that
+  // opens a 404 is worse than one that is not there. Everywhere else it is an address, so it works
+  // whether or not the tab is on this workspace.
+  const zurl = isSample() ? null : viewUrl(v.id);
+  $('dzoho').style.display = zurl ? '' : 'none';
+  $('dzoho').onclick = () => { if (zurl) chrome.tabs.create({ url: zurl }); };
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
   // A tab that cannot say anything about this view is disabled, not shown and silently empty.
   $('tab_sql').disabled = !sqls[id];
