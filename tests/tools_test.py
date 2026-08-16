@@ -1241,43 +1241,38 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
             self.first = saved
 
 
-class InlineStylesStayTwins(unittest.TestCase):
-    """A page and its translation carry the same inline <style>, and the first divergence was a comment.
+class NoPageKeepsItsOwnStyle(unittest.TestCase):
+    """No page carries a `<style>` block, which is the stronger form of a rule this file used to hold.
 
-    Three landing pages keep 38-52 lines of `<style>` of their own, duplicated into the Italian copy.
-    Nothing enforced that, and an outside audit found the pair had already come apart on the home -
-    `it/index.html` was missing one comment. No rule differed, so nothing was visibly wrong; the point
-    is that the mechanism which dropped a comment will eventually drop a rule, and on a page nobody
-    would think to compare. Rules are compared exactly; comments are compared too, because a comment
-    that exists on one side is the evidence the copy was not carried over whole.
+    What was here before compared each landing page's inline `<style>` with its translation's, because
+    an audit had found the pair already coming apart - `it/index.html` was missing one comment. No rule
+    differed, so nothing looked wrong; the point was that whatever drops a comment will drop a rule.
+
+    The pages have no inline style left at all now: 210 lines of copy across fourteen pages became
+    rules in `site.css`, verified by photographing all 23 pages before and after. So the divergence
+    this guarded against cannot happen, and what is worth holding is the absence itself - the moment
+    one page grows a `<style>` again, the copying starts again with it.
+
+    The four things that genuinely differ per page are `--sel` and friends, and they are a class on
+    <body> now: `body.crm`, `body.analytics`, `body.lp`.
     """
 
-    PAIRS = ('index.html', 'crm.html', 'analytics.html')
+    def test_no_page_carries_an_inline_style_block(self):
+        offenders = []
+        for p in sorted((ROOT / 'site').rglob('*.html')):
+            if re.search(r'<style[^>]*>', p.read_text(encoding='utf-8')):
+                offenders.append(p.relative_to(ROOT).as_posix())
+        self.assertEqual(offenders, [], 'a page has grown a stylesheet of its own again; '
+                                        'site.css is where a rule lives, and tools/csscheck.py says why')
 
-    def _style(self, path):
-        s = (ROOT / path).read_text(encoding='utf-8')
-        m = re.search(r'<style>(.*?)</style>', s, re.S)
-        return m.group(1) if m else None
-
-    def test_every_pair_carries_the_same_block(self):
-        for name in self.PAIRS:
-            en, it = self._style('site/' + name), self._style('site/it/' + name)
-            self.assertIsNotNone(en, name + ' has no inline style block')
-            self.assertIsNotNone(it, 'it/' + name + ' has no inline style block')
-            if en == it:
-                continue
-            a = [l.strip() for l in en.split('\n') if l.strip()]
-            b = [l.strip() for l in it.split('\n') if l.strip()]
-            self.fail(f'{name}: the inline style block differs from its translation. '
-                      f'Only on the English page: {sorted(set(a) - set(b))[:3]} / '
-                      f'only on the Italian one: {sorted(set(b) - set(a))[:3]}')
-
-    def test_the_comparison_can_fail(self):
-        # A checker that has never failed is a claim. This proves the comparison is exact rather than
-        # normalising the difference away - the divergence that was found was a single comment line.
-        en = 'a{color:red}\n/* why */\n'
-        it = 'a{color:red}\n'
-        self.assertNotEqual(en, it)
+    def test_the_product_accent_is_a_class_on_body(self):
+        for page, cls in (('site/crm.html', 'crm'), ('site/analytics.html', 'analytics'),
+                          ('site/docs-crm.html', 'crm'), ('site/it/analytics.html', 'analytics')):
+            body = re.search(r'<body[^>]*>', (ROOT / page).read_text(encoding='utf-8')).group(0)
+            self.assertIn(cls, body, f'{page}: nothing says which product this page is about')
+        css = (ROOT / 'site/site.css').read_text(encoding='utf-8')
+        for cls in ('body.crm{', 'body.analytics{'):
+            self.assertIn(cls, css, f'{cls} is not defined, so the class on <body> buys nothing')
 
 
 class DatesAreDerived(unittest.TestCase):

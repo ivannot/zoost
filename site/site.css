@@ -4,7 +4,7 @@
 
 :root{color-scheme:dark;--anchor-top:70px;
   --bg:#0d121c; --surface:#151d2b; --panel:#1b2333; --ink:#e7edf6; --muted:#8ea0bb;
-  --border:#26303f; --line:#1e2735; --sel:#5a6a86;--sel-text:#8f9aad; --amber:#d97706; --teal:#83d8c6;
+  --border:#26303f; --line:#1e2735; --sel:#5a6a86;--sel-text:#8f9aad;--sel-hover:#6d7f9e; --amber:#d97706; --teal:#83d8c6;
   /* --sel is the *suite* accent: the same slate as the family mark, so the home, the guides and
      the privacy page read as Zoost rather than as one of its products. Each product page
      overrides it with its own colour — see the :root block at the top of crm.html and
@@ -19,6 +19,15 @@
    not letting that line overflow in the first place, below. */
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+/* The landing pages' own rhythm. `:where()` is the whole point: it scopes without weighing anything,
+ * so `:where(body.lp) h3` is exactly as specific as the bare `h3` these pages used to carry - the
+ * cascade stays theirs and only the *place* the rule is written changes. Scoping with plain
+ * `body.lp` instead moved every section down three pixels, because a class then beat `.why h3`,
+ * which had been winning by a hair. Measured twice before it was believed. */
+:where(body.lp) section{padding:52px 0;border-bottom:1px solid var(--line)}
+:where(body.lp) section h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+    margin:0 0 22px;font-weight:600}
+:where(body.lp) h3{font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
 a{color:var(--teal)}
 .wrap{max-width:900px;margin:0 auto;padding:0 22px}
 /* `hidden` is only a UA rule, so any author `display` outranks it and the element stays on screen.
@@ -526,3 +535,51 @@ td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
 main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
 main .note.warn{border-color:#6b4a1c;color:#e2c98a}
 main .meta{font:12.5px var(--mono);color:var(--muted)}
+
+/* ---- the last of what the pages were keeping to themselves ---------------------------------------
+ * Which product a page is about is now a class on <body>, and everything derives from it: the accent,
+ * its soft and text variants, and the hover of the primary button, which used to be a fourth copy
+ * written beside each `:root`. One place to look up what blue and what magenta mean.
+ *
+ * `section`, `section h2` and `h3` carry `body.lp` - they have no class of their own, and unscoped in
+ * this file they restyled every page that has a section or an h3, which a screenshot caught.
+ *
+ * And one list of steps. It was two components under one name: numbered on the landing pages, plain
+ * on try.html. Numbered is what «steps» means here, so try.html now reads like the rest.
+ */
+body.crm{--sel:#2563eb;--sel-soft:#16263f;--sel-text:#6b95f1;--sel-hover:#2f6fe0}
+body.analytics{--sel:#be2a6b;--sel-soft:#3a1226;--sel-text:#e770a5;--sel-hover:#c4256b}
+.btn.p:hover{background:var(--sel-hover)}
+.btn{display:inline-block;text-decoration:none;font:600 14.5px var(--sans);padding:11px 20px;
+    border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a}
+.card code,p code,li code{font:12.5px var(--mono);color:var(--teal);background:#0f1826;
+    border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.dep{margin:0;padding:16px 18px;background:#0f1826;border:1px solid var(--line);border-radius:10px;
+       font:13.5px/1.75 var(--mono);color:var(--ink);overflow-x:auto}
+pre.ask{margin:14px 0 0;padding:14px 16px;background:#0f1826;border:1px solid var(--line);
+    border-radius:10px}
+pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);background:none;border:0;
+    padding:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.prod .st{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;border-radius:999px;
+    padding:2px 9px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.doc .tools{font-size:13.5px;line-height:1.9}
+.doc .tools code{white-space:nowrap}
+.steps{counter-reset:s;list-style:none;margin:0;padding:0}
+.steps li{counter-increment:s;position:relative;padding:0 0 18px 42px;color:var(--muted);font-size:15px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:26px;height:26px;
+    border-radius:50%;background:#22304a;border:1px solid var(--border);color:var(--ink);
+    font:600 12.5px var(--mono);display:flex;align-items:center;justify-content:center}
+
+/* ---- reasons that came up with their rules -------------------------------------------------
+ * Written beside the rule they explain, back when that rule lived in a page. The rule is here now
+ * and the reason came with it: a comment left in a file that no longer holds the code is one
+ * nobody reads at the moment it matters. */
+/* This page wears its product's accent; the home stays neutral because it is the suite. Same mechanism as the panels: one token, everything else derives from it. */
+/* This guide is about one product, so it wears that product's accent. The suite pages stay slate. Same mechanism as the panels: one token, everything else derives from it. */
+/* The same marks the toolbar draws, at the same weight - a guide that names a control the panel no longer spells out is a guide the reader has to translate. */
+/* `pre-wrap`, not `pre`: on a phone the box was scrolling sideways and hiding the end of every line, which for a block whose whole purpose is to be read and copied is the worst available behaviour. Wrapping keeps the newlines - so what lands in the clipboard is still the prompt, line by line - and only the *display* folds. Long URLs break rather than push the box wide. */
+/* min(320px,100%): a bare 320px minimum cannot shrink below itself, so on a 320px phone the two cards were 22px wider than the column and the page scrolled sideways. */
+/* wrap: the status pill is nowrap by design (a pill that breaks in two is not a pill), so on a narrow screen it has to drop to its own line instead of pushing the row past the card. */
+/* The card names the product, then says in full what it is. Both forms are the manifest's own - `name` and `short_name` - and putting them adjacent is how the site states the convention without a note about naming: seen once, every later "Zoost CRM" is legible. */
+/* --sel is an accent for fills and borders; read as text on the card it is 3.09:1 against the 4.5 AA asks. Same hue, lightened until it can be read. */
+/* The first column used to be a bare figure, so nowrap was free; it now names the thing as well ("120 Deluge functions"), and the middle column is the file count that adds up to the total in the heading above the table. The prose column gets what is left. */

@@ -41,10 +41,6 @@ crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
 crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.html
 crm:header	apps/crm/graphview.html,apps/crm/options.html
 crm:header h1	apps/crm/graphview.html,apps/crm/options.html
-site:.doc .tools	site/ai.html,site/it/ai.html
-site:.doc .tools code	site/ai.html,site/it/ai.html
-site:h3	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
 site:header .brand	site/site.css
 site:header nav a.nprod	site/site.css
 site:main table	site/site.css
-site:section	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
