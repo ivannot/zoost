@@ -226,6 +226,10 @@
   a.fk.in{color:#b9a9f0}      /* incoming: someone else points here - a different fact, a different colour */
   a.fk .fkc{color:var(--muted)}
   pre.sql{margin:0;font:11px var(--mono);color:#cbd5e1;white-space:pre-wrap;word-break:break-word;line-height:1.5}
+  /* The CRM's code colours, value for value: the two panels show code side by side in the same
+     working day, and two palettes for the same job would read as two products. */
+  .c-com{color:#5b6b82;font-style:italic} .c-str{color:#7ee0a6} .c-num{color:#e0a86b}
+  .c-kw{color:#7aa2f7;font-weight:600} .c-type{color:#c792ea} .c-fn{color:#82d2ff}
   .lin{margin:0 0 10px}
   .lin h5{margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:600}
   .lin ul{margin:0;padding-left:16px}
@@ -477,6 +481,7 @@
 <script src="idb.js"></script>
 <script src="keyvault.js"></script>
 <script src="analytics-sql.js"></script>
+<script src="highlight.js"></script>
 <script src="product-help.js"></script>
 <script src="sidepanel.js"></script>
 </body>

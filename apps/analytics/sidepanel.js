@@ -1306,7 +1306,9 @@ async function renderDetail(v) {
   if (detailTab === 'sql') {
     const sql = await sqlBodyOf(v.id);
     body.innerHTML = '<div class="dpad">' + (sql && sql.trim()
-      ? `<pre class="sql">${esc(sql)}</pre>`
+      // Highlighted, and still escaped: `highlightSql` tokenises the raw text and escapes every
+      // piece itself, which is the only reason it may be handed to innerHTML at all.
+      ? `<pre class="sql">${window.highlightSql ? window.highlightSql(sql) : esc(sql)}</pre>`
       : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL file could not be read.' : 'No SQL text.'}</b> ${esc(sqlText(sql))}</div>`) + '</div>';
     return;
   }

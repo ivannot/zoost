@@ -3752,3 +3752,62 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The SQL highlighter. Its whole design is a refusal: it colours what can be established by
+// reading - comments, strings, quoted identifiers, numbers, a fixed keyword list - and leaves
+// everything else alone. «Better one highlight less than one that is wrong», which is the same
+// rule the rest of this product applies to what it claims.
+//
+// The first thing asserted is not a colour but the escaping: this string is handed to innerHTML.
+{
+  // The whole file, run as the browser runs it: it is an IIFE that hangs one function on `window`,
+  // so what the test wants is that window, not a slice - `load` names what it can see, and here that
+  // is nothing.
+  const win = {};
+  vm.runInContext(read('apps/analytics/highlight.js'), vm.createContext({ window: win }));
+  const highlightSql = win.highlightSql;
+
+  test('it escapes before it colours', () => {
+    const out = highlightSql('select "<img src=x onerror=alert(1)>" from t');
+    assert.ok(!/<img/.test(out), out);
+    assert.ok(out.includes('&lt;img'), out);
+  });
+
+  test('a comment, a string and a quoted name are told apart', () => {
+    const out = highlightSql('-- why\nselect \'x\' , "Col" from "T"');
+    assert.ok(/c-com">-- why/.test(out), out);
+    assert.ok(/c-str">&#39;x&#39;|c-str">'x'/.test(out), out);
+    assert.ok(/c-type">"Col"/.test(out), out);
+  });
+
+  test('the doubled quote SQL uses as an escape does not end the string', () => {
+    const out = highlightSql("select 'it''s' from t");
+    assert.equal((out.match(/c-str/g) || []).length, 1, out);
+    assert.ok(out.includes("it''s"), out);
+  });
+
+  test('a keyword is coloured whatever case it is written in', () => {
+    for (const w of ['SELECT', 'select', 'Select']) {
+      assert.ok(new RegExp(`c-kw">${w}`).test(highlightSql(`${w} 1`)), w);
+    }
+  });
+
+  test('a name that merely looks like a function is left alone', () => {
+    // The refusal, asserted: `count(` is a keyword in every dialect and is coloured; `my_helper(`
+    // may be anything, and colouring it would be a claim about a dialect nobody here has read.
+    assert.ok(/c-fn">count/i.test(highlightSql('select count(*) from t')));
+    assert.ok(!/c-fn">my_helper/i.test(highlightSql('select my_helper(x) from t')));
+  });
+
+  test('a word inside a name is not a keyword', () => {
+    // «Ordered» starts with «order»; a highlighter that matched loosely would paint half of it.
+    const out = highlightSql('select "Ordered_At" from t');
+    assert.ok(!/c-kw">order/i.test(out), out);
+  });
+
+  test('text with nothing to colour comes back as itself, escaped', () => {
+    assert.equal(highlightSql('a & b'), 'a &amp; b');
+    assert.equal(highlightSql(''), '');
+  });
+}

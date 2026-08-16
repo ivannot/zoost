@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:877937168e110098 -->
+<!-- translated-from: site/docs-analytics.html sha256:a324ea559b957ed1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -338,6 +338,11 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     quella query. La prima ricerca della sessione legge una volta tutti i file <code>.sql</code> - il
     pannello dice quanti sono, e lo dice anche se qualcuno non si è aperto, perché una query che non è
     riuscito a leggere non è una query senza risultati.</p>
+  <p>L'SQL dentro il pannello è colorato: commenti, stringhe, numeri, i nomi che Zoho scrive fra
+    virgolette doppie e un elenco fisso di parole chiave. Solo quelli. Una parola che potrebbe essere
+    una colonna, una funzione di un dialetto che qui nessuno ha letto per intero, un nome che sembra
+    riservato e non lo è - restano neutri, perché un'evidenziazione sbagliata è peggio di una che
+    manca.</p>
   <p>Su disco ogni query è un file a sé, così <code>grep</code> e <code>git log -p</code> ci lavorano come su
     qualunque altro sorgente.</p>
   <p class="box warn">Zoost non esegue, non valida e non fa il deploy di nessun SQL. Lo legge e lo scrive su

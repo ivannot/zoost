@@ -318,6 +318,10 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     with no match.</p>
   <p>On disk every query is its own file too, so <code>grep</code> and <code>git log -p</code> work on
     them like any other source - the same search, from the other side.</p>
+  <p>The SQL in the panel is coloured: comments, strings, numbers, the names Zoho writes in double
+    quotes, and a fixed list of keywords. Only those. A word that could be a column, a function from
+    a dialect nobody here has read end to end, a name that merely looks reserved - left plain, because
+    a highlight that is wrong is worse than one that is missing.</p>
   <p class="box warn">Zoost never runs, validates or deploys SQL. It reads it and writes it to disk;
     Zoho Analytics remains the only thing that can tell you a query compiles.</p>
 
