@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:2d572290ed931983 -->
+<!-- translated-from: site/docs-analytics.html sha256:4ff7e5a7f0176503 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
 <meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=32cdf91b6b">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=e07742e4e5">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -245,7 +245,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     viste no.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=4007c309e2" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=059ed3893f" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
     <figcaption>Lineage: per una query table, quali colonne legge e da quale vista - la catena che Zoho Analytics non disegna. Ogni nome e' un link a quella vista, come le chiavi esterne sotto <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -346,11 +346,13 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     spostano la selezione fra le viste che i filtri hanno lasciato e ne aprono una come farebbe un
     clic, <b class="ui">Home</b> e <b class="ui">End</b> vanno ai due estremi. Prima scorreva e
     basta, che è tutto quello che un browser sa fare di un elenco.</p>
-  <p>Seguire un link e' solo meta' del lavoro, quindi il riquadro tiene una <b>cronologia</b>, come
-    fa un browser: <b class="ui">◂</b> torna indietro di un passo, <b class="ui">▸</b> va avanti e
-    <b class="ui">⋯</b> apre l'intera catena - tutto quello che hai aperto, dal piu' recente, con
-    evidenziato il punto in cui sei - cosi' puoi saltare direttamente a un passo di qualche tappa fa
-    invece di premere quattro volte indietro. <b class="ui">Alt</b> con <b class="ui">←</b> o
+  <p>Seguire un link e' solo meta' del lavoro, quindi il pannello tiene una <b>cronologia</b>, come
+    fa un browser. Nel riquadro di dettaglio, <b class="ui">◂</b> torna indietro di un passo e
+    <b class="ui">▸</b> va avanti. L'intera catena e' una vista a se': il comando <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg> History</b> accanto alle schede
+    la apre al posto dell'elenco - tutto quello che hai aperto, dal piu' recente, con evidenziato il
+    punto in cui sei e l'ora di apertura - cosi' puoi saltare direttamente a un passo di qualche
+    tappa fa invece di premere quattro volte indietro. Risponde alla stessa ricerca dell'elenco che sostituisce, e <b class="ui">Clear</b> la svuota
+    senza chiudere quello che stai leggendo. <b class="ui">Alt</b> con <b class="ui">←</b> o
     <b class="ui">→</b> fa lo stesso da tastiera. Ogni comando compare solo quando ha davvero dove
     portarti.
     La catena attraversa le schede, quindi una regola raggiunta da una funzione e' a un passo da

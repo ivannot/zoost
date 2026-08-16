@@ -4364,7 +4364,82 @@ test('crm: the arrows open a row the way that row opens', () => {
     assert.equal(navKind('connections/zoho'), 'connection');
     assert.equal(navKind('actions/index.json'), 'action');
     assert.equal(navKind('modules/Contacts.json'), 'module');
-    assert.equal(navKind('functions/automation/x.dg'), 'diagram');
+    // `.dg` is the extension of a Deluge function's source, so it is a function - it was labelled
+    // «diagram» from the file name, which is a guess about our own mirror.
+    assert.equal(navKind('functions/automation/x.dg'), 'function');
+    assert.equal(navKind('functions/automation/x.js'), 'function');
+  });
+
+  test('both panels word a vanished step identically', () => {
+    // The twins' shared-wording rule: one browser behaviour must not arrive as two sentences.
+    const of = (app) => load([sliceConst(`apps/${app}/sidepanel.js`, 'MSG')], {}).MSG.navGone;
+    assert.equal(of('crm'), of('analytics'));
+    assert.ok(of('crm'), 'neither panel says anything when a step has gone');
+  });
+
+  test('the history is a view, and it replaces the list rather than floating over it', () => {
+    // It was a dropdown hanging off the detail header, and three separate reports came out of that
+    // one shape: it moved oddly on a resize, it was indistinguishable from the detail underneath, and
+    // it had no room. As a view there is nothing positioned left to go wrong - what it covers is
+    // decided by a class on <body>, the mechanism this panel has always used for an overlay.
+    for (const app of ['crm', 'analytics']) {
+      const css = read(`apps/${app}/sidepanel.html`);
+      const rule = css.slice(css.indexOf('#navview{'), css.indexOf('#navview.show'));
+      assert.ok(!/position:\s*absolute/.test(rule), `${app}: the history is positioned again`);
+      assert.ok(/body\.nav-open/.test(css), `${app}: nothing is hidden while the history is open`);
+      // The search box and the Name toggle stay: a list of where you have been wants the same
+      // chrome as a list of anything else, which is why the view sits below them.
+      const hidden = css.slice(css.indexOf('body.nav-open'), css.indexOf('{display:none}', css.indexOf('body.nav-open')));
+      for (const kept of ['#find', '#nameToggle', '.bar']) {
+        assert.ok(!hidden.includes(kept), `${app}: the history hides ${kept}, which it needs`);
+      }
+    }
+  });
+
+  test('nothing that reads Zoho stays live over a list of where you have been', () => {
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/function navBlockChrome/.test(js), `${app}: the pull buttons are not disabled`);
+      const at = js.indexOf('function navBlockChrome');
+      const body = js.slice(at, at + 600);
+      assert.ok(/navSavedBtns = ids\.map/.test(body),
+                `${app}: the previous state is not saved, so closing the view could enable a button that was off for its own reason`);
+    }
+  });
+
+  test('the chain can be emptied, and emptying it keeps what is open', () => {
+    // Reported as missing. Keeping the current step is the part worth holding: dropping it too would
+    // leave the pane showing something the history says was never visited.
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      assert.ok(new RegExp("\\$\\('navclear'\\)\\.onclick").test(js), `${app}: Clear is drawn and never wired`);
+      const at = js.indexOf("$('navclear').onclick");
+      assert.ok(/navHist = here \? \[here\] : \[\]/.test(js.slice(at, at + 300)),
+                `${app}: Clear does not keep the step you are on`);
+    }
+  });
+
+  test('the search filters the history while it is the thing on screen', () => {
+    // Asked for: the view sits where a list sits, so it answers the same box. Both panels, because a
+    // search that works in one product and not in the other is the drift the twins rule exists for.
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/navOpenNow\(\) \? renderNav\(\)/.test(js), `${app}: typing does not redraw the chain`);
+      const at = js.indexOf('function renderNav');
+      assert.ok(/\$\('find'\)\.value/.test(js.slice(at, at + 900)), `${app}: the chain ignores the search box`);
+    }
+  });
+
+  test('a step names what kind of thing it was, from the prefix the opener dispatches on', () => {
+    const { navKind } = load([sliceFn('apps/crm/sidepanel.js', 'navKind')], {});
+    assert.equal(navKind('workflows/1.json'), 'workflow');
+    assert.equal(navKind('schedules/1.json'), 'schedule');
+    assert.equal(navKind('connections/zoho'), 'connection');
+    assert.equal(navKind('actions/index.json'), 'action');
+    assert.equal(navKind('modules/Contacts.json'), 'module');
+    // `.dg` is the extension of a Deluge function's source, so it is a function - it was labelled
+    // «diagram» from the file name, which is a guess about our own mirror.
+    assert.equal(navKind('functions/automation/x.dg'), 'function');
     assert.equal(navKind('functions/automation/x.js'), 'function');
   });
 
@@ -4378,7 +4453,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   test('every navigation control is drawn and wired, in both panels', () => {
     // A control drawn and never wired is the failure this panel has met before; a pair of arrows is
     // exactly where it would go unnoticed, because one of them usually does nothing anyway.
-    for (const [app, ids] of [['crm', ['pvback', 'pvfwd', 'pvchain']], ['analytics', ['dback', 'dfwd', 'dchain']]]) {
+    for (const [app, ids] of [['crm', ['pvback', 'pvfwd', 'navtab']], ['analytics', ['dback', 'dfwd', 'navtab']]]) {
       const js = read(`apps/${app}/sidepanel.js`);
       const html = read(`apps/${app}/sidepanel.html`);
       for (const id of ids) {
@@ -4386,5 +4461,31 @@ test('crm: the arrows open a row the way that row opens', () => {
         assert.ok(new RegExp(`\\$\\('${id}'\\)\\.onclick`).test(js), `${app}: id=${id} is drawn and never wired`);
       }
     }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// «Con più spazio in larghezza, la history potrebbe mostrare data e ora di apertura» - asked for,
+// and it is a fact only the panel holds: with a chain that spans a session, "which of these did I
+// look at first" has no other answer. Held in both products because a stamp on one side only is the
+// twins drifting where nobody looks.
+{
+  test('a step records when it was taken, in both panels', () => {
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/navHist\.push\(\{[^}]*at: Date\.now\(\)/.test(js), `${app}: a step carries no time`);
+      assert.ok(/navWhen\(e\.at\)/.test(js), `${app}: the time is recorded and never shown`);
+    }
+  });
+
+  test('today shows the time alone, an older day carries its date', () => {
+    // The distinction is the whole point: a date repeated on every row of one session is noise, and
+    // its absence on an older step is a lie about when that step happened.
+    const { navWhen } = load([sliceFn('apps/crm/sidepanel.js', 'navWhen')], { Date, Intl });
+    const now = new Date();
+    const today = navWhen(now.getTime());
+    const older = navWhen(now.getTime() - 40 * 24 * 3600 * 1000);
+    assert.ok(/\d/.test(today), 'today says nothing');
+    assert.ok(older.length > today.length, `an older step reads like today's: ${older} vs ${today}`);
   });
 }

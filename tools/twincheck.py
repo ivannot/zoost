@@ -62,6 +62,7 @@ EQUIV = {
     'tree': 'list',          # the scrolling list of items
     'preview': 'detail',     # the pane below the draggable split
     'findx': 'findclear',    # the search box's clear affordance
+    'chiprow': 'filterrow',  # the row of filters the history view replaces: chips there, selects here
     # The history controls. Named after the pane each sits in - `pv` for the CRM's preview, `d` for
     # the Analytics detail - which is the same divergence as #preview / #detail one line up, so it
     # is declared the same way rather than renamed on one side alone.
@@ -129,6 +130,8 @@ EXPECTED = {
     ('.zbtn:hover:not(:disabled)', 'border-color'): 'ditto',
     ('.aimsg.user .aitext', 'color'): 'a light tint of each product accent',
     (':root', '--accent'): 'the accent is the product colour: blue in CRM, teal in Analytics',
+    ('.navseg', 'font-size'): "the CRM's stands among the tabs and takes their 11px; the Analytics one stands among ordinary buttons and takes theirs",
+    ('.navseg', 'background'): "the history control takes the ground of the row it stands in - the tab strip in the CRM, the toolbar in Analytics",
     ('#healthbody', 'flex'): 'the Analytics health view is a flex column and its body must fill it',
     ('#healthbody', 'color'): 'base typography, which the CRM inherits from elsewhere',
     ('#healthbody', 'font-size'): 'ditto',

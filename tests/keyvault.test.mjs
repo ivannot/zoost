@@ -845,22 +845,29 @@ test('the assistant sends you to the part of the settings it means', () => {
   }
 });
 
-test('the gear is not a speck beside the cross', () => {
-  // Same declared size, and a glyph's ink is its own business: ⚙ painted far smaller than ✕, so the
-  // control that leads somewhere looked like an accident next to the one that closes.
+test('the gear and the cross are drawn, not typed', () => {
+  // The story of this case is the argument for it. First the gear was made bigger than the cross,
+  // because ⚙ paints far smaller than ✕ at the same declared size; then both were put in a 20x20 box
+  // and centred - measured headless, both boxes land on the same axis to a tenth of a pixel - and it
+  // was *still* reported crooked, because what is left is the ink of two glyphs that come from two
+  // different system fonts, which no stylesheet here can reach.
+  //
+  // So they are marks now, like the toolbar's: one viewBox, one stroke, identical on every machine.
+  // The panel's glyph vocabulary (↻ ↗ → ♥ ⚙ ⏱ ◐) is untouched everywhere else - this is the one
+  // place where two glyphs had to agree with each other rather than only be read.
   for (const app of ['crm', 'analytics']) {
     const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
-    const m = html.match(/#aiview #aigear\{([^}]*)\}/);
-    assert.ok(m, `${app}: the gear is back to the shared icon size`);
-    const size = /font-size:(\d+)px/.exec(m[1]);
-    assert.ok(size && Number(size[1]) > 14, `${app}: ${m[1]} is no larger than the icons beside it`);
-    // And both glyphs sit in a box of their own rather than on their own baselines: measured in the
-    // shipped panel, title, badge, Clear, gear and cross now share one vertical centre to a tenth of
-    // a pixel. A per-glyph nudge would be fitting the font instead of the layout.
+    for (const id of ['aigear', 'aix']) {
+      const m = new RegExp(`id="${id}"[^>]*>(.*?)</span>`, 's').exec(html);
+      assert.ok(m, `${app}: ${id} is gone`);
+      assert.ok(/<svg class="mk"/.test(m[1]), `${app}: ${id} is a font glyph again: ${m[1].slice(0, 40)}`);
+      assert.ok(/viewBox="0 0 16 16"/.test(m[1]), `${app}: ${id} does not share the marks' box`);
+    }
+    // No size lever left compensating for a glyph that is no longer there - a rule that answers a
+    // problem which has gone reads as deliberate to whoever meets it next.
+    assert.ok(!/#aiview #aigear\{/.test(html), `${app}: the gear still has a size of its own`);
     const box = html.match(/#aiview #aigear, #aiview #aix\{([^}]*)\}/s);
-    assert.ok(box, `${app}: the two icons are not boxed together`);
-    assert.ok(/align-items:center/.test(box[1]) && /width:20px/.test(box[1]),
-              `${app}: the box does not centre them: ${box[1]}`);
-    assert.ok(!/top:\s*-?\d+px/.test(m[1]), `${app}: the gear is still nudged by hand`);
+    assert.ok(box && /align-items:center/.test(box[1]) && /width:20px/.test(box[1]),
+              `${app}: the two icons are not boxed and centred together`);
   }
 });

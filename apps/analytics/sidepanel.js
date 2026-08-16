@@ -51,6 +51,7 @@ const MSG = {
   mismatchRefused: 'The active tab is a different workspace from this one - nothing here reads Zoho Analytics until they match.',
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
+  narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   navGone: 'That step is not in this workspace any more.',
   errPrefix: 'Error: ',
 };
@@ -2508,7 +2509,7 @@ function navHere(id, label) {
   if (cur && String(cur.id) === String(id)) { if (label) cur.label = label; updateNav(); return; }
   // A new step drops what was ahead - the forward arrow means «where I came back from».
   navHist = navHist.slice(0, navPos + 1);
-  navHist.push({ n: ++navSeq, id: String(id), label: label || String(id), kind: '' });
+  navHist.push({ n: ++navSeq, id: String(id), label: label || String(id), kind: '', at: Date.now() });
   if (navHist.length > NAV_MAX) navHist.shift();
   navPos = navHist.length - 1;
   updateNav();
@@ -2520,7 +2521,7 @@ function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
 async function navTo(i) {
   if (i < 0 || i >= navHist.length || i === navPos) return;
   const e = navHist[i];
-  navPos = i; closeNavMenu(); updateNav();
+  navPos = i; navShow(false); updateNav();
   navReplaying = true;
   try {
     if (viewById().get(e.id)) await openDetail(e.id);
@@ -2531,26 +2532,84 @@ async function navTo(i) {
 function updateNav() {
   $('dback').classList.toggle('show', navPos > 0);
   $('dfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
-  $('dchain').classList.toggle('show', navHist.length > 1);
+  $('navtab').style.display = navHist.length ? '' : 'none';   // nowhere to go, nothing to offer
 }
-function closeNavMenu() { $('dchainmenu').classList.remove('show'); }
-function toggleNavMenu() {
-  const m = $('dchainmenu');
-  if (m.classList.contains('show')) { closeNavMenu(); return; }
-  // Newest first: the reader is looking for where they were a moment ago. The step they are on is
-  // marked rather than left out.
-  m.innerHTML = navHist.map((e, i) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(String(e.id))}">`
-    + `<span class="nvk">${esc(e.kind || 'view')}</span><span class="nvl">${esc(e.label)}</span></div>`).reverse().join('');
-  m.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
-  m.classList.add('show');
+// When a step was taken. A real fact rather than something to fill a row with: with a chain that
+// spans a session, «which of these two did I look at first» is a question the reader actually has,
+// and the panel is the only thing that knows. Today's steps show the time alone - the date would be
+// noise on every row - and anything older carries its day.
+function navWhen(ms) {
+  const d = new Date(ms);
+  const t = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const today = new Date();
+  const sameDay = d.getDate() === today.getDate() && d.getMonth() === today.getMonth()
+    && d.getFullYear() === today.getFullYear();
+  return sameDay ? t : `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ${t}`;
+}
+function closeNavMenu() { navShow(false); }
+// Open it, or draw it again where it already is - the second is what the name toggle needs, and
+// without it the chain kept the old names until it was closed and reopened.
+function redrawNavMenu() { if (navOpenNow()) renderNav(); }
+const navOpenNow = () => $('navview').classList.contains('show');
+// The Zoho buttons and Refresh, off while the history is open - the twin of the CRM's, against this
+// panel's own set.
+let navSavedBtns = null;
+function navBlockChrome(on) {
+  const ids = ['pull', 'refresh'].filter((b) => $(b));
+  if (on) {
+    if (!navSavedBtns) navSavedBtns = ids.map((b) => $(b).disabled);
+    ids.forEach((b) => ($(b).disabled = true));
+  } else if (navSavedBtns) {
+    ids.forEach((b, i) => ($(b).disabled = navSavedBtns[i]));
+    navSavedBtns = null;
+  }
+}
+function navShow(on) {
+  $('navview').classList.toggle('show', on);
+  navBlockChrome(on);
+  document.body.classList.toggle('nav-open', on);
+  const seg = $('navtab');
+  if (seg) { seg.classList.toggle('on', on); seg.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  if (on) renderNav();
+}
+function toggleNavMenu() { navShow(!navOpenNow()); }
+/** The chain, drawn full width. Newest first - the reader is looking for where they were a moment
+ *  ago, not for where they started - and the step they are on is marked rather than left out. */
+function renderNav() {
+  const body = $('navbody');
+  // The same search box as the list it replaces - see the twin.
+  const q = ($('find').value || '').trim().toLowerCase();
+  const rows = navHist.map((e, i) => ({ e, i }))
+    .filter(({ e }) => !q || String(e.label).toLowerCase().includes(q) || String(e.kind || 'view').toLowerCase().includes(q));
+  $('navcount').textContent = navHist.length
+    ? `${rows.length === navHist.length ? navHist.length : rows.length + ' of ' + navHist.length} step${navHist.length > 1 ? 's' : ''}`
+    : '';
+  if (!navHist.length) {
+    body.innerHTML = '<div class="nvnone">Nothing yet. Open a view and every step you take is '
+      + 'listed here - click one to go back to it.</div>';
+    return;
+  }
+  if (!rows.length) { body.innerHTML = `<div class="nvnone">${esc(MSG.narrowNav)}</div>`; return; }
+  body.innerHTML = rows.map(({ e, i }) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(String(e.id))}">`
+    + `<span class="nvk">${esc(e.kind || 'view')}</span><span class="nvl">${esc(e.label)}</span>`
+    + `<span class="nvw">${esc(navWhen(e.at))}</span></div>`).reverse().join('');
+  body.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
 }
 
+// Emptying the chain does not close what is open: the reader asked to forget where they have been,
+// not to lose the thing they are reading. The step they are on is kept as the only entry, so the
+// next link still has something to come back to.
+$('navclear').onclick = () => {
+  const here = navHist[navPos];
+  navHist = here ? [here] : []; navPos = navHist.length - 1;
+  updateNav(); renderNav();
+};
+$('navx').onclick = () => navShow(false);
 $('dback').onclick = () => navTo(navPos - 1);
 $('dfwd').onclick = () => navTo(navPos + 1);
-$('dchain').onclick = (e) => { e.stopPropagation(); toggleNavMenu(); };
-document.addEventListener('click', (e) => { if (!$('dchainmenu').contains(e.target)) closeNavMenu(); });
+$('navtab').onclick = () => toggleNavMenu();
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $('dchainmenu').classList.contains('show')) { closeNavMenu(); return; }
+  if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
@@ -2567,7 +2626,7 @@ $('list').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = render;
+$('find').oninput = () => (navOpenNow() ? renderNav() : render());
 $('smode').onclick = async () => {
   searchMode = searchMode === 'name' ? 'sql' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';

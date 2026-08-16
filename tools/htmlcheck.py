@@ -157,6 +157,32 @@ def duplicate_attributes(path) -> list:
     return out
 
 
+def divs_are_closed(path) -> list:
+    """A `<div>` that is never closed, which no browser will tell you about.
+
+    It happened while moving a view into a panel: the new block's `</div>` was consumed by the edit,
+    every element after it became its child, and because that block is `display:none` until it is
+    opened, *half the panel had zero size* - laid out, present in the DOM, invisible. Nothing threw
+    and the page scored a perfect run of every other check here.
+
+    Counted rather than parsed, and only for `div`, which is what these panels are built from: the
+    tag cannot be self-closing and is never implicitly closed, so open != close is always a defect
+    and never a style. Comments and script bodies are removed first, or a `</div>` inside a template
+    literal would be counted as markup - which is exactly what the panels' own render functions are
+    full of.
+    """
+    src = path.read_text(encoding='utf-8')
+    src = re.sub(r'<!--.*?-->', '', src, flags=re.S)
+    src = re.sub(r'<script\b.*?</script>', '', src, flags=re.S | re.I)
+    opened = len(re.findall(r'<div\b', src, re.I))
+    closed = len(re.findall(r'</div\s*>', src, re.I))
+    if opened == closed:
+        return []
+    which = 'never closed' if opened > closed else 'closed too many times'
+    return [f'{path.name}: {abs(opened - closed)} <div> {which} '
+            f'({opened} opened, {closed} closed) - everything after it is inside something else']
+
+
 def notes_belong_to_a_control(findings: list) -> None:
     """On a settings page, an explanation lives inside the block of the control it explains.
 
@@ -204,6 +230,7 @@ def main() -> int:
     for path in pages:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in display_override(path)]
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in duplicate_attributes(path)]
+        findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in divs_are_closed(path)]
     notes_belong_to_a_control(findings)
 
     print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')

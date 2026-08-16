@@ -100,6 +100,8 @@ const MSG = {
   actNotPulled: 'Actions have not been pulled into this workspace yet - press Pull here first.',
   modNotHere: 'That module is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Modules.',
   modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull here first.',
+  openInZoho: 'Open in Zoho \u2197',
+  narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
   wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
@@ -738,7 +740,7 @@ async function refreshContext() {
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
   document.body.classList.toggle('zoho-blocked', !zohoReady());
-  ZOHO_BTNS.forEach((b) => ($(b).disabled = pullBusy || !zohoReady() || !dir));   // a pull in progress keeps them disabled even as the 5s refresh runs
+  ZOHO_BTNS.forEach((b) => ($(b).disabled = pullBusy || !zohoReady() || !dir || navOpenNow()));   // a pull in progress - or the history view - keeps them disabled even as the 5s refresh runs
   updateWsButtons();
 }
 function guardOk() {
@@ -1059,6 +1061,8 @@ async function openFile(path, line = null) {
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
+  const trow = treeData.find((x) => x.path === path);
+  if (trow) navNames({ display: trow.display_name, api: trow.api_name });
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   pvTabsFor('function');
   let code; try { code = await readFile(path); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
@@ -1115,8 +1119,15 @@ async function showCallers(path) {
     const node = Object.values(g.nodes).find((n) => n.file === path); if (!node) { box.className = ''; return; }
     const callers = node.called_by;
     const nm = (id) => nameMode === 'display' ? (g.nodes[id].display_name || g.nodes[id].name) : (g.nodes[id].api_name || g.nodes[id].name);
+    // Chips, not a sentence. A comma-separated list of seven names reads as prose while the reader
+    // is scanning for one of them, and this panel already has a shape for «a link to a function» -
+    // the `.wf-fn` chip that workflows, schedules and connections use. Asked for by name: the same
+    // layout for every function link. Not inside the code pane, where a chip would deform the line
+    // it sits in; there a call stays an inline link.
     let html = callers.length
-      ? `<b>Called by (${callers.length}):</b> ` + callers.map((id) => `<a data-file="${escA(g.nodes[id].file)}" title="${escA(g.nodes[id].display_name || g.nodes[id].name || '')}">${escHtml(nm(id))}</a>`).join(', ')
+      ? `<b>Called by (${callers.length}):</b><div class="fnchips">`
+        + callers.map((id) => `<a class="wf-fn" data-file="${escA(g.nodes[id].file)}" title="${escA(g.nodes[id].display_name || g.nodes[id].name || '')}">\u0192 ${escHtml(nm(id))}</a>`).join('')
+        + '</div>'
       : '<b>Called by</b> - none';
     const ap = node.associated_place || [];
     if (ap.length) {
@@ -1522,14 +1533,23 @@ function buildTypeChips() {
   }
 }
 $('nameToggle').onclick = () => {
+  if (navOpenNow()) {
+    nameMode = nameMode === 'internal' ? 'display' : 'internal';
+    $('nameToggle').textContent = MSG.namePrefix + nameMode;
+    // The list behind is redrawn too, even though it cannot be seen: there is one naming, and coming
+    // out of the history onto a tree still labelled the old way is the two lists disagreeing again -
+    // the very thing this control was just taught to keep in step.
+    renderNav(); renderTree();
+    return;
+  }
   if (viewMode === 'functions') {
     nameMode = nameMode === 'internal' ? 'display' : 'internal';
     $('nameToggle').textContent = MSG.namePrefix + nameMode;
-    renderTree(); if (currentPath) showCallers(currentPath);
+    renderTree(); if (currentPath) showCallers(currentPath); redrawNavMenu();
   } else {
     moduleNameMode = moduleNameMode === 'api' ? 'display' : moduleNameMode === 'display' ? 'generated' : 'api';
     $('nameToggle').textContent = MSG.namePrefix + moduleNameMode;
-    renderModules();
+    renderModules(); redrawNavMenu();
   }
 };
 // ---- keyboard: the selection follows the arrows ------------------------------------------------
@@ -1609,7 +1629,7 @@ function navHere(label) {
   // Stepping somewhere new drops what was ahead, exactly as a browser does: the forward arrow means
   // «where I came back from», and after a turn there is no such place any more.
   navHist = navHist.slice(0, navPos + 1);
-  navHist.push({ n: ++navSeq, path: currentPath, label: label || currentPath.split('/').pop() });
+  navHist.push({ n: ++navSeq, path: currentPath, label: label || currentPath.split('/').pop(), at: Date.now() });
   if (navHist.length > NAV_MAX) navHist.shift();
   navPos = navHist.length - 1;
   updateNav();
@@ -1621,20 +1641,37 @@ function navLabel(name) {
   const cur = navHist[navPos];
   if (cur && name) { cur.label = name; updateNav(); }
 }
+/** The names this item is known by, kept on the step itself.
+ *
+ *  Deriving them at draw time from `treeData` worked only while the reader was on the tab that holds
+ *  them: in Workflows, `treeData` is the rules, so every function in the chain fell back to its file
+ *  name and the panel showed `alertcompito....dg`. Reported with a picture. Recorded here instead,
+ *  where the opener has just read the row, so which tab is open afterwards cannot change what a step
+ *  is called.
+ */
+function navNames(names) {
+  const cur = navHist[navPos];
+  if (cur && names) { cur.names = names; updateNav(); }
+}
 function navClear() { navHist = []; navPos = -1; closeNavMenu(); updateNav(); }
 
 async function navOpen(p) {
   const find = (arr) => (arr || []).find((x) => x.path === p);
   const gone = () => setStatus(MSG.navGone, 'warn');
+  // Only when the tab actually changes. `setMode()` closes the detail pane - it has to, the pane is
+  // showing something from the tab being left - so calling it for a step that is already on this tab
+  // made every «back» close the pane, select the row and reopen it. Reported as a flicker, and it is
+  // one: the reader is looking at the pane, and the pane is what blinked.
+  const goMode = (m) => { if (viewMode !== m) setMode(m); };
   // A step can point into an area the role has stopped granting - the mirror still has the files,
   // the tab is gone. Same refusal as every other jump, from the one guard.
-  if (!tabReachable(navKind(p) === 'function' || navKind(p) === 'diagram' ? 'functions' : navKind(p) + 's')) return;
-  if (p.startsWith('workflows/')) { setMode('workflows'); await rebuildWorkflows(); const e = find(workflowData); return e ? openWorkflow(e) : gone(); }
-  if (p.startsWith('schedules/')) { setMode('schedules'); await rebuildSchedules(); const e = find(scheduleData); return e ? openSchedule(e) : gone(); }
-  if (p.startsWith('connections/')) { setMode('connections'); await rebuildConnections(); const e = find(connectionData); return e ? openConnection(e) : gone(); }
-  if (p.startsWith('actions/')) { setMode('actions'); await rebuildActions(); const e = find(actionData); return e ? openAction(e) : gone(); }
-  if (p.startsWith('modules/')) { setMode('modules'); await rebuildModules(); return openModule(p); }
-  setMode('functions'); return openFile(p);
+  if (!tabReachable(navKind(p) === 'function' ? 'functions' : navKind(p) + 's')) return;
+  if (p.startsWith('workflows/')) { goMode('workflows'); await rebuildWorkflows(); const e = find(workflowData); return e ? openWorkflow(e) : gone(); }
+  if (p.startsWith('schedules/')) { goMode('schedules'); await rebuildSchedules(); const e = find(scheduleData); return e ? openSchedule(e) : gone(); }
+  if (p.startsWith('connections/')) { goMode('connections'); await rebuildConnections(); const e = find(connectionData); return e ? openConnection(e) : gone(); }
+  if (p.startsWith('actions/')) { goMode('actions'); await rebuildActions(); const e = find(actionData); return e ? openAction(e) : gone(); }
+  if (p.startsWith('modules/')) { goMode('modules'); await rebuildModules(); return openModule(p); }
+  goMode('functions'); return openFile(p);
 }
 
 /** Go to step `i`. The position moves even when the item turns out not to be there any more - the
@@ -1644,7 +1681,7 @@ async function navOpen(p) {
 async function navTo(i) {
   if (i < 0 || i >= navHist.length || i === navPos) return;
   const e = navHist[i];
-  navPos = i; closeNavMenu(); updateNav();
+  navPos = i; navShow(false); updateNav();
   navReplaying = true;
   try { await navOpen(e.path); } finally { navReplaying = false; }
 }
@@ -1655,39 +1692,136 @@ async function navTo(i) {
 function updateNav() {
   $('pvback').classList.toggle('show', navPos > 0);
   $('pvfwd').classList.toggle('show', navPos >= 0 && navPos < navHist.length - 1);
-  $('pvchain').classList.toggle('show', navHist.length > 1);
+  const seg = $('navtab');
+  if (seg) seg.style.display = navHist.length ? '' : 'none';   // nowhere to go, nothing to offer
 }
-function closeNavMenu() { $('pvchainmenu').classList.remove('show'); }
-function toggleNavMenu() {
-  const m = $('pvchainmenu');
-  if (m.classList.contains('show')) { closeNavMenu(); return; }
-  // Newest first, which is the order the reader is thinking in: they are looking for where they were
-  // a moment ago, not for where they started. The step they are on is marked rather than removed -
-  // a chain with a hole where «here» should be is a chain nobody can read.
-  m.innerHTML = navHist.map((e, i) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(e.path)}">`
-    + `<span class="nvk">${escHtml(navKind(e.path))}</span><span class="nvl">${escHtml(e.label)}</span></div>`).reverse().join('');
-  m.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
-  m.classList.add('show');
+function closeNavMenu() { navShow(false); }
+// Open it, or draw it again where it already is - the second is what the name toggle needs, and
+// without it the chain kept the old names until it was closed and reopened.
+function redrawNavMenu() { if (navOpenNow()) renderNav(); }
+const navOpenNow = () => $('navview').classList.contains('show');
+// The two Zoho buttons and Refresh, off while the history is open: it lists what has already been
+// opened, and neither pulling nor reloading has anything to do with it. Saved and put back rather
+// than recomputed, so closing the view cannot enable something that was disabled for its own reason
+// - a sample workspace, a pull in flight, the wrong tab.
+let navSavedBtns = null;
+function navBlockChrome(on) {
+  const ids = ZOHO_BTNS.concat(['refresh']);
+  if (on) {
+    if (!navSavedBtns) navSavedBtns = ids.map((b) => $(b).disabled);
+    ids.forEach((b) => ($(b).disabled = true));
+  } else if (navSavedBtns) {
+    ids.forEach((b, i) => ($(b).disabled = navSavedBtns[i]));
+    navSavedBtns = null;
+  }
+}
+function navShow(on) {
+  $('navview').classList.toggle('show', on);
+  navBlockChrome(on);
+  // `Name` is hidden by setMode() on the tabs that have no naming of their own - Workflows, Actions,
+  // Connections - and the history opened from one of those inherited that, while its own rows are
+  // functions and modules whose names it decides. Reported. So it is shown here and put back the way
+  // the tab left it on the way out. It acts on the *function* naming while the chain is up, which is
+  // what all but a handful of steps are; a module in the chain follows what the Modules tab is set to.
+  $('nameToggle').style.display = on ? ''
+    : ((viewMode === 'functions' || viewMode === 'modules') ? '' : 'none');
+  if (on) $('nameToggle').textContent = MSG.namePrefix + nameMode;
+  document.body.classList.toggle('nav-open', on);
+  const seg = $('navtab');
+  if (seg) { seg.classList.toggle('on', on); seg.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  if (on) renderNav();
+}
+function toggleNavMenu() { navShow(!navOpenNow()); }
+/** The chain, drawn full width. Newest first - the reader is looking for where they were a moment
+ *  ago, not for where they started - and the step they are on is marked rather than left out. */
+function renderNav() {
+  const body = $('navbody');
+  // The same search box as every other tab, filtering the same way: by the name on screen, which is
+  // the one `navLabelNow()` decides. A history that ignored the box while sitting in its place would
+  // be a list that looks like the others and does not behave like them.
+  const q = ($('find').value || '').trim().toLowerCase();
+  const rows = navHist.map((e, i) => ({ e, i }))
+    .filter(({ e }) => !q || navLabelNow(e).toLowerCase().includes(q) || navKind(e.path).includes(q));
+  $('navcount').textContent = navHist.length
+    ? `${rows.length === navHist.length ? navHist.length : rows.length + ' of ' + navHist.length} step${navHist.length > 1 ? 's' : ''}`
+    : '';
+  if (!navHist.length) {
+    body.innerHTML = '<div class="nvnone">Nothing yet. Open a function, a rule or a module and every '
+      + 'step you take is listed here - click one to go back to it.</div>';
+    return;
+  }
+  if (!rows.length) { body.innerHTML = `<div class="nvnone">${escHtml(MSG.narrowNav)}</div>`; return; }
+  body.innerHTML = rows.map(({ e, i }) => `<div class="nvrow${i === navPos ? ' at' : ''}" data-n="${escA(String(e.n))}" data-i="${escA(String(i))}" title="${escA(e.path)}">`
+    + `<span class="nvk">${escHtml(navKind(e.path))}</span><span class="nvl">${escHtml(navLabelNow(e))}</span>`
+    + `<span class="nvw">${escHtml(navWhen(e.at))}</span></div>`).reverse().join('');
+  body.querySelectorAll('.nvrow').forEach((r) => { r.onclick = () => navTo(Number(r.dataset.i)); });
 }
 // What kind of thing a step was, from the same prefix navOpen() dispatches on - so the chain reads
 // «workflow Invoice overdue» rather than a bare name that could be any of six things.
+// When a step was taken. A real fact rather than something to fill a row with: with a chain that
+// spans a session, «which of these two did I look at first» is a question the reader actually has,
+// and the panel is the only thing that knows. Today's steps show the time alone - the date would be
+// noise on every row - and anything older carries its day.
+function navWhen(ms) {
+  const d = new Date(ms);
+  const t = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const today = new Date();
+  const sameDay = d.getDate() === today.getDate() && d.getMonth() === today.getMonth()
+    && d.getFullYear() === today.getFullYear();
+  return sameDay ? t : `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ${t}`;
+}
+/** What to call a step *now*.
+ *
+ * The label captured when the step was taken is a fallback, not the answer: this panel lets the
+ * reader switch between a function's display name and its api name, and between three names for a
+ * module, and a chain still reading «Build invoice» while the tree reads `buildInvoice` is two lists
+ * disagreeing about the same item. Reported. So the name is derived at draw time from the same rows
+ * the tree and the module list derive theirs from - one source, so they cannot drift - and the
+ * stored label is used only for something no longer in the mirror.
+ */
+function navLabelNow(e) {
+  const n = e.names;
+  if (e.path.startsWith('modules/')) {
+    if (n) return (moduleNameMode === 'display' ? n.display : moduleNameMode === 'generated' ? n.gen : n.api) || e.label;
+    const m = moduleData.find((x) => x.path === e.path);
+    return m ? (moduleNameMode === 'display' ? m.label : moduleNameMode === 'generated' ? m.gen : m.api_name) : e.label;
+  }
+  if (e.path.startsWith('functions/')) {
+    if (n) return (nameMode === 'display' ? n.display : n.api) || e.label;
+    const f = treeData.find((x) => x.path === e.path);
+    return f ? labelOf(f) : e.label;
+  }
+  return e.label;   // a rule, a schedule, an action, a connection: one name each, and it was recorded
+}
 function navKind(p) {
   if (p.startsWith('workflows/')) return 'workflow';
   if (p.startsWith('schedules/')) return 'schedule';
   if (p.startsWith('connections/')) return 'connection';
   if (p.startsWith('actions/')) return 'action';
   if (p.startsWith('modules/')) return 'module';
-  return p.endsWith('.dg') ? 'diagram' : 'function';
+  // `.dg` is the extension Zoho gives a Deluge function's source, so every function in the chain
+  // was labelled «diagram». Reported. The kinds here are the ones `navOpen()` dispatches on, and
+  // functions are its default: nothing else in this panel opens a file that is not one of the five
+  // above.
+  return 'function';
 }
 
+// Emptying the chain does not close what is open: the reader asked to forget where they have been,
+// not to lose the thing they are reading. The step they are on is kept as the only entry, so the
+// next link still has something to come back to.
+$('navtab').onclick = () => toggleNavMenu();
+$('navclear').onclick = () => {
+  const here = navHist[navPos];
+  navHist = here ? [here] : []; navPos = navHist.length - 1;
+  updateNav(); renderNav();
+};
+$('navx').onclick = () => navShow(false);
 $('pvback').onclick = () => navTo(navPos - 1);
 $('pvfwd').onclick = () => navTo(navPos + 1);
-$('pvchain').onclick = (e) => { e.stopPropagation(); toggleNavMenu(); };
-document.addEventListener('click', (e) => { if (!$('pvchainmenu').contains(e.target)) closeNavMenu(); });
 // Alt+arrows, because that is what a browser answers to and the hands already know it. Left alone
 // inside a field, where the arrows belong to the text.
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $('pvchainmenu').classList.contains('show')) { closeNavMenu(); return; }
+  if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); navTo(navPos - 1); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); navTo(navPos + 1); }
@@ -1703,7 +1837,7 @@ $('tree').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = runSearch;
+$('find').oninput = () => (navOpenNow() ? renderNav() : runSearch());
 $('findx').onclick = () => { $('find').value = ''; runSearch(); $('find').focus(); };
 $('smode').onclick = () => {
   if (viewMode !== 'functions') return;   // full-text search applies to function code only
@@ -3567,7 +3701,7 @@ function setPullBusy(b) {
   // Both read from Zoho, so both are also off on a sample workspace - and this function is what
   // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
   // already turned it off. A state that is restored somewhere else has to know every reason for it.
-  ZOHO_BTNS.forEach((x) => ($(x).disabled = b || !zohoReady() || !dir));
+  ZOHO_BTNS.forEach((x) => ($(x).disabled = b || !zohoReady() || !dir || navOpenNow()));
 }
 async function pullCurrent() {
   if (pullBusy) return;
@@ -3869,6 +4003,8 @@ async function openModule(path, layoutId) {
   currentPath = path; navHere(); if ($('status').className) setStatus('', '');
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
+  navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
+             gen: m.module_name || m.api_name, api: m.api_name });
   const nav = moduleNavigable(m);
   const refusal = moduleRefusal(m.unreadable);
   setPvName(`${m.plural_label || m.singular_label || m.module_name || m.api_name} \u00b7 ${m.api_name} \u00b7 ${(m.fields || []).length} fields${nav ? '' : ' \u00b7 no records tab'}`, path);
@@ -5274,7 +5410,7 @@ function openAction(a) {
   // that may not exist.
   const canOpen = !!actionUrl(a);
   $('pvreveal').style.display = canOpen ? '' : 'none';
-  $('pvreveal').textContent = 'Open in Zoho \u2197';
+  $('pvreveal').textContent = MSG.openInZoho;
   $('pvreveal').title = MSG.openThis + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
   $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
@@ -5558,7 +5694,7 @@ async function openWorkflow(e) {
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
-  $('pvreveal').style.display = ''; $('pvreveal').textContent = 'Go to \u2197'; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
+  $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();

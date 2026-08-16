@@ -102,6 +102,12 @@
   #askai.on{background:#d97706;border-color:#d97706;color:#fff;font-weight:600}
   #health.on{background:#7c5cff;border-color:#7c5cff;color:#fff;font-weight:600}
   #belowbar{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
+  /* What the history covers: everything the tab row controls. Written with the id repeated so
+     it outranks `#preview.show`, which is an id selector of its own. */
+  /* What the history replaces: the list and the detail pane. The pull bar stays - disabled, from
+     `navBlockChrome()` - and so do the search box and Name, which the chain uses. The chip row goes:
+     those filter the tab's own types and mean nothing here. */
+  body.nav-open #chiprow, body.nav-open #main{display:none}
   #aiview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
   #aiview.show{display:flex}
   #aiview .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
@@ -115,7 +121,6 @@
      clip it. Reported as «the gear is too small and they are not all centred». */
   #aiview #aigear, #aiview #aix{display:inline-flex;align-items:center;justify-content:center;
     width:20px;height:20px;line-height:1}
-  #aiview #aigear{font-size:17px}
   #aiview .aiicon:hover{color:var(--ink)}
   /* Chrome, not content: the context line sits on the panel background so the message bubbles -
      which are --surface - read as raised above it. It used to share both the background and the
@@ -388,6 +393,10 @@
   body.zoho-blocked .st{opacity:.3;pointer-events:none}
   body.zoho-blocked #pvreveal, body.zoho-blocked #pvfind{opacity:.4;pointer-events:none}
 
+  /* The callers, as chips on their own line: a comma-separated list of names reads as prose
+     while the reader is scanning for one of them. Same chip as everywhere else a function is
+     linked, so «a link to a function» has one look across the panel. */
+  #pvcallers .fnchips{margin-top:3px}
   #pvcallers .apwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);line-height:1.7}
   #pvcallers .orphan{color:#f59e0b}
   #pvcallers .connwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
@@ -430,19 +439,59 @@
   #pvhead{display:flex;gap:8px;align-items:center;min-height:36px;padding:7px 10px;border-bottom:1px solid var(--border);font:12px var(--mono);background:#141b29}
   /* «name in Module»: the joining word is quiet so the two names stay the readable part. */
   .apwrap .apin{color:var(--muted);font-style:italic}
-  #pvhead{position:relative}
-  #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none} #pvhead .back.show{display:inline}
-  /* The chain hangs under the header it belongs to. Capped and scrollable rather than allowed to
-     grow: fifty steps of a walk is a list, not a page. */
-  #pvchainmenu{display:none;position:absolute;top:100%;left:6px;z-index:40;min-width:220px;max-width:92%;
-    max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;
-    box-shadow:0 8px 24px rgba(0,0,0,.38);padding:4px}
-  #pvchainmenu.show{display:block}
-  #pvchainmenu .nvrow{display:flex;gap:8px;align-items:baseline;padding:4px 8px;border-radius:6px;cursor:pointer;font:11px var(--sans)}
-  #pvchainmenu .nvrow:hover{background:var(--tree)}
-  #pvchainmenu .nvrow.at{background:var(--sel-soft)}
-  #pvchainmenu .nvk{color:var(--muted);flex:none;font-size:10px;text-transform:uppercase;letter-spacing:.04em;min-width:62px}
-  #pvchainmenu .nvl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* The chain, as a panel in the flow. It was a positioned layer and a resize left it beside
+     nothing; here there is no position to become wrong. It pushes the pane's content down while it
+     is open, which is also what tells the reader it belongs to this pane. */
+  /* The history as a view, not a layer. It is a list of the same items the tab beside it lists, so
+     it lives where those live and hides them while it is on - by a class on <body>, the way this
+     panel has always done an overlay. Nothing is positioned, so nothing can be left behind by a
+     resize. */
+  #navview{display:none;flex:1;min-height:0;flex-direction:column;background:var(--bg)}
+  #navview.show{display:flex}
+  #navview .nvh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;
+    border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
+  #navview .nvh .nvr{display:flex;align-items:center;gap:10px;font-weight:400}
+  #navview .nvclear{cursor:pointer;color:var(--sel);font:11px var(--sans)}
+  #navview .nvclear:hover{text-decoration:underline}
+  #navview .nvx{cursor:pointer;color:var(--muted);font-size:15px}
+  #navview .nvx:hover{color:var(--ink)}
+  #navbody{flex:1;min-height:0;overflow:auto;padding:4px 0}
+  #navbody .nvrow{display:flex;gap:10px;align-items:baseline;padding:7px 12px;cursor:pointer;
+    border-bottom:1px solid var(--line);font:12px var(--sans)}
+  #navbody .nvrow:hover{background:var(--tree)}
+  #navbody .nvrow.at{background:var(--sel-soft)}
+  #navbody .nvk{color:var(--muted);flex:none;font-size:10px;text-transform:uppercase;letter-spacing:.04em;min-width:78px}
+  #navbody .nvl{color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #navbody .nvw{color:var(--muted);flex:none;font-size:11px;font-variant-numeric:tabular-nums}
+  #navbody .nvnone{padding:16px 12px;color:var(--muted)}
+  /* The tab that opens it, drawn with the tabs and never one of them: it is a view of where you have
+     been, not an area of the org. */
+  .moderow{display:flex;align-items:center;gap:6px}
+  .moderow .modebar{flex:1;min-width:0}
+  /* It stands with the tabs, so it takes their box: measured against a segment rather than given
+     a height of its own, which is how it came out 15px beside their 27. */
+  /* The same box as a tab, because it stands among them: the declarations are `.seg`'s, minus the
+     `flex:1` that makes a tab share the row. Its «on» is a tab's «active», for the same reason. */
+  .navseg{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;flex:none;
+    background:#0f1826;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;font-size:11px}
+  .navseg.on{background:#33415e;border-color:#4a5a7e;color:#fff}
+  /* The three ways of moving through the chain. Drawn rather than typed - reported as too small,
+     and a size asked for in pixels is only a size when we draw the shape; a glyph's ink belongs to
+     whatever font the machine happens to have. Bigger than the toolbar's marks on purpose: these are
+     what the reader aims at to move. Present only when they can do something, which is this panel's
+     rule for Clear, for Forget and for the retry button.
+     They also carry their own display rule: the earlier chain-panel edit took the old one with it,
+     and with no rule at all every arrow was permanently visible. */
+  .nvmk{width:16px;height:16px;stroke-width:1.8}
+  /* A mark on its own does not read as a control beside buttons that have a border and a
+     background - reported: «non sembra cliccabile ma lo e'». The cursor was already a
+     pointer over the whole icon (measured), so what was missing is the affordance, not the
+     handler: a hit area of its own, 22px square, that lights up under the mouse. */
+  #pvhead .back{cursor:pointer;color:var(--sel);flex:none;display:none;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:6px;background:rgba(127,127,127,.10)}
+  #pvhead .back.show{display:inline-flex}
+  #pvhead .back:hover{color:var(--ink);background:var(--sel)}
+  #pvhead .back .mk{pointer-events:none}   /* the span takes the click, so the cursor cannot differ over the drawing */
   #pvhead #pvname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
   /* The file, in the same place on every tab. It used to be the whole path, only on Functions,
      in the element that also holds the name - so the one part worth reading, the file name,
@@ -454,6 +503,12 @@
   #pvhead .x{cursor:pointer;color:var(--muted);flex:none}
   #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b}
   #pvcallers.show{display:block} #pvcallers b{color:var(--ink)} #pvcallers a{color:var(--sel);cursor:pointer}
+  /* `#pvcallers a` is an id selector and `.wf-fn:hover` is not, so the chip's hover colour lost to
+     it and the label stayed blue on a blue fill - unreadable, reported with a picture. The chip is
+     shared with three other views, so it is *this* container that is made to agree with it rather
+     than the chip being changed under them. */
+  #pvcallers a.wf-fn{color:#82d2ff}
+  #pvcallers a.wf-fn:hover{color:#fff}
   #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
   /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
      Settings, Help and About were unreachable - and Settings is where somebody who has just
@@ -557,7 +612,9 @@
   <!-- Built from the TABS registry in sidepanel.js: which segments exist, and in what order, depends
        on the user's settings and on what the org's roles actually grant. Empty in the markup on
        purpose - five hard-coded buttons here is what made the set impossible to reorder. -->
-  <div class="modebar" id="modebar"></div>
+  <!-- The tabs, and beside them the history: it is a view of the same items from another angle,
+       so it belongs in this row and never inside #modebar, which is rebuilt from the registry. -->
+  <div class="moderow"><div class="modebar" id="modebar"></div><button id="navtab" class="navseg" style="display:none" title="History - everywhere you have been, most recent first" aria-label="History" aria-pressed="false"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.6"/></svg></button></div>
   <div class="bar">
     <!-- Pull and Refresh are always present → fixed on the left (Pull 1st, Refresh 2nd), so Refresh
          never shifts when tab-specific buttons appear/disappear to its right. -->
@@ -573,7 +630,16 @@
     </div>
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
-  <div class="controls"><div class="chips" id="typechips"></div></div>
+  <div class="controls" id="chiprow"><div class="chips" id="typechips"></div></div>
+  <!-- The history view. It sits under the search row rather than above it: a list of where you have
+       been wants the same box and the same Name toggle as a list of anything else, and putting
+       it higher took both away. The class on <body> hides what it replaces - the list and the
+       detail pane - and nothing here is positioned, so a resize cannot move it. -->
+  <div id="navview">
+    <div class="nvh"><span>History</span><span class="nvr"><span id="navcount"></span><span class="nvclear" id="navclear" title="Empty the history - what is open stays open">Clear</span><span class="nvx" id="navx" title="Close">✕</span></span></div>
+    <div id="navbody"></div>
+  </div>
+
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 
   <div id="main">
@@ -583,10 +649,8 @@
     <div id="resizer"></div>
     <div id="preview">
       <div id="pvhead">
-        <span class="back" id="pvback" title="Back (Alt+←)" aria-label="Back">◂</span>
-        <span class="back" id="pvfwd" title="Forward (Alt+→)" aria-label="Forward">▸</span>
-        <span class="back" id="pvchain" title="Everywhere you have been - click a step to go there" aria-label="History">⋯</span>
-        <div id="pvchainmenu"></div>
+        <span class="back" id="pvback" title="Back (Alt+←)" aria-label="Back"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5 4.5 8l5.5 5.5"/></svg></span>
+        <span class="back" id="pvfwd" title="Forward (Alt+→)" aria-label="Forward"><svg class="mk nvmk" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5 11.5 8 6 13.5"/></svg></span>
         <span id="pvname"></span>
         <span id="pvfile"></span>
         <span class="reveal" id="pvreveal" title="Open in Zoho">Open in Zoho ↗</span>
@@ -612,7 +676,7 @@
     <!-- Health lives at the #belowbar level (sibling of #aiview), so it covers the mode tabs too - like the AI panel. -->
     <div id="healthview"><div class="hh"><span>Workspace health</span><span class="hhr"><span id="healthmsg"></span><button id="healthpull" class="zbtn icon" aria-label="Pull runtime" title="Pull runtime - re-read what Zoho reports about how this org runs: what is failing, and how often each function ran. Everything else in this view is computed from the local mirror and needs no call."><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg></button><span class="hx" id="healthx" title="Close">✕</span></span></div><div id="healthbody"></div></div>
     <div id="aiview">
-      <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down" style="display:none">Clear</span><span id="aigear" class="aiicon" title="Settings">⚙</span><span id="aix" class="aiicon" title="Close">✕</span></div>
+      <div class="aihead"><span>AI assistant</span><span id="aiengbadge"></span><span class="aisp"></span><span id="aiclear" class="aiicon" title="Clear the conversation - also resets what is sent with each message, which keeps answers focused and cost down" style="display:none">Clear</span><span id="aigear" class="aiicon" title="Settings" aria-label="Settings"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M12.5 3.5l-1.3 1.3M4.8 11.2l-1.3 1.3"/></svg></span><span id="aix" class="aiicon" title="Close" aria-label="Close"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></span></div>
       <div id="aictx" class="aictx"></div>
       <div id="ainote" class="ainote"><span id="ainotex" class="ainotex" title="Hide until next time you open the chat">✕</span><span id="ainotetxt"></span></div>
       <div id="aimsgs" class="aimsgs"></div>
