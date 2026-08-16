@@ -19,13 +19,17 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4000",
-      "name": "New order received"
+      "id": "900000",
+      "name": "New order received",
+      "module": "Orders",
+      "status": true
     },
     {
       "_type": "workflow_rules",
-      "id": "4009",
-      "name": "Quote accepted"
+      "id": "900009",
+      "name": "Quote accepted",
+      "module": "Quotes",
+      "status": true
     }
   ],
   "workflow": "",

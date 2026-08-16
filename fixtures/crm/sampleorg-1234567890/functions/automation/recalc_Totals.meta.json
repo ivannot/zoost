@@ -19,8 +19,10 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4001",
-      "name": "Order amount changed"
+      "id": "900001",
+      "name": "Order amount changed",
+      "module": "Orders",
+      "status": true
     }
   ],
   "workflow": "",

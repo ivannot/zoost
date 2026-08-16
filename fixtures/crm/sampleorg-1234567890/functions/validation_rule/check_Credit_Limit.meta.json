@@ -19,8 +19,10 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4008",
-      "name": "Credit limit changed"
+      "id": "900008",
+      "name": "Credit limit changed",
+      "module": "Accounts",
+      "status": true
     }
   ],
   "workflow": "",

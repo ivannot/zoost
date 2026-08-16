@@ -206,9 +206,15 @@
   // «Used in workflow_rules (2): …» line, and the links it now carries, had nothing to draw from and
   // no picture could show them. The ids are the ones the workflow files are written with.
   const usedIn = {};
-  WORKFLOWS.forEach(([, name, fn], i) => {
+  WORKFLOWS.forEach(([mod, name, fn], i) => {
     if (!fn) return;
-    (usedIn[fn] ||= []).push({ _type: 'workflow_rules', id: String(4000 + i), name: name });   // the id the workflow files carry
+    // **The id here is deliberately not the rule's.** Measured on a real org: of 77 «used in»
+    // references to workflow rules, none matched the rules index by id and every one matched by
+    // name - Zoho puts something else in that field. The sample used to carry the rule's own id, so
+    // the two keys agreed here and only here, and the panel's lookup looked correct until it met a
+    // real workspace. A fixture that is luckier than reality is one that hides a defect.
+    (usedIn[fn] ||= []).push({ _type: 'workflow_rules', id: String(900000 + i), name: name,
+                               module: mod, status: true });
   });
   const SCHEDULES = [
     ['Nightly dispatch', 'schedule.nightlyDispatch', 'Every day at 02:00'],

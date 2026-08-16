@@ -19,8 +19,10 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4003",
-      "name": "Ticket unanswered"
+      "id": "900003",
+      "name": "Ticket unanswered",
+      "module": "Tickets",
+      "status": true
     }
   ],
   "workflow": "",

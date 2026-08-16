@@ -14,8 +14,10 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4002",
-      "name": "Invoice overdue"
+      "id": "900002",
+      "name": "Invoice overdue",
+      "module": "Invoices",
+      "status": true
     }
   ],
   "workflow": "",

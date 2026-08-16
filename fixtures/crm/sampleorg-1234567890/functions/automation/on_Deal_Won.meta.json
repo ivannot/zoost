@@ -19,8 +19,10 @@
   "associated_place": [
     {
       "_type": "workflow_rules",
-      "id": "4005",
-      "name": "Deal won"
+      "id": "900005",
+      "name": "Deal won",
+      "module": "Deals",
+      "status": true
     }
   ],
   "workflow": "",
