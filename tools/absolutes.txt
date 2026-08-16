@@ -960,6 +960,7 @@ dfa36e648483c465  store/analytics/store-listing.md: The workspace does not have 
 a4e30f5c8bf74931  store/analytics/store-listing.md: These two are the only AI destinations the extension can reach, and they are the two that are tested; no other endpoint is configurable.
 6bbe316464fbc3c8  store/analytics/store-listing.md: Views nothing depends on, tables in no relation at all, views with no description, items that could not be read.
 c2a0e232d21020b1  store/analytics/store-listing.md: WHO IT'S FOR Zoho Analytics builders, data analysts and consultants who need to understand a workspace rather than only use it: what a report is built on, which tables a query reads, what nothing depends on any more, and what changed since last month.
+1f7f1669335d355b  store/analytics/store-listing.md: What can be said from a browser is what Zoost sends; it is named here because anyone checking the read-only claim literally will find it.
 52394b196be084c4  store/analytics/store-listing.md: Whatever the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
 5bf685e8b83c820b  store/analytics/store-listing.md: With Anthropic it runs as an agent with read-only tools over your local mirror - it can read a structure, follow a foreign key, open a query's SQL, search columns, and say what depends on what.
 1cca3283c5631789  store/analytics/store-listing.md: With no AI provider configured, nothing leaves the machine.

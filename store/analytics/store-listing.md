@@ -71,7 +71,7 @@ Zoho Analytics builders, data analysts and consultants who need to understand a 
 
 WHAT IT DOES NOT DO
 
-- It calls no endpoint that creates, edits or deletes anything in Zoho Analytics. One call is a POST whose URL contains CREATE - ZDBCreateERD.ma, which returns the workspace ER model; it computes rather than creates, and is named here because anyone checking will find it. No creating, editing or deleting a view, ever.
+- It calls no endpoint that creates, edits or deletes anything in Zoho Analytics. One call is a POST whose URL contains CREATE - ZDBCreateERD.ma, which returns the workspace ER model and is the call the Zoho Analytics diagram screen itself makes. What can be said from a browser is what Zoost sends; it is named here because anyone checking the read-only claim literally will find it. No creating, editing or deleting a view, ever.
 - It never reads the rows in your tables. Structure, relations, SQL and metadata only. The endpoints that return cell values exist and are deliberately not called.
 - It does not run, validate or deploy SQL. Whatever the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
 - Report definitions - which columns a chart puts on which axis, and how it aggregates them - are not covered. The endpoint that carries them also carries the computed series, which is your data.
