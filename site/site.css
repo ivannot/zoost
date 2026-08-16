@@ -428,3 +428,17 @@ footer .legal{line-height:1.65;margin:10px 0 0}
   main table[data-labelled] td.k,
   main table[data-labelled] td.p{white-space:normal;overflow-wrap:anywhere}
 }
+
+/* The table of contents every guide draws. Three rules, copied into ten pages - the shape that has
+ * already cost this site four classes rendering as nothing when a page used one defined beside its
+ * first user. Moving it here is proven and not argued: all 23 pages were photographed before and
+ * after, and they are identical pixel for pixel.
+ *
+ * The other 55 duplicated rules stayed where they are, and the reason is worth writing down. They
+ * sit *after* other rules in their page's own <style>, so they win by order there; in this file
+ * they would come before those rules and lose. Moving them shifted 5-20%% of the pixels on six
+ * pages - measured, not feared - so consolidating the rest is a job with a screenshot after every
+ * step, not a tidy-up. */
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin:0 0 26px}
+.toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:26px}
+.toc li{margin:4px 0;font-size:14px;break-inside:avoid}
