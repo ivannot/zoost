@@ -115,6 +115,7 @@ CRM = """
       if (wf) {
         wf.click(); await wait(900);
         if (!/^workflows\\//.test(currentPath || '')) say('a workflow row did not open a workflow');
+        if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers over a workflow, which has no code');
         // Having gone back to step 0 and then somewhere new, what was ahead is gone - a browser
         // does exactly this - so the chain is two long and we are at its end.
         if (navHist.length !== 2 || navPos !== 1) say('the forward tail was not dropped: ' + navHist.length + '@' + navPos);
@@ -241,6 +242,12 @@ CRM = """
     if (Math.abs(cb.height - nb.height) > 1) say(`the copy button is ${cb.height}px against the row's ${nb.height}px`);
     if (Math.abs(cb.top - nb.top) > 1) say('the copy button is not on the same line as the tabs beside it');
     if (!$('codecopy').querySelector('svg')) say('the mark is gone after a copy');
+    // It belongs to the pane that holds code, so it goes away with it: on «Details», and on a module,
+    // which has no code at all. It stayed lit on both - visible in a picture published on the site.
+    $('pvtab_info').click(); await wait(300);
+    if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button is still there on Details');
+    $('pvtab_code').click(); await wait(300);
+    if (getComputedStyle($('codecopy')).display === 'none') say('the copy button did not come back with the code');
 
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.

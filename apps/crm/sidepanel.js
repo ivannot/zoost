@@ -1077,7 +1077,6 @@ async function openFile(path, line = null) {
   // the moment the reader changed tab.
   currentPath = path; navHere(path.split('/').pop()); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
-  $('codecopy').style.display = '';   // a function is the one thing in this pane that is code
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
   const trow = treeData.find((x) => x.path === path);
@@ -1114,6 +1113,11 @@ function setPvTab(which) {
   pvTab = which === 'info' ? 'info' : 'code';
   $('pvtab_code').classList.toggle('active', pvTab === 'code');
   $('pvtab_info').classList.toggle('active', pvTab === 'info');
+  // The copy control belongs to the pane that holds code, so it follows the strip like every other
+  // pane rather than being switched on by the opener: set there, it stayed lit on «Details» and on a
+  // module, where there is no code at all - visible in a picture published on the site. It is the
+  // defect the comment above `PV_KINDS` describes, made once more by the same route.
+  $('codecopy').style.display = (pvKind === 'function' && pvTab === 'code') ? '' : 'none';
   const k = PV_KINDS[pvKind]; if (!k) return;
   Object.entries(k.panes).forEach(([tab, panes]) => panes.forEach(([id, shown]) => {
     const el = $(id); if (el) el.style.display = tab === pvTab ? shown : 'none';
@@ -1126,6 +1130,7 @@ function setPvTab(which) {
 function pvTabsFor(kind) {
   pvKind = PV_KINDS[kind] ? kind : null;
   $('pvtabs').hidden = !pvKind;
+  if (!pvKind) $('codecopy').style.display = 'none';   // a workflow, a schedule, a connection: no code
   $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left
   if (pvKind) { $('pvtab_code').textContent = PV_KINDS[pvKind].first; setPvTab('code'); }
   else { $('pvcallers').style.display = ''; }
@@ -4028,7 +4033,7 @@ async function openModule(path, layoutId) {
       + lays.map((l) => `<option value="${escA(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
       + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho - Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
     : '';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   // Absent, not disabled, and not left to open an empty window: with no fields there is no box to
   // draw and no lookup to follow, so the depth control and the ER button have nothing to act on.
   const relBar = refusal ? '' : `depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
@@ -4978,7 +4983,7 @@ async function openSchedule(e) {
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const fnLink = `<span class="wf-fn" data-fnid="${escA(e.function_id || '')}" data-fnname="${escA(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
   $('pvtable').innerHTML = `<div class="wfd">`
     + `<div class="wfrow"><span class="wk">Function</span> ${fnLink}</div>`
@@ -5417,7 +5422,7 @@ function openAction(a) {
   $('pvreveal').textContent = MSG.openInZoho;
   $('pvreveal').title = MSG.openThis + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
   $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;
   const fires = actionFiredBy(a);
   let h = '<div class="wfd">'
@@ -5552,7 +5557,7 @@ function openConnection(c) {
   setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
   const uses = c.uses.slice().sort((a, b) => (nm(a) || '').localeCompare(nm(b) || ''));
   let h = '<div class="wfd">'
@@ -5699,7 +5704,7 @@ async function openWorkflow(e) {
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
   $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });
