@@ -1,0 +1,92 @@
+# Selectors written in more than one place, as they stand today. Derived by
+# tools/csscheck.py --accept; the check refuses anything not in here.
+# **This file may only shrink.** Every line is a rule waiting to be moved into the sheet
+# that should own it - and moving one is a job with a screenshot after it, because these
+# rules win by order inside their own page and lose that when they move.
+# selector	where
+analytics:#ertools button.on	apps/analytics/graphview.html
+analytics:*	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:.c-com	apps/analytics/graphview.html,apps/analytics/sidepanel.html
+analytics:.c-kw	apps/analytics/graphview.html,apps/analytics/sidepanel.html
+analytics:.ck	apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:.ck input	apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:.empty	apps/analytics/graphview.html,apps/analytics/sidepanel.html
+analytics:.erbox	apps/analytics/graphview.html
+analytics:.wrap	apps/analytics/graphview.html,apps/analytics/options.html
+analytics:[hidden]	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:body	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:button.primary	apps/analytics/options.html,apps/analytics/sidepanel.html
+analytics:header	apps/analytics/graphview.html,apps/analytics/options.html
+analytics:header h1	apps/analytics/graphview.html,apps/analytics/options.html
+crm:#ertools button.on	apps/crm/graphview.html
+crm:*	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
+crm:.c-com	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.c-kw	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.chips	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ck	apps/crm/options.html,apps/crm/sidepanel.html
+crm:.ck em	apps/crm/options.html,apps/crm/sidepanel.html
+crm:.ck input	apps/crm/options.html,apps/crm/sidepanel.html
+crm:.ck.ind	apps/crm/options.html,apps/crm/sidepanel.html
+crm:.empty	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.erbox	apps/crm/graphview.html
+crm:.ftbl	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ftbl td	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ftbl td.mono	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.ftbl th	apps/crm/graphview.html,apps/crm/sidepanel.html
+crm:.tabrow	apps/crm/graphview.html,apps/crm/options.html
+crm:.tabs	apps/crm/graphview.html,apps/crm/options.html
+crm:.wrap	apps/crm/graphview.html,apps/crm/options.html
+crm:[hidden]	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
+crm:body	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
+crm:button.primary	apps/crm/options.html,apps/crm/sidepanel.html
+crm:header	apps/crm/graphview.html,apps/crm/options.html
+crm:header h1	apps/crm/graphview.html,apps/crm/options.html
+site:.btn.p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.btn:hover	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.card	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.card li	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.card p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.card ul	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.cta	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.dep b	site/index.html,site/it/index.html
+site:.dep i	site/index.html,site/it/index.html
+site:.doc .tools	site/ai.html,site/it/ai.html
+site:.doc .tools code	site/ai.html,site/it/ai.html
+site:.grid	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.gsw	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
+site:.gsw a	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
+site:.gsw a.on	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
+site:.gsw a:hover	site/docs-analytics.html,site/docs-crm.html,site/it/docs-analytics.html,site/it/docs-crm.html
+site:.hero	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.hero h1	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.hero h1 span	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.hero p.lead	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.k	site/index.html,site/it/index.html
+site:.meta	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.note.warn	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.num	site/it/try.html,site/try.html
+site:.num td,.num th	site/it/try.html,site/try.html
+site:.num td:first-child	site/it/try.html,site/try.html
+site:.num td:nth-child(2)	site/it/try.html,site/try.html
+site:.num th	site/it/try.html,site/try.html
+site:.prod	site/index.html,site/it/index.html
+site:.prod .card	site/index.html,site/it/index.html
+site:.prod .full	site/index.html,site/it/index.html
+site:.prod .ph	site/index.html,site/it/index.html
+site:.prod .ph h3	site/index.html,site/it/index.html
+site:.prod .ph img,.prod .ph .cpic	site/index.html,site/it/index.html
+site:.prod .plinks	site/index.html,site/it/index.html
+site:.prod .plinks a	site/index.html,site/it/index.html
+site:.prod .plinks a:hover	site/index.html,site/it/index.html
+site:.prod .st.live	site/index.html,site/it/index.html
+site:.prod .st.wip	site/index.html,site/it/index.html
+site:.steps b	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.why	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.why h3	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:.why p	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:h3	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:header .brand	site/site.css
+site:header nav a.nprod	site/site.css
+site:main table	site/site.css
+site:section	site/analytics.html,site/crm.html,site/index.html,site/it/analytics.html,site/it/crm.html,site/it/index.html
+site:td.p	site/it/privacy.html,site/privacy.html

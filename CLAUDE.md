@@ -366,6 +366,30 @@ a single session without being asked for, and they are on GitHub. The default th
 overridden here and stays overridden — **only Ivan decides what goes in a commit message.** Ask if you
 think there is a reason; do not infer one.
 
+**A selector is defined in one place, and `python3 tools/csscheck.py` refuses a second.** The rule
+this repository kept re-learning: `.k`, `.card`, `.note` and `b.ui` were each written beside their
+first user, and each rendered as nothing the day a second page used it. Prose did not stop it four
+times, so the check does - it reads every stylesheet and every inline `<style>`, per document, and
+reports a selector written twice (**duplicated**) or written twice with different declarations
+(**divergent**, which is worse: a class meaning two things, and which one wins depends on which page
+you landed on).
+
+It is a ledger and not a red light, because on the day it was written 86 repetitions already existed
+and a gate that always refuses is one nobody reads. `tools/cssdupes.txt` holds them with their places;
+anything not in it fails, and so does a **new place** for something already listed - that hole was
+found by planting a seventh copy of `.cta` and watching the first version let it through. **The
+ledger may only shrink**: a line that no longer matches is a finding, so consolidating something
+means recording it with `--accept` in the same change.
+
+Two things it will not do for you. Moving a rule into `site.css` **changes what the page looks like**
+whenever that rule was winning by order inside its own `<style>` - measured: consolidating all 58
+shifted 5-20% of the pixels on six pages. And the four selectors that are *deliberately* repeated -
+`:root`, `.btn.p:hover`, `.steps`, `.steps li`, which carry the product colour or a page's own list -
+are declared in the tool with their reason. So: one selector at a time, `tools/pngsame.py` on the
+before and after, and the ledger shrinks by one line. The first pass did exactly that for `.toc` -
+thirty copies into one - and found on the way that every guide had been carrying *two* of them, a
+16px and a 20px padding, with half of each page's copy dead.
+
 **`b.ui` was defined in four inline copies and is now in `site.css` once.** It is the chip that
 names a control - `Clear`, `Pull all` - and both guides in both languages carried their own copy, so
 the first page outside the guides to use it rendered it as ordinary bold text. Exactly the `.k` /
