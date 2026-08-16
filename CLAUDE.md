@@ -658,6 +658,16 @@ tracked, and it also refuses machine-shaped absolute paths anywhere in the tree 
 copy of this rule I wrote checked `tools/` and `tests/run.sh` only, and I put the path in **this
 file** in the same commit, under a test that said it was written in one place.
 
+**And it is not something to remember at all: a hook syncs it after every change.** «Ogni volta che
+aggiorni qualcosa devo poter fare i test - non devo chiederti io tutte le volte di copiare sulla
+directory di test.» The rule below was real and insufficient: it only fired when the *battery* was
+run, so a UI change checked with `tools/probe.py` alone, or with `node --test`, left the folder Chrome
+loads from a version behind - and he found it by testing something that had already been fixed. The
+fix is the second step this file demands of every rule that keeps being broken: `tools/synctest.sh`
+copies when anything under `apps/` is newer than its stamp and costs milliseconds when nothing is,
+and `.claude/settings.json` runs it after every tool call. **Never hand over a fix without the mirror
+carrying it**, and never wait to be asked.
+
 **It is not something to remember: `tests/run.sh` does it first thing, on every run.** "Run it when
 the user asks" was a rule, and this file has just finished establishing that a rule living only as
 prose is one that will be broken - so it was mechanised the same day, which is the second step that

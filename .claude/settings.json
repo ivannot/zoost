@@ -1,0 +1,26 @@
+{
+  "$comment": [
+    "Whatever is under apps/ is on the test mirror a moment later, without anyone asking for it.",
+    "The rule was already written down - tests/run.sh refreshes the mirror first thing - and it held",
+    "only for as long as the battery was actually run after an edit. It was not: a UI change verified",
+    "with the render probe alone left the folder Chrome loads from a version behind, and the author",
+    "found it by testing something that had already been fixed. So it is a hook rather than a habit.",
+    "It fires after every tool call because most edits here are made by scripts run through Bash, not",
+    "by the file tools; tools/synctest.sh is a stamp check that costs milliseconds when nothing has",
+    "moved, and a no-op on any machine where the share is not mounted."
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && bash tools/synctest.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
