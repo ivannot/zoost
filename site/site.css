@@ -289,13 +289,17 @@ figure.shot figcaption{margin-top:8px;font-size:13px;color:var(--muted);line-hei
 main table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
 main th,main td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:#c3cddc}
 .doc th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.doc .k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
+.k{color:var(--ink);font-weight:600}   /* a control name, as the panel spells it */
 /* In the privacy table the first cell stacks three lines - the storage, its API, and the product it
    belongs to - and the third was flush against the second, so «(File System Access)» and «Zoho CRM»
    read as one run. They are different facts and the last one is in a different voice (ink and bold
    against mono and teal), which the eye only picks up once there is a gap to notice it in. */
 main td .k{display:block;margin-top:6px}
-main td.k{white-space:nowrap;color:var(--ink);font-weight:inherit}
+/* The key column is bold, and says so. It used to inherit that from `.doc .k` winning on
+ * specificity - two classes against one class and two elements - so unscoping `.k` quietly
+ * took the weight off every term table on the site. A layout that depends on which of two
+ * rules happens to be more specific is one nobody can move. */
+main td.k{white-space:nowrap;color:var(--ink);font-weight:600}
 /* The nowrap keeps a two-word key from breaking; a command is not a key. Reported from the nerd
    page: `gh attestation verify <file> --repo ivannot/zoost` inherited it and made the cell **416px
    inside a 331px table**, so the table scrolled sideways and the column beside it was left 93px -
@@ -318,13 +322,6 @@ main table[data-prose] td.k{white-space:normal}
    guides' callouts had been rendering as plain unstyled paragraphs. Same family as the td.p/.note
    defect already recorded: a class borrowed from the page that defines it. Scoped to .doc, which is
    exactly the set of pages that lack an inline copy, so no landing page changes. */
-.doc .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
-.doc .note.warn{border-color:#6b4a1c;color:#e2c98a}
-.doc .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px;margin:22px 0}
-.doc .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
-.doc .card h3{margin-top:0}
-.doc .card p:last-child{margin-bottom:0}
-.doc .meta{font:12.5px var(--mono);color:var(--muted)}
 
 /* ---- footer (identical on every page) ---- */
 footer{border-top:1px solid var(--line);padding:34px 0 60px;color:var(--muted);font-size:13px}
@@ -490,3 +487,42 @@ footer .legal{line-height:1.65;margin:10px 0 0}
 .btn:hover{border-color:var(--sel)}
 .btn.p{background:var(--sel);border-color:var(--sel);color:#fff}
 .gsw a.on{background:var(--sel);color:#fff}
+
+/* ---- one card ----------------------------------------------------------------------------------
+ * There were two, a landing one written into six pages and a `.doc` one here, differing by a pixel
+ * of radius and two of padding - the same component under one name, which is how a site ends up
+ * with a class that means something different depending on where you are. The values kept are the
+ * guides', because ten pages already draw them and six drew the other.
+ */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:18px;margin:22px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
+.card h3{margin-top:0}
+.card p{margin:0;color:var(--muted);font-size:14.5px}
+.card p:last-child{margin-bottom:0}
+.card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
+.card li{margin:5px 0}
+
+/* ---- what the landing pages and the guides each kept a copy of ----------------------------------
+ * `.meta`, `.k` and `.note` were written twice - here under a `.doc` scope and inline in the pages -
+ * with the *same declarations*, so the scope bought nothing but a second place to edit. One
+ * definition each now.
+ *
+ * `.num` and `td.p` come up from `try.html` and `privacy.html`, the only two pages that had them.
+ * The column alignment for wide tables stays where it is: `main table.num[data-cols]` is more
+ * specific than these and still wins.
+ */
+.num{border-collapse:collapse;margin:18px 0;font-size:14px}
+.num td,.num th{border-bottom:1px solid var(--border);padding:7px 16px 7px 0;text-align:left;vertical-align:top}
+.num th{font-weight:600;color:var(--muted);font-size:13px}
+.num td:first-child{font-weight:600}
+.num td:nth-child(2){font-weight:600;color:var(--ink)}
+td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
+.prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
+
+/* One note, and enough weight to stay quiet. Unscoped, `.note` lost its muted colour to `.doc p` -
+ * a class alone cannot beat a class plus an element - and every aside on the guides came out in
+ * full ink. `main .note` matches it and wins by coming later, which is a tie broken on purpose
+ * rather than a scope that says «only in the docs» about something both halves of the site use. */
+main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
+main .note.warn{border-color:#6b4a1c;color:#e2c98a}
+main .meta{font:12.5px var(--mono);color:var(--muted)}

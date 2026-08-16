@@ -26,14 +26,13 @@
  "url":"https://zoost.it/","logo":"https://zoost.it/icon-512.png",
  "sameAs":["https://github.com/ivannot/zoost"]}
 </script>
-<link rel="stylesheet" href="/site.css?v=57166f7d33">
+<link rel="stylesheet" href="/site.css?v=4cd0381c97">
 <style>
 
   /* landing-page specific - shared base is in site.css */
   .btn{display:inline-block;text-decoration:none;font:600 14.5px var(--sans);padding:11px 20px;
     border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a}
   .btn.p:hover{background:#6d7f9e}
-  .meta{font:12.5px var(--mono);color:var(--muted)}
 
   section{padding:52px 0;border-bottom:1px solid var(--line)}
   section h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
@@ -49,13 +48,8 @@
     border-radius:10px}
   pre.ask code{display:block;font:12.5px/1.65 var(--mono);color:var(--ink);background:none;border:0;
     padding:0;white-space:pre-wrap;overflow-wrap:anywhere}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
-  .card p{margin:0;color:var(--muted);font-size:14.5px}
-  .card ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14px}
-  .card li{margin:5px 0}
   .card code,p code,li code{font:12.5px var(--mono);color:var(--teal);background:#0f1826;
     border:1px solid var(--line);border-radius:5px;padding:1px 5px}
-  .k{color:var(--ink);font-weight:600}
 
   .steps{counter-reset:s;list-style:none;margin:0;padding:0}
   .steps li{counter-increment:s;position:relative;padding:0 0 18px 42px;color:var(--muted);font-size:15px}
@@ -65,10 +59,8 @@
 
   .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;
     max-width:70ch}
-  .note.warn{border-color:var(--amber);color:#e2c98a}
   /* min(320px,100%): a bare 320px minimum cannot shrink below itself, so on a 320px
      phone the two cards were 22px wider than the column and the page scrolled sideways. */
-  .prod .card{display:flex;flex-direction:column;gap:12px;padding:24px 26px}
   /* wrap: the status pill is nowrap by design (a pill that breaks in two is not a pill), so on a
      narrow screen it has to drop to its own line instead of pushing the row past the card. */
   /* The card names the product, then says in full what it is. Both forms are the manifest's
