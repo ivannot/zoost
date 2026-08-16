@@ -1011,6 +1011,30 @@ function setPvName(label, path) {
   $('pvfile').title = f && !same ? f.title : '';
 }
 function updateBack() { $('pvback').classList.toggle('show', pvHist.length > 0); }
+// The list follows whatever the preview is showing. Marking the row was already here; what was
+// missing is everything a reader needs for that mark to *mean* anything - it was reported as the
+// selection staying uncoordinated after jumping from one function to another through a call in the
+// code.
+//
+// Three things, and each was its own small lie: a group closed over the target stays closed and the
+// row does not exist to be marked, so the tree shows nothing selected; a row far down the list is
+// marked where nobody can see it; and the keyboard went on stepping from where *it* had been, so
+// the next arrow jumped back to the previous function.
+function syncTreeTo(path) {
+  const e = treeData.find((x) => x.path === path);
+  // `ns`, spelled the way the tree spells it: `collapsed` is shared with the modules list, which
+  // prefixes its keys, and a test holds that difference. Same key, same name for it.
+  const ns = e && e.namespace;
+  if (ns && treeSort === 'name' && collapsed.has(ns)) {
+    collapsed.delete(ns);                 // opened, because you asked to look at what is inside it
+    renderTree();
+  }
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
+  stepAnchor = path;                      // the arrows carry on from what you are looking at
+  const row = [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
+  revealRow(row, $('tree'), '.grp');
+}
+
 function openFromTree(path) { pvHist = []; openFile(path); }
 async function openFile(path, push = false, line = null) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
@@ -1018,7 +1042,7 @@ async function openFile(path, push = false, line = null) {
   currentPath = path; updateBack(); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
+  syncTreeTo(path);
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   pvTabsFor('function');
   let code; try { code = await readFile(path); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }

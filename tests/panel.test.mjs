@@ -3979,3 +3979,63 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The list follows what the preview is showing. Jumping from one function to another through a call
+// in the code left the tree pointing at the previous one - reported as the selection staying
+// uncoordinated. Marking the row was already there; what was missing is everything that makes the
+// mark mean something.
+{
+  function jump({ path, ns, isCollapsed }) {
+    const rows = [
+      { dataset: { path: 'standalone/a.dg' }, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; },
+        getBoundingClientRect: () => ({ top: 10, bottom: 40, height: 30 }) },
+      { dataset: { path }, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; },
+        getBoundingClientRect: () => ({ top: 500, bottom: 530, height: 30 }) },
+    ];
+    const ctx = {
+      treeData: [{ path, namespace: ns }],
+      collapsed: new Set(isCollapsed ? [ns] : []),
+      treeSort: 'name',
+      rendered: 0,
+      renderTree() { ctx.rendered++; },
+      stepAnchor: 'standalone/a.dg',
+      document: { querySelectorAll: () => rows },
+      $: () => ({
+        scrollTop: 0,
+        getBoundingClientRect: () => ({ top: 0, bottom: 300, height: 300 }),
+        querySelector: () => ({ getBoundingClientRect: () => ({ top: 0, bottom: 24, height: 24 }) }),
+        querySelectorAll: () => rows,
+      }),
+    };
+    const { syncTreeTo } = load([sliceFn('apps/crm/sidepanel.js', 'revealRow'),
+                                 sliceFn('apps/crm/sidepanel.js', 'syncTreeTo')], ctx);
+    syncTreeTo(path);
+    return { ctx, rows };
+  }
+
+  test('the row of what is open is the one marked', () => {
+    const { rows } = jump({ path: 'standalone/b.dg', ns: 'standalone', isCollapsed: false });
+    assert.equal(rows[1].attrs['aria-selected'], true);
+    assert.equal(rows[0].attrs['aria-selected'], false);
+  });
+
+  test('a group closed over the target is opened, because you asked to see inside it', () => {
+    const { ctx } = jump({ path: 'standalone/b.dg', ns: 'standalone', isCollapsed: true });
+    assert.equal(ctx.collapsed.has('standalone'), false, 'the group stayed shut, so there is no row to mark');
+    assert.equal(ctx.rendered, 1, 'the tree was not redrawn, so the row does not exist yet');
+  });
+
+  test('the keyboard carries on from what you are looking at', () => {
+    const { ctx } = jump({ path: 'standalone/b.dg', ns: 'standalone', isCollapsed: false });
+    assert.equal(ctx.stepAnchor, 'standalone/b.dg',
+                 'the next arrow would jump back to the function you came from');
+  });
+
+  test('analytics reveals the row it opens, from a foreign key or the lineage', () => {
+    const src = read('apps/analytics/sidepanel.js');
+    const i = src.indexOf('async function openDetail(id)');
+    const body = src.slice(i, src.indexOf('async function renderDetail', i));
+    assert.ok(/revealRow\(/.test(body), 'opening a view from a link marks a row nobody can see');
+  });
+}

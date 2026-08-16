@@ -1255,6 +1255,11 @@ async function openDetail(id) {
   await renderDetail(v);
   resetDetailScroll();
   render();
+  // And the list follows: opening a view from a foreign key or from the lineage marks its row, and a
+  // mark nobody can see is not a selection. The twin's tree does the same thing when a call in the
+  // code takes you to another function.
+  const row = [...$('list').querySelectorAll('tr[data-id]')].find((r) => r.dataset.id === String(id));
+  revealRow(row, $('list'), 'thead');
 }
 
 async function renderDetail(v) {
