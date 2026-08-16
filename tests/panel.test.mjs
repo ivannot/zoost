@@ -4377,33 +4377,31 @@ test('crm: the arrows open a row the way that row opens', () => {
     assert.ok(of('crm'), 'neither panel says anything when a step has gone');
   });
 
-  test('the history is a view, and it replaces the list rather than floating over it', () => {
-    // It was a dropdown hanging off the detail header, and three separate reports came out of that
-    // one shape: it moved oddly on a resize, it was indistinguishable from the detail underneath, and
-    // it had no room. As a view there is nothing positioned left to go wrong - what it covers is
-    // decided by a class on <body>, the mechanism this panel has always used for an overlay.
+  test('the history covers what AI and Health cover, tab row included', () => {
+    // Three shapes in three days, and the last is the one that reads: a dropdown, then a strip
+    // wedged between the search row and the list, now an overlay - «deve essere la stessa di ai e
+    // health, nascondendo di fatto anche tutti i tab». Held against those two rather than against
+    // numbers: whatever they cover, this covers.
     for (const app of ['crm', 'analytics']) {
       const css = read(`apps/${app}/sidepanel.html`);
-      const rule = css.slice(css.indexOf('#navview{'), css.indexOf('#navview.show'));
-      assert.ok(!/position:\s*absolute/.test(rule), `${app}: the history is positioned again`);
-      assert.ok(/body\.nav-open/.test(css), `${app}: nothing is hidden while the history is open`);
-      // The search box and the Name toggle stay: a list of where you have been wants the same
-      // chrome as a list of anything else, which is why the view sits below them.
-      const hidden = css.slice(css.indexOf('body.nav-open'), css.indexOf('{display:none}', css.indexOf('body.nav-open')));
-      for (const kept of ['#find', '#nameToggle', '.bar']) {
-        assert.ok(!hidden.includes(kept), `${app}: the history hides ${kept}, which it needs`);
+      const rule = (id) => css.slice(css.indexOf(`#${id}{`), css.indexOf(`#${id}.show`));
+      const mine = rule('navview'), health = rule('healthview');
+      for (const decl of ['position:absolute', 'inset:0']) {
+        assert.ok(mine.includes(decl), `${app}: the history does not ${decl} the way the health view does`);
+        assert.ok(health.includes(decl), `${app}: the health view stopped doing ${decl} - compare against something else`);
       }
-    }
-  });
-
-  test('nothing that reads Zoho stays live over a list of where you have been', () => {
-    for (const app of ['crm', 'analytics']) {
-      const js = read(`apps/${app}/sidepanel.js`);
-      assert.ok(/function navBlockChrome/.test(js), `${app}: the pull buttons are not disabled`);
-      const at = js.indexOf('function navBlockChrome');
-      const body = js.slice(at, at + 600);
-      assert.ok(/navSavedBtns = ids\.map/.test(body),
-                `${app}: the previous state is not saved, so closing the view could enable a button that was off for its own reason`);
+      // Covering the search box means it cannot borrow it, so it carries its own.
+      assert.ok(css.includes('id="navfind"'), `${app}: the history covers the search box and offers none`);
+      // `body.nav-open` exists, and for the same reason `body.health-open` does: while the view is up
+      // every other control in the toolbar is dimmed and inert. What it must *not* do is hide the
+      // list underneath - an overlay covers, and hiding as well was the shape this replaced.
+      const dim = (cls) => css.includes(`body.${cls} .wsgroup > button:not(#`);
+      assert.ok(dim('nav-open'), `${app}: the history leaves the toolbar live under it`);
+      assert.ok(dim('health-open'), `${app}: the health view stopped dimming - compare against something else`);
+      for (const gone of ['#tree', '#list', '#detail', '#preview']) {
+        assert.ok(!new RegExp(`body\\.nav-open[^{]*\\${gone}`).test(css),
+                  `${app}: the history hides ${gone} as well as covering it`);
+      }
     }
   });
 
@@ -4442,7 +4440,11 @@ test('crm: the arrows open a row the way that row opens', () => {
       const css = read(`apps/${app}/sidepanel.html`);
       const rule = css.slice(css.indexOf('#navbody{'), css.indexOf('#navbody{') + 200);
       assert.ok(/overflow:\s*auto/.test(rule), `${app}: the history box cannot scroll`);
-      assert.ok(css.includes('#navbody::-webkit-scrollbar'), `${app}: its scrollbar is the invisible one`);
+      // And its bar is the browser's, like every other list here. It was styled in `--border` for a
+      // while, which is darker than the default and made this list look like a different kind of
+      // thing - reported. The lists it replaces style nothing, so neither does it.
+      assert.ok(!css.includes('#navbody::-webkit-scrollbar'),
+                `${app}: the history dresses its scrollbar while #tree and #list do not`);
     }
   });
 
@@ -4450,8 +4452,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     // It moved the functions and left the modules on whatever the Modules tab was set to, so half the
     // chain answered the button - reported. The kinds that cannot follow have one name each.
     const js = read('apps/crm/sidepanel.js');
-    const at = js.indexOf('if (navOpenNow()) {', js.indexOf("$('nameToggle').onclick"));
-    const body = js.slice(at, at + 900);
+    const body = js.slice(js.indexOf("$('navname').onclick"), js.indexOf("$('navname').onclick") + 700);
     assert.ok(/nameMode = /.test(body), 'the function naming does not move');
     assert.ok(/moduleNameMode = /.test(body), 'the module naming does not move with it');
   });
@@ -4461,9 +4462,9 @@ test('crm: the arrows open a row the way that row opens', () => {
     // search that works in one product and not in the other is the drift the twins rule exists for.
     for (const app of ['crm', 'analytics']) {
       const js = read(`apps/${app}/sidepanel.js`);
-      assert.ok(/navOpenNow\(\) \? renderNav\(\)/.test(js), `${app}: typing does not redraw the chain`);
+      assert.ok(/\$\('navfind'\)\.oninput = renderNav/.test(js), `${app}: typing does not redraw the chain`);
       const at = js.indexOf('function renderNav');
-      assert.ok(/\$\('find'\)\.value/.test(js.slice(at, at + 900)), `${app}: the chain ignores the search box`);
+      assert.ok(/\$\('navfind'\)\.value/.test(js.slice(at, at + 900)), `${app}: the chain ignores its own search box`);
     }
   });
 
@@ -4524,5 +4525,61 @@ test('crm: the arrows open a row the way that row opens', () => {
     const older = navWhen(now.getTime() - 40 * 24 * 3600 * 1000);
     assert.ok(/\d/.test(today), 'today says nothing');
     assert.ok(older.length > today.length, `an older step reads like today's: ${older} vs ${today}`);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// One code pane, two products. The CRM shows Deluge with `white-space:pre` and lets the box scroll;
+// the Analytics SQL pane wrapped, so a query's indentation stopped meaning anything and the reader
+// could not tell a wrap from a line somebody wrote. Reported as an inconsistency between the apps,
+// which is what it was - and the kind that survives because each panel looks right on its own.
+test('code is shown the same way in both products: lines as written, box scrolls', () => {
+  const crm = read('apps/crm/sidepanel.html');
+  const an = read('apps/analytics/sidepanel.html');
+  const crmRule = crm.slice(crm.indexOf('#pvgutter,#pvcode{'), crm.indexOf('#pvgutter,#pvcode{') + 200);
+  const anRule = an.slice(an.indexOf('pre.sql{'), an.indexOf('pre.sql{') + 200);
+  assert.ok(/white-space:pre[;}]/.test(crmRule), 'the CRM code pane no longer keeps its lines');
+  assert.ok(/white-space:pre[;}]/.test(anRule), 'the SQL pane wraps again');
+  assert.ok(/overflow-x:auto/.test(anRule), 'the SQL pane keeps its lines and gives no way to read them');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The code can be taken out of the panel. Asked for: «l'sql su analytics e deluge su crm devono
+// poter essere copiabili». One control, the same in both, in the row above the code - it was floated
+// over the pane first and landed on the control at the end of that row, which is what a button
+// positioned into somebody else's box does sooner or later.
+{
+  test('both panels offer one copy control, wired to what is on screen', () => {
+    for (const app of ['crm', 'analytics']) {
+      const html = read(`apps/${app}/sidepanel.html`);
+      const js = read(`apps/${app}/sidepanel.js`);
+      assert.ok(html.includes('id="codecopy"'), `${app}: nothing to copy the code with`);
+      assert.ok(js.includes("$('codecopy').onclick"), `${app}: the copy button is drawn and never wired`);
+      // textContent of the pane, never a stored source: what the reader is looking at is what lands
+      // in the clipboard, and the highlighting comes back off by itself.
+      const at = js.indexOf("$('codecopy').onclick");
+      assert.ok(/textContent/.test(js.slice(at, at + 200)), `${app}: it copies something other than what is shown`);
+      assert.ok(/function copyCode/.test(js), `${app}: copyCode is missing - the button throws on click`);
+    }
+  });
+
+  test('it is not positioned over anything: it sits in the row above the code', () => {
+    for (const app of ['crm', 'analytics']) {
+      const css = read(`apps/${app}/sidepanel.html`);
+      const rule = css.slice(css.indexOf('#codecopy{'), css.indexOf('#codecopy{') + 120);
+      assert.ok(!/position:\s*absolute/.test(rule), `${app}: the copy button floats again`);
+    }
+  });
+
+  test('every scrollbar in the panel is the same light one', () => {
+    // Reported: the lists showed the browser's light bar and the boxes below showed something dark
+    // that could not be seen against them. Stated once, for everything that scrolls.
+    for (const app of ['crm', 'analytics']) {
+      const css = read(`apps/${app}/sidepanel.html`);
+      assert.ok(css.includes('*::-webkit-scrollbar-thumb{background:#5a6b85'),
+                `${app}: the scrollbars are back to whatever each box inherits`);
+      assert.ok(!/\.wsgroup::-webkit-scrollbar-thumb/.test(css),
+                `${app}: one box still paints its own thumb, which is how they came to differ`);
+    }
   });
 }

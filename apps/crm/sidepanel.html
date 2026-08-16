@@ -108,7 +108,6 @@
   /* What the history replaces: the list and the detail pane. The pull bar stays - disabled, from
      `navBlockChrome()` - and so do the search box and Name, which the chain uses. The chip row goes:
      those filter the tab's own types and mean nothing here. */
-  body.nav-open #chiprow, body.nav-open #main{display:none}
   #aiview{display:none;position:absolute;inset:0;z-index:8;background:var(--bg);flex-direction:column}
   #aiview.show{display:flex}
   #aiview .aihead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
@@ -260,20 +259,37 @@
      products, wherever the panel is drawn. Measured in the shipped panel rather than reasoned:
      label 183.3..191.3, padding box 184.3, clipped by 1.0px. Reported by the author from a
      screenshot. Keep this at least 6px or the letters lose their top row again. */
-  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:8px 7px 7px;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
-  .wsgroup button{height:28px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}   /* uniform height + centering, so every button on the row sits at the same level */
-  .wsgroup::-webkit-scrollbar{height:5px}
-  .wsgroup::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-  .wsgroup::-webkit-scrollbar-track{background:transparent}
+  .wsgroup{border:1px solid var(--border);border-radius:9px;padding:8px 4px 7px;margin:0;display:flex;gap:clamp(3px,1.4vw,8px);align-items:center;flex-wrap:nowrap;width:100%;min-width:0;overflow-x:auto}
+  /* Left-aligned, with the spare width left spare - spreading the icons across the whole row was
+     tried and is worse: it reads as a bar of unrelated things rather than a group. What grows is
+     only the distance between them, and it grows with the panel: 3px at the narrowest, where every
+     icon still has to be reachable without scrolling the row, up to 8px where there is room. Two
+     reports answered by one line - «devono essere allineate a sinistra» and «le icone si devono
+     visualizzare tutte». */
+  /* Every icon in this row has to be reachable at the panel's minimum width - measured, not
+     guessed: with the history control added the row wanted 348px of the 322px it has, and a
+     button one drag off-screen is one most people never find. 9px of padding became 6, and the
+     two decorative separators went: the export group has a border of its own to say where it
+     starts. */
+  .wsgroup button{height:28px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center}   /* uniform height + centering, so every button on the row sits at the same level */
+  /* One scrollbar for the whole panel, light enough to be seen on the darkest box in it. Reported:
+     the lists showed the browser's own light bar and the panes below showed something dark that was
+     invisible against them - partly a rule of ours that painted the workspace strip's thumb in
+     `--border`, partly Chrome taking its default from each box's own background. Stated once here,
+     so every scrollable thing agrees. */
+  *::-webkit-scrollbar{width:10px;height:8px}
+  *::-webkit-scrollbar-thumb{background:#5a6b85;border-radius:5px}
+  *::-webkit-scrollbar-thumb:hover{background:#7b8dab}
+  *::-webkit-scrollbar-track{background:transparent}
+  *{scrollbar-width:thin;scrollbar-color:#5a6b85 transparent}
   .wsgroup > button{flex:none;white-space:nowrap}   /* one line, never wrap; the row scrolls (contained) if it truly cannot fit */
   /* Export box: a plain inline-flex box (not a fieldset), so its buttons align with the neighbours.
      The label is absolutely positioned over the top border - same look as a legend, but it adds no
      vertical offset, which is what threw "Pull all" out of line. It earns its keep: HTML and MD say
      what the file is and nothing about what the buttons do, and the legend is what says it. */
-  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:4px 6px;display:inline-flex;gap:5px;align-items:center;flex:none}
+  .expgroup{position:relative;border:1px solid #2f6f62;border-radius:8px;margin:0;padding:3px 4px;display:inline-flex;gap:4px;align-items:center;flex:none}
   .explabel{position:absolute;top:-7px;left:8px;padding:0 4px;background:var(--surface);font-size:8px;color:#83d8c6;text-transform:uppercase;letter-spacing:.5px;line-height:1}
   .expgroup button{flex:none;white-space:nowrap}
-  .gsep{width:1px;align-self:stretch;background:var(--border);margin:1px 3px;flex:none}
   /* The stacking order of the panel's four overlapping layers, written down because it was
      wrong: a dialog at 61 opened *under* the off-platform overlay at 70, so pressing About
      with no Zoho tab did nothing anybody could see. It reads, from the bottom:
@@ -335,8 +351,12 @@
   .pbtn:hover:not(:disabled){background:rgba(124,92,255,.16)}
   .abtn{background:transparent;border:1px solid #b06a1c;color:#f0a44a}
   .abtn:hover:not(:disabled){background:rgba(217,119,6,.14);border-color:#d97706;color:#fbbf24}
-  body.ai-open .wsgroup > button:not(#askai), body.ai-open .wsgroup .gsep{opacity:.32;pointer-events:none}
-  body.health-open .wsgroup > button:not(#health), body.health-open .wsgroup .gsep{opacity:.32;pointer-events:none}
+  body.ai-open .wsgroup > button:not(#askai){opacity:.32;pointer-events:none}
+  body.health-open .wsgroup > button:not(#health){opacity:.32;pointer-events:none}
+  /* The history is the third view of this kind, so it behaves like the other two: while it is
+     open every other control in the toolbar is dimmed and inert. Asked for three times, and it
+     was the half that was missing - the view covered the panel and left the buttons above it live. */
+  body.nav-open .wsgroup > button:not(#navtab){opacity:.32;pointer-events:none}
   /* The export box dims from the inside, and every other faded control dims with `opacity`.
      `opacity` on this one made its own top border show through the label whose whole job is to hide
      it - a line straight across EXPORT the moment Health or the assistant opened. Measured: the
@@ -345,9 +365,12 @@
      keeps a fully opaque label, which goes on masking, and the border and the buttons are dimmed by
      hand. The two colours are the .32 blend over --surface computed, not eyeballed:
      #2f6f62 -> #213b42, #83d8c6 -> #3c5d62. */
-  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
-  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button{opacity:.32}
-  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel{color:#3c5d62}
+  body.ai-open .wsgroup .expgroup, body.health-open .wsgroup .expgroup,
+  body.nav-open .wsgroup .expgroup{pointer-events:none;border-color:#213b42}
+  body.ai-open .wsgroup .expgroup button, body.health-open .wsgroup .expgroup button,
+  body.nav-open .wsgroup .expgroup button{opacity:.32}
+  body.ai-open .wsgroup .explabel, body.health-open .wsgroup .explabel,
+  body.nav-open .wsgroup .explabel{color:#3c5d62}
   .genbar button:disabled{opacity:.5}
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
   .smode:hover{background:#1e2a3d;color:var(--ink)}
@@ -432,7 +455,7 @@
   #resizer.show{display:block}
   #resizer::after{content:'';position:absolute;left:50%;top:2.5px;width:34px;height:3px;border-radius:2px;background:#3a4a63;transform:translateX(-50%)}
   /* preview (high contrast vs tree) */
-  #preview{display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+  #preview{position:relative;display:none;flex-direction:column;flex:none;height:300px;background:var(--surface);box-shadow:0 -10px 24px rgba(0,0,0,.45)}
   #preview.show{display:flex}
   /* The row must not change height as the buttons come and go: with «Records»/«Layouts» or
      «Open in Zoho» it measured 36px and with none of them 29, so selecting a connection after a
@@ -443,28 +466,27 @@
   /* The chain, as a panel in the flow. It was a positioned layer and a resize left it beside
      nothing; here there is no position to become wrong. It pushes the pane's content down while it
      is open, which is also what tells the reader it belongs to this pane. */
-  /* The history as a view, not a layer. It is a list of the same items the tab beside it lists, so
-     it lives where those live and hides them while it is on - by a class on <body>, the way this
-     panel has always done an overlay. Nothing is positioned, so nothing can be left behind by a
-     resize. */
-  #navview{display:none;flex:1;min-height:0;flex-direction:column;background:var(--bg)}
+  /* The same footprint as the AI and Health views, because it is the same kind of thing: a view of
+     the whole workspace from one angle, not a strip inside another list. It covers the tab row too,
+     which is what made the borrowed search box and Name toggle impossible - so it carries its own,
+     the way the health view carries its own Pull. */
+  #navview{display:none;position:absolute;inset:0;z-index:7;background:var(--bg);flex-direction:column}
   #navview.show{display:flex}
   #navview .nvh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;
     border-bottom:1px solid var(--line);font-weight:600;color:var(--ink)}
   #navview .nvh .nvr{display:flex;align-items:center;gap:10px;font-weight:400}
-  #navview .nvclear{cursor:pointer;color:var(--sel);font:11px var(--sans)}
+  #navview .nvtools{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line)}
+  #navview .nvtools input{flex:1;min-width:0;background:var(--tree);color:var(--ink);border:1px solid var(--border);
+    border-radius:7px;padding:6px 8px;font:12px var(--sans)}
+  #navview .nvclear{cursor:pointer;color:var(--hist);font:11px var(--sans)}
   #navview .nvclear:hover{text-decoration:underline}
   #navview .nvx{cursor:pointer;color:var(--muted);font-size:15px}
   #navview .nvx:hover{color:var(--ink)}
   #navbody{flex:1;min-height:0;overflow:auto;padding:4px 0}
-  /* A visible bar, because the platform's is not: the box does scroll - measured, 1168px of steps in
-     378px - and «it has no scrollbar» is what an invisible one looks like. The workspace strip has
-     had this treatment since it was written. */
-  #navbody::-webkit-scrollbar{width:9px}
-  #navbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
-  #navbody::-webkit-scrollbar-thumb:hover{background:var(--hist-line)}
-  #navbody::-webkit-scrollbar-track{background:transparent}
-  #navbody{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  /* No scrollbar styling here, and that is the point: `#tree` and `#list` - the lists this view
+     stands in place of - use the browser's own, so anything of ours would make the history the
+     odd one out. It was dressed in `--border`, which is darker than Chrome's default and read
+     as a different kind of list. Uniform by having nothing to be uniform with. */
   #navbody .nvrow{display:flex;gap:10px;align-items:baseline;padding:7px 12px;cursor:pointer;
     border-bottom:1px solid var(--line);font:12px var(--sans)}
   #navbody .nvrow:hover{background:var(--tree)}
@@ -473,14 +495,6 @@
   #navbody .nvl{color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #navbody .nvw{color:var(--muted);flex:none;font-size:11px;font-variant-numeric:tabular-nums}
   #navbody .nvnone{padding:16px 12px;color:var(--muted)}
-  /* The tab that opens it, drawn with the tabs and never one of them: it is a view of where you have
-     been, not an area of the org. */
-  /* It stands with the tabs, so it takes their box: measured against a segment rather than given
-     a height of its own, which is how it came out 15px beside their 27. */
-  /* The history control. Cyan is not in the button grammar (blue = Zoho, light blue = opens a page
-     there, teal = local artefact, violet = in-panel view, amber = assistant) and that is the point:
-     a list of where you have been reaches nothing and produces nothing. Same colour in both products
-     - it is a role, not a product identity - and it stands beside AI in both, so it is in one place. */
   .navseg{display:inline-flex;align-items:center;justify-content:center;flex:none;
     background:var(--hist-fill);border:1px solid var(--hist-line);color:var(--hist)}
   .navseg:hover:not(:disabled){background:rgba(34,211,238,.24);border-color:var(--hist)}
@@ -521,6 +535,12 @@
      than the chip being changed under them. */
   #pvcallers a.wf-fn{color:#82d2ff}
   #pvcallers a.wf-fn:hover{color:#fff}
+  /* Copy, in the row above the code rather than floating over it - it landed on the control at the
+     end of that row, which is what a button positioned into somebody else's box does sooner or
+     later. A local artefact, so it wears the .lbtn colour the export buttons wear. */
+  /* The height of the buttons it stands with, measured against them: 28px beside their 22 read
+     as a control that had wandered in from another row. */
+  #codecopy{margin-left:auto;height:22px;padding:0 8px;display:inline-flex;align-items:center}
   #pvbody{flex:1;display:flex;overflow:auto;min-height:0}
   /* Above the off-platform overlay, which is fixed and covers the panel: with no Zoho tab,
      Settings, Help and About were unreachable - and Settings is where somebody who has just
@@ -609,12 +629,10 @@
   <div class="genbar">
     <fieldset class="wsgroup">
       <button id="pull" class="zbtn icon" disabled title="Pull all - functions, modules, workflows and schedules" aria-label="Pull all"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1.5v7"/><path d="M2.2 5.8 5 8.6l2.8-2.8"/><path d="M11 1.5v7"/><path d="M8.2 5.8 11 8.6l2.8-2.8"/><path d="M2 12.5h12"/></svg></button>
-      <span class="gsep"></span>
       <span class="expgroup"><span class="explabel">export</span>
         <button id="export" class="lbtn" disabled aria-label="Export HTML" title="Self-contained HTML report of this workspace">HTML</button>
         <button id="exportmd" class="lbtn" disabled aria-label="Export Markdown" title="Markdown export - context for an external AI tool">MD</button>
       </span>
-      <span class="gsep"></span>
       <button id="graph" class="lbtn icon" aria-label="Wiring" title="Wiring - what fires what across the org, in its own window" disabled><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>
       <button id="health" class="pbtn glyph" disabled title="Health - workspace audit, shown in this panel" aria-label="Health">♥</button>
       <button id="askai" class="abtn" disabled title="Ask AI about this org">AI</button>
@@ -622,6 +640,14 @@
     </fieldset>
   </div>
   <div id="belowbar">
+  <!-- The history, as a view over everything: the same footprint as the AI and Health
+       views beside it in the toolbar, tab row included. It covers the search box, so it
+       carries its own - and its own Name, where the product has one. -->
+  <div id="navview">
+    <div class="nvh"><span>History</span><span class="nvr"><span id="navcount"></span><span class="nvclear" id="navclear" title="Empty the history - what is open stays open">Clear</span><span class="nvx" id="navx" title="Close">✕</span></span></div>
+    <div class="nvtools"><input id="navfind" placeholder="Find in the history…" autocomplete="off"><button id="navname" title="Toggle internal / display name">Name: display</button></div>
+    <div id="navbody"></div>
+  </div>
   <!-- Built from the TABS registry in sidepanel.js: which segments exist, and in what order, depends
        on the user's settings and on what the org's roles actually grant. Empty in the markup on
        purpose - five hard-coded buttons here is what made the set impossible to reorder. -->
@@ -642,14 +668,6 @@
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
   <div class="controls" id="chiprow"><div class="chips" id="typechips"></div></div>
-  <!-- The history view. It sits under the search row rather than above it: a list of where you have
-       been wants the same box and the same Name toggle as a list of anything else, and putting
-       it higher took both away. The class on <body> hides what it replaces - the list and the
-       detail pane - and nothing here is positioned, so a resize cannot move it. -->
-  <div id="navview">
-    <div class="nvh"><span>History</span><span class="nvr"><span id="navcount"></span><span class="nvclear" id="navclear" title="Empty the history - what is open stays open">Clear</span><span class="nvx" id="navx" title="Close">✕</span></span></div>
-    <div id="navbody"></div>
-  </div>
 
   <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
 
@@ -677,6 +695,7 @@
       <div class="dtabs" id="pvtabs" hidden>
         <button class="dtab active" id="pvtab_code" data-pv="code">Code</button>
         <button class="dtab" id="pvtab_info" data-pv="info">Details</button>
+        <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
         <span id="pvtabsr"></span>
       </div>
       <div id="pvcallers"></div>

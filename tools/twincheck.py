@@ -85,6 +85,7 @@ PRODUCT_ONLY = {
         'smode': 'search scope, names vs source text — no source to search here',
         'stxt': 'ditto',
         'nameToggle': 'internal vs display name, a CRM-only distinction',
+        'navname': 'the same distinction inside the history view; a Zoho Analytics view has one name',
         'typechips': 'the old chip row, replaced by a picklist',
         'modebar': 'the segment row for the five CRM types; Analytics has one list and a type filter',
         'scstale': 'per-area staleness: only the CRM pulls its areas separately, so only there can one fall behind',

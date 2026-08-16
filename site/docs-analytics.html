@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/docs-analytics">
 <meta property="og:title" content="How to use Zoost Analytics">
 <meta property="og:description" content="Guide to Zoost Analytics: workspaces, pull, a table's structure, its foreign keys, the SQL as files, exports and the assistant.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=550b5bcc63">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=bd2b341bd1">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -227,7 +227,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     rather than built by you. Zoho Analytics' own ER model knows which; the view list does not.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=60416e452e" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=967dfc9f13" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Lineage tab of a query table, showing which columns it reads and from where.">
     <figcaption>Lineage: for a query table, which columns it reads and from which view - the chain Zoho Analytics does not draw. Every name in it is a link to that view, as are the foreign keys under <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -306,7 +306,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="sql">8. Query-table SQL</h2>
-  <p>The <b class="ui">SQL</b> tab shows the source of a query table. The <b>Lineage</b> tab lists the
+  <p>The <b class="ui">SQL</b> tab shows the source of a query table. <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg> Copy code</b>, at the end of that row, puts the whole of it on the clipboard - the lines as they are, not the highlighting. The <b>Lineage</b> tab lists the
     source tables it reads and how many of their columns it actually involves - which is what makes
     <em>if I drop this column, what breaks</em> answerable.</p>
   <p><b class="ui">Find</b> has a scope switch attached to it, the same one Zoost CRM's function list
@@ -344,7 +344,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Zoho Analytics remains the only thing that can tell you a query compiles.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=95c519e55d" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=1cc944ab32" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Analytics panel with the search scope on «in: SQL»: seven query tables matching JOIN, each row showing the line it is on.">
     <figcaption>Chapter 8: <b>in: SQL</b> looks inside every query in the workspace at once - here the
       seven that join something, each with the line the term is on.</figcaption>
@@ -359,7 +359,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     consumer is invisible to that graph. Treat the list as a place to start asking, not a delete queue.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-health.webp?v=d28a8519c6" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-health.webp?v=180e9ea19c" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The health view listing views nothing depends on, next to what the scan cannot see.">
     <figcaption>What nothing depends on any more - with the coverage gap stated beside the number.</figcaption>
   </figure>
@@ -386,7 +386,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     an assistant reading that file does not write queries that cannot run.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-export.webp?v=e4c3fc56a3" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-export.webp?v=99b7527d47" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The export dialog for a Zoho Analytics workspace.">
     <figcaption>What may leave the machine, section by section.</figcaption>
   </figure>

@@ -52,6 +52,7 @@ const MSG = {
   folder: 'Folder access needs re-granting - click ↻ Refresh.',
   narrow: 'Use a longer substring to narrow.',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
+  copyFailed: 'Could not copy: ',
   navGone: 'That step is not in this workspace any more.',
   errPrefix: 'Error: ',
 };
@@ -1293,6 +1294,10 @@ async function openDetail(id) {
 async function renderDetail(v) {
   const body = $('dbody');
   const m = viewById();
+  // Off unless this tab is showing code, decided once here rather than in each branch: it lingered
+  // over the columns because only the SQL branch had an opinion about it - a control that is turned
+  // on in one place and never off in the others.
+  $('codecopy').style.display = 'none';
   if (detailTab === 'cols') {
     const chain = structureChain(v, m);
     if (!chain) {
@@ -1338,6 +1343,8 @@ async function renderDetail(v) {
   }
   if (detailTab === 'sql') {
     const sql = await sqlBodyOf(v.id);
+    // Only where there is code to take: this is the one tab of the four that shows any.
+    $('codecopy').style.display = (sql && sql.trim()) ? '' : 'none';
     body.innerHTML = '<div class="dpad">' + (sql && sql.trim()
       // Highlighted, and still escaped: `highlightSql` tokenises the raw text and escapes every
       // piece itself, which is the only reason it may be handed to innerHTML at all.
@@ -2551,22 +2558,28 @@ function closeNavMenu() { navShow(false); }
 // without it the chain kept the old names until it was closed and reopened.
 function redrawNavMenu() { if (navOpenNow()) renderNav(); }
 const navOpenNow = () => $('navview').classList.contains('show');
-// The Zoho buttons and Refresh, off while the history is open - the twin of the CRM's, against this
-// panel's own set.
-let navSavedBtns = null;
-function navBlockChrome(on) {
-  const ids = ['pull', 'refresh'].filter((b) => $(b));
-  if (on) {
-    if (!navSavedBtns) navSavedBtns = ids.map((b) => $(b).disabled);
-    ids.forEach((b) => ($(b).disabled = true));
-  } else if (navSavedBtns) {
-    ids.forEach((b, i) => ($(b).disabled = navSavedBtns[i]));
-    navSavedBtns = null;
+// Copy the code that is on screen. `textContent` rather than the source variable: what the reader is
+// looking at is what lands in the clipboard, and the highlighting comes back off by itself. The mark
+// becomes a tick for a moment, because a copy that says nothing is indistinguishable from a click
+// that missed.
+const COPY_MARK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg>';
+const COPY_TICK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg>';
+async function copyCode(text) {
+  const btn = $('codecopy');
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.innerHTML = COPY_TICK;
+    setTimeout(() => { btn.innerHTML = COPY_MARK; }, 1200);
+  } catch (e) {
+    status(MSG.copyFailed + friendlyError(e), 'warn');
   }
 }
+
 function navShow(on) {
   $('navview').classList.toggle('show', on);
-  navBlockChrome(on);
+  // The same class the health and AI views set, driving the same rules: while this is up, every
+  // other control in the toolbar is dimmed and inert. Three views of the workspace, one behaviour.
   document.body.classList.toggle('nav-open', on);
   const seg = $('navtab');
   if (seg) { seg.classList.toggle('on', on); seg.setAttribute('aria-pressed', on ? 'true' : 'false'); }
@@ -2578,7 +2591,7 @@ function toggleNavMenu() { navShow(!navOpenNow()); }
 function renderNav() {
   const body = $('navbody');
   // The same search box as the list it replaces - see the twin.
-  const q = ($('find').value || '').trim().toLowerCase();
+  const q = ($('navfind').value || '').trim().toLowerCase();
   const rows = navHist.map((e, i) => ({ e, i }))
     .filter(({ e }) => !q || String(e.label).toLowerCase().includes(q) || String(e.kind || 'view').toLowerCase().includes(q));
   $('navcount').textContent = navHist.length
@@ -2608,6 +2621,8 @@ $('navx').onclick = () => navShow(false);
 $('dback').onclick = () => navTo(navPos - 1);
 $('dfwd').onclick = () => navTo(navPos + 1);
 $('navtab').onclick = () => toggleNavMenu();
+$('codecopy').onclick = () => copyCode((document.querySelector('pre.sql') || {}).textContent || '');
+$('navfind').oninput = renderNav;
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && navOpenNow()) { navShow(false); return; }
   if (!e.altKey || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
@@ -2626,7 +2641,7 @@ $('list').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = () => (navOpenNow() ? renderNav() : render());
+$('find').oninput = render;
 $('smode').onclick = async () => {
   searchMode = searchMode === 'name' ? 'sql' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';

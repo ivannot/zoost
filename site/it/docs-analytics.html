@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-analytics.html sha256:4ff7e5a7f0176503 -->
+<!-- translated-from: site/docs-analytics.html sha256:22e85d6ebb00fcbd -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost Analytics</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/docs-analytics">
 <meta property="og:title" content="Come si usa Zoost Analytics">
 <meta property="og:description" content="Guida a Zoost Analytics: workspace, pull, la struttura di una tabella, le chiavi esterne, l'SQL come file, gli export e l'assistente.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=550b5bcc63">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=bd2b341bd1">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/docs-analytics">
 <link rel="alternate" hreflang="en" href="https://zoost.it/docs-analytics">
@@ -245,7 +245,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     viste no.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-lineage.webp?v=60416e452e" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-lineage.webp?v=967dfc9f13" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La scheda Lineage di una query table, con le colonne che legge e da dove.">
     <figcaption>Lineage: per una query table, quali colonne legge e da quale vista - la catena che Zoho Analytics non disegna. Ogni nome e' un link a quella vista, come le chiavi esterne sotto <b class="ui">Columns</b>.</figcaption>
   </figure>
@@ -329,7 +329,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
   </figure>
 
   <h2 id="sql">8. L'SQL delle query table</h2>
-  <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. La scheda <b>Lineage</b> elenca
+  <p>La scheda <b class="ui">SQL</b> mostra il sorgente di una query table. <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg> Copy code</b>, in fondo a quella riga, lo mette negli appunti - le righe come sono, non l'evidenziazione. Il riquadro scorre in orizzontale invece di mandarle a capo. La scheda <b>Lineage</b> elenca
     le tabelle sorgente che legge e quante delle loro colonne coinvolge davvero - ed è quello che permette di rispondere a <em>se tolgo questa colonna, cosa si rompe</em>.</p>
   <p><b class="ui">Find</b> ha attaccato un selettore, lo stesso che ha l'elenco delle funzioni di
     Zoost CRM: <b class="ui">in: names</b> cerca nei nomi delle viste, nelle cartelle e nei nomi delle
@@ -369,7 +369,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     disco; Zoho Analytics resta l'unica cosa che può dirti che una query compila.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=95c519e55d" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=1cc944ab32" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il pannello Analytics con la ricerca su «in: SQL»: sette query table che contengono JOIN, ognuna con la riga in cui si trova.">
     <figcaption>Capitolo 8: <b>in: SQL</b> guarda dentro tutte le query del workspace in una volta
       sola - qui le sette che fanno una join, ognuna con la riga in cui sta il termine.</figcaption>
@@ -385,7 +385,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     cominciare a chiedere, non come una coda di cancellazione.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-health.webp?v=d28a8519c6" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-health.webp?v=180e9ea19c" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La vista health con le viste da cui non dipende niente, accanto a cosa la scansione non vede.">
     <figcaption>Quello da cui non dipende più niente - con il buco di copertura dichiarato accanto al numero.</figcaption>
   </figure>
@@ -408,7 +408,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Analytics</b>, così un assistente che legge quel file non scrive query che non possono girare.</p>
 
   <figure class="shot">
-    <img src="/img/analytics-export.webp?v=e4c3fc56a3" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-export.webp?v=99b7527d47" width="1760" height="1100" loading="lazy" decoding="async"
          alt="La finestra dell'export per un workspace Zoho Analytics.">
     <figcaption>Cosa può uscire dalla macchina, sezione per sezione.</figcaption>
   </figure>

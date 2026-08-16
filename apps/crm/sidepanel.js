@@ -102,6 +102,7 @@ const MSG = {
   modNotPulled: 'Modules have not been pulled into this workspace yet - press Pull here first.',
   openInZoho: 'Open in Zoho \u2197',
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
+  copyFailed: 'Could not copy: ',
   navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
   wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
@@ -1015,6 +1016,23 @@ function pvFileOf(path) {
   if (/\.[a-z0-9]+$/i.test(last)) return { name: last, title: path };
   return { name: 'index.json', title: `${parts.slice(0, -1).join('/')}/index.json - one row inside it` };
 }
+// Copy the code that is on screen. `textContent` rather than the source variable: what the reader is
+// looking at is what lands in the clipboard, and the highlighting comes back off by itself. The mark
+// becomes a tick for a moment, because a copy that says nothing is indistinguishable from a click
+// that missed.
+const COPY_MARK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg>';
+const COPY_TICK = '<svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg>';
+async function copyCode(text) {
+  const btn = $('codecopy');
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.innerHTML = COPY_TICK;
+    setTimeout(() => { btn.innerHTML = COPY_MARK; }, 1200);
+  } catch (e) {
+    setStatus(MSG.copyFailed + friendlyError(e), 'warn');
+  }
+}
 function setPvName(label, path) {
   navLabel(label);   // the chain shows what the header shows - one name, decided in one place
   const f = pvFileOf(path);
@@ -1059,6 +1077,7 @@ async function openFile(path, line = null) {
   // the moment the reader changed tab.
   currentPath = path; navHere(path.split('/').pop()); if ($('status').className) setStatus('', '');
   $('pvreveal').style.display = 'none';   // "Go to" (auto-open in the editor) removed: it drove Zoho's localized DOM. Find is the deterministic way in.
+  $('codecopy').style.display = '';   // a function is the one thing in this pane that is code
   $('pvfind').style.display = ''; $('pvfind').textContent = 'Find in Zoho \u2197'; $('pvfind').title = 'Filter the Zoho functions list to this function - then open it from Zoho\'s own \u22ef menu (Edit / Delete / Duplicate\u2026)'; $('pvtable').style.display = 'none';
   syncTreeTo(path);
   const trow = treeData.find((x) => x.path === path);
@@ -1533,20 +1552,6 @@ function buildTypeChips() {
   }
 }
 $('nameToggle').onclick = () => {
-  if (navOpenNow()) {
-    // Both namings at once. It moved the functions and left the modules on whatever the Modules tab
-    // was set to, so half the chain answered the button and half ignored it - reported. A module has
-    // three names and a function two, so «internal» here means the api name for both, which is the
-    // pair a reader is actually switching between. What cannot follow is a rule, a schedule, an
-    // action or a connection: Zoho gives each of those exactly one name.
-    nameMode = nameMode === 'internal' ? 'display' : 'internal';
-    moduleNameMode = nameMode === 'internal' ? 'api' : 'display';
-    $('nameToggle').textContent = MSG.namePrefix + nameMode;
-    // The lists behind are redrawn too, though they cannot be seen: there is one naming, and coming
-    // out of the history onto a tree still labelled the old way is the two lists disagreeing again.
-    renderNav(); renderTree(); renderModules();
-    return;
-  }
   if (viewMode === 'functions') {
     nameMode = nameMode === 'internal' ? 'display' : 'internal';
     $('nameToggle').textContent = MSG.namePrefix + nameMode;
@@ -1705,33 +1710,12 @@ function closeNavMenu() { navShow(false); }
 // without it the chain kept the old names until it was closed and reopened.
 function redrawNavMenu() { if (navOpenNow()) renderNav(); }
 const navOpenNow = () => $('navview').classList.contains('show');
-// The two Zoho buttons and Refresh, off while the history is open: it lists what has already been
-// opened, and neither pulling nor reloading has anything to do with it. Saved and put back rather
-// than recomputed, so closing the view cannot enable something that was disabled for its own reason
-// - a sample workspace, a pull in flight, the wrong tab.
-let navSavedBtns = null;
-function navBlockChrome(on) {
-  const ids = ZOHO_BTNS.concat(['refresh']);
-  if (on) {
-    if (!navSavedBtns) navSavedBtns = ids.map((b) => $(b).disabled);
-    ids.forEach((b) => ($(b).disabled = true));
-  } else if (navSavedBtns) {
-    ids.forEach((b, i) => ($(b).disabled = navSavedBtns[i]));
-    navSavedBtns = null;
-  }
-}
 function navShow(on) {
   $('navview').classList.toggle('show', on);
-  navBlockChrome(on);
-  // `Name` is hidden by setMode() on the tabs that have no naming of their own - Workflows, Actions,
-  // Connections - and the history opened from one of those inherited that, while its own rows are
-  // functions and modules whose names it decides. Reported. So it is shown here and put back the way
-  // the tab left it on the way out. It acts on the *function* naming while the chain is up, which is
-  // what all but a handful of steps are; a module in the chain follows what the Modules tab is set to.
-  $('nameToggle').style.display = on ? ''
-    : ((viewMode === 'functions' || viewMode === 'modules') ? '' : 'none');
-  if (on) $('nameToggle').textContent = MSG.namePrefix + nameMode;
+  // The same class the health and AI views set, driving the same rules: while this is up, every
+  // other control in the toolbar is dimmed and inert. Three views of the workspace, one behaviour.
   document.body.classList.toggle('nav-open', on);
+  if (on) $('navname').textContent = MSG.namePrefix + nameMode;
   const seg = $('navtab');
   if (seg) { seg.classList.toggle('on', on); seg.setAttribute('aria-pressed', on ? 'true' : 'false'); }
   if (on) renderNav();
@@ -1744,7 +1728,7 @@ function renderNav() {
   // The same search box as every other tab, filtering the same way: by the name on screen, which is
   // the one `navLabelNow()` decides. A history that ignored the box while sitting in its place would
   // be a list that looks like the others and does not behave like them.
-  const q = ($('find').value || '').trim().toLowerCase();
+  const q = ($('navfind').value || '').trim().toLowerCase();
   const rows = navHist.map((e, i) => ({ e, i }))
     .filter(({ e }) => !q || navLabelNow(e).toLowerCase().includes(q) || navKind(e.path).includes(q));
   $('navcount').textContent = navHist.length
@@ -1815,6 +1799,21 @@ function navKind(p) {
 // not to lose the thing they are reading. The step they are on is kept as the only entry, so the
 // next link still has something to come back to.
 $('navtab').onclick = () => toggleNavMenu();
+$('codecopy').onclick = () => copyCode($('pvcode').textContent);
+$('navfind').oninput = renderNav;
+// The history's own Name. It moves *both* namings: it used to move the functions and leave the
+// modules on whatever the Modules tab was set to, so half the chain answered the button - reported.
+// A module has three names and a function two, so «internal» here is the api name for both, which is
+// the pair a reader is switching between. A rule, a schedule, an action and a connection have one
+// name each and cannot follow; that is Zoho's doing and is said in the guide rather than hidden.
+// The lists underneath are redrawn as well: there is one naming, and coming out of the history onto
+// a tree still labelled the old way is two lists disagreeing about the same item.
+$('navname').onclick = () => {
+  nameMode = nameMode === 'internal' ? 'display' : 'internal';
+  moduleNameMode = nameMode === 'internal' ? 'api' : 'display';
+  $('navname').textContent = MSG.namePrefix + nameMode;
+  renderNav(); renderTree(); renderModules();
+};
 $('navclear').onclick = () => {
   const here = navHist[navPos];
   navHist = here ? [here] : []; navPos = navHist.length - 1;
@@ -1842,7 +1841,7 @@ $('tree').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = () => (navOpenNow() ? renderNav() : runSearch());
+$('find').oninput = runSearch;
 $('findx').onclick = () => { $('find').value = ''; runSearch(); $('find').focus(); };
 $('smode').onclick = () => {
   if (viewMode !== 'functions') return;   // full-text search applies to function code only
@@ -4029,7 +4028,7 @@ async function openModule(path, layoutId) {
       + lays.map((l) => `<option value="${escA(String(l.id))}">${escHtml(l.name || l.id)}${l.visible === false ? ' \u00b7 hidden' : ''}${l.sections ? ` \u00b7 ${l.sections} sections` : ''}</option>`).join('')
       + `</select> <button id="laymod" class="laymod" title="Open the selected layout in Zoho - Zoost shows it, Zoho is where it is changed">View \u2197</button></div>`
     : '';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
   // Absent, not disabled, and not left to open an empty window: with no fields there is no box to
   // draw and no lookup to follow, so the depth control and the ER button have nothing to act on.
   const relBar = refusal ? '' : `depth <select id="reldepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select><button id="relopen" class="laylocal icon" aria-label="ER diagram" title="ER diagram - opened on this module at the depth chosen here, in its own window"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg></button>`;
@@ -4979,7 +4978,7 @@ async function openSchedule(e) {
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
   const fnLink = `<span class="wf-fn" data-fnid="${escA(e.function_id || '')}" data-fnname="${escA(e.function_name || '')}" title="Open the function">\u0192 ${escHtml(e.function_name || '?')}</span>`;
   $('pvtable').innerHTML = `<div class="wfd">`
     + `<div class="wfrow"><span class="wk">Function</span> ${fnLink}</div>`
@@ -5418,7 +5417,7 @@ function openAction(a) {
   $('pvreveal').textContent = MSG.openInZoho;
   $('pvreveal').title = MSG.openThis + actionKindLabel(a.kind).toLowerCase().replace(/s$/, '') + ' in Zoho';
   $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
   const row = (k, v) => v == null || v === '' ? '' : `<div class="wfrow"><span class="wk">${escHtml(k)}</span> ${v}</div>`;
   const fires = actionFiredBy(a);
   let h = '<div class="wfd">'
@@ -5553,7 +5552,7 @@ function openConnection(c) {
   setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
   const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
   const uses = c.uses.slice().sort((a, b) => (nm(a) || '').localeCompare(nm(b) || ''));
   let h = '<div class="wfd">'
@@ -5700,7 +5699,7 @@ async function openWorkflow(e) {
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
-  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
+  $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block'; $('codecopy').style.display = 'none';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
   $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });

@@ -28,6 +28,7 @@ shots = importlib.util.module_from_spec(spec); spec.loader.exec_module(shots)
 CRM = """
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  let copied = null;
   (async () => {
     // Declared before anything uses it: open the history view only if it is not already open.
     // Clicking a toggle blind is how this check once read rows out of a panel it had just closed.
@@ -55,6 +56,16 @@ CRM = """
       if (Math.abs(bx('navtab').top - bx(id).top) > 1) say(`the history control is ${Math.round(bx('navtab').top - bx(id).top)}px off ${id}`);
       if (Math.abs(bx('navtab').height - bx(id).height) > 1) say(`the history control is ${bx('navtab').height}px against ${id}'s ${bx(id).height}px`);
     }
+    // At the panel's minimum width every icon in the toolbar has to be reachable without scrolling
+    // the row sideways - a control that is one drag off-screen is a control most people never find.
+    // Measured: 335px of content in a 322px row before the separators and the export group were
+    // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
+    const wide = document.body.style.width;
+    document.body.style.width = '340px'; await wait(300);
+    const grp = document.querySelector('.wsgroup');
+    if (grp.scrollWidth > grp.clientWidth + 1)
+      say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
+    document.body.style.width = wide; await wait(200);
     const mk = $('pvback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     if (mk.getBoundingClientRect().width < 15) say('the arrows are smaller than asked for: ' + mk.getBoundingClientRect().width);
@@ -118,47 +129,36 @@ CRM = """
     // be misplaced by a resize, which is what was reported.
     $('navtab').click(); await wait(300);
     if (!$('navview').classList.contains('show')) say('the history view did not open');
-    // It replaces the list and the pane, and keeps the chrome a list needs: the search box and Name
-    // stay, the pull bar stays but goes dead, the chip row goes.
-    for (const sel of ['#tree', '#chiprow', '#preview']) {
-      const el = document.querySelector(sel);
-      // offsetParent, not computed display: an element inside a hidden parent still reports its own
-      // display, which is how this check passed over a list that was plainly gone.
-      if (el && el.offsetParent !== null) say(`${sel} is still on screen behind the history`);
+    // Held against Health itself, not against numbers: «deve essere identico a quello di ai e health,
+    // così come deve avere lo stesso comportamento e inibire tutti gli altri tasti». So the health
+    // view is opened, measured, closed - and the history has to match it rectangle for rectangle and
+    // dim the same set of controls.
+    $('health').click(); await wait(600);
+    const hBox = $('healthview').getBoundingClientRect();
+    const dimmed = (skip) => [...document.querySelectorAll('.wsgroup > button')]
+      .filter((b) => b.id !== skip).map((b) => getComputedStyle(b).pointerEvents).join(',');
+    const hDim = dimmed('health');
+    $('healthx').click(); await wait(400);
+    await openChain();
+    const nBox = $('navview').getBoundingClientRect();
+    for (const side of ['top', 'left', 'right', 'bottom']) {
+      if (Math.abs(nBox[side] - hBox[side]) > 1)
+        say(`the history is ${Math.round(nBox[side] - hBox[side])}px off the health view on ${side}`);
     }
-    for (const id of ['modebar', 'find', 'nameToggle']) {
-      if ($(id).offsetParent === null) say(`${id} went away with the list`);
-    }
-    // The box scrolls when there is more chain than room, and the bar is visible rather than the
-    // platform's invisible one - «il box history non ha la scrollbar», measured before being fixed.
-    const nb = $('navbody');
-    if (getComputedStyle(nb).overflowY !== 'auto') say('the history box cannot scroll at all');
-
-    // and Name acts on the chain while the chain is what is on screen - on a row that *is* a
-    // function, since a rule has one name and could never follow it.
-    const fRow = () => [...document.querySelectorAll('#navbody .nvrow')]
-      .find((r) => r.querySelector('.nvk').textContent === 'function');
-    if (!fRow()) say('no function in the chain to try Name against');
-    const wasNamed = fRow().querySelector('.nvl').textContent;
-    $('nameToggle').click(); await wait(300);
-    if (fRow().querySelector('.nvl').textContent === wasNamed) say('Name did nothing to the history');
-    $('nameToggle').click(); await wait(300);
-    for (const id of ['pull', 'pullone', 'refresh']) {
-      if (!$(id).disabled) say(`${id} is still live over a list of where you have been`);
-    }
-    // the box filters the chain rather than the list underneath
-    $('find').value = 'zzzznothing'; $('find').dispatchEvent(new Event('input')); await wait(300);
+    const nDim = dimmed('navtab');
+    if (nDim !== hDim) say(`the history leaves the toolbar live: ${nDim} against health's ${hDim}`);
+    if (getComputedStyle($('health')).pointerEvents !== 'none') say('Health itself is still clickable under the history');
+    // and it carries its own search, since it covers the one the list uses
+    $('navfind').value = 'zzzznothing'; $('navfind').dispatchEvent(new Event('input')); await wait(300);
     if (document.querySelectorAll('#navbody .nvrow').length) say('the search does not filter the history');
-    $('find').value = ''; $('find').dispatchEvent(new Event('input')); await wait(300);
+    $('navfind').value = ''; $('navfind').dispatchEvent(new Event('input')); await wait(300);
     if (!document.querySelectorAll('#navbody .nvrow').length) say('clearing the box did not bring the chain back');
-    // It takes the height it can: whatever is left under the rows above it, with nothing collapsed
-    // beside it. Reported as «deve occupare tutto lo spazio possibile anche in altezza».
-    const vb = $('navview').getBoundingClientRect();
-    const room = innerHeight - vb.top;
-    if (vb.height < room - 60) say(`the history uses ${Math.round(vb.height)}px of the ${Math.round(room)}px below it`);
+    // Narrower: it still covers its host exactly. It is meant to be *over* the tab row now, so the
+    // old check - that it stayed below the tabs - was asserting the shape this one replaced.
     document.body.style.width = '420px'; await wait(250);
-    const box = $('navview').getBoundingClientRect(), bar = $('modebar').getBoundingClientRect();
-    if (box.top < bar.bottom - 2) say('a narrower panel put the history over the tabs');
+    const box = $('navview').getBoundingClientRect(), h2 = $('belowbar').getBoundingClientRect();
+    if (Math.abs(box.width - h2.width) > 1 || Math.abs(box.top - h2.top) > 1)
+      say(`a narrower panel left the history at ${Math.round(box.width)}px over a ${Math.round(h2.width)}px host`);
     document.body.style.width = '';
     $('navtab').click(); await wait(300);
     if ($('navview').classList.contains('show')) say('the history view did not close again');
@@ -178,12 +178,12 @@ CRM = """
       .find((r) => r.querySelector('.nvk').textContent === 'function');
     if (!fnRow()) say('no function in the chain to check the name toggle against');
     const named1 = fnRow().querySelector('.nvl').textContent;
-    $('nameToggle').click(); await wait(500);
+    $('navname').click(); await wait(500);
     const named2 = fnRow().querySelector('.nvl').textContent;
     if (named1 === named2) say('the chain did not follow the name toggle: still ' + named2);
     const inTree = [...document.querySelectorAll('#tree .f[aria-selected="true"]')][0];
     if (inTree && !inTree.textContent.includes(named2)) say(`the chain says «${named2}» and the tree «${inTree.textContent.trim()}»`);
-    $('nameToggle').click(); await wait(400);
+    $('navname').click(); await wait(400);
 
     // And it keeps saying so from another tab, where the list it could be derived from is a
     // different list entirely - which is how the chain came to show raw `.dg` file names.
@@ -226,6 +226,22 @@ CRM = """
         say(`the caller chip is ${ink} on ${fill} - unreadable`);
     }
 
+
+    // The code can be taken out of the panel. Reported as missing, and the clipboard is stubbed here
+    // because a headless page has no permission to write to the real one - what is proven is that the
+    // button is offered where there is code, absent where there is none, and that what it hands over
+    // is exactly what is on screen.
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (x) => { copied = x; } }, configurable: true });
+    if (getComputedStyle($('codecopy')).display === 'none') say('no copy button over a function');
+    $('codecopy').click(); await wait(300);
+    if (copied !== $('pvcode').textContent) say('what was copied is not the code on screen');
+    // It stands in a row of buttons, so it is the height of that row - measured against a neighbour
+    // rather than given a number, which is how it came out 28px beside their 22.
+    const cb = $('codecopy').getBoundingClientRect(), nb = $('pvtab_code').getBoundingClientRect();
+    if (Math.abs(cb.height - nb.height) > 1) say(`the copy button is ${cb.height}px against the row's ${nb.height}px`);
+    if (Math.abs(cb.top - nb.top) > 1) say('the copy button is not on the same line as the tabs beside it');
+    if (!$('codecopy').querySelector('svg')) say('the mark is gone after a copy');
+
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];
@@ -251,6 +267,7 @@ CRM = """
 AN = """
   const say = (m) => { throw new Error(m); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  let copied = null;
   (async () => {
     const openChain = async () => { if (!$('navview').classList.contains('show')) { $('navtab').click(); await wait(300); } };
     await wait(1600);
@@ -274,6 +291,16 @@ AN = """
       if (Math.abs(bx('navtab').top - bx(id).top) > 1) say(`the history control is ${Math.round(bx('navtab').top - bx(id).top)}px off ${id}`);
       if (Math.abs(bx('navtab').height - bx(id).height) > 1) say(`the history control is ${bx('navtab').height}px against ${id}'s ${bx(id).height}px`);
     }
+    // At the panel's minimum width every icon in the toolbar has to be reachable without scrolling
+    // the row sideways - a control that is one drag off-screen is a control most people never find.
+    // Measured: 335px of content in a 322px row before the separators and the export group were
+    // trimmed, 305 after. Held here because nothing else would notice one more button arriving.
+    const wide = document.body.style.width;
+    document.body.style.width = '340px'; await wait(300);
+    const grp = document.querySelector('.wsgroup');
+    if (grp.scrollWidth > grp.clientWidth + 1)
+      say(`the toolbar needs ${grp.scrollWidth}px in ${grp.clientWidth}px - an icon is off-screen at the minimum width`);
+    document.body.style.width = wide; await wait(200);
     const mk = $('dback').querySelector('svg.nvmk');
     if (!mk) say('the arrows are font glyphs again');
     const mw = mk.getBoundingClientRect();
@@ -292,6 +319,32 @@ AN = """
     if (menu.length !== 2) say('the chain shows ' + menu.length + ' steps, expected 2');
     menu[1].click(); await wait(800);
     if (String(selectedId) !== String(a)) say('clicking a step in the chain did not go there');
+
+    // The SQL is shown the way the CRM shows Deluge: lines as the author wrote them, and the box
+    // scrolls. It wrapped here and not there - reported as an inconsistency between the two products,
+    // and a wrapped query is one whose indentation has stopped meaning anything.
+    const sqlTab = [...document.querySelectorAll('.dtab')].find((x) => /SQL/.test(x.textContent));
+    if (sqlTab) {
+      sqlTab.click(); await wait(600);
+      const pre = document.querySelector('pre.sql');
+      if (pre) {
+        const s = getComputedStyle(pre);
+        if (s.whiteSpace !== 'pre') say(`the SQL still wraps: white-space is ${s.whiteSpace}`);
+        if (s.overflowX !== 'auto' && s.overflowX !== 'scroll') say(`the SQL cannot scroll sideways: overflow-x is ${s.overflowX}`);
+        // The copy control belongs to code, so it is only asked for where there is code - the view
+        // this probe happens to have open may be a table, which has none.
+        if (getComputedStyle($('codecopy')).display === 'none') say('no copy button over the SQL');
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (x) => { copied = x; } }, configurable: true });
+        $('codecopy').click(); await wait(300);
+        if (copied !== pre.textContent) say('what was copied is not the SQL on screen');
+        const cb = $('codecopy').getBoundingClientRect(), nb = $('tab_sql').getBoundingClientRect();
+        if (Math.abs(cb.height - nb.height) > 1) say(`the copy button is ${cb.height}px against the row's ${nb.height}px`);
+        if (Math.abs(cb.top - nb.top) > 1) say('the copy button is not on the same line as the tabs beside it');
+      }
+      const cols = [...document.querySelectorAll('.dtab')].find((x) => /Columns/.test(x.textContent));
+      if (cols) { cols.click(); await wait(400); }
+      if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers where there is no code');
+    }
 
     // a link inside the detail is a step too - that is what the history exists for
     const link = document.querySelector('#dbody a.fk[data-go]');
