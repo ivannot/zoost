@@ -2048,8 +2048,24 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
  */
 function selectRow(path) {
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
-  const row = [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
-  revealRow(row, $('tree'), '.grp');
+  const find = () => [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
+  let row = find();
+  // Not there yet, for one of two reasons, and both were reported. The row may be inside a **closed
+  // group** - every list here groups its rows and `collapsed` is shared, with a different key prefix
+  // per list - or the list may not have been drawn yet, because arriving here changes tab and the
+  // rebuild lands a tick later. Neither is worth teaching this function about: the group headers
+  // already carry the code that opens them, so the ones that are closed are *clicked*, which is what
+  // the reader would have done, and each list re-renders itself its own way. Then we look again on
+  // the next frame, which is also the answer to the second reason.
+  if (!row) {
+    $('tree').querySelectorAll('.grp.collapsed').forEach((g) => g.click());
+    row = find();
+  }
+  if (row) { revealRow(row, $('tree'), '.grp'); return; }
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
+    revealRow(find(), $('tree'), '.grp');
+  });
 }
 
 function revealRow(el, box, stickySel) {
