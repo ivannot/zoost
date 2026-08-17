@@ -4941,3 +4941,78 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   }
   assert.deepEqual(missing, [], 'a cache no test tries to make stale: ' + missing.join(', '));
 });
+
+// ---------------------------------------------------------------------------------------------
+// Two read-modify-write cycles, forced to interleave. The review that asked for this drew it as a
+// sequence rather than a scenario, which is the sharper way to put it:
+//
+//     A reads X │ B reads X │ A writes XA │ B writes XB   →   XB has lost A's change
+//
+// The probe runs both producers concurrently in a browser, and that is a real regression test - it
+// went red on the two-writer code, with `sv` coming back 2 where 1 was expected. What it cannot do
+// is *force* the order: it starts both and hopes. So the same question is asked here of a fake file
+// system that records every operation, and the assertion is on the **sequence**, not only on the
+// result - a run whose content came out right because the two happened to serialise favourably is
+// indistinguishable from a correct one when you look at the file alone.
+//
+// Both orders, because «whoever writes second» is the whole hazard.
+{
+  const FILE = 'apps/crm/sidepanel.js';
+  const NODES = [{ file: 'functions/standalone/build.dg', namespace: 'standalone', name: 'build',
+                   api_name: 'build', display_name: 'Build', category: 'standalone', source: 'crm',
+                   rest: false, refs: ['automation.recalc'], stats: { lines: 12 } }];
+  const GRAPH = { nodes: { 'standalone.build': { refs: ['automation.recalc'], stats: { lines: 12 } } } };
+  const ROWS = [{ path: 'functions/standalone/build.dg', id: '77', stale: true,
+                  updatedTime: '2026-08-17T00:00:00+00:00', namespace: 'standalone', display_name: 'Build' }];
+
+  /** The panel's two producers over one fake file, with every read and write recorded and every one
+   *  of them yielding - so if the code ever goes back to two independent read-modify-write cycles,
+   *  the second reader gets in before the first writer and the log says so. */
+  const run = (first) => {
+    const ops = [];
+    let disk = JSON.stringify({ v: 1, sv: 2, files: {} });
+    // Several turns of the microtask queue per call: a single `await` would let a two-writer
+    // implementation slip through whenever the runtime happened to resume it in a friendly order.
+    const slow = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+    const env = {
+      META_INDEX: 'functions/meta-index.json',
+      META_SV: 2,
+      treeData: ROWS,
+      _dirtyMeta: new Set(['functions/standalone/build.dg']),
+      _dirtySource: new Set(['functions/standalone/build.dg']),
+      readFile: async (rel) => { ops.push('read'); await slow(); return disk; },
+      writeFile: async (rel, body) => { ops.push('write'); await slow(); disk = body; },
+      Promise, JSON, Object, Set, String,
+    };
+    // The queue's own variable comes from the source too: a test that declares its own would be
+    // testing its copy of the mechanism rather than the mechanism.
+    const { saveMetaIndex, saveGraphFacts } = load(
+      [sliceConst(FILE, '_metaIndexWrites'), sliceFn(FILE, 'updateMetaIndex'),
+       sliceFn(FILE, 'saveMetaIndex'), sliceFn(FILE, 'saveGraphFacts')], env);
+    const a = () => saveMetaIndex(['functions/standalone/build.meta.json']);
+    const b = () => saveGraphFacts(NODES, GRAPH);
+    const [p, q] = first === 'meta' ? [a, b] : [b, a];
+    return Promise.all([p(), q()]).then(() => ({ ops, files: JSON.parse(disk).files }));
+  };
+
+  for (const first of ['meta', 'graph']) {
+    test(`two read-modify-write cycles keep both halves (${first} first)`, async () => {
+      const { files } = await run(first);
+      const e = files['functions/standalone/build.dg'] || {};
+      // The meta writer's half: the stale mark and the date, which only a .meta.json can say.
+      assert.equal(e.sv, 1, 'the stale mark the meta producer set is not in the file');
+      assert.equal(e.updatedTime, '2026-08-17T00:00:00+00:00', 'the modified date was lost');
+      // The graph writer's half: what the parser read out of the .dg.
+      assert.deepEqual(e.refs, ['automation.recalc'], 'the references the graph producer wrote were lost');
+      assert.deepEqual(e.stats, { lines: 12 }, 'the size counts were lost');
+    });
+
+    test(`no cycle reads a version another is about to replace (${first} first)`, async () => {
+      // The barrier itself. read,read,write,write is the lost update whether or not the fields
+      // happened to survive it; read,write,read,write is the only sequence that cannot lose one.
+      const { ops } = await run(first);
+      assert.deepEqual(ops, ['read', 'write', 'read', 'write'],
+                       `the two cycles overlapped: ${ops.join(',')}`);
+    });
+  }
+}
