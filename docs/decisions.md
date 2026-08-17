@@ -100,6 +100,22 @@ empty the chat that reset different things is how the twins drifted on the large
 skipped when the "switch" is a re-activation of the workspace already open, because regranting a
 lapsed folder permission must not throw away a conversation about the org you never left.
 
+**And what is dropped when a *file* changes is decided by the write, never by the caller.** The same
+defect as the paragraph above, one layer down and four times over: each thing read off the mirror and
+kept in memory - the sources behind `in: code`, the call graph, the assistant's modules, connections
+and actions, and the map of which rule fires which action - used to be cleared at whichever call site
+had just written the file. Counted rather than assumed: two of the six were, four were not. A
+function saved in Zoho was mirrored correctly and then searched as it read before the edit; a module
+resync left the assistant holding the field list it had replaced; a workflows pull changed the answer
+to "which rule fires this" and rebuilt nothing. Every one of them is invisible from the panel,
+because **the mirror on disk is right and only the memory over it is wrong** - there is nothing on
+screen to compare against. So `noteWrite(rel)` maps what was written to what must be forgotten, both
+panels have one, and it is reached from `writeFile` *and* `removeFile`, since a deletion is a write.
+A path that writes tomorrow inherits it without being told. The one thing it cannot do is rebuild:
+`actionFiredBy()` is called while a row is drawn and cannot read a file, so the workflows pull
+rebuilds that map itself - a map that is merely absent would be drawn as "no rule fires this", which
+is a stronger claim than the stale one it replaced.
+
 **Anything that writes the mirror asks for the folder first, and the twin comparison is what found
 the gap.** Chrome drops the File System Access permission between sessions, so a write that has not
 asked throws `NotAllowedError: The request is not allowed by the user agent…` - a sentence naming

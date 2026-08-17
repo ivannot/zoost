@@ -327,6 +327,48 @@ CRM = """
       row2.stale = was;
     }
 
+    // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
+    // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
+    // source and clears the diagram beside it, so a search after an edit answered with the text from
+    // before. The cache is not asked to be clever here: it is asked to know that a write happened.
+    const src = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+    if (src) {
+      const c0 = await getCodeCache();
+      if (!c0.get(src.id)) say('the source cache does not hold the function it was asked about');
+      await writeFile(src.path, 'void s(){ standalone.log(); }  // rewritten by the probe\\n');
+      const c1 = await getCodeCache();
+      if (!/rewritten by the probe/.test(c1.get(src.id) || ''))
+        say('searching in: code still holds the text from before the file was rewritten');
+    }
+
+    // The same question asked of what the assistant is handed. Its catalogues are read off the
+    // mirror once and kept: the actions pull rebuilt them, the workflows pull did not, and the
+    // modules resync cleared the diagram beside them and not the schema the model is told about. So
+    // the assistant answered about a field list, or a set of rules, that the panel had replaced a
+    // second earlier - the one place where being confidently out of date is invisible, because
+    // there is nothing on screen to compare it against.
+    {
+      const cat0 = await aiLoadActions();
+      await writeFile('actions/index.json', JSON.stringify([...(cat0.list || []),
+        { kind: 'webhook', id: '999999', name: 'Probe webhook' }], null, 2));
+      const cat1 = await aiLoadActions();
+      if (!(cat1.list || []).some((a) => a.name === 'Probe webhook'))
+        say('the assistant still holds the actions from before the pull that replaced them');
+      const mods0 = await aiLoadModules();
+      const some = Object.keys(mods0)[0];
+      if (some) {
+        const mf = 'modules/' + some + '.json';
+        let raw = null; try { raw = JSON.parse(await readFile(mf)); } catch (_) {}
+        if (raw) {
+          raw.fields = (raw.fields || []).concat([{ api_name: 'Probe_Field', label: 'Probe field' }]);
+          await writeFile(mf, JSON.stringify(raw, null, 2));
+          const mods1 = await aiLoadModules();
+          if (!(mods1[some].fields || []).some((f) => f.api_name === 'Probe_Field'))
+            say('the assistant still holds the module as it was before the resync');
+        }
+      }
+    }
+
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];
@@ -429,6 +471,21 @@ AN = """
       const cols = [...document.querySelectorAll('.dtab')].find((x) => /Columns/.test(x.textContent));
       if (cols) { cols.click(); await wait(400); }
       if (getComputedStyle($('codecopy')).display !== 'none') say('the copy button lingers where there is no code');
+    }
+
+    // The twin of the CRM's source cache, and the same defect: `in: SQL` reads every query once and
+    // keeps it, while «Re-read this view» and «Retry the failures» replace the SQL in memory, write
+    // it out, and left the search holding the previous text. Reproduced the way those two paths do
+    // it - the new SQL arrives from the bridge, then it is written.
+    const qid = Object.keys(sqls).find((id) => sqls[id] && sqls[id].stem);
+    if (qid) {
+      const c0 = await ensureSqlCache();
+      if (typeof c0.get(qid) !== 'string') say('the SQL cache does not hold the query it was asked about');
+      sqls[qid].sql = 'select 1 -- rewritten by the probe\\n';
+      await writeSql();
+      const c1 = await ensureSqlCache();
+      if (!/rewritten by the probe/.test(c1.get(qid) || ''))
+        say('searching in: SQL still holds the query from before it was re-read');
     }
 
     // a link inside the detail is a step too - that is what the history exists for

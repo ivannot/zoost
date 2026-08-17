@@ -110,6 +110,33 @@ write the fast path.** `tools/probe.py` rewrites a source and a meta in a real b
 that the diagram and the tree both moved; it goes red on a one-line regression, which was proved by
 putting the defect back.
 
+**Then the rule was turned on the caches that were already here, and four of the six were wrong.**
+That is the part worth keeping: the discipline was written the day the summary was fixed, and the
+summary was the *only* cache it had ever been applied to. Asking the same question of the rest -
+what does this hold, what makes it untrue, who is supposed to notice - found `in: code` searching a
+function as it read before the edit Zoho had just synced, «which rule fires this action» describing
+rules the workflows pull had replaced, and both of the assistant's catalogues answering from the org
+state of a minute earlier. None of them is visible: **the mirror on disk is right in every case, and
+the panel is confidently out of date about it** - there is nothing on screen to compare against,
+which is why they had survived since they were written. The two that were right were right by luck.
+
+The class, which is not about caches: **invalidation must derive from the event, never from the
+memory of whoever caused it.** Each of these was dropped at the call site that had just written the
+file - three call sites remembered and two did not, and the three that were right were right by
+luck, since nothing would have said otherwise. The fix is the one this repository keeps arriving at
+from different directions: put the knowledge at the single point the event passes through.
+`noteWrite(rel)` in both panels now maps *what was written* to *what must be forgotten*, and it is
+reached from `writeFile` **and `removeFile`** - a deletion is a write, and the pull that prunes
+functions Zoho no longer has was the sixth path that had to remember. A write path added tomorrow
+inherits all of it without being told it exists.
+
+And the discipline itself is now a check rather than a sentence, because this file has already
+established what happens to the other kind: `tests/panel.test.mjs` derives every `*Cache` declared
+in `apps/*/*.js` and fails when one is named by no test - no allow-list, so tomorrow's is covered by
+the naming convention the code already follows. It says what it misses, too: a cache whose name does
+not end in `Cache` escapes it, and being *mentioned* by a test is not the same as its staleness
+being *proved*. The mention is what makes an absence visible; the proof is still judgement.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

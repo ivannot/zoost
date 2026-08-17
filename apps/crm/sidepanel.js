@@ -165,7 +165,10 @@ const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 // index, checked against the folder walk on every load - see rebuildTree().
 const META_INDEX = 'functions/meta-index.json';
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
-async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); }
+// A deletion is a write: what was read from that path is no longer what is there. It goes through
+// the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
+// diagram without the pull having to remember.
+async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); noteWrite(path); }
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
@@ -534,10 +537,33 @@ let _dirtySource = new Set();
 function distrustEverything() {
   treeData.forEach((r) => { if (r.path) { _dirtyMeta.add(r.path); _dirtySource.add(r.path); } });
 }
+/** What a write means for everything read from that file and still held in memory.
+ *
+ *  This used to mark the summary and nothing else, and the six things made out of mirror files and
+ *  kept in memory were each dropped by whoever remembered to at the call site. Counted rather than
+ *  assumed: two were right and **four were not**. `syncOne` - the panel following a save made in
+ *  Zoho - cleared the diagram and left `in: code` searching the text from before the edit;
+ *  `resyncModule` left the assistant holding the field list it had replaced a second earlier; the
+ *  actions pull rebuilt «which rule fires this» and forgot the catalogue beside it; the workflows
+ *  pull changed the answer to «which rule fires this» and rebuilt nothing at all. None of them is a
+ *  bug you can see: the mirror on disk is right in every case, and the panel is confidently out of
+ *  date about it. The two that were right were right by luck - nothing would have said otherwise.
+ *
+ *  So the mapping from «what was written» to «what must be forgotten» lives here, at the one point
+ *  every write and every deletion passes through, and a new write path inherits it without knowing
+ *  it exists. `tests/panel.test.mjs` holds the shape - no cache of file contents may be cleared
+ *  anywhere else - and `tools/probe.py` proves them in a browser, each one red on the defect put
+ *  back. */
 const noteWrite = (rel) => {
+  if (isModuleFile(rel)) { graphCache = null; aiModCache = null; return; }
+  if (rel === 'connections/index.json') { aiConnCache = null; return; }
+  if (rel === 'actions/index.json') { aiActCache = null; return; }
+  // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
+  // the answer - and the actions pull was the only one that rebuilt it.
+  if (rel.startsWith('workflows/')) { actionUsers = null; aiActCache = null; return; }
   if (!rel.startsWith('functions/')) return;
   if (rel.endsWith('.meta.json')) _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
-  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); }
+  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; }
 };
 // The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
 // root again - two calls to the browser's file system before the one that does the work - so half of
@@ -2253,7 +2279,6 @@ async function pullAll() {
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await readFile(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
     }
     let prunedF = 0; for (const p of rmF) { try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
-    codeCache = null;
     // patchCfg, not writeCfg: this file also holds the access verdicts and the workspace's own
     // name, and a whole-object write here drops both. The trap arriving a third time.
     await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
@@ -3370,7 +3395,6 @@ async function syncOne(id) {
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
     await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg); await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
-    graphCache = null;
     const ent = treeData.find((x) => x.id === String(id));
     if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
@@ -4261,7 +4285,6 @@ async function resyncModule(m) {
   mod.fields = r.fields; delete mod.unreadable;
   try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
   m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
-  graphCache = null;
   renderModules(); if (currentPath === m.path) openModule(m.path);
   setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
 }
@@ -4566,7 +4589,6 @@ async function downloadOne(entry) {
     entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
-    graphCache = null; codeCache = null;
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
@@ -5494,7 +5516,6 @@ async function pullConnections() {
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
     await writeFile('connections/index.json', JSON.stringify(r.connections || [], null, 2));
-    aiConnCache = null;   // the AI's catalogue must not serve what we just replaced
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
     await noteAccess('connections', null);
@@ -5999,6 +6020,13 @@ async function pullWorkflows() {
     await loadWorkflowIndex();
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
+    // The writes above dropped \u00abwhich rule fires this action\u00bb - it is read out of these very rules.
+    // Dropping it is the write's business; rebuilding it has to happen where there is an await, and
+    // this is that place: `actionFiredBy()` is called while a row is being drawn and cannot read a
+    // file, so a map that is merely absent would be drawn as \u00abno rule fires this\u00bb, which is a
+    // stronger claim than the stale one it replaced.
+    if (actionUsers === null) actionUsers = await buildActionUsers();
+    if (viewMode === 'actions') renderActions();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 - some workflows may be missing', 'warn');
     await noteAccess('workflows', null);

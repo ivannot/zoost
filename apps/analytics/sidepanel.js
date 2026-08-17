@@ -209,11 +209,24 @@ async function dirFor(parts, create) {
   return d;
 }
 
+/** What a write means for what is still held in memory from that file. The CRM panel's `noteWrite`,
+ *  with one entry, because this product has one cache of file contents.
+ *
+ *  `in: SQL` reads every query once and keeps it for the session, and it was dropped in
+ *  `loadFromDisk()` alone - which a pull passes through and a *re-read* does not. So «Re-read this
+ *  view» and «Retry the failures» replaced the SQL in memory, wrote it out, and left the search
+ *  matching the query as it used to be: the mirror right and the panel confidently wrong about it,
+ *  the same defect the CRM had in `syncOne`. Deriving it from the write means the next path that
+ *  writes a query inherits this without knowing it exists. */
+function noteWrite(rel) {
+  if (rel.startsWith('sql/') && rel.endsWith('.sql')) sqlCache = null;
+}
 async function writeFile(rel, content) {
   const parts = rel.split('/');
   const d = await dirFor(parts.slice(0, -1), true);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
+  noteWrite(rel);
 }
 async function readFile(rel) {
   const parts = rel.split('/');

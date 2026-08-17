@@ -4864,3 +4864,80 @@ test('the directory handles are cached, and dropped when the folder changes', ()
               'the meta writer sets source-derived facts');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A cache is forgotten by the write, never by whoever remembered. The summary was already built
+// that way - `noteWrite()` at the one point every write passes through - while the five things made
+// out of mirror files and kept in memory were each dropped at the call site that produced them.
+// Three of the five remembered and two did not, which is the shape: nothing is broken, the mirror on
+// disk is right, and the panel is confidently out of date about it. `syncOne` cleared the diagram
+// and left `in: code` searching the text from before the edit; the workflows pull left «which rule
+// uses this action» describing the rules it had just replaced; the actions pull and the modules
+// resync left the assistant's catalogues behind. All five now derive from the path written, so a
+// write path added tomorrow inherits the invalidation without being told it exists.
+{
+  const js = read('apps/crm/sidepanel.js');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const region = (start, end) => code.slice(code.indexOf(start), code.indexOf(end, code.indexOf(start)));
+  const CACHES = ['codeCache', 'graphCache', 'aiModCache', 'aiConnCache', 'aiActCache', 'actionUsers'];
+
+  test('every cache made of mirror files is dropped by the write itself', () => {
+    const note = region('const noteWrite', '\n};');
+    for (const c of ['codeCache', 'graphCache', 'aiModCache', 'aiConnCache', 'aiActCache', 'actionUsers']) {
+      assert.ok(new RegExp(c + '\\s*=\\s*null').test(note), `noteWrite does not forget ${c}`);
+    }
+    assert.ok(/noteWrite\(path\)/.test(region('async function removeFile', '\n')),
+              'a deletion leaves what was read from that path in memory');
+  });
+
+  test('nothing else clears one, except on leaving the workspace', () => {
+    // The three that stay are not writes: a tree load starting over, a workspace being left, and
+    // Refresh - which distrusts everything on purpose because it answers for the writes this panel
+    // cannot see. Anything outside those is a call site remembering again.
+    const allowed = [region('const noteWrite', '\n};'),
+                     region('function dropWorkspaceState', '\n}'),
+                     region('async function rebuildTree', '\n}')];
+    for (const c of CACHES) {
+      for (const line of code.split('\n')) {
+        if (!new RegExp('(?<![\\w$])' + c + '\\s*=\\s*null').test(line)) continue;
+        if (/^let |^const /.test(line) || /distrustEverything\(\)/.test(line)) continue;
+        assert.ok(allowed.some((r) => r.includes(line.trim())),
+                  `${c} is cleared by hand outside noteWrite: ${line.trim().slice(0, 90)}`);
+      }
+    }
+  });
+
+  test('the Analytics twin does the same at its own write', () => {
+    const an = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const at = an.indexOf('async function writeFile');
+    assert.ok(/noteWrite\(rel\)/.test(an.slice(at, at + 400)), 'a write leaves no mark in Analytics');
+    assert.ok(/sqlCache\s*=\s*null/.test(an.slice(an.indexOf('function noteWrite'), at)),
+              'the query cache is not forgotten by the write that replaced the query');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The discipline itself, as a check rather than a sentence. Every fast path shipped here should
+// arrive with a test that tries to make it lie - and the five above shipped without one, which is
+// why five of them were wrong and nobody could tell. So the file set is derived and there is no
+// allow-list: a cache added tomorrow is covered by the naming convention this code already follows.
+//
+// **What it does not catch, said rather than left to be found.** A cache whose name does not end in
+// `Cache` escapes it - `actionUsers` does, and is held by the case above instead. And a name being
+// mentioned in a test is not the same as the staleness being proved; that part is judgement, and
+// the mention is what makes its absence visible.
+test('every cache in a shipped panel is named by something that tests it', () => {
+  const named = readdirSync(join(ROOT, 'tests')).filter((f) => f.endsWith('.mjs'))
+    .map((f) => read(`tests/${f}`)).join('\n') + read('tools/probe.py');
+  const missing = [];
+  for (const app of readdirSync(join(ROOT, 'apps'))) {
+    for (const f of readdirSync(join(ROOT, 'apps', app)).filter((x) => x.endsWith('.js'))) {
+      const src = read(`apps/${app}/${f}`);
+      for (const m of src.matchAll(/(?:^|[,(\s])([A-Za-z_$][\w$]*Cache)\s*=/gm)) {
+        const name = m[1];
+        if (!new RegExp('(?<![\\w$])' + name + '(?![\\w$])').test(named)) missing.push(`${app}/${f}: ${name}`);
+      }
+    }
+  }
+  assert.deepEqual(missing, [], 'a cache no test tries to make stale: ' + missing.join(', '));
+});
