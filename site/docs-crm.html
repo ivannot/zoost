@@ -286,6 +286,16 @@ git commit -m "baseline"</code></pre>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> (in Functions mode) opens how the org is wired - what fires what; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
+  <p class="note"><b>How the arrows are found, and what that cannot see.</b> An arrow between two
+    functions is a <code>namespace.name(</code> written in the caller's source. Comments and text in
+    quotes are set aside first, so a call you have commented out is not an arrow - and the function it
+    named can then be reported by the health audit as one nothing calls. Four things follow, and they
+    are the honest edges of the method rather than defects: a call written any other way is not seen;
+    when the namespace in the source does not match where the function actually lives, Zoost links it
+    to the only function with that name, which is a deduction, and where two carry the same name it
+    says <b>ambiguous</b> instead of choosing; a call inside a branch that never runs is still an
+    arrow, because this reads your code and not its execution; and a function that calls itself is not
+    drawn as one. What the picture is, precisely, is <b>where your code names other code</b>.</p>
   <ul>
     <li>The call graph is not only functions. A <b>workflow</b> or a <b>schedule</b> that fires one is a node
       of its own, and so is every <b>connection</b> a function reaches - each in its own colour, filterable

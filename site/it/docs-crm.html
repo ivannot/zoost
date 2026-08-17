@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:c56f815ad7f64eaa -->
+<!-- translated-from: site/docs-crm.html sha256:f43d9cb1ac6d0085 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -313,6 +313,17 @@ git commit -m "baseline"</code></pre>
     <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in modalità Modules) apre i moduli e le loro relazioni.
     Dall'anteprima di un modulo, lo stesso pulsante apre il diagramma entità-relazioni centrato su quel
     modulo.</p>
+  <p class="note"><b>Come vengono trovate le frecce, e cosa quel metodo non può vedere.</b> Una freccia
+    fra due funzioni è un <code>namespace.nome(</code> scritto nel sorgente di chi chiama. I commenti e
+    il testo fra virgolette vengono messi da parte prima, quindi una chiamata che hai commentato non è
+    una freccia - e la funzione che nominava può a quel punto comparire nell'audit di salute come una
+    che nessuno chiama. Ne discendono quattro cose, che sono i bordi onesti del metodo e non difetti:
+    una chiamata scritta in qualunque altro modo non si vede; se il namespace scritto nel sorgente non
+    corrisponde a dove la funzione vive davvero, Zoost la collega all'unica con quel nome - è una
+    deduzione - e dove due portano lo stesso nome dice <b>ambigua</b> invece di scegliere; una chiamata
+    dentro un ramo che non gira mai è comunque una freccia, perché qui si legge il tuo codice e non la
+    sua esecuzione; e una funzione che chiama sé stessa non viene disegnata come tale. Quello che il
+    disegno è, con precisione, è <b>dove il tuo codice nomina altro codice</b>.</p>
   <ul>
     <li>Il grafo delle chiamate non è fatto solo di funzioni. Un <b>workflow</b> o uno <b>schedule</b> che ne
       fa partire una è un nodo a sé, e così ogni <b>connessione</b> che una funzione raggiunge - ognuno con
