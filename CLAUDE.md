@@ -76,6 +76,22 @@ No fingerprint and no second read to check the first: we know what we wrote, bec
 **What no cheap check can see is somebody else's write** - an editor, a `git checkout`, a synced
 folder - so ↻ Refresh now distrusts the summary and reads everything, and its tooltip says so.
 
+**And a cache with two writers has a third failure nobody looks for: they overwrite each other.**
+`saveMetaIndex()` describes what a `.meta.json` says and `saveGraphFacts()` what a `.dg` says, into
+one file - and the first version of the first one *rebuilt the file from scratch*, throwing away
+every reference and size the other had written. Nothing broke: the diagram simply read five thousand
+sources again, and the summary looked complete while being useless to it. A silent loss of the whole
+optimisation, found only because a review asked how the two interleave. Two writers, one file: merge,
+never replace, and let each clear only the marks it refreshed.
+
+The ordering question that found it is worth keeping too. `attachFnStats()` is started and
+deliberately not awaited, so a graph build runs *inside* the tree load - which means «did the
+metadata writer declare a function done before the source was re-read» had no answer in the code, only
+in how the promises happened to resolve. Now each reader snapshots the marks **before its first
+await** and each writer clears **only its own**, so there is no ordering to reason about. The hazard
+was reachable only above `STATS_LIMIT`, where the build does not happen during the load - which is
+exactly the kind of window that is never hit in testing and always hit by somebody's real org.
+
 The rule this leaves: **for every fast path, write the test that tries to make it lie before you
 write the fast path.** `tools/probe.py` rewrites a source and a meta in a real browser and checks
 that the diagram and the tree both moved; it goes red on a one-line regression, which was proved by

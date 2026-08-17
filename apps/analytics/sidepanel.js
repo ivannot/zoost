@@ -359,7 +359,7 @@ async function refreshWorkspaces() {
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} - no workspaces yet</option>`;
     if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own - move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
-    dir = null; bound = null; forgetDirs(); forgetDirs(); render(); return updateButtons();
+    dir = null; bound = null; forgetDirs(); render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
   // The list is real now, so the remembered answer is refreshed from it - including to null,

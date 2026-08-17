@@ -272,6 +272,34 @@ CRM = """
       if (!row || row.updatedTime !== '2099-01-01T00:00:00+00:00') say('the tree still shows the date from the previous meta');
     }
 
+    // And the ordering itself: the tree load starts the graph build without awaiting it, and then
+    // writes the summary. A review asked whether the writer of the metadata could declare a function
+    // «described» while the build that has to re-read its *source* was still walking - it could,
+    // when one set served both. Reproduced here by starting a load and building the diagram into it
+    // rather than after it: the diagram must show what the file says now, whoever finished first.
+    const race = treeData.find((e) => e.downloaded && e.path.endsWith('.dg') && e.path !== victim.path);
+    if (race) {
+      graphCache = null; await ensureGraph();                       // summary describes the old source
+      await writeFile(race.path, 'void r(){ automation.recalcTotals(); }\\n');
+      // The dangerous order is not «during» but «after»: the tree load finishes, its writer declares
+      // the metadata described, and the reader opens the diagram a second later. With one set for
+      // both readings that clear also wiped the mark that says «this source changed», and the
+      // diagram came back with the references from before the file was rewritten.
+      await rebuildTree(); await wait(700);
+      graphCache = null;
+      const g = await ensureGraph();
+      const node = Object.values(g.nodes).find((n) => n.file === race.path);
+      const summaryNow = JSON.parse(await readFile('functions/meta-index.json'));
+      const e = summaryNow.files[race.path] || {};
+      if (!node || !node.refs.includes('automation.recalcTotals'))
+        say(`the diagram used the summary written before the file changed: refs=${JSON.stringify(node && node.refs)}`);
+      // and the summary itself must carry the new reading, not just the graph in memory - this is
+      // what the two writers used to take from each other, one replacing the file the other had
+      // just written.
+      if (!Array.isArray(e.refs) || !e.refs.includes('automation.recalcTotals'))
+        say(`the summary lost the references the diagram had written: ${JSON.stringify(e.refs)}`);
+    }
+
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];

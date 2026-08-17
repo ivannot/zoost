@@ -4747,25 +4747,70 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   test('every write marks the function it rewrote', () => {
     const at = code.indexOf('async function writeFile');
     assert.ok(/noteWrite\(rel\)/.test(code.slice(at, at + 400)), 'a write leaves no mark');
-    assert.ok(/_rewritten\.add/.test(code), 'nothing records which files were rewritten');
+    assert.ok(/_dirtySource\.add/.test(code), 'nothing records which files were rewritten');
   });
 
   test('both fast paths refuse what has been rewritten', () => {
-    assert.ok(/_rewritten\.has\(dg\)/.test(code), 'the tree trusts the summary for a file it just wrote');
-    assert.ok(/_rewritten\.has\(p\) \? null : known\[p\]/.test(code), 'the diagram does too');
+    assert.ok(/dirtyMeta\.has\(dg\)/.test(code), 'the tree trusts the summary for a file it just wrote');
+    assert.ok(/dirtySrc\.has\(p\) \? null : known\[p\]/.test(code), 'the diagram does too');
   });
 
   test('the mark is cleared only when the summary has been written again', () => {
     const at = code.indexOf('writeFile(META_INDEX');
-    assert.ok(/_rewritten = new Set\(\)/.test(code.slice(at, at + 200)),
-              'the set is cleared somewhere other than after the rewrite, so a load can lose a change');
+    assert.ok(/_dirtyMeta\.delete/.test(code.slice(at, at + 300)),
+              'the marks are cleared somewhere other than after the rewrite, so a load can lose a change');
   });
 
   test('Refresh distrusts the summary, for the writes this panel cannot see', () => {
     // An editor, a `git checkout`, a synced folder: nothing marks those, and detecting them would
     // cost a `getFile()` per file - the very reading the summary exists to avoid.
-    assert.ok(/_distrust = true/.test(code), 'Refresh no longer forces a full re-read');
+    assert.ok(/distrustEverything\(\)/.test(code), 'Refresh no longer forces a full re-read');
     const html = read('apps/crm/sidepanel.html');
     assert.ok(/read every file again/.test(html), 'the button does not say that is what it does');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Two readings, two writers, and no ordering to reason about. A review asked whether the writer of
+// the metadata could declare a function «described» while the build that re-reads its *source* was
+// still walking - it could, when one set served both, and the answer was «the promises happen to
+// resolve favourably», which is not an answer. The behavioural half of this lives in the probe; what
+// is held here is the structure, because the dangerous interleaving is only reachable above
+// STATS_LIMIT - where the graph is not built during the load - and a test that cannot reach a hazard
+// must at least pin the design that removes it.
+{
+  const js = read('apps/crm/sidepanel.js');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = (name) => {
+    const at = code.indexOf('async function ' + name);
+    assert.ok(at > 0, `${name} is gone`);
+    return code.slice(at, code.indexOf('\n}', at));
+  };
+
+  test('each writer clears only the marks it refreshed', () => {
+    assert.ok(/_dirtyMeta\.delete/.test(fn('saveMetaIndex')), 'saveMetaIndex clears nothing');
+    assert.ok(!/_dirtySource/.test(fn('saveMetaIndex')),
+              'saveMetaIndex touches the source marks - it has not read a single .dg');
+    assert.ok(/_dirtySource\.delete/.test(fn('saveGraphFacts')), 'saveGraphFacts clears nothing');
+    assert.ok(!/_dirtyMeta/.test(fn('saveGraphFacts')), 'saveGraphFacts touches the metadata marks');
+  });
+
+  test('each reader takes its snapshot before its first await', () => {
+    for (const [name, snap] of [['rebuildTree', 'dirtyMeta'], ['loadGraph', 'dirtySrc']]) {
+      const body = fn(name);
+      const snapAt = body.indexOf(`const ${snap} = new Set(`);
+      const awaitAt = body.indexOf('await ');
+      assert.ok(snapAt > 0, `${name} does not snapshot the marks`);
+      assert.ok(snapAt < awaitAt, `${name} snapshots after its first await, so another task can move it`);
+    }
+  });
+
+  test('the summary is merged, never replaced', () => {
+    // The first version rewrote the whole file with the metadata half, throwing away every reference
+    // and size the diagram had written. Nothing broke - the graph simply read five thousand sources
+    // again - which is exactly why it survived until somebody asked how the two writers interleave.
+    const body = fn('saveMetaIndex');
+    assert.ok(/prev\.files/.test(body), 'the previous summary is not read back before writing');
+    assert.ok(!/const files = \{\};/.test(body), 'the file is rebuilt from scratch again');
   });
 }

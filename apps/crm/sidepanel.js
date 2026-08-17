@@ -511,17 +511,33 @@ function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classLi
 //
 // What this cannot see is somebody else's write: an editor, a `git checkout`, a file copied in. That
 // is what ↻ Refresh is for, and it now drops the summary entirely rather than trusting it.
-let _rewritten = new Set();
-// «Non fidarti di niente»: ↻ Refresh legge di nuovo ogni file. It is the answer to the write this
-// panel cannot see - an editor, a `git checkout`, a folder synced from another machine - and it is
-// the reason the summary is allowed to be cheap the rest of the time: there is a control that says
-// «re-read it all», it is the one people already press when the disk changed under them, and its
-// tooltip says so.
-let _distrust = false;
+// Two readings, two writers, two sets. `.meta.json` is described by `saveMetaIndex()` and `.dg` by
+// `saveGraphFacts()`, and they finish at different moments - one is a single write at the end of the
+// tree load, the other happens whenever the diagram is built. One set for both meant the first
+// writer declared the second one's work done: `saveMetaIndex()` cleared the mark while the graph
+// build, started and deliberately not awaited, was still walking the folder. The ordering happened
+// to be favourable, which is not the same as being correct - and an outside review said exactly
+// that. Each set is now cleared by the writer that actually refreshed it, path by path, so a file
+// rewritten *during* a build stays marked.
+let _dirtyMeta = new Set();
+let _dirtySource = new Set();
+/** ↻ Refresh: read every file again.
+ *
+ *  It is the answer to the write this panel cannot see - an editor, a `git checkout`, a folder
+ *  synced from another machine - and it is what lets the summary be cheap the rest of the time.
+ *
+ *  It marks rather than raising a flag. A flag would have needed a moment to be lowered, and the
+ *  only honest moment is «when every file has been read again», which is two different events for
+ *  the metas and the sources - and would never arrive at all on a workspace where the diagram is
+ *  never built. Marking every known path uses the machinery that already exists, and each writer
+ *  gives up its own marks as it describes them. One mechanism, no lifetime to reason about. */
+function distrustEverything() {
+  treeData.forEach((r) => { if (r.path) { _dirtyMeta.add(r.path); _dirtySource.add(r.path); } });
+}
 const noteWrite = (rel) => {
   if (!rel.startsWith('functions/')) return;
-  if (rel.endsWith('.meta.json')) _rewritten.add(rel.replace(/\.meta\.json$/, '.dg'));
-  else if (rel.endsWith('.dg')) _rewritten.add(rel);
+  if (rel.endsWith('.meta.json')) _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
+  else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); }
 };
 // The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
 // root again - two calls to the browser's file system before the one that does the work - so half of
@@ -918,6 +934,10 @@ function renderTree() {
 let treeLoad = 0;
 
 async function rebuildTree() {
+  // Before anything that can yield. Whether another task could actually clear these marks in the
+  // window between the permission check and here is the sort of question nobody should have to
+  // answer while reading: the snapshot goes first, and then there is nothing to answer.
+  const dirtyMeta = new Set(_dirtyMeta);
   if (!dir) return;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
   const mine = ++treeLoad;
@@ -986,13 +1006,13 @@ async function rebuildTree() {
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
   if (!current()) return;
-  const known = (!_distrust && summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
   const missing = [];
   for (const mp of metaPaths) {
     const dg = mp.replace(/\.meta\.json$/, '.dg');
     const s = known[dg];
     const row = byPath.get(dg);
-    if (!s || !row || _rewritten.has(dg)) { missing.push(mp); continue; }
+    if (!s || !row || dirtyMeta.has(dg)) { missing.push(mp); continue; }
     row.downloaded = true;
     row.stale = (s.sv || 0) < META_SV;
     row.updatedTime = s.updatedTime || null;
@@ -1062,15 +1082,30 @@ async function rebuildTree() {
  *  wrong, which is why nothing else depends on this file. */
 async function saveMetaIndex(metaPaths) {
   try {
-    const files = {};
+    // Merged, never rewritten from scratch. Two writers share this file - this one describes what a
+    // `.meta.json` says, `saveGraphFacts()` what a `.dg` says - and the first version of this
+    // replaced the whole thing with its own half, silently throwing away every reference and size
+    // the diagram had written. Nothing broke, which is why it survived: the graph simply read five
+    // thousand sources again, and the summary looked complete while being useless to it. Found by a
+    // review asking how the two writers interleave; the answer was that they did not interleave at
+    // all, one of them just deleted the other's work.
+    let files = {};
+    try {
+      const prev = JSON.parse(await readFile(META_INDEX));
+      if (prev && prev.v === 1 && prev.files) files = prev.files;
+    } catch (_) {}
     const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
+    Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // sparito dal disco
     treeData.forEach((r) => {
       if (!onDisk.has(r.path)) return;
-      files[r.path] = { id: String(r.id), sv: r.stale ? 1 : META_SV, updatedTime: r.updatedTime || null,
-                        namespace: r.namespace || '', display_name: r.display_name || '' };
+      const e = files[r.path] || (files[r.path] = {});
+      e.id = String(r.id); e.sv = r.stale ? 1 : META_SV; e.updatedTime = r.updatedTime || null;
+      e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
     });
     await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
-    _rewritten = new Set(); _distrust = false;   // ciò che abbiamo riscritto è ora descritto
+    // Only the metas this pass actually described, and only the meta half: the source-derived facts
+    // belong to `saveGraphFacts()` and are not this writer's to declare done.
+    metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
   } catch (_) {}
 }
 
@@ -1171,8 +1206,12 @@ function graphForWindow(g) {
  *  It used to read every `.dg` and every `.meta.json` - two files per function, 40,000 file-system
  *  calls on an org of five thousand - and parse the sources again each time. What the parse produces
  *  per function is now kept in `functions/meta-index.json`: the references the parser saw and the
- *  size counts. Both are *readings* of one file, so they age exactly when that file changes, which
- *  the walk detects. The resolution of a reference into an edge still happens on every build,
+ *  size counts. Both are *readings* of one file, so they age exactly when that file changes - and
+ *  what detects that is **not** the folder walk, which sees paths appearing and disappearing and
+ *  nothing about the bytes behind them. This comment used to claim the walk was enough; a review
+ *  asked for the proof, the first test written for it failed, and the answer is `_dirtySource`:
+ *  every write this panel makes marks the file it touched, and ↻ Refresh marks all of them for the
+ *  writes it cannot see. The resolution of a reference into an edge still happens on every build,
  *  because it depends on the whole workspace.
  *
  *  A source the summary does not describe is read and parsed as before, and the summary is brought
@@ -1181,13 +1220,14 @@ function graphForWindow(g) {
  */
 async function loadGraph() {
   const nodes = [];
+  const dirtySrc = new Set(_dirtySource);   // snapshot, as the tree load does
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
-  const known = (!_distrust && summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
   let read = 0;
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;
-    const cached = _rewritten.has(p) ? null : known[p];
+    const cached = dirtySrc.has(p) ? null : known[p];
     if (cached && Array.isArray(cached.refs) && cached.stats) {
       nodes.push({ namespace: cached.namespace || p.split('/')[0],
                    name: cached.name || p.split('/').pop().replace(/\.dg$/, ''),
@@ -1239,7 +1279,9 @@ async function saveGraphFacts(nodes, g) {
       entry.stats = nd.stats || (node && node.stats) || null;
     });
     await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
-    _rewritten = new Set(); _distrust = false;   // ciò che abbiamo riscritto è ora descritto
+    // The sources this pass read are now described, and only those - a file rewritten while this
+    // build was walking the folder keeps its mark and is read by the next one.
+    nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
   } catch (_) {}
 }
 async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
@@ -6158,7 +6200,7 @@ async function pullHealthRuntime() {
   finally { b.disabled = false; }
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } _distrust = true; graphCache = null; codeCache = null; await rebuildActive(); };
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;
