@@ -28,7 +28,7 @@ const gsrc = (app) => read(`apps/${app}/graphview.js`) + '\n' + read(`apps/${app
 
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
-const { stripNonCode } = load([sliceFn('apps/crm/sidepanel.js', 'stripNonCode')]);
+const { stripNonCode } = load([sliceFn('apps/crm/graph-core.js', 'stripNonCode')]);
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -4970,13 +4970,17 @@ test('every cache in a shipped panel is named by something that tests it', () =>
    *  the second reader gets in before the first writer and the log says so. */
   const run = (first) => {
     const ops = [];
-    let disk = JSON.stringify({ v: 1, sv: 2, files: {} });
+    // The version comes from the source, not from a number typed here: a test that writes its own
+    // `v` keeps passing on the day the real one moves, which is exactly when it should speak.
+    const V = Number(sliceConst(FILE, 'SUMMARY_V').match(/=\s*(\d+)/)[1]);
+    let disk = JSON.stringify({ v: V, sv: 2, files: {} });
     // Several turns of the microtask queue per call: a single `await` would let a two-writer
     // implementation slip through whenever the runtime happened to resume it in a friendly order.
     const slow = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
     const env = {
       META_INDEX: 'functions/meta-index.json',
       META_SV: 2,
+      SUMMARY_V: V,
       treeData: ROWS,
       _dirtyMeta: new Set(['functions/standalone/build.dg']),
       _dirtySource: new Set(['functions/standalone/build.dg']),
@@ -5015,4 +5019,51 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                        `the two cycles overlapped: ${ops.join(',')}`);
     });
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// A call that somebody commented out months ago is not a call. The extractor read the source as
+// text, so `// standalone.log();` was an edge, and so was the name of a function inside an error
+// message - measured on six shapes that occur in ordinary Deluge, five of them wrong. The damage is
+// not the drawing: `dead_suspect` is «nothing calls this», so a function whose only mention is a
+// disabled line looked alive and the audit said nothing about it. Failing towards silence, in the
+// one view that exists to break silence.
+//
+// The reader that tells code from comments already existed - the statistics have used it since they
+// were written - and it was simply not shared with the extractor. This is that sharing, held here so
+// it cannot be undone quietly.
+{
+  const w = {};
+  new Function('window', read('apps/crm/graph-core.js'))(w);
+  const target = { namespace: 'standalone', name: 'log', api_name: 'log', dg: 'void log(){}', file: 'a.dg' };
+  const edges = (body) => w.buildGraph([{ ...target },
+    { namespace: 'standalone', name: 'caller', api_name: 'caller', dg: body, file: 'b.dg' },
+  ]).nodes['standalone.caller'].calls.length;
+
+  test('a call is a call, not a mention of one', () => {
+    for (const [what, body] of [
+      ['a line comment', '// standalone.log();\nreturn 1;'],
+      ['a block comment', '/* old: standalone.log(); */\nreturn 1;'],
+      ['a name inside a string', 'info "call standalone.log() if needed";'],
+      ['a name inside a message', 'sendmail[to:x subject:"standalone.log() failed"];'],
+      ['code that was switched off', '// if(x){ standalone.log(); }'],
+      // The shape real Deluge actually uses to park an old version: `/*` alone on its line, the
+      // block running for tens of lines, `*/` far below. Found on two real orgs - one function had
+      // 183 of its 193 lines inside one - and it is the case a single-line block comment does not
+      // exercise, because here the extractor has to stay in the comment across newlines.
+      ['a block comment spanning many lines',
+       'a = 1;\n/*\nb = 2;\nstandalone.log();\nc = 3;\n*/\nd = 4;'],
+    ]) {
+      assert.equal(edges(body), 0, `${what} still counts as an edge`);
+    }
+    assert.equal(edges('standalone.log();'), 1, 'a real call stopped being one');
+  });
+
+  test('what is analysed is stripped; what is shown is not', () => {
+    // The source travels on for the detail pane, the export and the assistant. Cleaning is for
+    // reading, never for displaying - a reader who opens a function must see it as it was written.
+    const gc = read('apps/crm/graph-core.js');
+    assert.ok(/stripNonCode\(it\.dg/.test(gc), 'the builder analyses the raw text again');
+    assert.ok(!/_dg = stripNonCode[\s\S]{0,80}source_code/.test(gc), 'the stripped text reached what is displayed');
+  });
 }

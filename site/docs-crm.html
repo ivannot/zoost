@@ -542,7 +542,8 @@ git commit -m "baseline"</code></pre>
 
   <h2 id="failures">10b. What is actually failing</h2>
   <p>The health audit reads the mirror and finds <em>structural</em> suspects - a function nothing calls,
-    a call that resolves to nothing. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull all</b> fetches what Zoho reports as having
+    a call that resolves to nothing. Code you have commented out does not count as a call, so a
+    function whose only mention is a disabled line is named here rather than left looking alive. It cannot tell you what broke this morning. Zoho does know, and Zoost reads it: <b class="ui">Pull all</b> fetches what Zoho reports as having
     failed, and it is the one thing here read from a system that is running rather than from the shape
     of what you built.</p>
   <p>It shows in the two places a failure belongs, and in no tab of its own - a failure is not a kind

@@ -7,6 +7,30 @@
   const NS = ['standalone', 'automation', 'button', 'schedule', 'validation_rule'];
   const CALL_RE = new RegExp('\\b(' + NS.join('|') + ')\\.([A-Za-z_]\\w*)\\s*\\(', 'g');
 
+  // Comments and string literals out, newlines and everything else kept. It lives here because this
+  // is the file that reads Deluge text, and because there must be one of it: the statistics have
+  // used it since they were written while the extractor below read the raw source, so a call
+  // somebody commented out months ago was an edge, and the name of a function inside an error
+  // message was another. Measured on six shapes that occur in ordinary Deluge: five were wrong.
+  //
+  // A single left-to-right scan on purpose. Chained regexes get it wrong, because a URL literal
+  // ("https://x") contains "//" and a comment-first pass would cut the line and leave an
+  // unterminated quote that swallows the lines after it. Newlines are preserved so the line count
+  // stays meaningful.
+  function stripNonCode(src) {
+    const s = String(src || '');
+    let out = '', i = 0;
+    while (i < s.length) {
+      const c = s[i], d = s[i + 1];
+      if (c === '/' && d === '*') { const e = s.indexOf('*/', i + 2); const seg = s.slice(i, e < 0 ? s.length : e + 2); out += seg.replace(/[^\n]/g, ' '); i = e < 0 ? s.length : e + 2; continue; }
+      if (c === '/' && d === '/') { const e = s.indexOf('\n', i); i = e < 0 ? s.length : e; out += ' '; continue; }
+      if (c === '"' || c === "'") { const q = c; i++; while (i < s.length && s[i] !== q) { if (s[i] === '\\') i++; i++; } i++; out += q + q; continue; }
+      out += c; i++;
+    }
+    return out;
+  }
+  window.stripNonCode = stripNonCode;
+
   window.buildGraph = function (input) {
     const nodes = {}, byName = {};
     for (const it of input) {
@@ -16,7 +40,7 @@
         display_name: it.display_name || it.name, category: it.category, source: it.source,
         description: it.description || '', rest: !!it.rest,
         associated_place: it.associated_place || null, file: it.file,
-        calls: [], called_by: [], unresolved: [], ambiguous: [], _dg: it.dg || '',
+        calls: [], called_by: [], unresolved: [], ambiguous: [], _dg: stripNonCode(it.dg || ''),
         // Handed in by a caller that read this source before and wrote down what it saw. The
         // node carries it explicitly, like every other field: this constructor copies what it
         // names and nothing else, which is why the first version of the shortcut silently

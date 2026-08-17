@@ -164,6 +164,12 @@ const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 // What the pull leaves so the next open does not have to read every meta. A cache beside the
 // index, checked against the folder walk on every load - see rebuildTree().
 const META_INDEX = 'functions/meta-index.json';
+// The shape *and the reading* behind the summary. It goes up when what is written down stops being
+// comparable with what this version would produce - and a mismatch discards the file wholesale,
+// which is the cheapest honest answer: one slow open, then back to one read. It moved to 2 when the
+// call extractor stopped counting names inside comments and strings, because every `refs` on disk
+// was the previous reader's answer and nothing else would ever have said so.
+const SUMMARY_V = 2;
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
@@ -1032,7 +1038,7 @@ async function rebuildTree() {
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
   if (!current()) return;
-  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   const missing = [];
   for (const mp of metaPaths) {
     const dg = mp.replace(/\.meta\.json$/, '.dg');
@@ -1126,10 +1132,10 @@ function updateMetaIndex(mutate) {
     let files = {};
     try {
       const prev = JSON.parse(await readFile(META_INDEX));
-      if (prev && prev.v === 1 && prev.files) files = prev.files;
+      if (prev && prev.v === SUMMARY_V && prev.files) files = prev.files;
     } catch (_) {}
     await mutate(files);
-    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+    await writeFile(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
   }).catch(() => {});   // a summary that cannot be written is a cache that will be rebuilt, not a failure
   return _metaIndexWrites;
 }
@@ -1188,23 +1194,9 @@ const RE_ZOHO_ANY = new RegExp('\\bzoho\\.(?:' + ZOHO_SERVICES + ')\\.\\w+', 'gi
 const RE_ZOHO_CRM = /\bzoho\.crm\.\w+/gi;
 const RE_INVOKEURL = /\binvokeurl\b/gi;
 const RE_SENDMAIL = /\bsendmail\b/gi;
-// Comments and string literals are removed, so a task named in a comment or inside a message is not
-// counted as a call. This is a single left-to-right scan on purpose: chained regexes get it wrong,
-// because a URL literal ("https://x") contains "//" and a comment-first pass would cut the line and
-// leave an unterminated quote that swallows the lines after it. Newlines are preserved so the line
-// count stays meaningful.
-function stripNonCode(src) {
-  const s = String(src || '');
-  let out = '', i = 0;
-  while (i < s.length) {
-    const c = s[i], d = s[i + 1];
-    if (c === '/' && d === '*') { const e = s.indexOf('*/', i + 2); const seg = s.slice(i, e < 0 ? s.length : e + 2); out += seg.replace(/[^\n]/g, ' '); i = e < 0 ? s.length : e + 2; continue; }
-    if (c === '/' && d === '/') { const e = s.indexOf('\n', i); i = e < 0 ? s.length : e; out += ' '; continue; }
-    if (c === '"' || c === "'") { const q = c; i++; while (i < s.length && s[i] !== q) { if (s[i] === '\\') i++; i++; } i++; out += q + q; continue; }
-    out += c; i++;
-  }
-  return out;
-}
+// Comments and string literals are removed before any of these are counted, by the one reader that
+// does it - `stripNonCode()` in graph-core.js, which the call extractor uses too. Two readers of the
+// same thing is the shape this repository has been bitten by; this used to be two.
 const _count = (s, re) => { const m = s.match(re); return m ? m.length : 0; };
 function fnStats(src) {
   const code = String(src || '');
@@ -1264,7 +1256,7 @@ async function loadGraph() {
   const dirtySrc = new Set(_dirtySource);   // snapshot, as the tree load does
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
-  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   let read = 0;
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;

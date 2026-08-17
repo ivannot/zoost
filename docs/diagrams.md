@@ -107,6 +107,48 @@ The facets follow the catalogue - «crosses namespace / same namespace / all» w
 A call to a name that resolves to nothing is **not** a row: those are measurements of absence and
 they live in the Health audit, which the hint under the table says.
 
+**And a mention of a call is not a call.** `CALL_RE` used to run over the source as it is written, so
+`// standalone.log();`, a name inside an error message and a whole block someone had switched off
+were all edges. Measured on six shapes that occur in ordinary Deluge: **five were wrong**. The
+drawing was the least of it - `dead_suspect` is «nothing calls this», so a function whose only
+mention was a disabled line looked alive and the audit said nothing about it, and a commented-out
+call to a function that no longer exists was reported as a call resolving to nothing. Both failures
+point the same way: **towards silence, in the view that exists to break it.**
+
+The reader that tells code from comments already existed - the statistics have used it since they
+were written - and it simply was not shared with the extractor, which is this repository's oldest
+shape of defect: two readers of the same thing, one of them better. It lives in `graph-core.js` now
+and both use it. What is **analysed** is stripped; what is **shown** is not - the detail pane, the
+exports and the assistant all still receive the source as it was written, comments included, and a
+test holds that separation because it is the one that would be easy to lose.
+
+**Measured on real Deluge, which is the only place this could be settled.** Two production orgs read
+in session and never committed - 428 functions, 673 KB of source: **793 references read as text, 775
+after cleaning**. Every one of the 18 that went was a mention inside a comment (nine line, nine
+block); **none was inside a string, and not one line of live code was lost.** Edges fell 96 to 90 and
+249 to 240, and «nothing calls this» gained one function in each org - both of them named only by a
+commented-out line, which is exactly the finding the audit exists to make and had been silently
+swallowing. That is the answer to the risk stated when this was proposed: it was a hope, and now it
+is a measurement, on the only corpus that could produce one.
+
+A second check, because a lexer that gets lost damages the badges and not only the drawing: in eight
+functions the cleaning removes more than half the lines. The worst is 183 lines of 193 - and that
+function really is a block comment with eight lines of code left in it, counted the same by two
+independent methods. Nowhere did the scanner run past the end of a construct.
+
+One artefact, known and harmless: a function's own **declaration line** matches the call pattern, so
+it appears among the references stored for it. It never becomes an edge - resolution drops a
+reference to the node it is on - and telling a declaration from a call needs more than a regex, so it
+is left alone rather than fixed with a heuristic that would be its own small defect.
+
+It is a cache-shaped change as well as a parsing one: every `refs` already written into
+`functions/meta-index.json` was the previous reader's answer, and nothing on disk would ever have
+said so. `SUMMARY_V` moved to 2, which discards the summary wholesale - one slow open, then back to
+one read. Measured on the workspace `+ Sample` delivers: **112 edges and 115 references before and
+after**, so the fixture, the counts on `try.html` and the published screenshots do not move. That is
+also the fixture's own blind spot, stated rather than left to be found - it contains no commented-out
+call, so it could never have caught this.
+
 Two things this uncovered. The Explorer selection moved the focus only `if (schema)`, so on a call
 graph the diagram stayed where it opened while the list said otherwise - the same "one of a set" miss
 this file already names. And four status lines spelt out «modules» and «lookups» as literals; `NOUN()`
