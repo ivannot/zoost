@@ -103,6 +103,7 @@ fbe79589c7c194d9  site/analytics.html: What the assistant writes is a draft; Zoh
 d2a8aead229f1846  site/analytics.html: What you built, and what Zoho put there Half the tables in a connected workspace arrived by sync and were never yours.
 fcc4580b9cbcad45  site/analytics.html: What's inside Every view, in one list Type, folder, owner, column count and dates - sortable, and searchable inside the column names , so you can find which table carries a field.
 4d33e9eca8ea7111  site/analytics.html: With your own key, an assistant that explores your workspace - and never your rows, because Zoost does not read them.
+6cb258d4367a6c3c  site/crm.html: A call that names its module through a variable is counted and declared, so every list is a floor and never a promise.
 b026410dcae3500b  site/crm.html: Every Deluge function as a file you can diff.
 7665635fa02819cf  site/crm.html: Every field with its type, and a matrix showing which layout it appears on.
 5770020df6783ede  site/crm.html: Every figure states what it does not cover, right next to itself.
@@ -183,6 +184,7 @@ d7ec42cad6a53999  site/docs-analytics.html: Workspace index is how much of the w
 1efb6928aad4b85e  site/docs-analytics.html: Zoost never runs, validates or deploys SQL.
 13c896893d2759e0  site/docs-analytics.html: Zoost only ever reads from Zoho Analytics.
 bcd1459edb0b8b01  site/docs-crm.html: A kind with nothing in it gets no chip.
+2f94956608136ac8  site/docs-crm.html: A module named through a variable cannot be known, so those calls are counted and reported rather than dropped - which makes every list a lower bound , never a guarantee that nothing else writes there.
 fb1480858e09fe96  site/docs-crm.html: A module shows no fields and a grey ⊘ Zoho refused to describe it - usually because the module is hidden in that org - so its fields, layouts and related lists were never read.
 45de55662fcdca70  site/docs-crm.html: A newcomer that lands on one of yours moves aside itself: what you placed stays where you put it, and only what you did not place gives way.
 9b83426c42d4b102  site/docs-crm.html: A workflow or a schedule that fires a function is a node of its own; so is every connection a function uses; so is every automation action - notifications, field updates, tasks, webhooks, including the ones no rule fires , which are the ones worth seeing; and so is every module those rules and actions touch.
@@ -190,6 +192,7 @@ d46596c26e556b05  site/docs-crm.html: A workflow or a schedule that fires one is
 e9887f7bcdd4ce2e  site/docs-crm.html: A workflow rule almost never does the work itself: it points at something that exists on its own in Zoho CRM and is reused across rules - an email notification , a field update , a task , a webhook .
 b8c39b7e4633e967  site/docs-crm.html: After signing out of one org, which org you want next is a choice and nothing here can deduce it: a consultant with clients on .eu , .com and .jp may well want the one they have never opened from this machine.
 d526906a4512534d  site/docs-crm.html: All of it comes from what is already on your disk: a workflow's own JSON says which functions it fires, a schedule's index row names the one it runs, and a function's captured meta lists its connections.
+141d1047a04a2f6d  site/docs-crm.html: And a name is only shown when it is a module this org actually has: a word that looks like one and is not says nothing.
 91c589c9c2792d1d  site/docs-crm.html: And who the recipients are - the count comes back with the rule, the list of people does not, and Zoost never asks for it.
 9a9833eb72d7d5c4  site/docs-crm.html: Beside the button is a picklist of every data centre.
 5236f5b433884e75  site/docs-crm.html: Both are per window and not remembered, and they exist only there: the other three views have no list.
@@ -238,6 +241,7 @@ ac9fd8dc864259da  site/docs-crm.html: Nothing is restored automatically and ther
 a47b310009d653b8  site/docs-crm.html: Nothing is sent to the developer, and there is no analytics or tracking of any kind.
 4a0ee16a6c2fc4e1  site/docs-crm.html: Once it is set the fields go away - the passphrase is not stored, so there is nothing to show in them - and the section says the key is encrypted, with a Change passphrase button when you want a different one.
 b948e6ecc42279ad  site/docs-crm.html: Once one exists that button reads Open sample workspace and opens it; before Chrome has given the panel access to the working folder it cannot tell, so it says neither and reads just Sample workspace - clicking asks for access first and then does whichever is right - the overlay covers the workspace list, so hiding it there would leave the sample unreachable.
+eef3c44dc442dcb3  site/docs-crm.html: Only in that position - a string anywhere else is a string, and which position that is comes from each task's own documented signature: in getRelatedRecords("Prices_Services", "Practitioners", id) the first name is the relation and it takes you to the module at the other end of it, while the second is the parent module.
 6a338e9465862125  site/docs-crm.html: Org index is how much of the org is described to the assistant with every message - bigger means it knows more names, and it is billed each time.
 39adf19bb9355e1d  site/docs-crm.html: Past 80 the drawing gets crowded - up to there the layout kept every box clear of every other on the graphs it was tested against, and past it boxes start covering each other - so the count turns amber and says so, and the diagram is still drawn: that is your call, not ours.
 ce00f2abaa40258f  site/docs-crm.html: Production vs sandbox Every workspace is bound to one org, host and instance, recorded in its .zoost.json .
@@ -316,7 +320,7 @@ f1bb58292cbc1041  site/index.html: Nothing leaves the machine No server, no acco
 c551b0dd44894a52  site/index.html: Nothing reaches the platform, and you delete it by deleting the folder.
 93ac8ae99db8aa51  site/index.html: Numbers without a grade You get counts and lists, never a score.
 f7ed85dc5c973391  site/index.html: One working folder holds every client at once, each bound to the org, host and instance it came from.
-4b6d45be914eb022  site/index.html: Open the sample workspace → invented data · no Zoho org · nothing to connect The workbenches Zoost CRM on the Chrome Web Store Zoost - workbench for Zoho CRM Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
+6a5d3790a5d678db  site/index.html: Open the sample workspace → invented data · no Zoho org · nothing to connect The workbenches Zoost CRM on the Chrome Web Store Zoost - workbench for Zoho CRM Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, which functions read and write each module, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
 1e3f9f7825036f1a  site/index.html: Reading tells you what a program is built to do; it cannot tell you what Zoho will answer tomorrow, or what somebody does with a file once they have saved it - and an assistant will sound just as sure either way, so it is asked to say where its answer stops.
 5e0e0b80dbfa59c1  site/index.html: The hosts are the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, one.zoho.* , and api.anthropic.com / api.openai.com .
 4c9d56d3a080d520  site/index.html: The only exception is the optional AI assistant, and only if you give it your own key - what it adds, and when it is not worth one .
@@ -432,6 +436,7 @@ e74e7ff9f143a48a  site/it/crm.html: Ti mostra ogni punto in cui compaiono un cam
 6b2b7097c13c1272  site/it/crm.html: Tutto il resto funziona anche senza.
 a5f9776b8bcc2860  site/it/crm.html: Tutto il resto non si muove da lì.
 032ac485ec25dc37  site/it/crm.html: Un grep su tutta l'org Ricerca full-text su tutte le funzioni Deluge insieme: la cosa che a Zoho è sempre mancata.
+b32083360624234b  site/it/crm.html: Una chiamata che nomina il modulo attraverso una variabile viene contata e dichiarata, quindi ogni elenco è un minimo e mai una promessa.
 1b70e1a63756b3b9  site/it/crm.html: Una riga per related list, con l'API name che vuole zoho.crm.getRelatedRecords() - che non è il nome di nessuno dei due moduli, e in Zoho CRM non è scritto da nessuna parte.
 edd6472ecf2bfe38  site/it/crm.html: Zoost le cataloga tutte, con la chiamata già pronta da copiare.
 ea7202391e94b024  site/it/crm.html: Zoost usa la tua sessione e i tuoi permessi esistenti - vede esattamente quello che vedi tu, niente di più.
@@ -532,6 +537,7 @@ c4759d38fe05e15f  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima d
 2e4716d3552a0532  site/it/docs-crm.html: Dopo essere uscito da un'org, quale org vuoi aprire adesso è una scelta e da qui non si deduce: un consulente con clienti su .eu , .com e .jp può benissimo volere quello che da questa macchina non ha mai aperto.
 fbc9c046d9b5f837  site/it/docs-crm.html: Due pulsanti coprono l'altra direzione: ↺ All rimette tutto, None spegne tutto, così un clic solo riaccende la categoria che ti serve.
 5dd1c8d4764acaac  site/it/docs-crm.html: E un modulo che nessuna automazione tocca non c'è: è un'altra domanda, a cui risponde l'audit Health .
+fde2f012bb6eb100  site/it/docs-crm.html: E un nome compare solo se è davvero un modulo di quest'org: una parola che sembra un modulo e non lo è non dice niente.
 927f6f6ee792f348  site/it/docs-crm.html: Elenca anche le connessioni che la funzione usa e chi l'ha modificata per ultimo - clicca una connessione per filtrare l'albero su tutte le funzioni che la usano (basta con il «cerca nel file» per il nome di una connessione).
 b9a20578d2d4e2c8  site/it/docs-crm.html: Entrambi i report dichiarano comunque le date per area: il fatto sta a te pesarlo; nasconderlo sarebbe l'unica cosa peggiore di un capitolo vecchio.
 1e018b7bb98f49ce  site/it/docs-crm.html: Entrambi portano tutto quello che mostra il pannello, compresi la dimensione di ogni funzione e i conteggi delle chiamate in uscita (una tabella Size and outbound calls nel Markdown, delle colonne nell'indice HTML): un report non deve mai essere una copia ridotta di quello che hai visto a schermo.
@@ -628,6 +634,7 @@ de13555469a0facd  site/it/docs-crm.html: Tutta la conversazione viene rimandata 
 09efc6d3098224d7  site/it/docs-crm.html: Tutto quello che Zoost scrive sta lì dentro.
 b568a66c73bc12a1  site/it/docs-crm.html: Tutto viene da quello che hai già su disco: il JSON di un workflow dice quali funzioni lancia, la riga di indice di uno schedule nomina quella che esegue, e il meta catturato di una funzione elenca le sue connessioni.
 021b613b86f5419b  site/it/docs-crm.html: Un click lo ripristina; non si apre nessun selettore di file.
+7d3e25ddadfc24a8  site/it/docs-crm.html: Un modulo nominato attraverso una variabile non si può sapere, quindi quelle chiamate vengono contate e dichiarate invece che scartate - il che rende ogni elenco un limite inferiore , mai la garanzia che nessun altro scriva lì.
 29113e00d9dd5d1b  site/it/docs-crm.html: Un modulo non ha campi e ha un ⊘ grigio Zoho si è rifiutato di descriverlo - di solito perché il modulo è nascosto in quell'org - quindi campi, layout e related list non sono mai stati letti.
 a5111fdaa94e7fb0  site/it/docs-crm.html: Un ordinamento numerico lascia cadere il raggruppamento per namespace e mostra un elenco piatto, con il namespace che si sposta su ogni riga, perché «quali sono le più grandi» è una domanda diversa da «cosa c'è in questo namespace».
 476a2f5c6f932a77  site/it/docs-crm.html: Un tipo senza niente dentro non ha la sua chip.
@@ -724,7 +731,7 @@ ab72e2a92c36f1ba  site/it/index.html: Tutto quello che hai costruito dentro Zoho
 986e2e394740fc08  site/it/index.html: Una funzione da quattrocento righe può benissimo essere una tabella di mappatura scritta bene: quali siano le tue lo sai soltanto tu.
 14c83c6b955611a6  site/it/index.html: Una sola cartella di lavoro tiene rispecchiati tutti i clienti insieme, ognuno legato all'org, all'host e all'istanza da cui è arrivato.
 ac8cc9b7b85fd67c  site/it/index.html: Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.
-ade412e82303203f  site/it/index.html: Zoost CRM sul Chrome Web Store Zoost - workbench for Zoho CRM Le funzioni Deluge come file da mettere sotto Git, la ricerca full-text su tutte in una volta, il grafo di chi chiama chi, lo schema dei moduli con i layout, gli API name delle related list che tocca sempre andare a ripescare, i workflow, le schedulazioni e il catalogo delle connessioni.
+df6d46747427fffb  site/it/index.html: Zoost CRM sul Chrome Web Store Zoost - workbench for Zoho CRM Le funzioni Deluge come file da mettere sotto Git, la ricerca full-text su tutte in una volta, il grafo di chi chiama chi, quali funzioni leggono e scrivono ogni modulo, lo schema dei moduli con i layout, gli API name delle related list che tocca sempre andare a ripescare, i workflow, le schedulazioni e il catalogo delle connessioni.
 e32a3b1c5bd6e896  site/it/index.html: Zoost porta l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa: chi chiama chi, chi dipende da chi e cosa non serve più a nessuno.
 7d80d260c1a1a50e  site/it/index.html: Zoost è piccolo, ed è pubblicato esattamente com'è stato scritto: niente di compresso, niente di nascosto.
 49983475f95ff67d  site/it/nerd.html: Chi lo ha battuto è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.
