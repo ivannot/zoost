@@ -37,79 +37,79 @@
   },
   "crm-actions": {
     "app": "crm",
-    "from": "4607b6cd9981552e"
+    "from": "27d0d7171f544d0f"
   },
   "crm-ai": {
     "app": "crm",
-    "from": "17bfd15db434c64c"
+    "from": "f74be7e7eea1f313"
   },
   "crm-buttons": {
     "app": "crm",
-    "from": "8c0e64164d351c46"
+    "from": "6df0dfb7dbd1ec19"
   },
   "crm-connections": {
     "app": "crm",
-    "from": "e54d755848ee5f5d"
+    "from": "10c7ea0bb7047c4b"
   },
   "crm-er": {
     "app": "crm",
-    "from": "453c5a7a7243da1d"
+    "from": "843af42a1299bd18"
   },
   "crm-explorer": {
     "app": "crm",
-    "from": "fb9f4b5bbeb989f5"
+    "from": "88cedac6f8a831df"
   },
   "crm-export": {
     "app": "crm",
-    "from": "549ca03235a46339"
+    "from": "bebb13288de4cb1d"
   },
   "crm-failures": {
     "app": "crm",
-    "from": "eefcc1c81e7bcab4"
+    "from": "9b76ecb43c27a2da"
   },
   "crm-graph": {
     "app": "crm",
-    "from": "d9f8c798810219b1"
+    "from": "74bbe3ed46388fb8"
   },
   "crm-health": {
     "app": "crm",
-    "from": "fb76484c526d6a2b"
+    "from": "b2aab4fdee72107f"
   },
   "crm-modules": {
     "app": "crm",
-    "from": "80671c55479de9fe"
+    "from": "4576754b1ef80659"
   },
   "crm-panel": {
     "app": "crm",
-    "from": "1c38d1b6b91e8a9d"
+    "from": "e82757ea8ac2392e"
   },
   "crm-preview": {
     "app": "crm",
-    "from": "7eb65bccb96f4e9f"
+    "from": "1d528eda293a4818"
   },
   "crm-relations": {
     "app": "crm",
-    "from": "853a50116ace65a4"
+    "from": "6d85a2b975d86bdf"
   },
   "crm-runtime": {
     "app": "crm",
-    "from": "327419c86737ed9d"
+    "from": "3c0e02854f0e1d1a"
   },
   "crm-sample": {
     "app": "crm",
-    "from": "3b19b5b4eb63fd39"
+    "from": "21725f04a25a6c2b"
   },
   "crm-search": {
     "app": "crm",
-    "from": "35775fb936b9ebf5"
+    "from": "f569ed927e98ee37"
   },
   "crm-settings": {
     "app": "crm",
-    "from": "f0a467be3f86fb82"
+    "from": "b3b1b6453c55d90c"
   },
   "crm-workflows": {
     "app": "crm",
-    "from": "8ddda155bb1db8ff"
+    "from": "62882857b3204014"
   },
   "og": {
     "from": "c21312d5c9a83a1d"

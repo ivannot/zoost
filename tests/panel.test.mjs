@@ -4732,3 +4732,40 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   assert.ok(drops >= 5, `the cache is dropped in ${drops} places; every path that changes dir must`);
   assert.ok(/dir = w\.handle; forgetDirs\(\)/.test(js), 'choosing a workspace keeps the old folders');
 });
+
+// ---------------------------------------------------------------------------------------------
+// No fast path may hand back an old photograph. The summary describes files *by path*, and the walk
+// that checks it sees paths appear and disappear - not a file whose bytes changed while its name
+// stayed the same. A review asked for that invariant to be proved rather than assumed; it did not
+// hold, and both halves were wrong: the diagram kept the previous source, the tree the previous
+// date. The fix is at the point where this panel writes, and `tools/probe.py` drives the whole thing
+// in a browser - this holds the mechanism so it cannot be removed without a red mark.
+{
+  const js = read('apps/crm/sidepanel.js');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('every write marks the function it rewrote', () => {
+    const at = code.indexOf('async function writeFile');
+    assert.ok(/noteWrite\(rel\)/.test(code.slice(at, at + 400)), 'a write leaves no mark');
+    assert.ok(/_rewritten\.add/.test(code), 'nothing records which files were rewritten');
+  });
+
+  test('both fast paths refuse what has been rewritten', () => {
+    assert.ok(/_rewritten\.has\(dg\)/.test(code), 'the tree trusts the summary for a file it just wrote');
+    assert.ok(/_rewritten\.has\(p\) \? null : known\[p\]/.test(code), 'the diagram does too');
+  });
+
+  test('the mark is cleared only when the summary has been written again', () => {
+    const at = code.indexOf('writeFile(META_INDEX');
+    assert.ok(/_rewritten = new Set\(\)/.test(code.slice(at, at + 200)),
+              'the set is cleared somewhere other than after the rewrite, so a load can lose a change');
+  });
+
+  test('Refresh distrusts the summary, for the writes this panel cannot see', () => {
+    // An editor, a `git checkout`, a synced folder: nothing marks those, and detecting them would
+    // cost a `getFile()` per file - the very reading the summary exists to avoid.
+    assert.ok(/_distrust = true/.test(code), 'Refresh no longer forces a full re-read');
+    const html = read('apps/crm/sidepanel.html');
+    assert.ok(/read every file again/.test(html), 'the button does not say that is what it does');
+  });
+}

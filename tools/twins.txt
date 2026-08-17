@@ -211,7 +211,7 @@ wasOwn	137c94652f18	137c94652f18	identical
 wireAsideFold	f549a11bd896	f549a11bd896	identical
 wireForget	aec6f1b54698	aec6f1b54698	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
-writeFile	b261151281b2	b261151281b2	identical
+writeFile	970f360fec56	b261151281b2	divergent
 writeSampleWorkspace	af9f7648decc	5a7d8829ecce	divergent
 wsLine	f5ef6e5dc8e9	f5ef6e5dc8e9	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent

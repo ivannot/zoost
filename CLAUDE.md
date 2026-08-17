@@ -63,6 +63,24 @@ Measured on 5,000 functions: opening 60,015 file-system calls -> **8** warm; the
 each source once - searching text means having read it - and that now happens in tranches with the
 count on screen instead of a dead panel.
 
+**A cache is not finished until you have proved it cannot serve an old photograph.** The summary
+above was checked against the folder walk and the comment said the readings «age exactly when the
+file changes, which the walk detects». They do not: a walk sees paths appear and disappear, not a
+file whose bytes changed while its name stayed the same. An outside review asked for the invariant to
+be *proved* rather than assumed - and both halves failed the first test written for it. A function
+pulled again in place kept its old references in the diagram, and its old date in the tree.
+
+The fix is at the point where this panel writes: every write marks the function it touched, the next
+load re-reads exactly those, and the mark clears only when the summary has been written out again.
+No fingerprint and no second read to check the first: we know what we wrote, because we wrote it.
+**What no cheap check can see is somebody else's write** - an editor, a `git checkout`, a synced
+folder - so ↻ Refresh now distrusts the summary and reads everything, and its tooltip says so.
+
+The rule this leaves: **for every fast path, write the test that tries to make it lie before you
+write the fast path.** `tools/probe.py` rewrites a source and a meta in a real browser and checks
+that the diagram and the tree both moved; it goes red on a one-line regression, which was proved by
+putting the defect back.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

@@ -495,6 +495,34 @@ function showAbout() {
 function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classList.remove('on'); }
 
 // ---------- filesystem ----------
+// Which function files this panel has rewritten since the summary was last trusted.
+//
+// `functions/meta-index.json` describes files *by path*, and the folder walk that checks it sees
+// paths appearing and disappearing - not a file whose bytes changed while its name stayed the same.
+// So a pull that refreshes a function in place, or a save picked up from Zoho, would leave the
+// summary describing the previous source: the tree would show the old date, and the diagram the old
+// calls. Found by a review that asked for the invariant to be *proved* rather than assumed, and it
+// did not hold.
+//
+// The fix is where the review put it first: at the point where we write. Every write through here
+// marks its function, the next load re-reads exactly those and writes the summary out again, and the
+// set is cleared when it has. No fingerprint, no second read to check a first one - we know what we
+// wrote, because we wrote it.
+//
+// What this cannot see is somebody else's write: an editor, a `git checkout`, a file copied in. That
+// is what ↻ Refresh is for, and it now drops the summary entirely rather than trusting it.
+let _rewritten = new Set();
+// «Non fidarti di niente»: ↻ Refresh legge di nuovo ogni file. It is the answer to the write this
+// panel cannot see - an editor, a `git checkout`, a folder synced from another machine - and it is
+// the reason the summary is allowed to be cheap the rest of the time: there is a control that says
+// «re-read it all», it is the one people already press when the disk changed under them, and its
+// tooltip says so.
+let _distrust = false;
+const noteWrite = (rel) => {
+  if (!rel.startsWith('functions/')) return;
+  if (rel.endsWith('.meta.json')) _rewritten.add(rel.replace(/\.meta\.json$/, '.dg'));
+  else if (rel.endsWith('.dg')) _rewritten.add(rel);
+};
 // The folders, remembered. Every read and every write resolved `functions/<namespace>/` from the
 // root again - two calls to the browser's file system before the one that does the work - so half of
 // what a pull and a load spend is asking for the same directory over and over. Measured: writing a
@@ -531,6 +559,7 @@ async function writeFile(rel, content) {
   const d = await dirFor(parts.slice(0, -1), true);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
+  noteWrite(rel);
 }
 async function readFile(rel) {
   const parts = rel.split('/');
@@ -957,13 +986,13 @@ async function rebuildTree() {
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
   if (!current()) return;
-  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (!_distrust && summary && summary.v === 1 && summary.files) ? summary.files : {};
   const missing = [];
   for (const mp of metaPaths) {
     const dg = mp.replace(/\.meta\.json$/, '.dg');
     const s = known[dg];
     const row = byPath.get(dg);
-    if (!s || !row) { missing.push(mp); continue; }
+    if (!s || !row || _rewritten.has(dg)) { missing.push(mp); continue; }
     row.downloaded = true;
     row.stale = (s.sv || 0) < META_SV;
     row.updatedTime = s.updatedTime || null;
@@ -1041,6 +1070,7 @@ async function saveMetaIndex(metaPaths) {
                         namespace: r.namespace || '', display_name: r.display_name || '' };
     });
     await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+    _rewritten = new Set(); _distrust = false;   // ciò che abbiamo riscritto è ora descritto
   } catch (_) {}
 }
 
@@ -1153,11 +1183,11 @@ async function loadGraph() {
   const nodes = [];
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
-  const known = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  const known = (!_distrust && summary && summary.v === 1 && summary.files) ? summary.files : {};
   let read = 0;
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;
-    const cached = known[p];
+    const cached = _rewritten.has(p) ? null : known[p];
     if (cached && Array.isArray(cached.refs) && cached.stats) {
       nodes.push({ namespace: cached.namespace || p.split('/')[0],
                    name: cached.name || p.split('/').pop().replace(/\.dg$/, ''),
@@ -1209,6 +1239,7 @@ async function saveGraphFacts(nodes, g) {
       entry.stats = nd.stats || (node && node.stats) || null;
     });
     await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+    _rewritten = new Set(); _distrust = false;   // ciò che abbiamo riscritto è ora descritto
   } catch (_) {}
 }
 async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
@@ -6127,7 +6158,7 @@ async function pullHealthRuntime() {
   finally { b.disabled = false; }
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } await rebuildActive(); };
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } _distrust = true; graphCache = null; codeCache = null; await rebuildActive(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;

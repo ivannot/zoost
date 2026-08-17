@@ -249,6 +249,29 @@ CRM = """
     $('pvtab_code').click(); await wait(300);
     if (getComputedStyle($('codecopy')).display === 'none') say('the copy button did not come back with the code');
 
+    // No fast path may hand back an old photograph. A file rewritten at the same path is what the
+    // summary cannot see by walking the folder, and a review asked for the invariant to be proved
+    // rather than assumed - it did not hold when it was asked. Both halves are checked: the source
+    // behind the diagram, and the meta behind the tree.
+    const victim = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+    if (victim) {
+      graphCache = null; await ensureGraph();
+      const idOf = (g) => Object.keys(g.nodes).find((k) => g.nodes[k].file === victim.path);
+      const g0 = await ensureGraph(); const before = g0.nodes[idOf(g0)].stats.lines;
+      await writeFile(victim.path, 'void v(){ standalone.log(); }\\n// one more line\\n');
+      graphCache = null;
+      const g1 = await ensureGraph(); const after = g1.nodes[idOf(g1)];
+      if (!after || after.stats.lines === before) say('the diagram still shows the source as it was before it was rewritten');
+      if (!after.refs.includes('standalone.log')) say('the references were not read again after the file changed');
+      const mp = victim.path.replace(/\\.dg$/, '.meta.json');
+      const meta = JSON.parse(await readFile(mp));
+      meta.updatedTime = '2099-01-01T00:00:00+00:00';
+      await writeFile(mp, JSON.stringify(meta, null, 2));
+      await rebuildTree(); await wait(700);
+      const row = treeData.find((e) => e.path === victim.path);
+      if (!row || row.updatedTime !== '2099-01-01T00:00:00+00:00') say('the tree still shows the date from the previous meta');
+    }
+
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];
