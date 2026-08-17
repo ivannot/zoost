@@ -38,6 +38,10 @@ fi
 
 echo
 echo "── unit: node ──"
+# The floor is stated rather than discovered. On node 19 the TAP reporter dies on a multi-byte
+# character split across a socket read and `tools/probe.py` stops with it - which reads as a defect
+# in the product and is a defect in the environment. Said here, once, at the moment it matters.
+node -e 'const m=+process.versions.node.split(".")[0]; if (m < 20) { console.error(`node ${process.versions.node}: this suite needs 20 or newer - on 19 the reporter dies mid-stream and it looks like a product failure`); process.exit(1); }'
 node --test --test-reporter=spec tests/*.test.mjs
 
 echo

@@ -118,7 +118,11 @@
       const mod = literal(args[sig.arg]);
       if (mod) add(mod, sig.mode, m[1]); else unknown++;
       // A task that names a second module names it as itself, not as a footnote to the first.
-      if (sig.parent !== undefined) { const p = literal(args[sig.parent]); if (p) add(p, sig.mode, m[1]); }
+      // Counted when it cannot be read, exactly like the first module. A call that names one module
+      // and computes the other was reported as fully understood - «every dynamic destination is
+      // declared» has to hold for the second one too, or the count quietly promises more than it
+      // knows.
+      if (sig.parent !== undefined) { const p = literal(args[sig.parent]); if (p) add(p, sig.mode, m[1]); else unknown++; }
       // The related list is a name this workspace also holds, so it is carried beside the module
       // rather than thrown away - it is what the reader actually wrote, and it can be looked up.
       if (sig.list !== undefined) {

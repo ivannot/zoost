@@ -5137,6 +5137,18 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/data-mod="Contacts"/.test(out), 'a V8 call does not link its module');
   });
 
+  test('a computed module is counted whichever argument it is', () => {
+    // Reported: `updateRelatedRecord("Sub", sid, parentModule, pid, values)` read `Sub` and returned
+    // `modulesUnknown: 0`, so a call that names one module and computes the other looked fully
+    // understood. «Every destination we cannot read is declared» has to hold for the second one too.
+    const n = mods('x = zoho.crm.updateRelatedRecord("Sub", sid, parentModule, pid, values);');
+    assert.deepEqual(n.modules.map((m) => m.name), ['Sub']);
+    assert.equal(n.modulesUnknown, 1, 'the computed parent module was not declared as unreadable');
+    // and both computed is two, not one
+    const b = mods('y = zoho.crm.updateRelatedRecord(sub, sid, parent, pid, values);');
+    assert.equal(b.modulesUnknown, 2, 'two unreadable destinations in one call were counted once');
+  });
+
   test('a task whose signature has not been read contributes nothing', () => {
     // Rather than guessing that it, too, takes the module first. It is a gap that is known.
     const gc = read('apps/crm/graph-core.js');
