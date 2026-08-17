@@ -33,7 +33,7 @@
     getRecordById: { mod: 0 }, getRecords: { mod: 0 }, searchRecords: { mod: 0 },
     getRelatedRecords: { rel: 0, mod: 1 },
     createRecord: { mod: 0 }, updateRecord: { mod: 0 },
-    upsert: { mod: 0 }, attachFile: { mod: 0 }, bulkUpdate: { mod: 0 },
+    upsert: { mod: 0 }, attachFile: { mod: 0 }, bulkUpdate: { mod: 0 }, bulkCreate: { mod: 0 },
     updateRelatedRecord: { mod: 0, parent: 2 },
     // Same list as `MODULE_TASK` in graph-core.js and for the same reason: only signatures somebody
     // has read. A task in one and not the other would link a word the reading does not count.
@@ -47,7 +47,7 @@
    *  wrong; this reads the call as a whole, which is the only way the *positions* can be right. */
   function argMarks(code) {
     const marks = new Map();
-    const call = /\bzoho\.crm\.(\w+)\s*\(/g;
+    const call = /\bzoho\.crm\.(?:v8\.)?(\w+)\s*\(/g;   // the V8 family is the same list under a prefix
     let m;
     while ((m = call.exec(code))) {
       const sig = ARGS[m[1]]; if (!sig) continue;

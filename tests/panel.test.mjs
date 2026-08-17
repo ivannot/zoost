@@ -5125,6 +5125,18 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.deepEqual(b.modules, [{ name: 'Reminders', mode: 'write', via: 'bulkUpdate' }]);
   });
 
+  test('the V8 family is the same list under a prefix', () => {
+    // `zoho.crm.v8.getRecordById(...)` - same name, same argument order, one prefix. Until it was
+    // allowed for, the pattern could not match a name with a dot in front of it, so every V8 call
+    // was invisible: no module read, no link, and nothing on screen to say so.
+    const n = mods('a = zoho.crm.v8.getRecordById("Contacts", id);\nb = zoho.crm.v8.bulkCreate("Leads", lst);');
+    assert.deepEqual(n.modules.map((m) => m.name).sort(), ['Contacts', 'Leads']);
+    const h = {};
+    new Function('window', read('apps/crm/highlight.js'))(h);
+    const out = h.highlightDeluge('a = zoho.crm.v8.getRecordById("Contacts", id);', null, (x) => x === 'Contacts' ? x : null);
+    assert.ok(/data-mod="Contacts"/.test(out), 'a V8 call does not link its module');
+  });
+
   test('a task whose signature has not been read contributes nothing', () => {
     // Rather than guessing that it, too, takes the module first. It is a gap that is known.
     const gc = read('apps/crm/graph-core.js');

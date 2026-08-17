@@ -2038,6 +2038,20 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
 //
 // The header is measured rather than assumed: it is a column row in one product and a group label
 // in the other, both `position: sticky`, and both change height with the font a reader has set.
+/** Mark a row as the selected one **and bring it into view** - one act, which was five.
+ *
+ *  Every list here had the first half; only the functions tree had the second, so a jump from a
+ *  health row, a link in the code or a step of the history selected a module, a workflow or a
+ *  connection that the reader then had to scroll to find. Reported exactly that way: «l'item
+ *  evidenziato deve sempre essere visibile». `openFile()` keeps its own two lines because it also
+ *  moves the arrow anchor; everything else calls this, so the next list inherits both halves.
+ */
+function selectRow(path) {
+  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
+  const row = [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
+  revealRow(row, $('tree'), '.grp');
+}
+
 function revealRow(el, box, stickySel) {
   if (!el || !box) return;
   const b = box.getBoundingClientRect();
@@ -4500,7 +4514,7 @@ function renderLayoutView(layout) {
 async function openModule(path, layoutId) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh.', 'bad'); return; }
   currentPath = path; navHere(); if ($('status').className) setStatus('', '');
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
+  selectRow(path);
   let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
   navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
              gen: m.module_name || m.api_name, api: m.api_name });
@@ -5505,7 +5519,7 @@ async function refreshSchedules() {
 }
 async function openSchedule(e) {
   currentPath = e.path; navHere(e.name);
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
+  selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
@@ -5936,7 +5950,7 @@ function mappingHtml(m) {
 const prettyTrigger = (t) => String(t || '').replace(/^\$\{!?/, '').replace(/\}$/, '') || 'the trigger';
 function openAction(a) {
   currentPath = a.path; navHere(a.name || a.id);
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === a.path));
+  selectRow(a.path);
   setPvName(a.name || a.id, 'actions/index.json');
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);
   // Absent rather than disabled, which is this panel's rule: for a webhook there is no page anyone
@@ -6078,7 +6092,7 @@ async function refreshConnections() {
 }
 function openConnection(c) {
   currentPath = c.path; navHere(c.label || c.name);
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === c.path));
+  selectRow(c.path);
   setPvName(c.label || c.name, c.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = 'none'; $('pvfind').style.display = 'none';
@@ -6216,7 +6230,7 @@ async function openWorkflow(e) {
   if (!e.downloaded) { const ok = await downloadOneWf(e); updateRow(e); updateMissingButton(); if (!ok) { setStatus('Could not download this workflow.', 'warn'); return; } }
   let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus(MSG.readFailed + err.message, 'bad'); return; }
   currentPath = e.path; navHere(e.name);
-  document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === e.path));
+  selectRow(e.path);
   setPvName(e.name, e.path);
   $('pvcallers').className = ''; $('pvcallers').textContent = ''; pvTabsFor(null);   // else the last function's callers/connections bar lingers
   $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';

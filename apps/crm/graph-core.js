@@ -65,7 +65,7 @@
     getRelatedRecords: { mode: 'read', arg: 1, list: 0 },
     createRecord: { mode: 'write', arg: 0 }, updateRecord: { mode: 'write', arg: 0 },
     upsert: { mode: 'write', arg: 0 }, attachFile: { mode: 'write', arg: 0 },
-    bulkUpdate: { mode: 'write', arg: 0 },
+    bulkUpdate: { mode: 'write', arg: 0 }, bulkCreate: { mode: 'write', arg: 0 },
     // Two modules in one call: the sub module it writes, and the parent it hangs from - which is
     // the third argument, not the second. Another signature that no pattern would have got right.
     updateRelatedRecord: { mode: 'write', arg: 0, parent: 2 },
@@ -75,8 +75,15 @@
     // wrong word in somebody's real code. `deleteRecord`, `bulkUpdate` and `upsertRecord` have no
     // page under /deluge/help/crm/ and are deliberately absent: a task whose signature nobody here
     // has read contributes nothing rather than a guess. `deleteRecord` and `upsertRecord` are not
-    // task names at all - the pages that look like theirs document `zoho.crm.upsert` - so nothing is
-    // missing here that the documentation names.
+    // task names at all - the page that looks like the second documents `zoho.crm.upsert`.
+    //
+    // **The V8 family is the same list under another prefix.** `zoho.crm.v8.getRelatedRecords(...)`
+    // is the same task with the same argument order and a longer tail of optional parameters, so
+    // the prefix is optional in the pattern rather than a second table - and, until it was, every
+    // V8 call was invisible here: `zoho.crm.(\w+)\(` cannot match a name with a dot in front of it,
+    // so those orgs' modules simply did not appear, in silence. `getFields` and `convertLead` are
+    // left out: the first reads a module's *metadata* rather than its records, and the second names
+    // no module at all - neither has been read closely enough to claim.
   };
   // Not a module, whatever follows it in a url: these are the API's own endpoints.
   const NOT_A_MODULE = /^(coql|settings|org|users|functions|actions|__|v\d)/i;
@@ -103,7 +110,7 @@
     let m;
     const lists = new Map();
     // The first two arguments, because that is as far as any documented signature puts a module.
-    const task = /\bzoho\.crm\.(\w+)\s*\(\s*([^,)]*)(?:,\s*([^,)]*))?(?:,\s*([^,)]*))?/g;
+    const task = /\bzoho\.crm\.(?:v8\.)?(\w+)\s*\(\s*([^,)]*)(?:,\s*([^,)]*))?(?:,\s*([^,)]*))?/g;
     const literal = (a) => { const l = String(a || '').trim().match(/^"([^"]*)"$|^'([^']*)'$/); return l ? (l[1] !== undefined ? l[1] : l[2]) : null; };
     while ((m = task.exec(bare))) {
       const sig = MODULE_TASK[m[1]]; if (!sig) continue;

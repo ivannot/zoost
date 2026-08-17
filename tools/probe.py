@@ -390,6 +390,14 @@ CRM = """
         const row = [...document.querySelectorAll('#tree .f')].find((e) => /Contacts/.test(e.textContent));
         if (row) {
           row.click(); await wait(1200);
+          // and it has to be *visible*: a jump that selects a row below the fold is a jump the
+          // reader has to go looking for. Reported that way, on a module opened from the code.
+          const sel = document.querySelector('#tree .f[aria-selected="true"]');
+          if (sel) {
+            const b = $('tree').getBoundingClientRect(), r = sel.getBoundingClientRect();
+            if (r.bottom < b.top + 1 || r.top > b.bottom - 1)
+              say('the selected module is outside the list box - it has to be scrolled to');
+          }
           $('pvtab_info').click(); await wait(900);
           const txt = $('pvcallers').textContent || '';
           if (!/Read by|Written by|No function reads/.test(txt))
