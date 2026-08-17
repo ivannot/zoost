@@ -4915,6 +4915,20 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     }
   });
 
+  test('a summary written by an older reader is discarded, never trusted', () => {
+    // The whole safety of storing a *reading*: when what the extractor writes changes meaning, the
+    // file on disk is not stale-looking, it is confidently wrong - and nothing re-reads a source the
+    // summary already describes. Reported after `modulesUnknown` changed meaning and the version did
+    // not: fresh parse said 1, the cached path still said 0. So every reader compares against the
+    // constant, and no reader may carry a number of its own.
+    const readers = code.match(/\.v === [\w.]+/g) || [];
+    assert.ok(readers.length >= 2, 'nobody checks the summary version');
+    for (const r of readers) {
+      assert.ok(/SUMMARY_V/.test(r), `a reader compares the version against a literal: ${r}`);
+    }
+    assert.ok(/v: SUMMARY_V/.test(code), 'the writer stamps a literal version instead of the constant');
+  });
+
   test('the module index is forgotten when the pull rewrites it', () => {
     // `modNamesCache` is what turns a name read out of Deluge into a module of *this* org. A pull
     // that rewrites the index changes that answer, and the index is deliberately not a «module

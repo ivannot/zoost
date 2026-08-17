@@ -169,7 +169,14 @@ const META_INDEX = 'functions/meta-index.json';
 // which is the cheapest honest answer: one slow open, then back to one read. It moved to 2 when the
 // call extractor stopped counting names inside comments and strings, because every `refs` on disk
 // was the previous reader's answer and nothing else would ever have said so.
-const SUMMARY_V = 3;
+// 4: `modulesUnknown` stopped meaning what a v3 file says it means - a call that names one module
+// and computes the other used to count 0 unreadable destinations and now counts 1. A workspace
+// indexed before that fix would have gone on serving the old number for ever, because nothing
+// re-reads a source the summary already describes. Reported from a diff of the two paths:
+// `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
+// same commit** - the test below holds the readers to it, but only a person can know the meaning
+// changed.
+const SUMMARY_V = 4;
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
