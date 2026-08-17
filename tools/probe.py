@@ -428,6 +428,33 @@ CRM = """
       }
     }
 
+    // The whole path, not its parts: a summary written by an older reader on disk, an ordinary open,
+    // and the numbers that come back. `modulesUnknown` changed meaning without the version moving,
+    // and a workspace indexed before that answered the old number for ever - because nothing re-reads
+    // a source the summary already describes. Nothing is marked dirty here on purpose: the only
+    // reason the old file must be refused is its version.
+    {
+      graphCache = null;
+      const g0 = await ensureGraph();
+      const node0 = Object.values(g0.nodes).find((n) => n.file && n.modules);
+      if (!node0) say('no node carries a module reading to write down');
+      const truth = node0.modulesUnknown || 0;
+      const summary = JSON.parse(await readFile('functions/meta-index.json'));
+      const files = {};
+      for (const [k, v] of Object.entries(summary.files)) files[k] = { ...v, modulesUnknown: 99 };
+      // written as a *previous* version would have written it
+      await writeFile('functions/meta-index.json', JSON.stringify({ v: 3, sv: summary.sv, files }, null, 2));
+      graphCache = null;
+      const g1 = await ensureGraph();
+      const node1 = g1.nodes[node0.id];
+      if (!node1 || node1.modulesUnknown === 99)
+        say('a summary from an older reader was trusted: modulesUnknown came back 99');
+      if ((node1.modulesUnknown || 0) !== truth)
+        say(`the recomputed count is ${node1.modulesUnknown}, the source says ${truth}`);
+      const after = JSON.parse(await readFile('functions/meta-index.json'));
+      if (after.v === 3) say('the old summary was read and left on disk at its old version');
+    }
+
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from
