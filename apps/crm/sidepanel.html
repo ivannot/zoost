@@ -524,7 +524,11 @@
   #pvhead .reveal{cursor:pointer;color:#9fc4f5;flex:none;background:rgba(47,111,237,.14);border:1px solid #3f6ea8;border-radius:6px;padding:3px 9px;font:11px var(--sans);font-weight:600}
   #pvhead .reveal:hover,#pvhead .reveal2:hover{background:rgba(47,111,237,.26);border-color:var(--sel);color:#cfe1fb}
   #pvhead .x{cursor:pointer;color:var(--muted);flex:none}
-  #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b}
+  /* It scrolls itself. On a function it holds a handful of callers; on a module it holds every
+     function that reads or writes it - 19 and 12 on a real org - and without a limit of its own
+     it grew the whole panel: the footer left the bottom of the window and the scrollbar that
+     appeared moved the extension instead of this box. Reported with a picture. */
+  #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b;overflow:auto;min-height:0;max-height:45vh}
   #pvcallers.show{display:block} #pvcallers b{color:var(--ink)} #pvcallers a{color:var(--sel);cursor:pointer}
   /* `#pvcallers a` is an id selector and `.wf-fn:hover` is not, so the chip's hover colour lost to
      it and the label stayed blue on a blue fill - unreadable, reported with a picture. The chip is

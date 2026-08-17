@@ -1572,7 +1572,14 @@ async function showModuleUsage(api) {
       + (blind ? ` \u00b7 ${blind} call(s) across the org name the module in a variable and cannot be attributed` : '')
       + '</div>';
     box.innerHTML = html;
-    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file)));
+    // A function opened from a module lives on the other tab, so the tab has to move with it -
+    // `openFile()` alone left the list showing modules while the detail showed a function, which is
+    // the panel reading as if it had lost its place. Reported. Same two calls every other cross-tab
+    // jump here makes, rather than a second way of doing it.
+    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => {
+      if (!tabReachable('functions')) return;
+      setMode('functions'); openFromTree(a.dataset.file);
+    }));
   } catch (_) { box.className = ''; }
 }
 async function showCallers(path) {
@@ -2062,7 +2069,21 @@ function applySelection() {
   if (!currentPath) return;
   const box = $('tree'); if (!box) return;
   const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === currentPath);
-  if (row) revealRow(row, box, '.grp');
+  if (!row) return;
+  // **Arriving** is not **stepping**, and they want different things. `revealRow()` scrolls the least
+  // it can - the right answer for the arrows, where a list that jumps under you is worse than one
+  // that barely moves - but it means a jump lands at the top edge when you came from below and at
+  // the bottom edge when you came from above, which reads as two behaviours. Reported that way.
+  // A jump puts the row a couple of rows down from the top of the list instead: one place, always,
+  // with what precedes it visible.
+  const st = box.querySelector('.grp');
+  const cover = st ? st.getBoundingClientRect().height : 0;
+  const rb = row.getBoundingClientRect(), bb = box.getBoundingClientRect();
+  // The lead is two rows of context above, but never more than the box can spare: with the detail
+  // pane open the list is 68px, and a fixed lead there would push the row it is placing off the
+  // bottom - which is how the first version of this managed to hide the thing it was revealing.
+  const lead = Math.max(0, Math.min(rb.height * 2, bb.height - cover - rb.height * 2));
+  box.scrollTop += (rb.top - bb.top - cover - lead);
 }
 
 /** Open the detail pane - one function, because opening it is what shrinks the list, and the six

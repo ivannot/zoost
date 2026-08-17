@@ -408,6 +408,17 @@ CRM = """
           if (r.bottom < b.top + 1 || r.top > b.bottom - 1)
             say('the selected module is outside the list box - it has to be scrolled to');
           $('pvtab_info').click(); await wait(900);
+          // A «Read by» chip opens a function, which lives on the other tab: the tab has to come
+          // with it, or the list shows modules while the detail shows a function. Reported.
+          const rb = $('pvcallers').querySelector('a.wf-fn[data-file]');
+          if (rb) {
+            rb.click(); await wait(1400);
+            if (viewMode !== 'functions') say('a function opened from a module left the tab on ' + viewMode);
+            const segM = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
+            if (segM) { segM.click(); await wait(900); }
+            const row2 = [...document.querySelectorAll('#tree .f')].find((e) => /Contacts/.test(e.textContent));
+            if (row2) { row2.click(); await wait(1000); $('pvtab_info').click(); await wait(600); }
+          }
           const txt = $('pvcallers').textContent || '';
           if (!/Read by|Written by|No function reads/.test(txt))
             say('the module detail does not say what code does with it: ' + txt.slice(0, 80));
