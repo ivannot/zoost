@@ -366,6 +366,14 @@ CRM = """
       if (getComputedStyle(links[0]).cursor !== 'pointer') say('the module link does not say it is clickable');
       links[0].click(); await wait(1400);
       if (viewMode !== 'modules') say('clicking the module in the code did not open the Modules tab');
+      // and back: going back changes tab, so the list is rebuilt - the reveal used to run against
+      // the rows of a moment earlier and the function came back selected below the fold.
+      $('pvback').click(); await wait(1600);
+      const selF = document.querySelector('#tree .f[aria-selected="true"]');
+      if (!selF) say('nothing is selected in the functions list after going back');
+      const bf = $('tree').getBoundingClientRect(), rf = selF.getBoundingClientRect();
+      if (rf.bottom < bf.top + 1 || rf.top > bf.bottom - 1)
+        say('the function we came back to is outside the list box');
       const back2 = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
       if (back2) { back2.click(); await wait(700); }
     }

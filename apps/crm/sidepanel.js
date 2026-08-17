@@ -1101,6 +1101,13 @@ async function rebuildTree() {
   }
   if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
+  // The load is over, so the rows exist. Anything that selected one *while* this was running -
+  // coming back from a module, a step of the history, a link that changed tab - marked and revealed
+  // against a tree that was still being drawn, and the reader arrived to find their function
+  // selected somewhere below the fold. Reported exactly that way. Put here rather than in each
+  // caller because this is the one point every draw of this list passes through, and a caller that
+  // arrives tomorrow inherits it without being told.
+  if (currentPath && currentPath.endsWith('.dg')) selectRow(currentPath);
   if (stale_summary) await saveMetaIndex(metaPaths);
   const dl = treeData.filter((e) => e.downloaded).length;
   setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok');
@@ -4332,6 +4339,11 @@ async function rebuildModules() {
   if (!current()) return;
   moduleData = rows;          // published once, whole - never a list two loads are both writing into
   renderModules();
+  // The same rule as the functions tree, and it is needed here for the same reason twice over: a
+  // jump selects the row and *then* this finishes drawing, so the mark landed on rows that were
+  // replaced a moment later. On a big org the window is wide enough to see it - reported on a
+  // module opened from a call, selected and not visible.
+  if (currentPath && currentPath.startsWith('modules/')) selectRow(currentPath);
   setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
 }
