@@ -199,6 +199,7 @@ d526906a4512534d  site/docs-crm.html: All of it comes from what is already on yo
 bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a search across every function's source at once - four matches in two files here, with the line each was found on.
 1631422a9c9bb1e3  site/docs-crm.html: Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.
 695566f1704feaf3  site/docs-crm.html: Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
+c0a970763287a425  site/docs-crm.html: Code you have commented out does not count as a call, so a function whose only mention is a disabled line is named here rather than left looking alive.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 950840e2d70d406e  site/docs-crm.html: Each control appears only when it has somewhere to take you.
 8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
@@ -521,7 +522,7 @@ c984d6d3984f9952  site/it/docs-crm.html: Come nell'elenco delle funzioni, qualsi
 cdfaa0d9c12ccf03  site/it/docs-crm.html: Conosce anche la dimensione di ogni funzione e i conteggi delle chiamate in uscita, e può usarli per filtrare - così «quante funzioni sono più lunghe di 150 righe?» oppure «quali fanno più di cinque chiamate API?» hanno una risposta presa dai numeri, non stimata.
 1f656fadc8656407  site/it/docs-crm.html: Conteggi, senza nessun verdetto: una funzione che fallisce cinque volte all'ora per come è fatta non sta peggio di una fallita una volta sola.
 af6e9c12d1fb4a66  site/it/docs-crm.html: Coprono tutte le funzioni e non costano niente da calcolare, ma sono una stima di quanto una funzione costa.
-6d9de7f783a4e01e  site/it/docs-crm.html: Cosa sta fallendo davvero L'audit di salute legge lo specchio e trova sospetti strutturali - una funzione che non chiama nessuno, una chiamata che non risolve.
+d8aca002fe82ab7b  site/it/docs-crm.html: Cosa sta fallendo davvero L'audit di salute legge lo specchio e trova sospetti strutturali - una funzione che nessuno chiama, una chiamata che non risolve.
 7dbcfb080eddba2c  site/it/docs-crm.html: Dare un nome a un workspace Il nome nell'elenco dei workspace viene dalla piattaforma, e la piattaforma non è sempre d'aiuto: l'id di un'istanza Zoho CRM è esatto senza essere memorabile, e due sandbox della stessa org non si distinguono a colpo d'occhio.
 ed8156dc957a672b  site/it/docs-crm.html: Decidi consapevolmente, ogni volta.
 c4759d38fe05e15f  site/it/docs-crm.html: Dice cosa se ne va e cosa resta prima di agire: la chiave cifrata viene rimossa e la protezione disattivata, i nomi dei modelli e ogni altra impostazione restano; la chiave API la incolli di nuovo dalla dashboard del tuo provider.
