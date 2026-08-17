@@ -1449,7 +1449,7 @@ async function openFile(path, line = null) {
     : escHtml(code);
   $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
 }
@@ -2046,6 +2046,34 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
  *  evidenziato deve sempre essere visibile». `openFile()` keeps its own two lines because it also
  *  moves the arrow anchor; everything else calls this, so the next list inherits both halves.
  */
+/** Move the view to the current item. Called when the geometry is final, never by whoever opened it.
+ *
+ *  Measured rather than guessed, after five attempts that were not. The recorded sequence of one
+ *  jump reads: the list is drawn, the reveal runs and finds the row **inside** a 376px box so it
+ *  correctly does nothing, and only *then* the detail pane opens and the box becomes 68px. Nothing
+ *  reveals after that, so whether the row is still on screen depends on where the scroll happened to
+ *  be - which is exactly what «random» looks like from the outside.
+ *
+ *  So the event is not «the list has been drawn»: it is «the pane has opened», which is what changes
+ *  the height. Reading the row's rect here forces the pending layout, so this sees the new geometry
+ *  and not the old.
+ */
+function applySelection() {
+  if (!currentPath) return;
+  const box = $('tree'); if (!box) return;
+  const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === currentPath);
+  if (row) revealRow(row, box, '.grp');
+}
+
+/** Open the detail pane - one function, because opening it is what shrinks the list, and the six
+ *  places that used to do it by hand each left the selected row wherever it happened to be. */
+function showPreview() {
+  $('preview').classList.add('show');
+  $('resizer').classList.add('show');
+  resetPreviewScroll();
+  applySelection();
+}
+
 function selectRow(path) {
   document.querySelectorAll('.f').forEach((x) => x.setAttribute('aria-selected', x.dataset.path === path));
   const find = () => [...$('tree').querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === path);
@@ -4598,7 +4626,7 @@ async function openModule(path, layoutId) {
   const mod = document.getElementById('laymod');
   if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayout(m.module_name || m.api_name, v === '__all__' ? null : v); };
   if (layoutId && sel) { sel.value = String(layoutId); if (sel.value === String(layoutId)) await sel.onchange(); }
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
 }
 
 // ---------- modules: schema graph (modules as nodes, lookups as edges) + function bridge ----------
@@ -5548,7 +5576,7 @@ async function openSchedule(e) {
     + (e.next ? `<div class="wfrow"><span class="wk">Next run</span> ${escHtml(e.next)}</div>` : '')
     + (e.last ? `<div class="wfrow"><span class="wk">Last run</span> ${escHtml(e.last)}</div>` : '')
     + `</div>`;
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
   $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });
 }
 
@@ -6035,7 +6063,7 @@ function openAction(a) {
   $('pvtable').innerHTML = h;
   $('pvtable').querySelectorAll('a[data-wf]').forEach((el) => (el.onclick = () => healthOpenWorkflow(el.dataset.wf)));
   $('pvtable').querySelectorAll('a[data-tpl]').forEach((el) => (el.onclick = () => openZohoAt(templateUrl(a), (a.template && a.template.name) || 'template')));
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
 }
 
 // ---------- connections view (org-wide catalogue + usage) ----------
@@ -6127,7 +6155,7 @@ function openConnection(c) {
   h += '</div>';
   $('pvtable').innerHTML = h;
   $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file); }));
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
 }
 /** A timestamp the reader can act on. The failures endpoint answers with two forms of the same
  *  moment - `last_failed_time` already localized into the user's own format, and an ISO one beside
@@ -6252,7 +6280,7 @@ async function openWorkflow(e) {
   $('pvreveal').style.display = ''; $('pvreveal').textContent = MSG.openInZoho; $('pvreveal').title = 'Open the workflow in Zoho'; $('pvfind').style.display = 'none';
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
-  $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
+  showPreview();
   $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });
   const _ub = $('pvtable').querySelector('.wfusage'); if (_ub) _ub.onclick = () => loadWorkflowUsage(_ub.dataset.wfid, $('pvtable').querySelector('.wfusage-out'), _ub);
 }
