@@ -300,6 +300,33 @@ CRM = """
         say(`the summary lost the references the diagram had written: ${JSON.stringify(e.refs)}`);
     }
 
+    // Two producers, one file. Both used to do read-modify-write on the summary, so whoever wrote
+    // second restored the fields the other had just changed - the oldest race there is, and it was
+    // reachable on any cold open, where the tree load and the diagram build both write. Run together
+    // in both orders: each half must survive the other.
+    {
+      const g2 = await ensureGraph();
+      const p2 = treeData.find((e) => e.downloaded && e.path.endsWith('.dg')).path;
+      const metaPaths2 = treeData.filter((e) => e.downloaded).map((e) => e.path.replace(/\\.dg$/, '.meta.json'));
+      const nodes2 = Object.values(g2.nodes).filter((n) => n.file).map((n) => ({
+        namespace: n.namespace, name: n.name, api_name: n.api_name, display_name: n.display_name,
+        category: n.category, source: n.source, rest: n.rest, file: n.file, refs: n.refs, stats: n.stats }));
+      const row2 = treeData.find((e) => e.path === p2);
+      const was = row2.stale;
+      row2.stale = true;
+      await Promise.all([saveMetaIndex(metaPaths2), saveGraphFacts(nodes2, g2)]);
+      let s2 = JSON.parse(await readFile('functions/meta-index.json'));
+      let e2 = s2.files[p2] || {};
+      if (e2.sv !== 1) say(`the graph writer put back the stale mark the meta writer had just set (sv=${e2.sv})`);
+      if (!Array.isArray(e2.refs)) say('the meta writer dropped the references the graph writer had just written');
+      row2.stale = false;
+      await Promise.all([saveGraphFacts(nodes2, g2), saveMetaIndex(metaPaths2)]);
+      s2 = JSON.parse(await readFile('functions/meta-index.json'));
+      e2 = s2.files[p2] || {};
+      if (e2.sv !== 2 || !Array.isArray(e2.refs)) say(`the other order loses something too: sv=${e2.sv} refs=${Array.isArray(e2.refs)}`);
+      row2.stale = was;
+    }
+
     // A tab the reader hid in Settings is still somewhere a link can land. The row must show it
     // while we are on it, or the panel reads as having lost its place.
     tabPrefs.hidden = ['workflows'];

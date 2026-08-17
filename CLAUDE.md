@@ -92,6 +92,19 @@ await** and each writer clears **only its own**, so there is no ordering to reas
 was reachable only above `STATS_LIMIT`, where the build does not happen during the load - which is
 exactly the kind of window that is never hit in testing and always hit by somebody's real org.
 
+**And when two producers write one file, give the file one writer.** Both savers did
+read-modify-write on the summary, and merging was not enough: each read version X, each merged its
+own half, and whoever wrote second put back what the other had just changed. Proved by marking a
+function stale and running the two together - the file came back saying it was fresh, undone by the
+writer that has no opinion about that field at all. `updateMetaIndex(mutator)` queues each change
+behind the one in flight and reads the merge base *inside* the queue, so there is one writer and two
+producers. No lock and no version field: the contention is between two known callers in one document.
+
+The half worth remembering is the diagnosis. Each of the three defects in this cache was found by
+someone asking *how do the two halves interleave* and refusing «the promises resolve favourably» as
+an answer - and each time the fix was not more bookkeeping but a sharper question: **what is a fact,
+who produced it, and who has the authority to call it fresh.**
+
 The rule this leaves: **for every fast path, write the test that tries to make it lie before you
 write the fast path.** `tools/probe.py` rewrites a source and a meta in a real browser and checks
 that the diagram and the tree both moved; it goes red on a one-line regression, which was proved by

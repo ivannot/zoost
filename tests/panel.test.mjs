@@ -4756,9 +4756,13 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   });
 
   test('the mark is cleared only when the summary has been written again', () => {
-    const at = code.indexOf('writeFile(META_INDEX');
-    assert.ok(/_dirtyMeta\.delete/.test(code.slice(at, at + 300)),
-              'the marks are cleared somewhere other than after the rewrite, so a load can lose a change');
+    // The write now happens inside the queue, so «after the rewrite» means «after the mutator this
+    // saver queued has been awaited» - which is what the `await updateMetaIndex(...)` before the
+    // delete says.
+    const body = code.slice(code.indexOf('async function saveMetaIndex'), code.indexOf('async function saveGraphFacts'));
+    const queued = body.indexOf('await updateMetaIndex('), cleared = body.indexOf('_dirtyMeta.delete');
+    assert.ok(queued >= 0 && cleared > queued,
+              'the marks are cleared before the write they depend on has happened');
   });
 
   test('Refresh distrusts the summary, for the writes this panel cannot see', () => {
@@ -4782,7 +4786,9 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   const js = read('apps/crm/sidepanel.js');
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (name) => {
-    const at = code.indexOf('async function ' + name);
+    // async or not: the helper should find the function, not assert a keyword nobody promised.
+    let at = code.indexOf('async function ' + name);
+    if (at < 0) at = code.indexOf('function ' + name);
     assert.ok(at > 0, `${name} is gone`);
     return code.slice(at, code.indexOf('\n}', at));
   };
@@ -4809,8 +4815,52 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // The first version rewrote the whole file with the metadata half, throwing away every reference
     // and size the diagram had written. Nothing broke - the graph simply read five thousand sources
     // again - which is exactly why it survived until somebody asked how the two writers interleave.
-    const body = fn('saveMetaIndex');
-    assert.ok(/prev\.files/.test(body), 'the previous summary is not read back before writing');
-    assert.ok(!/const files = \{\};/.test(body), 'the file is rebuilt from scratch again');
+    // The merge now lives in the one writer, so this is where it is checked - and the producers must
+    // not carry their own copy of it, or there would be two merge bases again.
+    const q = fn('updateMetaIndex');
+    assert.ok(/prev\.files/.test(q), 'the single writer does not read what is already there');
+    for (const name of ['saveMetaIndex', 'saveGraphFacts']) {
+      assert.ok(!/readFile\(META_INDEX\)/.test(fn(name)), `${name} reads the summary itself again`);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// One writer, two producers. Both savers did read-modify-write on the same file, so whoever wrote
+// second restored what the other had just changed - proved by marking a function stale and running
+// them together: the file came back saying it was fresh, undone by a writer that does not even have
+// an opinion about that field. A promise chain is enough here: the contention is between two known
+// callers inside one document, not between processes.
+{
+  const js = read('apps/crm/sidepanel.js');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = (name) => code.slice(code.indexOf('function ' + name), code.indexOf('\n}', code.indexOf('function ' + name)));
+
+  test('the summary has exactly one writer', () => {
+    const writes = (code.match(/writeFile\(META_INDEX/g) || []).length;
+    assert.equal(writes, 1, `${writes} places write the summary; it must be one`);
+    assert.ok(/function updateMetaIndex/.test(code), 'there is no single writer to queue behind');
+    for (const name of ['saveMetaIndex', 'saveGraphFacts']) {
+      assert.ok(/updateMetaIndex\(/.test(fn(name)), `${name} writes the file itself instead of queueing`);
+    }
+  });
+
+  test('the merge base is read inside the queue, not before it', () => {
+    const q = fn('updateMetaIndex');
+    const readAt = q.indexOf('readFile(META_INDEX)');
+    const chainAt = q.indexOf('_metaIndexWrites.then');
+    assert.ok(chainAt >= 0 && readAt > chainAt,
+              'the summary is read outside the chain, so two mutators can share a stale base');
+  });
+
+  test('neither producer writes the other half', () => {
+    // `sv` and `updatedTime` come from a `.meta.json`; refs and stats from a `.dg`. A producer that
+    // writes a field it has not read is how a merge turns into a lost update.
+    const graph = fn('saveGraphFacts');
+    assert.ok(!/entry\.sv\s*=/.test(graph), 'the graph writer sets the stale mark, which it cannot know');
+    assert.ok(!/entry\.updatedTime\s*=/.test(graph), 'the graph writer sets the modified date, which it cannot know');
+    const meta = fn('saveMetaIndex');
+    assert.ok(!/\.refs\s*=/.test(meta) && !/\.stats\s*=/.test(meta),
+              'the meta writer sets source-derived facts');
   });
 }

@@ -1080,21 +1080,37 @@ async function rebuildTree() {
  *  A failure here is not worth a message: the summary is a cache, the next load simply reads the
  *  metas again. What would be worth a message is the panel appearing to work while the mirror is
  *  wrong, which is why nothing else depends on this file. */
-async function saveMetaIndex(metaPaths) {
-  try {
-    // Merged, never rewritten from scratch. Two writers share this file - this one describes what a
-    // `.meta.json` says, `saveGraphFacts()` what a `.dg` says - and the first version of this
-    // replaced the whole thing with its own half, silently throwing away every reference and size
-    // the diagram had written. Nothing broke, which is why it survived: the graph simply read five
-    // thousand sources again, and the summary looked complete while being useless to it. Found by a
-    // review asking how the two writers interleave; the answer was that they did not interleave at
-    // all, one of them just deleted the other's work.
+/** The one writer of `functions/meta-index.json`.
+ *
+ *  Two producers put facts in this file - what a `.meta.json` says, and what a `.dg` says - and both
+ *  did read-modify-write on it. That is the oldest race there is: each reads version X, each merges
+ *  its own half into X, and whoever writes second restores the fields the other had just changed.
+ *  Proved rather than argued: marking a function stale and running the two savers together left the
+ *  file saying it was fresh, because the graph writer's merge base predated the mark - and it does
+ *  not even write that field.
+ *
+ *  So the file has one writer and two producers. A mutator is queued behind whatever is already in
+ *  flight, and the read happens *inside* the queue, so every merge base is the file as it stands.
+ *  No lock, no version field, no retry: a promise chain is enough because the contention is between
+ *  two known callers in one document, not between processes.
+ */
+let _metaIndexWrites = Promise.resolve();
+function updateMetaIndex(mutate) {
+  _metaIndexWrites = _metaIndexWrites.then(async () => {
     let files = {};
     try {
       const prev = JSON.parse(await readFile(META_INDEX));
       if (prev && prev.v === 1 && prev.files) files = prev.files;
     } catch (_) {}
-    const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
+    await mutate(files);
+    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
+  }).catch(() => {});   // a summary that cannot be written is a cache that will be rebuilt, not a failure
+  return _metaIndexWrites;
+}
+
+async function saveMetaIndex(metaPaths) {
+  const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
+  await updateMetaIndex((files) => {
     Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // sparito dal disco
     treeData.forEach((r) => {
       if (!onDisk.has(r.path)) return;
@@ -1102,11 +1118,10 @@ async function saveMetaIndex(metaPaths) {
       e.id = String(r.id); e.sv = r.stale ? 1 : META_SV; e.updatedTime = r.updatedTime || null;
       e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
     });
-    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
-    // Only the metas this pass actually described, and only the meta half: the source-derived facts
-    // belong to `saveGraphFacts()` and are not this writer's to declare done.
-    metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
-  } catch (_) {}
+  });
+  // Only the metas this pass actually described, and only the meta half: the source-derived facts
+  // belong to `saveGraphFacts()` and are not this writer's to declare done.
+  metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
 }
 
 // The tree is built from .meta.json alone; the stats need the sources. Fill them in after the first
@@ -1261,10 +1276,7 @@ async function loadGraph() {
  *  size counts. Everything else in the graph is computed from those two and from the workspace as a
  *  whole, so nothing here is a stored judgement - only a stored reading. */
 async function saveGraphFacts(nodes, g) {
-  try {
-    let summary = null;
-    try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
-    const files = (summary && summary.v === 1 && summary.files) ? summary.files : {};
+  await updateMetaIndex((files) => {
     nodes.forEach((nd) => {
       if (!nd.file) return;
       const node = g.nodes[nd.namespace + '.' + nd.name];
@@ -1273,16 +1285,17 @@ async function saveGraphFacts(nodes, g) {
       entry.display_name = nd.display_name; entry.category = nd.category; entry.source = nd.source;
       entry.rest = !!nd.rest; entry.associated_place = nd.associated_place || null;
       entry.return_type = nd.return_type || ''; entry.params = nd.params || [];
-      entry.connections = nd.connections || []; entry.updatedTime = nd.updatedTime || null;
-      entry.modified_by = nd.modified_by || null; entry.description = nd.description || '';
+      entry.connections = nd.connections || []; entry.modified_by = nd.modified_by || null;
+      entry.description = nd.description || '';
       entry.refs = (node && node.refs) ? node.refs : (nd.refs || []);
       entry.stats = nd.stats || (node && node.stats) || null;
+      // `sv` and `updatedTime` belong to the meta writer: this one has read a `.dg`, which says
+      // nothing about either. Writing them here is how a merge base becomes a lost update.
     });
-    await writeFile(META_INDEX, JSON.stringify({ v: 1, sv: META_SV, files }, null, 2));
-    // The sources this pass read are now described, and only those - a file rewritten while this
-    // build was walking the folder keeps its mark and is read by the next one.
-    nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
-  } catch (_) {}
+  });
+  // The sources this pass read are now described, and only those - a file rewritten while this
+  // build was walking the folder keeps its mark and is read by the next one.
+  nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
 }
 async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
 function makeCallResolver(g) {
