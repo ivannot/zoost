@@ -428,18 +428,6 @@ CRM = """
       }
     }
 
-    // A lapsed folder permission costs one click, and that click must still do what it was aimed
-    // at. Chrome asks nothing - it has remembered the grant - so all the reader sees is a click that
-    // appears to do nothing, and then a second one that works. Reported exactly that way.
-    {
-      const target = rows().find((e) => e.dataset.path && e.dataset.path !== currentPath) || rows()[0];
-      const want = target.dataset.path;
-      rootGranted = false;                       // as it is at the start of a session
-      target.click(); await wait(1200);
-      if (currentPath !== want) say('the first click after a lapsed permission was spent and not delivered');
-      if (!rootGranted) say('the click did not re-grant the folder');
-    }
-
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from

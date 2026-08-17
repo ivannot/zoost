@@ -4064,49 +4064,11 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
 // except on the controls that would themselves ask, on a dialog, on the mismatch overlay, or in the
 // chat. The two panels excluded different subsets of those and neither list was wrong, which is how
 // a divergence survives: both looked deliberate. It is the union now, and the same on both sides.
-/** The first click after a lapsed folder permission does one thing, not two.
- *
- *  Chrome requires a user gesture to re-attach a stored folder handle - even when it has remembered
- *  the grant and shows no dialog at all, which is what a reader sees: no question, and yet a click
- *  that seems to do nothing. This listener has always used *any* click for that, rather than making
- *  somebody find a button. What it did not do was **wait**: it ran in the capture phase without
- *  holding the click, so the row or the button underneath acted immediately, tried to read a file
- *  before the permission had arrived, and failed. The reader clicks twice and calls the first one
- *  wasted - correctly.
- *
- *  So the click is held here, spent on the permission, and then **replayed** at its target. One
- *  click, one effect, the one that was aimed at. The replay is our own event on our own element, not
- *  a synthetic gesture into a contract we do not own - the rule that bans those is about pretending
- *  a user acted, and here the user did.
- */
 document.addEventListener('click', async (e) => {
   if (!root || rootGranted) return;
-  if (e.__zoostReplay) return;            // the replayed click must not be held a second time
   const t = e.target;
   if (t.closest && (t.closest('#wsroot') || t.closest('#pfoot') || t.closest('.dlg') || t.closest('#aiview') || t.closest('#offoverlay'))) return;
-  // Held: nothing under it runs until the permission is in. What was aimed at is remembered by
-  // identity now, because the list is about to be redrawn under it.
-  const row = t.closest && t.closest('.f[data-path]');
-  const want = row ? row.dataset.path : null;
-  e.preventDefault(); e.stopPropagation();
-  try {
-    if (await ensurePerm(root)) {
-      rootGranted = true;
-      await loadWorkspaces();
-      // and now the click it always was - at the element that *is* the target now. Granting
-      // reloads the workspaces, which redraws the list, so the node clicked a moment ago is gone:
-      // replaying at it would dispatch into a detached element and do nothing, which is how the
-      // first version of this managed to fail exactly like the defect it was fixing. The row is
-      // found again by what identifies it, not by the object it used to be.
-      const again = (want && document.querySelector(`.f[data-path="${CSS.escape(want)}"]`))
-        || (t && t.isConnected ? t : null);
-      if (again) {
-        const ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-        ev.__zoostReplay = true;
-        again.dispatchEvent(ev);
-      }
-    }
-  } catch (_) {}
+  try { if (await ensurePerm(root)) { rootGranted = true; await loadWorkspaces(); } } catch (_) {}
 }, true);
 /** What the workspace list shows, and what it must never stop showing.
  *
