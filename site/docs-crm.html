@@ -291,7 +291,7 @@ git commit -m "baseline"</code></pre>
     it <b>writes</b> - read out of the calls themselves, so <code>zoho.crm.getRecordById("Contacts", id)</code>
     is a read of Contacts and <code>updateRecord</code> is a write. A COQL query and the path of a REST
     url count too. Open a <b>module</b> and the same pane turns it round: which functions read it, which
-    write it. That second question has no answer anywhere in Zoho.<br>
+    write it. Zoho's own editor does not ask that second question: it shows a module's fields and layouts, not the Deluge that writes to it.<br>
     Two limits, and they are on the screen as well as here. A module named through a variable cannot be
     known, so those calls are counted and reported rather than dropped - which makes every list a
     <b>lower bound</b>, never a guarantee that nothing else writes there. And a name is only shown when
