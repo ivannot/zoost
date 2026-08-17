@@ -65,13 +65,18 @@
     getRelatedRecords: { mode: 'read', arg: 1, list: 0 },
     createRecord: { mode: 'write', arg: 0 }, updateRecord: { mode: 'write', arg: 0 },
     upsert: { mode: 'write', arg: 0 }, attachFile: { mode: 'write', arg: 0 },
+    bulkUpdate: { mode: 'write', arg: 0 },
+    // Two modules in one call: the sub module it writes, and the parent it hangs from - which is
+    // the third argument, not the second. Another signature that no pattern would have got right.
+    updateRelatedRecord: { mode: 'write', arg: 0, parent: 2 },
     // Every line above was read off its own documentation page, one at a time, after a signature
     // written from memory put the module in the wrong argument - `getRelatedRecords` names the
     // relation first and its parent module second, and assuming «the first argument» linked the
     // wrong word in somebody's real code. `deleteRecord`, `bulkUpdate` and `upsertRecord` have no
     // page under /deluge/help/crm/ and are deliberately absent: a task whose signature nobody here
-    // has read contributes nothing rather than a guess. `bulkUpdate` does appear in real orgs, so
-    // this is a gap that is known, not one that is hidden.
+    // has read contributes nothing rather than a guess. `deleteRecord` and `upsertRecord` are not
+    // task names at all - the pages that look like theirs document `zoho.crm.upsert` - so nothing is
+    // missing here that the documentation names.
   };
   // Not a module, whatever follows it in a url: these are the API's own endpoints.
   const NOT_A_MODULE = /^(coql|settings|org|users|functions|actions|__|v\d)/i;
@@ -98,16 +103,19 @@
     let m;
     const lists = new Map();
     // The first two arguments, because that is as far as any documented signature puts a module.
-    const task = /\bzoho\.crm\.(\w+)\s*\(\s*([^,)]*)(?:,\s*([^,)]*))?/g;
+    const task = /\bzoho\.crm\.(\w+)\s*\(\s*([^,)]*)(?:,\s*([^,)]*))?(?:,\s*([^,)]*))?/g;
     const literal = (a) => { const l = String(a || '').trim().match(/^"([^"]*)"$|^'([^']*)'$/); return l ? (l[1] !== undefined ? l[1] : l[2]) : null; };
     while ((m = task.exec(bare))) {
       const sig = MODULE_TASK[m[1]]; if (!sig) continue;
-      const mod = literal(sig.arg === 1 ? m[3] : m[2]);
+      const args = [m[2], m[3], m[4]];
+      const mod = literal(args[sig.arg]);
       if (mod) add(mod, sig.mode, m[1]); else unknown++;
+      // A task that names a second module names it as itself, not as a footnote to the first.
+      if (sig.parent !== undefined) { const p = literal(args[sig.parent]); if (p) add(p, sig.mode, m[1]); }
       // The related list is a name this workspace also holds, so it is carried beside the module
       // rather than thrown away - it is what the reader actually wrote, and it can be looked up.
       if (sig.list !== undefined) {
-        const rl = literal(sig.list === 1 ? m[3] : m[2]);
+        const rl = literal(args[sig.list]);
         if (rl && !lists.has(rl)) lists.set(rl, { name: rl, module: mod || null });
       }
     }

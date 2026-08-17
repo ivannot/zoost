@@ -33,7 +33,8 @@
     getRecordById: { mod: 0 }, getRecords: { mod: 0 }, searchRecords: { mod: 0 },
     getRelatedRecords: { rel: 0, mod: 1 },
     createRecord: { mod: 0 }, updateRecord: { mod: 0 },
-    upsert: { mod: 0 }, attachFile: { mod: 0 },
+    upsert: { mod: 0 }, attachFile: { mod: 0 }, bulkUpdate: { mod: 0 },
+    updateRelatedRecord: { mod: 0, parent: 2 },
     // Same list as `MODULE_TASK` in graph-core.js and for the same reason: only signatures somebody
     // has read. A task in one and not the other would link a word the reading does not count.
   
@@ -59,15 +60,16 @@
         if (c === '"' || c === "'") { const q = c; i++; while (i < code.length && code[i] !== q) { if (code[i] === '\\') i++; i++; } continue; }
         if (c === '(' || c === '[') depth++;
         else if (c === ')' || c === ']') { if (depth === 0) break; depth--; }
-        else if (c === ',' && depth === 0) { arg++; starts[arg] = i + 1; if (arg > 2) break; }
+        else if (c === ',' && depth === 0) { arg++; starts[arg] = i + 1; if (arg > 3) break; }
       }
       const litAt = (idx) => {
         if (idx === undefined || starts[idx] === undefined) return null;
         const lit = code.slice(starts[idx], i).match(/^\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/);
         return lit ? { at: starts[idx] + lit[0].length - lit[1].length, name: lit[1].slice(1, -1) } : null;
       };
-      const mod = litAt(sig.mod), rel = litAt(sig.rel);
+      const mod = litAt(sig.mod), rel = litAt(sig.rel), par = litAt(sig.parent);
       if (mod) marks.set(mod.at, { kind: 'mod', name: mod.name });
+      if (par) marks.set(par.at, { kind: 'mod', name: par.name });
       // The relation is resolved *within* its parent, because the same related-list name can exist
       // on more than one module - so the parent travels with it rather than being looked up later.
       if (rel) marks.set(rel.at, { kind: 'rel', name: rel.name, parent: mod ? mod.name : null });

@@ -5116,12 +5116,23 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                                  { name: 'Deals', mode: 'write', via: 'updateRecord' }]);
   });
 
+  test('a call can name two modules, and both are read', () => {
+    // `updateRelatedRecord(<sub>, <sub_id>, <parent>, <parent_id>, <values>)` - the parent is the
+    // third argument. Read off its page; no pattern over «the first string» would have found it.
+    const n = mods('x = zoho.crm.updateRelatedRecord("Sub", sid, "Parent", pid, mp);');
+    assert.deepEqual(n.modules.map((m) => m.name).sort(), ['Parent', 'Sub']);
+    const b = mods('y = zoho.crm.bulkUpdate("Reminders", list);');
+    assert.deepEqual(b.modules, [{ name: 'Reminders', mode: 'write', via: 'bulkUpdate' }]);
+  });
+
   test('a task whose signature has not been read contributes nothing', () => {
     // Rather than guessing that it, too, takes the module first. It is a gap that is known.
     const gc = read('apps/crm/graph-core.js');
+    // `bulkUpdate` and `updateRelatedRecord` were added the day their pages were read; what stays
+    // out is what the documentation does not name at all.
     for (const src of [gc, read('apps/crm/highlight.js')]) {
-      assert.ok(!/bulkUpdate:/.test(src) && !/deleteRecord:/.test(src),
-                'a task nobody read the documentation for is being interpreted');
+      assert.ok(!/deleteRecord:/.test(src) && !/upsertRecord:/.test(src),
+                'a task the documentation does not name is being interpreted');
     }
     assert.ok(/contributes nothing rather than a guess/.test(gc),
               'the gap is not stated where the next reader will be');
