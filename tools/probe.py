@@ -327,6 +327,79 @@ CRM = """
       row2.stale = was;
     }
 
+    // The two halves of the mirror, one click apart. A function's detail names the modules its code
+    // reads and writes - read out of the source, resolved against the module index, and never shown
+    // for a name this org does not have. Held here because the wiring is the half a unit test cannot
+    // see: the chips have to be in the pane, and clicking one has to land on the module.
+    {
+      const fn = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+      await writeFile(fn.path, 'void m(){\\n  c = zoho.crm.getRecordById("Contacts", id);\\n'
+        + '  u = zoho.crm.updateRecord("Deals", id, mp);\\n  g = zoho.crm.getRecordById("NotAModuleHere", id);\\n'
+        + '  v = zoho.crm.getRecordById(computed, id);\\n}\\n');
+      graphCache = null; modNamesCache = null;
+      const r = rows().find((e) => e.dataset.path === fn.path) || rows()[0];
+      r.click(); await wait(900);
+      $('pvtab_info').click(); await wait(500);
+      const chips = [...document.querySelectorAll('#pvcallers .mod')].map((c) => c.dataset.mod);
+      if (!chips.includes('Contacts')) say('the module the function reads is not shown: ' + JSON.stringify(chips));
+      if (chips.includes('NotAModuleHere')) say('a name that is not a module of this org was drawn as one');
+      const w = [...document.querySelectorAll('#pvcallers .mod.w')].map((c) => c.dataset.mod);
+      if (w.length && !w.includes('Deals')) say('what is written is not marked as written: ' + JSON.stringify(w));
+      if (!/not determinable/.test($('pvcallers').textContent)) say('the call whose module is computed is not reported');
+    }
+
+    // The module named inside a call is hypertext, like the call itself. Reported as an expectation
+    // rather than a defect - «mi aspetto che Dossier sia cliccabile e porti al modulo Dossier» - and
+    // the three cases that must stay apart are held here: the argument that names a module, a string
+    // in the same call that does not, and a name that is not a module of this workspace.
+    {
+      const fn2 = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+      await writeFile(fn2.path, 'void h(){\\n  a = zoho.crm.getRecordById("Contacts", id);\\n'
+        + '  b = zoho.crm.getRecordById(mod, "Contacts");\\n  c = zoho.crm.getRecordById("NotAModuleHere", id);\\n}\\n');
+      graphCache = null; modNamesCache = null;
+      const r2 = rows().find((e) => e.dataset.path === fn2.path) || rows()[0];
+      r2.click(); await wait(900);
+      $('pvtab_code').click(); await wait(400);
+      const links = [...document.querySelectorAll('#pvcode a.c-link[data-mod]')];
+      if (links.length !== 1) say('module links in code: ' + links.length + ', expected exactly one');
+      if (links[0].dataset.mod !== 'Contacts') say('the wrong string was linked: ' + links[0].dataset.mod);
+      if (getComputedStyle(links[0]).cursor !== 'pointer') say('the module link does not say it is clickable');
+      links[0].click(); await wait(1400);
+      if (viewMode !== 'modules') say('clicking the module in the code did not open the Modules tab');
+      const back2 = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
+      if (back2) { back2.click(); await wait(700); }
+    }
+
+    // Two loads of the same list, started together. `rebuildModules()` used to empty `moduleData`
+    // and fill it a file at a time, so the second run emptied what the first had put in and both
+    // kept pushing - every module twice, and the selection on two rows. Reported from a jump that
+    // arrived while the tab was still loading, which is the window a jump lands in.
+    {
+      await Promise.all([rebuildModules(), rebuildModules()]);
+      const paths = (moduleData || []).map((m) => m.path);
+      if (paths.length !== new Set(paths).size)
+        say(`two module loads produced ${paths.length} rows for ${new Set(paths).size} modules`);
+    }
+
+    // and the same fact from the other side: open the module and see what writes it. This is the
+    // question the platform cannot answer at all, so it is the one worth holding down.
+    {
+      const seg = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
+      if (seg) {
+        seg.click(); await wait(1200);
+        const row = [...document.querySelectorAll('#tree .f')].find((e) => /Contacts/.test(e.textContent));
+        if (row) {
+          row.click(); await wait(1200);
+          $('pvtab_info').click(); await wait(900);
+          const txt = $('pvcallers').textContent || '';
+          if (!/Read by|Written by|No function reads/.test(txt))
+            say('the module detail does not say what code does with it: ' + txt.slice(0, 80));
+        }
+        const back = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
+        if (back) { back.click(); await wait(900); }
+      }
+    }
+
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from
@@ -354,7 +427,7 @@ CRM = """
       const cat1 = await aiLoadActions();
       if (!(cat1.list || []).some((a) => a.name === 'Probe webhook'))
         say('the assistant still holds the actions from before the pull that replaced them');
-      const mods0 = await aiLoadModules();
+      const mods0 = await loadModuleFiles();
       const some = Object.keys(mods0)[0];
       if (some) {
         const mf = 'modules/' + some + '.json';
@@ -362,7 +435,7 @@ CRM = """
         if (raw) {
           raw.fields = (raw.fields || []).concat([{ api_name: 'Probe_Field', label: 'Probe field' }]);
           await writeFile(mf, JSON.stringify(raw, null, 2));
-          const mods1 = await aiLoadModules();
+          const mods1 = await loadModuleFiles();
           if (!(mods1[some].fields || []).some((f) => f.api_name === 'Probe_Field'))
             say('the assistant still holds the module as it was before the resync');
         }

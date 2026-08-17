@@ -414,6 +414,14 @@
   #pvcallers .orphan{color:#f59e0b}
   #pvcallers .connwrap{margin-top:5px;padding-top:5px;border-top:1px solid var(--border)}
   #pvcallers .conn{display:inline-block;background:#1a2333;border:1px solid #3f6ea8;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;color:#9fc4f5;cursor:pointer}
+  /* Module chips: the same shape as a connection chip, because they are the same kind of thing -
+     something outside the function that it reaches - with the colour carrying read against write.
+     Read borrows the module colour the ER diagram already uses; write is warmer, because that is
+     the one somebody scans for before changing a field. */
+  #pvcallers .mod{display:inline-block;border-radius:5px;padding:1px 7px;margin:1px 3px 1px 0;cursor:pointer;border:1px solid}
+  #pvcallers .mod.r{background:#16261d;border-color:#3f8a63;color:#9fe0bd}
+  #pvcallers .mod.w{background:#2a2016;border-color:#a8783f;color:#f0c48a}
+  #pvcallers .mod.t{background:#1e1e26;border-color:#6b6b8a;color:#b9b9d4}
   #pvcallers .conn:hover{background:rgba(47,111,237,.22);color:#cfe1fb}
   #pvcallers .modline{margin-top:4px;color:#6b7688}
   #pvcallers .statline{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);color:#8ea0bb}
@@ -545,6 +553,9 @@
   #pvcode{flex:1;color:#cbd5e1}
   .c-com{color:#5b6b82;font-style:italic} .c-str{color:#7ee0a6} .c-num{color:#e0a86b}
   .c-kw{color:#7aa2f7;font-weight:600} .c-type{color:#c792ea} .c-fn{color:#82d2ff}
+  /* A module named inside a call keeps the colour of the string it is, and underlines like the
+     function links beside it - one rule for «this name goes somewhere», not two. */
+  .c-mod{text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
   /* off-zoho overlay */
   #offoverlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:70;text-align:center;padding:20px}
   #offoverlay.show{display:flex}

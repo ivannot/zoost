@@ -122,6 +122,27 @@ and both use it. What is **analysed** is stripped; what is **shown** is not - th
 exports and the assistant all still receive the source as it was written, comments included, and a
 test holds that separation because it is the one that would be easy to lose.
 
+**The same reading, turned into the join the platform does not have.** Once a source can be read
+without counting its comments, the *arguments* are worth reading too: `zoho.crm.getRecordById(
+"Contacts", id)` names a module, and the task says whether it is a read or a write. So each function
+carries the modules it names, and a module's detail carries the functions that name it - the second
+question being the one Zoho cannot answer at all. Three places a module gets named, all measured
+before being written: the documented tasks, a COQL query, and the path of a REST url.
+
+Three decisions hold it up. It is **candidates, resolved late** - `graph-core` reads words out of
+text and knows nothing about which modules exist, so the panel checks each against
+`modules/index.json` and draws nothing it cannot match; on two production orgs that refused three and
+four names each that look like modules and are not. **Read and write stay apart**, because that is
+the distinction somebody about to change a field is actually asking about, and it comes from the
+task's documented signature rather than from a guess about the verb. And a call whose module is
+computed at run time is **counted and shown**, never dropped: every list is a floor, and the panel
+says so - measured at 17 such calls in one org and none in the other.
+
+It needed a second output from the one scanner, which is the part worth remembering: the module names
+live *inside* the string literals that the call reading blanks out. One pass now returns both the
+code with its strings emptied and the source with only its comments gone. Two readers of the same
+text is the shape this file keeps recording; one reader with two answers is not.
+
 **Measured on real Deluge, which is the only place this could be settled.** Two production orgs read
 in session and never committed - 428 functions, 673 KB of source: **793 references read as text, 775
 after cleaning**. Every one of the 18 that went was a mention inside a comment (nine line, nine

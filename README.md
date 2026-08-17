@@ -4,7 +4,8 @@
 
 Zoost is a small family of Chrome extensions (Manifest V3), **one per Zoho product**. Each mirrors
 what *you* have built inside that product into plain local files you can put under your own Git -
-then layers navigation, diagrams, search, a health audit that states its own blind spots, exports
+then layers navigation, diagrams, search, which functions read and write each module, a health
+audit that states its own blind spots, exports
 and an optional AI
 assistant on top of that mirror. None of them calls an endpoint that writes. Everything runs in
 your browser.

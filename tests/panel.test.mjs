@@ -28,7 +28,15 @@ const gsrc = (app) => read(`apps/${app}/graphview.js`) + '\n' + read(`apps/${app
 
 // ---------- Deluge: stripping comments and strings before counting anything ----------
 
-const { stripNonCode } = load([sliceFn('apps/crm/graph-core.js', 'stripNonCode')]);
+// The scanner comes with it: `stripNonCode` is now the façade over one pass that also hands back
+// the source with its string literals intact, which is what the module reading needs.
+const { stripNonCode, scanDeluge, moduleRefs } = load([
+  sliceFn('apps/crm/graph-core.js', 'scanDeluge'),
+  sliceFn('apps/crm/graph-core.js', 'stripNonCode'),
+  sliceConst('apps/crm/graph-core.js', 'MODULE_TASK'),
+  sliceConst('apps/crm/graph-core.js', 'NOT_A_MODULE'),
+  sliceFn('apps/crm/graph-core.js', 'moduleRefs'),
+]);
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -1602,13 +1610,13 @@ test('re-activating the same workspace keeps the conversation', () => {
 });
 
 test("the CRM's per-org caches are dropped there too, not only in the Functions tab", () => {
-  // graphCache, aiModCache and aiConnCache were cleared in rebuildTree(), which only runs if you
+  // graphCache, moduleFilesCache and aiConnCache were cleared in rebuildTree(), which only runs if you
   // happen to be on Functions. Switch workspace from the Workflows tab and the assistant answered
   // from the previous org's functions and schema, with no sign of it anywhere.
   const src = read('apps/crm/sidepanel.js');
   const fn = src.slice(src.indexOf('function dropWorkspaceState()'));
   const body = fn.slice(0, fn.indexOf('\n}'));
-  for (const c of ['graphCache = null', 'aiModCache = null', 'aiConnCache = null']) {
+  for (const c of ['graphCache = null', 'moduleFilesCache = null', 'aiConnCache = null']) {
     assert.ok(body.includes(c), `dropWorkspaceState does not clear ${c}`);
   }
 });
@@ -4879,11 +4887,11 @@ test('the directory handles are cached, and dropped when the folder changes', ()
   const js = read('apps/crm/sidepanel.js');
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const region = (start, end) => code.slice(code.indexOf(start), code.indexOf(end, code.indexOf(start)));
-  const CACHES = ['codeCache', 'graphCache', 'aiModCache', 'aiConnCache', 'aiActCache', 'actionUsers'];
+  const CACHES = ['codeCache', 'graphCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache', 'actionUsers'];
 
   test('every cache made of mirror files is dropped by the write itself', () => {
     const note = region('const noteWrite', '\n};');
-    for (const c of ['codeCache', 'graphCache', 'aiModCache', 'aiConnCache', 'aiActCache', 'actionUsers']) {
+    for (const c of ['codeCache', 'graphCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache', 'actionUsers']) {
       assert.ok(new RegExp(c + '\\s*=\\s*null').test(note), `noteWrite does not forget ${c}`);
     }
     assert.ok(/noteWrite\(path\)/.test(region('async function removeFile', '\n')),
@@ -4905,6 +4913,24 @@ test('the directory handles are cached, and dropped when the folder changes', ()
                   `${c} is cleared by hand outside noteWrite: ${line.trim().slice(0, 90)}`);
       }
     }
+  });
+
+  test('the module index is forgotten when the pull rewrites it', () => {
+    // `modNamesCache` is what turns a name read out of Deluge into a module of *this* org. A pull
+    // that rewrites the index changes that answer, and the index is deliberately not a «module
+    // file» - `isModuleFile` excludes it - so it needed its own line rather than inheriting one.
+    const note = region('const noteWrite', '\n};');
+    assert.ok(/modules\/index\.json/.test(note) && /modNamesCache\s*=\s*null/.test(note),
+              'a pull can rewrite the module index and leave the readings resolved against the old one');
+  });
+
+  test('a name is a module only if this org has one', () => {
+    // The whole safety of the module reading: graph-core reads words out of text and knows nothing
+    // about which exist. Measured on two production orgs when this was written - three and four
+    // names each that look like modules and are not.
+    const body = code.slice(code.indexOf('async function modulesOf'), code.indexOf('\n}', code.indexOf('async function modulesOf')));
+    assert.ok(/known\.has\(m\.name\)/.test(body), 'a candidate is drawn without being checked against the org');
+    assert.ok(/unknown/.test(body), 'the calls whose module is computed are dropped instead of counted');
   });
 
   test('the Analytics twin does the same at its own write', () => {
@@ -5065,5 +5091,61 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const gc = read('apps/crm/graph-core.js');
     assert.ok(/stripNonCode\(it\.dg/.test(gc), 'the builder analyses the raw text again');
     assert.ok(!/_dg = stripNonCode[\s\S]{0,80}source_code/.test(gc), 'the stripped text reached what is displayed');
+  });
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// Which argument names the module is a property of each task, not a pattern. Written from memory it
+// was «the first one», and `getRelatedRecords("Tariffe_Prestazioni", "Professionisti", id)` names the
+// **relation** first and its parent module second - so the wrong word was linked, in somebody's real
+// code, and the module that was actually touched was missed. Every signature here was then read off
+// its own documentation page one at a time; these cases are that reading, held so it cannot rot.
+{
+  const w = {};
+  new Function('window', read('apps/crm/graph-core.js'))(w);
+  const mods = (dg) => w.buildGraph([{ namespace: 'standalone', name: 'a', api_name: 'a', file: 'a.dg', dg }])
+    .nodes['standalone.a'];
+
+  test('the module is taken from the argument its own task puts it in', () => {
+    const n = mods('x = zoho.crm.getRelatedRecords("Prices_Services", "Practitioners", id);');
+    assert.deepEqual(n.modules.map((m) => m.name), ['Practitioners'],
+                     'the relation name was read as if it were the module');
+    const d = mods('a = zoho.crm.getRecordById("Contacts", id);\nb = zoho.crm.updateRecord("Deals", id, mp);');
+    assert.deepEqual(d.modules, [{ name: 'Contacts', mode: 'read', via: 'getRecordById' },
+                                 { name: 'Deals', mode: 'write', via: 'updateRecord' }]);
+  });
+
+  test('a task whose signature has not been read contributes nothing', () => {
+    // Rather than guessing that it, too, takes the module first. It is a gap that is known.
+    const gc = read('apps/crm/graph-core.js');
+    for (const src of [gc, read('apps/crm/highlight.js')]) {
+      assert.ok(!/bulkUpdate:/.test(src) && !/deleteRecord:/.test(src),
+                'a task nobody read the documentation for is being interpreted');
+    }
+    assert.ok(/contributes nothing rather than a guess/.test(gc),
+              'the gap is not stated where the next reader will be');
+    // The two lists must agree: one linking a word the other does not count is the drift.
+    // Every `name: {` in the block, wherever it sits on its line - the first version only read
+    // entries at the start of a line and reported a difference that was its own.
+    const tasks = (src) => (src.match(/(\w+):\s*\{/g) || []).map((x) => x.split(':')[0]).sort();
+    assert.deepEqual(tasks(gc.slice(gc.indexOf('const MODULE_TASK'), gc.indexOf('};', gc.indexOf('const MODULE_TASK')))),
+                     tasks(read('apps/crm/highlight.js').slice(read('apps/crm/highlight.js').indexOf('const ARGS'),
+                           read('apps/crm/highlight.js').indexOf('};', read('apps/crm/highlight.js').indexOf('const ARGS')))),
+                     'the extractor and the code view disagree about which tasks name a module');
+  });
+
+  test('the relation links to the module at the other end, inside its own parent', () => {
+    const h = {};
+    new Function('window', read('apps/crm/highlight.js'))(h);
+    const linkFor = (name, kind, parent) => kind === 'mod'
+      ? (['Practitioners', 'Contacts'].includes(name) ? name : null)
+      : (parent === 'Practitioners' && name === 'Prices_Services' ? 'Prices' : null);
+    const out = h.highlightDeluge('x = zoho.crm.getRelatedRecords("Prices_Services","Practitioners",id);', null, linkFor);
+    assert.ok(/data-mod="Prices"/.test(out), 'the relation does not lead to the module it identifies');
+    assert.ok(/data-mod="Practitioners"/.test(out), 'the parent module is not a link');
+    // and a string that is not one of those arguments stays a string
+    const plain = h.highlightDeluge('info "Contacts";', null, linkFor);
+    assert.ok(!/c-link/.test(plain), 'a string outside an argument position was turned into a link');
   });
 }

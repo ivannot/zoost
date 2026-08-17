@@ -109,7 +109,7 @@ Zoost is an independent, unofficial developer tool. It is not affiliated with, e
 ```
 Zoost has one purpose: to give a Zoho CRM administrator or developer a local mirror of their own org's Deluge code and configuration - read from Zoho into a folder of their own - and the tools to navigate and document it.
 
-Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an entity-relationship diagram, a catalogue of related-list API names, a cross-reference of which functions use which connection, a health audit and offline exports.
+Working from the Zoho CRM session the user is already signed in to, it reads Deluge function sources, module and layout metadata, related lists, workflows, schedules and the org's connection catalogue, and writes them as plain files into a local folder the user selects. On top of that mirror it provides search across all sources, a call-reference graph, an ER diagram, the related-list API names, which functions use which connection, which functions read and write each module, a health audit and offline exports.
 
 Every feature serves that single purpose: understanding and version-controlling a Zoho CRM implementation. Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 ```

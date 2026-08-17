@@ -169,7 +169,7 @@ const META_INDEX = 'functions/meta-index.json';
 // which is the cheapest honest answer: one slow open, then back to one read. It moved to 2 when the
 // call extractor stopped counting names inside comments and strings, because every `refs` on disk
 // was the previous reader's answer and nothing else would ever have said so.
-const SUMMARY_V = 2;
+const SUMMARY_V = 3;
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
@@ -561,7 +561,10 @@ function distrustEverything() {
  *  anywhere else - and `tools/probe.py` proves them in a browser, each one red on the defect put
  *  back. */
 const noteWrite = (rel) => {
-  if (isModuleFile(rel)) { graphCache = null; aiModCache = null; return; }
+  if (isModuleFile(rel)) { graphCache = null; moduleFilesCache = null; return; }
+  // The index is what says which names are modules of this org, so a pull that rewrites it changes
+  // every module reading the panel is about to resolve.
+  if (rel === 'modules/index.json') { modNamesCache = null; graphCache = null; return; }
   if (rel === 'connections/index.json') { aiConnCache = null; return; }
   if (rel === 'actions/index.json') { aiActCache = null; return; }
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
@@ -975,7 +978,7 @@ async function rebuildTree() {
   const mine = ++treeLoad;
   const current = () => mine === treeLoad;
   setStatus(MSG.loadingTree, 'busy');
-  graphCache = null; aiModCache = null; aiConnCache = null;
+  graphCache = null; moduleFilesCache = null; aiConnCache = null;
   const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
   if (!current()) return;
 
@@ -1271,14 +1274,16 @@ async function loadGraph() {
                    return_type: cached.return_type || '', params: cached.params || [],
                    connections: cached.connections || [], updatedTime: cached.updatedTime || null,
                    modified_by: cached.modified_by || null,
-                   refs: cached.refs, stats: cached.stats, dg: '' });
+                   refs: cached.refs, stats: cached.stats,
+                   _modules: Array.isArray(cached.modules) ? { modules: cached.modules, unknown: cached.modulesUnknown || 0 } : null,
+                   dg: '' });
       continue;
     }
     read++;
     const dg = await readFile(p); let meta = {}; try { meta = JSON.parse(await readFile(p.replace(/\.dg$/, '.meta.json'))); } catch {}
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
-  const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs } : n)));
+  const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs, _modules: n._modules } : n)));
   // What the parser saw, written down for the next build. Only when something had to be read: a
   // graph built entirely from the summary has nothing new to say, and rewriting the file on every
   // open would touch a folder the reader may have under version control.
@@ -1306,6 +1311,10 @@ async function saveGraphFacts(nodes, g) {
       entry.connections = nd.connections || []; entry.modified_by = nd.modified_by || null;
       entry.description = nd.description || '';
       entry.refs = (node && node.refs) ? node.refs : (nd.refs || []);
+      // The module candidates, beside the references and for the same reason: a reading of one
+      // source, never a resolution against the workspace.
+      entry.modules = (node && node.modules) ? node.modules : (nd.modules || []);
+      entry.modulesUnknown = (node && node.modulesUnknown) || 0;
       entry.stats = nd.stats || (node && node.stats) || null;
       // `sv` and `updatedTime` belong to the meta writer: this one has read a `.dg`, which says
       // nothing about either. Writing them here is how a merge base becomes a lost update.
@@ -1419,8 +1428,27 @@ async function openFile(path, line = null) {
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
   const _g = await ensureGraph().catch(() => null);
   const _resolve = _g ? makeCallResolver(_g) : null;
-  $('pvcode').innerHTML = window.highlightDeluge ? window.highlightDeluge(code, _resolve) : escHtml(code);
-  $('pvcode').querySelectorAll('a.c-link').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
+  // The module named inside a call is a link too, on the same principle as the call itself: a name
+  // that identifies something this panel can show is hypertext. Resolved against the module index,
+  // so a string that merely looks like a module stays a string.
+  const _known = await moduleNames().catch(() => new Map());
+  // A related-list name identifies the module at the *other* end of the relation - which is what
+  // the reader means by it - so it is resolved inside its parent module's own catalogue of related
+  // lists, where Zoost already holds `api_name` beside the module it points at. The same name can
+  // exist on two modules, which is why the parent is part of the question and not a guess.
+  const _mfiles = await loadModuleFiles().catch(() => ({}));
+  const _linkFor = (name, kind, parent) => {
+    if (kind === 'mod') return _known.has(name) ? name : null;
+    const p = parent && _mfiles[parent];
+    const rl = p && (p.related_lists || []).find((r) => (r.api_name || '') === name);
+    const target = rl && (rl.module || rl.connected_module);
+    return target && _known.has(target) ? target : null;
+  };
+  $('pvcode').innerHTML = window.highlightDeluge
+    ? window.highlightDeluge(code, _resolve, _linkFor)
+    : escHtml(code);
+  $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
+  $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
   $('preview').classList.add('show'); $('resizer').classList.add('show'); resetPreviewScroll();
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
@@ -1438,7 +1466,9 @@ async function openFile(path, line = null) {
 let pvTab = 'code', pvKind = null;
 const PV_KINDS = {
   function: { first: 'Code', panes: { code: [['pvbody', 'flex']], info: [['pvcallers', '']] } },
-  module: { first: 'Fields', panes: { code: [['pvfields', '']], info: [['pvdetails', '']] } },
+  // `pvcallers` is on both kinds now: on a function it is what calls it, on a module it is what
+  // reads and writes it. Same pane, same question - what relates to the thing on screen.
+  module: { first: 'Fields', panes: { code: [['pvfields', '']], info: [['pvdetails', ''], ['pvcallers', '']] } },
 };
 function setPvTab(which) {
   pvTab = which === 'info' ? 'info' : 'code';
@@ -1467,6 +1497,84 @@ function pvTabsFor(kind) {
   else { $('pvcallers').style.display = ''; }
 }
 
+/** The modules this org actually has, by api_name, read once per workspace.
+ *
+ *  A module *candidate* out of a source becomes a fact only here: `graph-core` reads names out of
+ *  the text and knows nothing about which of them exist, so a COQL query selecting from a word that
+ *  is not a module of this org says nothing rather than drawing a box. Measured on two production
+ *  orgs before this was written: three and four such names each, every one correctly refused.
+ */
+let modNamesCache = null;
+async function moduleNames() {
+  if (modNamesCache) return modNamesCache;
+  let idx = []; try { idx = JSON.parse(await readFile('modules/index.json')); } catch (_) {}
+  const list = Array.isArray(idx) ? idx : (idx && idx.modules) || [];
+  const m = new Map();
+  list.forEach((x) => { const a = x.api_name || x.module_name || x.name; if (a) m.set(a, x); });
+  modNamesCache = m; return m;
+}
+
+/** What this function does to the modules of this org: read, written, or reached by a url whose
+ *  method we have not looked at. Sorted, deduplicated, and with the count of the calls whose module
+ *  is computed at run time - which is shown rather than dropped, because the answer is a lower
+ *  bound and a reader deciding whether a field is safe to change has to be told so. */
+async function modulesOf(node) {
+  const known = await moduleNames();
+  const out = { read: [], write: [], touch: [], unknown: (node && node.modulesUnknown) || 0 };
+  for (const m of (node && node.modules) || []) {
+    if (!known.has(m.name)) continue;
+    const b = out[m.mode] || out.touch;
+    if (!b.includes(m.name)) b.push(m.name);
+  }
+  // A module both read and written is a write as far as «is this safe to change» goes, but both
+  // facts are true and the panel shows both - interpreting them is the reader's business.
+  ['read', 'write', 'touch'].forEach((k) => out[k].sort());
+  return out;
+}
+/** Which functions read this module, and which write it - the reading turned round.
+ *
+ *  This is the question the platform cannot answer at all: Zoho will show you a module's fields and
+ *  its layouts, and nothing that says «this Deluge writes here». It fills the same pane a function's
+ *  callers use, because it is the same kind of fact - what relates to the thing on screen - and it
+ *  is drawn after the pane rather than blocking it, since it needs the call graph.
+ *
+ *  It is a lower bound and says so. A call whose module is computed at run time cannot be attributed
+ *  to any module, so «nothing writes here» is «nothing that could be read», and the line under the
+ *  lists carries that instead of leaving the reader to assume otherwise.
+ */
+async function showModuleUsage(api) {
+  const box = $('pvcallers'); box.textContent = 'reading what the code does with it\u2026'; box.className = 'show';
+  try {
+    const g = await ensureGraph();
+    if (!currentPath || !currentPath.startsWith('modules/')) return;
+    const read = [], write = [], touch = [];
+    let blind = 0;
+    for (const n of Object.values(g.nodes)) {
+      if (!n.file) continue;
+      blind += n.modulesUnknown || 0;
+      for (const m of n.modules || []) {
+        if (m.name !== api) continue;
+        const b = m.mode === 'write' ? write : m.mode === 'read' ? read : touch;
+        if (!b.some((x) => x.id === n.id)) b.push(n);
+      }
+    }
+    const nm = (n) => nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name);
+    const chips = (list) => '<div class="fnchips">' + list
+      .sort((a, b) => nm(a).localeCompare(nm(b)))
+      .map((n) => `<a class="wf-fn" data-file="${escA(n.file)}" title="${escA(n.namespace + '.' + n.name)}">\u0192 ${escHtml(nm(n))}</a>`)
+      .join('') + '</div>';
+    let html = '';
+    if (read.length) html += `<b>Read by (${read.length}):</b>${chips(read)}`;
+    if (write.length) html += `<b>Written by (${write.length}):</b>${chips(write)}`;
+    if (touch.length) html += `<b>Reached by URL from (${touch.length}):</b>${chips(touch)}`;
+    if (!html) html = '<b>No function reads or writes it</b> - as far as the code can be read';
+    html += `<div class="modline">From the module names written in your Deluge`
+      + (blind ? ` \u00b7 ${blind} call(s) across the org name the module in a variable and cannot be attributed` : '')
+      + '</div>';
+    box.innerHTML = html;
+    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file)));
+  } catch (_) { box.className = ''; }
+}
 async function showCallers(path) {
   const box = $('pvcallers'); box.textContent = 'computing references…'; box.className = 'show';
   try {
@@ -1521,6 +1629,22 @@ async function showCallers(path) {
           + '</div>';
       }
     } catch (_) { /* no reading yet: say nothing rather than claim none */ }
+    // Which modules this function touches, and how. The nearest sibling on this pane is the
+    // connections row - a set of things outside the function that it reaches - so it is built the
+    // same way, and the chips carry the module's api_name because that is what the code wrote.
+    const mods = await modulesOf(node);
+    if (mods.read.length || mods.write.length || mods.touch.length || mods.unknown) {
+      const chips = (names, kind) => names.map((n) =>
+        `<span class="mod ${kind}" data-mod="${escA(n)}" title="${escA(n + ' - click to open the module')}">${escHtml(n)}</span>`).join(' ');
+      html += '<div class="modwrap">';
+      if (mods.read.length) html += `<b>Reads (${mods.read.length}):</b> ${chips(mods.read, 'r')}<br>`;
+      if (mods.write.length) html += `<b>Writes (${mods.write.length}):</b> ${chips(mods.write, 'w')}<br>`;
+      if (mods.touch.length) html += `<b>Reached by URL (${mods.touch.length}):</b> ${chips(mods.touch, 't')}<br>`;
+      // Never folded into the counts above: a number that quietly excludes what it could not read
+      // is the kind of half-answer this panel exists to refuse.
+      if (mods.unknown) html += `<span class="orphan">${mods.unknown} call(s) name the module in a variable - not determinable</span>`;
+      html += '</div>';
+    }
     const conns = node.connections || [];
     if (conns.length) {
       html += '<div class="connwrap"><b>Connections (' + conns.length + '):</b> '
@@ -1546,6 +1670,9 @@ async function showCallers(path) {
     box.innerHTML = html;
     box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file)));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
+    // A module chip opens the module, the way a function chip opens the function. It is the whole
+    // point of the reading: the two halves of the mirror are one click apart instead of two lists.
+    box.querySelectorAll('.mod[data-mod]').forEach((c) => (c.onclick = () => healthOpenModule(c.dataset.mod)));
     // «Used in …»: the rule or the schedule that fires this function, opened where it lives.
     box.querySelectorAll('a.aplink[data-ap]').forEach((a) => (a.onclick = () => {
       const open = HEALTH_OPEN[a.dataset.ap];
@@ -2707,7 +2834,7 @@ function toggleHealth() { if ($('healthview').classList.contains('show')) closeH
 function closeHealth() { $('healthview').classList.remove('show'); $('health').classList.remove('on'); document.body.classList.remove('health-open'); }
 
 // ---------- AI assistant (BYOK, provider-agnostic; Phase A: context chat) ----------
-let aiMessages = [], aiModCache = null, aiConnCache = null, aiSeedTruncated = false, aiSeedWarned = false;
+let aiMessages = [], moduleFilesCache = null, aiConnCache = null, aiSeedTruncated = false, aiSeedWarned = false;
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
   const cfg = { active: c.active || 'anthropic', anthropic: Object.assign({ model: '', apiKey: '' }, c.anthropic || {}), openai: Object.assign({ model: '', apiKey: '' }, c.openai || {}), maxIter: c.maxIter || 20, seedCap: c.seedCap || AI_SEED_CAP_DEFAULT };
@@ -2798,11 +2925,11 @@ async function aiUnlock() {
   aiLockMsg(''); aiShowLock(false); setStatus('API key unlocked for this browser session.', 'ok');
 }
 function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
-async function aiLoadModules() {
-  if (aiModCache) return aiModCache;
+async function loadModuleFiles() {
+  if (moduleFilesCache) return moduleFilesCache;
   const map = {};
   for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
-  aiModCache = map; return map;
+  moduleFilesCache = map; return map;
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
 // Connections tab: meta.connections[].name, the string in invokeurl [...connection:"..."]).
@@ -2863,7 +2990,7 @@ async function aiBuildSeed(cap) {
   let funcs = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
 
-  const mods = await aiLoadModules(); const mk = Object.keys(mods).sort();
+  const mods = await loadModuleFiles(); const mk = Object.keys(mods).sort();
   // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
   // about, rather than at the moment the answer would already have been guessed.
   const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
@@ -3040,11 +3167,11 @@ async function aiExecTool(name, input) {
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
   }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
-  if (name === 'get_module') { const mods = await aiLoadModules(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') { const mods = await loadModuleFiles(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
@@ -3674,7 +3801,7 @@ async function addWorkspaceForTab() {
  * whole thread is re-sent with every message - so the model is asked to reason about two orgs at
  * once and told nothing about the boundary.
  *
- * The **caches** stayed too, which is not confusing but wrong. `graphCache`, `aiModCache` and
+ * The **caches** stayed too, which is not confusing but wrong. `graphCache`, `moduleFilesCache` and
  * `aiConnCache` were cleared in `rebuildTree()` - which only runs if you happen to be on the
  * Functions tab. Switch workspace while looking at Workflows and the assistant answered from the
  * previous org's functions and schema, with no sign of it anywhere.
@@ -3685,7 +3812,7 @@ async function addWorkspaceForTab() {
 function dropWorkspaceState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
-  graphCache = null; aiModCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
+  graphCache = null; moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
   healthData = null;   // an audit is about one workspace, and it was the one thing left off this list
   aiRenderMessages();
   return had;
@@ -4145,20 +4272,35 @@ async function pullModules() {
 }
 
 // ---------- modules: tree ----------
+// Which module load is the current one. `rebuildModules()` empties `moduleData` and then fills it a
+// file at a time, so two of them running together is not two lists - it is one list written by two
+// writers: the second empties what the first has put in and both keep pushing, and every module
+// comes out twice. Reported from a jump that arrives while the tab is already loading, which is
+// exactly the window a jump lands in. The tree has carried this token since the phased load; the
+// other lists were left with the hazard and no token, which is the «one of a set» miss this project
+// keeps recording.
+let moduleLoad = 0;
+
 async function rebuildModules() {
   if (!dir) return;
   if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+  const mine = ++moduleLoad;
+  const current = () => mine === moduleLoad;
   setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  if (!current()) return;
   const names = [];
   for await (const p of walk(dir)) if (isModuleFile(p)) names.push(p);
   names.sort();
-  moduleData = [];
+  if (!current()) return;
+  const rows = [];
   for (const p of names) {
     try {
       const m = JSON.parse(await readFile(p));
-      moduleData.push({ path: p, api_name: m.api_name, gen: m.module_name || m.api_name, label: m.plural_label || m.singular_label || m.module_name || m.api_name, custom: m.generated_type === 'custom', generated_type: m.generated_type || '', fieldCount: (m.fields || []).length, lookupCount: (m.fields || []).filter((f) => f.lookup).length, layoutCount: (m.layouts || []).length, layouts: (m.layouts || []), viewable: (m.viewable !== false && m.visible !== false), navigable: moduleNavigable(m), unreadable: m.unreadable || null });
+      rows.push({ path: p, api_name: m.api_name, gen: m.module_name || m.api_name, label: m.plural_label || m.singular_label || m.module_name || m.api_name, custom: m.generated_type === 'custom', generated_type: m.generated_type || '', fieldCount: (m.fields || []).length, lookupCount: (m.fields || []).filter((f) => f.lookup).length, layoutCount: (m.layouts || []).length, layouts: (m.layouts || []), viewable: (m.viewable !== false && m.visible !== false), navigable: moduleNavigable(m), unreadable: m.unreadable || null });
     } catch (_) {}
   }
+  if (!current()) return;
+  moduleData = rows;          // published once, whole - never a list two loads are both writing into
   renderModules();
   setStatus(moduleData.length ? `${moduleData.length} modules in workspace.` : (emptyReason() || 'No modules yet - click Pull.'), moduleData.length ? 'ok' : 'warn');
   await refreshContext();
@@ -4368,6 +4510,7 @@ async function openModule(path, layoutId) {
   $('pvreveal').style.display = nav ? '' : 'none'; $('pvreveal').textContent = 'Records \u2197'; $('pvreveal').title = 'Open the module\'s records list in Zoho';
   $('pvfind').style.display = nav ? '' : 'none'; $('pvfind').textContent = 'Layouts \u2197'; $('pvfind').title = 'Open the module\'s layouts (add/edit fields & layout) in Zoho';
   $('pvcallers').className = ''; $('pvcallers').textContent = '';
+  showModuleUsage(m.api_name);   // not awaited: it needs the graph, and the fields must not wait for it
   const gen = m.module_name || m.api_name;
   const namesBlock = `<div style="padding:8px 10px;font:11px var(--mono);border-bottom:1px solid var(--border);background:#141b29;line-height:1.7">`
     + `<div style="color:#8ea0bb">display: <span style="color:#e7edf6">${escHtml(m.plural_label || m.singular_label || m.module_name || m.api_name)}</span></div>`
@@ -4762,6 +4905,10 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         + (trig.length ? `<span><b>Triggered by (${trig.length}):</b> ${trig.map((w) => `<a href="#${wfAnchor(w.id)}">${esc(w.name)}</a>`).join(', ')}</span>` : '')
         + ((scheduledBy[f.api_name] || []).length ? `<span><b>Scheduled by (${scheduledBy[f.api_name].length}):</b> ${scheduledBy[f.api_name].map((sc) => `<a href="#${schAnchor(sc.id)}">${esc(sc.name)}</a>`).join(', ')}</span>` : '')
         + assocText(f)
+        + ((f.modulesR || []).length ? `<span><b>Reads (${f.modulesR.length}):</b> ${f.modulesR.map(esc).join(', ')}</span>` : '')
+        + ((f.modulesW || []).length ? `<span><b>Writes (${f.modulesW.length}):</b> ${f.modulesW.map(esc).join(', ')}</span>` : '')
+        + ((f.modulesT || []).length ? `<span><b>Reached by URL (${f.modulesT.length}):</b> ${f.modulesT.map(esc).join(', ')}</span>` : '')
+        + (f.modulesUnknown ? `<span><b>Module not determinable:</b> ${f.modulesUnknown} call(s)</span>` : '')
         + ((scope.connections && (f.connections || []).length) ? `<span><b>Connections (${f.connections.length}):</b> ${f.connections.map((c) => (c.name && connApiSet.has(c.name)) ? `<a href="#${connAnchor(c.name)}">${esc(c.name)}</a>` : esc(c.name)).join(', ')}</span>` : '')
         + (f.stats ? `<span><b>Size:</b> ${f.stats.lines} lines (${f.stats.codeLines} code) · ${(f.stats.chars / 1024).toFixed(1)} KB · <b>outbound calls:</b> ${f.stats.apiCalls || 'none'}${f.stats.apiCalls ? ` (${f.stats.invokeurl} invokeurl, ${f.stats.crm} zoho.crm, ${f.stats.zoho} other${f.stats.sendmail ? ', ' + f.stats.sendmail + ' sendmail' : ''})` : ''}</span>` : '')
         + ((f.modified_by || f.updatedTime) ? `<span><b>Modified:</b> ${f.modified_by ? 'by ' + esc(f.modified_by) : ''}${f.updatedTime ? ' · ' + esc(String(f.updatedTime).slice(0, 16)) : ''}</span>` : '')
@@ -5045,6 +5192,30 @@ async function loadExportData() {
   const mods = [];
   for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
   let g = null; try { g = await ensureGraph(); } catch (_) {}
+  // The module reading, resolved once for both reports. It is done here rather than in each builder
+  // because the two must not be able to disagree - a reader moves between the HTML and the Markdown
+  // and a number that differs between them is worse than a number missing from one.
+  if (g) {
+    const known = await moduleNames();
+    const byKey = new Map();
+    for (const n of Object.values(g.nodes)) {
+      if (!n.file) continue;
+      const r = [], w = [], tc = [];
+      for (const m of n.modules || []) {
+        if (!known.has(m.name)) continue;
+        const b = m.mode === 'write' ? w : m.mode === 'read' ? r : tc;
+        if (!b.includes(m.name)) b.push(m.name);
+      }
+      n.modulesR = r.sort(); n.modulesW = w.sort(); n.modulesT = tc.sort();
+      byKey.set((n.namespace || '') + '.' + (n.api_name || n.name), n);
+    }
+    fns.forEach((f) => {
+      const n = byKey.get((f.namespace || '') + '.' + (f.api_name || ''));
+      if (!n) return;
+      f.modulesR = n.modulesR; f.modulesW = n.modulesW; f.modulesT = n.modulesT;
+      f.modulesUnknown = n.modulesUnknown || 0;
+    });
+  }
   const modRefs = {};
   mods.forEach((m) => (m.fields || []).forEach((fl) => { if (fl.lookup) (modRefs[fl.lookup] ||= []).push({ module: m.api_name, field: fl.api_name }); }));
   const wfs = [];
@@ -5125,6 +5296,14 @@ function buildExportMarkdown(d, scope) {
     if (n.associated_place && n.associated_place.length) md += `- used in: ${n.associated_place.map((p) => `${p._type}${p.name ? ' ' + p.name : ''}`).join('; ')}\n`;
     if (n.stats) md += `- size: ${n.stats.lines} lines (${n.stats.codeLines} code) · ${(n.stats.chars / 1024).toFixed(1)} KB\n- outbound calls: ${n.stats.apiCalls || 'none'}${n.stats.apiCalls ? ` (${n.stats.invokeurl} invokeurl, ${n.stats.crm} zoho.crm, ${n.stats.zoho} other Zoho${n.stats.sendmail ? `, ${n.stats.sendmail} sendmail` : ''})` : ''}\n`;
     if (scope.connections && n.connections && n.connections.length) md += `- connections: ${n.connections.map((c) => c.name).join(', ')}\n`;
+    // What the code does to the org's modules. Read and write are kept apart here as on screen, and
+    // the calls whose module is computed are stated rather than dropped - a report that quietly
+    // omits what it could not read is a lesser copy of the panel, which is the one thing an export
+    // must never be.
+    if (n.modulesR && n.modulesR.length) md += `- reads modules: ${n.modulesR.join(', ')}\n`;
+    if (n.modulesW && n.modulesW.length) md += `- writes modules: ${n.modulesW.join(', ')}\n`;
+    if (n.modulesT && n.modulesT.length) md += `- reaches by URL: ${n.modulesT.join(', ')}\n`;
+    if (n.modulesUnknown) md += `- module not determinable in ${n.modulesUnknown} call(s)\n`;
     if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
     md += scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
   });

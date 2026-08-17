@@ -286,6 +286,23 @@ git commit -m "baseline"</code></pre>
   <p><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> Wiring</b> (in Functions mode) opens how the org is wired - what fires what; <b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5" rx="1"/><rect x="9" y="9" width="5.5" height="5" rx="1"/><path d="M7 4h3.5a1.2 1.2 0 0 1 1.2 1.2V9"/></svg> ER diagram</b> (in Modules
     mode) opens modules and their relations. From a module preview, the same button opens the entity-relationship
     diagram focused on that module.</p>
+  <p class="note"><b>Which modules a function touches, and which functions touch a module.</b> Open a
+    function and its <b class="ui">Details</b> pane lists the modules its code <b>reads</b> and the ones
+    it <b>writes</b> - read out of the calls themselves, so <code>zoho.crm.getRecordById("Contacts", id)</code>
+    is a read of Contacts and <code>updateRecord</code> is a write. A COQL query and the path of a REST
+    url count too. Open a <b>module</b> and the same pane turns it round: which functions read it, which
+    write it. That second question has no answer anywhere in Zoho.<br>
+    Two limits, and they are on the screen as well as here. A module named through a variable cannot be
+    known, so those calls are counted and reported rather than dropped - which makes every list a
+    <b>lower bound</b>, never a guarantee that nothing else writes there. And a name is only shown when
+    it is a module this org actually has: a word that looks like one and is not says nothing.<br>
+    In the code itself the module is a link: in <code>zoho.crm.getRecordById("Contacts", id)</code> the
+    name <code>"Contacts"</code> opens the module, the way a call to another function opens that
+    function. Only in that position - a string anywhere else is a string, and which position that is
+    comes from each task's own documented signature: in
+    <code>getRelatedRecords("Prices_Services", "Practitioners", id)</code> the first name is the
+    <b>relation</b> and it takes you to the module at the other end of it, while the second is the
+    parent module. A task whose signature has not been read is left alone rather than guessed at.</p>
   <p class="note"><b>How the arrows are found, and what that cannot see.</b> An arrow between two
     functions is a <code>namespace.name(</code> written in the caller's source. Comments and text in
     quotes are set aside first, so a call you have commented out is not an arrow - and the function it
