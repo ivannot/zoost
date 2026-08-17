@@ -137,6 +137,38 @@ the naming convention the code already follows. It says what it misses, too: a c
 not end in `Cache` escapes it, and being *mentioned* by a test is not the same as its staleness
 being *proved*. The mention is what makes an absence visible; the proof is still judgement.
 
+**An intermittent defect is a sequence, so record the sequence - do not sample it and never deduce
+it.** A row selected by a jump was not scrolled into view «sometimes»; it took **five** changes to
+the panel, each reverted, before anybody wrote down what actually happened in what order. When that
+was finally done - wrap the function that scrolls, put a `MutationObserver` and a `ResizeObserver` on
+the box, number every entry - the answer was one line long:
+
+    list drawn -> reveal: box 401..777, row 424, INSIDE, does nothing -> pane opens -> box 401..469
+
+The reveal was running and was **right**; then the detail pane opened, the list went from 376px to
+68px, and nothing revealed again. Whether the row was still on screen depended on where the scroll
+happened to be, which is what «random» is. The event nobody had named was not «the list has been
+drawn» - every one of the five attempts aimed at that - it was «the pane has opened».
+
+Three rules come out of it, and the third is the one that costs the most to learn:
+
+- **Sampling at chosen instants is not measuring.** «Read `scrollTop` after a second» is the 1990s
+  junior's `sleep`, and it produces a fix of the same shape - one that waits instead of knowing.
+  Reported that way by the author, and he was right. Record events in order; the causality is then in
+  the data instead of in your head.
+- **A guard that skips when the thing is absent is not a guard.** The first check here read the row's
+  position *if there was a row*, so it passed on exactly the case it was written for. Absence is the
+  finding.
+- **Every change made before the sequence existed was wrong, and every change made after it was
+  right.** Not most: all of them, five against three. When a report contains the word «sometimes»,
+  the next action is an instrument, never an edit.
+
+**And a mechanical replace decides which call sites it hits - twice it decided wrong.** Both times the
+helper being introduced *contained the pattern being replaced*, so the new function was rewritten
+into a call to itself, and both times every unit test passed because nothing executes it: the browser
+caught it. Insert the helper **after** the replacement, and read the count it reports - «7 sites» when
+grep said 6 is the defect announcing itself.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because
