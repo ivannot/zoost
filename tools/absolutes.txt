@@ -200,6 +200,7 @@ bd185851083e23ae  site/docs-crm.html: Chapter 5: in: code turns the box into a s
 1631422a9c9bb1e3  site/docs-crm.html: Chapter 8: the catalogue, and which functions use each connection - so one that nothing uses is visible.
 695566f1704feaf3  site/docs-crm.html: Chapter 9: candidates to review, never a verdict - and the coverage note sits above the list, not in a footnote.
 c0a970763287a425  site/docs-crm.html: Code you have commented out does not count as a call, so a function whose only mention is a disabled line is named here rather than left looking alive.
+64e4d4d0509f3e83  site/docs-crm.html: Comments and text in quotes are set aside first, so a call you have commented out is not an arrow - and the function it named can then be reported by the health audit as one nothing calls.
 ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 950840e2d70d406e  site/docs-crm.html: Each control appears only when it has somewhere to take you.
 8756fe2d46f0bc32  site/docs-crm.html: Each is absent when it would do nothing.
@@ -207,6 +208,8 @@ ad261f06b401142d  site/docs-crm.html: Decide deliberately, every time.
 dda479e23ee57331  site/docs-crm.html: Filter chips hide the system related lists (Notes, Attachments, Tasks…) so only your own relations remain.
 9e282c99c84b2b6c  site/docs-crm.html: Find has a scope switch attached to it: in: names matches file names, in: code runs a full-text search across every function source in the org - the closest thing to grep over your Deluge, and something Zoho does not provide.
 9db8aa1683ed13f2  site/docs-crm.html: Following a link is only half of it, so the panel keeps a history , exactly as a browser does.
+84a9e84a8cbfaf9d  site/docs-crm.html: Four things follow, and they are the honest edges of the method rather than defects: a call written any other way is not seen; when the namespace in the source does not match where the function actually lives, Zoost links it to the only function with that name, which is a deduction, and where two carry the same name it says ambiguous instead of choosing; a call inside a branch that never runs is still an arrow, because this reads your code and not its execution; and a function that calls itself is not drawn as one.
+39535ffb5a94943a  site/docs-crm.html: How the arrows are found, and what that cannot see.
 f13a92a1cf15097b  site/docs-crm.html: If Zoho refuses an area, the pull says so in plain words instead of showing a status code, nothing is written for it, and its tab disappears rather than sitting there greyed out.
 616120c86aac644b  site/docs-crm.html: If everything still matches but the relations have changed, it says that too, because otherwise a clean-looking load would be the only thing you were told.
 75b20437b7a7b080  site/docs-crm.html: If the Zoho tab in front of you belongs to a different org, Zoost disables every Zoho-bound action and shows a bar offering to switch tab or switch workspace.
@@ -538,6 +541,7 @@ b9a20578d2d4e2c8  site/it/docs-crm.html: Entrambi i report dichiarano comunque l
 5ff88323d6720862  site/it/docs-crm.html: Guidano tutte e tre le viste, quindi spegnere Connections è il modo di leggere un diagramma senza di esse - la ricerca invece restringe solo l'elenco.
 16668d9173bc4b4c  site/it/docs-crm.html: HTML ( Export HTML ) - tutto il workspace come un unico file autoconsistente e navigabile.
 e46961abb53c0a61  site/it/docs-crm.html: I chip in alto sono insieme il filtro e la legenda dei colori, e comandano tutte e tre le viste.
+27098dfc26517577  site/it/docs-crm.html: I commenti e il testo fra virgolette vengono messi da parte prima, quindi una chiamata che hai commentato non è una freccia - e la funzione che nominava può a quel punto comparire nell'audit di salute come una che nessuno chiama.
 584366bc3ae1ca59  site/it/docs-crm.html: I conteggi d'uso coprono soltanto le funzioni Deluge di questo workspace .
 2b7b3da5542f5255  site/it/docs-crm.html: I ruoli sono per org: un workspace che rifiuta un'area non dice niente sul prossimo.
 57d500e9e6b6c5b1  site/it/docs-crm.html: Il filtro è Attached to nothing , e lo stesso elenco compare nell'audit di salute sotto Wiring .
@@ -561,6 +565,7 @@ e9b082a5ca27517a  site/it/docs-crm.html: Lo stesso filtro dispone il grafo allo 
 2111218ffad46d2b  site/it/docs-crm.html: Lunghezza e chiamate coprono tutte le funzioni; i conteggi di esecuzione coprono le più attive e vengono da Zoho.
 32baca9c4a4ec7aa  site/it/docs-crm.html: Metterlo sotto Git Qui non c'è niente di automatico, di proposito: è il tuo repository, con le tue convenzioni.
 2b09799e9359c974  site/it/docs-crm.html: Mostrano cosa c'è a schermo : tutte accese vuol dire tutto, un clic ne spegne una.
+d49f73ca2b7b54f9  site/it/docs-crm.html: Ne discendono quattro cose, che sono i bordi onesti del metodo e non difetti: una chiamata scritta in qualunque altro modo non si vede; se il namespace scritto nel sorgente non corrisponde a dove la funzione vive davvero, Zoost la collega all'unica con quel nome - è una deduzione - e dove due portano lo stesso nome dice ambigua invece di scegliere; una chiamata dentro un ramo che non gira mai è comunque una freccia, perché qui si legge il tuo codice e non la sua esecuzione; e una funzione che chiama sé stessa non viene disegnata come tale.
 b5e6539a39d9c83d  site/it/docs-crm.html: Nel pannello una picklist mostra il numero di valori e si apre verso il basso con un clic, uno per riga: quaranta opzioni su una riga facevano scorrere la tabella di lato senza fine modules/layouts/ un file per modulo, con le sezioni e i campi di ogni layout - sotto i moduli che descrivono workflows/ un file per regola: trigger, criteri, azioni immediate e differite schedules/ , connections/ l'elenco delle schedulazioni e il catalogo delle connessioni dell'org export/ i report che generi Una cartella per tipo, un index.json dentro ciascuna e le funzioni sotto functions/ così un namespace Deluge non può mai scontrarsi con una cartella creata da Zoost.
 5e93f984ce642524  site/it/docs-crm.html: Nella vista ♥ Health , sotto Functions: ogni funzione fallita con il motivo e il numero di riga, e sopra quante esecuzioni e quanti fallimenti Zoho ha contato nelle ultime 24 ore.
 422e56827ea6d29d  site/it/docs-crm.html: Niente related list / nessuna matrice dei layout Quel workspace è stato scaricato prima che esistessero.
