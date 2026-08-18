@@ -36,7 +36,21 @@
   // the sender is this window and that the id is digits, and re-reads the function from Zoho itself.
   // Raised by an outside audit, which was right about the '*' and wrong about the receiver: source
   // was already checked. Neither half is worth much alone.
+  // Installing over an older hook leaves *its* wrappers underneath - they were never removed, and
+  // cannot be: a wrapper does not know how to unwrap itself. So one request walks two observers and
+  // the panel is told twice. Harmless in effect (a notice only ever asks for a re-read of the state
+  // as it is now) and wrong as a fact, so identical notices arriving together are collapsed here,
+  // where the duplication is made, rather than by everyone downstream learning to expect it.
+  //
+  // A window rather than a flag, because a second genuine save of the same function is a thing
+  // people do - and re-reading once instead of twice for it costs nothing.
+  // On the page, not in this closure: the older hook's wrappers are still there with a closure of
+  // their own, so a private memory would be two memories and would collapse nothing.
   const notify = (type, id) => {
+    const what = type + ':' + (id || ''), now = Date.now();
+    const last = window.__zoostLast || {};
+    if (last.what === what && now - last.at < 1500) return;
+    window.__zoostLast = { what, at: now };
     try {
       window.postMessage({ source: 'DELUGE_IDE_HOOK', type, id: id == null ? '' : String(id) }, location.origin);
     } catch (_) {}

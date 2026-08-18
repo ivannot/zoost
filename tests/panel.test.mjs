@@ -5225,6 +5225,28 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const load = (win, xhr) => new Function('window', 'XMLHttpRequest', 'location', 'document', 'console', hook)(
     win, xhr, win.location, { title: '' }, { debug() {}, info() {}, log() {} });
 
+  test('replacing an older hook does not tell the panel twice', () => {
+    // Reported, and the first version of the test below was too kind: it set the marker an older
+    // build leaves without installing the **wrappers** that build leaves. Those cannot be removed -
+    // a wrapper does not know how to unwrap itself - so one request now walks two observers, and
+    // without collapsing the notice the panel is told twice and rewrites the file twice.
+    const posted = [];
+    class FakeXHR {
+      constructor() { this.status = 200; this._l = {}; }
+      open(m, u) { this.__m = m; this.__u = u; }
+      send() { (this._l.loadend || []).forEach((f) => f()); }
+      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
+    }
+    const win = { postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
+                  location: { origin: 'https://crm.zoho.eu' } };
+    load(win, FakeXHR);                    // the older build, wrappers and all
+    win.__zoostHook = true;                // marked the way an older build marked it
+    load(win, FakeXHR);                    // this build, installing over it
+    const x = new FakeXHR(); x.open('PUT', '/crm/v2/settings/functions/123?language=deluge'); x.send();
+    assert.deepEqual(posted.map((p) => `${p.type}:${p.id}`), ['saved:123'],
+                     'one save produced more than one notice');
+  });
+
   test('a newer hook replaces an older one instead of bowing out', () => {
     const posted = [];
     class FakeXHR {
@@ -5259,5 +5281,28 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.equal(win.__zoostHook, v, 'the version moved on a second install');
     const x = new FakeXHR(); x.open('PUT', '/crm/v2/settings/functions/7?language=deluge'); x.send();
     assert.deepEqual(posted.map((p) => p.type), ['saved'], 'one request produced two notices');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The export is a document, and a document with the same id twice is malformed - every anchor to it
+// lands on the first, and a reader scrolling finds the chapter again further down. `Actions` was
+// emitted twice, chapter and contents entry both, from the commit that introduced it: the HTML
+// checks read the pages we *ship* and had never read the HTML we *generate*, which is the gap.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  const body = panel.slice(panel.indexOf('function buildExportHtml'), panel.indexOf('function buildExportMarkdown'));
+
+  test('the export names each chapter once', () => {
+    for (const id of ['functions', 'modules', 'relations', 'workflows', 'schedules', 'actions',
+                      'connections', 'failures', 'health']) {
+      const n = (body.match(new RegExp(`id="${id}"`, 'g')) || []).length;
+      assert.equal(n, 1, `the export emits <h2 id="${id}"> ${n} times`);
+    }
+  });
+
+  test('the contents list names each chapter once', () => {
+    const heads = (body.match(/class="toch">([A-Za-z ]+)/g) || []).map((x) => x.split('>')[1].trim());
+    assert.deepEqual(heads, [...new Set(heads)], `a chapter is listed twice: ${heads.join(', ')}`);
   });
 }
