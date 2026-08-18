@@ -515,7 +515,7 @@
     return row;
   }
   async function pullActions() {
-    const out = [], missed = [], capped = [];
+    const out = [], missed = [], capped = [], detailMissed = [];
     for (const k of ACTION_KINDS) {
       let page = 1;
       try {
@@ -539,16 +539,28 @@
         // workflow rules are: a list plus a detail per item. Bounded, and the bound is reported.
         if (k.kind === 'tasks') {
           const mine = out.filter((a) => a.kind === 'tasks');
-          for (let i = 0; i < mine.length && i < 500; i++) {
+          for (let i = 0; i < mine.length; i++) {
+            // Beyond the bound the task is still listed - every one of them is - and only its detail
+            // was not read. It used to be reported as `capped`, which the panel words as «there are
+            // more in Zoho»: false, and it named a kind that does not exist, so nothing downstream
+            // could match it against a row. Named by id instead, in the same list as a refusal.
+            if (i >= 500) { mine[i].detail_read = false; detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: 'beyond the per-pull detail bound' }); continue; }
             try {
               const one = await api(`${k.path}/${mine[i].id}`
                 + (k.detail ? `?include_inner_details=${encodeURIComponent(k.detail)}` : ''));
               const t = list(one, k.key, `${k.path}/${mine[i].id}`)[0];
               if (t && t.field_mappings) mine[i].mappings = t.field_mappings.map(mapping).filter((m) => m.field);
-            } catch (_) { /* one task that will not answer is not the area failing */ }
+              mine[i].detail_read = true;
+            } catch (e) {
+              // One task that will not answer is not the area failing - but it is not a task with no
+              // mappings either, and that is what it looked like: the row went to disk thin, with a
+              // current schema version, over a row that had them. Said by id so the panel can keep
+              // what the last pull read of exactly this one.
+              mine[i].detail_read = false;
+              detailMissed.push({ kind: 'tasks', id: mine[i].id, reason: (e && e.message) || String(e) });
+            }
             await new Promise((res) => setTimeout(res, 40));
           }
-          if (mine.length > 500) capped.push('tasks (detail)');
         }
       } catch (e) {
         // One kind refusing is not the area failing: an org may not have the feature, or the role
@@ -560,7 +572,7 @@
     // already injected into an open Zoho tab, so a pull can run the *previous* version and write
     // rows the panel then reports as «not read by the pull that wrote this» - which is true, and
     // reads as a bug in the panel. With this, the panel can say whose copy is old.
-    return { total: out.length, actions: out, missed, capped, sv: ACT_SV };
+    return { total: out.length, actions: out, missed, capped, detail_missed: detailMissed, sv: ACT_SV };
   }
 
   async function pullConnections() {
@@ -614,6 +626,15 @@
   // it is certain of and reports the ceiling, which is the same bargain the paged walks strike with
   // `capped`: the list may be shorter than the org, and nothing here pretends otherwise.
   const FAIL_LIMIT = 100;
+  // `Number()` is not a reading: it answers 0 for `null`, for `''` and for a string of spaces, which
+  // are the three shapes a field that did not come back actually arrives in. The first version of
+  // this guard used `Number.isFinite(Number(x))` and let all three through as zeros - it was written
+  // against `undefined`, which is the one shape that happens to fail it.
+  function finiteCount(v) {
+    if (v == null || (typeof v === 'string' && !v.trim())) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
   async function pullFailures() {
     const j = await api(`/crm/v2/settings/functions/failures?language=deluge&start=1&limit=${FAIL_LIMIT}&componentType=all`);
     const failures = list(j, 'custom_function_failures', 'custom_function_failures').map(failureRow);
@@ -631,8 +652,10 @@
         // A row with no readable count contributes nothing to a sum and says nothing about it, so
         // the total quietly comes out low - the same «unknown, never zero» this catch already states,
         // one level down, where it applies to a component of the number instead of to the number.
-        const counts = (u.top_usage || []).map((x) => Number(x.count));
-        usage[status] = counts.every((n) => Number.isFinite(n)) ? counts.reduce((n, c) => n + c, 0) : null;
+        // `list()` rather than `|| []`: a response with no `top_usage` at all is a shape that did not
+        // answer, and summing an empty array produces a confident zero out of it.
+        const counts = list(u, 'top_usage', 'top_usage').map((x) => finiteCount(x.count));
+        usage[status] = counts.every((n) => n !== null) ? counts.reduce((n, c) => n + c, 0) : null;
       } catch (_) { usage[status] = null; }   // an aggregate we could not read is unknown, never zero
     }
     // How often each function actually ran, which is the measured cost the mirror can only guess at
@@ -648,11 +671,11 @@
     try {
       const r = await api('/crm/v2/settings/functions/dashboard/top_usage?type=function_most_used'
         + `&period=past_24_hours&from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to))}`);
-      runs = (r.top_usage || []).map((x) => ({ id: x.function_id ? String(x.function_id) : null,
+      runs = list(r, 'top_usage', 'top_usage').map((x) => ({ id: x.function_id ? String(x.function_id) : null,
                                                name: x.value || '',
                                                // A function in the *most used* list whose count did
                                                // not read is not a function that ran zero times.
-                                               count: Number.isFinite(Number(x.count)) ? Number(x.count) : null }));
+                                               count: finiteCount(x.count) }));
     } catch (_) { runs = null; }   // unknown, never an empty list: an empty one would read as «nothing ran»
     // The org's own meter for the period: what Zoho counted against the plan, and the ceiling.
     let credits = null;

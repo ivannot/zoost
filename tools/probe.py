@@ -680,7 +680,7 @@ AN = """
       const c0 = await ensureSqlCache();
       if (typeof c0.get(qid) !== 'string') say('the SQL cache does not hold the query it was asked about');
       sqls[qid].sql = 'select 1 -- rewritten by the probe\\n';
-      await writeSql();
+      await writeSql(beginWorkspaceOp());   // the writers take the workspace they belong to
       const c1 = await ensureSqlCache();
       if (!/rewritten by the probe/.test(c1.get(qid) || ''))
         say('searching in: SQL still holds the query from before it was re-read');

@@ -195,17 +195,30 @@ async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.
 // worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
 // checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
 // back by us.
-let _dirCache = new Map();
-const forgetDirs = () => { _dirCache = new Map(); };
-async function dirFor(parts, create) {
+// Keyed on the root, not one map for whichever folder is current. It walked from `dir`, awaited each
+// step, and then wrote what it found into the *global* cache - so a resolution that started in one
+// workspace and finished after a switch filled the new workspace's cache with the old one's handles,
+// and the next lookup there answered without ever asking that folder. Reproduced in both panels: a
+// path resolved in B came back holding A's handle with zero calls to B.
+//
+// A cache per root cannot say the wrong thing about the other one: the entry goes where it was read
+// from. Handles still have to be given up eagerly rather than checked - a stale one is worse than a
+// slow one - so a switch drops everything and `removeEntry` drops everything, since a folder that
+// has just been deleted must not be handed back by us.
+let _dirCaches = new WeakMap();
+const forgetDirs = (root) => { if (root) _dirCaches.delete(root); else _dirCaches = new WeakMap(); };
+async function dirFor(parts, create, root = dir) {
+  if (!root) throw new Error('No workspace folder is open.');
+  let cache = _dirCaches.get(root);
+  if (!cache) _dirCaches.set(root, (cache = new Map()));
   const key = parts.join('/');
   // The cache answers for writes too: a folder that has been created once exists, and asking the
   // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
   // was set left a pull paying full price for every file it wrote - half of the eight calls each.
-  if (_dirCache.has(key)) return _dirCache.get(key);
-  let d = dir;
+  if (cache.has(key)) return cache.get(key);
+  let d = root;
   for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
-  _dirCache.set(key, d);
+  cache.set(key, d);
   return d;
 }
 
@@ -221,19 +234,42 @@ async function dirFor(parts, create) {
 function noteWrite(rel) {
   if (rel.startsWith('sql/') && rel.endsWith('.sql')) sqlCache = null;
 }
-async function writeFile(rel, content) {
+// The workspace an operation belongs to, taken once and carried - not read out of a global after
+// every await. A pull reads from Zoho, waits, and then writes: `dir` at that moment is whatever the
+// panel is showing *now*, so a switch part-way through wrote one workspace's views, schema and SQL
+// into another workspace's folder - and put its ids into the other one's memory. Measured.
+//
+// The root is a parameter of the I/O and the refusal lives in the one place every write passes
+// through. `current()` is what a caller asks before spending effort or touching what is in memory;
+// the writer refuses regardless, which is what makes the class impossible rather than unlikely.
+const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
+function beginWorkspaceOp() {
+  const gen = wsGen, root = dir;
+  return {
+    root, gen,
+    current: () => gen === wsGen && root === dir,
+    read: (p) => readFileAt(root, p),
+    write: (p, body) => writeFileAt(root, p, body),
+  };
+}
+async function writeFileAt(root, rel, content) {
+  if (root !== dir) throw new Error(WS_MOVED);
   const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), true);
+  const d = await dirFor(parts.slice(0, -1), true, root);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
   noteWrite(rel);
 }
-async function readFile(rel) {
+async function readFileAt(root, rel) {
   const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), false);
+  const d = await dirFor(parts.slice(0, -1), false, root);
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
 }
+// The shorthands every render path uses: they read and write the workspace on screen, which is the
+// one they mean. A path that survives an await must take an op instead.
+const writeFile = (rel, content) => writeFileAt(dir, rel, content);
+const readFile = (rel) => readFileAt(dir, rel);
 // «Not there» and «could not be read» are different facts, and this returned the same fallback for
 // both - so a workspace whose files were all on disk was announced as never pulled, and the reader
 // was sent to press Pull all over a folder that had simply gone unreadable. Reported. The file three
@@ -244,8 +280,8 @@ async function readFile(rel) {
 // added is that a failure which is not «no such file» leaves a trace, so whoever asks can say which
 // of the two happened.
 let readFailed = null;
-const readJson = async (rel, fallback) => {
-  try { return JSON.parse(await readFile(rel)); } catch (e) {
+const readJson = async (rel, fallback, op) => {
+  try { return JSON.parse(await (op ? op.read(rel) : readFile(rel))); } catch (e) {
     // `NotAllowedError` is Chrome saying the folder permission has lapsed, and it is proof that the
     // cached verdict in `rootGranted` is wrong. Leaving that verdict alone is what made the state
     // circular: the panel only re-requests permission while it believes it has none, so believing it
@@ -259,11 +295,13 @@ const readJson = async (rel, fallback) => {
 // What the last load off disk ran into, and the only thing the empty state is allowed to speak about:
 // a stray failure from some unrelated read must not turn into a sentence about this workspace.
 let diskUnreadable = null;
-const writeJson = (rel, o) => writeFile(rel, JSON.stringify(o, null, 2));
+const writeJson = (rel, o, op) => (op ? op.write(rel, JSON.stringify(o, null, 2)) : writeFile(rel, JSON.stringify(o, null, 2)));
 // Merge rather than replace. `.zoost.json` holds more than the binding - the workspace's own name
 // lives there too - and a whole-object write from any one writer silently drops what the others put
 // in it. The CRM learnt this twice; this side inherits the lesson rather than the bug.
-const patchCfg = async (o) => writeJson(CFG, Object.assign({}, await readJson(CFG, {}), o));
+// The op reaches here because `.zoost.json` is the file that says which workspace this folder
+// mirrors. Optional, so the render paths that mean the folder on screen are unchanged.
+const patchCfg = async (o, op) => writeJson(CFG, Object.assign({}, await readJson(CFG, {}, op), o), op);
 // Filenames are derived from Zoho's names, so anything a filesystem dislikes has to go. The id is
 // appended because two views in different folders may legitimately share a name.
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
@@ -737,36 +775,41 @@ function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Rea
 
 // ---------- pull ----------
 async function pullAll() {
+  const op = beginWorkspaceOp();   // the workspace this pull belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, 'Pulling…');
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     setBusy(true, 'Reading the workspace…');
     const info = await toBridge({ cmd: 'workspaceInfo' });
 
     setBusy(true, 'Reading the view list…');
     const vl = await toBridge({ cmd: 'listViews' });
+    if (!op.current()) return;   // the answer describes the workspace we were in, not this one
     views = vl.views || []; folders = vl.folders || [];
 
     setBusy(true, 'Reading structure and relations…');
     const sc = await toBridge({ cmd: 'workspaceErd' });
+    if (!op.current()) return;
     schema = sc.tables || {}; relations = sc.relations || [];
 
     const qIds = views.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
     const sq = await toBridge({ cmd: 'pullSql', ids: qIds });
+    if (!op.current()) return;
     sqls = sq.sql || {};
 
     const allIds = views.map((v) => v.id);
     setBusy(true, `Reading lineage… 0 / ${allIds.length}`);
     const dp = await toBridge({ cmd: 'scanDependencies', ids: allIds });
+    if (!op.current()) return;
     deps = dp.deps || {};
     pullFailed = [].concat(sq.failed || [], dp.failed || []);
 
     mergeSchemaIntoViews();
-    await writeToDisk(info);
+    await writeToDisk(info, op);
 
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
@@ -800,23 +843,24 @@ async function pullAll() {
 // Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
 // items that failed, and `pullOne()` re-reads a single view from its detail pane.
 async function pullOne(id) {
-  const gen = wsGen;   // the workspace this re-read belongs to
+  const op = beginWorkspaceOp();   // the workspace this re-read belongs to
   if (mismatchRefuse()) return;
   const v = viewById().get(id);
   if (!v) return;
   setBusy(true, `Re-reading «${v.name}»…`);
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     if (v.type === 'QueryTable') {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
+      if (!op.current()) return;
       if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
     }
     const d = await toBridge({ cmd: 'viewDependencies', id });
+    if (!op.current()) return;
     if (!deps) deps = {};
     deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     pullFailed = pullFailed.filter((f) => f.id !== id);
-    if (!inSameWorkspace(gen)) return;   // you changed workspace while this was reading
-    await writeLineage(); if (!inSameWorkspace(gen)) return; await writeSql();
+    await writeLineage(op); await writeSql(op);
     setBusy(false, `«${v.name}» re-read.`); $('status').className = 'ok';
     render(); await openDetail(id);
   } catch (e) {
@@ -827,6 +871,7 @@ async function pullOne(id) {
 }
 
 async function retryFailed() {
+  const op = beginWorkspaceOp();   // the workspace these items belong to
   if (mismatchRefuse()) return;
   const ids = [...new Set(pullFailed.map((f) => f.id))];
   if (!ids.length) return;
@@ -834,16 +879,19 @@ async function retryFailed() {
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, `Retrying ${ids.length} item(s)…`);
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const qIds = ids.filter((i) => { const v = viewById().get(i); return v && v.type === 'QueryTable'; });
     const still = [];
-    if (qIds.length) { const r = await toBridge({ cmd: 'pullSql', ids: qIds }); Object.assign(sqls, r.sql || {}); still.push(...(r.failed || [])); }
+    if (qIds.length) { const r = await toBridge({ cmd: 'pullSql', ids: qIds }); if (!op.current()) return; Object.assign(sqls, r.sql || {}); still.push(...(r.failed || [])); }
     const r2 = await toBridge({ cmd: 'scanDependencies', ids });
+    // Before the model is touched, not only before the disk is: these ids belong to the workspace
+    // this retry started in, and merging them into another one's memory is the same defect indoors.
+    if (!op.current()) return;
     if (!deps) deps = {};
     Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []));
     pullFailed = still;
     mergeSchemaIntoViews();
-    await writeLineage(); await writeSql();
+    await writeLineage(op); await writeSql(op);
     setBusy(false, pullFailed.length ? `${pullFailed.length} still unreadable.` : 'All previously failed items are now in.');
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
@@ -854,42 +902,42 @@ async function retryFailed() {
 }
 
 // Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
-async function writeLineage() {
-  if (!dir) return;
-  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps, failed: pullFailed });
+async function writeLineage(op) {
+  if (!op || !op.current()) return;
+  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps, failed: pullFailed }, op);
 }
-async function writeSql() {
-  if (!dir) return;
-  const index = await readJson('sql/index.json', {});
+async function writeSql(op) {
+  if (!op || !op.current()) return;
+  const index = await readJson('sql/index.json', {}, op);
   for (const [id, q] of Object.entries(sqls)) {
     if (typeof q.sql !== 'string') continue;              // not re-read this session; its file is current
     const v = viewById().get(id);
     const stem = q.stem || stemOf(v ? v.name : id, id);
-    await writeFile(`sql/${stem}.sql`, q.sql);
+    await op.write(`sql/${stem}.sql`, q.sql);
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
-  await writeJson('sql/index.json', index);
+  await writeJson('sql/index.json', index, op);
 }
 
-async function writeToDisk(info) {
-  await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views });
-  await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations });
-  await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed });
+async function writeToDisk(info, op) {
+  await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views }, op);
+  await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations }, op);
+  await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed }, op);
   // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
   // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
   const index = {};
   for (const [id, q] of Object.entries(sqls)) {
     const v = views.find((x) => x.id === id);
     const stem = stemOf(v ? v.name : id, id);
-    await writeFile(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
+    await op.write(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
-  await writeJson('sql/index.json', index);
+  await writeJson('sql/index.json', index, op);
   await patchCfg({
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
     counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, relations: relations.length, sql: Object.keys(sqls).length },
-  });
+  }, op);
   bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '', sample: !!(await readJson(CFG, {})).sample };
 }
 
@@ -898,7 +946,6 @@ async function writeToDisk(info) {
 // started. Reported there and reproduced here - a re-read begun in one workspace wrote its lineage
 // and its SQL into the next.
 let wsGen = 0;
-const inSameWorkspace = (gen) => gen === wsGen;
 
 async function loadFromDisk() {
   readFailed = null;
@@ -2217,18 +2264,19 @@ async function buildExportMarkdown(sc) {
 // There is no "analytics" in the filename because the workspace already sits under analytics/, and
 // the CRM does not put "crm" in its own.
 async function doExport(kind) {
+  const op = beginWorkspaceOp();   // the scope dialog and the build both await; the folder can move
   if (!dir) return;
   const sc = await askScope();
   if (!sc) return;
   await window.idbHandle.set('exportScopeAnalytics', sc);
   setBusy(true, kind === 'md' ? 'Building AI (Markdown) export…' : 'Building HTML export…');
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const md = kind === 'md';
     const body = md ? await buildExportMarkdown(sc) : await buildExportHtml(sc);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && (bound.name || bound.workspace)) || 'workspace')}-${stamp}.${md ? 'md' : 'html'}`;
-    await writeFile(name, body);
+    await op.write(name, body);
     setBusy(false, `Exported → ${name} (in your workspace folder).`); $('status').className = 'ok';
   } catch (e) {
     setBusy(false, 'Export error: ' + (e.message || e)); $('status').className = 'bad';
@@ -2356,6 +2404,7 @@ function wsOptionTitle(w) {
  * the folder does.
  */
 async function renameWorkspace() {
+  const op = beginWorkspaceOp();   // the prompt and the permission both await; the folder can move
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !dir) return;
   const current = (w.cfg && w.cfg.label) || '';
@@ -2370,8 +2419,8 @@ async function renameWorkspace() {
     // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
     // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
-    if (!(await ensurePerm(dir))) { status('Folder access needs re-granting - press ↻ Refresh, then try again.', 'warn'); return; }
-    await patchCfg({ label });
+    if (!(await ensurePerm(op.root))) { status(MSG.folder, 'warn'); return; }
+    await patchCfg({ label }, op);
     status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await refreshWorkspaces();
   } catch (e) { status('Could not save the name. ' + friendlyError(e), 'bad'); }

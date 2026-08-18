@@ -41,6 +41,16 @@ export function sliceFn(rel, name) {
   // The closing brace sits at the same indentation as the declaration. Column zero alone was not
   // enough: content-bridge.js wraps everything in an IIFE, so its functions are indented by two and
   // csrfToken() sliced 317 lines. Indentation is a fact about this codebase, consistently applied.
+  // A declaration that closes on its own line ends there. Without this the search below runs past it
+  // to the next `}` at that indentation and the slice quietly carries whatever sits between - which
+  // is how `ensurePerm`, one line long, arrived with three unrelated declarations attached and a
+  // duplicate `const` that only failed once something after it happened to share a name. A test that
+  // silently evaluates its neighbours is the failure this file exists to refuse.
+  // `start` sits on the newline before the declaration, because the search allows `(^|\n)`.
+  const from = src[start] === '\n' ? start + 1 : start;
+  const lineEnd = src.indexOf('\n', from);
+  const firstLine = src.slice(from, lineEnd < 0 ? src.length : lineEnd);
+  if (firstLine.includes('{') && firstLine.trimEnd().endsWith('}')) return firstLine.replace(/^(\s*)export\s+/, '$1');
   const kw = src.indexOf('function', start);
   const pad = src.slice(src.lastIndexOf('\n', kw) + 1, kw).match(/^[ \t]*/)[0];
   const end = src.indexOf('\n' + pad + '}', src.indexOf('{', start));

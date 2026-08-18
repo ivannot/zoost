@@ -183,7 +183,13 @@ const META_SV = 2;   // current function-meta schema version; functions on disk 
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
 // diagram without the pull having to remember.
-async function removeFile(path) { const parts = path.split('/'); const name = parts.pop(); let d = dir; for (const p of parts) d = await d.getDirectoryHandle(p); await d.removeEntry(name); noteWrite(path); }
+async function removeFileAt(root, path) {
+  if (root !== dir) throw new Error(WS_MOVED);
+  const parts = path.split('/'); const name = parts.pop();
+  let d = root; for (const p of parts) d = await d.getDirectoryHandle(p);
+  await d.removeEntry(name); noteWrite(path);
+}
+const removeFile = (path) => removeFileAt(dir, path);
 // --- Attribution (set PRODUCT_URL to the Chrome Web Store URL once available) ---
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
@@ -392,8 +398,11 @@ function bridgeError(r, fallback) {
 // The date is stored with it and shown, because "forbidden" is not a permanent truth - roles change,
 // and a verdict from three months ago is a record of what was asked, not a fact about today. That is
 // also why nothing here ever hides an area *without* an answer: no measurement means visible.
-async function noteAccess(area, err) {
+async function noteAccess(area, err, op) {
   if (!TAB[area]) return;
+  // Written after a pull, which means after every await it made: without the op this records one
+  // org's refusal in another org's `.zoost.json`, and the verdict is what later pulls skip on.
+  if (op && !op.current()) return;
   const state = !err ? 'ok' : err.forbidden ? 'forbidden' : 'failed';
   const before = accessOf(area);
   const prev = tabAccess[area] || {};
@@ -405,7 +414,7 @@ async function noteAccess(area, err) {
     // section detectable instead of silently old.
     pulledAt: err ? (prev.pulledAt || null) : new Date().toISOString(),
   } });
-  try { await patchCfg({ access: tabAccess }); } catch (_) {}
+  try { await patchCfg({ access: tabAccess }, op); } catch (_) {}
   publishAccess();
   if (before !== state && (before === 'forbidden' || state === 'forbidden')) renderTabs();   // the set of tabs just changed
 }
@@ -423,8 +432,8 @@ function pullFailMessage(area, e) {
 // The two halves of a failed pull, always taken together: record what Zoho answered for the area,
 // then say it. Recording without saying leaves the user with a tab that vanished and no reason;
 // saying without recording loses the verdict the next pull skips on. Six sites did both by hand.
-async function notePullFailure(area, e) {
-  await noteAccess(area, e);
+async function notePullFailure(area, e, op) {
+  await noteAccess(area, e, op);
   setStatus(pullFailMessage(area, e), 'bad');
   // A role refusal is not a platform change and no release will fix it, so the pointer would be
   // sending the reader somewhere that cannot help. Everything else is «Zoho did not answer the way
@@ -605,17 +614,30 @@ const noteWrite = (rel) => {
 // worse than a slow one, and this is the kind of cache that has to be given up eagerly rather than
 // checked. `removeEntry` drops it too, since a folder that has just been deleted must not be handed
 // back by us.
-let _dirCache = new Map();
-const forgetDirs = () => { _dirCache = new Map(); };
-async function dirFor(parts, create) {
+// Keyed on the root, not one map for whichever folder is current. It walked from `dir`, awaited each
+// step, and then wrote what it found into the *global* cache - so a resolution that started in one
+// workspace and finished after a switch filled the new workspace's cache with the old one's handles,
+// and the next lookup there answered without ever asking that folder. Reproduced in both panels: a
+// path resolved in B came back holding A's handle with zero calls to B.
+//
+// A cache per root cannot say the wrong thing about the other one: the entry goes where it was read
+// from. Handles still have to be given up eagerly rather than checked - a stale one is worse than a
+// slow one - so a switch drops everything and `removeEntry` drops everything, since a folder that
+// has just been deleted must not be handed back by us.
+let _dirCaches = new WeakMap();
+const forgetDirs = (root) => { if (root) _dirCaches.delete(root); else _dirCaches = new WeakMap(); };
+async function dirFor(parts, create, root = dir) {
+  if (!root) throw new Error('No workspace folder is open.');
+  let cache = _dirCaches.get(root);
+  if (!cache) _dirCaches.set(root, (cache = new Map()));
   const key = parts.join('/');
   // The cache answers for writes too: a folder that has been created once exists, and asking the
   // browser to create it again is the call this exists to avoid. Skipping the cache when `create`
   // was set left a pull paying full price for every file it wrote - half of the eight calls each.
-  if (_dirCache.has(key)) return _dirCache.get(key);
-  let d = dir;
+  if (cache.has(key)) return cache.get(key);
+  let d = root;
   for (const p of parts) d = await d.getDirectoryHandle(p, create ? { create: true } : undefined);
-  _dirCache.set(key, d);
+  cache.set(key, d);
   return d;
 }
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
@@ -627,19 +649,45 @@ const hasPerm = async (h) => (await h.queryPermission({ mode: 'readwrite' })) ==
 // the wording no longer varies by call site, so a wrapper like «Export error: …» is the only thing
 // that differs between one report of a lapsed permission and another.
 async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.folder); }
-async function writeFile(rel, content) {
+// The workspace an operation belongs to, taken once and carried - not read out of a global after
+// every await. A pull lists from Zoho, waits, and then writes: `dir` at that moment is whatever the
+// panel is showing *now*, so a switch part-way through put one org's functions, modules and layouts
+// into another org's folder, and the guards that existed checked once and let the writes after them
+// through. Measured, in both panels.
+//
+// So the root is a parameter of the I/O and the check lives in the one place every write passes
+// through, rather than being remembered at each call site - the same move as `noteWrite`. `current()`
+// is what a caller asks before spending effort; the writer refuses regardless, which is what makes
+// the class impossible instead of merely unlikely.
+const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
+function beginWorkspaceOp() {
+  const gen = wsGen, root = dir;
+  return {
+    root, gen,
+    current: () => gen === wsGen && root === dir,
+    read: (p) => readFileAt(root, p),
+    write: (p, body) => writeFileAt(root, p, body),
+    remove: (p) => removeFileAt(root, p),
+  };
+}
+async function writeFileAt(root, rel, content) {
+  if (root !== dir) throw new Error(WS_MOVED);
   const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), true);
+  const d = await dirFor(parts.slice(0, -1), true, root);
   const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
   const w = await fh.createWritable(); await w.write(content); await w.close();
   noteWrite(rel);
 }
-async function readFile(rel) {
+async function readFileAt(root, rel) {
   const parts = rel.split('/');
-  const d = await dirFor(parts.slice(0, -1), false);
+  const d = await dirFor(parts.slice(0, -1), false, root);
   const fh = await d.getFileHandle(parts[parts.length - 1]);
   return (await fh.getFile()).text();
 }
+// The shorthands every render path uses: they read and write the workspace on screen, which is the
+// one they mean. A path that survives an await must take an op instead.
+const writeFile = (rel, content) => writeFileAt(dir, rel, content);
+const readFile = (rel) => readFileAt(dir, rel);
 async function* walk(d, prefix = '') {
   for await (const [name, h] of d.entries()) {
     if (name.startsWith('.')) continue;
@@ -647,11 +695,14 @@ async function* walk(d, prefix = '') {
   }
 }
 const readCfg = async () => { try { return JSON.parse(await readFile(CFG)); } catch { return null; } };
-const writeCfg = async (o) => writeFile(CFG, JSON.stringify(o, null, 2));
+const writeCfg = async (o, op) => (op ? op.write(CFG, JSON.stringify(o, null, 2)) : writeFile(CFG, JSON.stringify(o, null, 2)));
 // Merge rather than replace. `.zoost.json` now holds more than the binding - the access verdicts
 // below live there too - and a whole-object write from any one writer silently drops what the others
 // put in it. This is the `cacheBinding` trap in CLAUDE.md, arriving a second time with a new field.
-const patchCfg = async (o) => writeCfg(Object.assign({}, (await readCfg()) || {}, o));
+// The op reaches here because `.zoost.json` is the file that says which org this folder mirrors:
+// written into the wrong one, two workspaces answer to the same id and only a hand edit separates
+// them again. It is optional, so the render paths that mean the folder on screen are unchanged.
+const patchCfg = async (o, op) => writeCfg(Object.assign({}, (await readCfg()) || {}, o), op);
 
 // ---------- tabs ----------
 //
@@ -1157,14 +1208,18 @@ async function rebuildTree() {
  */
 let _metaIndexWrites = Promise.resolve();
 function updateMetaIndex(mutate) {
+  // The queue is what makes this correct against the other writer, and it is also what made it write
+  // into the wrong folder: work handed to it runs *later*, so `dir` inside is whatever is on screen
+  // by the time its turn comes. The workspace is taken here, where the caller still means it.
+  const op = beginWorkspaceOp();
   _metaIndexWrites = _metaIndexWrites.then(async () => {
     let files = {};
     try {
-      const prev = JSON.parse(await readFile(META_INDEX));
+      const prev = JSON.parse(await op.read(META_INDEX));
       if (prev && prev.v === SUMMARY_V && prev.files) files = prev.files;
     } catch (_) {}
     await mutate(files);
-    await writeFile(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
+    await op.write(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
   }).catch(() => {});   // a summary that cannot be written is a cache that will be rebuilt, not a failure
   return _metaIndexWrites;
 }
@@ -2518,11 +2573,11 @@ async function contentSearch() {
 
 // ---------- pull / graph ----------
 async function pullAll() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
@@ -2534,16 +2589,16 @@ async function pullAll() {
       setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
       await rebuildTree(); endPull(); return;
     }
-    await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
+    await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
-    for await (const p of walk(dir)) {
+    for await (const p of walk(op.root)) {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
-      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await readFile(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
+      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
     }
     // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
-    let prunedF = 0; for (const p of rmF) { if (!sameWs(gen)) return; try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
+    let prunedF = 0; for (const p of rmF) { if (!op.current()) return; try { await op.remove(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
     // If you were reading one of the functions the pull has just pruned, the pane is showing
     // something that no longer exists - in Zoho or on disk. Reported: it stayed open, with the code
     // of a deleted function in it. It closes with the file, the same way a live deletion closes it.
@@ -2555,8 +2610,8 @@ async function pullAll() {
     // The org's identity is the one thing that must never land in another folder: written there,
     // two workspaces answer to the same id and only a hand-edited `.zoost.json` separates them
     // again. Checked immediately before, because everything above it awaited.
-    if (!sameWs(gen)) return;
-    await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
+    if (!op.current()) return;
+    await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() }, op);
     // Every field the binding carries, or the guard that reads one of them silently stops firing.
     // A pull cannot run on a sample - guardOk refuses it - so this can only ever be false here, and
     // writing it out is what stops the next field added to .zoost.json being dropped in this line.
@@ -2571,8 +2626,8 @@ async function pullAll() {
     // looked exactly like a census. That is the one thing a mirror may never do, and it was
     // introduced the day the ceiling was - reported by an assistant reading the repository.
     if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
-    await noteAccess('functions', null);
-  } catch (e) { await notePullFailure('functions', e); } finally { endPull(); }
+    await noteAccess('functions', null, op);
+  } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
 //
@@ -3433,7 +3488,8 @@ async function aiExecTool(name, input) {
         ? ` writes ${a.field || '?'} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}`
         : a.kind === 'email_notifications'
           ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
-          : a.kind === 'webhooks' ? ` ${a.method || ''} ${a.url || ''}` : '';
+          : a.kind === 'webhooks' ? ` ${a.method || ''} ${a.url || ''}`
+          : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}` : '';
       return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
     });
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `kind`, `module` or `unused`.');
@@ -3700,13 +3756,13 @@ function endPull() {
   if (pendingAfterPull) { pendingAfterPull = false; reconcileFunctions(); }
 }
 function reconcileFunctions() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   // Single-flight is not enough on its own: a create or a delete arriving *while* the list is being
   // read is a change the answer in flight cannot contain, and returning the promise already running
   // says «done» about a state that predates it. So a notice during a run is remembered and answered
   // by one more round afterwards - which also covers the notice that arrives while a pull is busy.
   if (reconciling) { reconcileAgain = true; return reconciling; }
   reconciling = (async () => {
-    const myDir = dir;                     // before anything awaits: the guards below await too
     if (mismatchRefuse()) return;
     if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
     if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
@@ -3720,7 +3776,7 @@ function reconcileFunctions() {
     try {
       setStatus('Something changed in Zoho - checking\u2026', 'busy');
       const r = await toBridge({ cmd: 'listFunctions' });
-      if (dir !== myDir) return;           // the answer describes the workspace we were in, not this one
+      if (!op.current()) return;           // the answer describes the workspace we were in, not this one
       if (!r?.ok) throw bridgeError(r, 'list failed');
       // A list that stopped early is not a statement about what exists: it is a statement about how
       // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
@@ -3732,20 +3788,20 @@ function reconcileFunctions() {
         return;
       }
       const live = new Set((r.entries || []).map((e) => String(e.id)));
-      await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
+      await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
       // Pruned from what Zoho says, never from what the page said.
       // Whatever a previous round could not finish removing, before anything else.
       // Try the removal again rather than asking whether the file is there: a read that fails for
       // any other reason would otherwise be taken for «already gone» and the entry dropped.
       // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
       for (const p of [...failedRemovals]) {
-        if (dir !== myDir) return;
-        try { await removeFile(p); failedRemovals.delete(p); }
+        if (!op.current()) return;
+        try { await op.remove(p); failedRemovals.delete(p); }
         catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
       }
       const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
       let failed = 0;
-      for (const e of gone) { if (dir !== myDir) return; failed += await pruneFunction(e.id) ? 0 : 1; }
+      for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id) ? 0 : 1; }
       await rebuildTree();
       await downloadMissing();
       if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
@@ -3764,6 +3820,7 @@ const failedRemovals = new Set();
 /** Take a function out of the mirror. Returns whether it went completely - a half-removed function
  *  reported as removed comes back at the next open, and the reader was told it had gone. */
 async function pruneFunction(id) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   const key = String(id);
   const info = index.get(key);
   const row = treeData.find((e) => String(e.id) === key);
@@ -3772,28 +3829,27 @@ async function pruneFunction(id) {
   let whole = true;
   // The folder this removal belongs to. Two files, two removals, awaits inside each: without this
   // the source went from one workspace and the metadata from the next.
-  const myDir = dir;
   for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) {
-    if (dir !== myDir) return false;
+    if (!op.current()) return false;
     // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
     // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
-    try { await removeFile(p); if (dir !== myDir) return false; failedRemovals.delete(p); }
+    try { await op.remove(p); if (!op.current()) return false; failedRemovals.delete(p); }
     catch (e) {
       // After the await, not before it: the failure of a removal that started in the previous
       // workspace was being written into this one's queue, which `dropWorkspaceState` had just
       // emptied - so the retry followed the reader across.
-      if (dir !== myDir) return false;
+      if (!op.current()) return false;
       if (!/NotFound/i.test(String(e && e.name))) { whole = false; failedRemovals.add(p); }
     }
   }
-  if (dir !== myDir) return false;
+  if (!op.current()) return false;
   try {
-    const idx = JSON.parse(await readFile('functions/index.json'));
-    if (dir !== myDir) return false;
-    if (Array.isArray(idx)) await writeFile('functions/index.json',
+    const idx = JSON.parse(await op.read('functions/index.json'));
+    if (!op.current()) return false;
+    if (Array.isArray(idx)) await op.write('functions/index.json',
       JSON.stringify(idx.filter((e) => String(e.id) !== key), null, 2));
   } catch (_) { whole = false; }
-  if (dir !== myDir) return false;
+  if (!op.current()) return false;
   index.delete(key);
   treeData = treeData.filter((e) => String(e.id) !== key);
   if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
@@ -3827,10 +3883,10 @@ function syncOne(id) {
 }
 
 async function syncOneNow(id) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   // The folder this started in. Everything below awaits Zoho, and the workspace selector stays
   // usable the whole time: without this the answer for A was written into B, both files, silently.
   // A handle identifies it exactly - the same object or a different workspace, no name to compare.
-  const myDir = dir;
   if (mismatchRefuse()) return;
   if (!dir || !(await hasPerm(dir))) return;
   await refreshContext();
@@ -3845,19 +3901,19 @@ async function syncOneNow(id) {
   try {
     setStatus(`Save detected (${id}), syncing…`, 'busy');
     const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });
-    if (dir !== myDir) return;             // you moved: this answer belongs to a folder we have left
+    if (!op.current()) return;             // you moved: this answer belongs to a folder we have left
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
     // Before **each** effect, not once before the pair: a write is several awaits of its own, so the
     // folder can change between the source and its metadata - and it did, leaving one file in each
     // workspace. Checked again rather than trusted from a moment ago.
-    if (dir !== myDir) return;
-    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg);
-    if (dir !== myDir) return;
-    await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    if (!op.current()) return;
+    await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
+    if (!op.current()) return;
+    await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     // The memory is an effect too: after the last write the row looked up in `treeData` is the new
     // workspace's, and marking it downloaded gave one org's row the other org's path.
-    if (dir !== myDir) return;
+    if (!op.current()) return;
     const ent = treeData.find((x) => x.id === String(id));
     if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
@@ -4391,6 +4447,7 @@ function wsOptionTitle(w) {
  * the folder does.
  */
 async function renameWorkspace() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !dir) return;
   const current = (w.cfg && w.cfg.label) || '';
@@ -4405,8 +4462,8 @@ async function renameWorkspace() {
     // there is a click to ask under: without it getFileHandle() throws the same bare "not allowed"
     // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
-    if (!(await ensurePerm(dir))) { setStatus('Folder access needs re-granting - press ↻ Refresh, then try again.', 'warn'); return; }
-    await patchCfg({ label });
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
+    await patchCfg({ label }, op);
     setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await loadWorkspaces();
   } catch (e) { setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
@@ -4578,7 +4635,10 @@ function setPullBusy(b) {
   // Both read from Zoho, so both are also off on a sample workspace - and this function is what
   // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
   // already turned it off. A state that is restored somewhere else has to know every reason for it.
-  ZOHO_BTNS.forEach((x) => ($(x).disabled = b || !zohoReady() || !dir || navOpenNow()));
+  // `pullBusy`, not `b`: with the depth counter, the argument says what this caller wants and the
+  // flag says whether anything else still holds it. Reading the argument put the buttons back on
+  // while a pull was running - a click that looks available and then does nothing.
+  ZOHO_BTNS.forEach((x) => ($(x).disabled = pullBusy || !zohoReady() || !dir || navOpenNow()));
 }
 async function pullCurrent() {
   if (pullBusy) return;
@@ -4626,11 +4686,11 @@ async function pullEverything() {
 
 // ---------- modules: pull ----------
 async function pullModules() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
@@ -4646,7 +4706,7 @@ async function pullModules() {
       if (fullLayouts.length) {
         // A write that failed is not permission to delete what is already there: the old file is
         // still the best answer anybody has, and losing it costs a re-pull of the expensive half.
-        try { await writeFile(lf, JSON.stringify(fullLayouts, null, 2)); lw++; } catch (_) {}
+        try { await op.write(lf, JSON.stringify(fullLayouts, null, 2)); lw++; } catch (_) {}
         keepLayoutFiles.add(lf);
       } else if (m.layouts_read !== true) {
         // Zoho did not answer - refused, rate-limited, or never asked because the fields call had
@@ -4659,26 +4719,26 @@ async function pullModules() {
       m.layouts = fullLayouts.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false, status: l.status || null, sections: (l.sections || []).length }));
       index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
       layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
-      try { await writeFile(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
+      try { await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
     }
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
-    await writeFile('modules/index.json', JSON.stringify(index, null, 2));
-    await writeFile('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
+    if (!op.current()) return;   // you changed workspace while this was reading
+    await op.write('modules/index.json', JSON.stringify(index, null, 2));
+    await op.write('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
-    for await (const p of walk(dir)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
+    for await (const p of walk(op.root)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await op.remove(p); prunedM++; } catch (_) {} } }
     // Only what this pull *knows* is gone: a module Zoho answered for, with no layouts. Anything it
     // could not read, or could not write, keeps whatever is on disk.
     let prunedL = 0;
-    for await (const p of walk(dir)) {
+    for await (const p of walk(op.root)) {
       if (!isLayoutFile(p) || keepLayoutFiles.has(p)) continue;
-      if (!sameWs(gen)) return;
-      try { await removeFile(p); prunedL++; } catch (_) {}
+      if (!op.current()) return;
+      try { await op.remove(p); prunedL++; } catch (_) {}
     }
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.`, 'ok');
-    await noteAccess('modules', null);
-  } catch (e) { await notePullFailure('modules', e); } finally { endPull(); }
+    await noteAccess('modules', null, op);
+  } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 
 // ---------- modules: tree ----------
@@ -4798,19 +4858,20 @@ function renderModules() {
   }
 }
 async function resyncModule(m) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
-  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return; }
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return; }
   if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
   setStatus(`Resyncing ${m.api_name}…`, 'busy');
   const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
-  let mod = {}; try { mod = JSON.parse(await readFile(m.path)); } catch (_) {}
+  let mod = {}; try { mod = JSON.parse(await op.read(m.path)); } catch (_) {}
   // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
   // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
   // module Zoho has just described, which is the same class of lie in the other direction.
   if (!r?.ok) {
     if (isRefusal(r?.status)) {
       mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
-      try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
+      try { await op.write(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
       m.unreadable = mod.unreadable; m.error = false;
       renderModules(); if (currentPath === m.path) openModule(m.path);
       setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
@@ -4821,7 +4882,7 @@ async function resyncModule(m) {
     return;
   }
   mod.fields = r.fields; delete mod.unreadable;
-  try { await writeFile(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
+  try { await op.write(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
   m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
   renderModules(); if (currentPath === m.path) openModule(m.path);
   setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
@@ -5117,16 +5178,17 @@ function isTransient(msg) {
 }
 const errText = (e) => String((e && e.message) || e || 'unknown').replace(/["'<>]/g, '').slice(0, 140);
 async function downloadOne(entry) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return false;
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
   const info = index.get(entry.id) || {};
   try {
     const r = await toBridge({ cmd: 'fetchOne', id: entry.id, category: entry.category || info.category, source: entry.source || info.source });
     if (!r?.ok || !r.file) throw new Error(r?.error || 'not found');
     const f = r.file;
-    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg);
-    await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
+    await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
@@ -5527,6 +5589,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         : a.kind === 'field_updates' ? (a.field ? esc(a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
             + ' \u2190 ' + (actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : esc(String(a.value))) : '')
         : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
+        : a.kind === 'tasks' && actThin(a) ? esc(MISS_DETAIL)
         : a.notify === true ? 'notifies' : '';
       return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(a.module || '') + '</td>'
         + '<td class="num">' + users.length + '</td><td>' + users.map((w) => esc(w.name || w.id)).join(', ') + '</td><td>' + detail + '</td></tr>';
@@ -5793,6 +5856,7 @@ function buildExportMarkdown(d, scope) {
            a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
         : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
         : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
+        : a.kind === 'tasks' && actThin(a) ? MISS_DETAIL
         : a.notify === true ? 'notifies' : '';
       md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(a.module || '')} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
     });
@@ -5834,30 +5898,32 @@ function buildExportMarkdown(d, scope) {
   return md;
 }
 async function exportMarkdown() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (!dir) return;
   const scope = await askScope(); if (!scope) return;
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     setStatus('Building AI (Markdown) export\u2026', 'busy');
     const data = await loadExportData();
     const md = buildExportMarkdown(data, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
-    await writeFile(name, md);
+    await op.write(name, md);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 async function exportHtml() {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (!dir) return;
   const scope = await askScope(); if (!scope) return;
   try {
-    await requirePerm(dir);
+    await requirePerm(op.root);
     setStatus('Building HTML export\u2026', 'busy');
     const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData();
     const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
-    await writeFile(name, html);
+    await op.write(name, html);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
   } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
 }
@@ -6042,13 +6108,14 @@ function renderWorkflows() {
   });
 }
 async function downloadOneWf(entry) {
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return false;
   if (!dir) return false;
-  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'bad'); return false; }
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return false; }
   try {
     const r = await toBridge({ cmd: 'fetchWorkflow', id: entry.id });
     if (!r?.ok || !r.rule) throw new Error(r?.error || 'not found');
-    await writeFile(entry.path, JSON.stringify(r.rule, null, 2));
+    await op.write(entry.path, JSON.stringify(r.rule, null, 2));
     entry.downloaded = true; entry.error = false; entry.errorMsg = '';
     return true;
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
@@ -6072,41 +6139,41 @@ async function downloadMissingWf() {
   setPullBusy(false); $('missing').disabled = false;
 }
 async function pullSchedules() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
-    if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
-    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e); return; }
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
+    const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e, op); return; }
+    if (!op.current()) return;   // you changed workspace while this was reading
     if (r.capped) { setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn'); return; }
-    await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
+    await op.write('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
-    await noteAccess('schedules', null);
-  } catch (e) { await notePullFailure('schedules', e); }
+    await noteAccess('schedules', null, op);
+  } catch (e) { await notePullFailure('schedules', e, op); }
 }
 // Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
-    if (!(await ensurePerm(dir))) return;
+    if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
-    await writeFile('connections/index.json', JSON.stringify(r.connections || [], null, 2));
+    if (!op.current()) return;   // you changed workspace while this was reading
+    await op.write('connections/index.json', JSON.stringify(r.connections || [], null, 2));
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
-    await noteAccess('connections', null);
-  } catch (e) { await notePullFailure('connections', e); }
+    await noteAccess('connections', null, op);
+  } catch (e) { await notePullFailure('connections', e, op); }
 }
 // ---------- automation actions (what a workflow fires) ----------
 //
@@ -6134,6 +6201,11 @@ const ACTION_SORTS = {
 // as META_SV on a function's meta.
 const ACT_SV = 4;
 const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
+// Two different absences, and they had the same appearance - none at all. A pull that could not read
+// this one item says so by id; a pull made by an older copy of the extension says so by schema. Both
+// are «not read», neither is «has none», and the wording is here once because four surfaces show it.
+const MISS_DETAIL = 'Zoho did not answer for this one when it was pulled - its field mappings are not read';
+const actThin = (a) => a && a.detail_read === false;
 /** Which rules fire each action, read from the workflow files already on disk.
  *
  *  This is the join the whole area rests on, and it costs nothing: `fetchWorkflow` has always
@@ -6184,17 +6256,17 @@ async function loadActionsIndex() {
   return Array.isArray(idx) ? idx : [];
 }
 async function pullActions() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
-    if (!(await ensurePerm(dir))) return;
+    if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }
     setStatus('Pulling automation actions\u2026', 'busy');
     const r = await toBridge({ cmd: 'pullActions' });
     if (!r?.ok) { setStatus('Actions pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
+    if (!op.current()) return;   // you changed workspace while this was reading
     // A kind that refused is stated rather than folded into the total: an org without webhooks and
     // an org whose role cannot read them look identical in a count.
     const missed = (r.missed || []).filter((m) => m && m.kind);
@@ -6222,23 +6294,41 @@ async function pullActions() {
     // carry less detail. That is reported, not merged - restoring a field this pull did not read
     // would be asserting something nobody measured.
     const partial = new Set([...missed.map((m) => m.kind), ...capped]);
+    // A task whose detail did not answer is not a task with no field mappings, and it arrived as one:
+    // full schema version, thin row, written over a row that had them. Named by id, so what is kept
+    // is exactly the item that was not read - the kind around it was read whole and is replaced.
+    const detailMissed = (r.detail_missed || []).filter((d) => d && d.kind && d.id != null);
     let actions = r.actions || [];
-    if (partial.size) {
+    if (partial.size || detailMissed.length) {
       const seen = new Set(actions.map((a) => `${a.kind}:${a.id}`));
       const prev = await loadActionsIndex();
       const kept = prev.filter((a) => partial.has(a.kind) && !seen.has(`${a.kind}:${a.id}`));
       if (kept.length) actions = actions.concat(kept);
-      if (!sameWs(gen)) return;   // reading the previous census is an await, and the folder can move under one
+      if (detailMissed.length) {
+        const thin = new Set(detailMissed.map((d) => `${d.kind}:${String(d.id)}`));
+        const before = new Map(prev.map((a) => [`${a.kind}:${String(a.id)}`, a]));
+        actions = actions.map((a) => {
+          const k = `${a.kind}:${String(a.id)}`;
+          if (!thin.has(k)) return a;
+          const p = before.get(k);
+          // Kept whole, not merged field by field: the previous row is a reading somebody took, and
+          // grafting half of it onto this one would produce a row nobody ever measured.
+          return (p && p.detail_read !== false && (p.mappings || []).length) ? p : a;
+        });
+      }
+      if (!op.current()) return;   // reading the previous census is an await, and the folder can move under one
     }
-    await writeFile('actions/index.json', JSON.stringify(actions, null, 2));
+    await op.write('actions/index.json', JSON.stringify(actions, null, 2));
     // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
     // short are two different reasons for a number to be smaller than the org.
+    const stillThin = detailMissed.filter((d) => { const a = actions.find((x) => `${x.kind}:${String(x.id)}` === `${d.kind}:${String(d.id)}`); return !a || a.detail_read === false; });
     const note = (missed.length ? ` ${missed.length} kind(s) could not be read - what the last pull saw of them was kept.` : '')
-      + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '');
+      + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '')
+      + (stillThin.length ? ` ${stillThin.length} task(s) whose detail Zoho did not return - they are listed, their field mappings are not read.` : '');
     if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${actions.length} action(s).` + note, 'warn'); }
-    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length) ? 'warn' : 'ok');
-    await noteAccess('actions', null);
-  } catch (e) { await notePullFailure('actions', e); }
+    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length || stillThin.length) ? 'warn' : 'ok');
+    await noteAccess('actions', null, op);
+  } catch (e) { await notePullFailure('actions', e, op); }
 }
 async function rebuildActions() {
   if (!dir) return;
@@ -6432,8 +6522,8 @@ function openAction(a) {
     // and a mirror that changes with the reader's locale is not a mirror. Zoho's own words are the
     // fallback for a shape this code has not met.
     + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '), mappingHtml(m))).join(''))
-    + (a.kind === 'tasks' && !(a.mappings || []).length && actStale(a)
-        ? row('Detail', '<span style="color:var(--warn)">not read by the pull that wrote this - press Pull to read it</span>') : '')
+    + (a.kind === 'tasks' && !(a.mappings || []).length && (actStale(a) || actThin(a))
+        ? row('Detail', `<span style="color:var(--warn)">${actThin(a) ? escHtml(MISS_DETAIL) : 'not read by the pull that wrote this'} - press Pull to read it</span>`) : '')
     + (a.notify === true ? row('Notify', 'yes') : '')
     + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
     + (a.locked ? row('Locked', 'yes') : '');
@@ -6592,11 +6682,11 @@ function runtimeSummary(n, capped) {
        + (capped ? ` \u00b7 ${FAIL_CAPPED}` : '');
 }
 async function pullFailures() {
-  const gen = wsGen;   // the workspace this reading belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
     pullActive = true;
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
@@ -6606,25 +6696,25 @@ async function pullFailures() {
     // One file for everything Zoho knows about how this org *runs*: what failed, how much ran, and
     // what it cost. It keeps the `failures/` name because that is what a reader looks for, and the
     // shape says the rest.
-    if (!sameWs(gen)) return;
-    await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
+    if (!op.current()) return;
+    await op.write('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
       runs: r.runs || null, credits: r.credits || null, capped: !!r.capped, failures: r.failures || [] }, null, 2));
-    await noteAccess('failures', null);
+    await noteAccess('failures', null, op);
     // No view of its own: a failure is a property of a function, not a kind of object, so it shows
     // where that dimension belongs - in the function's own detail, and in the health view, which is
     // already the place that answers «what is wrong across this org».
     setStatus(runtimeSummary((r.failures || []).length, r.capped), 'ok');
     if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
-  } catch (e) { await notePullFailure('failures', e); }
+  } catch (e) { await notePullFailure('failures', e, op); }
   finally { endPull(); }
 }
 
 async function pullWorkflows() {
-  const gen = wsGen;   // the workspace this pull belongs to
+  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
-    await requirePerm(dir);
+    await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
     const cfg = await readCfg();
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
@@ -6639,11 +6729,11 @@ async function pullWorkflows() {
       await loadWorkflowIndex(); if (viewMode === 'workflows') renderWorkflows();
       return;
     }
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
-    await writeFile('workflows/index.json', JSON.stringify(r.entries, null, 2));
+    if (!op.current()) return;   // you changed workspace while this was reading
+    await op.write('workflows/index.json', JSON.stringify(r.entries, null, 2));
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
     let prunedW = 0;
-    for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await removeFile(p); prunedW++; } catch (_) {} } } }
+    for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (_) {} } } }
     await loadWorkflowIndex();
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
@@ -6656,8 +6746,8 @@ async function pullWorkflows() {
     if (viewMode === 'actions') renderActions();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
-    await noteAccess('workflows', null);
-  } catch (e) { await notePullFailure('workflows', e); } finally { endPull(); }
+    await noteAccess('workflows', null, op);
+  } catch (e) { await notePullFailure('workflows', e, op); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {
   if (sampleRefuse()) return;
