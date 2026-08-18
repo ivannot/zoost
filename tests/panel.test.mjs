@@ -6390,3 +6390,74 @@ test('analytics: the model is guarded, not only the disk', () => {
     assert.ok(d.listenerGone, 'and its progress listener behind');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// From a security audit, and the first one is the sharper lesson: `noFocusHere` was already
+// inspected by a test, which asserted that it uses `DATA.focusName` and writes into the status line -
+// the *path*, never the property. A name from the org (a Zoho view or module may legally be called
+// `<img src=x>`) reached `innerHTML` raw. The CSP stops it executing and does not stop it being
+// markup, and «no hostile string keeps a tag open» is a rule this project asserts elsewhere.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the name in «nothing to focus on» is escaped`, () => {
+    const fn = sliceFn(`apps/${app}/graphview.js`, 'noFocusHere');
+    assert.ok(/const name = esc\(String\(DATA\.focusName \|\| id\)\);/.test(fn),
+              'a name from the org reaches innerHTML raw');
+    assert.ok(/\$\{name\}/.test(fn), 'and it no longer says which one it could not find');
+  });
+}
+
+// The link rule ran over text that had been through `escHtml` - which escapes `& < >` and not `"` -
+// and its URL pattern admits a quote. So `[x](https://a/"style="…)` closed the href and opened an
+// attribute: measured as a `position:fixed` overlay covering the whole panel. The string is the
+// model's, and the model reads Deluge source out of the org, which is the prompt-injection path.
+{
+  const RUN = (app, src) => {
+    const ctx = { String, RegExp, JSON };
+    vm.createContext(ctx);
+    vm.runInContext(sliceConst(`apps/${app}/sidepanel.js`, app === 'crm' ? 'escHtml' : 'esc') + '\n'
+      + (app === 'analytics' ? 'const escHtml = esc;\n' : '')
+      + sliceFn(`apps/${app}/sidepanel.js`, 'aiMarkdown'), ctx);
+    return vm.runInContext('aiMarkdown', ctx)(src);
+  };
+  for (const app of ['crm', 'analytics']) {
+    test(`${app}: a link cannot open an attribute of its own`, () => {
+      const out = RUN(app, 'see [docs](https://example.com/x"style="position:fixed;width:100vw)');
+      assert.ok(!/"style=/.test(out), `id=attr the href closed early: ${out.slice(0, 120)}`);
+      assert.ok(/&quot;style=&quot;/.test(out), 'id=attr the quote was dropped rather than escaped');
+    });
+
+    test(`${app}: and an ordinary link is not double-escaped`, () => {
+      // `&` has already been through escHtml by the time this rule runs; encoding it again turns
+      // every query string in the assistant's answers into `&amp;amp;`.
+      const out = RUN(app, 'see [ok](https://a.b/c?x=1&y=2)');
+      assert.ok(/href="https:\/\/a\.b\/c\?x=1&amp;y=2"/.test(out), `id=amp ${out.slice(0, 120)}`);
+      assert.ok(!/&amp;amp;/.test(out), 'id=amp the ampersand was encoded twice');
+    });
+  }
+}
+
+// The derivation cost, and the field that makes raising it free.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: the passphrase is derived at the current recommended cost`, () => {
+    const src = read(`apps/${app}/keyvault.js`);
+    const m = src.match(/const ITER = (\d+);/);
+    assert.ok(m, 'the cost is no longer a single named number');
+    assert.ok(Number(m[1]) >= 600000, `PBKDF2-HMAC-SHA256 at ${m[1]} iterations, below OWASP's 600,000`);
+    // What makes the number changeable at all: an old box is read at the cost it was written with.
+    assert.ok(/it: ITER/.test(src), 'the envelope no longer records the cost it was written at');
+    assert.ok(/Number\(box\.it\) \|\| ITER/.test(src), 'an old box would be read at the new cost and fail');
+  });
+}
+
+// A git ref may legally contain a quote, and both workflows read one into a shell. The tag is
+// validated by its exact shape in the one step that produces it, because every later step
+// interpolates that output - so this is the line that makes those safe.
+test('the release workflows take a ref through env and validate its whole shape', () => {
+  for (const f of ['.github/workflows/release.yml', '.github/workflows/store-upload.yml']) {
+    const y = read(f);
+    assert.ok(/IN_TAG: \$\{\{ inputs\.tag/.test(y), `id=env ${f} interpolates the ref into the script`);
+    assert.ok(/TAG="\$IN_TAG"/.test(y), `id=env ${f} does not read it from the environment`);
+    assert.ok(/grep -Eq '\^\(crm\|analytics\)-v\[0-9\]\+\\\.\[0-9\]\+\\\.\[0-9\]\+\$'/.test(y),
+              `id=shape ${f} accepts a tag by prefix, so anything may follow it`);
+  }
+});

@@ -1998,7 +1998,15 @@ function aiMarkdown(src) {
   t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
   t = t.replace(/^#{1,6}\s+(.*)$/gm, '<strong>$1</strong>');
   t = t.replace(/^\s*[-*]\s+(.*)$/gm, '• $1');
-  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // `escHtml` escapes `& < >` and not `"`, and the URL pattern admits one - so a link the model
+  // writes as `[x](https://a/"style="…)` closes the href and opens an attribute of its own. The
+  // model reads Deluge source from the org, which is the prompt-injection path `docs/boundaries.md`
+  // names, so this string is not ours. The CSP stops an inline handler; it does not stop a `style`
+  // that covers the panel, nor an href that differs from the text shown. The quote is escaped in the
+  // *replacement*, by function rather than by `$2`, so nothing else in the URL is touched twice -
+  // `&` has already been through escHtml and must not be encoded again.
+  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    (m, text, href) => `<a href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${text}</a>`);
   t = t.replace(/\n/g, '<br>');
   t = t.replace(/\uE000(\d+)\uE001/g, (mm, i) => codes[+i]);
   return t;

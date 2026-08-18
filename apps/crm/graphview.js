@@ -1084,8 +1084,13 @@ function orphanNote() {
 function noFocusHere(id) {
   const line = document.getElementById('statline');
   if (!line) return;
-  // What it was called, when the caller knew: an id is not something a reader can act on.
-  const name = String(DATA.focusName || id);
+  // What it was called, when the caller knew: an id is not something a reader can act on. Escaped,
+  // because it is a name from the org - a Zoho view or module called `<img src=x>` is a legal name,
+  // and this is the one place a name reached `innerHTML` raw. The CSP stops it executing; it does
+  // not stop it being markup, and «no hostile string keeps a tag open» is a rule this project asserts
+  // elsewhere. Found by an outside audit inside a function a test already inspected - the test read
+  // the *path* and never the property.
+  const name = esc(String(DATA.focusName || id));
   line.innerHTML = `<b>Nothing to focus on.</b> ${name} is not in this diagram - `
     + `nothing names it, so it is not one of the boxes this graph is made of. Showing everything instead.`;
 }

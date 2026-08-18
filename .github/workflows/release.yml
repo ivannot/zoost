@@ -62,13 +62,21 @@ jobs:
 
       - name: Read the app and version out of the tag
         id: tag
+        # Through `env:`, never interpolated into the script. A git ref may legally contain a quote,
+        # so `TAG="${{ … }}"` is a shell injection with a write-access precondition - which on a
+        # one-author repository is already the end of the story, and is still not a reason to leave
+        # the pattern in the one workflow that signs an attestation. GitHub's own hardening guidance
+        # says the same thing.
+        env:
+          IN_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           # GITHUB_REF_NAME is the branch on a dispatched run, so the input wins where there is one.
-          TAG="${{ inputs.tag || github.ref_name }}"
-          case "$TAG" in
-            crm-v*|analytics-v*) ;;
-            *) echo "::error::$TAG is not <app>-v<version>"; exit 1 ;;
-          esac
+          TAG="$IN_TAG"
+          # The exact shape, not a glob. `crm-v*` matches `crm-v1'; …` too, and every later step
+          # interpolates this output into a shell - so validating it loosely here is what would make
+          # those safe or unsafe. One place decides, and it decides on the whole string.
+          printf '%s' "$TAG" | grep -Eq '^(crm|analytics)-v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::$TAG is not <app>-v<major>.<minor>.<patch>"; exit 1; }
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           # The commit that was checked out, never github.sha: on a dispatched run that is the head
           # of the branch the workflow was launched from, so the first dispatch published a Release

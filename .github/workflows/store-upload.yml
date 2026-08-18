@@ -58,12 +58,19 @@ jobs:
       # one field in this file that is a property of the platform rather than of us.
       - name: Read the tag
         id: tag
+        # Through `env:` - see the note in release.yml. `head_branch` is a platform field carrying a
+        # git ref, which is exactly the kind of value that must not reach a shell by interpolation.
+        env:
+          IN_TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
-          TAG='${{ inputs.tag || github.event.workflow_run.head_branch }}'
+          TAG="$IN_TAG"
+          # The exact shape, for the same reason as in release.yml: everything downstream reads this
+          # output back into a shell, so this is the line that makes those safe.
+          printf '%s' "$TAG" | grep -Eq '^(crm|analytics)-v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::$TAG is not <app>-v<major>.<minor>.<patch>"; exit 1; }
           APP="${TAG%%-v*}"
           VERSION="${TAG##*-v}"
-          [ "$APP" != "$TAG" ] || { echo "::error::$TAG is not <app>-v<version>"; exit 1; }
           [ -d "apps/$APP" ] || { echo "::error::there is no apps/$APP"; exit 1; }
           echo "app=$APP" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"

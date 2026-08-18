@@ -22,7 +22,12 @@
  * a random salt, then AES-GCM with a random IV. No dependencies, nothing invented.
  */
 (function () {
-  const ITER = 250000;                 // deliberate cost, paid once per unlock
+  // OWASP's current figure for PBKDF2-HMAC-SHA256 is 600,000; this was 250,000, chosen when it was
+  // the figure. Raising it costs nothing to anybody who already has a box: the envelope carries `it`,
+  // which is exactly what that field is for, so an old box is still read at its own cost and is
+  // re-written at this one the next time it is locked. Paid once per unlock, on a passphrase whose
+  // threat model is a shared machine.
+  const ITER = 600000;
   const enc = new TextEncoder();
   const dec = new TextDecoder();
   const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
