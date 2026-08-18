@@ -159,7 +159,7 @@ passKind	684df355a097	bdf6d02817df	divergent
 pdfTitle	93b3d0697faa	d692e674db7f	divergent
 pickRoot	cd92b6382197	f43eb72e1a77	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
-pullAll	7f9d8cdc2c61	0a40bd90b9d8	divergent
+pullAll	5807447e26ed	0a40bd90b9d8	divergent
 readFile	ec9fffb8ee13	ec9fffb8ee13	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	07f0e3628c81	09196a24e765	divergent

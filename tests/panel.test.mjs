@@ -5339,3 +5339,27 @@ test('every cache in a shipped panel is named by something that tests it', () =>
               'it saves after the mode has already changed, so it saves under the wrong tab');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The worst thing this product could do, and it was reachable: `listFunctions` stops after twenty
+// pages and says so with `capped`, and both the reconciler and the pull treated that partial answer
+// as the whole truth - writing it as the index and deleting every local function missing from it.
+// Past the paging limit an ordinary creation, or a forged message from the page, could remove files
+// that are still in Zoho. In the pull the truncation was even reported *after* the pruning had run.
+// Raised by an outside review; a partial list is a statement about the reading, not about what
+// exists.
+{
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const [name, start] of [['reconcileFunctions', 'function reconcileFunctions'], ['pullAll', 'async function pullAll']]) {
+    test(`${name} removes nothing from a list that stopped early`, () => {
+      const fn = panel.slice(panel.indexOf(start), panel.indexOf('\n}', panel.indexOf(start)));
+      const guard = fn.indexOf('r.capped');
+      assert.ok(guard > 0, 'the truncation is never read');
+      for (const danger of ['pruneFunction', 'removeFile', "writeFile('functions/index.json'"]) {
+        const at = fn.indexOf(danger);
+        if (at > 0) assert.ok(guard < at, `${danger} runs before the truncation is checked`);
+      }
+      assert.ok(/nothing was removed/.test(fn), 'the reader is not told that nothing was removed');
+    });
+  }
+}

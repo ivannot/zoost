@@ -2478,6 +2478,12 @@ async function pullAll() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
     const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
+    // Same rule as the reconciler, and here it was worse: the truncation was reported *after* the
+    // pruning had already run, so the warning described files that were already gone.
+    if (r.capped) {
+      setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
+      await rebuildTree(); pullActive = false; return;
+    }
     await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
     const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
@@ -3639,6 +3645,15 @@ function reconcileFunctions() {
       setStatus('Something changed in Zoho - checking\u2026', 'busy');
       const r = await toBridge({ cmd: 'listFunctions' });
       if (!r?.ok) throw bridgeError(r, 'list failed');
+      // A list that stopped early is not a statement about what exists: it is a statement about how
+      // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
+      // functions that are still in Zoho - the worst thing this product could do, and reachable on
+      // any org past the paging limit by an ordinary create. Raised by an outside review.
+      if (r.capped) {
+        await rebuildTree();
+        setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Click Pull all.`, 'warn');
+        return;
+      }
       const live = new Set((r.entries || []).map((e) => String(e.id)));
       await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
       // Pruned from what Zoho says, never from what the page said.
