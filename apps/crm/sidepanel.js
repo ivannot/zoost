@@ -1014,7 +1014,9 @@ const labelOf = (e) => (nameMode === 'display' ? (e.display_name || e.api_name) 
 // Filter the functions tree to those that use a given connection (built from the pulled function
 // metadata). This is the "which/how many functions use connection X" answer, reusing the tree.
 async function filterByConnection(name) {
-  const g = await ensureGraph();
+  // WS_MOVED from an overtaken graph build ended as an unhandled rejection - a click that does
+  // nothing and says nothing. Overtaken means the filter no longer applies; stopping is the answer.
+  let g; try { g = await ensureGraph(); } catch (_) { return; }
   connFilterSet = new Set(Object.values(g.nodes).filter((n) => (n.connections || []).some((c) => c.name === name)).map((n) => n.file));
   connectionFilter = name;
   if (viewMode !== 'functions') setMode('functions'); else renderTree();
@@ -2930,7 +2932,7 @@ async function buildHealth() {
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
   // before its declaration - a temporal dead zone that `node --check` waves through and only
   // running the function finds, which is the trap this repository has already recorded twice.
-  const fx = await failuresIndex();
+  const fx = (await failuresIndex()) || { at: null, usage: null, runs: null, credits: null, capped: false, byName: new Map(), all: [] };
   // Measured cost, beside the static proxies that were the only thing here before. «180 lines and
   // five outbound calls» is a guess about what a function costs; «it ran 239 times yesterday» is
   // what it cost. Both stay: the proxy covers every function, the measurement covers the busiest
@@ -3323,12 +3325,12 @@ async function aiBuildSeed(cap) {
   let funcs = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
 
-  const mods = await loadModuleFiles(); const mk = Object.keys(mods).sort();
+  const mods = (await loadModuleFiles()) || {}; const mk = Object.keys(mods).sort();
   // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
   // about, rather than at the moment the answer would already have been guessed.
   const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
 
-  const conns = await aiLoadConnections();
+  const conns = (await aiLoadConnections()) || [];
   const connections = conns.length
     ? `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} \u00b7 used by ${c.uses.length} function(s)${c.connected === false ? ' \u00b7 NOT CONNECTED' : ''}${c.missing ? ' \u00b7 not in catalogue' : ''}`).join('\n') + '\n'
     : '';
@@ -3336,7 +3338,7 @@ async function aiBuildSeed(cap) {
   // The actions are a vocabulary too: without their names the model cannot answer «which rule sends
   // the renewal notice» except by opening rules one at a time. Counts by kind, not the whole list -
   // an org can have hundreds, and `list_actions` is one call away.
-  const acts = await aiLoadActions();
+  const acts = (await aiLoadActions()) || { list: [], users: new Map(), addresses: false };
   const byKind = {};
   acts.list.forEach((a) => (byKind[a.kind] = (byKind[a.kind] || 0) + 1));
   const unattached = acts.list.filter((a) => !a.associated && !(acts.users.get(a.kind + ':' + String(a.id)) || []).length).length;
@@ -3424,7 +3426,7 @@ async function aiFocus() {
         // The sender address obeys the same setting here as in the index and in both exports. A
         // focus block that carried it regardless would let the address out through the one door
         // nobody thought to close - and the whole point of that switch is that it has one meaning.
-        const { addresses } = await aiLoadActions();
+        const { addresses } = (await aiLoadActions()) || { addresses: false };
         const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
         if (!addresses && shown.from_address) shown.from_address = '(withheld - Settings can let the assistant see sender addresses)';
         return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
@@ -3504,7 +3506,7 @@ async function aiExecTool(name, input) {
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
-  if (name === 'get_module') { const mods = await loadModuleFiles(); const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') { const mods = (await loadModuleFiles()) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
@@ -3523,7 +3525,7 @@ async function aiExecTool(name, input) {
       rows.length, 'Pass a filter to narrow by function name or reason.');
   }
   if (name === 'get_connection') {
-    const list = await aiLoadConnections();
+    const list = (await aiLoadConnections()) || [];
     const q = String(input.name || '').toLowerCase();
     const c = list.find((x) => (x.name || '').toLowerCase() === q) || list.find((x) => (x.label || '').toLowerCase() === q);
     if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled - run Pull all)');
@@ -3589,7 +3591,7 @@ async function aiExecTool(name, input) {
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
   }
   if (name === 'list_actions') {
-    const acts = await aiLoadActions();
+    const acts = (await aiLoadActions()) || { list: [], users: new Map(), addresses: false };
     if (!acts.list.length) return 'No automation actions in this workspace - they are pulled with «Pull all» or from the Actions tab.';
     const kind = String(input.kind || '').toLowerCase().replace(/[\s-]/g, '_');
     let sel = acts.list;
@@ -5903,7 +5905,7 @@ async function loadExportData() {
   // because the two must not be able to disagree - a reader moves between the HTML and the Markdown
   // and a number that differs between them is worse than a number missing from one.
   if (g) {
-    const known = await moduleNames();
+    const known = (await moduleNames()) || new Map();
     const byKey = new Map();
     for (const n of Object.values(g.nodes)) {
       if (!n.file) continue;
@@ -7267,6 +7269,7 @@ async function pullHealthRuntime() {
     healthData = await buildHealth();
     renderHealthView();
     const fx = await failuresIndex();
+    if (!fx) return;   // overtaken: the runtime it read belongs to the workspace that was left
     healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
   } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
   finally { b.disabled = false; }

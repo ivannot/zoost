@@ -6746,3 +6746,27 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// A loader that was overtaken answers null, and a caller that does not expect it turns a clean stop
+// into a TypeError - ugly where a catch waits upstream, an unhandled rejection where none does
+// (`filterByConnection` is a click handler). Derived over the six loaders: every await of one is
+// followed, on its own line or the next, by something that copes - a fallback, a catch, or a check.
+test('crm: every caller of a null-returning loader copes with the null', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const lines = src.split('\n');
+  const bad = [];
+  for (const fn of ['moduleNames', 'loadModuleFiles', 'getCodeCache', 'aiLoadActions', 'aiLoadConnections', 'failuresIndex']) {
+    lines.forEach((line, i) => {
+      if (!new RegExp(`await ${fn}\\(`).test(line) || new RegExp(`function ${fn}`).test(line)) return;
+      const here = line + '\n' + (lines[i + 1] || '');
+      if (!/\|\||\.catch|if \(!/.test(here)) bad.push(`${fn} at line ${i + 1}: ${line.trim().slice(0, 80)}`);
+    });
+  }
+  assert.deepEqual(bad, [], `these read a loader's answer without asking if it was overtaken:\n  ${bad.join('\n  ')}`);
+  // And the one caller that is a click handler with no try above it: `ensureGraph` throws WS_MOVED
+  // when overtaken, and from an onclick that ends as an unhandled rejection - a click that does
+  // nothing and says nothing, which is the silent-exit class this file already names.
+  assert.ok(/let g; try \{ g = await ensureGraph\(\); \} catch \(_\) \{ return; \}/.test(
+    sliceFn('apps/crm/sidepanel.js', 'filterByConnection')),
+    'a click on a connection can end as an unhandled rejection again');
+});
