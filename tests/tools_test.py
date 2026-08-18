@@ -2899,7 +2899,10 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
         self.assertIn('location.origin);', hook, "hook.js posts to '*' again")
         self.assertNotIn("}, '*')", hook, "hook.js posts to '*' again")
         bridge = (ROOT / 'apps' / 'crm' / 'content-bridge.js').read_text(encoding='utf-8')
-        listener = bridge[bridge.index("addEventListener('message'"):][:700]
+        # To the end of the listener, not a fixed number of characters: a comment added inside it
+        # pushed the check this looks for out of the window, and the test read as a missing guard.
+        _at = bridge.index("addEventListener('message'")
+        listener = bridge[_at:bridge.index("\n  });", _at)]
         self.assertIn('ev.source !== window', listener, 'the bridge accepts a message from any frame')
         self.assertRegex(listener, r"d\.source !== 'DELUGE_IDE_HOOK'", 'the bridge accepts any shape')
         self.assertRegex(listener, r'\\d\{1,20\}', 'the bridge forwards an id it has not looked at')
