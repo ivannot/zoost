@@ -5215,6 +5215,30 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const bridge = read('apps/crm/content-bridge.js');
   const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
+  test('the hook, run, turns each request into its event', () => {
+    // Executed, not read: asserting the text of `kindOf` is not knowing what it does, and the
+    // difference cost an evening. It listens on `loadend` - `load` is the success path only and
+    // misses a request aborted after the server answered - so the stub fires that.
+    const posted = [];
+    class FakeXHR {
+      constructor() { this.status = 200; this._l = {}; }
+      open(m, u) { this.__m = m; this.__u = u; }
+      send() { (this._l.loadend || []).forEach((f) => f()); }
+      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
+    }
+    const win = { postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
+                  location: { origin: 'https://crm.zoho.eu' } };
+    new Function('window', 'XMLHttpRequest', 'location', 'document', 'console', hook)(
+      win, FakeXHR, win.location, { title: '' }, { info() {}, debug() {} });
+    for (const [m, u] of [['PUT', '/crm/v2/settings/functions/123?language=deluge'],
+                          ['DELETE', '/crm/v2/settings/functions/123?language=deluge'],
+                          ['POST', '/crm/v2/settings/functions']]) {
+      const x = new FakeXHR(); x.open(m, u); x.send();
+    }
+    assert.deepEqual(posted.map((p) => `${p.type}:${p.id || '-'}`),
+                     ['saved:123', 'deleted:123', 'created:-']);
+  });
+
   test('the hook maps each method to its own event, in one place', () => {
     const at = hook.indexOf('const kindOf');
     assert.ok(at > 0, 'the two interceptors decide for themselves what they saw');

@@ -59,9 +59,18 @@
     return XO.call(this, method, url, ...rest);
   };
   XMLHttpRequest.prototype.send = function (...a) {
-    this.addEventListener('load', () => {
+    // If the page captured `open` before this script ran, our record of the method never gets
+    // written and every request looks like nothing at all. `responseURL` is on the object itself
+    // after the response, so the url can always be recovered; the method cannot, and that is the
+    // one thing worth being defensive about.
+    if (!this.__di) this.__di = { method: '', url: '' };
+    // `loadend`, not `load`: `load` is the success path only, and it does not fire when a request is
+    // aborted or errors after the server has already answered - which is a request we would then
+    // never hear about. `loadend` fires in every case and the status is checked below anyway.
+    this.addEventListener('loadend', () => {
       try {
         const d = this.__di || {};
+        if (!d.url && this.responseURL) d.url = this.responseURL;
         const ok = this.status >= 200 && this.status < 300;
         const k = ok && kindOf(d.method, d.url || '');
         if (k) notify(k[0], k[1]);
