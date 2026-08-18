@@ -115,8 +115,10 @@ The pieces exist scattered across other tools; the **combination** doesn't:
   rather than a verdict. Zoost never reads a template's content, nor who the recipients are.
 - **Execution failures**: what Zoho reports as failing - the function, what invoked it, the reason with its
   line number, how often, and how many runs and failures Zoho counted in the last 24 hours. The one
-  thing here that reads a runtime rather than a structure, so it carries the date it was read. It
-  does not re-run anything (that would write) and it does not read the input of a failed run.
+  thing here that reads a runtime rather than a structure, so it carries the date it was read. Zoho's
+  list is read to its first page, and a page that came back full is reported as such rather than
+  presented as the whole. It does not re-run anything (that would write) and it does not read the
+  input of a failed run.
 - **Size and outbound calls**: every function shows its length (lines, code lines, KB) and how many
   outbound calls it makes - `invokeurl`, `zoho.crm.*` and the other Zoho service tasks, counted
   outside comments and string literals. Counts, not a score: length is verbosity, not complexity,

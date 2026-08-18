@@ -34,21 +34,30 @@
     const cand = i >= 0 ? p[i + 1] : (p[0] === 'crm' ? p[1] : null);
     return (cand && !/^v\d/.test(cand) && cand !== 'org') ? cand : null;   // skip API version / org-prefixed forms
   }
+  // Both of these read the id out of the page's markup, and both were called per request - `orgId()`
+  // from the header builder, so a pull of a few thousand functions serialised the whole CRM DOM a few
+  // thousand times. What is remembered is a *successful* read only: a page that has not rendered the
+  // field yet must be asked again, and a value that was found cannot change without a navigation,
+  // which replaces the document this script is attached to. Switching org in Zoho is such a
+  // navigation; the panel compares the org against the binding on every pull regardless.
+  let _org = null, _zuid = null;
   function orgId() {
+    if (_org) return _org;
     // The CRM org id is the zgid / crmZgid. Do NOT fall back to a generic "orgId":
     // on some pages that is an embedded ASAP/help-portal id (e.g. ASAP_ORGID), not the CRM org.
     try {
       const html = document.documentElement.innerHTML;
       const m = html.match(/(?:crmZgid|["']?zgid["']?)["'\s]*[,:=]["'\s]*(\d{9,})/);
-      if (m) return m[1];
+      if (m) return (_org = m[1]);
     } catch (_) {}
     return null;
   }
   // The Zoho user id (zuid) is on every CRM page - a #dreZuId field (deluge runtime) and a `zuid`
   // JS global. The connections catalogue endpoint needs it. Scraped like orgId (same fragility).
   function zuid() {
-    try { const el = document.getElementById('dreZuId'); const v = el && String(el.value || el.textContent || '').trim(); if (v && /^\d{6,}$/.test(v)) return v; } catch (_) {}
-    try { const m = document.documentElement.innerHTML.match(/\bzuid\s*["'\s]*[:=]\s*["']?(\d{9,})/i); if (m) return m[1]; } catch (_) {}
+    if (_zuid) return _zuid;
+    try { const el = document.getElementById('dreZuId'); const v = el && String(el.value || el.textContent || '').trim(); if (v && /^\d{6,}$/.test(v)) return (_zuid = v); } catch (_) {}
+    try { const m = document.documentElement.innerHTML.match(/\bzuid\s*["'\s]*[:=]\s*["']?(\d{9,})/i); if (m) return (_zuid = m[1]); } catch (_) {}
     return null;
   }
   const context = () => ({ ok: true, origin: BASE, org: orgId(), instance: instanceName(), zuid: zuid() });
@@ -591,9 +600,16 @@
       recordId: (f.entity_info && f.entity_info.id) ? String(f.entity_info.id) : null,
     };
   }
+  // One page, and it is *said*. The endpoint takes `start` and `limit`, and whether it walks past the
+  // first page is not something this has ever read - a walk built on that guess would loop over the
+  // same hundred rows if `start` were ignored, and produce a census by repetition. So it reads what
+  // it is certain of and reports the ceiling, which is the same bargain the paged walks strike with
+  // `capped`: the list may be shorter than the org, and nothing here pretends otherwise.
+  const FAIL_LIMIT = 100;
   async function pullFailures() {
-    const j = await api('/crm/v2/settings/functions/failures?language=deluge&start=1&limit=100&componentType=all');
+    const j = await api(`/crm/v2/settings/functions/failures?language=deluge&start=1&limit=${FAIL_LIMIT}&componentType=all`);
     const failures = list(j, 'custom_function_failures', 'custom_function_failures').map(failureRow);
+    const capped = failures.length >= FAIL_LIMIT;
     // The run counts are aggregates - a count per hour, nothing else - so they carry no record data
     // at all and are the one half of this that costs nothing in posture.
     const to = new Date(), from = new Date(to.getTime() - 24 * 3600 * 1000);
@@ -630,7 +646,7 @@
       const row = (d.dashboard || [])[0] || {};
       if (row.count != null || row.used != null) credits = { limit: row.count ?? null, used: row.used ?? null };
     } catch (_) { credits = null; }
-    return { failures, usage, runs, credits, at: iso(to) };
+    return { failures, capped, usage, runs, credits, at: iso(to) };
   }
 
   // The MAIN world is the page's, so anything running in it can send this - the check is what the

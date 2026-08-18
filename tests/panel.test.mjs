@@ -4630,8 +4630,18 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // Building the call graph reads every source - 40,000 calls on five thousand functions - and it
     // used to happen on every open for two numbers in a badge. Above the limit it waits to be asked.
     assert.ok(/const STATS_LIMIT = \d+/.test(src), 'the graph is built on every open again');
+    assert.ok(/const statsDeferred = \(\) => treeData\.length > STATS_LIMIT/.test(src), 'the limit is not applied');
     const at = src.indexOf('async function attachFnStats');
-    assert.ok(/treeData\.length > STATS_LIMIT/.test(src.slice(at, at + 400)), 'the limit is not applied');
+    assert.ok(/if \(statsDeferred\(\)\) return;/.test(src.slice(at, at + 200)), 'the badges are built above the limit');
+  });
+
+  test('and the reader is told why the badges are absent, by the line that survives', () => {
+    // It was said by `attachFnStats`, which the load starts and does not await, and the load then set
+    // its own status over it in the same turn: written for large orgs, and no large org saw it.
+    const at = src.indexOf('async function attachFnStats');
+    assert.ok(!/setStatus/.test(src.slice(at, at + 200)), 'the explanation is set where it is overwritten');
+    assert.ok(/functions \(\$\{dl\} downloaded\)\.`\s*\n?\s*\+ \(statsDeferred\(\)/.test(src),
+              'the load\'s own status line does not carry it');
   });
 
   test('the metas are read in tranches, with a yield between them', () => {
@@ -5776,5 +5786,57 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.equal(chains.length, 1, `the per-mode filter is assigned by ${chains.length} chains, not one`);
     assert.ok(/const curFilter = \(\) =>/.test(src) && /function setCurFilter\(k\)/.test(src),
               'the read and the write of the per-mode filter are not defined in one place');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Three from the same cold scans, each invisible on screen: a number at its ceiling that looks like
+// the whole truth, a helper that would throw if anything called it, and a page serialised per request.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  const bridge = read('apps/crm/content-bridge.js');
+
+  test('the failures list says it was read to a ceiling, on every surface that shows it', () => {
+    assert.ok(/const capped = failures\.length >= FAIL_LIMIT/.test(bridge),
+              'the bridge reads one page and reports nothing about the ones it did not read');
+    assert.ok(/return \{ failures, capped,/.test(bridge), 'and it does not hand the ceiling to the panel');
+    // Every surface the rule names: the status line, the health view, both exports, and what the
+    // model is told. Derived by asking each one, not by counting occurrences - a count is satisfied
+    // by five mentions in one place.
+    const surfaces = {
+      'the status line': /setStatus\(runtimeSummary\(\(r\.failures \|\| \[\]\)\.length, r\.capped\)/,
+      'the health view': /healthSay\(runtimeSummary\(fx\.all\.length, fx\.capped\)/,
+      'the HTML export': /fails\.capped \? esc\(FAIL_CAPPED\)/,
+      'the Markdown export': /if \(fails\.capped\) md \+= ' ' \+ FAIL_CAPPED/,
+      'the assistant': /d\.capped \? `; \$\{FAIL_CAPPED\}`/,
+    };
+    for (const [what, re] of Object.entries(surfaces))
+      assert.ok(re.test(panel), `${what} shows the failures without saying the list stopped`);
+  });
+
+  test('the module related-lists helper is defined once, where its names exist', () => {
+    // Two copies, and the one in renderModules() closed over `scope`, `esc` and `modLink` - none of
+    // which exist there. Nothing called it, so nothing threw: a ReferenceError armed for whoever
+    // wired it up, and green tests all the way.
+    assert.equal((panel.match(/const relsHtmlFor = /g) || []).length, 1, 'the dead copy is back');
+    const rm = panel.slice(panel.indexOf('function renderModules'), panel.indexOf('\nfunction ', panel.indexOf('function renderModules') + 10));
+    assert.ok(!/relsHtmlFor/.test(rm), 'renderModules defines it again with names it does not have');
+  });
+
+  test('a page id found once is not read out of the DOM again', () => {
+    // `orgId()` is called by the header builder, so a pull of a few thousand functions serialised the
+    // whole CRM document a few thousand times. A *successful* read is remembered; a failed one is not,
+    // because a page that has not rendered the field yet must be asked again.
+    const ctx = { _org: null, reads: 0, document: { documentElement: { get innerHTML() { ctx.reads++; return ctx.html; } } },
+                  html: 'var crmZgid = "123456789012";' };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'orgId'), ctx);
+    assert.equal(vm.runInContext('orgId()', ctx), '123456789012');
+    assert.equal(vm.runInContext('orgId()', ctx), '123456789012');
+    assert.equal(ctx.reads, 1, `the document was serialised ${ctx.reads} times for one answer`);
+    ctx.html = 'nothing here'; ctx._org = null; ctx.reads = 0;
+    assert.equal(vm.runInContext('orgId()', ctx), null);
+    assert.equal(vm.runInContext('orgId()', ctx), null);
+    assert.equal(ctx.reads, 2, 'a page that had not rendered the id yet is never asked again');
   });
 }

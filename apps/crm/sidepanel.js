@@ -1128,7 +1128,8 @@ async function rebuildTree() {
   // the summary back, so the next load may believe it again.
   distrustSummary = false;
   const dl = treeData.filter((e) => e.downloaded).length;
-  setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok');
+  setStatus(`${treeData.length} functions (${dl} downloaded).`
+    + (statsDeferred() ? ' Size and call counts appear when the diagram, the audit or a code search builds the map.' : ''), 'ok');
   await refreshContext();
 }
 
@@ -1194,12 +1195,14 @@ async function saveMetaIndex(metaPaths) {
 // expensive.
 const STATS_LIMIT = 1200;
 
+// Above this many functions the badges wait to be asked for, and that has to be *said* - a missing
+// badge with no explanation reads as a defect. It used to be said by `attachFnStats`, which the load
+// starts and deliberately does not await, and the load then set its own status over it in the same
+// turn: the sentence was written for large orgs and no large org ever saw it. The condition is here
+// so the one line that survives can carry it.
+const statsDeferred = () => treeData.length > STATS_LIMIT && !graphCache;
 async function attachFnStats() {
-  if (treeData.length > STATS_LIMIT && !graphCache) {
-    // Said rather than left to be noticed: a missing badge with no explanation reads as a defect.
-    setStatus(`${treeData.length} functions - size and call counts appear when the diagram, the audit or a code search builds the map.`, 'ok');
-    return;
-  }
+  if (statsDeferred()) return;
   try {
     const g = await ensureGraph();
     const byFile = {}; Object.values(g.nodes).forEach((n) => { if (n.file) byFile[n.file] = n.stats; });
@@ -3332,6 +3335,7 @@ async function aiExecTool(name, input) {
     const rows = d.failures.filter((f) => !q || (f.name || '').toLowerCase().includes(q) || (f.reason || '').toLowerCase().includes(q))
       .sort((a, b) => b.count - a.count);
     const head = `read from Zoho on ${d.at || '(unknown date)'}`
+      + (d.capped ? `; ${FAIL_CAPPED}` : '')
       + (d.usage ? `; in the 24 hours before that: ${d.usage.success ?? 'unknown'} run(s), ${d.usage.failure ?? 'unknown'} failed` : '')
       + (d.credits ? `; ${d.credits.used ?? 'unknown'} counted against a ceiling of ${d.credits.limit ?? 'unknown'}` : '')
       + (Array.isArray(d.runs) && d.runs.length
@@ -4732,13 +4736,7 @@ function moduleRefusal(u) {
 function renderModules() {
   if (viewMode !== 'modules') return;
   const term = $('find').value.trim().toLowerCase();
-  const relsHtmlFor = (m) => {
-    const rl = scope.relations ? (m.related_lists || []) : []; if (!rl.length) return '';
-    return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">- API name for zoho.crm.getRelatedRecords()</span></div>`
-      + `<table class="ftbl"><thead><tr><th>Relation API</th><th>Label</th><th>Returns</th><th>Type</th></tr></thead><tbody>`
-      + rl.map((r) => `<tr><td class="mono"><b>${esc(r.api_name)}</b></td><td>${esc(r.label || '')}</td><td class="mono">${r.module ? modLink(r.module) : esc(r.connected_module || '')}${r.linking_module ? ` <span class="none">via ${esc(r.linking_module)}</span>` : ''}</td><td>${esc(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
-      + `</tbody></table>`;
-  };
+
   const groups = { Standard: [], Custom: [] };
   moduleData
     .filter((m) => moduleFilter === 'all' || (moduleFilter === 'custom' ? m.custom : !m.custom))
@@ -5545,6 +5543,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + (fails.usage
         ? `In the 24 hours before that: ${esc(String(fails.usage.success ?? 'unknown'))} run(s), ${esc(String(fails.usage.failure ?? 'unknown'))} failed. `
         : '')
+    + (fails.capped ? esc(FAIL_CAPPED) + ' ' : '')
     + 'The input of each failed execution stays in Zoho - Zoost does not read it.</p>'
     + (failRows.length
         ? '<table><thead><tr><th>Function</th><th>Invoked by</th><th>Times</th><th>Last failure</th><th>Reason</th></tr></thead><tbody>'
@@ -5809,6 +5808,7 @@ function buildExportMarkdown(d, scope) {
     md += '---\n\n## Failures\n\n';
     md += `Read from Zoho on ${fails.at || 'an unknown date'}.`;
     if (fails.usage) md += ` In the 24 hours before that: ${fails.usage.success ?? 'unknown'} run(s), ${fails.usage.failure ?? 'unknown'} failed.`;
+    if (fails.capped) md += ' ' + FAIL_CAPPED;
     md += ' The input of each failed execution stays in Zoho - Zoost does not read it.\n\n';
     if (failRows.length) {
       md += '| function | invoked by | times | last failure | reason |\n|---|---|---|---|---|\n';
@@ -6556,7 +6556,7 @@ async function failuresIndex() {
     d.failures.forEach((f) => { const k = String(f.name || '').toLowerCase(); if (k) (byName.get(k) || byName.set(k, []).get(k)).push(f); });
   }
   failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, runs: (d && d.runs) || null,
-                credits: (d && d.credits) || null, byName, all: (d && d.failures) || [] };
+                credits: (d && d.credits) || null, capped: !!(d && d.capped), byName, all: (d && d.failures) || [] };
   return failIndex;
 }
 
@@ -6575,9 +6575,14 @@ async function failuresIndex() {
  *  the pull worked and the number is functions Zoho reports failing at *runtime*. Reported, and the
  *  green did not save it: a colour cannot name a subject. One sentence for both readers of it, the
  *  status line and the health view's own line, so the two cannot drift. */
-function runtimeSummary(n) {
-  return n ? `Read from Zoho \u00b7 ${n} function(s) failing there`
-           : 'Read from Zoho \u00b7 nothing failing there';
+// The count is a reading of one page, so a full one says so wherever it is shown - here, in the
+// health view, in both exports and in what the assistant is told. A number at its own ceiling and
+// a number that happens to be the whole truth look identical.
+const FAIL_CAPPED = 'Zoho\'s list was read to its first page - there may be more failures than these.';
+function runtimeSummary(n, capped) {
+  return (n ? `Read from Zoho \u00b7 ${n} function(s) failing there`
+            : 'Read from Zoho \u00b7 nothing failing there')
+       + (capped ? ` \u00b7 ${FAIL_CAPPED}` : '');
 }
 async function pullFailures() {
   const gen = wsGen;   // the workspace this reading belongs to
@@ -6596,12 +6601,12 @@ async function pullFailures() {
     // shape says the rest.
     if (!sameWs(gen)) return;
     await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
-      runs: r.runs || null, credits: r.credits || null, failures: r.failures || [] }, null, 2));
+      runs: r.runs || null, credits: r.credits || null, capped: !!r.capped, failures: r.failures || [] }, null, 2));
     await noteAccess('failures', null);
     // No view of its own: a failure is a property of a function, not a kind of object, so it shows
     // where that dimension belongs - in the function's own detail, and in the health view, which is
     // already the place that answers «what is wrong across this org».
-    setStatus(runtimeSummary((r.failures || []).length), 'ok');
+    setStatus(runtimeSummary((r.failures || []).length, r.capped), 'ok');
     if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
   } catch (e) { await notePullFailure('failures', e); }
   finally { endPull(); }
@@ -6851,7 +6856,7 @@ async function pullHealthRuntime() {
     healthData = await buildHealth();
     renderHealthView();
     const fx = await failuresIndex();
-    healthSay(runtimeSummary(fx.all.length), 'ok');
+    healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
   } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
   finally { b.disabled = false; }
 }
