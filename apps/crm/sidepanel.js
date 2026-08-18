@@ -134,6 +134,7 @@ const MSG = {
   rereadErr: 'Could not re-read: ',
   namePrefix: 'Name: ',
   openingFns: 'Opening Functions list…',
+  findInCode: 'Find inside the code\u2026',
   findByName: 'Find by name…',
   // The health audit is drawn twice - the panel's view and the HTML export - and the titles are the
   // only part that has to agree word for word, because a reader moves between the two. The section
@@ -2401,7 +2402,7 @@ $('smode').onclick = () => {
   searchMode = searchMode === 'name' ? 'content' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: code';
   $('smode').classList.toggle('on', searchMode === 'content');
-  $('find').placeholder = searchMode === 'name' ? MSG.findByName : 'Find inside the code\u2026';
+  $('find').placeholder = searchMode === 'name' ? MSG.findByName : MSG.findInCode;
   runSearch();
 };
 function runSearch() {
@@ -3714,7 +3715,11 @@ async function pruneFunction(id) {
   const path = (info && info.path) || (row && row.path);
   if (!path) return true;
   let whole = true;
+  // The folder this removal belongs to. Two files, two removals, awaits inside each: without this
+  // the source went from one workspace and the metadata from the next.
+  const myDir = dir;
   for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) {
+    if (dir !== myDir) return false;
     // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
     // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
     try { await removeFile(p); failedRemovals.delete(p); }
@@ -3779,7 +3784,13 @@ async function syncOneNow(id) {
     if (dir !== myDir) return;             // you moved: this answer belongs to a folder we have left
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
-    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg); await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    // Before **each** effect, not once before the pair: a write is several awaits of its own, so the
+    // folder can change between the source and its metadata - and it did, leaving one file in each
+    // workspace. Checked again rather than trusted from a moment ago.
+    if (dir !== myDir) return;
+    await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg);
+    if (dir !== myDir) return;
+    await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     const ent = treeData.find((x) => x.id === String(id));
     if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
@@ -4357,6 +4368,7 @@ function setMode(mode) {
   $('find').value = back.text;
   if (mode === 'functions' && back.mode === 'content') {
     searchMode = 'content'; $('smode').textContent = 'in: code'; $('smode').classList.add('on');
+    $('find').placeholder = MSG.findInCode;   // the label said code and the box said name
   }
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
@@ -6705,7 +6717,11 @@ async function pullHealthRuntime() {
   finally { b.disabled = false; }
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; await rebuildActive(); };
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; await rebuildActive();
+  // The message that reports a removal it could not finish says «click Refresh», so Refresh has
+  // to be the thing that tries again - a remedy naming a control that does something else is
+  // worse than no remedy, because the reader does it and believes it worked.
+  if (failedRemovals.size) await reconcileFunctions(); };
 $('ainotex').onclick = () => $('ainote').classList.remove('show');   // hidden for this session of the chat, back on next open
 $('ailockgo').onclick = aiUnlock; $('ailockpass').onkeydown = (e) => { if (e.key === 'Enter') aiUnlock(); };
 $('askai').onclick = toggleAI; $('aix').onclick = closeAI; $('aiclear').onclick = aiClear; $('aisend').onclick = aiSend; $('aigear').onclick = aiOpenSettings;

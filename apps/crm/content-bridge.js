@@ -243,7 +243,7 @@
     while (true) {
       const resp = await api(`/crm/v9/settings/automation/schedules?page=${page}&per_page=200`);
       const s = list(resp, 'schedules', 'schedules'); raw = raw.concat(s);
-      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > MAX_PAGES) { capped = true; break; }
+      const info = resp.info || {}; if (!info.more_records || s.length === 0) break; page++; if (page > MAX_PAGES_WIDE) { capped = true; break; }
     }
     const entries = raw.map((s) => ({
       id: String(s.id), name: s.name, status: s.status,
@@ -506,7 +506,7 @@
           // bound is the workflow list's, for the same reason - a runaway loop against somebody
           // else's pagination is not a thing to ship - and hitting it is **reported**, because a
           // list that silently stops at four thousand is a census that lies by omission.
-          if (++page > 20) { capped.push(k.kind); break; }
+          if (++page > MAX_PAGES_WIDE) { capped.push(k.kind); break; }   // 200 a page: the wide bound
         }
         // The task list carries five of the six mappings - the reminder is only in the task's own
         // detail, counted on a real org: 56 tasks, Subject/Due_Date/Status/Priority on every one,

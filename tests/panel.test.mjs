@@ -5475,3 +5475,43 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/MAX_PAGES_WIDE/.test(wide), 'the wide walk still counts against the narrow ceiling');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A check between two effects is a check that protects the first one only. `syncOneNow` compared the
+// folder once and then wrote two files - each write being several awaits of its own - so a change of
+// workspace mid-way left the source in one and the metadata in the next. `pruneFunction` removed the
+// same pair the same way. Raised by an outside review, with both halves reproduced.
+{
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
+
+  test('every write and every removal is checked, not just the first', () => {
+    for (const [name, effect] of [['async function syncOneNow', 'writeFile'],
+                                  ['async function pruneFunction', 'removeFile']]) {
+      const body = fn(name);
+      const checks = (body.match(/dir !== myDir/g) || []).length;
+      const effects = (body.match(new RegExp(effect + '\\(', 'g')) || []).length;
+      assert.ok(checks >= effects, `${name}: ${effects} ${effect} calls behind ${checks} check(s)`);
+    }
+  });
+
+  test('the remedy a message names is the one that runs', () => {
+    // «click Refresh» over a removal that could not finish: Refresh redrew the list and never tried
+    // again, so the reader did as told and believed it had worked.
+    assert.ok(/failedRemovals\.size\) await reconcileFunctions\(\)/.test(panel),
+              'Refresh does not retry what failed');
+  });
+
+  test('every walk that reads 200 a page counts against the wide bound', () => {
+    // Derived from the requests themselves: a walk added tomorrow with the same page size is
+    // measured rather than remembered.
+    const bridge = read('apps/crm/content-bridge.js').split('\n');
+    for (let i = 0; i < bridge.length; i++) {
+      if (!/per_page=200/.test(bridge[i])) continue;
+      const near = bridge.slice(i, i + 14).join('\n');
+      const bound = near.match(/MAX_PAGES(_WIDE)?\b/);
+      if (!bound) continue;
+      assert.equal(bound[0], 'MAX_PAGES_WIDE', `a 200-a-page walk near line ${i + 1} uses the narrow bound`);
+    }
+  });
+}
