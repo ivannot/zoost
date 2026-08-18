@@ -5389,15 +5389,37 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/reconcileAgain = true/.test(r), 'a notice during a run is forgotten');
     assert.ok(/if \(reconcileAgain\) \{ reconcileAgain = false; reconcileFunctions\(\); \}/.test(r),
               'the remembered change never gets its round');
-    assert.ok(/pullActive.*reconcileAgain = true/.test(r), 'a notice during a pull is dropped');
+    // Left for the pull to consume, not re-armed: re-running while the pull is busy is a tight
+    // loop of permission and context checks during the most expensive thing the panel does.
+    assert.ok(/pullActive\) \{ pendingAfterPull = true; return; \}/.test(r), 'a notice during a pull is dropped');
+    const pull = fn('async function pullAll');
+    assert.ok(/pendingAfterPull.*reconcileFunctions\(\)/.test(pull), 'the pull never honours it');
   });
 
   test('a removal that failed is tried again, not forgotten', () => {
     assert.ok(/const failedRemovals = new Set\(\)/.test(panel), 'a failed removal is not kept');
     const p = fn('async function pruneFunction');
-    assert.ok(/failedRemovals\.add\(path\)/.test(p), 'the path is lost when the removal fails');
+    assert.ok(/failedRemovals\.add\(p\)/.test(p), 'the failing path is not the one kept');
+    assert.ok(!/failedRemovals\.add\(path\)/.test(p), 'it keeps the function path instead of the file that failed');
     const r = fn('function reconcileFunctions');
     assert.ok(/for \(const p of \[\.\.\.failedRemovals\]\)/.test(r), 'nothing retries them');
     assert.ok(r.indexOf('failedRemovals') < r.indexOf('const gone'), 'the retry runs after the new pruning');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A click must not move the list; arriving from elsewhere must. That was told apart by a global set
+// in `openFromTree` and cleared only by `applySelection` - so a click whose open then failed (no
+// permission, an unreadable file) left it set, and the *next* arrival from somewhere else was
+// mistaken for that click and never revealed. Raised by an outside review. The origin is an argument
+// of the call now: there is no state to leak between two navigations.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  test('where an open came from travels with the call', () => {
+    assert.ok(!/openedByClick/.test(panel), 'the origin is a shared flag again');
+    assert.ok(/function openFromTree\(path\) \{ openFile\(path, null, true\); \}/.test(panel),
+              'a click no longer says it is one');
+    const sel = panel.slice(panel.indexOf('function applySelection'), panel.indexOf('\n}', panel.indexOf('function applySelection')));
+    assert.ok(/if \(byClick\) return;/.test(sel), 'a click moves the list again');
   });
 }

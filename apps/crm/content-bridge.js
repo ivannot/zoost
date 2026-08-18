@@ -12,7 +12,14 @@
   // and - worse for a mirror - the two that had it were the only ones that could *say* they had
   // stopped early. A partial list must never be shaped like a complete one, so every loop now
   // counts against this and every result carries `capped`.
-  const MAX_PAGES = 20;
+  // 20 pages of 50 was a thousand functions, and a thousand is a real org: past it every list came
+  // back `capped`, and since a partial list may not prune or replace the index, create, delete and
+  // pull all stopped working entirely - with a message telling the reader to try again, which could
+  // only produce the same answer. The ceiling exists to stop a loop that never ends, not to decide how
+  // large an org may be, so it is set where it does that job: 400 pages is 20,000 functions, four
+  // times the largest org this has been measured against, and a page that returns fewer than it was
+  // asked for still ends the walk on the first one.
+  const MAX_PAGES = 400;
   const BASE = location.origin;
   const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
 

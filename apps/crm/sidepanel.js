@@ -1421,9 +1421,8 @@ function syncTreeTo(path) {
 // below the fold, and scrolling after your own click is the panel arguing with your finger. Arriving
 // from anywhere else - a link, a health row, a step of the history - is the opposite: there the row
 // has to be found for you. One flag tells the two apart, set by the only place a click starts.
-let openedByClick = false;
-function openFromTree(path) { openedByClick = true; openFile(path); }
-async function openFile(path, line = null) {
+function openFromTree(path) { openFile(path, null, true); }
+async function openFile(path, line = null, byClick = false) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
   // something each caller decides - every arrival is a step, which is what made the old one useless
@@ -1462,7 +1461,7 @@ async function openFile(path, line = null) {
     : escHtml(code);
   $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
-  showPreview();
+  showPreview(byClick);
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path);
 }
@@ -2078,7 +2077,7 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
  *  the height. Reading the row's rect here forces the pending layout, so this sees the new geometry
  *  and not the old.
  */
-function applySelection() {
+function applySelection(byClick) {
   if (!currentPath) return;
   const box = $('tree'); if (!box) return;
   const row = [...box.querySelectorAll('.f[data-path]')].find((r) => r.dataset.path === currentPath);
@@ -2091,17 +2090,20 @@ function applySelection() {
   // with what precedes it visible.
   const st = box.querySelector('.grp');
   const cover = st ? st.getBoundingClientRect().height : 0;
-  if (openedByClick) { openedByClick = false; return; }   // your own click: the list stays put
+  // The origin travels with the call rather than in a variable shared between two navigations: a
+  // click whose open then failed - no permission, an unreadable file - used to leave the flag set,
+  // and the *next* arrival from somewhere else was mistaken for that click and never revealed.
+  if (byClick) return;                    // your own click: the list stays put
   revealRow(row, box, '.grp');   // arrived from elsewhere: the least scroll that shows it
 }
 
 /** Open the detail pane - one function, because opening it is what shrinks the list, and the six
  *  places that used to do it by hand each left the selected row wherever it happened to be. */
-function showPreview() {
+function showPreview(byClick) {
   $('preview').classList.add('show');
   $('resizer').classList.add('show');
   resetPreviewScroll();
-  applySelection();
+  applySelection(byClick);
 }
 
 function selectRow(path) {
@@ -2516,7 +2518,7 @@ async function pullAll() {
     // introduced the day the ceiling was - reported by an assistant reading the repository.
     if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
     await noteAccess('functions', null);
-  } catch (e) { await notePullFailure('functions', e); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('functions', e); } finally { pullActive = false; if (pendingAfterPull) { pendingAfterPull = false; reconcileFunctions(); } }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
 //
@@ -3631,7 +3633,7 @@ async function buildGraphFor(kind) {
  *  together - which is exactly what a creation sends, POST then PUT - start two reconciliations that
  *  both write the index.
  */
-let reconciling = null, reconcileAgain = false;
+let reconciling = null, reconcileAgain = false, pendingAfterPull = false;
 function reconcileFunctions() {
   // Single-flight is not enough on its own: a create or a delete arriving *while* the list is being
   // read is a change the answer in flight cannot contain, and returning the promise already running
@@ -3644,7 +3646,11 @@ function reconcileFunctions() {
     if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     await refreshContext();
     if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    if (pullActive) { reconcileAgain = true; return; }   // let the pull finish, then check
+    // A pull is already doing this and more. Re-running until it finishes would be a tight loop of
+    // permission and context checks during the most expensive thing this panel does - measured at
+    // five entries in one probe - so the notice is left for the pull to consume when it ends, and
+    // this round simply stops. The flag is deliberately *not* re-armed here.
+    if (pullActive) { pendingAfterPull = true; return; }
     try {
       setStatus('Something changed in Zoho - checking\u2026', 'busy');
       const r = await toBridge({ cmd: 'listFunctions' });
@@ -3662,11 +3668,12 @@ function reconcileFunctions() {
       await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
       // Pruned from what Zoho says, never from what the page said.
       // Whatever a previous round could not finish removing, before anything else.
+      // Try the removal again rather than asking whether the file is there: a read that fails for
+      // any other reason would otherwise be taken for «already gone» and the entry dropped.
+      // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
       for (const p of [...failedRemovals]) {
-        let stillThere = true;
-        try { await readFile(p); } catch (_) { stillThere = false; }
-        if (!stillThere) { failedRemovals.delete(p); continue; }
-        try { await removeFile(p); failedRemovals.delete(p); } catch (_) {}
+        try { await removeFile(p); failedRemovals.delete(p); }
+        catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
       }
       const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
       let failed = 0;
@@ -3696,7 +3703,10 @@ async function pruneFunction(id) {
   if (!path) return true;
   let whole = true;
   for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) {
-    try { await removeFile(p); } catch (e) { if (!/NotFound/i.test(String(e && e.name))) whole = false; }
+    // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
+    // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
+    try { await removeFile(p); failedRemovals.delete(p); }
+    catch (e) { if (!/NotFound/i.test(String(e && e.name))) { whole = false; failedRemovals.add(p); } }
   }
   try {
     const idx = JSON.parse(await readFile('functions/index.json'));
@@ -3710,8 +3720,7 @@ async function pruneFunction(id) {
   // A failure that is forgotten is a file nobody will ever come back to: the index has already been
   // rewritten without it, so the next reconciliation cannot see it is still there. Kept by path, and
   // retried at the top of the next round.
-  if (whole) { failedRemovals.delete(path); setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok'); }
-  else failedRemovals.add(path);
+  if (whole) setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok');
   return whole;
 }
 
