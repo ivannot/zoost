@@ -4251,8 +4251,17 @@ $('wsdel').onclick = async () => {
 };
 
 // ---------- view mode (Functions / Modules) ----------
+// What you typed in Find belongs to the list you typed it in. It used to belong to the panel, so
+// switching from a search in Functions to Modules showed the modules matching a function's name -
+// usually none - and the reader had to notice the box was still full to understand why. Reported as
+// disorienting, and it is: the box says «I am filtering» about a list that never asked.
+const findByMode = {};
+
 function setMode(mode) {
+  if (viewMode && viewMode !== mode) findByMode[viewMode] = $('find').value;
   viewMode = mode;
+  // Restored, not cleared: coming back to a tab you were searching in should find it as you left it.
+  $('find').value = findByMode[mode] || '';
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';

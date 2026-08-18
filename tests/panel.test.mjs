@@ -5323,3 +5323,19 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/could not be fully removed/.test(fn), 'a partial removal is never reported');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// What you typed in Find belongs to the list you typed it in. It belonged to the panel, so switching
+// from a search in Functions to Modules filtered the modules by a function's name - usually nothing
+// - and the box stayed full while the list looked empty for no visible reason. Reported as
+// disorienting, which is exactly what it is: a control claiming to filter a list that never asked.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  const fn = panel.slice(panel.indexOf('function setMode'), panel.indexOf('\n}', panel.indexOf('function setMode')));
+  test('each tab keeps its own Find', () => {
+    assert.ok(/findByMode\[viewMode\] = \$\('find'\)\.value/.test(fn), 'leaving a tab throws away what was typed in it');
+    assert.ok(/\$\('find'\)\.value = findByMode\[mode\]/.test(fn), 'arriving on a tab does not restore its own');
+    assert.ok(fn.indexOf("findByMode[viewMode]") < fn.indexOf('viewMode = mode'),
+              'it saves after the mode has already changed, so it saves under the wrong tab');
+  });
+}
