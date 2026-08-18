@@ -5239,12 +5239,18 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/'created'/.test(body), 'a creation never reaches the panel');
   });
 
-  test('a deletion removes the files, the index row and the open pane', () => {
-    const fn = panel.slice(panel.indexOf('async function removeOne'), panel.indexOf('\n}', panel.indexOf('async function removeOne')));
-    assert.ok(/removeFile\(p\)/.test(fn), 'the files stay on disk');
-    assert.ok(/\.meta\.json/.test(fn), 'only one of the two files is removed');
-    assert.ok(/functions\/index\.json/.test(fn), 'the index keeps the row, so the row returns on the next open');
-    assert.ok(/mismatchRefuse\(\)/.test(fn) && /guardOk\(\)/.test(fn), 'it writes to a workspace it has not checked');
+  test('a deletion checks at the edge and acts where a test can reach it', () => {
+    // Split on purpose: a guard chain cannot be driven without a Zoho tab, so the work below it
+    // could never be exercised - which is how this shipped broken. `tools/probe.py` drives
+    // `pruneFunction` in a browser; what is asserted here is that the two stay apart.
+    const guard = panel.slice(panel.indexOf('async function removeOne'), panel.indexOf('\n}', panel.indexOf('async function removeOne')));
+    assert.ok(/mismatchRefuse\(\)/.test(guard) && /guardOk\(\)/.test(guard), 'it writes to a workspace it has not checked');
+    assert.ok(/pruneFunction\(id\)/.test(guard), 'the guard does the work itself again');
+    const act = panel.slice(panel.indexOf('async function pruneFunction'), panel.indexOf('\n}', panel.indexOf('async function pruneFunction')));
+    assert.ok(/removeFile\(p\)/.test(act), 'the files stay on disk');
+    assert.ok(/\.meta\.json/.test(act), 'only one of the two files is removed');
+    assert.ok(/functions\/index\.json/.test(act), 'the index keeps the row, so the row returns on the next open');
+    assert.ok(!/mismatchRefuse|guardOk/.test(act), 'the effect carries guards, so a test cannot drive it');
   });
 
   test('a creation asks Zoho for the list and lets the usual path fetch it', () => {
