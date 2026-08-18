@@ -3665,6 +3665,12 @@ async function syncOne(id) {
   await refreshContext();
   if (!guardOk()) { setStatus(`Save ignored: active ${envOf(lastCtx?.origin)}/org ${lastCtx?.org} ≠ workspace ${envOf(bound?.base)}/org ${bound?.org}.`, 'warn'); return; }
   const info = index.get(String(id));
+  // A function this workspace has never heard of. Creating one in the editor issues a save straight
+  // after - POST then PUT, measured in a HAR - so the save names an id the index cannot know, the
+  // detail call goes out without a category, and Zoho refuses it with `PATTERN_NOT_MATCHED`. That is
+  // what a reader was shown for the ordinary act of making a function. It is a creation, so it is
+  // treated as one.
+  if (!info) { await noticeCreated(); return; }
   try {
     setStatus(`Save detected (${id}), syncing…`, 'busy');
     const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });
