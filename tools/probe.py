@@ -455,6 +455,31 @@ CRM = """
       if (after.v === 3) say('the old summary was read and left on disk at its old version');
     }
 
+    // Clicking a row you can already see must not move the list. Reported: the row jumped to the
+    // top under the finger that had just touched it.
+    {
+      const vis = rows().filter((e) => {
+        const r = e.getBoundingClientRect(), b = $('tree').getBoundingClientRect();
+        return r.top >= b.top && r.bottom <= b.bottom;
+      });
+      if (vis.length > 1) {
+        const before = $('tree').scrollTop;
+        vis[vis.length - 1].click(); await wait(900);
+        if ($('tree').scrollTop !== before)
+          say(`clicking a visible row moved the list from ${before} to ${$('tree').scrollTop}`);
+      }
+    }
+
+    // Nothing to clear, nothing to click. Reported, and held here because a rule that hides a
+    // control is exactly the kind that renders as nothing the day the markup moves.
+    {
+      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await wait(200);
+      if (getComputedStyle($('findx')).display !== 'none') say('the clear mark is shown over an empty box');
+      $('find').value = 'x'; $('find').dispatchEvent(new Event('input')); await wait(300);
+      if (getComputedStyle($('findx')).display === 'none') say('the clear mark stays hidden with text in the box');
+      $('find').value = ''; $('find').dispatchEvent(new Event('input')); await wait(300);
+    }
+
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from

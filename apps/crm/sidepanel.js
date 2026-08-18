@@ -1417,7 +1417,12 @@ function syncTreeTo(path) {
   revealRow(row, $('tree'), '.grp');
 }
 
-function openFromTree(path) { openFile(path); }
+// You clicked it, so you know where it is: opening the pane shortens the list and may push that row
+// below the fold, and scrolling after your own click is the panel arguing with your finger. Arriving
+// from anywhere else - a link, a health row, a step of the history - is the opposite: there the row
+// has to be found for you. One flag tells the two apart, set by the only place a click starts.
+let openedByClick = false;
+function openFromTree(path) { openedByClick = true; openFile(path); }
 async function openFile(path, line = null) {
   if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
@@ -2086,12 +2091,8 @@ function applySelection() {
   // with what precedes it visible.
   const st = box.querySelector('.grp');
   const cover = st ? st.getBoundingClientRect().height : 0;
-  const rb = row.getBoundingClientRect(), bb = box.getBoundingClientRect();
-  // The lead is two rows of context above, but never more than the box can spare: with the detail
-  // pane open the list is 68px, and a fixed lead there would push the row it is placing off the
-  // bottom - which is how the first version of this managed to hide the thing it was revealing.
-  const lead = Math.max(0, Math.min(rb.height * 2, bb.height - cover - rb.height * 2));
-  box.scrollTop += (rb.top - bb.top - cover - lead);
+  if (openedByClick) { openedByClick = false; return; }   // your own click: the list stays put
+  revealRow(row, box, '.grp');   // arrived from elsewhere: the least scroll that shows it
 }
 
 /** Open the detail pane - one function, because opening it is what shrinks the list, and the six

@@ -196,6 +196,10 @@
   .findwrap input{width:100%;padding:6px 26px 6px 10px;background:transparent;border:0;color:var(--ink);font:12px var(--sans);outline:none}
   .findwrap .fx{position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer}
   .findwrap .fx:hover{color:var(--ink)}
+  /* Nothing to clear, nothing to click: the mark appears with the text. Written as a rule about
+     the input's own state rather than as something switched from script - there is no second place
+     to keep in step, and it cannot fall out of date with what the box contains. */
+  .findwrap input:placeholder-shown + .fx{display:none}
   .fsellbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
   .filtersel{background:#0f1826;color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font:12px var(--sans);cursor:pointer}
   .scwarn{font-size:11px;color:#f0a44a;flex:1}
