@@ -2484,6 +2484,12 @@ async function pullAll() {
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await readFile(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
     }
     let prunedF = 0; for (const p of rmF) { try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
+    // If you were reading one of the functions the pull has just pruned, the pane is showing
+    // something that no longer exists - in Zoho or on disk. Reported: it stayed open, with the code
+    // of a deleted function in it. It closes with the file, the same way a live deletion closes it.
+    if (currentPath && rmF.includes(currentPath)) {
+      $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null;
+    }
     // patchCfg, not writeCfg: this file also holds the access verdicts and the workspace's own
     // name, and a whole-object write here drops both. The trap arriving a third time.
     await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });

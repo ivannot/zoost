@@ -5239,6 +5239,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/'created'/.test(body), 'a creation never reaches the panel');
   });
 
+  test('a pull that prunes what you are reading closes the pane', () => {
+    // Reported: pulling removed a function deleted in Zoho and left its code on screen - a pane
+    // showing something that exists nowhere any more.
+    const pull = panel.slice(panel.indexOf('async function pullAll'), panel.indexOf('\n}', panel.indexOf('async function pullAll')));
+    assert.ok(/rmF\.includes\(currentPath\)/.test(pull), 'the pane survives the file it is showing');
+    assert.ok(/preview'\)\.classList\.remove\('show'\)/.test(pull), 'it does not actually close');
+  });
+
   test('a deletion checks at the edge and acts where a test can reach it', () => {
     // Split on purpose: a guard chain cannot be driven without a Zoho tab, so the work below it
     // could never be exercised - which is how this shipped broken. `tools/probe.py` drives
