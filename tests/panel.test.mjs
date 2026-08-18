@@ -3467,7 +3467,8 @@ for (const app of ['crm', 'analytics']) {
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
-           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne']],
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne',
+           'noticeCreated']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -5208,5 +5209,55 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const pull = panel.slice(panel.indexOf('async function pullAll'), panel.indexOf('\n}', panel.indexOf('async function pullAll')));
     assert.ok(/rmF\.includes\(currentPath\)/.test(pull), 'the pane survives the file it is showing');
     assert.ok(/preview'\)\.classList\.remove\('show'\)/.test(pull), 'it does not actually close');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The guard against installing twice was a boolean, and a boolean cannot tell «this hook is already
+// here» from «an older hook is already here». Chrome keeps a page alive across an extension update
+// and injects into frames more than once, so the new build bowed out and the old one stayed - which
+// meant an evening of fixes that could not take effect, because the code being run was never the
+// code being written. The save kept working (the old hook knows that one) and nothing else ever did.
+// Found only when the silent bail was made to say so, which is the rule this repository already has
+// about mute exits, applied three hours late.
+{
+  const hook = read('apps/crm/hook.js');
+  const load = (win, xhr) => new Function('window', 'XMLHttpRequest', 'location', 'document', 'console', hook)(
+    win, xhr, win.location, { title: '' }, { debug() {}, info() {}, log() {} });
+
+  test('a newer hook replaces an older one instead of bowing out', () => {
+    const posted = [];
+    class FakeXHR {
+      constructor() { this.status = 200; this._l = {}; }
+      open(m, u) { this.__m = m; this.__u = u; }
+      send() { (this._l.loadend || []).forEach((f) => f()); }
+      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
+    }
+    // A page that an older build has already marked, the way it marked it: a bare `true`.
+    const win = { __zoostHook: true, postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
+                  location: { origin: 'https://crm.zoho.eu' } };
+    load(win, FakeXHR);
+    const x = new FakeXHR(); x.open('DELETE', '/crm/v2/settings/functions/123?language=deluge'); x.send();
+    assert.deepEqual(posted.map((p) => p.type), ['deleted'],
+                     'an older marker still turns the new hook away');
+    assert.equal(typeof win.__zoostHook, 'number', 'the marker is still a flag, so this returns tomorrow');
+  });
+
+  test('the same version installs once', () => {
+    const posted = [];
+    class FakeXHR {
+      constructor() { this.status = 200; this._l = {}; }
+      open(m, u) { this.__m = m; this.__u = u; }
+      send() { (this._l.loadend || []).forEach((f) => f()); }
+      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
+    }
+    const win = { postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
+                  location: { origin: 'https://crm.zoho.eu' } };
+    load(win, FakeXHR);
+    const v = win.__zoostHook;
+    load(win, FakeXHR);                    // injected again into the same page
+    assert.equal(win.__zoostHook, v, 'the version moved on a second install');
+    const x = new FakeXHR(); x.open('PUT', '/crm/v2/settings/functions/7?language=deluge'); x.send();
+    assert.deepEqual(posted.map((p) => p.type), ['saved'], 'one request produced two notices');
   });
 }
