@@ -51,7 +51,7 @@ conflictBox	ecb43a011b8e	ecb43a011b8e	identical
 copyCode	b81ea73b94f0	582021ac794c	divergent
 currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	ed62bc61e9b4	ed62bc61e9b4	identical
-dropWorkspaceState	ff361c75590c	768de73a06e2	divergent
+dropWorkspaceState	107a2aee180a	87119ff3dd87	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
 emptyReason	f7a750117acd	edc245701f46	divergent
 engineIncomplete	54560440576d	54560440576d	identical

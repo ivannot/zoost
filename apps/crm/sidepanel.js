@@ -3722,14 +3722,23 @@ async function pruneFunction(id) {
     if (dir !== myDir) return false;
     // The exact path that failed, not the function's. Keeping only the `.dg` meant a retry that
     // found it already gone, dropped the entry, and left the `.meta.json` on disk for ever.
-    try { await removeFile(p); failedRemovals.delete(p); }
-    catch (e) { if (!/NotFound/i.test(String(e && e.name))) { whole = false; failedRemovals.add(p); } }
+    try { await removeFile(p); if (dir !== myDir) return false; failedRemovals.delete(p); }
+    catch (e) {
+      // After the await, not before it: the failure of a removal that started in the previous
+      // workspace was being written into this one's queue, which `dropWorkspaceState` had just
+      // emptied - so the retry followed the reader across.
+      if (dir !== myDir) return false;
+      if (!/NotFound/i.test(String(e && e.name))) { whole = false; failedRemovals.add(p); }
+    }
   }
+  if (dir !== myDir) return false;
   try {
     const idx = JSON.parse(await readFile('functions/index.json'));
+    if (dir !== myDir) return false;
     if (Array.isArray(idx)) await writeFile('functions/index.json',
       JSON.stringify(idx.filter((e) => String(e.id) !== key), null, 2));
   } catch (_) { whole = false; }
+  if (dir !== myDir) return false;
   index.delete(key);
   treeData = treeData.filter((e) => String(e.id) !== key);
   if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
@@ -3791,6 +3800,9 @@ async function syncOneNow(id) {
     await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg);
     if (dir !== myDir) return;
     await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    // The memory is an effect too: after the last write the row looked up in `treeData` is the new
+    // workspace's, and marking it downloaded gave one org's row the other org's path.
+    if (dir !== myDir) return;
     const ent = treeData.find((x) => x.id === String(id));
     if (ent) { ent.path = `functions/${f.folder}/${f.stem}.dg`; ent.downloaded = true; ent.error = false; updateRow(ent); updateMissingButton(); } else { await rebuildTree(); }
     if (currentPath === `functions/${f.folder}/${f.stem}.dg`) await openFile(currentPath);
@@ -4086,6 +4098,14 @@ async function addWorkspaceForTab() {
  * Both are per-workspace state, so both are dropped in one place, called from the one line that
  * changes workspace. The Analytics panel has the same function, doing the same thing.
  */
+// Which workspace we are in, as a number that only ever moves forward. A handle comparison closes
+// one function at a time; this closes the class, because an operation captures it once and every
+// effect after any `await` asks the same question - «am I still where I started?» - without knowing
+// anything about folders. Reported after three functions had been fixed one by one and the fourth,
+// fifth and sixth were still writing one org's data into another's folder.
+let wsGen = 0;
+const sameWs = (gen) => gen === wsGen;
+
 function dropWorkspaceState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
@@ -4095,6 +4115,7 @@ function dropWorkspaceState() {
   // workspace was retried against the same path in the next, which is a file belonging to another
   // org. The queue goes with the workspace it belongs to.
   failedRemovals.clear();
+  wsGen++;                              // everything in flight belongs to the workspace we just left
   aiRenderMessages();
   return had;
 }
@@ -4532,6 +4553,7 @@ async function pullEverything() {
 
 // ---------- modules: pull ----------
 async function pullModules() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
@@ -4557,6 +4579,7 @@ async function pullModules() {
       layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
       try { await writeFile(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
     }
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
     await writeFile('modules/index.json', JSON.stringify(index, null, 2));
     await writeFile('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
@@ -5958,6 +5981,7 @@ async function downloadMissingWf() {
   setPullBusy(false); $('missing').disabled = false;
 }
 async function pullSchedules() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
@@ -5966,6 +5990,8 @@ async function pullSchedules() {
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e); return; }
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
+    if (r.capped) { setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn'); return; }
     await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
@@ -5974,6 +6000,7 @@ async function pullSchedules() {
 }
 // Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) return;
@@ -5983,6 +6010,7 @@ async function pullConnections() {
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
     if (!r?.ok) { setStatus('Connections pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
     await writeFile('connections/index.json', JSON.stringify(r.connections || [], null, 2));
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
@@ -6065,6 +6093,7 @@ async function loadActionsIndex() {
   return Array.isArray(idx) ? idx : [];
 }
 async function pullActions() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     if (!(await ensurePerm(dir))) return;
@@ -6074,6 +6103,10 @@ async function pullActions() {
     setStatus('Pulling automation actions\u2026', 'busy');
     const r = await toBridge({ cmd: 'pullActions' });
     if (!r?.ok) { setStatus('Actions pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
+    // A kind that could not be read makes the whole answer partial: replacing the index with it
+    // loses every item the previous pull had censused and this one could not see.
+    if ((r.capped || []).length) { setStatus(`Zoho returned a partial list of actions (${(r.capped || []).join(', ')}) - nothing was replaced.`, 'warn'); return; }
     await writeFile('actions/index.json', JSON.stringify(r.actions || [], null, 2));
     // A kind that refused is stated rather than folded into the total: an org without webhooks and
     // an org whose role cannot read them look identical in a count.
@@ -6092,7 +6125,7 @@ async function pullActions() {
     // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
     // short are two different reasons for a number to be smaller than the org.
     const note = (missed.length ? ` ${missed.length} kind(s) could not be read.` : '')
-      + (capped.length ? ` ${capped.join(', ')} stopped at 4000 - there are more in Zoho.` : '');
+      + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho.` : '');
     if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${(r.actions || []).length} action(s).` + note, 'warn'); }
     else setStatus(`${(r.actions || []).length} action(s) pulled.` + note, (missed.length || capped.length) ? 'warn' : 'ok');
     await noteAccess('actions', null);
@@ -6471,6 +6504,7 @@ async function pullFailures() {
 }
 
 async function pullWorkflows() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
@@ -6489,6 +6523,7 @@ async function pullWorkflows() {
       await loadWorkflowIndex(); if (viewMode === 'workflows') renderWorkflows();
       return;
     }
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
     await writeFile('workflows/index.json', JSON.stringify(r.entries, null, 2));
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
     let prunedW = 0;

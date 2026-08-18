@@ -5515,3 +5515,42 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Fixing three functions did not close the class: a fourth, a fifth and a sixth were still writing
+// one org's data into another org's folder, because every one of them checks at the start and writes
+// after an await while the workspace selector stays live. A generation closes it - captured once,
+// asked again before each effect - and the check below is derived from the writes rather than from a
+// list of functions somebody remembered.
+{
+  for (const app of ['crm', 'analytics']) {
+    const src = read(`apps/${app}/sidepanel.js`);
+    test(`${app}: the workspace has a generation, and leaving one moves it`, () => {
+      assert.ok(/let wsGen = 0;/.test(src), 'there is nothing to compare against');
+      const drop = src.slice(src.indexOf('function dropWorkspaceState'), src.indexOf('\n}', src.indexOf('function dropWorkspaceState')));
+      assert.ok(/wsGen\+\+/.test(drop), 'the generation does not move when the workspace does');
+    });
+  }
+
+  test('crm: every pull that writes an index checks it is still where it started', () => {
+    const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const name of ['pullModules', 'pullSchedules', 'pullActions', 'pullConnections', 'pullWorkflows']) {
+      const at = src.indexOf(`async function ${name}`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      assert.ok(/const gen = wsGen;/.test(body), `${name} does not remember which workspace it belongs to`);
+      const guard = body.indexOf('sameWs(gen)'), write = body.search(/writeFile\('[a-z]+\/index\.json'/);
+      if (write > 0) assert.ok(guard > 0 && guard < write, `${name} writes its index without asking`);
+    }
+  });
+
+  test('crm: a partial list never replaces an index, in any pull', () => {
+    const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const [name, idx] of [['pullSchedules', 'schedules'], ['pullActions', 'actions'],
+                               ['pullWorkflows', 'workflows'], ['pullAll', 'functions']]) {
+      const at = src.indexOf(`async function ${name}`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      const capped = body.indexOf('capped'), write = body.indexOf(`writeFile('${idx}/index.json'`);
+      if (write > 0) assert.ok(capped > 0 && capped < write, `${name} replaces its index from a partial list`);
+    }
+  });
+}

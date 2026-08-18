@@ -399,6 +399,7 @@ function dropWorkspaceState() {
   aiMessages = []; aiSeedWarned = false;
   aiRenderMessages();
   return had;
+  wsGen++;                              // everything in flight belongs to the workspace we just left
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.
  *
@@ -794,6 +795,7 @@ async function pullAll() {
 // Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
 // items that failed, and `pullOne()` re-reads a single view from its detail pane.
 async function pullOne(id) {
+  const gen = wsGen;   // the workspace this re-read belongs to
   if (mismatchRefuse()) return;
   const v = viewById().get(id);
   if (!v) return;
@@ -808,7 +810,8 @@ async function pullOne(id) {
     if (!deps) deps = {};
     deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     pullFailed = pullFailed.filter((f) => f.id !== id);
-    await writeLineage(); await writeSql();
+    if (!sameWs(gen)) return;   // you changed workspace while this was reading
+    await writeLineage(); if (!sameWs(gen)) return; await writeSql();
     setBusy(false, `«${v.name}» re-read.`); $('status').className = 'ok';
     render(); await openDetail(id);
   } catch (e) {
@@ -884,6 +887,13 @@ async function writeToDisk(info) {
   });
   bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '', sample: !!(await readJson(CFG, {})).sample };
 }
+
+// Which workspace we are in, as a number that only moves forward. Same reason as the CRM panel: an
+// operation captures it once and every effect after an `await` asks whether it is still where it
+// started. Reported there and reproduced here - a re-read begun in one workspace wrote its lineage
+// and its SQL into the next.
+let wsGen = 0;
+const sameWs = (gen) => gen === wsGen;
 
 async function loadFromDisk() {
   readFailed = null;
