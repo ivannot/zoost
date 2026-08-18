@@ -4592,13 +4592,22 @@ async function pullModules() {
     setStatus('Pulling modules…', 'busy');
     const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw bridgeError(r, 'pull failed');
     setStatus(`Writing ${r.modules.length} modules…`, 'busy');
-    const liveLayoutFiles = new Set(); const index = []; const layIndex = [];
+    const keepLayoutFiles = new Set(); const index = []; const layIndex = [];
     let mw = 0, lw = 0;
     for (const m of r.modules) {
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
+      const lf = `modules/layouts/${sanitize(m.api_name || 'unknown')}.json`;
       if (fullLayouts.length) {
-        const lf = `modules/layouts/${sanitize(m.api_name || 'unknown')}.json`;
-        try { await writeFile(lf, JSON.stringify(fullLayouts, null, 2)); liveLayoutFiles.add(lf); lw++; } catch (_) {}
+        // A write that failed is not permission to delete what is already there: the old file is
+        // still the best answer anybody has, and losing it costs a re-pull of the expensive half.
+        try { await writeFile(lf, JSON.stringify(fullLayouts, null, 2)); lw++; } catch (_) {}
+        keepLayoutFiles.add(lf);
+      } else if (m.layouts_read !== true) {
+        // Zoho did not answer - refused, rate-limited, or never asked because the fields call had
+        // already failed. «I could not read it» is not «it has none», and only the second is a fact
+        // the prune below may act on. Reported: a 429 on one module deleted its layout detail and
+        // the status line said nothing.
+        keepLayoutFiles.add(lf);
       }
       // keep a compact summary inside the module JSON (drives the preview line + index)
       m.layouts = fullLayouts.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false, status: l.status || null, sections: (l.sections || []).length }));
@@ -4612,9 +4621,16 @@ async function pullModules() {
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
     for await (const p of walk(dir)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await removeFile(p); prunedM++; } catch (_) {} } }
-    for await (const p of walk(dir)) { if (isLayoutFile(p) && !liveLayoutFiles.has(p)) { try { await removeFile(p); } catch (_) {} } }
+    // Only what this pull *knows* is gone: a module Zoho answered for, with no layouts. Anything it
+    // could not read, or could not write, keeps whatever is on disk.
+    let prunedL = 0;
+    for await (const p of walk(dir)) {
+      if (!isLayoutFile(p) || keepLayoutFiles.has(p)) continue;
+      if (!sameWs(gen)) return;
+      try { await removeFile(p); prunedL++; } catch (_) {}
+    }
     await rebuildModules();
-    setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
+    setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.`, 'ok');
     await noteAccess('modules', null);
   } catch (e) { await notePullFailure('modules', e); } finally { endPull(); }
 }

@@ -5601,3 +5601,36 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A failed read must never authorise a deletion. The modules pull kept a set of the layout files it
+// had just written and deleted every other one on disk - so a module whose layouts call was refused,
+// rate-limited, or never attempted (the fields call had already failed) arrived with an empty list
+// and had its existing layout detail removed, silently, as though Zoho had said it has none. A
+// failed *write* did the same. Found by a cold scan of the panel and the bridge together.
+{
+  const bridge = read('apps/crm/content-bridge.js');
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = panel.slice(panel.indexOf('async function pullModules'), panel.indexOf('\n}', panel.indexOf('async function pullModules')));
+
+  test('the bridge says whether the layouts were read, not just what they were', () => {
+    assert.ok(/let layoutsRead = false;/.test(bridge), 'nothing distinguishes «none» from «not read»');
+    assert.ok(/layoutsRead = true;/.test(bridge), 'the flag is never set, so every module looks unread');
+    assert.ok(/layouts_read: layoutsRead/.test(bridge), 'the panel is never told');
+  });
+
+  test('a layout file is removed only for a module that answered with none', () => {
+    assert.ok(/m\.layouts_read !== true/.test(fn), 'a module Zoho could not answer for is pruned anyway');
+    assert.ok(/keepLayoutFiles\.has\(p\)/.test(fn), 'the prune does not consult what must be kept');
+    // A write that failed keeps the old file: it is still the best answer anybody has.
+    const write = fn.indexOf('await writeFile(lf');
+    const keep = fn.indexOf('keepLayoutFiles.add(lf)', write);
+    assert.ok(keep > write, 'the file is only kept when the write succeeded');
+    assert.ok(!/liveLayoutFiles/.test(fn), 'the old set, built from writes, is still deciding');
+  });
+
+  test('layout sets removed are counted and said', () => {
+    assert.ok(/prunedL/.test(fn), 'nothing counts them');
+    assert.ok(/layout set\(s\) removed/.test(fn), 'the reader is not told anything was removed');
+  });
+}

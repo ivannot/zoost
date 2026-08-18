@@ -290,9 +290,14 @@
         }
       }
       let layouts = [];
+      // Whether the answer «no layouts» was read or merely not obtained. Without it the panel cannot
+      // tell a module that genuinely has none from one whose call was refused or rate-limited - and
+      // it was deleting the layout detail of the second, silently, as though Zoho had said it did
+      // not exist. A failed read must never authorise a deletion.
+      let layoutsRead = false;
       // Only real record modules have layouts. Exact call the CRM UI uses (verified via HAR):
       // v2.2 with the comma URL-encoded (id%2Cstatus) returns every layout WITH full sections/fields.
-      if (fieldsOk) { try { layouts = list(await api(`/crm/v2.2/settings/layouts?module=${encodeURIComponent(m.api_name)}&fields=id%2Cstatus`), 'layouts', 'layouts?module=' + m.api_name); } catch (_) {} }
+      if (fieldsOk) { try { layouts = list(await api(`/crm/v2.2/settings/layouts?module=${encodeURIComponent(m.api_name)}&fields=id%2Cstatus`), 'layouts', 'layouts?module=' + m.api_name); layoutsRead = true; } catch (_) {} }
       // Related lists. The API name of a related list is NOT the api_name of the target module:
       // it is what zoho.crm.getRelatedRecords() / the REST /{module}/{id}/{related_list} path expect.
       let related = [];
@@ -327,6 +332,9 @@
       }
       out.push({
         related_lists: related,
+        // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
+        // it may act on, «not read» is not.
+        layouts_read: layoutsRead,
         // null when the module read fine. Present only when Zoho refused, and then it is the whole
         // reason the three lists below are empty.
         unreadable,
