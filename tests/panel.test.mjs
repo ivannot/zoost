@@ -1621,12 +1621,21 @@ test("the CRM's per-org caches are dropped there too, not only in the Functions 
   }
 });
 
-test('Clear and switching workspace go through the same function', () => {
+test('Clear and switching workspace empty the chat through the same function', () => {
   // Two ways to empty the chat that reset different things is how the large-index warning came back
-  // on one path and not the other. The twins had already drifted on exactly that.
+  // on one path and not the other. What this used to assert was that both went through
+  // `dropWorkspaceState()` - and that turned out to be the defect rather than the rule: leaving a
+  // workspace also drops every cache and the queue of removals still owed on disk, none of which has
+  // anything to do with a conversation. The shared part is the conversation; the rest is not shared.
   for (const app of ['crm', 'analytics']) {
-    assert.match(read(`apps/${app}/sidepanel.js`), /function aiClear\(\)[^\n]*dropWorkspaceState\(\);/,
-      `${app}: aiClear does not use the shared helper`);
+    const src = read(`apps/${app}/sidepanel.js`);
+    const clear = /function aiClear\(\)[^\n]*clearConversationState\(\);/.test(src)
+               || /function aiClear\(\)[^\n]*dropWorkspaceState\(\);/.test(src);
+    assert.ok(clear, `${app}: aiClear does not use the shared helper`);
+    const drop = sliceFn(`apps/${app}/sidepanel.js`, 'dropWorkspaceState');
+    if (/failedRemovals|Cache = null/.test(drop))
+      assert.ok(/function aiClear\(\)[^\n]*clearConversationState\(\);/.test(src),
+        `${app}: Clear goes through the function that also drops the caches and the removal queue`);
   }
 });
 
@@ -2366,10 +2375,15 @@ test('the sample workspace is written by the shipped generator, and nothing abou
     // the flag has to survive every rebuild of `bound`, or the guard silently stops firing
     // Line by line, not `\{[^}]*\}`: that stops at the first closing brace, which on one of these
     // is inside `readJson(CFG, {})`, so a line that does carry the flag was reported as missing it.
-    for (const line of js.split('\n')) {
-      if (!/^\s*bound = \{/.test(line)) continue;
-      assert.ok(/sample/.test(line),
-        `${app}: «${line.trim().slice(0, 60)}…» rebuilds the binding without the sample flag`);
+    const lines = js.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!/^\s*bound = \{/.test(lines[i])) continue;
+      // The whole statement, not its first line: one of these is written over two lines and the flag
+      // is on the second, so a line-by-line read reported a binding that does carry it as missing it.
+      let stmt = lines[i], j = i;
+      while (!/\};?\s*$/.test(lines[j]) && j < lines.length - 1) stmt += '\n' + lines[++j];
+      assert.ok(/sample/.test(stmt),
+        `${app}: «${stmt.trim().slice(0, 60)}…» rebuilds the binding without the sample flag`);
     }
     // and it is absent once one exists - a control with nothing to do
     assert.ok(/wssample'\)[\s\S]{0,300}hidden = /.test(js), `${app}: the button never goes away`);
@@ -3253,7 +3267,9 @@ test('the mismatch guard drives every Zoho-bound button from one list', () => {
       + 'drive it from ZOHO_BTNS so the two cannot drift');
   }
   // and the one that downloads without being in that list guards at the call instead
-  assert.ok(/async function downloadMissing\(\) \{[\s\S]{0,400}?if \(!zohoReady\(\)\)/.test(src),
+  // Read from the function rather than from a window of N characters after its name: the window was
+  // 400 and a comment pushed the guard past it, so the case failed over prose.
+  assert.ok(/if \(!zohoReady\(\)\)/.test(sliceFn('apps/crm/sidepanel.js', 'downloadMissing')),
     'id=crm downloadMissing no longer refuses the wrong tab');
 });
 
@@ -5557,14 +5573,16 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       // and never ran, which made every guard in it always true. Both reported. And it must move
       // *before* the new handle is assigned, or an operation from the old workspace passes its
       // check while already writing through the new folder.
-      const bump = src.indexOf('wsGen++');
+      // `const gen = ++wsGen`: the selection keeps the number it moved to, so it can tell later
+      // whether a second selection has overtaken it - which is what decides what gets remembered.
+      const bump = src.indexOf('const gen = ++wsGen;');
       assert.ok(bump > 0, 'the generation never moves');
       const drop = src.slice(src.indexOf('function dropWorkspaceState'), src.indexOf('\n}', src.indexOf('function dropWorkspaceState')));
-      assert.ok(!/wsGen\+\+/.test(drop), 'clearing the conversation still moves the generation');
+      assert.ok(!/wsGen\s*\+\+/.test(drop), 'clearing the conversation still moves the generation');
       const line = src.slice(0, bump).split('\n').length;
       const around = src.split('\n').slice(line - 1, line + 6).join('\n');
       assert.ok(/dir = w\.handle/.test(around), 'the generation does not move where the folder changes');
-      assert.ok(around.indexOf('wsGen++') < around.indexOf('dir = w.handle'),
+      assert.ok(around.indexOf('const gen = ++wsGen;') < around.indexOf('dir = w.handle'),
                 'the folder changes before the generation does');
     });
   }
@@ -5769,12 +5787,22 @@ test('every cache in a shipped panel is named by something that tests it', () =>
                      'a complete read did not remove what Zoho no longer has');
   });
 
-  test('a task whose detail refused keeps the reading the last pull took', async () => {
-    const prev = [{ kind: 'tasks', id: '9', name: 't9', detail_read: true, mappings: [{ field: 'Subject' }] }];
-    const c = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9', detail_read: false }],
+  test('a task whose detail refused keeps the mappings and nothing else', async () => {
+    // The first version of this kept the previous row *whole*, which threw away everything this pull
+    // did read: the name went back to what it was last week, `detail_read` came back true, and the
+    // status line said «1 action(s) pulled.» with no warning. Worse than losing the mappings.
+    const prev = [{ kind: 'tasks', id: '9', name: 'old name', module: 'Deals', detail_read: true,
+                    modified_time: '2026-08-01T00:00:00Z', mappings: [{ field: 'Subject' }] }];
+    const c = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 'new name', detail_read: false }],
                           detail_missed: [{ kind: 'tasks', id: '9', reason: '429' }] }, prev);
-    assert.deepEqual((c.written || [])[0].mappings, [{ field: 'Subject' }],
-                     'a thin row was written over a row that had the detail');
+    const row = (c.written || [])[0];
+    assert.equal(row.name, 'new name', 'the row this pull read was replaced by one from before it');
+    assert.deepEqual(row.mappings, [{ field: 'Subject' }], 'the mappings the last pull read were dropped');
+    assert.equal(row.detail_read, false, 'the row claims a detail this pull never read');
+    assert.equal(row.detail_kept, true, 'nothing marks the mappings as coming from an older reading');
+    assert.equal(row.detail_kept_from, '2026-08-01T00:00:00Z', 'and nothing says how old it is');
+    assert.ok(c.status.some((s) => /detail Zoho did not return/.test(s)),
+              'a pull that could not read a detail reported no warning at all');
   });
 
   test('and with nothing to keep, it is written thin and said to be thin', async () => {
@@ -5884,6 +5912,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     };
     for (const [what, re] of Object.entries(surfaces))
       assert.ok(re.test(panel), `${what} shows a task with unread detail as a task with no mappings`);
+    // And the harder half: mappings *are* there, from an older reading. Silence would present them
+    // as current, which is the one thing a mirror may not do.
+    for (const [what, re] of Object.entries({
+      'the action detail': /actKept\(a\) \|\| \(!\(a\.mappings \|\| \[\]\)\.length/,
+      'the HTML export': /a\.kind === 'tasks' && actKept\(a\) \? esc\(KEPT_DETAIL\)/,
+      'the Markdown export': /a\.kind === 'tasks' && actKept\(a\) \? KEPT_DETAIL/,
+      'the assistant': /a\.kind === 'tasks' && actKept\(a\) \? ` - \$\{KEPT_DETAIL\}`/,
+    })) assert.ok(re.test(panel), `${what} shows inherited mappings as if this pull had read them`);
   });
 
   test('the module related-lists helper is defined once, where its names exist', () => {
@@ -6058,8 +6094,15 @@ for (const app of ['crm', 'analytics']) {
   test(`${app}: an operation takes its workspace before its first await`, () => {
     const b = sliceFn(`apps/${app}/sidepanel.js`, 'beginWorkspaceOp');
     assert.ok(/const gen = wsGen, root = dir;/.test(b), 'the op does not capture both halves');
-    assert.ok(/current: \(\) => gen === wsGen && root === dir/.test(b),
+    assert.ok(/const current = \(\) => gen === wsGen && root === dir;/.test(b),
               'being current is decided on one of the two, so one of the two ways of moving is invisible');
+    // The refusal is the op's, on both sides of the await. `writeFileAt` compares handles, and a
+    // handle is not an identity through time: A -> B -> A makes the old one valid again, so an
+    // operation from before the round trip wrote while `current()` said false.
+    assert.ok(/const guard = \(\) => \{ if \(!current\(\)\) throw new Error\(WS_MOVED\); \};/.test(b),
+              'the op hands its I/O straight to the file writer, which only compares handles');
+    assert.ok(/const through = async \(fn\) => \{ guard\(\); const v = await fn\(\); guard\(\); return v; \};/.test(b),
+              'the workspace is checked on one side of the await only');
   });
 
   test(`${app}: every function that writes carries an op`, () => {
@@ -6089,3 +6132,155 @@ test('analytics: the model is guarded, not only the disk', () => {
     assert.ok(guard > 0 && guard < first, `${fn} writes into the panel's memory before asking whether it is still there`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Reported from a real org: «ho fatto un pull all e mentre girava ho aperto la org di test - vedevo
+// che il pull era ancora in moto». The writes were already refused by then; what was not was the
+// *running*. A pull is minutes of fetching with a pause between items, and it went on counting
+// «Downloading 214/900» into a panel that had been showing another workspace for a minute - and
+// finished by announcing a failure count over it, because every refused write had counted as one.
+{
+  const panel = read('apps/crm/sidepanel.js');
+
+  test('an op speaks only into the workspace it belongs to', () => {
+    const b = sliceFn('apps/crm/sidepanel.js', 'beginWorkspaceOp');
+    assert.ok(/say: \(msg, kind\) => \{ if \(current\(\)\) setStatus\(msg, kind\); \}/.test(b),
+              'progress is not bound to the workspace the way the writes are');
+  });
+
+  test('the long loops give up as soon as the workspace moves', () => {
+    for (const fn of ['downloadMissing', 'downloadMissingWf', 'pullModules', 'pullEverything']) {
+      const body = sliceFn('apps/crm/sidepanel.js', fn);
+      const loop = body.search(/\n\s*for \(/);
+      const guard = body.indexOf('!op.current()');
+      assert.ok(loop > 0, `${fn} no longer has the loop this is about`);
+      assert.ok(guard > 0, `${fn} runs its loop to the end whatever workspace it is in`);
+      const after = body.slice(loop);
+      assert.ok(/!op\.current\(\)/.test(after.slice(0, after.indexOf('await '))),
+                `${fn} checks once before the loop rather than on each turn`);
+    }
+    // And giving up must not leave the buttons off: the hold is released in a finally, not on the
+    // one path that reaches the end.
+    for (const fn of ['downloadMissing', 'downloadMissingWf']) {
+      const body = sliceFn('apps/crm/sidepanel.js', fn);
+      assert.ok(/\} finally \{ setPullBusy\(false\)/.test(body),
+                `${fn} leaves both Pull buttons disabled when it stops early`);
+    }
+  });
+
+  test('a pull that was overtaken says nothing about the org you left', () => {
+    const body = sliceFn('apps/crm/sidepanel.js', 'notePullFailure');
+    const guard = body.indexOf('if (op && !op.current()) return;');
+    // Not `guard < indexOf(...)` on its own: a missing guard is -1, which is less than everything,
+    // so the case passed with the defect put back. Absence is the finding.
+    assert.ok(guard >= 0, 'an overtaken pull reports its own refused write as a failure');
+    assert.ok(guard < body.indexOf('setStatus'), 'it says it first and checks afterwards');
+  });
+
+  test('analytics: progress and busy belong to the workspace too', () => {
+    const src = read('apps/analytics/sidepanel.js');
+    assert.equal((src.match(/if \(m\?\.type === 'pullProgress'\) op\.say\(/g) || []).length, 2,
+                 'the bridge keeps reporting progress into a workspace it is not pulling');
+    const b = sliceFn('apps/analytics/sidepanel.js', 'beginWorkspaceOp');
+    assert.ok(/say: \(msg, kind\) => \{ if \(current\(\)\) status\(msg, kind\); \}/.test(b),
+              'the twin of the CRM op cannot speak, so its callers check by hand and drift');
+    assert.ok(/function endBusyElsewhere\(\) \{ busy = false; updateButtons\(\); \}/.test(src),
+              'an overtaken pull leaves the panel it is no longer in looking busy');
+    assert.ok(!/return endBusyElsewhere\(\);\s*\n\s*status\(/.test(src),
+              'and it writes a sentence about the workspace you left');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Four more from the same scan, and two of them were mine from this morning.
+{
+  const crm = read('apps/crm/sidepanel.js');
+
+  test('a task detail that refused keeps the mappings, never the whole old row', () => {
+    const body = sliceFn('apps/crm/sidepanel.js', 'pullActions');
+    assert.ok(/return \{ \.\.\.a, mappings: p\.mappings, detail_read: false, detail_kept: true,/.test(body),
+              'the row this pull read is replaced by one from before it - name, module and date included');
+    assert.ok(/detailMissed\.length \? ` \$\{detailMissed\.length\} task\(s\)/.test(body),
+              'the warning counts what survived the salvage, so a salvaged one reports nothing');
+  });
+
+  test('clearing the chat does not forget what the mirror still owes', () => {
+    // `failedRemovals` is a queue of deletions that failed and must be retried - a fact about the
+    // files, not about the conversation. Clear emptied it, with no workspace change at all.
+    const clear = sliceFn('apps/crm/sidepanel.js', 'clearConversationState');
+    for (const c of ['failedRemovals', 'graphCache', 'codeCache'])
+      assert.ok(!new RegExp(c).test(clear), `Clear still throws away ${c}`);
+    assert.ok(/clearConversationState\(\);/.test(sliceFn('apps/crm/sidepanel.js', 'aiClear')),
+              'Clear still goes through the workspace-change path');
+    const drop = sliceFn('apps/crm/sidepanel.js', 'dropWorkspaceState');
+    assert.ok(/failedRemovals\.clear\(\)/.test(drop) && /clearConversationState\(\)/.test(drop),
+              'leaving a workspace no longer drops the queue, or no longer clears the conversation');
+  });
+
+  test('opening the list does not make a switch look like a re-open', () => {
+    // `activate()` decides on `activeWsId` whether this is the same workspace being re-opened, and
+    // `loadWorkspaces()` set it first - so every switch looked like one and `dropWorkspaceState()`
+    // never ran: conversation, caches and the failed-removal queue followed the reader into the next org.
+    assert.ok(!/sel\.value = act\.id; activeWsId = act\.id;/.test(crm),
+              'the list still decides the answer to the question activate() is about to ask');
+  });
+
+  for (const app of ['crm', 'analytics']) {
+    test(`${app}: what is remembered as open is what is on screen`, () => {
+      const src = read(`apps/${app}/sidepanel.js`);
+      const r = sliceFn(`apps/${app}/sidepanel.js`, 'rememberActive');
+      assert.ok(/gen === wsGen \? window\.idbHandle\.set\(key, id\) : undefined/.test(r),
+                'a slow selection still writes itself over a faster one that came after it');
+      assert.ok(/_activeWsWrites = _activeWsWrites\.then/.test(r), 'the writes are not ordered');
+      assert.ok(/await rememberActive\(/.test(src), 'the selection does not go through it');
+      assert.ok(/if \(gen !== wsGen\) return;/.test(src),
+                'a selection that was overtaken carries on setting up the panel');
+    });
+  }
+}
+
+// The half a root-bound writer does not reach: what an operation publishes into the panel's *memory*
+// after its last write. The files are safe - the writer refuses a folder that is not the op's - and
+// `index`, the row and `bound` are the panel's picture of the workspace on screen, so writing into
+// them after the final await puts one org's function into another org's index, and produces a
+// binding with half its fields from each. Run rather than read: both were reproduced this way.
+{
+  test('a download that was overtaken does not enter the next workspace\'s index', async () => {
+    let live = true;
+    const entry = { id: '7', category: 'c', source: 's' };
+    const ctx = {
+      dir: {}, index: new Map(), MSG: { folder: 'folder' }, setStatus() {},
+      mismatchRefuse: () => false, ensurePerm: async () => true,
+      beginWorkspaceOp: () => ({ root: ctx.dir, current: () => live, write: async () => {} }),
+      toBridge: async () => ({ ok: true, file: { folder: 'standalone', stem: 'build',
+        dg: 'void b(){}', meta: { display_name: 'Build', name: 'build', category: 'c', source: 's' } } }),
+      errText: (e) => String(e), Error, String, JSON, Map,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'downloadOne'), ctx);
+    // The switch lands between the last write and the publication, which is where the awaits are.
+    ctx.beginWorkspaceOp = () => ({ root: ctx.dir, current: () => live,
+                                    write: async () => { live = false; } });
+    const ok = await vm.runInContext('downloadOne', ctx)(entry);
+    assert.equal(ok, false, 'an overtaken download reported success');
+    assert.equal(ctx.index.size, 0, 'it wrote one workspace\'s function into another\'s index');
+    assert.ok(!entry.downloaded, 'and lit its row there');
+  });
+
+  test('analytics: a binding is published whole or not at all', async () => {
+    let live = true;
+    const ctx = {
+      bound: null, folders: [], views: [], schema: {}, relations: [], deps: {}, pullFailed: [], sqls: {},
+      writeJson: async () => {}, patchCfg: async () => {}, stemOf: (n) => String(n),
+      readJson: async () => ({ label: 'B', sample: true }),
+      PULL_SV: 1, CFG: '.zoost.json', Object, JSON, Date, Boolean,
+    };
+    ctx.op = { current: () => live, write: async () => {} };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
+    ctx.readJson = async () => { live = false; return { label: 'B', sample: true }; };
+    const ok = await vm.runInContext('writeToDisk', ctx)({ workspace: 'A', name: 'A', origin: 'oA' }, ctx.op);
+    assert.equal(ok, false, 'an overtaken pull reported that it had written the workspace');
+    assert.equal(ctx.bound, null, 'the panel is now bound to one workspace by id and another by name');
+  });
+}

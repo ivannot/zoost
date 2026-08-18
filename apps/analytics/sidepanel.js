@@ -245,11 +245,21 @@ function noteWrite(rel) {
 const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
 function beginWorkspaceOp() {
   const gen = wsGen, root = dir;
+  const current = () => gen === wsGen && root === dir;
+  // See the CRM twin: a handle is not an identity through time. Leave a workspace and come back and
+  // the same object is current again, so an operation from before the round trip passed a check that
+  // compares handles while `current()` said false. Asked on both sides of the await.
+  const guard = () => { if (!current()) throw new Error(WS_MOVED); };
+  const through = async (fn) => { guard(); const v = await fn(); guard(); return v; };
   return {
-    root, gen,
-    current: () => gen === wsGen && root === dir,
-    read: (p) => readFileAt(root, p),
-    write: (p, body) => writeFileAt(root, p, body),
+    root, gen, current,
+    read: (p) => through(() => readFileAt(root, p)),
+    write: (p, body) => through(() => writeFileAt(root, p, body)),
+    // Progress belongs to a workspace as much as a write does. Reported on the CRM side: a pull kept
+    // counting into the panel after the user had opened another workspace, so the work looked like it
+    // was happening there. Here the counting arrives as a message from the bridge, which is the same
+    // thing one layer out. It says nothing once it is not there.
+    say: (msg, kind) => { if (current()) status(msg, kind); },
   };
 }
 async function writeFileAt(root, rel, content) {
@@ -453,6 +463,15 @@ function resetView() {
   if ($('aiview').classList.contains('show')) aiContextLabel();
 }
 
+// Which workspace the panel should reopen on, remembered in IndexedDB. Two selections overlapping -
+// a slow one, then a fast one - resolved in the order the browser finished them, so the panel showed
+// the second and reopened on the first. The write is queued and the queued work asks whether it is
+// still the current selection: what is persisted is what is on screen, not what finished last.
+let _activeWsWrites = Promise.resolve();
+function rememberActive(key, id, gen) {
+  _activeWsWrites = _activeWsWrites.then(() => (gen === wsGen ? window.idbHandle.set(key, id) : undefined));
+  return _activeWsWrites;
+}
 async function selectWorkspace(w) {
   const sameWs = bound && bound.workspace === w.id;
   // The generation moves **here**, before the handle does and before anything awaits: an operation
@@ -460,10 +479,11 @@ async function selectWorkspace(w) {
   // move inside `dropWorkspaceState()`, which is also what Clear calls - so clearing a conversation
   // interrupted a pull, and in Analytics the line sat after a `return` and never ran at all, which
   // made every guard in that file always true. Both reported.
-  wsGen++;
+  const gen = ++wsGen;
   dir = w.handle; forgetDirs();
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
-  await window.idbHandle.set('activeWsAnalytics', w.id);
+  await rememberActive('activeWsAnalytics', w.id, gen);
+  if (gen !== wsGen) return;   // a second selection overtook this one while IndexedDB was writing
   // Not on a re-selection of the workspace already open - regranting a folder must not throw
   // away a conversation about the workspace you are still in.
   if (!sameWs) {
@@ -773,11 +793,17 @@ function updateButtons() {
 }
 function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : ''); updateButtons(); }
 
+// An operation that has been overtaken stops - and stopping must not leave the panel it is no longer
+// in looking like something is running there. It says nothing: the workspace on screen has just been
+// loaded and has already said what it has to say, and a sentence about the org you left is noise at
+// best. Only the busy state, which is what greys the buttons, is put down.
+function endBusyElsewhere() { busy = false; updateButtons(); }
+
 // ---------- pull ----------
 async function pullAll() {
   const op = beginWorkspaceOp();   // the workspace this pull belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
-  const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
+  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, 'Pulling…');
   try {
@@ -787,29 +813,29 @@ async function pullAll() {
 
     setBusy(true, 'Reading the view list…');
     const vl = await toBridge({ cmd: 'listViews' });
-    if (!op.current()) return;   // the answer describes the workspace we were in, not this one
+    if (!op.current()) return endBusyElsewhere();   // the answer describes the workspace we were in, not this one
     views = vl.views || []; folders = vl.folders || [];
 
     setBusy(true, 'Reading structure and relations…');
     const sc = await toBridge({ cmd: 'workspaceErd' });
-    if (!op.current()) return;
+    if (!op.current()) return endBusyElsewhere();
     schema = sc.tables || {}; relations = sc.relations || [];
 
     const qIds = views.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
     const sq = await toBridge({ cmd: 'pullSql', ids: qIds });
-    if (!op.current()) return;
+    if (!op.current()) return endBusyElsewhere();
     sqls = sq.sql || {};
 
     const allIds = views.map((v) => v.id);
     setBusy(true, `Reading lineage… 0 / ${allIds.length}`);
     const dp = await toBridge({ cmd: 'scanDependencies', ids: allIds });
-    if (!op.current()) return;
+    if (!op.current()) return endBusyElsewhere();
     deps = dp.deps || {};
     pullFailed = [].concat(sq.failed || [], dp.failed || []);
 
     mergeSchemaIntoViews();
-    await writeToDisk(info, op);
+    if (!(await writeToDisk(info, op))) return endBusyElsewhere();
 
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
@@ -852,11 +878,11 @@ async function pullOne(id) {
     await requirePerm(op.root);
     if (v.type === 'QueryTable') {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
-      if (!op.current()) return;
+      if (!op.current()) return endBusyElsewhere();
       if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
     }
     const d = await toBridge({ cmd: 'viewDependencies', id });
-    if (!op.current()) return;
+    if (!op.current()) return endBusyElsewhere();
     if (!deps) deps = {};
     deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     pullFailed = pullFailed.filter((f) => f.id !== id);
@@ -875,7 +901,7 @@ async function retryFailed() {
   if (mismatchRefuse()) return;
   const ids = [...new Set(pullFailed.map((f) => f.id))];
   if (!ids.length) return;
-  const onProgress = (m) => { if (m?.type === 'pullProgress') status(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
+  const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
   setBusy(true, `Retrying ${ids.length} item(s)…`);
   try {
@@ -886,7 +912,7 @@ async function retryFailed() {
     const r2 = await toBridge({ cmd: 'scanDependencies', ids });
     // Before the model is touched, not only before the disk is: these ids belong to the workspace
     // this retry started in, and merging them into another one's memory is the same defect indoors.
-    if (!op.current()) return;
+    if (!op.current()) return endBusyElsewhere();
     if (!deps) deps = {};
     Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []));
     pullFailed = still;
@@ -938,7 +964,15 @@ async function writeToDisk(info, op) {
     lastPull: new Date().toISOString(),
     counts: { views: views.length, folders: folders.length, tables: Object.keys(schema).length, relations: relations.length, sql: Object.keys(sqls).length },
   }, op);
-  bound = { workspace: info.workspace, name: info.name, origin: info.origin, label: (await readJson(CFG, {})).label || '', sample: !!(await readJson(CFG, {})).sample };
+  // Read once, through the op, and asked again before publishing: this is the panel's memory of which
+  // workspace it is showing. Reproduced as a binding half from each - `workspace: A, label: B` - by
+  // switching during the last write, which is the shape a mirror can never recover from by itself.
+  // The two reads were also two reads of the same file for two fields.
+  const cfg = await readJson(CFG, {}, op);
+  if (!op.current()) return false;
+  bound = { workspace: info.workspace, name: info.name, origin: info.origin,
+            label: cfg.label || '', sample: !!cfg.sample };
+  return true;
 }
 
 // Which workspace we are in, as a number that only moves forward. Same reason as the CRM panel: an

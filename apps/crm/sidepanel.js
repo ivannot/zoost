@@ -433,6 +433,10 @@ function pullFailMessage(area, e) {
 // then say it. Recording without saying leaves the user with a tab that vanished and no reason;
 // saying without recording loses the verdict the next pull skips on. Six sites did both by hand.
 async function notePullFailure(area, e, op) {
+  // An overtaken pull ends in here, because the writer refused it. There is nothing true to say: the
+  // verdict belongs to the folder we left and cannot be written to it, and the sentence would name
+  // an area of an org the reader is no longer looking at. It stops, quietly.
+  if (op && !op.current()) return;
   await noteAccess(area, e, op);
   setStatus(pullFailMessage(area, e), 'bad');
   // A role refusal is not a platform change and no release will fix it, so the pointer would be
@@ -662,12 +666,23 @@ async function requirePerm(h) { if (!(await ensurePerm(h))) throw new Error(MSG.
 const WS_MOVED = 'The workspace changed while this was running - nothing further was written to it.';
 function beginWorkspaceOp() {
   const gen = wsGen, root = dir;
+  const current = () => gen === wsGen && root === dir;
+  // The refusal is the op's, not the file writer's. `writeFileAt` compares handles, and a handle is
+  // not an identity through time: leave a workspace and come back to it and the same object is
+  // current again, so an operation from before the round trip passed the check while `current()`
+  // said false. Both halves, both sides of the await - the workspace can move while the browser is
+  // inside `createWritable()` as easily as between two calls.
+  const guard = () => { if (!current()) throw new Error(WS_MOVED); };
+  const through = async (fn) => { guard(); const v = await fn(); guard(); return v; };
   return {
-    root, gen,
-    current: () => gen === wsGen && root === dir,
-    read: (p) => readFileAt(root, p),
-    write: (p, body) => writeFileAt(root, p, body),
-    remove: (p) => removeFileAt(root, p),
+    root, gen, current,
+    read: (p) => through(() => readFileAt(root, p)),
+    write: (p, body) => through(() => writeFileAt(root, p, body)),
+    remove: (p) => through(() => removeFileAt(root, p)),
+    // Progress belongs to a workspace as much as a write does. Reported: a pull started in one org
+    // kept counting «Downloading 214/900» into the panel after the user had opened another workspace,
+    // so the work looked like it was happening *there*. It says nothing once it is not there.
+    say: (msg, kind) => { if (current()) setStatus(msg, kind); },
   };
 }
 async function writeFileAt(root, rel, content) {
@@ -695,6 +710,10 @@ async function* walk(d, prefix = '') {
   }
 }
 const readCfg = async () => { try { return JSON.parse(await readFile(CFG)); } catch { return null; } };
+// The same read, through an operation's own workspace. `.zoost.json` is the file that says which org
+// a folder mirrors, so a pull that reads it out of whichever folder is on screen can publish the
+// other one's identity as its own.
+const opReadCfg = async (op) => { try { return JSON.parse(await op.read(CFG)); } catch { return null; } };
 const writeCfg = async (o, op) => (op ? op.write(CFG, JSON.stringify(o, null, 2)) : writeFile(CFG, JSON.stringify(o, null, 2)));
 // Merge rather than replace. `.zoost.json` now holds more than the binding - the access verdicts
 // below live there too - and a whole-object write from any one writer silently drops what the others
@@ -2615,7 +2634,11 @@ async function pullAll() {
     // Every field the binding carries, or the guard that reads one of them silently stops firing.
     // A pull cannot run on a sample - guardOk refuses it - so this can only ever be false here, and
     // writing it out is what stops the next field added to .zoost.json being dropped in this line.
-    const _c = (await readCfg()) || {};
+    // Through the op, and asked again after it: `bound`, the binding cache, the tree and the
+    // download queue are all about the workspace the panel is showing, and `readCfg()` read it from
+    // whichever folder that was. A pull overtaken here published one org's identity as the other's.
+    const _c = (await opReadCfg(op)) || {};
+    if (!op.current()) return;
     bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
     await cacheBinding(bound);
     await rebuildTree();
@@ -3489,6 +3512,7 @@ async function aiExecTool(name, input) {
         : a.kind === 'email_notifications'
           ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
           : a.kind === 'webhooks' ? ` ${a.method || ''} ${a.url || ''}`
+          : a.kind === 'tasks' && actKept(a) ? ` - ${KEPT_DETAIL}`
           : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}` : '';
       return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;
     });
@@ -3687,7 +3711,7 @@ function toggleAI() {
   aiEnsureFiles().then(() => aiContextLabel());   // the label reads the mirror too, and fills in when its measurement lands
 }
 function closeAI() { $('aiview').classList.remove('show'); $('askai').classList.remove('on'); document.body.classList.remove('ai-open'); }
-function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it - switching workspace does it too, because the old thread was about another org.')) return; dropWorkspaceState(); }
+function aiClear() { if (!aiMessages.length) return; if (!window.confirm('Clear this conversation? Only you can clear it - switching workspace does it too, because the old thread was about another org.')) return; clearConversationState(); }
 // AI configuration lives in the options page now: the side panel is 400px wide and these are
 // set-once fields. openSettings() focuses the one settings window; the panel picks the change up via
 // chrome.storage.onChanged.
@@ -4217,9 +4241,18 @@ async function addWorkspaceForTab() {
 let wsGen = 0;
 const sameWs = (gen) => gen === wsGen;
 
-function dropWorkspaceState() {
+// Clearing a conversation and leaving a workspace are two different things, and one function did
+// both: Clear threw away every cache *and the queue of removals that had failed and must be retried*,
+// which is a fact about the mirror on disk and has nothing to do with the chat. Reported: the queue
+// went from 1 to 0 with no workspace change at all.
+function clearConversationState() {
   const had = aiMessages.length;
   aiMessages = []; aiSeedWarned = false;
+  aiRenderMessages();
+  return had;
+}
+function dropWorkspaceState() {
+  const had = clearConversationState();
   graphCache = null; moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
   healthData = null;   // an audit is about one workspace, and it was the one thing left off this list
   // Relative paths mean nothing outside the folder they came from: a removal that failed in one
@@ -4231,7 +4264,6 @@ function dropWorkspaceState() {
   // org's index - so a module the new workspace has and the old one did not vanished from the chips
   // and from both reports, silently, as an absence.
   codeCache = null; modNamesCache = null;
-  aiRenderMessages();
   return had;
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.
@@ -4258,6 +4290,15 @@ function resetView() {
   if ($('aiview').classList.contains('show')) aiContextLabel();
 }
 
+// Which workspace the panel should reopen on, remembered in IndexedDB. Two selections overlapping -
+// a slow one, then a fast one - resolved in the order the browser finished them, so the panel showed
+// the second and reopened on the first. The write is queued and the queued work asks whether it is
+// still the current selection: what is persisted is what is on screen, not what finished last.
+let _activeWsWrites = Promise.resolve();
+function rememberActive(key, id, gen) {
+  _activeWsWrites = _activeWsWrites.then(() => (gen === wsGen ? window.idbHandle.set(key, id) : undefined));
+  return _activeWsWrites;
+}
 async function activate(w, viaGesture) {
   const sameWs = activeWsId === w.id;
   // The binding is set with the handle, not four lines later. It used to be read after
@@ -4269,9 +4310,10 @@ async function activate(w, viaGesture) {
   // move inside `dropWorkspaceState()`, which is also what Clear calls - so clearing a conversation
   // interrupted a pull, and in Analytics the line sat after a `return` and never ran at all, which
   // made every guard in that file always true. Both reported.
-  wsGen++;
+  const gen = ++wsGen;
   dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
-  await window.idbHandle.set('activeWs', w.id); setEnabled(true);
+  await rememberActive('activeWs', w.id, gen); setEnabled(true);
+  if (gen !== wsGen) return;   // a second selection overtook this one while IndexedDB was writing
   oldLayout = await hasOldLayout(w.handle);
   // Not on a re-activation of the workspace already open - regranting a folder must not throw
   // away a conversation about the org you are still in.
@@ -4398,8 +4440,13 @@ async function loadWorkspaces() {
     sel.appendChild(o);
   });
   const act = wsList.find((w) => w.id === active) || wsList[0];
-  sel.value = act.id; activeWsId = act.id; updateWsButtons();
+  // `activeWsId` is what `activate()` compares against to decide whether this is the same workspace
+  // being re-opened - and setting it here made every switch look like one, so `dropWorkspaceState()`
+  // never ran: the conversation, every cache and the queue of failed removals followed the reader
+  // into the next org. It is set by `activate()`, which is the one place that knows.
+  sel.value = act.id;
   await activate(act, false);
+  updateWsButtons();
 }
 
 $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
@@ -4665,14 +4712,20 @@ async function pullCurrent() {
 // out of them because a tab was tidied away would be a mirror that lies by omission.
 async function pullEverything() {
   if (pullBusy) return;
+  const op = beginWorkspaceOp();   // «Pull all» is one act, and it belongs to the workspace it began in
   setPullBusy(true);
   const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
   const skipped = [];
   for (const t of TABS) {
+    // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
+    // so without this the remaining areas would carry on pulling the tab's org into the folder the
+    // user had just opened, which is only refused if that folder is already bound to another org.
+    if (!op.current()) { setPullBusy(false); return; }
     if (isForbidden(t.id)) continue;
     if (!isPulled(t.id)) { skipped.push(t.id); continue; }
     try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
   }
+  if (!op.current()) { setPullBusy(false); return; }
   try { await rebuildActive(); } catch (_) {}
   renderTabs();                                   // a refusal discovered just now changes the set
   // Both notes, because they are different facts and neither may be swallowed: one is what Zoho
@@ -4697,10 +4750,11 @@ async function pullModules() {
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Pulling modules…', 'busy');
     const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw bridgeError(r, 'pull failed');
-    setStatus(`Writing ${r.modules.length} modules…`, 'busy');
+    op.say(`Writing ${r.modules.length} modules…`, 'busy');
     const keepLayoutFiles = new Set(); const index = []; const layIndex = [];
     let mw = 0, lw = 0;
     for (const m of r.modules) {
+      if (!op.current()) return;   // one file per module and per layout set: a loop long enough to be left
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
       const lf = `modules/layouts/${sanitize(m.api_name || 'unknown')}.json`;
       if (fullLayouts.length) {
@@ -5189,6 +5243,11 @@ async function downloadOne(entry) {
     const f = r.file;
     await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
     await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
+    // The files are safe - the writer refuses a folder that is not this op's - and `index` and the
+    // row are not: they are the panel's memory of the workspace *on screen*, so publishing into them
+    // after the last await puts one org's function into another org's index and lights its row.
+    // Wrong indoors before it is wrong on disk, and it never reaches the disk to be caught there.
+    if (!op.current()) return false;
     entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
@@ -5196,6 +5255,7 @@ async function downloadOne(entry) {
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissing() {
+  const op = beginWorkspaceOp();   // the workspace these functions belong to
   // It downloads, so it is refused on the wrong tab like every other pull. A guard rather than a
   // disabled button: the button is `display:none` unless something is missing, and disabling it
   // from `updateMissingButton` would be an assignment on top of the five-second re-render - set
@@ -5205,18 +5265,25 @@ async function downloadMissing() {
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
-  for (let i = 0; i < pending.length; i++) {
-    const e = pending[i];
-    setStatus(`Downloading ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
-    let done = await downloadOne(e);
-    if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
-    done ? ok++ : fail++;
-    updateRow(e);
-    await sleep(140);
-  }
-  updateMissingButton();
-  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
-  setPullBusy(false); $('missing').disabled = false;
+  // The longest loop in the panel - one fetch and a pause per function, so minutes on a large org,
+  // and every one of those minutes is a place the workspace can change underneath. It used to run to
+  // the end regardless: each download refused, each refusal counted as a failure, and it finished by
+  // announcing «Downloaded 0, 900 still missing» over a workspace that had nothing to do with it.
+  try {
+    for (let i = 0; i < pending.length; i++) {
+      if (!op.current()) return;
+      const e = pending[i];
+      op.say(`Downloading ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
+      let done = await downloadOne(e);
+      if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
+      done ? ok++ : fail++;
+      updateRow(e);
+      await sleep(140);
+    }
+    if (!op.current()) return;
+    updateMissingButton();
+    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
+  } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 function updateRow(e) {
   const row = document.querySelector(`.f[data-id="${escA((window.CSS && CSS.escape) ? CSS.escape(e.id) : e.id)}"]`); if (!row) return;
@@ -5589,6 +5656,7 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
         : a.kind === 'field_updates' ? (a.field ? esc(a.field) + (a.field_type ? ' (' + esc(a.field_type) + ')' : '')
             + ' \u2190 ' + (actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : esc(String(a.value))) : '')
         : a.kind === 'webhooks' ? [esc(a.method || ''), esc(a.url || '')].filter(Boolean).join(' ')
+        : a.kind === 'tasks' && actKept(a) ? esc(KEPT_DETAIL)
         : a.kind === 'tasks' && actThin(a) ? esc(MISS_DETAIL)
         : a.notify === true ? 'notifies' : '';
       return '<tr><td>' + esc(a.name || a.id) + '</td><td>' + esc(actionKindLabel(a.kind)) + '</td><td>' + esc(a.module || '') + '</td>'
@@ -5856,6 +5924,7 @@ function buildExportMarkdown(d, scope) {
            a.recipient_count != null ? a.recipient_count + ' recipient(s)' : ''].filter(Boolean).join(' - ')
         : a.kind === 'field_updates' ? (a.field ? `${a.field}${a.field_type ? ' (' + a.field_type + ')' : ''} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}` : '')
         : a.kind === 'webhooks' ? [a.method || '', a.url || ''].filter(Boolean).join(' ')
+        : a.kind === 'tasks' && actKept(a) ? KEPT_DETAIL
         : a.kind === 'tasks' && actThin(a) ? MISS_DETAIL
         : a.notify === true ? 'notifies' : '';
       md += `| ${_mdCell(a.name || a.id)} | ${_mdCell(actionKindLabel(a.kind))} | ${_mdCell(a.module || '')} | ${users.length} | ${_mdCell(users.map((w) => w.name || w.id).join(', '))} | ${_mdCell(detail)} |\n`;
@@ -6121,22 +6190,26 @@ async function downloadOneWf(entry) {
   } catch (e) { entry.error = true; entry.downloaded = false; entry.errorMsg = errText(e); return false; }
 }
 async function downloadMissingWf() {
+  const op = beginWorkspaceOp();   // the workspace these workflows belong to - see downloadMissing()
   const pending = workflowData.filter((e) => !e.downloaded);
   if (!pending.length) { setStatus('All workflows downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
-  for (let i = 0; i < pending.length; i++) {
-    const e = pending[i];
-    setStatus(`Downloading workflow ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
-    let done = await downloadOneWf(e);
-    if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneWf(e); }
-    done ? ok++ : fail++;
-    if (viewMode === 'workflows') updateRow(e);
-    await sleep(120);
-  }
-  updateMissingButton();
-  setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
-  setPullBusy(false); $('missing').disabled = false;
+  try {
+    for (let i = 0; i < pending.length; i++) {
+      if (!op.current()) return;
+      const e = pending[i];
+      op.say(`Downloading workflow ${i + 1}/${pending.length}\u2026${fail ? ' (' + fail + ' failed)' : ''}`, 'busy');
+      let done = await downloadOneWf(e);
+      if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOneWf(e); }
+      done ? ok++ : fail++;
+      if (viewMode === 'workflows') updateRow(e);
+      await sleep(120);
+    }
+    if (!op.current()) return;
+    updateMissingButton();
+    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} workflows downloaded.`, fail ? 'warn' : 'ok');
+  } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 async function pullSchedules() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
@@ -6205,7 +6278,9 @@ const actStale = (a) => (Number(a && a.sv) || 0) < ACT_SV;
 // this one item says so by id; a pull made by an older copy of the extension says so by schema. Both
 // are «not read», neither is «has none», and the wording is here once because four surfaces show it.
 const MISS_DETAIL = 'Zoho did not answer for this one when it was pulled - its field mappings are not read';
+const KEPT_DETAIL = 'Zoho did not answer for this one when it was pulled - the field mappings below are what the last pull that could read them saw';
 const actThin = (a) => a && a.detail_read === false;
+const actKept = (a) => a && a.detail_kept === true;
 /** Which rules fire each action, read from the workflow files already on disk.
  *
  *  This is the join the whole area rests on, and it costs nothing: `fetchWorkflow` has always
@@ -6311,9 +6386,15 @@ async function pullActions() {
           const k = `${a.kind}:${String(a.id)}`;
           if (!thin.has(k)) return a;
           const p = before.get(k);
-          // Kept whole, not merged field by field: the previous row is a reading somebody took, and
-          // grafting half of it onto this one would produce a row nobody ever measured.
-          return (p && p.detail_read !== false && (p.mappings || []).length) ? p : a;
+          if (!p || p.detail_read === false || !(p.mappings || []).length) return a;
+          // Only the mappings, and said so. Keeping the previous row *whole* was worse than losing
+          // it: everything this pull did read - the name, the module, the modified date - was thrown
+          // away in favour of a row from before, and the result carried `detail_read: true`, so the
+          // panel presented last week's name as current and nothing warned. The fields this pull
+          // read win; the half it could not read comes from the last pull that could, and the row
+          // says where it came from.
+          return { ...a, mappings: p.mappings, detail_read: false, detail_kept: true,
+                   detail_kept_from: p.modified_time || null };
         });
       }
       if (!op.current()) return;   // reading the previous census is an await, and the folder can move under one
@@ -6321,12 +6402,16 @@ async function pullActions() {
     await op.write('actions/index.json', JSON.stringify(actions, null, 2));
     // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
     // short are two different reasons for a number to be smaller than the org.
-    const stillThin = detailMissed.filter((d) => { const a = actions.find((x) => `${x.kind}:${String(x.id)}` === `${d.kind}:${String(d.id)}`); return !a || a.detail_read === false; });
+    // On `detailMissed`, not on what survived it: a row that kept the previous pull's mappings is
+    // still a row this pull could not read, and counting only the empty ones meant the one case
+    // where something was salvaged reported «1 action(s) pulled.» with no warning at all.
+    const kept = detailMissed.filter((d) => actions.some((x) => `${x.kind}:${String(x.id)}` === `${d.kind}:${String(d.id)}` && x.detail_kept));
     const note = (missed.length ? ` ${missed.length} kind(s) could not be read - what the last pull saw of them was kept.` : '')
       + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '')
-      + (stillThin.length ? ` ${stillThin.length} task(s) whose detail Zoho did not return - they are listed, their field mappings are not read.` : '');
+      + (detailMissed.length ? ` ${detailMissed.length} task(s) whose detail Zoho did not return`
+          + (kept.length ? ` - ${kept.length} of them still show the field mappings the last pull read.` : ' - they are listed, their field mappings are not read.') : '');
     if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${actions.length} action(s).` + note, 'warn'); }
-    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length || stillThin.length) ? 'warn' : 'ok');
+    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length || detailMissed.length) ? 'warn' : 'ok');
     await noteAccess('actions', null, op);
   } catch (e) { await notePullFailure('actions', e, op); }
 }
@@ -6522,8 +6607,8 @@ function openAction(a) {
     // and a mirror that changes with the reader's locale is not a mirror. Zoho's own words are the
     // fallback for a shape this code has not met.
     + ((a.mappings || []).map((m) => row(m.field.replace(/_/g, ' '), mappingHtml(m))).join(''))
-    + (a.kind === 'tasks' && !(a.mappings || []).length && (actStale(a) || actThin(a))
-        ? row('Detail', `<span style="color:var(--warn)">${actThin(a) ? escHtml(MISS_DETAIL) : 'not read by the pull that wrote this'} - press Pull to read it</span>`) : '')
+    + (a.kind === 'tasks' && (actKept(a) || (!(a.mappings || []).length && (actStale(a) || actThin(a))))
+        ? row('Detail', `<span style="color:var(--warn)">${actKept(a) ? escHtml(KEPT_DETAIL) : actThin(a) ? escHtml(MISS_DETAIL) : 'not read by the pull that wrote this'} - press Pull to read it</span>`) : '')
     + (a.notify === true ? row('Notify', 'yes') : '')
     + (a.modified_by ? row(MSG.lastModified, escHtml(a.modified_by) + (a.modified_time ? ' \u00b7 ' + escHtml(String(a.modified_time).slice(0, 16)) : '')) : '')
     + (a.locked ? row('Locked', 'yes') : '');
