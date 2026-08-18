@@ -44,13 +44,12 @@
   //
   // A window rather than a flag, because a second genuine save of the same function is a thing
   // people do - and re-reading once instead of twice for it costs nothing.
-  // On the page, not in this closure: the older hook's wrappers are still there with a closure of
-  // their own, so a private memory would be two memories and would collapse nothing.
+  // No collapsing here, and deliberately none. An older hook's wrappers stay underneath this one and
+  // notify from a closure of their own, so a memory kept here would be two memories and would
+  // collapse nothing - measured. And a window that drops a repeat can drop a **second real save**,
+  // which is a lost edit. The panel answers a notice by asking Zoho what exists now, which is
+  // idempotent: hearing it twice costs one list call and can never lose anything.
   const notify = (type, id) => {
-    const what = type + ':' + (id || ''), now = Date.now();
-    const last = window.__zoostLast || {};
-    if (last.what === what && now - last.at < 1500) return;
-    window.__zoostLast = { what, at: now };
     try {
       window.postMessage({ source: 'DELUGE_IDE_HOOK', type, id: id == null ? '' : String(id) }, location.origin);
     } catch (_) {}

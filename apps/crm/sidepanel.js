@@ -104,6 +104,7 @@ const MSG = {
   narrowNav: 'No step here matches that. Clear the box to see the whole chain.',
   copyFailed: 'Could not copy: ',
   loadingTree: 'Loading tree\u2026',
+  noWorkspaceHere: 'Something changed in Zoho - no workspace is open here.',
   navGone: 'That step is not in this workspace any more.',
   wfNotHere: 'That workflow is not in this mirror - it may have been renamed or deleted in Zoho. Press Pull on Workflows.',
   wfNotPulled: 'Workflows have not been pulled into this workspace yet - press Pull here first.',
@@ -3574,8 +3575,10 @@ function aiOpenSettings() { openSettings('#ai'); }   // sent from the assistant,
 // ---------- save-sync ----------
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'saved') syncOne(msg.id);
-  if (msg?.type === 'deleted') removeOne(msg.id);
-  if (msg?.type === 'created') noticeCreated();
+  // A deletion and a creation both mean «the list has changed»; neither is trusted with what
+  // changed. Duplicates are harmless because reconciling is idempotent, which is why the hook no
+  // longer needs to collapse them.
+  if (msg?.type === 'deleted' || msg?.type === 'created') reconcileFunctions();
   if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
   // The diagram window asking for the other drawing. It has no folder access of its own - by design,
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
@@ -3605,66 +3608,75 @@ async function buildGraphFor(kind) {
  *
  *  Same guards as a save, and for the same reason: this writes to the workspace, so it must refuse
  *  when the tab is not the org this workspace is bound to. */
-async function removeOne(id) {
-  // The guards live here and the effect lives below, because a guard chain cannot be exercised
-  // without a Zoho tab and the effect must be - which is how both halves of this shipped untested.
-  if (mismatchRefuse()) return;
-  if (!dir) { setStatus(`A function was deleted in Zoho (${id}) - no workspace is open here.`, 'warn'); return; }
-  if (!(await hasPerm(dir))) { setStatus(`A function was deleted in Zoho (${id}) - ${MSG.folder}`, 'warn'); return; }
-  await refreshContext();
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  await pruneFunction(id);
+/** Any notice from the page means one thing: **go and ask Zoho what exists now.**
+ *
+ *  It used to mean three. A save re-read one function, a creation re-read the list, and a deletion
+ *  *acted* - it took an id out of a `window.postMessage` and removed files with it. That last one was
+ *  an instruction rather than a hint, and the page's MAIN world is not ours: any script there can
+ *  post the same message, and holding the id to digits limits its shape, not its authority. Raised
+ *  by an outside review and it was right.
+ *
+ *  So nothing here trusts the notice. The list comes from Zoho, what is on it is fetched, and what
+ *  is **not** on it is pruned - which is what a pull has always done, on the one signal that says it
+ *  is worth doing now. A forged notice can therefore cost a list call and nothing else.
+ *
+ *  Single-flight, and the promise is stored **before the first await**, or two notices arriving
+ *  together - which is exactly what a creation sends, POST then PUT - start two reconciliations that
+ *  both write the index.
+ */
+let reconciling = null;
+function reconcileFunctions() {
+  if (reconciling) return reconciling;
+  reconciling = (async () => {
+    if (mismatchRefuse()) return;
+    if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
+    if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+    await refreshContext();
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+    if (pullActive) return;                 // a pull is already doing this, and more
+    try {
+      setStatus('Something changed in Zoho - checking\u2026', 'busy');
+      const r = await toBridge({ cmd: 'listFunctions' });
+      if (!r?.ok) throw bridgeError(r, 'list failed');
+      const live = new Set((r.entries || []).map((e) => String(e.id)));
+      await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
+      // Pruned from what Zoho says, never from what the page said.
+      const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
+      let failed = 0;
+      for (const e of gone) failed += await pruneFunction(e.id) ? 0 : 1;
+      await rebuildTree();
+      await downloadMissing();
+      if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
+    } catch (e) { setStatus('Could not check with Zoho: ' + errText(e), 'warn'); }
+  })().finally(() => { reconciling = null; });
+  return reconciling;
 }
 
-/** Take a function out of the mirror: both files, the index row, the tree, and the pane if it is the
- *  one on screen. No guards - the caller has done that - so this is what a test can drive. */
+/** Take a function out of the mirror. Returns whether it went completely - a half-removed function
+ *  reported as removed comes back at the next open, and the reader was told it had gone. */
 async function pruneFunction(id) {
   const key = String(id);
   const info = index.get(key);
   const row = treeData.find((e) => String(e.id) === key);
   const path = (info && info.path) || (row && row.path);
-  if (!path) { setStatus(`A function was deleted in Zoho (${key}) - it was not in this workspace.`, 'ok'); return; }
+  if (!path) return true;
+  let whole = true;
+  for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) {
+    try { await removeFile(p); } catch (e) { if (!/NotFound/i.test(String(e && e.name))) whole = false; }
+  }
   try {
-    for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) { try { await removeFile(p); } catch (_) {} }
-    try {
-      const idx = JSON.parse(await readFile('functions/index.json'));
-      if (Array.isArray(idx)) await writeFile('functions/index.json',
-        JSON.stringify(idx.filter((e) => String(e.id) !== key), null, 2));
-    } catch (_) {}
-    index.delete(key);
-    treeData = treeData.filter((e) => String(e.id) !== key);
-    if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
-    renderTree(); updateMissingButton();
-    setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok');
-  } catch (e) { setStatus('Could not remove it locally: ' + errText(e), 'warn'); }
+    const idx = JSON.parse(await readFile('functions/index.json'));
+    if (Array.isArray(idx)) await writeFile('functions/index.json',
+      JSON.stringify(idx.filter((e) => String(e.id) !== key), null, 2));
+  } catch (_) { whole = false; }
+  index.delete(key);
+  treeData = treeData.filter((e) => String(e.id) !== key);
+  if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
+  renderTree(); updateMissingButton();
+  if (whole) setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok');
+  return whole;
 }
 
-
-/** A function created in Zoho, fetched while you watch.
- *
- *  The creation carries its id only in the response body, which the hook deliberately does not read,
- *  so what arrives here is «one was created» and nothing else. The answer is to ask Zoho for the
- *  list - the same call a pull starts with - write it down, and then fetch what is on the list and
- *  not on disk. That is `downloadMissing()`, which already exists and already reports its own
- *  failures, so the new function arrives by the path every other function arrives by.
- *
- *  It costs one list call. Reading the id out of the body would have saved it and turned the hook
- *  into a source of data; this keeps it a hint that can only ever ask for a re-read. */
-async function noticeCreated() {
-  if (mismatchRefuse()) return;
-  if (!dir || !(await hasPerm(dir))) return;
-  await refreshContext();
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  if (pullActive) return;                 // a pull is already doing exactly this, and more
-  try {
-    setStatus('A function was created in Zoho - looking for it\u2026', 'busy');
-    const r = await toBridge({ cmd: 'listFunctions' });
-    if (!r?.ok) throw bridgeError(r, 'list failed');
-    await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
-    await rebuildTree();
-    await downloadMissing();
-  } catch (e) { setStatus('Could not fetch the new function: ' + errText(e), 'warn'); }
-}
 async function syncOne(id) {
   if (mismatchRefuse()) return;
   if (!dir || !(await hasPerm(dir))) return;
@@ -3676,7 +3688,7 @@ async function syncOne(id) {
   // detail call goes out without a category, and Zoho refuses it with `PATTERN_NOT_MATCHED`. That is
   // what a reader was shown for the ordinary act of making a function. It is a creation, so it is
   // treated as one.
-  if (!info) { await noticeCreated(); return; }
+  if (!info) { await reconcileFunctions(); return; }
   try {
     setStatus(`Save detected (${id}), syncing…`, 'busy');
     const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });

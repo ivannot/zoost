@@ -3468,7 +3468,7 @@ for (const app of ['crm', 'analytics']) {
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
            'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne',
-           'noticeCreated']],
+           'reconcileFunctions']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -5225,26 +5225,17 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const load = (win, xhr) => new Function('window', 'XMLHttpRequest', 'location', 'document', 'console', hook)(
     win, xhr, win.location, { title: '' }, { debug() {}, info() {}, log() {} });
 
-  test('replacing an older hook does not tell the panel twice', () => {
-    // Reported, and the first version of the test below was too kind: it set the marker an older
-    // build leaves without installing the **wrappers** that build leaves. Those cannot be removed -
-    // a wrapper does not know how to unwrap itself - so one request now walks two observers, and
-    // without collapsing the notice the panel is told twice and rewrites the file twice.
-    const posted = [];
-    class FakeXHR {
-      constructor() { this.status = 200; this._l = {}; }
-      open(m, u) { this.__m = m; this.__u = u; }
-      send() { (this._l.loadend || []).forEach((f) => f()); }
-      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
-    }
-    const win = { postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
-                  location: { origin: 'https://crm.zoho.eu' } };
-    load(win, FakeXHR);                    // the older build, wrappers and all
-    win.__zoostHook = true;                // marked the way an older build marked it
-    load(win, FakeXHR);                    // this build, installing over it
-    const x = new FakeXHR(); x.open('PUT', '/crm/v2/settings/functions/123?language=deluge'); x.send();
-    assert.deepEqual(posted.map((p) => `${p.type}:${p.id}`), ['saved:123'],
-                     'one save produced more than one notice');
+  test('a repeated notice is harmless, because the answer is idempotent', () => {
+    // An older hook's wrappers stay underneath this one and notify from a closure of their own, so
+    // the hook cannot collapse duplicates - measured, and the first attempt to do it collapsed
+    // nothing while risking a lost second save. The answer is that a notice asks Zoho what exists
+    // now: hearing it twice costs a list call and cannot lose an edit.
+    assert.ok(!/__zoostLast/.test(hook), 'the hook is collapsing notices again');
+    const panel = read('apps/crm/sidepanel.js');
+    assert.ok(/reconcileFunctions\(\)/.test(panel), 'nothing reconciles');
+    const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
+    assert.ok(/if \(reconciling\) return reconciling;/.test(fn), 'two notices start two reconciliations');
+    assert.ok(fn.indexOf('reconciling = (async') < fn.indexOf('await'), 'the promise is stored after the first await');
   });
 
   test('a newer hook replaces an older one instead of bowing out', () => {
@@ -5304,5 +5295,31 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   test('the contents list names each chapter once', () => {
     const heads = (body.match(/class="toch">([A-Za-z ]+)/g) || []).map((x) => x.split('>')[1].trim());
     assert.deepEqual(heads, [...new Set(heads)], `a chapter is listed twice: ${heads.join(', ')}`);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The page's MAIN world is not ours: any script there can post the message our hook posts. A save
+// and a creation were always hints - the panel re-read Zoho - but a deletion *acted*, taking an id
+// out of that message and removing files with it. Holding the id to digits limits its shape, not its
+// authority. Raised by an outside review, and it was right.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
+
+  test('nothing is removed on the word of a message from the page', () => {
+    assert.ok(/listFunctions/.test(fn), 'it does not ask Zoho what exists');
+    assert.ok(/live\.has\(String\(e\.id\)\)/.test(fn), 'what is pruned is not decided by Zoho');
+    const dispatch = panel.slice(panel.indexOf("msg?.type === 'deleted'"), panel.indexOf("msg?.type === 'deleted'") + 200);
+    assert.ok(!/pruneFunction\(msg/.test(dispatch), 'a message still names what to delete');
+  });
+
+  test('a half-removed function is not reported as removed', () => {
+    // Both files, the index row: any of them can fail, and saying «removed from the mirror» over a
+    // file still on disk is a lie the next open exposes.
+    const prune = panel.slice(panel.indexOf('async function pruneFunction'), panel.indexOf('\n}', panel.indexOf('async function pruneFunction')));
+    assert.ok(/whole = false/.test(prune), 'a failure to remove is swallowed');
+    assert.ok(/return whole/.test(prune), 'the caller cannot tell whether it worked');
+    assert.ok(/could not be fully removed/.test(fn), 'a partial removal is never reported');
   });
 }
