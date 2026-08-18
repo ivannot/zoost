@@ -87,7 +87,9 @@ const PRODUCT_URL = 'https://zoost.it';
 // granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
 // blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
 // so those links were opening in a window of their own.
-function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho(cloud)?\.[a-z.]+(\/|$)/i.test(String(u || '')); }
+function isZohoUrl(u) {
+  return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
+}
 
 function openExternal(url) {
   try {
@@ -169,11 +171,14 @@ let dir = null;             // the active workspace folder handle
 let bound = null;           // { workspace, name, origin } of the active workspace, from its .zoost.json
 let ctx = null;             // { origin, workspace, view } of the active tab
 let busy = false;
+let pullDepth = 0, pullBusy = false;
 
 let wsList = [];            // workspaces found on disk, cached like the CRM panel's
 let views = [], folders = [], schema = {}, relations = [], sqls = {}, deps = null, pullFailed = [];
 const ORPHANS = '__orphans__';
 let typeFilter = null, sortKey = 'name', sortDir = 1, selectedId = null, detailTab = 'cols';
+let detailLoad = 0;
+const detailCurrent = (mine, op) => mine === detailLoad && op.current();
 
 // ---------- status ----------
 function status(text, kind) { $('statustext').textContent = text; $('status').className = kind || ''; showEmergency(false); }
@@ -334,6 +339,7 @@ async function appRoot(create) {
 
 // ---------- working folder ----------
 async function pickRoot() {
+  if (workspaceChangeRefuse()) return;
   try {
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'zoost-root' });
     if (!(await ensurePerm(h))) { status('Permission to the folder was not granted.', 'bad'); return; }
@@ -454,7 +460,9 @@ async function refreshWorkspaces() {
  */
 function dropWorkspaceState() {
   const had = aiMessages.length;
-  aiMessages = []; aiSeedWarned = false;
+  aiGen++;
+  aiMessages = []; aiSeedWarned = false; aiBusy = false;
+  const send = $('aisend'); if (send) send.disabled = false;
   aiRenderMessages();
   return had;
 }
@@ -483,6 +491,12 @@ function rememberActive(key, id, gen) {
   return _activeWsWrites;
 }
 async function selectWorkspace(w) {
+  if (pullBusy && bound && String(w.id) !== String(bound.workspace)) {
+    $('ws').value = bound.workspace;
+    status('Pull in progress - wait for it to finish before changing workspace.', 'warn');
+    updateButtons();
+    return false;
+  }
   const sameWs = bound && bound.workspace === w.id;
   // The generation moves **here**, before the handle does and before anything awaits: an operation
   // still running belongs to the workspace it started in, and it must be able to tell. It used to
@@ -508,6 +522,7 @@ async function selectWorkspace(w) {
 }
 
 async function addWorkspace() {
+  if (workspaceChangeRefuse()) return;
   if (!root) return status('Pick a working folder first.', 'warn');
   if (!ctx || !ctx.workspace) return status('Open a Zoho Analytics workspace in the active tab first.', 'warn');
   setBusy(true, 'Creating the workspace folder…');
@@ -531,6 +546,7 @@ async function addWorkspace() {
 // Deleting the local mirror only. The confirmation says so explicitly, because "Remove workspace"
 // next to a tool that talks to Zoho is exactly the phrase someone reads as "delete it in Zoho".
 async function delWorkspace() {
+  if (workspaceChangeRefuse()) return;
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !root) return;
   if (!confirm(`Delete the folder «${w.folder}» and everything in it?\n\nThis removes the local mirror only - nothing in Zoho Analytics is touched. You can pull it again at any time.`)) return;
@@ -622,9 +638,13 @@ function sampleRefuse() {
   return true;
 }
 
+let contextLoad = 0;
 async function refreshContext() {
+  const mine = ++contextLoad;
+  const current = () => mine === contextLoad;
   const el = $('ctx'), who = $('who'), bnd = $('bound');
   const id = await analyticsTabId();
+  if (!current()) return;
   const localLbl = bound
     ? `<span class="rlbl local">Workspace</span>«${esc(bound.name || bound.workspace)}» ${esc(bound.workspace)}`
     : '<span class="rlbl local">Workspace</span><span>not bound yet</span>';
@@ -644,7 +664,12 @@ async function refreshContext() {
   }
   $('offoverlay').classList.remove('show');
   await ensureBridge(id);
-  try { const r = await chrome.tabs.sendMessage(id, { cmd: 'context' }); ctx = r && r.ok ? r : null; } catch { ctx = null; }
+  if (!current()) return;
+  try {
+    const r = await chrome.tabs.sendMessage(id, { cmd: 'context' });
+    if (!current()) return;
+    ctx = r && r.ok ? r : null;
+  } catch (_) { if (!current()) return; ctx = null; }
 
   if (!ctx) { el.className = 'offzoho'; who.innerHTML = 'Zoho Analytics tab (not ready - reload it)'; bnd.innerHTML = localLbl; }
   else if (!ctx.workspace) { el.className = 'offzoho'; who.innerHTML = '<span class="rlbl remote">Zoho Analytics tab</span><span>no workspace open</span>'; bnd.innerHTML = localLbl; }
@@ -775,6 +800,8 @@ async function openZohoHome() {
 
 function updateButtons() {
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
+  $('ws').disabled = pullBusy;
+  $('wsroot').disabled = pullBusy;
   // Same rule as the CRM panel, and the same reason. Analytics had no such check at all: it left
   // the button offering to "create" a workspace that already existed, and reopened the same folder.
   // Harmless, and still a control saying it will do something it will not.
@@ -783,9 +810,9 @@ function updateButtons() {
   // Absent once one exists, and the overlay's copy says which of the two it will do. Both are
   // decided in one place, because they were decided in two and disagreed.
   updateSampleButtons();
-  $('wsadd').disabled = busy || !root || !rootGranted || !ctx || !ctx.workspace;
-  $('wsdel').disabled = busy || !dir || !wsList.length;
-  $('wsrename').disabled = busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
+  $('wsadd').disabled = pullBusy || busy || !root || !rootGranted || !ctx || !ctx.workspace;
+  $('wsdel').disabled = pullBusy || busy || !dir || !wsList.length;
+  $('wsrename').disabled = pullBusy || busy || !dir || !wsList.length;   // temporarily unavailable: pick a workspace and it works
   $('pull').disabled = busy || !dir || !guardOk();
   // Absent, not disabled, when there is nothing to retry - the CRM's equivalent does the same.
   // A greyed button still says "there is something here you cannot have", which is misleading
@@ -809,6 +836,18 @@ function updateButtons() {
     : PULL_TITLE;
 }
 function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : ''); updateButtons(); }
+function setPullBusy(on) {
+  pullDepth = Math.max(0, pullDepth + (on ? 1 : -1));
+  pullBusy = pullDepth > 0;
+  updateButtons();
+}
+function workspaceChangeRefuse() {
+  if (!pullBusy) return false;
+  $('ws').value = bound ? bound.workspace : '';
+  status('Pull in progress - workspace unchanged.', 'warn');
+  updateButtons();
+  return true;
+}
 
 // An operation that has been overtaken stops - and stopping must not leave the panel it is no longer
 // in looking like something is running there. It says nothing: the workspace on screen has just been
@@ -818,10 +857,12 @@ function endBusyElsewhere() { busy = false; updateButtons(); }
 
 // ---------- pull ----------
 async function pullAll() {
+  if (pullBusy) return;
   const op = beginWorkspaceOp();   // the workspace this pull belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Pulling ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
+  setPullBusy(true);
   setBusy(true, 'Pulling…');
   try {
     await requirePerm(op.root);
@@ -870,6 +911,7 @@ async function pullAll() {
     showEmergency(!(e && e.forbidden));
   } finally {
     chrome.runtime.onMessage.removeListener(onProgress);
+    setPullBusy(false);
   }
 }
 
@@ -886,6 +928,7 @@ async function pullAll() {
 // Both are recoverable without re-downloading the workspace: `retryFailed()` re-reads exactly the
 // items that failed, and `pullOne()` re-reads a single view from its detail pane.
 async function pullOne(id) {
+  if (pullBusy) return;
   const op = beginWorkspaceOp();   // the workspace this re-read belongs to
   // `pullSql` reports a *per-item* failure in `failed` and does not throw: this read the ids it had
   // asked for out of `pullFailed` regardless and finished ««Q1» re-read.», so a view whose SQL is
@@ -896,6 +939,7 @@ async function pullOne(id) {
   if (mismatchRefuse()) return;
   const v = viewById().get(id);
   if (!v) return;
+  setPullBusy(true);
   setBusy(true, `Re-reading «${v.name}»…`);
   try {
     await requirePerm(op.root);
@@ -919,16 +963,18 @@ async function pullOne(id) {
     setBusy(false, `Could not re-read «${v.name}»: ` + (e.message || e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
-  }
+  } finally { setPullBusy(false); }
 }
 
 async function retryFailed() {
+  if (pullBusy) return;
   const op = beginWorkspaceOp();   // the workspace these items belong to
   if (mismatchRefuse()) return;
   const ids = [...new Set(pullFailed.map((f) => f.id))];
   if (!ids.length) return;
   const onProgress = (m) => { if (m?.type === 'pullProgress') op.say(`Retrying ${m.stage}… ${m.done} / ${m.total}`, 'busy'); };
   chrome.runtime.onMessage.addListener(onProgress);
+  setPullBusy(true);
   setBusy(true, `Retrying ${ids.length} item(s)…`);
   try {
     await requirePerm(op.root);
@@ -959,7 +1005,7 @@ async function retryFailed() {
   } catch (e) {
     setBusy(false, 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
-  } finally { chrome.runtime.onMessage.removeListener(onProgress); }
+  } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
 }
 
 // Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
@@ -1064,12 +1110,16 @@ const sqlText = (body) => (body == null ? SQL_UNREADABLE : (body.trim() ? body :
 
 // SQL bodies are not held in memory after a reload - they are read from their file on demand, which
 // is also what keeps a large workspace from sitting in the panel's heap.
-async function sqlBodyOf(id) {
+async function sqlBodyOf(id, op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   const q = sqls[id];
   if (!q) return null;
   if (typeof q.sql === 'string') return q.sql;
-  try { q.sql = await readFile(`sql/${q.stem}.sql`); } catch { q.sql = null; }
-  return q.sql;
+  let body = null;
+  try { body = await op.read(`sql/${q.stem}.sql`); } catch (_) {}
+  if (!op.current() || sqls[id] !== q) return null;
+  q.sql = body;
+  return body;
 }
 
 // ---------- derived ----------
@@ -1203,22 +1253,26 @@ function sqlHit(text, term) {
 
 // Read every query's file once. A view whose file will not open is counted, never silently dropped:
 // «no match» and «never read» are the distinction this panel exists to keep.
-async function ensureSqlCache() {
+async function ensureSqlCache(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (sqlCache) return sqlCache;
-  const ids = Object.keys(sqls).filter((id) => sqls[id] && sqls[id].stem);
-  if (ids.length) status(`Reading the SQL of ${ids.length} quer${ids.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
+  const entries = Object.entries(sqls).filter(([, q]) => q && q.stem);
+  if (entries.length) op.say(`Reading the SQL of ${entries.length} quer${entries.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
   const m = new Map();
-  sqlUnread = 0;
-  for (const id of ids) {
-    if (typeof sqls[id].sql === 'string') { m.set(id, sqls[id].sql); continue; }
+  const loaded = new Map();
+  let unread = 0;
+  for (const [id, q] of entries) {
+    if (typeof q.sql === 'string') { m.set(id, q.sql); continue; }
     try {
-      const text = await readFile(`sql/${sqls[id].stem}.sql`);
-      sqls[id].sql = text;                       // the detail pane wants it too, and now has it
-      m.set(id, text);
-    } catch (_) { sqlUnread++; }
+      const body = await op.read(`sql/${q.stem}.sql`);
+      loaded.set(id, { q, body }); m.set(id, body);
+    } catch (_) { unread++; }
   }
+  if (!op.current()) return null;
+  loaded.forEach(({ q, body }, id) => { if (sqls[id] === q) q.sql = body; });
+  sqlUnread = unread;
   sqlCache = m;
-  if (ids.length) status(`${m.size} quer${m.size === 1 ? 'y' : 'ies'} read${sqlUnread ? ` \u00b7 ${sqlUnread} could not be opened` : ''}.`, sqlUnread ? 'warn' : '');
+  if (entries.length) op.say(`${m.size} quer${m.size === 1 ? 'y' : 'ies'} read${sqlUnread ? ` \u00b7 ${sqlUnread} could not be opened` : ''}.`, sqlUnread ? 'warn' : '');
   return sqlCache;
 }
 
@@ -1401,6 +1455,8 @@ function resetDetailScroll() {
 }
 
 async function openDetail(id) {
+  const mine = ++detailLoad;
+  const op = beginWorkspaceOp();
   selectedId = id;
   const v = viewById().get(id);
   if (!v) return;
@@ -1457,7 +1513,8 @@ async function openDetail(id) {
   if (detailTab === 'rel' && !relationsOf(id).length) detailTab = 'cols';
   if (detailTab === 'lin' && !deps) detailTab = 'cols';
   document.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('active', b.dataset.tab === detailTab));
-  await renderDetail(v);
+  await renderDetail(v, mine, op);
+  if (!detailCurrent(mine, op)) return;
   resetDetailScroll();
   render();
   // And the list follows: opening a view from a foreign key or from the lineage marks its row, and a
@@ -1467,7 +1524,7 @@ async function openDetail(id) {
   revealRow(row, $('list'), 'thead');
 }
 
-async function renderDetail(v) {
+async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
   const body = $('dbody');
   const m = viewById();
   // Off unless this tab is showing code, decided once here rather than in each branch: it lingered
@@ -1518,7 +1575,8 @@ async function renderDetail(v) {
     return;
   }
   if (detailTab === 'sql') {
-    const sql = await sqlBodyOf(v.id);
+    const sql = await sqlBodyOf(v.id, op);
+    if (!detailCurrent(mine, op)) return false;
     // Only where there is code to take: this is the one tab of the four that shows any.
     $('codecopy').style.display = (sql && sql.trim()) ? '' : 'none';
     body.innerHTML = '<div class="dpad">' + (sql && sql.trim()
@@ -1674,6 +1732,7 @@ async function openSchemaGraph(focusId, depth) {
 // SQL guardrail, which is the one thing here not derived from the user's own workspace.
 let aiMessages = [];
 let aiBusy = false, aiSeedTruncated = false, aiSeedWarned = false, aiSeedOmitted = [];
+let aiGen = 0;
 
 async function aiGetCfg() {
   let c = {}; try { const r = await chrome.storage.local.get('aicfg'); c = r.aicfg || {}; } catch (_) {}
@@ -2055,15 +2114,17 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
   return { content, stop_reason };
 }
 
-async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
+async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true) {
   const msgs = apiMessages.slice();
   for (let iter = 0; iter < maxIter; iter++) {
     let bubble = null, el = null;
     const onText = (t) => {
+      if (!current()) return;
       if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
       bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
     };
     const { content, stop_reason } = await aiStreamAnthropic(a, msgs, system, tools, onText);
+    if (!current()) return;
     const toolUses = content.filter((b) => b.type === 'tool_use');
     if (stop_reason !== 'tool_use' || !toolUses.length) {
       if (!bubble) { const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n'); aiMessages.push({ role: 'assistant', content: txt || '(empty response)' }); aiRenderMessages(); }
@@ -2071,9 +2132,16 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
     }
     msgs.push({ role: 'assistant', content });
     const results = [];
-    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
+    for (const tu of toolUses) {
+      if (!current()) return;
+      aiToolEvent(tu.name, tu.input);
+      let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; }
+      if (!current()) return;
+      results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) });
+    }
     msgs.push({ role: 'user', content: results });
   }
+  if (!current()) return;
   aiMessages.push({ role: 'assistant', content: `(Reached the tool-step limit of ${maxIter}. Raise it in Settings or ask something more specific.)` }); aiRenderMessages();
 }
 
@@ -2115,10 +2183,15 @@ function aiRenderMessages() {
 }
 
 async function aiSend() {
+  if (aiBusy) return;
+  const op = beginWorkspaceOp(), gen = aiGen;
+  const current = () => op.current() && gen === aiGen;
   const cfg = await aiGetCfg();
+  if (!current()) return;
   aiEngineChrome();
   if (aiLocked(cfg)) { aiShowLock(true); return; }
   if (!(await aiEnsureFiles())) { status('Folder access needs re-granting - press \u21bb Refresh, then ask again.', 'warn'); return; }
+  if (!current()) return;
   if (!aiActiveReady(cfg)) { openSettings('#ai'); status('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -2127,6 +2200,7 @@ async function aiSend() {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
     const system = await aiSystemPrompt(withTools, cfg.seedCap);
+    if (!current()) return;
     // The workspace index sent to the model is capped. If it was cut, say so once - do not let the
     // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
@@ -2136,10 +2210,12 @@ async function aiSend() {
         + (withTools ? 'Claude can still find them by name with its tools - the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
       aiRenderMessages();
     }
-    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20);
-    else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current);
+    else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    if (!current()) return;
     status('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
+  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
+  if (!current()) return;
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -2490,6 +2566,7 @@ function wsOptionTitle(w) {
  * the folder does.
  */
 async function renameWorkspace() {
+  if (workspaceChangeRefuse()) return;
   const op = beginWorkspaceOp();   // the prompt and the permission both await; the folder can move
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !dir) return;
@@ -2558,10 +2635,12 @@ function updateSampleButtons() {
   const have = knownSample();
   const sb = $('wssample');
   if (sb) sb.hidden = !!have || !root || !rootGranted;
+  if (sb) sb.disabled = pullBusy || sampleBusy;
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
+    ob.disabled = pullBusy || sampleBusy;
     // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
     // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
     // honest label asserts nothing and the tooltip says the click will find out. This project does
@@ -2578,6 +2657,7 @@ function updateSampleButtons() {
 
 let sampleBusy = false;
 async function addSampleWorkspace() {
+  if (workspaceChangeRefuse()) return;
   if (sampleBusy) return;
   if (!root) { await pickRoot(); return; }
   // **Grant first, then decide.** A click is the only context in which the permission can be
@@ -2596,7 +2676,7 @@ async function addSampleWorkspace() {
   try { await writeSampleWorkspace(); }
   finally {
     sampleBusy = false;
-    ['wssample', 'offsample'].forEach((b) => { const e = $(b); if (e) e.disabled = false; });
+    updateSampleButtons();
   }
 }
 async function writeSampleWorkspace() {
@@ -2631,7 +2711,10 @@ async function writeSampleWorkspace() {
   } catch (e) { status('Could not write the sample: ' + e.message, 'bad'); }
 }
 $('wsdel').onclick = delWorkspace;
-$('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w); };
+$('ws').onchange = async () => {
+  if (workspaceChangeRefuse()) return;
+  const w = wsList.find((x) => x.id === $('ws').value); if (w) await selectWorkspace(w);
+};
 $('pull').onclick = pullAll;
 // Touched by hand, so the next repaint leaves it alone: this control is redrawn on every
 // workspace change, and a choice that is reset while you are looking at it is not a choice.
@@ -2826,11 +2909,13 @@ $('list').addEventListener('keydown', (e) => {
 
 $('find').oninput = render;
 $('smode').onclick = async () => {
+  const op = beginWorkspaceOp();
   searchMode = searchMode === 'name' ? 'sql' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';
   $('smode').classList.toggle('on', searchMode === 'sql');
   $('find').placeholder = searchMode === 'name' ? 'Find\u2026' : 'Find inside the SQL\u2026';
-  if (searchMode === 'sql') await ensureSqlCache();
+  if (searchMode === 'sql' && !(await ensureSqlCache(op))) return;
+  if (!op.current()) return;
   render();
 };
 $('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };
@@ -2873,14 +2958,15 @@ $('aboutx').onclick = closeAbout;
 $('aboutok').onclick = closeAbout;
 $('scrim').onclick = () => { closeAbout(); closeScope(false); };
 // Closing the pane does not forget where you have been: reopening anything continues the chain.
-$('dclose').onclick = () => { $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; updateNav(); render(); };
+$('dclose').onclick = () => { detailLoad++; $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; updateNav(); render(); };
 document.querySelectorAll('.dtab').forEach((b) => {
   b.onclick = async () => {
     if (b.disabled) return;
+    const mine = ++detailLoad, op = beginWorkspaceOp();
     detailTab = b.dataset.tab;
     document.querySelectorAll('.dtab').forEach((x) => x.classList.toggle('active', x === b));
     const v = viewById().get(selectedId);
-    if (v) { await renderDetail(v); resetDetailScroll(); }   // a different tab is different content too
+    if (v) { await renderDetail(v, mine, op); if (detailCurrent(mine, op)) resetDetailScroll(); }   // a different tab is different content too
   };
 });
 // A stored folder handle loses its permission between sessions and can only be re-granted from a

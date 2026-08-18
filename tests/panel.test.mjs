@@ -349,6 +349,10 @@ test('a host that merely contains the word is not Zoho', () => {
   // Sending these to the Zoho tab would make the guard complain about a mismatch it did not cause.
   assert.equal(isZohoUrl('https://notzoho.com/x'), false);
   assert.equal(isZohoUrl('https://evil.com/zoho.eu'), false);
+  // The registrable domain matters too. `zoho.example.com` starts with the right word but belongs
+  // to example.com; the old `[a-z.]+` suffix accepted it as one of Zoho's own hosts.
+  assert.equal(isZohoUrl('https://zoho.example.com/x'), false);
+  assert.equal(isZohoUrl('https://crm.zoho.com.example.org/x'), false);
 });
 
 test('a non-http scheme is left entirely alone', () => {
@@ -3301,6 +3305,22 @@ for (const app of ['crm', 'analytics']) {
   });
 }
 
+test('crm: summary invalidations stay with the workspace that caused them', () => {
+  const ctx = { dir: null, _dirtyMeta: new Set(), _dirtySource: new Set(), _dirtyByRoot: new WeakMap(), Set, WeakMap };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'switchDirtyWorkspace'), ctx);
+  const swap = vm.runInContext('switchDirtyWorkspace', ctx);
+  const A = {}, B = {};
+  swap(A); ctx.dir = A;
+  ctx._dirtySource.add('functions/ns/changed.dg');
+  swap(B); ctx.dir = B;
+  assert.equal(ctx._dirtySource.has('functions/ns/changed.dg'), false, 'B inherited A\'s invalidation');
+  ctx._dirtySource.add('functions/ns/other.dg');
+  swap(A); ctx.dir = A;
+  assert.equal(ctx._dirtySource.has('functions/ns/changed.dg'), true, 'A\'s invalidation was consumed while B was open');
+  assert.equal(ctx._dirtySource.has('functions/ns/other.dg'), false, 'B\'s invalidation leaked back into A');
+});
+
 // One comparator, byte for byte, on both sides - the bar is shared chrome and a list ordered two
 // ways is exactly the discontinuity the twin rule exists to stop.
 test('both panels order the workspace list with the same comparator', () => {
@@ -4639,7 +4659,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
   const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('async function attachFnStats'));
 
   test('the index is read before anything is drawn, and the metas after', () => {
-    const idxAt = load.indexOf("readFile('functions/index.json')");
+    const idxAt = load.indexOf("op.read('functions/index.json')");
     const firstPaint = load.indexOf('renderTree()');
     const metaLoop = load.indexOf('metaPathsToRead.slice');
     assert.ok(idxAt > 0 && firstPaint > idxAt, 'the tree is drawn before the index is read');
@@ -4651,7 +4671,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // eight on the next. The summary is a cache and is treated as one - checked against the folder
     // walk, and rewritten when it no longer describes what is there.
     assert.ok(/const META_INDEX = 'functions\/meta-index\.json'/.test(src), 'no summary is written');
-    assert.ok(/readFile\(META_INDEX\)/.test(load), 'the load does not read it');
+    assert.ok(/op\.read\(META_INDEX\)/.test(load), 'the load does not read it through its captured workspace');
     assert.ok(/function saveMetaIndex/.test(src), 'nothing writes it');
     const code = load.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     assert.ok(/missing\.push\(mp\)/.test(code), 'it is believed instead of checked against the walk');
@@ -4817,10 +4837,10 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // And only if it happened. The queue used to swallow the failure, so a refused write - a
     // workspace changed under it, a folder gone - still ended with the marks cleared, which means
     // the file was old and nothing on the next load would re-read it.
-    const gate = body.indexOf('if (!(await written)) return;');
+    const gate = body.indexOf('if (!(await written) || !op.current()) return;');
     assert.ok(gate > 0 && gate < cleared, 'a refused write still declares the files described');
     for (const fn of ['saveMetaIndex', 'saveGraphFacts'])
-      assert.ok(/if \(!\(await written\)\) return;/.test(sliceFn('apps/crm/sidepanel.js', fn)),
+      assert.ok(/if \(!\(await written\)(?: \|\| !op\.current\(\))?\) return;/.test(sliceFn('apps/crm/sidepanel.js', fn)),
                 `${fn} clears its marks whether or not the summary was written`);
   });
 
@@ -5653,8 +5673,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 
   test('a graph built for one workspace is not kept for another', () => {
     const fn = src.slice(src.indexOf('async function ensureGraph'), src.indexOf('\n}', src.indexOf('async function ensureGraph')));
-    assert.ok(/const gen = wsGen;/.test(fn), 'the build does not remember where it started');
-    assert.ok(/if \(!sameWs\(gen\)\) return g;/.test(fn), 'the result is cached whatever workspace we are in now');
+    assert.ok(/op = beginWorkspaceOp\(\)/.test(fn), 'the build does not remember where it started');
+    assert.ok(/loadGraph\(op\)/.test(fn), 'the graph reader does not carry that workspace through its own I/O');
+    assert.ok(/if \(!op\.current\(\)\) throw new Error\(WS_MOVED\);/.test(fn),
+              'an overtaken graph is returned to its caller even though it must not be used');
   });
 
   test('every cache made of a workspace\'s files is dropped with it', () => {
@@ -6055,6 +6077,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // wanted, which is exactly the distinction the counter was introduced to make.
 test('a nested release leaves the buttons off while anything still holds the pull', () => {
   const ctx = { pullDepth: 0, pullBusy: false, dir: {}, disabled: {}, ZOHO_BTNS: ['pullall', 'pullone'],
+                updateWsButtons() {},
                 $: (id) => (ctx.disabled[id] = ctx.disabled[id] || { set disabled(v) { ctx.disabled[id + ':v'] = v; },
                                                                     get disabled() { return ctx.disabled[id + ':v']; } }),
                 zohoReady: () => true, navOpenNow: () => false, Math };
@@ -6361,7 +6384,7 @@ test('analytics: the model is guarded, not only the disk', () => {
 {
   const RUN = async (fn, over) => {
     const ctx = {
-      dir: {}, wsGen: 1, busy: false, pullFailed: [{ id: 'q1', stage: 'sql' }], sqls: {}, deps: {},
+      dir: {}, wsGen: 1, busy: false, pullBusy: false, pullFailed: [{ id: 'q1', stage: 'sql' }], sqls: {}, deps: {},
       status: [], className: null, Object, JSON, String, Set, Promise, Error,
       mismatchRefuse: () => false, requirePerm: async () => true, render() {}, openDetail: async () => {},
       viewById: () => new Map([['q1', { id: 'q1', name: 'Q1', type: 'QueryTable' }]]),
@@ -6369,6 +6392,7 @@ test('analytics: the model is guarded, not only the disk', () => {
       showEmergency() {}, endBusyElsewhere: () => { ctx.busy = false; },
       $: () => ({ set className(v) { ctx.className = v; }, get className() { return ctx.className; } }),
       setBusy: (on, text) => { ctx.busy = on; ctx.status.push(String(text || '')); },
+      setPullBusy: (on) => { ctx.pullBusy = on; },
       chrome: { runtime: { onMessage: { addListener() {}, removeListener() { ctx.listenerGone = true; } } } },
       beginWorkspaceOp: () => ({ root: ctx.dir, current: () => !over(), say() {} }),
       toBridge: async (msg) => (msg.cmd === 'pullSql'
@@ -6534,5 +6558,191 @@ for (const app of ['crm', 'analytics']) {
       bad.push(m[1]);
     }
     assert.deepEqual(bad, [], `these read \`op\` and never make one: ${bad.join(', ')}`);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A cache is a publication, not merely an optimisation. These loaders read a workspace, await the
+// file system, and then assign a global used by every later view. Switching workspace during that
+// await used to install A's answer as B's cache, which is worse than a slow read: the wrong answer
+// then became the fast path and stayed there until another switch.
+test('analytics: a SQL search overtaken by a workspace switch publishes nothing', async () => {
+  let live = true, release;
+  const delayed = new Promise((resolve) => { release = resolve; });
+  const ctx = {
+    sqlCache: null, sqlUnread: 0, sqls: { q1: { stem: 'query-one', sql: null } },
+    beginWorkspaceOp: () => ({ current: () => live, read: async () => delayed,
+      say() {} }),
+    readFile: async () => delayed, status() {}, Map, Object,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'), ctx);
+  const pending = vm.runInContext('ensureSqlCache()', ctx);
+  live = false; release('select * from A');
+  await pending;
+  assert.equal(ctx.sqlCache, null, 'A became the full-text cache of B');
+  assert.equal(ctx.sqls.q1.sql, null, 'A\'s SQL was attached to B\'s index row');
+});
+
+test('crm: a module-index read overtaken by a workspace switch publishes nothing', async () => {
+  let live = true, release;
+  const delayed = new Promise((resolve) => { release = resolve; });
+  const ctx = {
+    modNamesCache: null,
+    beginWorkspaceOp: () => ({ current: () => live, read: async () => delayed }),
+    readFile: async () => delayed, Map, Array, JSON,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'moduleNames'), ctx);
+  const pending = vm.runInContext('moduleNames()', ctx);
+  live = false; release('[{"api_name":"Only_In_A"}]');
+  await pending;
+  assert.equal(ctx.modNamesCache, null, 'A became the module-name cache of B');
+});
+
+test('crm: a workflow-index read publishes its list and lookup atomically', async () => {
+  let live = true, release;
+  const delayed = new Promise((resolve) => { release = resolve; });
+  const oldRow = { id: 'B', name: 'workspace B' };
+  const ctx = {
+    workflowData: [oldRow], wfIndex: new Map([['B', oldRow]]),
+    beginWorkspaceOp: () => ({ root: {}, current: () => live, read: async () => delayed }),
+    walk: async function* () {}, wfScheduled: () => ({ count: 0, delays: [] }),
+    Map, Set, Array, String, JSON,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'loadWorkflowIndex'), ctx);
+  const pending = vm.runInContext('loadWorkflowIndex()', ctx);
+  live = false; release('[{"id":"A","name":"workspace A"}]');
+  await pending;
+  assert.equal(ctx.workflowData[0].id, 'B', 'A replaced B\'s workflow list');
+  assert.equal(ctx.wfIndex.has('B'), true, 'the old list and its lookup stopped agreeing');
+  assert.equal(ctx.wfIndex.has('A'), false, 'A entered B\'s workflow lookup');
+});
+
+test('crm: an overtaken graph is neither returned nor cached', async () => {
+  let live = true, release;
+  const delayed = new Promise((resolve) => { release = resolve; });
+  const ctx = {
+    graphCache: null, WS_MOVED: 'moved',
+    beginWorkspaceOp: () => ({ current: () => live }),
+    loadGraph: async () => delayed,
+    Error,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'ensureGraph'), ctx);
+  const pending = vm.runInContext('ensureGraph()', ctx);
+  live = false; release({ workspace: 'A', nodes: {} });
+  await assert.rejects(pending, /moved/);
+  assert.equal(ctx.graphCache, null, 'A became the graph cache of B');
+});
+
+// One user gesture can start only one model request, and leaving or clearing the conversation
+// cancels its right to publish. The request itself cannot be unsent, but its late text must not
+// reappear in the next workspace or after the user pressed Clear.
+for (const app of ['crm', 'analytics']) {
+  const systemName = app === 'crm' ? 'aiSystemPromptB' : 'aiSystemPrompt';
+  const statusName = app === 'crm' ? 'setStatus' : 'status';
+  const run = async (cancel) => {
+    let release;
+    const delayed = new Promise((resolve) => { release = resolve; });
+    const input = { value: 'question' }, send = { disabled: false };
+    const ctx = {
+      aiMessages: [], aiBusy: false, aiSeedWarned: false, aiSeedTruncated: false,
+      aiSeedOmitted: [], aiGen: 0, live: true,
+      beginWorkspaceOp: () => ({ current: () => ctx.live }),
+      aiGetCfg: async () => ({ active: 'openai', openai: {}, seedCap: 10 }),
+      aiEngineChrome() {}, aiLocked: () => false, aiEnsureFiles: async () => true,
+      aiActiveReady: () => true, openSettings() {}, aiOpenSettings() {}, aiShowLock() {},
+      [systemName]: async () => 'system', aiCall: async () => delayed,
+      aiRunAnthropicAgent: async () => {}, aiRenderMessages() {}, friendlyError: (e) => String(e),
+      [statusName]() {}, AI_TOOLS: [],
+      $: (id) => id === 'aiinput' ? input : id === 'aisend' ? send : {},
+      String, Error,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'aiSend'), ctx);
+    const pending = vm.runInContext('aiSend()', ctx);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    ctx.aiMessages = [];
+    if (cancel === 'workspace') ctx.live = false; else ctx.aiGen++;
+    release('answer from A');
+    await pending;
+    return ctx;
+  };
+
+  test(`${app}: a reply cannot follow the user into another workspace`, async () => {
+    const c = await run('workspace');
+    assert.deepEqual(c.aiMessages, [], 'the previous workspace\'s reply appeared in the new one');
+  });
+
+  test(`${app}: Clear remains clear when an old reply arrives`, async () => {
+    const c = await run('clear');
+    assert.deepEqual(c.aiMessages, [], 'a reply repopulated the conversation after Clear');
+  });
+
+  test(`${app}: the keyboard shortcut cannot start a second request`, async () => {
+    let cfgReads = 0;
+    const ctx = { aiBusy: true, aiGetCfg: async () => { cfgReads++; return {}; } };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'aiSend'), ctx);
+    await vm.runInContext('aiSend()', ctx);
+    assert.equal(cfgReads, 0, 'a disabled button was bypassed by the keyboard shortcut');
+  });
+}
+
+// The detail panes are asynchronous too. Clicking B while A is still reading must leave B on
+// screen; guarding only the background caches does not protect the DOM from an older continuation.
+for (const fn of ['openFile', 'openModule', 'openWorkflow']) {
+  test(`crm: ${fn} is invalidated by the next detail navigation`, () => {
+    const body = sliceFn('apps/crm/sidepanel.js', fn);
+    assert.ok(/const mine = \+\+previewLoad/.test(body), 'the opener has no navigation token');
+    assert.ok(/previewCurrent\(mine, op\)/.test(body), 'the opener never checks whether it was overtaken');
+  });
+}
+
+test('analytics: a SQL detail is invalidated by the next detail navigation', () => {
+  const open = sliceFn('apps/analytics/sidepanel.js', 'openDetail');
+  const render = sliceFn('apps/analytics/sidepanel.js', 'renderDetail');
+  assert.ok(/const mine = \+\+detailLoad/.test(open), 'the opener has no navigation token');
+  assert.ok(/await renderDetail\(v, mine, op\)/.test(open), 'the token does not reach the SQL read');
+  assert.ok(/detailCurrent\(mine, op\)/.test(render), 'the SQL read can still repaint an item opened later');
+});
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: a pull locks workspace selection in the UI and in the activation path`, () => {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const repaint = sliceFn(`apps/${app}/sidepanel.js`, app === 'crm' ? 'updateWsButtons' : 'updateButtons');
+    const activateBody = sliceFn(`apps/${app}/sidepanel.js`, app === 'crm' ? 'activate' : 'selectWorkspace');
+    assert.ok(/\$\('ws'\)\.disabled = pullBusy/.test(repaint), 'a repaint can re-enable the workspace selector during a pull');
+    assert.ok(/(?:\$\('wsroot'\)|rt)\.disabled = pullBusy/.test(repaint), 'the working-folder picker can replace the workspace during a pull');
+    assert.ok(/if \(pullBusy/.test(activateBody), 'a direct/programmatic activation bypasses the disabled selector');
+    const refuse = sliceFn(`apps/${app}/sidepanel.js`, 'workspaceChangeRefuse');
+    assert.ok(/if \(!pullBusy\) return false/.test(refuse), 'workspace-changing actions have no shared programmatic guard');
+    for (const fn of ['pickRoot', 'addSampleWorkspace', 'renameWorkspace']) {
+      assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, fn)), `${fn} bypasses the pull lock`);
+    }
+    const add = app === 'crm' ? 'addWorkspaceForTab' : 'addWorkspace';
+    assert.ok(/workspaceChangeRefuse\(\)/.test(sliceFn(`apps/${app}/sidepanel.js`, add)), `${add} bypasses the pull lock`);
+    const remove = app === 'crm'
+      ? src.slice(src.indexOf("$('wsdel').onclick"), src.indexOf('\n};', src.indexOf("$('wsdel').onclick")) + 3)
+      : sliceFn('apps/analytics/sidepanel.js', 'delWorkspace');
+    assert.ok(/workspaceChangeRefuse\(\)/.test(remove), 'Remove workspace bypasses the pull lock');
+    const handlerAt = src.indexOf("$('ws').onchange");
+    const handler = src.slice(handlerAt, src.indexOf('\n};', handlerAt) + 3);
+    assert.ok(/workspaceChangeRefuse\(\)/.test(handler), 'a forged change event bypasses the lock');
+  });
+}
+
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: an older context probe cannot overwrite the active tab`, () => {
+    const body = sliceFn(`apps/${app}/sidepanel.js`, 'refreshContext');
+    assert.ok(/const mine = \+\+contextLoad/.test(body), 'context refreshes have no ordering token');
+    const awaits = [...body.matchAll(/await /g)].map((m) => m.index);
+    assert.ok(awaits.length >= 2, 'the context probe no longer has the asynchronous race this test describes');
+    for (const at of awaits) {
+      const next = body.slice(at, at + 180);
+      assert.ok(/current\(\)/.test(next), 'a context await can publish after a newer probe finished');
+    }
   });
 }

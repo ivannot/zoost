@@ -100,7 +100,8 @@ def writes_in(code):
 
 
 def findings(rel):
-    src = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+    with open(os.path.join(ROOT, rel), encoding='utf-8') as fh:
+        src = fh.read()
     names = globals_of(src)
     out = []
     for fname, body, at in functions(src):

@@ -68,6 +68,10 @@ function fitter(app, panel, geom = { maxX: 553, maxY: 494 }, hidden = []) {
   return { fit: () => vm.runInContext('erFit()', ctx), state, applied: () => applied };
 }
 
+// The measured numbers from the render: the sample schema draws 553x494 of boxes into a 1280x583
+// panel. `pad` is 40 a side, so the scale is min((1280-80)/553, (583-80)/494) = min(2.170, 1.018).
+const REAL = { w: 1280, h: 583 };
+const REAL_SCALE = 1.0182;
 
 for (const app of ['crm', 'analytics']) {
   test(`${app}: a box folded away does not size the frame`, () => {
@@ -83,11 +87,6 @@ for (const app of ['crm', 'analytics']) {
       `a folded box still sized the frame: ${folded.state.erScale} rather than ${REAL_SCALE}`);
   });
 }
-
-// The measured numbers from the render: the sample schema draws 553x494 of boxes into a 1280x583
-// panel. `pad` is 40 a side, so the scale is min((1280-80)/553, (583-80)/494) = min(2.170, 1.018).
-const REAL = { w: 1280, h: 583 };
-const REAL_SCALE = 1.0182;
 
 for (const app of ['crm', 'analytics']) {
   test(`${app}: a measured panel gives the measured fit`, () => {

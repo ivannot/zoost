@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1477,6 +1478,25 @@ class TheStoreScreenshotsAreOrderedAndNumbered(unittest.TestCase):
             self.assertEqual(rec['files'],
                              [f'{n}.png' for n in range(1, len(self.shots.STORE[app]) + 1)])
             self.assertEqual(rec['folder'], f'dist/store/{app}/')
+
+    def test_a_failed_viewport_probe_reports_the_driver_error(self):
+        # `check=True` used to replace capture.mjs' useful stderr with a bare CalledProcessError.
+        # That made a missing WebSocket runtime look like an unexplained browser failure.
+        proc = mock.Mock()
+        measured = subprocess.CompletedProcess([], 1, stdout='', stderr='WebSocket is not defined')
+        sock = mock.MagicMock()
+        sock.__enter__.return_value.getsockname.return_value = ('127.0.0.1', 41234)
+        self.shots._browser = None
+        with mock.patch.object(self.shots.tempfile, 'mkdtemp', return_value='/tmp/zoost-probe-test'), \
+             mock.patch.object(self.shots.socket, 'socket', return_value=sock), \
+             mock.patch.object(self.shots, 'chrome', return_value='chrome'), \
+             mock.patch.object(self.shots, '_ws_url', return_value='ws://probe'), \
+             mock.patch.object(self.shots.subprocess, 'Popen', return_value=proc), \
+             mock.patch.object(self.shots.subprocess, 'run', return_value=measured):
+            with self.assertRaisesRegex(RuntimeError, 'WebSocket is not defined'):
+                self.shots._browser_for(1280, 800, 1.0)
+        proc.terminate.assert_called_once()
+        proc.wait.assert_called_once_with(timeout=10)
 
 
 class ReadingJavaScriptWithoutAParser(unittest.TestCase):
@@ -3385,4 +3405,3 @@ class AsyncCheckFinds(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

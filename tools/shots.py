@@ -284,8 +284,12 @@ def _browser_for(width: int, height: int, scale: float):
              f"--remote-debugging-port={port}", f"--user-data-dir={profile}", "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         ws = _ws_url(port)
-        seen = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, "--probe"],
-                              capture_output=True, text=True, check=True).stdout.strip()
+        measured = subprocess.run(["node", str(ROOT / "tools" / "capture.mjs"), ws, "--probe"],
+                                  capture_output=True, text=True)
+        if measured.returncode:
+            proc.terminate(); proc.wait(timeout=10)
+            raise RuntimeError("viewport probe failed: " + (measured.stderr.strip() or measured.stdout.strip() or "unknown error"))
+        seen = measured.stdout.strip()
         w, h = (int(x) for x in seen.split("x"))
         if (w, h) == (width, height):
             _browser = (key, (ws, proc, profile))

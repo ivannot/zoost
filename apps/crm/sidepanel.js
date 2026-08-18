@@ -65,6 +65,8 @@ let connectionFilter = null, connFilterSet = null;   // when set, the functions 
 let treeSort = 'name';        // 'name' keeps the namespace grouping; any other key sorts flat
 let treeSortDir = 'asc';      // 'asc' | 'desc' - defaults per sort: A→Z for names, biggest-first for numbers
 let currentPath = null;
+let previewLoad = 0;
+const previewCurrent = (mine, op) => mine === previewLoad && op.current();
 // `viewMode` opens on whatever tab the user put first, decided once in renderTabs() the first time
 // the row is drawn. It used to be hard-coded to 'functions', so reordering the tabs moved the
 // segments and left the panel showing the same one it always had - the preference was honoured in
@@ -226,7 +228,9 @@ const PRODUCT_URL = 'https://zoost.it';
 // granted hosts - a link to a Zoho page we do not read is still a Zoho page - and it had one
 // blind spot: the Canadian data centre is `zohocloud.ca`, which is not literally «zoho.something»,
 // so those links were opening in a window of their own.
-function isZohoUrl(u) { return /^https?:\/\/([^/]*\.)?zoho(cloud)?\.[a-z.]+(\/|$)/i.test(String(u || '')); }
+function isZohoUrl(u) {
+  return /^https?:\/\/(?:[^./?#]+\.)*(?:zoho\.com|zoho\.eu|zoho\.in|zoho\.com\.au|zoho\.jp|zohocloud\.ca|zoho\.sa|zoho\.uk|zoho\.ae)(?::\d+)?(?:[/?#]|$)/i.test(String(u || ''));
+}
 
 function openExternal(url) {
   try {
@@ -573,6 +577,14 @@ function closeAbout() { $('scrim').classList.remove('on'); $('aboutdlg').classLi
 // rewritten *during* a build stays marked.
 let _dirtyMeta = new Set();
 let _dirtySource = new Set();
+const _dirtyByRoot = new WeakMap();
+function switchDirtyWorkspace(nextRoot) {
+  if (dir) _dirtyByRoot.set(dir, { meta: _dirtyMeta, source: _dirtySource });
+  const saved = nextRoot && _dirtyByRoot.get(nextRoot);
+  _dirtyMeta = saved ? saved.meta : new Set();
+  _dirtySource = saved ? saved.source : new Set();
+  if (nextRoot && !saved) _dirtyByRoot.set(nextRoot, { meta: _dirtyMeta, source: _dirtySource });
+}
 /** ↻ Refresh: read every file again.
  *
  *  It is the answer to the write this panel cannot see - an editor, a `git checkout`, a folder
@@ -894,9 +906,13 @@ async function waitTabComplete(id, timeout = 9000) {
 }
 
 // ---------- context bar + off-zoho overlay ----------
+let contextLoad = 0;
 async function refreshContext() {
+  const mine = ++contextLoad;
+  const current = () => mine === contextLoad;
   const ctxEl = $('ctx'), who = $('who'), bnd = $('bound');
   const activeId = await activeZohoTabId();
+  if (!current()) return;
   if (!activeId) {                         // the ACTIVE tab is not Zoho
     lastCtx = null; $('mmbar').classList.remove('show'); updateWsButtons();
     // Not over a sample. A sample has nothing to say to Zoho, so a Zoho tab is not a precondition
@@ -914,8 +930,14 @@ async function refreshContext() {
   }
   $('offoverlay').classList.remove('show');
   await ensureBridge(activeId);
+  if (!current()) return;
   const cfid = await crmFrameId(activeId);
-  try { const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, { frameId: cfid }); lastCtx = r?.ok ? r : null; } catch { lastCtx = null; }
+  if (!current()) return;
+  try {
+    const r = await chrome.tabs.sendMessage(activeId, { cmd: 'context' }, { frameId: cfid });
+    if (!current()) return;
+    lastCtx = r?.ok ? r : null;
+  } catch (_) { if (!current()) return; lastCtx = null; }
   if (!lastCtx) { ctxEl.className = 'offzoho'; who.innerHTML = 'Zoho tab (not ready)'; bnd.textContent = ''; document.body.classList.add('zoho-blocked'); ZOHO_BTNS.forEach((b) => ($(b).disabled = true)); updateWsButtons(); return; }
   // On a sample workspace the tab half is true and irrelevant: the tab really is on that org, and
   // this folder has nothing to do with it. Saying so is better than leaving the two halves side by
@@ -1099,18 +1121,19 @@ async function rebuildTree() {
   // answer while reading: the snapshot goes first, and then there is nothing to answer.
   const dirtyMeta = new Set(_dirtyMeta);
   if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+  const op = beginWorkspaceOp();
+  if (!(await ensurePerm(op.root))) { op.say(MSG.folder, 'warn'); return; }
   const mine = ++treeLoad;
-  const current = () => mine === treeLoad;
-  setStatus(MSG.loadingTree, 'busy');
+  const current = () => mine === treeLoad && op.current();
+  op.say(MSG.loadingTree, 'busy');
   graphCache = null; moduleFilesCache = null; aiConnCache = null;
-  const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  const _cfg = await opReadCfg(op); if (_cfg && current()) bound = _cfg; await cacheBinding(bound);
   if (!current()) return;
 
   // ---- 1. the index draws the tree ---------------------------------------------------------------
   // One read. It lists every function, downloaded or not, with the fields a row shows - so the panel
   // is usable before a single meta has been opened.
-  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch (_) {}
+  let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
   if (!current()) return;
   index = new Map();
   const byPath = new Map(), byId = new Map();
@@ -1135,7 +1158,7 @@ async function rebuildTree() {
   // Names only: `walk()` yields paths and opens nothing. A function the index does not know about is
   // still shown - a workspace pulled by an older version, or one the index has fallen behind.
   const metaPaths = [];
-  for await (const p of walk(dir)) {
+  for await (const p of walk(op.root)) {
     if (!p.startsWith('functions/') || !p.endsWith('.meta.json')) continue;
     metaPaths.push(p);
     const dg = p.replace(/\.meta\.json$/, '.dg');
@@ -1164,7 +1187,7 @@ async function rebuildTree() {
   // which is what makes a hand-pulled function, an older mirror and a file copied in by somebody
   // else all come out right.
   let summary = null;
-  try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
+  try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}
   if (!current()) return;
   const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   const missing = [];
@@ -1194,7 +1217,7 @@ async function rebuildTree() {
     const batch = metaPathsToRead.slice(i, i + TRANCHE);
     await Promise.all(batch.map(async (mp) => {
       try {
-        const meta = JSON.parse(await readFile(mp));
+        const meta = JSON.parse(await op.read(mp));
         const dg = mp.replace(/\.meta\.json$/, '.dg');
         // By path, then by id - both from a Map. The second lookup used to be a `treeData.find()`,
         // which is linear, and it fires exactly when the two disagree: a file whose name the index
@@ -1226,7 +1249,8 @@ async function rebuildTree() {
   }
   if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
-  if (stale_summary) await saveMetaIndex(metaPaths);
+  if (stale_summary) await saveMetaIndex(metaPaths, op);
+  if (!current()) return;
   // Put down here, not when Refresh was pressed: the pass that re-read everything has now written
   // the summary back, so the next load may believe it again.
   distrustSummary = false;
@@ -1259,11 +1283,11 @@ async function rebuildTree() {
  *  two known callers in one document, not between processes.
  */
 let _metaIndexWrites = Promise.resolve();
-function updateMetaIndex(mutate) {
+function updateMetaIndex(mutate, suppliedOp = null) {
   // The queue is what makes this correct against the other writer, and it is also what made it write
   // into the wrong folder: work handed to it runs *later*, so `dir` inside is whatever is on screen
   // by the time its turn comes. The workspace is taken here, where the caller still means it.
-  const op = beginWorkspaceOp();
+  const op = suppliedOp || beginWorkspaceOp();
   const job = _metaIndexWrites.then(async () => {
     let files = {};
     try {
@@ -1282,7 +1306,7 @@ function updateMetaIndex(mutate) {
   return job.catch(() => false);
 }
 
-async function saveMetaIndex(metaPaths) {
+async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
   const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
   const written = updateMetaIndex((files) => {
     Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // sparito dal disco
@@ -1292,11 +1316,11 @@ async function saveMetaIndex(metaPaths) {
       e.id = String(r.id); e.sv = r.stale ? 1 : META_SV; e.updatedTime = r.updatedTime || null;
       e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
     });
-  });
+  }, op);
   // Only the metas this pass actually described, and only the meta half: the source-derived facts
   // belong to `saveGraphFacts()` and are not this writer's to declare done. And only if the write
   // happened: a mark cleared over a refused write is a file nothing will ever read again.
-  if (!(await written)) return;
+  if (!(await written) || !op.current()) return;
   metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
 }
 
@@ -1397,14 +1421,17 @@ function graphForWindow(g) {
  *  up to date afterwards. So a hand-pulled function, an older mirror or a file somebody dropped in
  *  all produce the same graph as a full read - proven in the suite by building it both ways.
  */
-async function loadGraph() {
+async function loadGraph(op = beginWorkspaceOp()) {
+  if (!op.current()) throw new Error(WS_MOVED);
   const nodes = [];
+  const workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
   const dirtySrc = new Set(_dirtySource);   // snapshot, as the tree load does
   let summary = null;
-  try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
+  try { summary = JSON.parse(await op.read(META_INDEX)); } catch (_) {}
   const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   let read = 0;
-  for await (const p of walk(dir)) {
+  for await (const p of walk(op.root)) {
+    if (!op.current()) throw new Error(WS_MOVED);
     if (!p.endsWith('.dg')) continue;
     const cached = dirtySrc.has(p) ? null : known[p];
     if (cached && Array.isArray(cached.refs) && cached.stats) {
@@ -1423,25 +1450,26 @@ async function loadGraph() {
       continue;
     }
     read++;
-    const dg = await readFile(p); let meta = {}; try { meta = JSON.parse(await readFile(p.replace(/\.dg$/, '.meta.json'))); } catch {}
+    const dg = await op.read(p); let meta = {}; try { meta = JSON.parse(await op.read(p.replace(/\.dg$/, '.meta.json'))); } catch {}
     nodes.push({ namespace: meta.nameSpace || p.split('/')[0], name: meta.name || p.split('/').pop().replace(/\.dg$/, ''), api_name: meta.api_name, category: meta.category, source: meta.source, display_name: meta.display_name, description: meta.description || '', rest: (meta.rest_api || []).some((r) => r.active), associated_place: meta.associated_place || null, return_type: meta.return_type, params: meta.params || [], connections: meta.connections || [], modified_by: meta.modified_by || null, updatedTime: meta.updatedTime || null, dg, stats: fnStats(dg), file: p });
   }
   const g = window.buildGraph(nodes.map((n) => (n.refs ? { ...n, _refs: n.refs, _modules: n._modules } : n)));
   // What the parser saw, written down for the next build. Only when something had to be read: a
   // graph built entirely from the summary has nothing new to say, and rewriting the file on every
   // open would touch a folder the reader may have under version control.
-  if (read) await saveGraphFacts(nodes, g);
+  if (read) await saveGraphFacts(nodes, g, op);
+  if (!op.current()) throw new Error(WS_MOVED);
   nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; // The counts come from the source when it was read, and from the summary when it was not -
   // the same numbers either way, since `fnStats()` is a pure reading of that text and what the
   // summary holds is the result of having run it.
   g.nodes[id].stats = nd.stats || fnStats(nd.dg); } });
-  g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
+  g.workspace = workspace;
   return g;
 }
 /** Keep, per function, exactly what a source read produced: the references the parser found and the
  *  size counts. Everything else in the graph is computed from those two and from the workspace as a
  *  whole, so nothing here is a stored judgement - only a stored reading. */
-async function saveGraphFacts(nodes, g) {
+async function saveGraphFacts(nodes, g, op = beginWorkspaceOp()) {
   const written = updateMetaIndex((files) => {
     nodes.forEach((nd) => {
       if (!nd.file) return;
@@ -1462,21 +1490,21 @@ async function saveGraphFacts(nodes, g) {
       // `sv` and `updatedTime` belong to the meta writer: this one has read a `.dg`, which says
       // nothing about either. Writing them here is how a merge base becomes a lost update.
     });
-  });
+  }, op);
   // The sources this pass read are now described, and only those - a file rewritten while this
   // build was walking the folder keeps its mark and is read by the next one. And only if the write
   // happened, for the same reason as in the meta half.
-  if (!(await written)) return;
+  if (!(await written) || !op.current()) return;
   nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
 }
-async function ensureGraph() {
+async function ensureGraph(op = beginWorkspaceOp()) {
+  if (!op.current()) throw new Error(WS_MOVED);
   if (graphCache) return graphCache;
   // The *result* was cached after the await, so a build begun in one workspace finished into the
   // next - and `saveGraphFacts` then wrote its readings into that workspace's summary. What comes
   // back for a folder we have left is thrown away rather than kept.
-  const gen = wsGen;
-  const g = await loadGraph();
-  if (!sameWs(gen)) return g;
+  const g = await loadGraph(op);
+  if (!op.current()) throw new Error(WS_MOVED);
   graphCache = g;
   return graphCache;
 }
@@ -1570,7 +1598,10 @@ function syncTreeTo(path) {
 // has to be found for you. One flag tells the two apart, set by the only place a click starts.
 function openFromTree(path) { openFile(path, null, true); }
 async function openFile(path, line = null, byClick = false) {
-  if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
+  const mine = ++previewLoad;
+  const op = beginWorkspaceOp();
+  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) setStatus('File access denied - click Refresh to grant.', 'bad'); return; }
+  if (!previewCurrent(mine, op)) return;
   // The `push` flag is gone with the back stack it fed: whether a step is remembered is no longer
   // something each caller decides - every arrival is a step, which is what made the old one useless
   // the moment the reader changed tab.
@@ -1582,20 +1613,24 @@ async function openFile(path, line = null, byClick = false) {
   if (trow) navNames({ display: trow.display_name, api: trow.api_name });
   setPvName(path.split('/').pop(), path); $('pvcallers').className = ''; $('pvcallers').textContent = '';
   pvTabsFor('function');
-  let code; try { code = await readFile(path); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
+  let code; try { code = await op.read(path); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
+  if (!previewCurrent(mine, op)) return;
   const lines = code.split('\n').length;
   $('pvgutter').textContent = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
-  const _g = await ensureGraph().catch(() => null);
+  const _g = await ensureGraph(op).catch(() => null);
+  if (!previewCurrent(mine, op)) return;
   const _resolve = _g ? makeCallResolver(_g) : null;
   // The module named inside a call is a link too, on the same principle as the call itself: a name
   // that identifies something this panel can show is hypertext. Resolved against the module index,
   // so a string that merely looks like a module stays a string.
-  const _known = await moduleNames().catch(() => new Map());
+  const _known = (await moduleNames(op).catch(() => null)) || new Map();
+  if (!previewCurrent(mine, op)) return;
   // A related-list name identifies the module at the *other* end of the relation - which is what
   // the reader means by it - so it is resolved inside its parent module's own catalogue of related
   // lists, where Zoost already holds `api_name` beside the module it points at. The same name can
   // exist on two modules, which is why the parent is part of the question and not a guess.
-  const _mfiles = await loadModuleFiles().catch(() => ({}));
+  const _mfiles = (await loadModuleFiles(op).catch(() => null)) || {};
+  if (!previewCurrent(mine, op)) return;
   const _linkFor = (name, kind, parent) => {
     if (kind === 'mod') return _known.has(name) ? name : null;
     const p = parent && _mfiles[parent];
@@ -1610,7 +1645,7 @@ async function openFile(path, line = null, byClick = false) {
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
   showPreview(byClick);
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
-  showCallers(path);
+  showCallers(path, mine, op);
 }
 /** Two tabs rather than one long column, for the two kinds of item whose detail is crowded.
  *
@@ -1664,12 +1699,14 @@ function pvTabsFor(kind) {
  *  orgs before this was written: three and four such names each, every one correctly refused.
  */
 let modNamesCache = null;
-async function moduleNames() {
+async function moduleNames(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (modNamesCache) return modNamesCache;
-  let idx = []; try { idx = JSON.parse(await readFile('modules/index.json')); } catch (_) {}
+  let idx = []; try { idx = JSON.parse(await op.read('modules/index.json')); } catch (_) {}
   const list = Array.isArray(idx) ? idx : (idx && idx.modules) || [];
   const m = new Map();
   list.forEach((x) => { const a = x.api_name || x.module_name || x.name; if (a) m.set(a, x); });
+  if (!op.current()) return null;
   modNamesCache = m; return m;
 }
 
@@ -1680,6 +1717,7 @@ async function moduleNames() {
 async function modulesOf(node) {
   const known = await moduleNames();
   const out = { read: [], write: [], touch: [], unknown: (node && node.modulesUnknown) || 0 };
+  if (!known) return out;
   for (const m of (node && node.modules) || []) {
     if (!known.has(m.name)) continue;
     const b = out[m.mode] || out.touch;
@@ -1701,11 +1739,11 @@ async function modulesOf(node) {
  *  to any module, so «nothing writes here» is «nothing that could be read», and the line under the
  *  lists carries that instead of leaving the reader to assume otherwise.
  */
-async function showModuleUsage(api) {
+async function showModuleUsage(api, path, mine, op) {
   const box = $('pvcallers'); box.textContent = 'reading what the code does with it\u2026'; box.className = 'show';
   try {
-    const g = await ensureGraph();
-    if (!currentPath || !currentPath.startsWith('modules/')) return;
+    const g = await ensureGraph(op);
+    if (!previewCurrent(mine, op) || currentPath !== path) return;
     const read = [], write = [], touch = [];
     let blind = 0;
     for (const n of Object.values(g.nodes)) {
@@ -1741,10 +1779,10 @@ async function showModuleUsage(api) {
     }));
   } catch (_) { box.className = ''; }
 }
-async function showCallers(path) {
+async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
   const box = $('pvcallers'); box.textContent = 'computing references…'; box.className = 'show';
   try {
-    const g = await ensureGraph(); if (currentPath !== path) return;
+    const g = await ensureGraph(op); if (!previewCurrent(mine, op) || currentPath !== path) return;
     const node = Object.values(g.nodes).find((n) => n.file === path); if (!node) { box.className = ''; return; }
     const callers = node.called_by;
     const nm = (id) => nameMode === 'display' ? (g.nodes[id].display_name || g.nodes[id].name) : (g.nodes[id].api_name || g.nodes[id].name);
@@ -1776,7 +1814,8 @@ async function showCallers(path) {
     // statically. Nothing is inferred: if it is not in the last reading, nothing is shown - «no
     // failures recorded» would be a claim about a measurement that may never have been taken.
     try {
-      const fx = await failuresIndex();
+      const fx = await failuresIndex(op);
+      if (!fx || !previewCurrent(mine, op) || currentPath !== path) return;
       // Zoho reports the display name; the mirror knows three names for the same function and which
       // one matches is not ours to assume. Try them all rather than picking one and finding nothing.
       const mine = [node.display_name, node.name, node.api_name]
@@ -1865,7 +1904,7 @@ async function showCallers(path) {
 // Closing the pane does not forget where you have been - reopening anything continues the same
 // chain, the way shutting a window does not clear a browser's history. Only leaving the workspace
 // does, below, because there the steps would point at another org's files.
-$('pvx').onclick = () => { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; updateNav(); };
+$('pvx').onclick = () => { previewLoad++; $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; updateNav(); };
 
 // resizable split
 let dragY = false;
@@ -2586,27 +2625,31 @@ function runSearch() {
  *  Measured on a generated org of 5,000 functions: 20,000 file-system calls the first time, none
  *  after. Before this, the panel simply stopped answering for the whole of it.
  */
-async function getCodeCache() {
+async function getCodeCache(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (codeCache) return codeCache;
   const m = new Map();
   const rows = treeData.filter((e) => e.downloaded);
   const TRANCHE = 120;
   for (let i = 0; i < rows.length; i += TRANCHE) {
     await Promise.all(rows.slice(i, i + TRANCHE).map(async (e) => {
-      try { m.set(e.id, await readFile(e.path)); } catch (_) {}
+      try { m.set(e.id, await op.read(e.path)); } catch (_) {}
     }));
     if (rows.length > TRANCHE) {
-      setStatus(`Reading sources ${Math.min(i + TRANCHE, rows.length)}/${rows.length}\u2026`, 'busy');
+      op.say(`Reading sources ${Math.min(i + TRANCHE, rows.length)}/${rows.length}\u2026`, 'busy');
       await new Promise((r) => setTimeout(r, 0));
     }
   }
+  if (!op.current()) return null;
   codeCache = m; return m;
 }
 async function contentSearch() {
+  const op = beginWorkspaceOp();
   const term = $('find').value.trim(); const tree = $('tree');
   if (!term) { renderTree(); return; }
   tree.innerHTML = '<div class="treemsg">Searching\u2026</div>';
-  const cache = await getCodeCache(); const tl = term.toLowerCase();
+  const cache = await getCodeCache(op); if (!cache || !op.current()) return;
+  const tl = term.toLowerCase();
   const results = [];
   const passType = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
   for (const e of treeData) {
@@ -3206,10 +3249,15 @@ async function aiUnlock() {
   aiLockMsg(''); aiShowLock(false); setStatus('API key unlocked for this browser session.', 'ok');
 }
 function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
-async function loadModuleFiles() {
+async function loadModuleFiles(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (moduleFilesCache) return moduleFilesCache;
   const map = {};
-  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); map[m.api_name] = m; } catch (_) {} } }
+  for await (const p of walk(op.root)) {
+    if (!op.current()) return null;
+    if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); map[m.api_name] = m; } catch (_) {} }
+  }
+  if (!op.current()) return null;
   moduleFilesCache = map; return map;
 }
 // Connections catalogue for the AI, joined with the functions that use each (same join key as the
@@ -3221,20 +3269,24 @@ let aiActCache = null;
  *  rather than a scope tick, because a chat has no dialog to tick: the export asks per file, this
  *  asks once. Off unless the user turned it on - the mirror keeps the address either way, and what
  *  is at stake here is whether it leaves the machine. */
-async function aiLoadActions() {
+async function aiLoadActions(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (aiActCache) return aiActCache;
-  let list = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) list = a; } catch (_) {}
-  const users = actionUsers || await buildActionUsers();
+  let list = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) list = a; } catch (_) {}
+  const users = actionUsers || await buildActionUsers(op);
   let addresses = false;
   try { const c = await chrome.storage.local.get('aicfg'); addresses = !!(c.aicfg && c.aicfg.shareAddresses); } catch (_) {}
+  if (!op.current()) return null;
   aiActCache = { list, users, addresses };
   return aiActCache;
 }
-async function aiLoadConnections() {
+async function aiLoadConnections(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (aiConnCache) return aiConnCache;
-  let cat = []; try { cat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
+  let cat = []; try { cat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(cat)) cat = [];
-  const g = await ensureGraph().catch(() => null);
+  const g = await ensureGraph(op).catch(() => null);
+  if (!op.current()) return null;
   const used = {};
   if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (used[c.name] ||= []).push(n.namespace + '.' + n.name); }));
   const list = cat.map((c) => ({ ...c, uses: (used[c.name] || []).slice() }));
@@ -3615,15 +3667,17 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
   const content = blocks.filter(Boolean).map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
   return { content, stop_reason };
 }
-async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
+async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true) {
   const msgs = apiMessages.slice();
   for (let iter = 0; iter < maxIter; iter++) {
     let bubble = null, el = null;
     const onText = (t) => {
+      if (!current()) return;
       if (!bubble) { bubble = { role: 'assistant', content: '' }; aiMessages.push(bubble); aiRenderMessages(); const ns = $('aimsgs').querySelectorAll('.aimsg.assistant .aitext'); el = ns[ns.length - 1]; }
       bubble.content += t; if (el) { el.innerHTML = aiMarkdown(bubble.content); $('aimsgs').scrollTop = $('aimsgs').scrollHeight; }
     };
     const { content, stop_reason } = await aiStreamAnthropic(a, msgs, system, tools, onText);
+    if (!current()) return;
     const toolUses = content.filter((b) => b.type === 'tool_use');
     if (stop_reason !== 'tool_use' || !toolUses.length) {
       if (!bubble) { const txt = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n'); aiMessages.push({ role: 'assistant', content: txt || '(empty response)' }); aiRenderMessages(); }
@@ -3631,9 +3685,16 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
     }
     msgs.push({ role: 'assistant', content });
     const results = [];
-    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
+    for (const tu of toolUses) {
+      if (!current()) return;
+      aiToolEvent(tu.name, tu.input);
+      let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; }
+      if (!current()) return;
+      results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) });
+    }
     msgs.push({ role: 'user', content: results });
   }
+  if (!current()) return;
   aiMessages.push({ role: 'assistant', content: `(Reached the tool-step limit of ${maxIter}. Raise it in Settings or ask something more specific.)` }); aiRenderMessages();
 }
 
@@ -3662,6 +3723,7 @@ async function aiCall(cfg, messages, system) {
   return txt;
 }
 let aiBusy = false;
+let aiGen = 0;
 function aiRenderMessages() {
   const box = $('aimsgs');
   // **Absent, not present-and-pointless, when there is nothing to clear.** Every other control here
@@ -3676,10 +3738,15 @@ function aiRenderMessages() {
   box.scrollTop = box.scrollHeight;
 }
 async function aiSend() {
+  if (aiBusy) return;
+  const op = beginWorkspaceOp(), gen = aiGen;
+  const current = () => op.current() && gen === aiGen;
   const cfg = await aiGetCfg();
+  if (!current()) return;
   aiEngineChrome();
   if (aiLocked(cfg)) { aiShowLock(true); return; }
   if (!(await aiEnsureFiles())) { setStatus('Folder access needs re-granting - press \u21bb Refresh, then ask again.', 'warn'); return; }
+  if (!current()) return;
   if (!aiActiveReady(cfg)) { aiOpenSettings(); setStatus('Set the model and API key in Settings (just opened), then try again.', 'warn'); return; }
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
@@ -3688,6 +3755,7 @@ async function aiSend() {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
     const system = await aiSystemPromptB(withTools, cfg.seedCap);
+    if (!current()) return;
     // The org index sent to the model is capped. If it was cut, say so once - don't let the user
     // assume the model saw everything. Claude can still look things up; OpenAI (single-shot) cannot.
     if (aiSeedTruncated && !aiSeedWarned) {
@@ -3697,10 +3765,12 @@ async function aiSend() {
         + (withTools ? 'Claude can still find them by name with its tools - the function list is always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific functions by name.') });
       aiRenderMessages();
     }
-    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20); }
-    else { const reply = await aiCall(cfg, apiMessages, system); aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current); }
+    else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
+    if (!current()) return;
     setStatus('', '');
-  } catch (e) { aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
+  } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
+  if (!current()) return;
   aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
@@ -4118,6 +4188,7 @@ async function grantRoot() {
   } catch (e) { setStatus('Grant failed: ' + e.message, 'bad'); }
 }
 async function pickRoot() {
+  if (workspaceChangeRefuse()) return;
   try {
     const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'zoost-root' });
     if (!(await ensurePerm(h))) return;
@@ -4176,10 +4247,12 @@ function updateSampleButtons() {
   const have = knownSample();
   const sb = $('wssample');
   if (sb) sb.hidden = !!have || !root || !rootGranted;
+  if (sb) sb.disabled = pullBusy || sampleBusy;
   // The overlay's copy covers the workspace list, so hiding it there would leave a sample on disk
   // unreachable. It changes what it says instead.
   const ob = $('offsample');
   if (ob) {
+    ob.disabled = pullBusy || sampleBusy;
     // Three states, because «+» and «Open» are both claims and there is a moment when neither can be
     // made. `+` says «there is none» and `Open` says «there is one»; with the folder unread the
     // honest label asserts nothing and the tooltip says the click will find out. This project does
@@ -4196,6 +4269,7 @@ function updateSampleButtons() {
 
 let sampleBusy = false;
 async function addSampleWorkspace() {
+  if (workspaceChangeRefuse()) return;
   if (sampleBusy) return;
   if (!root) { await pickRoot(); return; }
   // **Grant first, then decide.** A click is the only context in which the permission can be
@@ -4214,7 +4288,7 @@ async function addSampleWorkspace() {
   try { await writeSampleWorkspace(); }
   finally {
     sampleBusy = false;
-    ['wssample', 'offsample'].forEach((b) => { const e = $(b); if (e) e.disabled = false; });
+    updateSampleButtons();
   }
 }
 async function writeSampleWorkspace() {
@@ -4251,6 +4325,7 @@ async function writeSampleWorkspace() {
 }
 
 async function addWorkspaceForTab() {
+  if (workspaceChangeRefuse()) return;
   if (!root) { await pickRoot(); return; }
   if (!(await ensurePerm(root))) return;
   const ctx = lastCtx && lastCtx.org ? lastCtx : await getContext();
@@ -4301,7 +4376,9 @@ const sameWs = (gen) => gen === wsGen;
 // went from 1 to 0 with no workspace change at all.
 function clearConversationState() {
   const had = aiMessages.length;
-  aiMessages = []; aiSeedWarned = false;
+  aiGen++;
+  aiMessages = []; aiSeedWarned = false; aiBusy = false;
+  const send = $('aisend'); if (send) send.disabled = false;
   aiRenderMessages();
   return had;
 }
@@ -4354,6 +4431,12 @@ function rememberActive(key, id, gen) {
   return _activeWsWrites;
 }
 async function activate(w, viaGesture) {
+  if (pullBusy && w && w.id !== activeWsId) {
+    $('ws').value = activeWsId || '';
+    setStatus('Pull in progress - wait for it to finish before changing workspace.', 'warn');
+    updateWsButtons();
+    return false;
+  }
   const sameWs = activeWsId === w.id;
   // The binding is set with the handle, not four lines later. It used to be read after
   // setEnabled(true), so `isSample()` was still answering about the *previous* workspace and the
@@ -4365,7 +4448,7 @@ async function activate(w, viaGesture) {
   // interrupted a pull, and in Analytics the line sat after a `return` and never ran at all, which
   // made every guard in that file always true. Both reported.
   const gen = ++wsGen;
-  dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
+  switchDirtyWorkspace(w.handle); dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
   // From here on this activation is an operation like any other: it awaits four times and every one
   // of them is a place a second activation can finish first. It used to check once, after IndexedDB,
   // and then keep going - so `oldLayout` was published from the workspace being left, and the reset,
@@ -4410,12 +4493,14 @@ async function cacheBinding(b) {
 
 function updateWsButtons() {
   const add = $('wsadd'), rt = $('wsroot');
+  $('ws').disabled = pullBusy;
+  rt.disabled = pullBusy;
   // Both are temporarily unavailable, never permanently: pick a workspace and they work. Analytics
   // has disabled its Remove this way from the start; this side never did, and the two buttons sat
   // beside each other behaving differently.
   renderGoDc();                      // the list it offers is the workspaces, so it moves with them
-  $('wsrename').disabled = !dir || !wsList.length;
-  $('wsdel').disabled = !dir || !wsList.length;
+  $('wsrename').disabled = pullBusy || !dir || !wsList.length;
+  $('wsdel').disabled = pullBusy || !dir || !wsList.length;
   const needsGrant = !!root && !rootGranted;
   rt.classList.toggle('needgrant', needsGrant);
   rt.textContent = !root ? '\u{1F4C1} Set working folder\u2026'
@@ -4431,7 +4516,7 @@ function updateWsButtons() {
   // stays visible and says what is missing.
   const known = (wsList || []).some((w) => lastCtx && w.binding && w.binding.org === lastCtx.org);
   add.hidden = known;
-  add.disabled = !root || !lastCtx || !lastCtx.org;
+  add.disabled = pullBusy || !root || !lastCtx || !lastCtx.org;
   add.textContent = (lastCtx && lastCtx.instance) ? `+ ${lastCtx.instance}` : '+ Workspace';
   add.title = !root ? 'Set the working folder first'
     : !lastCtx ? 'Open a Zoho CRM tab first'
@@ -4447,14 +4532,14 @@ async function loadWorkspaces() {
   wsList = [];
   if (!root) {
     sel.innerHTML = '<option value="">No working folder</option>';
-    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
+    switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus('Pick a working folder to start - every workspace lives inside it.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
   rootGranted = await hasPerm(root);
   if (!rootGranted) {
     sel.innerHTML = `<option value="">${root.name} - access not granted</option>`;
-    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
+    switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus('Click \u00abGrant access\u00bb above, or anywhere in this panel - one click, no folder picker.', 'warn');
     renderBlocked(); await refreshContext(); return;
   }
@@ -4488,7 +4573,7 @@ async function loadWorkspaces() {
       }
     } catch (_) {}
     sel.innerHTML = `<option value="">${root.name}/${APP_DIR} - no workspaces yet</option>`;
-    dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
+    switchDirtyWorkspace(null); dir = null; forgetDirs(); setEnabled(false); updateWsButtons();
     setStatus(stray
       ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
@@ -4558,6 +4643,7 @@ function wsOptionTitle(w) {
  * the folder does.
  */
 async function renameWorkspace() {
+  if (workspaceChangeRefuse()) return;
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   const w = wsList.find((x) => x.id === $('ws').value);
   if (!w || !dir) return;
@@ -4587,8 +4673,12 @@ $('wssample').onclick = () => addSampleWorkspace();
 // One call for both copies of the button: addSampleWorkspace() decides whether there is one to
 // open or one to write, so the two cannot disagree and neither can act on a stale label.
 $('offsample').onclick = () => addSampleWorkspace();
-$('ws').onchange = async () => { const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true); };
+$('ws').onchange = async () => {
+  if (workspaceChangeRefuse()) return;
+  const w = wsList.find((x) => x.id === $('ws').value); if (w) await activate(w, true);
+};
 $('wsdel').onclick = async () => {
+  if (workspaceChangeRefuse()) return;
   const w = wsList.find((x) => x.id === $('ws').value); if (!w || !root) return;
   if (!confirm(`Delete the folder \u00ab${w.name}\u00bb and everything in it?\n\nThis removes the local mirror only - nothing in Zoho CRM is touched. You can pull it again at any time.`)) return;
   try {
@@ -4750,6 +4840,14 @@ function setPullBusy(b) {
   // flag says whether anything else still holds it. Reading the argument put the buttons back on
   // while a pull was running - a click that looks available and then does nothing.
   ZOHO_BTNS.forEach((x) => ($(x).disabled = pullBusy || !zohoReady() || !dir || navOpenNow()));
+  updateWsButtons();
+}
+function workspaceChangeRefuse() {
+  if (!pullBusy) return false;
+  $('ws').value = activeWsId || '';
+  setStatus('Pull in progress - workspace unchanged.', 'warn');
+  updateWsButtons();
+  return true;
 }
 async function pullCurrent() {
   if (pullBusy) return;
@@ -5081,10 +5179,14 @@ function renderLayoutView(layout) {
   }).join('');
 }
 async function openModule(path, layoutId) {
-  if (!(await ensurePerm(dir))) { setStatus('File access denied - click Refresh.', 'bad'); return; }
+  const mine = ++previewLoad;
+  const op = beginWorkspaceOp();
+  if (!(await ensurePerm(op.root))) { if (previewCurrent(mine, op)) setStatus('File access denied - click Refresh.', 'bad'); return; }
+  if (!previewCurrent(mine, op)) return;
   currentPath = path; navHere(); if ($('status').className) setStatus('', '');
   selectRow(path);
-  let m; try { m = JSON.parse(await readFile(path)); } catch (e) { setStatus(MSG.readFailed + e.message, 'bad'); return; }
+  let m; try { m = JSON.parse(await op.read(path)); } catch (e) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + e.message, 'bad'); return; }
+  if (!previewCurrent(mine, op)) return;
   navNames({ display: m.plural_label || m.singular_label || m.module_name || m.api_name,
              gen: m.module_name || m.api_name, api: m.api_name });
   const nav = moduleNavigable(m);
@@ -5093,7 +5195,7 @@ async function openModule(path, layoutId) {
   $('pvreveal').style.display = nav ? '' : 'none'; $('pvreveal').textContent = 'Records \u2197'; $('pvreveal').title = 'Open the module\'s records list in Zoho';
   $('pvfind').style.display = nav ? '' : 'none'; $('pvfind').textContent = 'Layouts \u2197'; $('pvfind').title = 'Open the module\'s layouts (add/edit fields & layout) in Zoho';
   $('pvcallers').className = ''; $('pvcallers').textContent = '';
-  showModuleUsage(m.api_name);   // not awaited: it needs the graph, and the fields must not wait for it
+  showModuleUsage(m.api_name, path, mine, op);   // not awaited: it needs the graph, and the fields must not wait for it
   const gen = m.module_name || m.api_name;
   const namesBlock = `<div style="padding:8px 10px;font:11px var(--mono);border-bottom:1px solid var(--border);background:#141b29;line-height:1.7">`
     + `<div style="color:#8ea0bb">display: <span style="color:#e7edf6">${escHtml(m.plural_label || m.singular_label || m.module_name || m.api_name)}</span></div>`
@@ -5146,13 +5248,15 @@ async function openModule(path, layoutId) {
     const body = document.getElementById('laybody'); const v = sel.value;
     if (v === '__all__') { body.innerHTML = renderFieldsTable(m); return; }
     body.innerHTML = '<div style="padding:10px;color:var(--muted)">Loading layout\u2026</div>';
-    let full = []; try { full = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    let full = []; try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    if (!previewCurrent(mine, op)) return;
     const L = (full || []).find((x) => String(x.id) === String(v));
     body.innerHTML = L ? renderLayoutView(L) : '<div style="padding:10px;color:var(--muted)">Layout detail not found - re-pull modules.</div>';
   };
   const mod = document.getElementById('laymod');
   if (mod) mod.onclick = () => { const v = sel ? sel.value : '__all__'; openModuleLayout(m.module_name || m.api_name, v === '__all__' ? null : v); };
   if (layoutId && sel) { sel.value = String(layoutId); if (sel.value === String(layoutId)) await sel.onchange(); }
+  if (!previewCurrent(mine, op)) return;
   showPreview();
 }
 
@@ -6121,6 +6225,7 @@ async function refreshSchedules() {
   setStatus(`${scheduleData.length} schedules.`, 'ok');
 }
 async function openSchedule(e) {
+  previewLoad++;
   currentPath = e.path; navHere(e.name);
   selectRow(e.path);
   setPvName(e.name, e.path);
@@ -6163,42 +6268,47 @@ function wfScheduled(rule) {
   return { count, delays: [...new Set(delays)] };
 }
 
-async function loadWorkflowIndex() {
+async function loadWorkflowIndex(op = beginWorkspaceOp()) {
   // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
   // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
   // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
   // this class instead of waiting for the next reader to notice an instance of it.
-  const op = beginWorkspaceOp();
-  wfIndex = new Map();
-  let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  let idx = []; try { idx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   const have = new Set();
-  for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
-  if (!op.current()) return;
+  for await (const p of walk(op.root)) {
+    if (!op.current()) return false;
+    if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, ''));
+  }
+  if (!op.current()) return false;
   // The list and its index are one fact and are published together. They were not: the index was
   // filled at the very end, after a loop that reads one file per downloaded rule, so an interrupted
   // loader left a list on screen whose rows opened nothing. Found by `tools/probe.py` in a browser,
   // on a guard this same session had added - a guard that returns is a guard that must not leave
   // half a state behind.
-  workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
+  const nextData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
+  const nextIndex = new Map();
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
   // downloaded yet has neither, and says so as absence rather than as a zero - «0 scheduled» about a
   // workflow nobody has read is a measurement that was never taken.
   // The loop below reads one file per downloaded rule, so the index it fills is filled long after the
   // list it is an index *of* - and `wfIndex` is read by every workflow row on screen.
-  workflowData.forEach((e) => wfIndex.set(e.id, e));
+  nextData.forEach((e) => nextIndex.set(e.id, e));
   // Enrichment from here on - two fields the list endpoint does not return, one file per rule. It may
   // stop; what is already on screen stays consistent with what a click can find.
-  for (const e of workflowData) {
-    if (!op.current()) return;
+  for (const e of nextData) {
+    if (!op.current()) return false;
     if (!e.downloaded) continue;
     try {
-      const rule = JSON.parse(await readFile(e.path));
+      const rule = JSON.parse(await op.read(e.path));
       const s = wfScheduled(rule);
       e.sched = s.count; e.schedDelays = s.delays;
       e.lastRun = rule.last_executed_time || null;
     } catch (_) { /* unreadable here is the same as not downloaded: no fact, not a false zero */ }
   }
-  workflowData.forEach((e) => wfIndex.set(e.id, e));
+  if (!op.current()) return false;
+  workflowData = nextData;
+  wfIndex = nextIndex;
+  return true;
 }
 async function rebuildWorkflows() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
@@ -6207,7 +6317,7 @@ async function rebuildWorkflows() {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading workflows\u2026', 'busy');
     const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
-    await loadWorkflowIndex();
+    if (!(await loadWorkflowIndex(op))) return;
     renderWorkflows(); updateMissingButton();
     const dl = workflowData.filter((e) => e.downloaded).length;
     setStatus(`${workflowData.length} workflows (${dl} downloaded).`, 'ok');
@@ -6378,11 +6488,13 @@ const actKept = (a) => a && a.detail_kept === true;
  *  the rest away at the filter, so the id needed to answer «who sends this notification» was on disk
  *  the whole time. Keyed on kind+id, with the name as a fallback the way resolveFn() does it,
  *  because Zoho gives an id it knows and a name it displays. */
-async function buildActionUsers() {
+async function buildActionUsers(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   const map = new Map();
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of Array.isArray(wfIdx) ? wfIdx : []) {
-    let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
+    if (!op.current()) return null;
+    let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
     if (!d) continue;   // not pulled: it is a rule with no measured actions, never a rule with none
     (d.conditions || []).forEach((c) => {
       const acts = [];
@@ -6397,7 +6509,7 @@ async function buildActionUsers() {
       });
     });
   }
-  return map;
+  return op.current() ? map : null;
 }
 function actionFiredBy(a) {
   if (!actionUsers) return [];
@@ -6648,6 +6760,7 @@ function mappingHtml(m) {
 // are shown as they are, minus the punctuation that only means «this is a placeholder».
 const prettyTrigger = (t) => String(t || '').replace(/^\$\{!?/, '').replace(/\}$/, '') || 'the trigger';
 function openAction(a) {
+  previewLoad++;
   currentPath = a.path; navHere(a.name || a.id);
   selectRow(a.path);
   setPvName(a.name || a.id, 'actions/index.json');
@@ -6796,6 +6909,7 @@ async function refreshConnections() {
   await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
 }
 function openConnection(c) {
+  previewLoad++;
   currentPath = c.path; navHere(c.label || c.name);
   selectRow(c.path);
   setPvName(c.label || c.name, c.path);
@@ -6835,13 +6949,15 @@ function fmtDate(iso) {
 // tab put it a level too high. It shows in the two places that dimension belongs: on the function
 // itself, and in the health view, which already answers «what is wrong across this org».
 let failIndex = null;   // {at, usage, byName:Map} - built once per read, dropped when a pull replaces it
-async function failuresIndex() {
+async function failuresIndex(op = beginWorkspaceOp()) {
+  if (!op.current()) return null;
   if (failIndex) return failIndex;
-  let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
+  let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}
   const byName = new Map();
   if (d && Array.isArray(d.failures)) {
     d.failures.forEach((f) => { const k = String(f.name || '').toLowerCase(); if (k) (byName.get(k) || byName.set(k, []).get(k)).push(f); });
   }
+  if (!op.current()) return null;
   failIndex = { at: (d && d.at) || null, usage: (d && d.usage) || null, runs: (d && d.runs) || null,
                 credits: (d && d.credits) || null, capped: !!(d && d.capped), byName, all: (d && d.failures) || [] };
   return failIndex;
@@ -6949,8 +7065,16 @@ async function openWorkflowInZoho(id) {
   catch (e) { setStatus('Could not open: ' + e.message, 'warn'); }
 }
 async function openWorkflow(e) {
-  if (!e.downloaded) { const ok = await downloadOneWf(e); updateRow(e); updateMissingButton(); if (!ok) { setStatus('Could not download this workflow.', 'warn'); return; } }
-  let rule; try { rule = JSON.parse(await readFile(e.path)); } catch (err) { setStatus(MSG.readFailed + err.message, 'bad'); return; }
+  const mine = ++previewLoad;
+  const op = beginWorkspaceOp();
+  if (!e.downloaded) {
+    const ok = await downloadOneWf(e);
+    if (!previewCurrent(mine, op)) return;
+    updateRow(e); updateMissingButton();
+    if (!ok) { setStatus('Could not download this workflow.', 'warn'); return; }
+  }
+  let rule; try { rule = JSON.parse(await op.read(e.path)); } catch (err) { if (previewCurrent(mine, op)) setStatus(MSG.readFailed + err.message, 'bad'); return; }
+  if (!previewCurrent(mine, op)) return;
   currentPath = e.path; navHere(e.name);
   selectRow(e.path);
   setPvName(e.name, e.path);
