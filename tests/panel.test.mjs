@@ -5840,3 +5840,63 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.equal(ctx.reads, 2, 'a page that had not rendered the id yet is never asked again');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «An aggregate we could not read is unknown, never zero» was written beside the catch, and the sum
+// inside it did the opposite: a row whose count did not parse contributed nothing and the total came
+// out low, with nothing to say it had. Same for a function in the *most used* list with no count -
+// written as having run zero times, which is the one thing that list says it did not do.
+{
+  const RUN = async (rows) => {
+    const ctx = {
+      list: (j) => j.custom_function_failures || [], failureRow: (f) => f, FAIL_LIMIT: 100,
+      api: async (url) => {
+        if (/functions\/failures/.test(url)) return { custom_function_failures: [] };
+        if (/type=usage_pattern/.test(url)) return { top_usage: rows };
+        if (/function_most_used/.test(url)) return { top_usage: rows };
+        return { dashboard: [] };
+      },
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'pullFailures'), ctx);
+    return vm.runInContext('pullFailures()', ctx);
+  };
+
+  test('a total whose parts did not all read is unknown, not a smaller total', async () => {
+    const whole = await RUN([{ count: 3 }, { count: 4 }]);
+    assert.equal(whole.usage.success, 7, 'a readable aggregate stopped being reported');
+    const holed = await RUN([{ count: 3 }, { value: 'no count here' }]);
+    assert.equal(holed.usage.success, null, `a partial sum was presented as the total (${holed.usage.success})`);
+  });
+
+  test('a function in the busiest list with no count did not run zero times', async () => {
+    const r = await RUN([{ function_id: 1, value: 'a', count: 5 }, { function_id: 2, value: 'b' }]);
+    assert.deepEqual(r.runs.map((x) => x.count), [5, null], 'an unread count was written as a zero');
+  });
+}
+
+// Related lists had both their reads end in a silent catch, so «this module has none» and «neither
+// endpoint would answer» arrived as the same empty array - and the panel then told the reader to run
+// the pull that had just run. The distinction `layouts_read` already makes, made once more, and said
+// on each surface that shows the list.
+{
+  const panel = read('apps/crm/sidepanel.js');
+  const bridge = read('apps/crm/content-bridge.js');
+
+  test('the bridge records whether the related lists were read at all', () => {
+    assert.equal((bridge.match(/relatedRead = true/g) || []).length, 2,
+                 'one of the two paths that can answer does not record that it did');
+    assert.ok(/related_read: relatedRead/.test(bridge), 'and it is not handed to the panel');
+  });
+
+  test('every surface that shows the list separates «none» from «not read»', () => {
+    const surfaces = {
+      'the module detail': /m\.related_read === false \?/,
+      'the HTML export': /scope\.relations && m\.related_read === false/,
+      'the Markdown export': /else if \(scope\.relations && m\.related_read === false\)/,
+      'the layouts line': /m\.layouts_read === false \? 'not read' : 0/,
+    };
+    for (const [what, re] of Object.entries(surfaces))
+      assert.ok(re.test(panel), `${what} reports a refused read as an empty one`);
+  });
+}

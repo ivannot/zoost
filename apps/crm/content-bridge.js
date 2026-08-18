@@ -310,6 +310,11 @@
       // Related lists. The API name of a related list is NOT the api_name of the target module:
       // it is what zoho.crm.getRelatedRecords() / the REST /{module}/{id}/{related_list} path expect.
       let related = [];
+      // The same distinction `layouts_read` makes, for the same reason: both paths ended in a silent
+      // `catch`, so «this module has no related lists» and «neither endpoint would answer» arrived as
+      // the same empty array. The panel then told the reader to run the pull again - which had just
+      // run - instead of naming what actually happened.
+      let relatedRead = false;
       if (fieldsOk) {
         try {
           const rl = list(await api(`/crm/v2/settings/related_lists?module=${encodeURIComponent(m.api_name)}`), 'related_lists', 'related_lists?module=' + m.api_name);
@@ -323,6 +328,7 @@
             linking_module: (r.linking_module && (r.linking_module.api_name || r.linking_module)) || null,
             id: r.id || null, src: 'api',
           })).filter((r) => r.api_name);
+          relatedRead = true;
         } catch (_) {
           // Fallback: the endpoint the CRM UI itself uses (rellistsysrefname == related list API name).
           try {
@@ -335,6 +341,7 @@
                 type: r.isCustom ? 'custom' : 'default', visible: r.isVisible !== false,
                 connected_module: null, linking_module: null, id: r.rellistid || null, src: 'ui',
               })).filter((r) => r.api_name);
+              relatedRead = true;
             }
           } catch (_) {}
         }
@@ -344,6 +351,7 @@
         // Read, or merely not obtained. The panel prunes layout files against this: «none» is a fact
         // it may act on, «not read» is not.
         layouts_read: layoutsRead,
+        related_read: relatedRead,
         // null when the module read fine. Present only when Zoho refused, and then it is the whole
         // reason the three lists below are empty.
         unreadable,
@@ -620,7 +628,11 @@
         const u = await api('/crm/v2/settings/functions/dashboard/top_usage?type=usage_pattern'
           + `&component_type=functions&status=${status}&period=past_24_hours`
           + `&from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to))}`);
-        usage[status] = (u.top_usage || []).reduce((n, x) => n + (Number(x.count) || 0), 0);
+        // A row with no readable count contributes nothing to a sum and says nothing about it, so
+        // the total quietly comes out low - the same «unknown, never zero» this catch already states,
+        // one level down, where it applies to a component of the number instead of to the number.
+        const counts = (u.top_usage || []).map((x) => Number(x.count));
+        usage[status] = counts.every((n) => Number.isFinite(n)) ? counts.reduce((n, c) => n + c, 0) : null;
       } catch (_) { usage[status] = null; }   // an aggregate we could not read is unknown, never zero
     }
     // How often each function actually ran, which is the measured cost the mirror can only guess at
@@ -637,7 +649,10 @@
       const r = await api('/crm/v2/settings/functions/dashboard/top_usage?type=function_most_used'
         + `&period=past_24_hours&from=${encodeURIComponent(iso(from))}&to=${encodeURIComponent(iso(to))}`);
       runs = (r.top_usage || []).map((x) => ({ id: x.function_id ? String(x.function_id) : null,
-                                               name: x.value || '', count: Number(x.count) || 0 }));
+                                               name: x.value || '',
+                                               // A function in the *most used* list whose count did
+                                               // not read is not a function that ran zero times.
+                                               count: Number.isFinite(Number(x.count)) ? Number(x.count) : null }));
     } catch (_) { runs = null; }   // unknown, never an empty list: an empty one would read as «nothing ran»
     // The org's own meter for the period: what Zoho counted against the plan, and the ceiling.
     let credits = null;

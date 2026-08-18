@@ -2779,7 +2779,8 @@ async function buildHealth() {
     const n = fnById[String(r.id || '')] || fnByName[String(r.name || '').toLowerCase()];
     const who = n ? fnLink(n) : `<b>${escHtml(r.name || '?')}</b>`;
     const st = n && n.stats ? ` \u00b7 ${n.stats.lines} lines, ${n.stats.apiCalls} outbound call(s)` : '';
-    return { html: `${who} <span class="meta">${escHtml(String(r.count))} run(s) in 24h${st}</span>` };
+    const cnt = r.count == null ? 'an unknown number of' : escHtml(String(r.count));
+    return { html: `${who} <span class="meta">${cnt} run(s) in 24h${st}</span>` };
   });
   const runsDesc = fx.runs
     ? `The busiest ${fx.runs.length} functions in the 24 hours before ${escHtml(fmtDate(fx.at))}, as Zoho counted them - not every function, and not a ranking of anything but frequency.`
@@ -3339,7 +3340,7 @@ async function aiExecTool(name, input) {
       + (d.usage ? `; in the 24 hours before that: ${d.usage.success ?? 'unknown'} run(s), ${d.usage.failure ?? 'unknown'} failed` : '')
       + (d.credits ? `; ${d.credits.used ?? 'unknown'} counted against a ceiling of ${d.credits.limit ?? 'unknown'}` : '')
       + (Array.isArray(d.runs) && d.runs.length
-          ? `. Busiest in that window (a top list, not every function): ${d.runs.slice(0, 8).map((r) => `${r.name} ${r.count}\u00d7`).join(', ')}` : '')
+          ? `. Busiest in that window (a top list, not every function): ${d.runs.slice(0, 8).map((r) => `${r.name} ${r.count == null ? '(count unknown)' : r.count + '\u00d7'}`).join(', ')}` : '')
       + '. The input of each failed run stays in Zoho and is not available here.';
     if (!rows.length) return head + '\nNothing matched.';
     return head + '\n' + aiCap(rows.map((f) => `${f.name} \u00b7 ${f.componentType || '?'} \u00b7 ${f.count}\u00d7 \u00b7 last ${f.lastFailedAt || '?'} \u00b7 ${f.reason || ''}`),
@@ -4919,7 +4920,7 @@ async function openModule(path, layoutId) {
     + `<div style="color:#8ea0bb">display: <span style="color:#e7edf6">${escHtml(m.plural_label || m.singular_label || m.module_name || m.api_name)}</span></div>`
     + `<div style="color:#8ea0bb">api_name: <span style="color:#82d2ff">${escHtml(m.api_name)}</span></div>`
     + `<div style="color:#8ea0bb">generated: <span style="color:#a78bfa">${escHtml(gen)}</span>${nav ? '' : ' <span style=\"color:#fbbf24\">(no records tab)</span>'}</div>`
-    + `<div style="color:#8ea0bb">layouts: <span style="color:#e7edf6">${(m.layouts || []).length}</span>${(m.layouts || []).length ? ' <span style=\"color:#8ea0bb\">(' + (m.layouts || []).map((l) => escHtml(l.name)).join(', ') + ')</span>' : ''}</div>`
+    + `<div style="color:#8ea0bb">layouts: <span style="color:#e7edf6">${(m.layouts || []).length || (m.layouts_read === false ? 'not read' : 0)}</span>${(m.layouts || []).length ? ' <span style=\"color:#8ea0bb\">(' + (m.layouts || []).map((l) => escHtml(l.name)).join(', ') + ')</span>' : ''}</div>`
     + `</div>`;
   const lays = m.layouts || [];
   const selector = lays.length
@@ -4941,7 +4942,9 @@ async function openModule(path, layoutId) {
         + `<td>${escHtml(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
       + `</tbody></table>`
     : `<div class="secttl">Related lists</div><div style="padding:8px 10px;color:var(--muted)">${
-        refusal ? 'Not read either - Zoho would not describe this module.' : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
+        refusal ? 'Not read either - Zoho would not describe this module.'
+        : m.related_read === false ? 'Neither endpoint would answer for this module, so whether it has any is unknown - not that it has none.'
+        : 'None recorded - re-run <b>Pull Modules</b> to fetch them.'}</div>`;
   const refBanner = refusal
     ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
     : '';
@@ -5328,7 +5331,9 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
   const modApiSet = new Set(mods.map((m) => m.api_name));
   const modLink = (api) => (api && modApiSet.has(api)) ? `<a href="#${modAnchor(api)}">${esc(api)}</a>` : esc(api || '');
   const relsHtmlFor = (m) => {
-    const rl = scope.relations ? (m.related_lists || []) : []; if (!rl.length) return '';
+    const rl = scope.relations ? (m.related_lists || []) : [];
+    if (!rl.length) return (scope.relations && m.related_read === false)
+      ? `<p class="note">Related lists: neither endpoint would answer for this module when it was pulled, so whether it has any is unknown.</p>` : '';
     return `<div style="font-weight:700;margin:12px 0 4px;color:#d97706">Related lists (${rl.length}) <span class="none" style="font-weight:400">- API name for zoho.crm.getRelatedRecords()</span></div>`
       + `<table class="ftbl"><thead><tr><th>Relation API</th><th>Label</th><th>Returns</th><th>Type</th></tr></thead><tbody>`
       + rl.map((r) => `<tr><td class="mono"><b>${esc(r.api_name)}</b></td><td>${esc(r.label || '')}</td><td class="mono">${r.module ? modLink(r.module) : esc(r.connected_module || '')}${r.linking_module ? ` <span class="none">via ${esc(r.linking_module)}</span>` : ''}</td><td>${esc(r.type || '')}${r.visible === false ? ' \u00b7 hidden' : ''}</td></tr>`).join('')
@@ -5750,6 +5755,8 @@ function buildExportMarkdown(d, scope) {
       md += `#### Related lists (use the API name in zoho.crm.getRelatedRecords)\n\n| API name | Label | Target module | Type |\n|---|---|---|---|\n`;
       m.related_lists.forEach((r) => { md += `| \`${_mdCell(r.api_name)}\` | ${_mdCell(r.label || '')} | ${_mdCell(r.module || r.connected_module || '')}${r.linking_module ? ' via ' + _mdCell(r.linking_module) : ''} | ${_mdCell(r.type || '')}${r.visible === false ? ' (hidden)' : ''} |\n`; });
       md += '\n';
+    } else if (scope.relations && m.related_read === false) {
+      md += 'Related lists: neither endpoint would answer for this module when it was pulled, so whether it has any is unknown.\n\n';
     }
     (scope.layouts ? (m._layouts || []) : []).forEach((L) => {
       md += `#### Layout: ${_mdCell(L.name || String(L.id))}${L.visible === false ? ' (hidden)' : ''} - ${(L.sections || []).length} sections\n\n`;
