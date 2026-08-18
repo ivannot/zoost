@@ -621,9 +621,17 @@
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.source !== 'DELUGE_IDE_HOOK' || d.type !== 'saved') return;
-    if (!/^\d{1,20}$/.test(String(d.id || ''))) return;
-    chrome.runtime.sendMessage({ type: 'saved', id: String(d.id) }).catch(() => {});
+    if (!d || d.source !== 'DELUGE_IDE_HOOK') return;
+    // Three kinds, and only three. A save and a deletion name a function, so the id is still held to
+    // digits - a forged notice can therefore only ask for a re-read or a removal of something whose
+    // id exists. A creation names nothing: it can only ask the panel to go and look at the list,
+    // which it may do at any time anyway.
+    if (d.type === 'saved' || d.type === 'deleted') {
+      if (!/^\d{1,20}$/.test(String(d.id || ''))) return;
+      chrome.runtime.sendMessage({ type: d.type, id: String(d.id) }).catch(() => {});
+      return;
+    }
+    if (d.type === 'created') chrome.runtime.sendMessage({ type: 'created' }).catch(() => {});
   });
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     // Only a real CRM-origin frame acts. With all_frames:true the scripts also load into sandboxed /

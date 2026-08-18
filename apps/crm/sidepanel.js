@@ -3568,6 +3568,8 @@ function aiOpenSettings() { openSettings('#ai'); }   // sent from the assistant,
 // ---------- save-sync ----------
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'saved') syncOne(msg.id);
+  if (msg?.type === 'deleted') removeOne(msg.id);
+  if (msg?.type === 'created') noticeCreated();
   if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
   // The diagram window asking for the other drawing. It has no folder access of its own - by design,
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
@@ -3587,6 +3589,65 @@ async function buildGraphFor(kind) {
     setStatus(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
+}
+/** A function deleted in Zoho, removed from the mirror while you watch.
+ *
+ *  The id is in the URL of the DELETE, so this one knows exactly what went - no re-reading and no
+ *  guessing. It prunes the two files and the index row, which is what a full pull would have done
+ *  eventually; until now «eventually» meant the next pull, and a function you had just deleted sat
+ *  in the tree looking real.
+ *
+ *  Same guards as a save, and for the same reason: this writes to the workspace, so it must refuse
+ *  when the tab is not the org this workspace is bound to. */
+async function removeOne(id) {
+  if (mismatchRefuse()) return;
+  if (!dir || !(await hasPerm(dir))) return;
+  await refreshContext();
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  const key = String(id);
+  const info = index.get(key);
+  const row = treeData.find((e) => String(e.id) === key);
+  const path = (info && info.path) || (row && row.path);
+  if (!path) { setStatus(`A function was deleted in Zoho (${key}) - it was not in this workspace.`, 'ok'); return; }
+  try {
+    for (const p of [path, path.replace(/\.dg$/, '.meta.json')]) { try { await removeFile(p); } catch (_) {} }
+    // The index is the tree's first source, so a row left in it comes back on the next open.
+    try {
+      const idx = JSON.parse(await readFile('functions/index.json'));
+      if (Array.isArray(idx)) await writeFile('functions/index.json',
+        JSON.stringify(idx.filter((e) => String(e.id) !== key), null, 2));
+    } catch (_) {}
+    index.delete(key);
+    if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
+    await rebuildTree();
+    setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok');
+  } catch (e) { setStatus('Could not remove it locally: ' + errText(e), 'warn'); }
+}
+
+/** A function created in Zoho, fetched while you watch.
+ *
+ *  The creation carries its id only in the response body, which the hook deliberately does not read,
+ *  so what arrives here is «one was created» and nothing else. The answer is to ask Zoho for the
+ *  list - the same call a pull starts with - write it down, and then fetch what is on the list and
+ *  not on disk. That is `downloadMissing()`, which already exists and already reports its own
+ *  failures, so the new function arrives by the path every other function arrives by.
+ *
+ *  It costs one list call. Reading the id out of the body would have saved it and turned the hook
+ *  into a source of data; this keeps it a hint that can only ever ask for a re-read. */
+async function noticeCreated() {
+  if (mismatchRefuse()) return;
+  if (!dir || !(await hasPerm(dir))) return;
+  await refreshContext();
+  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+  if (pullActive) return;                 // a pull is already doing exactly this, and more
+  try {
+    setStatus('A function was created in Zoho - looking for it\u2026', 'busy');
+    const r = await toBridge({ cmd: 'listFunctions' });
+    if (!r?.ok) throw bridgeError(r, 'list failed');
+    await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
+    await rebuildTree();
+    await downloadMissing();
+  } catch (e) { setStatus('Could not fetch the new function: ' + errText(e), 'warn'); }
 }
 async function syncOne(id) {
   if (mismatchRefuse()) return;

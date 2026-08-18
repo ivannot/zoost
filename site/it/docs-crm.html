@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:f2d6ca2559bbbbbc -->
+<!-- translated-from: site/docs-crm.html sha256:e4a1bee3f7f47150 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · aggiornata il <span class="dd" data-stamp="updated">17 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · aggiornata il <span class="dd" data-stamp="updated">18 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -171,11 +171,12 @@
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (nella barra delle modalità) aggiorna solo il tipo corrente - quello
       fra Functions, Modules, Workflows, Schedules e Connections che è la scheda attiva - più veloce quando
       hai appena cambiato una cosa sola.</li>
-    <li><b>Sincronizzazione automatica al salvataggio</b>: quando salvi una funzione nell'editor di Zoho, il
-      file locale corrispondente si aggiorna da sé. Non devi fare niente.</li>
-    <li>Le funzioni cancellate in Zoho vengono rimosse in locale <b>al pull successivo</b> (la cancellazione
-      viene riconciliata al momento del pull, non intercettata dal vivo come il salvataggio), così la
-      cartella resta un mirror fedele invece di un mucchio che si accumula.</li>
+    <li><b>Sincronizzazione automatica mentre lavori</b>: salvi una funzione nell'editor di Zoho e il file
+      locale corrispondente si aggiorna da sé; ne crei una e Zoost la scarica; ne cancelli una e sparisce
+      dal mirror. Non devi fare niente.<br>
+      Quello che vede è quello che fai <b>tu</b> in quella scheda. Una funzione creata o cancellata da un
+      collega, o modificata da te in un'altra finestra, viene riconciliata al <b>Pull all</b> successivo -
+      Zoost si accorge di quello che succede davanti a lui, non è sempre in pari con la piattaforma.</li>
   </ul>
   <p>Layout e related list arrivano con <b>Pull all</b> o con <b>Pull</b> in modalità Modules. Se la matrice
     dei layout o il catalogo delle relazioni sembra vuoto, quel workspace è stato scaricato con una versione
