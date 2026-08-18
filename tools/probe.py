@@ -428,6 +428,31 @@ CRM = """
       }
     }
 
+    // Refresh says «read every file again». It used to re-read only the rows the panel was holding -
+    // the functions tree's - so pressing it from another tab did nothing at all. Driven here from
+    // Modules, with a source rewritten behind the panel's back, which is exactly the write Refresh
+    // exists to answer.
+    {
+      const fn3 = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+      await ensureGraph();
+      await writeFile(fn3.path, 'void r(){ standalone.log(); }  // rewritten behind the panel\\n');
+      // Forget that we know a write happened: this is the case where somebody else made it.
+      _dirtySource.clear(); _dirtyMeta.clear();
+      const segM2 = [...document.querySelectorAll('.seg')].find((s) => /Modules/.test(s.textContent));
+      if (segM2) { segM2.click(); await wait(1000); }
+      // The reported state: the panel opened on another tab, so the functions tree was never loaded
+      // in this workspace and there are no rows for the old mechanism to mark.
+      treeData = [];
+      $('refresh').click(); await wait(1800);
+      const segF2 = [...document.querySelectorAll('.seg')].find((s) => /Functions/.test(s.textContent));
+      if (segF2) { segF2.click(); await wait(1400); }
+      graphCache = null;
+      const g3 = await ensureGraph();
+      const n3 = Object.values(g3.nodes).find((n) => n.file === fn3.path);
+      if (!n3 || !(n3.refs || []).includes('standalone.log'))
+        say('Refresh from another tab did not re-read a file changed behind the panel');
+    }
+
     // The whole path, not its parts: a summary written by an older reader on disk, an ordinary open,
     // and the numbers that come back. `modulesUnknown` changed meaning without the version moving,
     // and a workspace indexed before that answered the old number for ever - because nothing re-reads

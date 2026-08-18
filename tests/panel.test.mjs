@@ -5660,3 +5660,35 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/pullDepth/.test(assigns[0]), 'the one assignment does not follow the count');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Refresh promises «read every file again» and delivered «re-read the rows this panel is holding» -
+// which are the functions tree's, filled only by a load of that tab and never reset per workspace.
+// Open the panel on Modules, let an editor or a `git checkout` change a `.dg`, press Refresh:
+// nothing marked, nothing re-read, and the one control that answers the write we cannot see did
+// nothing and said nothing. The marks were the wrong instrument - they name paths, and what is being
+// distrusted is the whole summary.
+{
+  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('distrust is a state of the load, not the rows in memory', () => {
+    const fn = src.slice(src.indexOf('function distrustEverything'), src.indexOf('\n}', src.indexOf('function distrustEverything')));
+    assert.ok(/distrustSummary = true/.test(fn), 'it still depends on what the panel happens to hold');
+  });
+
+  test('both readers ignore the summary while it is distrusted', () => {
+    // Readers *of the summary*: another `const known` in this file is the workspace list, which has
+    // nothing to do with it - derived by what they mention rather than by their variable name.
+    const readers = (src.match(/const known = \([^;]+;/g) || []).filter((r) => /SUMMARY_V/.test(r));
+    assert.equal(readers.length, 2, `expected two readers of the summary, found ${readers.length}`);
+    for (const r of readers) assert.ok(/!distrustSummary/.test(r), `a reader still trusts it: ${r.slice(0, 60)}`);
+  });
+
+  test('the flag is put down only after the re-read has been written back', () => {
+    const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('\nasync function', src.indexOf('async function rebuildTree') + 10));
+    const saved = load.indexOf('saveMetaIndex'), cleared = load.indexOf('distrustSummary = false');
+    assert.ok(cleared > saved && saved > 0, 'it is put down before the summary has been rewritten');
+    assert.ok(/stale_summary = distrustSummary \|\|/.test(load),
+              'a full re-read does not force the summary to be rewritten, so the next open starts over');
+  });
+}

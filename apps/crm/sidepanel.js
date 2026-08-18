@@ -549,7 +549,20 @@ let _dirtySource = new Set();
  *  the metas and the sources - and would never arrive at all on a workspace where the diagram is
  *  never built. Marking every known path uses the machinery that already exists, and each writer
  *  gives up its own marks as it describes them. One mechanism, no lifetime to reason about. */
+// Refresh says «read every file again», and it used to mean «re-read the rows this panel happens to
+// be holding» - which are the functions tree's, filled only by a load of that tab. Open the panel on
+// Modules, let an editor or a `git checkout` change a `.dg`, press Refresh: nothing was marked,
+// nothing was re-read, and the control that exists to answer the write we cannot see did nothing
+// and said nothing. Reported, and the marks were never the right instrument: they name paths, and
+// what the reader is distrusting is the whole summary.
+//
+// So it is a state of the *load* rather than a set of paths. The two readers below treat the file as
+// absent for one pass, which re-reads every meta and every source from disk, and the flag is put
+// down when the tree load that honoured it finishes - not before, or a second load started in the
+// middle would trust what the first has not yet rewritten.
+let distrustSummary = false;
 function distrustEverything() {
+  distrustSummary = true;
   treeData.forEach((r) => { if (r.path) { _dirtyMeta.add(r.path); _dirtySource.add(r.path); } });
 }
 /** What a write means for everything read from that file and still held in memory.
@@ -1050,7 +1063,7 @@ async function rebuildTree() {
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
   if (!current()) return;
-  const known = (summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
+  const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   const missing = [];
   for (const mp of metaPaths) {
     const dg = mp.replace(/\.meta\.json$/, '.dg');
@@ -1066,7 +1079,7 @@ async function rebuildTree() {
   // The summary is only worth rewriting when it is wrong: something new to describe, or something it
   // still describes that has gone. Otherwise opening the panel would write to the workspace every
   // time, which is a change to a folder the reader has under version control.
-  let stale_summary = missing.length > 0 || Object.keys(known).length !== metaPaths.length;
+  let stale_summary = distrustSummary || missing.length > 0 || Object.keys(known).length !== metaPaths.length;
   if (missing.length) setStatus(`${treeData.length} functions - reading ${missing.length} detail(s)\u2026`, 'busy');
   renderTree();
 
@@ -1111,6 +1124,9 @@ async function rebuildTree() {
   if (!current()) return;
   renderTree(); updateMissingButton(); attachFnStats();
   if (stale_summary) await saveMetaIndex(metaPaths);
+  // Put down here, not when Refresh was pressed: the pass that re-read everything has now written
+  // the summary back, so the next load may believe it again.
+  distrustSummary = false;
   const dl = treeData.filter((e) => e.downloaded).length;
   setStatus(`${treeData.length} functions (${dl} downloaded).`, 'ok');
   await refreshContext();
@@ -1268,7 +1284,7 @@ async function loadGraph() {
   const dirtySrc = new Set(_dirtySource);   // snapshot, as the tree load does
   let summary = null;
   try { summary = JSON.parse(await readFile(META_INDEX)); } catch (_) {}
-  const known = (summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
+  const known = (!distrustSummary && summary && summary.v === SUMMARY_V && summary.files) ? summary.files : {};
   let read = 0;
   for await (const p of walk(dir)) {
     if (!p.endsWith('.dg')) continue;
