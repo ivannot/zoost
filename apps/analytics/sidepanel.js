@@ -399,7 +399,6 @@ function dropWorkspaceState() {
   aiMessages = []; aiSeedWarned = false;
   aiRenderMessages();
   return had;
-  wsGen++;                              // everything in flight belongs to the workspace we just left
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.
  *
@@ -418,6 +417,12 @@ function resetView() {
 
 async function selectWorkspace(w) {
   const sameWs = bound && bound.workspace === w.id;
+  // The generation moves **here**, before the handle does and before anything awaits: an operation
+  // still running belongs to the workspace it started in, and it must be able to tell. It used to
+  // move inside `dropWorkspaceState()`, which is also what Clear calls - so clearing a conversation
+  // interrupted a pull, and in Analytics the line sat after a `return` and never ran at all, which
+  // made every guard in that file always true. Both reported.
+  wsGen++;
   dir = w.handle; forgetDirs();
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
   await window.idbHandle.set('activeWsAnalytics', w.id);
@@ -810,8 +815,8 @@ async function pullOne(id) {
     if (!deps) deps = {};
     deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     pullFailed = pullFailed.filter((f) => f.id !== id);
-    if (!sameWs(gen)) return;   // you changed workspace while this was reading
-    await writeLineage(); if (!sameWs(gen)) return; await writeSql();
+    if (!inSameWorkspace(gen)) return;   // you changed workspace while this was reading
+    await writeLineage(); if (!inSameWorkspace(gen)) return; await writeSql();
     setBusy(false, `«${v.name}» re-read.`); $('status').className = 'ok';
     render(); await openDetail(id);
   } catch (e) {
@@ -893,7 +898,7 @@ async function writeToDisk(info) {
 // started. Reported there and reproduced here - a re-read begun in one workspace wrote its lineage
 // and its SQL into the next.
 let wsGen = 0;
-const sameWs = (gen) => gen === wsGen;
+const inSameWorkspace = (gen) => gen === wsGen;
 
 async function loadFromDisk() {
   readFailed = null;

@@ -5525,10 +5525,22 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 {
   for (const app of ['crm', 'analytics']) {
     const src = read(`apps/${app}/sidepanel.js`);
-    test(`${app}: the workspace has a generation, and leaving one moves it`, () => {
+    test(`${app}: the generation moves at the switch, before the handle and before any await`, () => {
       assert.ok(/let wsGen = 0;/.test(src), 'there is nothing to compare against');
+      // Where it moves is the whole of it. It was in `dropWorkspaceState()`, which Clear also calls
+      // - so clearing a conversation interrupted a pull - and in one file it sat after the `return`
+      // and never ran, which made every guard in it always true. Both reported. And it must move
+      // *before* the new handle is assigned, or an operation from the old workspace passes its
+      // check while already writing through the new folder.
+      const bump = src.indexOf('wsGen++');
+      assert.ok(bump > 0, 'the generation never moves');
       const drop = src.slice(src.indexOf('function dropWorkspaceState'), src.indexOf('\n}', src.indexOf('function dropWorkspaceState')));
-      assert.ok(/wsGen\+\+/.test(drop), 'the generation does not move when the workspace does');
+      assert.ok(!/wsGen\+\+/.test(drop), 'clearing the conversation still moves the generation');
+      const line = src.slice(0, bump).split('\n').length;
+      const around = src.split('\n').slice(line - 1, line + 6).join('\n');
+      assert.ok(/dir = w\.handle/.test(around), 'the generation does not move where the folder changes');
+      assert.ok(around.indexOf('wsGen++') < around.indexOf('dir = w.handle'),
+                'the folder changes before the generation does');
     });
   }
 

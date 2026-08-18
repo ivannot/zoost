@@ -4115,7 +4115,6 @@ function dropWorkspaceState() {
   // workspace was retried against the same path in the next, which is a file belonging to another
   // org. The queue goes with the workspace it belongs to.
   failedRemovals.clear();
-  wsGen++;                              // everything in flight belongs to the workspace we just left
   aiRenderMessages();
   return had;
 }
@@ -4149,6 +4148,12 @@ async function activate(w, viaGesture) {
   // setEnabled(true), so `isSample()` was still answering about the *previous* workspace and the
   // per-type Pull came back on - «fields first, state second», which this repository already
   // records in its mirror image. The two are one fact about one workspace; they move together.
+  // The generation moves **here**, before the handle does and before anything awaits: an operation
+  // still running belongs to the workspace it started in, and it must be able to tell. It used to
+  // move inside `dropWorkspaceState()`, which is also what Clear calls - so clearing a conversation
+  // interrupted a pull, and in Analytics the line sat after a `return` and never ran at all, which
+  // made every guard in that file always true. Both reported.
+  wsGen++;
   dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
   await window.idbHandle.set('activeWs', w.id); setEnabled(true);
   oldLayout = await hasOldLayout(w.handle);
