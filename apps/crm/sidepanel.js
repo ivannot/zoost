@@ -1333,7 +1333,17 @@ async function saveGraphFacts(nodes, g) {
   // build was walking the folder keeps its mark and is read by the next one.
   nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
 }
-async function ensureGraph() { if (!graphCache) graphCache = await loadGraph(); return graphCache; }
+async function ensureGraph() {
+  if (graphCache) return graphCache;
+  // The *result* was cached after the await, so a build begun in one workspace finished into the
+  // next - and `saveGraphFacts` then wrote its readings into that workspace's summary. What comes
+  // back for a folder we have left is thrown away rather than kept.
+  const gen = wsGen;
+  const g = await loadGraph();
+  if (!sameWs(gen)) return g;
+  graphCache = g;
+  return graphCache;
+}
 function makeCallResolver(g) {
   const nodes = g.nodes || {}, byName = {};
   Object.values(nodes).forEach((n) => { (byName[n.name] ||= []).push(n); });
@@ -2472,6 +2482,7 @@ async function contentSearch() {
 
 // ---------- pull / graph ----------
 async function pullAll() {
+  const gen = wsGen;   // the workspace this pull belongs to
   if (mismatchRefuse()) return;
   try {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
@@ -2494,7 +2505,9 @@ async function pullAll() {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
       if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await readFile(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
     }
-    let prunedF = 0; for (const p of rmF) { try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
+    // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
+    // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
+    let prunedF = 0; for (const p of rmF) { if (!sameWs(gen)) return; try { await removeFile(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
     // If you were reading one of the functions the pull has just pruned, the pane is showing
     // something that no longer exists - in Zoho or on disk. Reported: it stayed open, with the code
     // of a deleted function in it. It closes with the file, the same way a live deletion closes it.
@@ -2503,6 +2516,10 @@ async function pullAll() {
     }
     // patchCfg, not writeCfg: this file also holds the access verdicts and the workspace's own
     // name, and a whole-object write here drops both. The trap arriving a third time.
+    // The org's identity is the one thing that must never land in another folder: written there,
+    // two workspaces answer to the same id and only a hand-edited `.zoost.json` separates them
+    // again. Checked immediately before, because everything above it awaited.
+    if (!sameWs(gen)) return;
     await patchCfg({ org: ctx.org, instance: ctx.instance, base: ctx.origin, lastPull: new Date().toISOString() });
     // Every field the binding carries, or the guard that reads one of them silently stops firing.
     // A pull cannot run on a sample - guardOk refuses it - so this can only ever be false here, and
@@ -4115,6 +4132,11 @@ function dropWorkspaceState() {
   // workspace was retried against the same path in the next, which is a file belonging to another
   // org. The queue goes with the workspace it belongs to.
   failedRemovals.clear();
+  // Both are keyed by Zoho ids and neither was dropped here: searching `in: code` in the next
+  // workspace missed every one of its functions, and the module names resolved against the previous
+  // org's index - so a module the new workspace has and the old one did not vanished from the chips
+  // and from both reports, silently, as an absence.
+  codeCache = null; modNamesCache = null;
   aiRenderMessages();
   return had;
 }
@@ -6483,6 +6505,7 @@ function runtimeSummary(n) {
            : 'Read from Zoho \u00b7 nothing failing there';
 }
 async function pullFailures() {
+  const gen = wsGen;   // the workspace this reading belongs to
   if (mismatchRefuse()) return;
   try {
     pullActive = true;
@@ -6496,6 +6519,7 @@ async function pullFailures() {
     // One file for everything Zoho knows about how this org *runs*: what failed, how much ran, and
     // what it cost. It keeps the `failures/` name because that is what a reader looks for, and the
     // shape says the rest.
+    if (!sameWs(gen)) return;
     await writeFile('failures/index.json', JSON.stringify({ at: r.at, usage: r.usage || null,
       runs: r.runs || null, credits: r.credits || null, failures: r.failures || [] }, null, 2));
     await noteAccess('failures', null);
@@ -6757,7 +6781,7 @@ async function pullHealthRuntime() {
   finally { b.disabled = false; }
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; await rebuildActive();
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; modNamesCache = null; await rebuildActive();
   // The message that reports a removal it could not finish says «click Refresh», so Refresh has
   // to be the thing that tries again - a remedy naming a control that does something else is
   // worse than no remedy, because the reader does it and believes it worked.

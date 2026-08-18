@@ -5566,3 +5566,38 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Derived from the writes, because a list of function names is a list somebody has to remember. The
+// workspace selector is never disabled, so every await in every pull is a place the folder can
+// change underneath - and `writeFile`/`removeFile` resolve their path against whatever `dir` is at
+// the moment they run, not the one the operation started in.
+{
+  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('every pull that writes captures the workspace it belongs to', () => {
+    // The set comes from the source: a pull added tomorrow is measured rather than remembered.
+    const names = [...src.matchAll(/async function (pull[A-Z]\w*)\s*\(/g)].map((m) => m[1]);
+    assert.ok(names.length >= 6, `only found ${names.length} pulls - the pattern has changed`);
+    for (const name of names) {
+      const at = src.indexOf(`async function ${name}`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      if (!/writeFile\(|removeFile\(|patchCfg\(/.test(body)) continue;   // reads nothing to protect
+      assert.ok(/const gen = wsGen;/.test(body), `${name} writes without remembering its workspace`);
+      assert.ok(/sameWs\(gen\)/.test(body), `${name} never asks whether it is still there`);
+    }
+  });
+
+  test('a graph built for one workspace is not kept for another', () => {
+    const fn = src.slice(src.indexOf('async function ensureGraph'), src.indexOf('\n}', src.indexOf('async function ensureGraph')));
+    assert.ok(/const gen = wsGen;/.test(fn), 'the build does not remember where it started');
+    assert.ok(/if \(!sameWs\(gen\)\) return g;/.test(fn), 'the result is cached whatever workspace we are in now');
+  });
+
+  test('every cache made of a workspace\'s files is dropped with it', () => {
+    const drop = src.slice(src.indexOf('function dropWorkspaceState'), src.indexOf('\n}', src.indexOf('function dropWorkspaceState')));
+    for (const c of ['graphCache', 'codeCache', 'modNamesCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache']) {
+      assert.ok(new RegExp(c + '\\s*=\\s*null').test(drop), `${c} survives a change of workspace`);
+    }
+  });
+}
