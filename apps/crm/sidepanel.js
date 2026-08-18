@@ -2484,7 +2484,7 @@ async function pullAll() {
     // pruning had already run, so the warning described files that were already gone.
     if (r.capped) {
       setStatus(`Zoho returned a partial list (stopped at ${r.total}) - nothing was removed. Try again.`, 'warn');
-      await rebuildTree(); pullActive = false; return;
+      await rebuildTree(); endPull(); return;
     }
     await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
     // reflect deletions: remove local files for functions no longer in Zoho
@@ -2518,7 +2518,7 @@ async function pullAll() {
     // introduced the day the ceiling was - reported by an assistant reading the repository.
     if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
     await noteAccess('functions', null);
-  } catch (e) { await notePullFailure('functions', e); } finally { pullActive = false; if (pendingAfterPull) { pendingAfterPull = false; reconcileFunctions(); } }
+  } catch (e) { await notePullFailure('functions', e); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
 //
@@ -3634,6 +3634,15 @@ async function buildGraphFor(kind) {
  *  both write the index.
  */
 let reconciling = null, reconcileAgain = false, pendingAfterPull = false;
+
+// Ending a pull is one act, not five. A notice that arrived while a pull was running is left for
+// the pull to consume - and only `pullAll` consumed it, so a change during a modules, workflows,
+// schedules or failures pull sat in the flag until something else happened to ask. One helper, used
+// by everything that owns `pullActive`, so a pull added tomorrow cannot forget the half nobody sees.
+function endPull() {
+  pullActive = false;
+  if (pendingAfterPull) { pendingAfterPull = false; reconcileFunctions(); }
+}
 function reconcileFunctions() {
   // Single-flight is not enough on its own: a create or a delete arriving *while* the list is being
   // read is a change the answer in flight cannot contain, and returning the promise already running
@@ -3641,6 +3650,7 @@ function reconcileFunctions() {
   // by one more round afterwards - which also covers the notice that arrives while a pull is busy.
   if (reconciling) { reconcileAgain = true; return reconciling; }
   reconciling = (async () => {
+    const myDir = dir;                     // before anything awaits: the guards below await too
     if (mismatchRefuse()) return;
     if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
     if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
@@ -3654,6 +3664,7 @@ function reconcileFunctions() {
     try {
       setStatus('Something changed in Zoho - checking\u2026', 'busy');
       const r = await toBridge({ cmd: 'listFunctions' });
+      if (dir !== myDir) return;           // the answer describes the workspace we were in, not this one
       if (!r?.ok) throw bridgeError(r, 'list failed');
       // A list that stopped early is not a statement about what exists: it is a statement about how
       // far the reading got. Writing it as the index, or pruning what is missing from it, deletes
@@ -3672,12 +3683,13 @@ function reconcileFunctions() {
       // any other reason would otherwise be taken for «already gone» and the entry dropped.
       // `removeFile` on something absent throws NotFound, which *is* the answer we wanted.
       for (const p of [...failedRemovals]) {
+        if (dir !== myDir) return;
         try { await removeFile(p); failedRemovals.delete(p); }
         catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
       }
       const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
       let failed = 0;
-      for (const e of gone) failed += await pruneFunction(e.id) ? 0 : 1;
+      for (const e of gone) { if (dir !== myDir) return; failed += await pruneFunction(e.id) ? 0 : 1; }
       await rebuildTree();
       await downloadMissing();
       if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
@@ -3746,6 +3758,10 @@ function syncOne(id) {
 }
 
 async function syncOneNow(id) {
+  // The folder this started in. Everything below awaits Zoho, and the workspace selector stays
+  // usable the whole time: without this the answer for A was written into B, both files, silently.
+  // A handle identifies it exactly - the same object or a different workspace, no name to compare.
+  const myDir = dir;
   if (mismatchRefuse()) return;
   if (!dir || !(await hasPerm(dir))) return;
   await refreshContext();
@@ -3760,6 +3776,7 @@ async function syncOneNow(id) {
   try {
     setStatus(`Save detected (${id}), syncing…`, 'busy');
     const r = await toBridge({ cmd: 'fetchOne', id, category: info?.category, source: info?.source });
+    if (dir !== myDir) return;             // you moved: this answer belongs to a folder we have left
     if (!r?.ok || !r.file) throw new Error(r?.error || 'detail not found');
     const f = r.file;
     await writeFile(`functions/${f.folder}/${f.stem}.dg`, f.dg); await writeFile(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
@@ -4063,6 +4080,10 @@ function dropWorkspaceState() {
   aiMessages = []; aiSeedWarned = false;
   graphCache = null; moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
   healthData = null;   // an audit is about one workspace, and it was the one thing left off this list
+  // Relative paths mean nothing outside the folder they came from: a removal that failed in one
+  // workspace was retried against the same path in the next, which is a file belonging to another
+  // org. The queue goes with the workspace it belongs to.
+  failedRemovals.clear();
   aiRenderMessages();
   return had;
 }
@@ -4326,10 +4347,17 @@ $('wsdel').onclick = async () => {
 const findByMode = {};
 
 function setMode(mode) {
-  if (viewMode && viewMode !== mode) findByMode[viewMode] = $('find').value;
+  // The text and *how* it is searched are one thing: putting away «needle» without «in: code» and
+  // handing it back as a name search means the same box quietly means something else on the way
+  // back. Reported. Saved and restored together.
+  if (viewMode && viewMode !== mode) findByMode[viewMode] = { text: $('find').value, mode: searchMode };
   viewMode = mode;
   // Restored, not cleared: coming back to a tab you were searching in should find it as you left it.
-  $('find').value = findByMode[mode] || '';
+  const back = findByMode[mode] || { text: '', mode: 'name' };
+  $('find').value = back.text;
+  if (mode === 'functions' && back.mode === 'content') {
+    searchMode = 'content'; $('smode').textContent = 'in: code'; $('smode').classList.add('on');
+  }
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
@@ -4526,7 +4554,7 @@ async function pullModules() {
     await rebuildModules();
     setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}.`, 'ok');
     await noteAccess('modules', null);
-  } catch (e) { await notePullFailure('modules', e); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('modules', e); } finally { endPull(); }
 }
 
 // ---------- modules: tree ----------
@@ -5928,7 +5956,7 @@ async function pullSchedules() {
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e); return; }
     await writeFile('schedules/index.json', JSON.stringify(r.entries, null, 2));
     await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
-    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · capped at 4000 - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
+    setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null);
   } catch (e) { await notePullFailure('schedules', e); }
 }
@@ -6427,7 +6455,7 @@ async function pullFailures() {
     setStatus(runtimeSummary((r.failures || []).length), 'ok');
     if (viewMode === 'functions') { failIndex = null; await rebuildTree(); }
   } catch (e) { await notePullFailure('failures', e); }
-  finally { pullActive = false; }
+  finally { endPull(); }
 }
 
 async function pullWorkflows() {
@@ -6441,6 +6469,14 @@ async function pullWorkflows() {
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Listing workflows\u2026', 'busy');
     const r = await toBridge({ cmd: 'listWorkflows' }); if (!r?.ok) throw new Error(r?.error || 'list failed');
+    // Same rule the functions pull learned: a list that stopped early describes the reading, not the
+    // org. Writing it as the index and pruning what is missing removes workflows that still exist -
+    // and the warning came *after* the pruning, so it described rules already gone.
+    if (r.capped) {
+      setStatus(`Zoho returned a partial list of workflows (stopped at ${r.total || 'the limit'}) - nothing was removed.`, 'warn');
+      await loadWorkflowIndex(); if (viewMode === 'workflows') renderWorkflows();
+      return;
+    }
     await writeFile('workflows/index.json', JSON.stringify(r.entries, null, 2));
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
     let prunedW = 0;
@@ -6456,9 +6492,9 @@ async function pullWorkflows() {
     if (actionUsers === null) actionUsers = await buildActionUsers();
     if (viewMode === 'actions') renderActions();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
-    if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list capped at 4000 - some workflows may be missing', 'warn');
+    if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
     await noteAccess('workflows', null);
-  } catch (e) { await notePullFailure('workflows', e); } finally { pullActive = false; }
+  } catch (e) { await notePullFailure('workflows', e); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {
   if (sampleRefuse()) return;

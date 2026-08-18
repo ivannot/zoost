@@ -5334,8 +5334,11 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const panel = read('apps/crm/sidepanel.js');
   const fn = panel.slice(panel.indexOf('function setMode'), panel.indexOf('\n}', panel.indexOf('function setMode')));
   test('each tab keeps its own Find', () => {
-    assert.ok(/findByMode\[viewMode\] = \$\('find'\)\.value/.test(fn), 'leaving a tab throws away what was typed in it');
-    assert.ok(/\$\('find'\)\.value = findByMode\[mode\]/.test(fn), 'arriving on a tab does not restore its own');
+    assert.ok(/findByMode\[viewMode\] = \{ text: \$\('find'\)\.value, mode: searchMode \}/.test(fn),
+              'leaving a tab throws away what was typed in it, or how it was being searched');
+    assert.ok(/\$\('find'\)\.value = back\.text/.test(fn), 'arriving on a tab does not restore its own');
+    assert.ok(/back\.mode === 'content'/.test(fn),
+              'the text comes back as a name search, so the same box means something else');
     assert.ok(fn.indexOf("findByMode[viewMode]") < fn.indexOf('viewMode = mode'),
               'it saves after the mode has already changed, so it saves under the wrong tab');
   });
@@ -5392,8 +5395,13 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // Left for the pull to consume, not re-armed: re-running while the pull is busy is a tight
     // loop of permission and context checks during the most expensive thing the panel does.
     assert.ok(/pullActive\) \{ pendingAfterPull = true; return; \}/.test(r), 'a notice during a pull is dropped');
-    const pull = fn('async function pullAll');
-    assert.ok(/pendingAfterPull.*reconcileFunctions\(\)/.test(pull), 'the pull never honours it');
+    // Honoured by one helper that every pull ends through, not by `pullAll` alone: a change during a
+    // modules or workflows pull used to sit in the flag until something else happened to ask.
+    const end = fn('function endPull');
+    assert.ok(/pendingAfterPull.*reconcileFunctions\(\)/.test(end), 'the pull never honours it');
+    const panelSrc = read('apps/crm/sidepanel.js');
+    assert.ok(!/finally \{ pullActive = false; \}/.test(panelSrc),
+              'a pull still ends on its own, so it cannot honour a notice');
   });
 
   test('a removal that failed is tried again, not forgotten', () => {
@@ -5421,5 +5429,49 @@ test('every cache in a shipped panel is named by something that tests it', () =>
               'a click no longer says it is one');
     const sel = panel.slice(panel.indexOf('function applySelection'), panel.indexOf('\n}', panel.indexOf('function applySelection')));
     assert.ok(/if \(byClick\) return;/.test(sel), 'a click moves the list again');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The workspace selector stays usable while an operation is talking to Zoho, so every await is a
+// place the folder underneath can change. Reproduced by an outside review: a fetch started in one
+// workspace wrote both of its files into the next. A handle identifies a folder exactly - the same
+// object, or a different workspace - so it is captured before the first await and compared after.
+{
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
+
+  test('an answer is not written into a workspace you have left', () => {
+    for (const name of ['async function syncOneNow', 'function reconcileFunctions']) {
+      const body = fn(name);
+      assert.ok(/const myDir = dir;/.test(body), `${name} does not remember which folder it started in`);
+      assert.ok(/dir !== myDir/.test(body), `${name} never checks the folder is still the same`);
+      assert.ok(body.indexOf('const myDir = dir;') < body.indexOf('await '),
+                `${name} captures the folder after its first await`);
+    }
+  });
+
+  test('a failed removal does not follow you into another workspace', () => {
+    // Relative paths mean nothing outside the folder they came from: retrying
+    // `functions/standalone/gone.dg` in the next workspace is a file belonging to another org.
+    const drop = fn('function dropWorkspaceState');
+    assert.ok(/failedRemovals\.clear\(\)/.test(drop), 'the retry queue survives a change of workspace');
+  });
+
+  test('a partial list of workflows removes nothing either', () => {
+    const p = fn('async function pullWorkflows');
+    const guard = p.indexOf('r.capped');
+    assert.ok(guard > 0, 'the truncation is never read');
+    for (const danger of ["writeFile('workflows/index.json'", 'removeFile']) {
+      const at = p.indexOf(danger);
+      if (at > 0) assert.ok(guard < at, `${danger} runs before the truncation is checked`);
+    }
+  });
+
+  test('each walk has the ceiling its own page size needs', () => {
+    const bridge = read('apps/crm/content-bridge.js');
+    assert.ok(/MAX_PAGES_WIDE/.test(bridge), 'one number serves walks that read 50 and 200 a page');
+    const wide = bridge.slice(bridge.indexOf('async function listWorkflows'), bridge.indexOf('async function listWorkflows') + 700);
+    assert.ok(/MAX_PAGES_WIDE/.test(wide), 'the wide walk still counts against the narrow ceiling');
   });
 }

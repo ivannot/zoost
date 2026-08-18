@@ -19,7 +19,12 @@
   // large an org may be, so it is set where it does that job: 400 pages is 20,000 functions, four
   // times the largest org this has been measured against, and a page that returns fewer than it was
   // asked for still ends the walk on the first one.
-  const MAX_PAGES = 400;
+  // Per endpoint, because the walks do not ask for the same page size: functions read 50 at a time
+  // and workflows 200, so one number meant «1,000 functions» and «80,000 workflows» - a ceiling in
+  // the way of a real org on one side and no ceiling at all on the other. Each is set where it stops
+  // a walk that never ends, well past where the platform's own limits sit.
+  const MAX_PAGES = 400;          // functions: 50 a page, so 20,000
+  const MAX_PAGES_WIDE = 40;      // workflows and schedules: 200 a page, so 8,000
   const BASE = location.origin;
   const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
 
@@ -210,7 +215,7 @@
       const resp = await api(`/crm/v8/settings/automation/workflow_rules?page=${page}&per_page=200`);
       const rules = list(resp, 'workflow_rules', 'workflow_rules'); raw = raw.concat(rules);
       const info = resp.info || {}; if (!info.more_records || rules.length === 0) break; page++;
-      if (page > MAX_PAGES) { capped = true; break; }   // surfaced to the panel instead of stopping in silence
+      if (page > MAX_PAGES_WIDE) { capped = true; break; }   // surfaced to the panel instead of stopping in silence
     }
     const entries = raw.map((r) => ({
       id: String(r.id), name: r.name, description: r.description || '',
