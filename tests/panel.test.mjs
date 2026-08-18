@@ -5634,3 +5634,29 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.ok(/layout set\(s\) removed/.test(fn), 'the reader is not told anything was removed');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// `pullEverything` holds the panel busy and calls `pullAll`, which calls `downloadMissing`, which
+// held and released the same flag - so from the moment the functions were fetched the remaining six
+// areas pulled with it false, the five-second poll re-enabled both Pull buttons, and a second
+// `pullEverything` could start on top of the first. A boolean owned by several callers loses
+// whatever the outer one meant, which is the third time that shape has been found here.
+{
+  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = src.slice(src.indexOf('function setPullBusy'), src.indexOf('\n}', src.indexOf('function setPullBusy')));
+
+  test('the busy state counts its holders instead of switching', () => {
+    assert.ok(/pullDepth/.test(fn), 'it is a switch again, so a nested pull releases the outer one');
+    assert.ok(/pullBusy = pullDepth > 0/.test(fn), 'the flag no longer follows the count');
+    assert.ok(/Math\.max\(0,/.test(fn), 'an extra release drives the count negative and wedges it busy');
+  });
+
+  test('nothing assigns the flag behind the counter', () => {
+    // One way in. An assignment elsewhere is the counter being bypassed, which is how this returns.
+    // The declaration is not an assignment for this purpose; anything else is the counter bypassed.
+    // The declaration is not an assignment for this purpose; anything else is the counter bypassed.
+    const assigns = src.split('\n').filter((l) => /\bpullBusy\s*=[^=]/.test(l) && !/^\s*let /.test(l));
+    assert.equal(assigns.length, 1, `pullBusy is set in ${assigns.length} places: ${assigns.map((l) => l.trim()).join(' | ')}`);
+    assert.ok(/pullDepth/.test(assigns[0]), 'the one assignment does not follow the count');
+  });
+}

@@ -4527,8 +4527,16 @@ async function rebuildActive() { return viewMode === 'functions' ? rebuildTree()
 // While a pull runs, BOTH pull buttons (global "Pull all" and the per-type "Pull \u2026") stay disabled,
 // so switching tabs and clicking a second pull cannot start an overlapping one. They come back only
 // when the current pull has finished - success or error.
+// Depth, not a switch. `pullEverything` sets it and then calls `pullAll`, which calls
+// `downloadMissing`, which set and cleared the same flag - so from the moment the functions were
+// fetched the remaining six areas pulled with the flag false, the five-second poll re-enabled both
+// Pull buttons, and a second `pullEverything` could start on top of the first. The comment above
+// promises the opposite. A count means a nested pull can raise and lower it without knowing who else
+// is holding it, which is the only version of this that stays true as callers are added.
+let pullDepth = 0;
 function setPullBusy(b) {
-  pullBusy = b;
+  pullDepth = Math.max(0, pullDepth + (b ? 1 : -1));
+  pullBusy = pullDepth > 0;
   // Both read from Zoho, so both are also off on a sample workspace - and this function is what
   // *re-enables* them when a pull ends, which is how #pullone came back on after setEnabled had
   // already turned it off. A state that is restored somewhere else has to know every reason for it.
