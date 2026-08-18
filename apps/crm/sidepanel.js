@@ -1990,6 +1990,16 @@ $('pvreveal').onclick = () => revealFromPreview('edit');
 $('pvfind').onclick = () => revealFromPreview('filter');
 
 // ---------- controls ----------
+// Each mode keeps its own filter, and the value was read and written by two ternary chains over the
+// same six variables - the shape that drifts the moment a seventh mode is added to one of them.
+const curFilter = () => viewMode === 'functions' ? typeFilter : viewMode === 'modules' ? moduleFilter
+  : viewMode === 'workflows' ? workflowFilter : viewMode === 'schedules' ? scheduleFilter
+  : viewMode === 'actions' ? actionFilter : connCatFilter;
+function setCurFilter(k) {
+  if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k;
+  else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k;
+  else if (viewMode === 'actions') actionFilter = k; else connCatFilter = k;
+}
 function buildTypeChips() {
   const wrap = $('typechips'); wrap.innerHTML = '';
   const defs = viewMode === 'functions'
@@ -2007,17 +2017,24 @@ function buildTypeChips() {
     : viewMode === 'workflows'
     ? [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['scheduled', 'Has scheduled actions']]
     : [['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive']];
-  if (viewMode === 'functions') typeFilter = 'all'; else if (viewMode === 'modules') moduleFilter = 'all'; else if (viewMode === 'workflows') workflowFilter = 'all'; else if (viewMode === 'schedules') scheduleFilter = 'all'; else if (viewMode === 'actions') actionFilter = 'all'; else connCatFilter = 'all';
+  // The chips were rebuilt after every data load and reset the filter as a side effect: set Kind =
+  // Webhooks, click a row's status dot, and the list was back to All with the control agreeing. The
+  // filter each mode keeps is that mode's own variable, so it survives a rebuild - and a tab switch -
+  // the way that tab's search text does. What must not survive is a value the new list cannot offer:
+  // Actions derives its kinds from what is on disk, so a kind that has just disappeared would filter
+  // everything out with no way back. Derived from the options rather than from which caller it was.
+  const keep = defs.some(([k]) => k === curFilter()) ? curFilter() : 'all';
+  setCurFilter(keep);
   // A one-line dropdown, not chips: in Functions mode there are 7 filters and they wrapped to a
   // second row, eating vertical space the tree/preview below needs more than the filter does.
   const lbl = document.createElement('span'); lbl.className = 'fsellbl';
   lbl.textContent = viewMode === 'functions' ? 'Type' : (viewMode === 'modules' || viewMode === 'actions') ? 'Kind' : viewMode === 'connections' ? 'Filter' : 'Status';
   const sel = document.createElement('select'); sel.className = 'filtersel'; sel.setAttribute('aria-label', lbl.textContent + ' filter');
   defs.forEach(([k, l]) => { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); });
-  sel.value = 'all';
+  sel.value = keep;
   sel.onchange = () => {
     const k = sel.value;
-    if (viewMode === 'functions') typeFilter = k; else if (viewMode === 'modules') moduleFilter = k; else if (viewMode === 'workflows') workflowFilter = k; else if (viewMode === 'schedules') scheduleFilter = k; else if (viewMode === 'actions') actionFilter = k; else connCatFilter = k;
+    setCurFilter(k);
     (viewMode === 'functions' ? runSearch() : viewMode === 'modules' ? renderModules() : viewMode === 'workflows' ? renderWorkflows() : viewMode === 'schedules' ? renderSchedules() : viewMode === 'actions' ? renderActions() : renderConnections());
   };
   wrap.appendChild(lbl); wrap.appendChild(sel);
@@ -6171,30 +6188,48 @@ async function pullActions() {
     const r = await toBridge({ cmd: 'pullActions' });
     if (!r?.ok) { setStatus('Actions pull failed: ' + (r?.error || 'unknown'), 'warn'); return; }
     if (!sameWs(gen)) return;   // you changed workspace while this was reading
-    // A kind that could not be read makes the whole answer partial: replacing the index with it
-    // loses every item the previous pull had censused and this one could not see.
-    if ((r.capped || []).length) { setStatus(`Zoho returned a partial list of actions (${(r.capped || []).join(', ')}) - nothing was replaced.`, 'warn'); return; }
-    await writeFile('actions/index.json', JSON.stringify(r.actions || [], null, 2));
     // A kind that refused is stated rather than folded into the total: an org without webhooks and
     // an org whose role cannot read them look identical in a count.
     const missed = (r.missed || []).filter((m) => m && m.kind);
     const capped = r.capped || [];
     // The tab keeps the content script it was loaded with: reloading the extension does not replace
-    // it. So a pull can be answered by the previous version, write rows without the newest fields,
-    // and the panel then says «not read by the pull that wrote this» about a pull that just ran -
-    // true, and impossible to act on unless somebody says which copy is old.
-    if ((Number(r.sv) || 0) < ACT_SV) {
-      setStatus(MSG.staleBridge, 'warn');
-      await writeFile('actions/index.json', JSON.stringify(r.actions || [], null, 2));
-      if (viewMode === 'actions') await rebuildActions();
-      return;
+    // it. So a pull can be answered by the previous version, which writes rows without the fields the
+    // current one captures - and those fields are on disk already, measured by a pull that could read
+    // them. Overwriting them would lose a reading and mark the loss «not read by the pull that wrote
+    // this», which is true and unactionable. It used to write first and check afterwards; it checks
+    // first and does not write, because the one thing to do here is reload that tab.
+    if ((Number(r.sv) || 0) < ACT_SV) { setStatus(MSG.staleBridge, 'warn'); return; }
+    // This census is per kind, and so is its incompleteness - which is why this does not do what the
+    // schedules pull does and refuse the whole write. Refusing it would mean that one kind the role
+    // cannot reach freezes the other three for ever, in every pull, for that org. So: a kind read
+    // whole is replaced, deletions included, and a kind that refused or stopped early keeps what the
+    // previous census had and takes what this one saw.
+    //
+    // The guard used to read `capped` alone while the comment beside it said «a kind that could not
+    // be read makes the answer partial» - so a kind that refused outright, the worse half, lost every
+    // item the previous pull had censused. And it wrote *before* checking the schema version, then
+    // wrote the same thing again inside the check: completeness and schema are decided first now,
+    // and there is one write.
+    //
+    // `capped` also carries `tasks (detail)`, which is not a kind: every task is in the list and some
+    // carry less detail. That is reported, not merged - restoring a field this pull did not read
+    // would be asserting something nobody measured.
+    const partial = new Set([...missed.map((m) => m.kind), ...capped]);
+    let actions = r.actions || [];
+    if (partial.size) {
+      const seen = new Set(actions.map((a) => `${a.kind}:${a.id}`));
+      const prev = await loadActionsIndex();
+      const kept = prev.filter((a) => partial.has(a.kind) && !seen.has(`${a.kind}:${a.id}`));
+      if (kept.length) actions = actions.concat(kept);
+      if (!sameWs(gen)) return;   // reading the previous census is an await, and the folder can move under one
     }
+    await writeFile('actions/index.json', JSON.stringify(actions, null, 2));
     // Both are stated rather than folded into the count: a kind that refused and a kind that was cut
     // short are two different reasons for a number to be smaller than the org.
-    const note = (missed.length ? ` ${missed.length} kind(s) could not be read.` : '')
-      + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho.` : '');
-    if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${(r.actions || []).length} action(s).` + note, 'warn'); }
-    else setStatus(`${(r.actions || []).length} action(s) pulled.` + note, (missed.length || capped.length) ? 'warn' : 'ok');
+    const note = (missed.length ? ` ${missed.length} kind(s) could not be read - what the last pull saw of them was kept.` : '')
+      + (capped.length ? ` ${capped.join(', ')} stopped early - there are more in Zoho, and nothing was removed.` : '');
+    if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${actions.length} action(s).` + note, 'warn'); }
+    else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length) ? 'warn' : 'ok');
     await noteAccess('actions', null);
   } catch (e) { await notePullFailure('actions', e); }
 }

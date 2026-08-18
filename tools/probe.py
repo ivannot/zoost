@@ -519,6 +519,26 @@ CRM = """
         say('searching in: code still holds the text from before the file was rewritten');
     }
 
+    // Set the Kind filter in Actions, then make the list reload the way clicking a row's status dot
+    // does. The chips are rebuilt from the data - the kinds are derived - and rebuilding them reset
+    // the filter, so the answer to «show me the webhooks» was the whole list a moment later.
+    {
+      const segA = [...document.querySelectorAll('.seg')].find((s) => /Actions/.test(s.textContent));
+      if (segA) {
+        segA.click(); await wait(1200);
+        const sel = document.querySelector('#typechips .filtersel');
+        const opt = sel && [...sel.options].map((o) => o.value).find((v) => v !== 'all' && v !== 'unused');
+        if (!opt) say('the Actions tab offers no kind to filter by - the case cannot run');
+        else {
+          sel.value = opt; sel.onchange(); await wait(400);
+          await rebuildActions(); await wait(600);
+          const now = document.querySelector('#typechips .filtersel');
+          if (actionFilter !== opt) say(`reloading the actions list reset the kind filter (${opt} -> ${actionFilter})`);
+          if (now && now.value !== opt) say('the kind control shows All while the list is filtered');
+        }
+      }
+    }
+
     // The same question asked of what the assistant is handed. Its catalogues are read off the
     // mirror once and kept: the actions pull rebuilt them, the workflows pull did not, and the
     // modules resync cleared the diagram beside them and not the schema the model is told about. So

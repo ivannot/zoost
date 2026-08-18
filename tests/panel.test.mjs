@@ -5692,3 +5692,89 @@ test('every cache in a shipped panel is named by something that tests it', () =>
               'a full re-read does not force the summary to be rewritten, so the next open starts over');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The actions census is per kind and so is its incompleteness. The guard read `capped` alone while
+// the comment beside it spoke about a kind that *could not be read* - so the worse half, a kind that
+// refused outright, replaced the index with an answer that did not contain it, and every webhook the
+// previous pull had censused was gone. It also wrote before checking which schema the bridge could
+// even produce, then wrote the same thing again inside the check.
+//
+// Run rather than read: the function is lifted and driven with a bridge whose answer is chosen per
+// case. What this does not cover is stated in slice.mjs - the wiring, not the logic.
+{
+  const RUN = async (resp, prevIdx) => {
+    const ctx = {
+      wsGen: 1, viewMode: 'functions', dir: {}, ACT_SV: 4, written: null, status: [],
+      MSG: { staleBridge: 'reload that tab', noTab: 'no tab', wrongTab: 'wrong tab' },
+      mismatchRefuse: () => false, ensurePerm: async () => true, sameWs: () => true,
+      getContext: async () => ({ org: 'o', origin: 'https://crm.example', instance: 'i' }),
+      readCfg: async () => null, toBridge: async () => resp,
+      setStatus: (s) => ctx.status.push(s),
+      writeFile: async (_p, txt) => { ctx.written = JSON.parse(txt); },
+      loadActionsIndex: async () => prevIdx,
+      rebuildActions: async () => {}, noteAccess: async () => {},
+      notePullFailure: async (_a, e) => { throw e; },
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'pullActions') + '\npullActions();', ctx);
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    return ctx;
+  };
+  const PREV = [{ kind: 'webhooks', id: '1', name: 'w1' }, { kind: 'webhooks', id: '2', name: 'w2' },
+                { kind: 'tasks', id: '9', name: 't9' }];
+  const OK = { ok: true, sv: 4, missed: [], capped: [] };
+
+  test('a kind that refused keeps what the last census saw of it', async () => {
+    const c = await RUN({ ...OK, actions: [{ kind: 'tasks', id: '9', name: 't9' }],
+                          missed: [{ kind: 'webhooks', error: '403' }] }, PREV);
+    const kinds = (c.written || []).filter((a) => a.kind === 'webhooks').map((a) => a.id).sort();
+    assert.deepEqual(kinds, ['1', '2'], 'the refused kind was replaced by an answer that could not see it');
+  });
+
+  test('a kind read whole is replaced, deletions included', async () => {
+    const c = await RUN({ ...OK, actions: [{ kind: 'webhooks', id: '1', name: 'w1' }] }, PREV);
+    assert.deepEqual((c.written || []).map((a) => `${a.kind}:${a.id}`), ['webhooks:1'],
+                     'a complete read did not remove what Zoho no longer has');
+  });
+
+  test('a kind cut short takes what it saw and keeps the rest', async () => {
+    const c = await RUN({ ...OK, actions: [{ kind: 'webhooks', id: '1', name: 'renamed' }],
+                          capped: ['webhooks'] }, PREV);
+    const w = (c.written || []).filter((a) => a.kind === 'webhooks');
+    assert.equal(w.length, 2, 'a partial list was written as the whole census');
+    assert.equal(w.find((a) => a.id === '1').name, 'renamed', 'what this pull read did not win');
+    assert.ok(!(c.written || []).some((a) => a.kind === 'tasks'),
+              'a kind nobody said was partial was kept instead of replaced');
+  });
+
+  test('a bridge that cannot write the current schema does not write at all', async () => {
+    const c = await RUN({ ...OK, sv: 3, actions: [{ kind: 'webhooks', id: '1' }] }, PREV);
+    assert.equal(c.written, null, 'an older copy of the extension overwrote fields it cannot capture');
+    assert.ok(c.status.some((s) => /reload that tab/.test(s)), 'and it did not say whose copy is old');
+  });
+}
+
+// The chips are rebuilt after every data load, and resetting the filter as a side effect meant that
+// clicking a row's status dot in Actions put the list back to All. Each mode keeps its own filter -
+// the same per-tab memory the search box has - and what must not survive is a value the rebuilt list
+// no longer offers, which is derived from the options rather than from which caller it was.
+{
+  const src = read('apps/crm/sidepanel.js');
+  const chips = sliceFn('apps/crm/sidepanel.js', 'buildTypeChips');
+
+  test('buildTypeChips keeps the current filter when the list still offers it', () => {
+    assert.ok(/defs\.some\(\(\[k\]\) => k === curFilter\(\)\) \? curFilter\(\) : 'all'/.test(chips),
+              'it still resets the filter as a side effect of being rebuilt');
+    assert.ok(/sel\.value = keep;/.test(chips), 'the control disagrees with the filter it is showing');
+  });
+
+  test('one place reads the per-mode filter and one writes it', () => {
+    const chains = (src.match(/viewMode === 'functions'\) typeFilter = /g) || []);
+    assert.equal(chains.length, 1, `the per-mode filter is assigned by ${chains.length} chains, not one`);
+    assert.ok(/const curFilter = \(\) =>/.test(src) && /function setCurFilter\(k\)/.test(src),
+              'the read and the write of the per-mode filter are not defined in one place');
+  });
+}
