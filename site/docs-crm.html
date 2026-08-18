@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · updated <span class="dd" data-stamp="updated">18 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · updated <span class="dd" data-stamp="updated">17 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -156,12 +156,10 @@
       and the connections catalogue.</li>
     <li><b class="ui"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8"/><path d="M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13.5h11"/></svg> Pull</b> (in the mode bar) refreshes only the current type - whichever of Functions,
       Modules, Workflows, Schedules or Connections is the active tab - faster when you just changed one thing.</li>
-    <li><b>Auto-sync while you work</b>: save a function in the Zoho editor and the matching local file
-      updates by itself; create one and Zoost fetches it; delete one and it goes from the mirror. No action
-      needed.<br>
-      What this sees is what <b>you</b> do in that tab. A function a colleague creates or deletes
-      elsewhere, or one you change in another window, is reconciled at the next <b>Pull all</b> - Zoost
-      notices what happens in front of it, it is not always in step with the platform.</li>
+    <li><b>Auto-sync on save</b>: when you save a function in the Zoho editor, the matching local file
+      updates by itself. No action needed.</li>
+    <li>Functions deleted in Zoho are pruned locally <b>on the next pull</b> (deletion is reconciled at pull time,
+      not intercepted live like a save), so the folder stays a faithful mirror rather than an accumulating pile.</li>
   </ul>
   <p>Layouts and related lists arrive with <b>Pull all</b> or <b>Pull</b> in Modules mode. If the layout matrix or the
     relation catalogue looks empty, that workspace was pulled with an older build - pull again.</p>

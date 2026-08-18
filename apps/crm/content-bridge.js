@@ -621,17 +621,21 @@
   window.addEventListener('message', (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.source !== 'DELUGE_IDE_HOOK') return;
-    // Three kinds, and only three. A save and a deletion name a function, so the id is still held to
-    // digits - a forged notice can therefore only ask for a re-read or a removal of something whose
-    // id exists. A creation names nothing: it can only ask the panel to go and look at the list,
-    // which it may do at any time anyway.
-    if (d.type === 'saved' || d.type === 'deleted') {
-      if (!/^\d{1,20}$/.test(String(d.id || ''))) return;
-      chrome.runtime.sendMessage({ type: d.type, id: String(d.id) }).catch(() => {});
+    if (!d || d.source !== 'DELUGE_IDE_HOOK' || d.type !== 'saved') return;
+    if (!/^\d{1,20}$/.test(String(d.id || ''))) return;
+    // Chrome can reload or update the extension while this script is still alive in a page opened
+    // before it. What is left is an orphan: the script runs and `chrome.runtime` is gone, so the
+    // call below throws `Cannot read properties of undefined` - uncaught, in somebody else's page,
+    // for an action they took. Seen for real; a user meets it after an automatic update, not only a
+    // developer after a reload. Said once, where the person is looking, instead of thrown.
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+      if (!window.__zoostOrphan) {
+        window.__zoostOrphan = true;
+        console.info('[zoost] this page is running an orphaned script - reload the tab');
+      }
       return;
     }
-    if (d.type === 'created') chrome.runtime.sendMessage({ type: 'created' }).catch(() => {});
+    try { chrome.runtime.sendMessage({ type: 'saved', id: String(d.id) }).catch(() => {}); } catch (_) {}
   });
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     // Only a real CRM-origin frame acts. With all_frames:true the scripts also load into sandboxed /
