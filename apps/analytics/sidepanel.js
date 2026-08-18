@@ -22,6 +22,16 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 // quote inside an attribute closes it early. Escaping both styles means a reader never has to work
 // out which one an attribute used - the same definition as the CRM panel and both graph windows.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Already through `escHtml`, so `& < >` are encoded; what is left is the delimiter that decides
+// where an attribute ends. `escA` cannot be used here - it encodes `&` too, and this value has been
+// encoded once already, so the query string of every link the assistant writes would come out as
+// `&amp;amp;`. Named rather than inline, because `tools/htmlcheck.py` reads the name to know an
+// attribute is safe, and a check that cannot see the escaping is a check that will be argued with.
+// The two delimiters written as escapes, not as themselves: a regex literal containing a quote is
+// the trap this repository already records against `sliceConst`, and it bites every scanner that
+// reads JavaScript without parsing it - the duplicate-message check and the slicer both lost their
+// place on the first version of this line.
+const escQ = (s) => String(s).replace(/[\u0022\u0027]/g, (c) => (c === '\u0022' ? '&quot;' : '&#39;'));
 
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // single source of truth: rename in manifest.json only
 // Built from the manifest: the hosts this extension is allowed to read are exactly the hosts it
@@ -563,7 +573,12 @@ async function toBridge(msg) {
   const id = await analyticsTabId();
   if (id == null) throw new Error('The active tab is not Zoho Analytics.');
   await ensureBridge(id);
-  const r = await chrome.tabs.sendMessage(id, msg);
+  // The identity travels with the command and is checked *in the page that will run it* - see the
+  // note in the CRM twin. Everything above is a check against a memory of which workspace the tab
+  // was showing, with three awaits between reading it and arriving.
+  const expected = (msg && msg.cmd !== 'context' && bound)
+    ? { workspace: bound.workspace, origin: bound.origin } : null;
+  const r = await chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg);
   if (!r) throw new Error('No answer from the Zoho Analytics page.');
   // Rebuild the Error with the two fields the reply carries, or the classification made in the
   // bridge is thrown away one line after crossing the boundary - which is how "your role does not
@@ -2006,7 +2021,7 @@ function aiMarkdown(src) {
   // *replacement*, by function rather than by `$2`, so nothing else in the URL is touched twice -
   // `&` has already been through escHtml and must not be encoded again.
   t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    (m, text, href) => `<a href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${text}</a>`);
+    (m, text, href) => `<a href="${escQ(href)}" target="_blank" rel="noopener">${text}</a>`);
   t = t.replace(/\n/g, '<br>');
   t = t.replace(/\uE000(\d+)\uE001/g, (mm, i) => codes[+i]);
   return t;

@@ -3344,6 +3344,45 @@ class ShippedFilesAreText(unittest.TestCase):
                         findings.append(f"{f.relative_to(ROOT)}: {[hex(b) for b in sorted(bad)]}")
         self.assertEqual(findings, [], "a control byte makes the file binary to ordinary tools")
 
+
+class AsyncCheckFinds(unittest.TestCase):
+    """The three shapes an audit measured as false negatives, and one control.
+
+    The first version of `asynccheck.py` reported «0 findings, 59 recorded as read» while missing
+    these - which is worse than not having it, because the number was quoted as evidence. They are
+    fixtures rather than assertions about the tree: the tree changes, the shapes do not."""
+
+    HEAD = 'let healthData = null, actionUsers = null;\nconst failedRemovals = new Set();\n'
+    CASES = {
+        'an assignment that is not at the start of its line':
+            'async function f() {\n  await g();\n  try { healthData = 1; } catch (_) {}\n}\n',
+        'a guard before the await and the write after it':
+            'async function f() {\n  if (!op.current()) return;\n  actionUsers = await g();\n}\n',
+        'a const collection mutated':
+            'async function f() {\n  await g();\n  failedRemovals.clear();\n}\n',
+    }
+    CONTROL = 'async function f() {\n  await g();\n  if (!op.current()) return;\n  healthData = 1;\n}\n'
+
+    def _run(self, body):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('asynccheck', ROOT / 'tools' / 'asynccheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        fd, path = tempfile.mkstemp(suffix='.js', dir=str(ROOT))
+        os.write(fd, (self.HEAD + body).encode('utf-8')); os.close(fd)
+        try:
+            return mod.findings(os.path.basename(path))
+        finally:
+            os.unlink(path)
+
+    def test_the_three_shapes_are_found(self):
+        for what, body in self.CASES.items():
+            with self.subTest(what):
+                self.assertTrue(self._run(body), f'{what}: not reported')
+
+    def test_a_guard_that_is_genuinely_between_is_not_a_finding(self):
+        # A checker that reports everything is one nobody reads - the other half of proving it works.
+        self.assertEqual(self._run(self.CONTROL), [])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

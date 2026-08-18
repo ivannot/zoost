@@ -75,7 +75,10 @@ export function sliceConst(rel, name) {
   // `var` as well as `const`: site.js is a no-build classic script and declares everything with var,
   // 27 times and never once const. Bending the file to suit the test helper would be the wrong way
   // round — the helper exists to read the code as written.
-  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?(?:const|var|let)\\s+${name}\\s*=[\\s\\S]*?;\\s*(//[^\\n]*)?$`, 'm'));
+  // `[ \t]*` and not `\\s*` before the trailing comment: `\\s` crosses a newline, so when the *next*
+  // line happened to be a comment the greedy match took it too - and which line follows a constant is
+  // not a property of that constant. escA sliced two lines the day a comment was written under it.
+  const m = read(rel).match(new RegExp(`(^|\\n)\\s*(export\\s+)?(?:const|var|let)\\s+${name}\\s*=[\\s\\S]*?;[ \\t]*(//[^\\n]*)?$`, 'm'));
   if (!m) throw new Error(`${rel}: const/var ${name} not found — renamed or removed.`);
   return m[0].replace(/^\s*export\s+/m, '');
 }

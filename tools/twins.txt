@@ -15,10 +15,10 @@ aiExecTool	57621b4ff7a9	7806b37c631e	divergent
 aiGetCfg	b01820a97b0f	b01820a97b0f	identical
 aiLockMsg	27ab8454c641	27ab8454c641	identical
 aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
-aiMarkdown	918eb66d4c46	78b0950dfcb4	divergent
+aiMarkdown	3f691b1cef40	f064613e3b42	divergent
 aiNeedCurrent	ab3dfc884fd4	ab3dfc884fd4	identical
 aiRenderMessages	b54eb6aee3bd	4894fcbf36e3	divergent
-aiRunAnthropicAgent	5549bfdae903	dd002ecee16d	divergent
+aiRunAnthropicAgent	dd002ecee16d	dd002ecee16d	identical
 aiSend	fe86ff34ce9a	d37c549dd7eb	divergent
 aiShowLock	9e9fad6d251c	9e9fad6d251c	identical
 aiStreamAnthropic	b0b989fb4051	b0b989fb4051	identical
@@ -114,7 +114,7 @@ erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
 fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
-friendlyError	9e24470bc84d	5e9b454554e7	divergent
+friendlyError	5e9b454554e7	5e9b454554e7	identical
 grantRoot	784657581fed	4ec64827ffe9	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	2d3e00ec6edc	c9709b0f9729	divergent
@@ -145,10 +145,10 @@ navHere	32db09ffc222	2541a2597e1b	divergent
 navShow	2421299e7e5a	e6f5d13b2ae9	divergent
 navTo	34dc8391f4a8	7e4b2c83f68b	divergent
 navWhen	6d2200ac5636	6d2200ac5636	identical
-noFocusHere	a28b950d2cfe	1692cf472065	divergent
+noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
-openHealth	2db7e2f6dc3e	0c5941e396f4	divergent
+openHealth	8c6fe19aa7e4	0c5941e396f4	divergent
 openSchemaGraph	9545037888e6	a7c076c85bf1	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
@@ -198,7 +198,7 @@ switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
-toBridge	52df3ac517f0	6afde4d5fbe5	divergent
+toBridge	7a1cb1ea6311	4b76106e745d	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	8780db5203e0	e7a00b84968a	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical

@@ -717,11 +717,30 @@
     }
     if (d.type === 'created') chrome.runtime.sendMessage({ type: 'created' }).catch(() => {});
   });
+  // The panel checks that the tab it is about to speak to is the right org, then awaits three times
+  // before the message arrives - and by then «the active tab» may be another one. It sends what it
+  // expects with the command, and this is the only party in the exchange that cannot be out of date
+  // about which org it is: it *is* the page. A command that does not match is refused here.
+  //
+  // `context` never carries one, because it is how a mismatch is discovered in the first place.
+  function expectedMatches(x, c) {
+    if (!x) return true;
+    if (x.workspace != null) return String(x.workspace) === String(c.workspace)
+      && (!x.origin || x.origin === c.origin);
+    return String(x.org) === String(c.org)
+      && (!x.origin || x.origin === c.origin)
+      && (!x.instance || !c.instance || x.instance === c.instance);
+  }
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     // Only a real CRM-origin frame acts. With all_frames:true the scripts also load into sandboxed /
     // null-origin iframes (location.origin === 'null'), where fetch(BASE + path) becomes a relative,
     // malformed URL (…/null/crm/v2/…) → 400. Those frames must stay silent so the real CRM frame answers.
     if (!/^https:\/\/crm(sandbox)?\.zoho/.test(location.origin)) return false;
+    if (msg?.cmd !== 'context' && !expectedMatches(msg && msg.__zoostExpected, context())) {
+      sendResponse({ ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
+      return;
+    }
+
   // An Error does not survive chrome.runtime messaging - it arrives as a plain object, and
   // `String(e)` throws away everything except the text. That is the boundary trap CLAUDE.md is about:
   // `forbidden` would be lost exactly here, and the panel would go back to guessing from a string.

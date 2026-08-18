@@ -346,8 +346,27 @@
     return { deps: out, failed };
   }
 
+  // The panel checks that the tab it is about to speak to is the right org, then awaits three times
+  // before the message arrives - and by then «the active tab» may be another one. It sends what it
+  // expects with the command, and this is the only party in the exchange that cannot be out of date
+  // about which org it is: it *is* the page. A command that does not match is refused here.
+  //
+  // `context` never carries one, because it is how a mismatch is discovered in the first place.
+  function expectedMatches(x, c) {
+    if (!x) return true;
+    if (x.workspace != null) return String(x.workspace) === String(c.workspace)
+      && (!x.origin || x.origin === c.origin);
+    return String(x.org) === String(c.org)
+      && (!x.origin || x.origin === c.origin)
+      && (!x.instance || !c.instance || x.instance === c.instance);
+  }
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!IS_ANALYTICS) return false;
+    if (msg?.cmd !== 'context' && !expectedMatches(msg && msg.__zoostExpected, context())) {
+      sendResponse({ ok: false, error: 'The Zoho tab is not the one this workspace is bound to - the command was refused.' });
+      return;
+    }
+
     // `forbidden` and `status` travel as their own fields: an Error does not survive
     // chrome.runtime messaging, and String(e) would drop exactly the two facts the panel needs to
     // tell a refusal from a fault. Same boundary trap as everywhere else in this repository.

@@ -43,18 +43,20 @@ GUARD = re.compile(r'op\.current\(\)|\bcurrent\(\)|sameWs\(|gen !== wsGen|gen ==
                    # overtakes a tree load is another tree load, not only a change of workspace.
                    r'|mine === |mine !== ')
 # Writing into a global: plain assignment, a member of it, or the mutators a Map/Set/Array carries.
-WRITE = re.compile(r'^\s*(?:(\w+)\s*(?:\[[^\]]*\])?(?:\.\w+)*\s*=[^=]'
+WRITE = re.compile(r'(?:(?<![.\w])(\w+)\s*(?:\[[^\]]*\])?(?:\.\w+)*\s*=(?![=>])'
                    r'|(\w+)\.(?:push|set|clear|delete|add|splice|sort|unshift)\('
                    r'|Object\.assign\((\w+))')
 
 
 def globals_of(src):
-    """Module-level `let` declarations - the mutable state a function can reach from anywhere.
+    """Module-level declarations - the state a function can reach from anywhere.
 
-    `const` is not here: a const binding cannot be reassigned, and mutating one that holds a Map or
-    a Set is caught by the mutator half of WRITE anyway."""
+    `const` as well as `let`, which the first version left out while its docstring said otherwise:
+    a const binding cannot be *reassigned*, and `failedRemovals` is a const Set whose `.add()`,
+    `.delete()` and `.clear()` are writes to shared state like any other. Reported by an audit as a
+    measured false negative, which is the only kind worth acting on."""
     names = set()
-    for m in re.finditer(r'(?m)^let\s+([^;\n]+)', src):
+    for m in re.finditer(r'(?m)^(?:let|const)\s+([^;\n]+)', src):
         for part in m.group(1).split(','):
             n = part.strip().split('=')[0].strip()
             if re.fullmatch(r'\w+', n):
@@ -63,13 +65,38 @@ def globals_of(src):
 
 
 def functions(src):
-    """Top-level function declarations, with the line they start on."""
+    """Top-level function declarations, with the line they start on.
+
+    A declaration that closes on its own line ends there. Without this the search for the next `}` in
+    column zero runs straight past it and the function is credited with everything that follows -
+    `ensurePerm` is one line long, and it was being reported as writing ten globals it never mentions.
+    The same over-capture had just been found in `tests/slice.mjs`; a helper that reads code by
+    scanning for a closing brace makes this mistake once per author."""
     for m in re.finditer(r'(?m)^(?:async\s+)?function\s+(\w+)\s*\(', src):
+        line_end = src.find('\n', m.start())
+        first = src[m.start():line_end if line_end > 0 else len(src)]
+        if '{' in first and first.rstrip().endswith('}'):
+            yield m.group(1), first, src[:m.start()].count('\n') + 1
+            continue
         start = src.index('{', m.start())
         end = src.find('\n}', start)
         if end < 0:
             continue
         yield m.group(1), src[m.start():end], src[:m.start()].count('\n') + 1
+
+
+def writes_in(code):
+    """Every write to a name on this line, with whether its value comes from an `await`.
+
+    Searched anywhere in the line and not only at its start: `try { healthData = await … }` is one
+    statement wearing a brace, and matching at the start of the line missed it - the second of the
+    three false negatives an audit measured against the first version of this file."""
+    for m in WRITE.finditer(code):
+        name = m.group(1) or m.group(2) or m.group(3)
+        rest = code[m.end():]
+        # `X = await f()` publishes *after* the await, so a guard written above it is not between
+        # the two. The first version judged it by the state before the line and let it through.
+        yield name, bool(re.match(r'\s*await\b', rest)), m.start()
 
 
 def findings(rel):
@@ -84,17 +111,26 @@ def findings(rel):
         since_guard = False      # a guard has been passed since the last await
         for i, line in enumerate(lines):
             code = re.sub(r'//.*$', '', line)
-            if seen_await and not since_guard:
-                w = WRITE.match(code)
-                if w:
-                    name = w.group(1) or w.group(2) or w.group(3)
-                    if name in names:
-                        out.append((rel, fname, name, at + i, code.strip()[:70]))
+            for name, from_await, pos in writes_in(code):
+                if name not in names:
+                    continue
+                # A guard earlier *on this line* counts, and one before the await on this line does
+                # not. Without the position the check read the line as a unit and reported
+                # `try { const x = await f(); if (!op.current()) return; g = x; }` as unguarded.
+                before = code[:pos]
+                last_await = before.rfind('await')
+                guarded_here = bool(GUARD.search(before[last_await:] if last_await >= 0 else before))
+                if guarded_here:
+                    continue
+                if from_await or (seen_await and not since_guard):
+                    out.append((rel, fname, name, at + i, code.strip()[:70]))
             if GUARD.search(code):
                 since_guard = True
             if re.search(r'\bawait\b', code):
                 seen_await = True
-                since_guard = bool(GUARD.search(code))
+                # A guard *after* the await on the same line still counts; one before it does not.
+                tail = code.split('await', 1)[1]
+                since_guard = bool(GUARD.search(tail))
     return out
 
 

@@ -4811,9 +4811,17 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // saver queued has been awaited» - which is what the `await updateMetaIndex(...)` before the
     // delete says.
     const body = code.slice(code.indexOf('async function saveMetaIndex'), code.indexOf('async function saveGraphFacts'));
-    const queued = body.indexOf('await updateMetaIndex('), cleared = body.indexOf('_dirtyMeta.delete');
+    const queued = body.indexOf('const written = updateMetaIndex('), cleared = body.indexOf('_dirtyMeta.delete');
     assert.ok(queued >= 0 && cleared > queued,
               'the marks are cleared before the write they depend on has happened');
+    // And only if it happened. The queue used to swallow the failure, so a refused write - a
+    // workspace changed under it, a folder gone - still ended with the marks cleared, which means
+    // the file was old and nothing on the next load would re-read it.
+    const gate = body.indexOf('if (!(await written)) return;');
+    assert.ok(gate > 0 && gate < cleared, 'a refused write still declares the files described');
+    for (const fn of ['saveMetaIndex', 'saveGraphFacts'])
+      assert.ok(/if \(!\(await written\)\) return;/.test(sliceFn('apps/crm/sidepanel.js', fn)),
+                `${fn} clears its marks whether or not the summary was written`);
   });
 
   test('Refresh distrusts the summary, for the writes this panel cannot see', () => {
@@ -6416,6 +6424,7 @@ for (const app of ['crm', 'analytics']) {
     vm.createContext(ctx);
     vm.runInContext(sliceConst(`apps/${app}/sidepanel.js`, app === 'crm' ? 'escHtml' : 'esc') + '\n'
       + (app === 'analytics' ? 'const escHtml = esc;\n' : '')
+      + sliceConst(`apps/${app}/sidepanel.js`, 'escQ') + '\n'
       + sliceFn(`apps/${app}/sidepanel.js`, 'aiMarkdown'), ctx);
     return vm.runInContext('aiMarkdown', ctx)(src);
   };
@@ -6461,3 +6470,69 @@ test('the release workflows take a ref through env and validate its whole shape'
               `id=shape ${f} accepts a tag by prefix, so anything may follow it`);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// The panel checks that the tab it is about to speak to is the right org, and then awaits three
+// times before the message arrives - `zohoTabId()`, `ensureBridge()`, `crmFrameId()` - so what it
+// checked is a five-second poll's memory of a tab that may since have become another org. Reproduced
+// by an audit on both shipped functions: the command reached the new tab.
+//
+// The last word belongs to the only party that cannot be out of date about which org it is: the page
+// itself. The expectation travels with the command and the bridge refuses what does not match.
+{
+  const CASES = {
+    crm: { now: { ok: true, org: 'B', origin: 'https://crm.zoho.eu', instance: null },
+           mine: { org: 'A', origin: 'https://crm.zoho.eu' },
+           theirs: { org: 'B', origin: 'https://crm.zoho.eu' } },
+    analytics: { now: { ok: true, workspace: 'B', origin: 'https://analytics.zoho.eu' },
+                 mine: { workspace: 'A', origin: 'https://analytics.zoho.eu' },
+                 theirs: { workspace: 'B', origin: 'https://analytics.zoho.eu' } },
+  };
+  for (const [app, c] of Object.entries(CASES)) {
+    test(`${app}: a command carries what it expects, and the page refuses what does not match`, () => {
+      const ctx = { String };
+      vm.createContext(ctx);
+      vm.runInContext(sliceFn(`apps/${app}/content-bridge.js`, 'expectedMatches'), ctx);
+      const f = vm.runInContext('expectedMatches', ctx);
+      assert.equal(f(c.mine, c.now), false, 'a command meant for one org was accepted by another');
+      assert.equal(f(c.theirs, c.now), true, 'the tab refuses a command that does belong to it');
+      assert.equal(f(null, c.now), true, 'the context probe stopped travelling, so no mismatch can be found');
+
+      const panel = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/__zoostExpected: expected/.test(panel) || /\{ \.\.\.msg, __zoostExpected: expected \}/.test(panel),
+                'the panel no longer sends what it expects');
+      const bridge = read(`apps/${app}/content-bridge.js`);
+      assert.ok(/cmd !== 'context' && !expectedMatches\(msg && msg\.__zoostExpected, context\(\)\)/.test(bridge),
+                'the bridge accepts a command without checking which org it is');
+    });
+  }
+
+  test('crm: a bound workspace with no verified context does not let a command through', () => {
+    // `if (!bound || !lastCtx) return true` treated «nothing to compare» and «not verified» as one
+    // answer, so a bound workspace whose context had not been read let `zohoTabId()` fall back to
+    // whichever Zoho tab happened to be open.
+    const g = sliceFn('apps/crm/sidepanel.js', 'guardOk');
+    assert.ok(/if \(!bound\) return true;/.test(g), 'a first workspace can no longer be created');
+    assert.ok(/if \(!lastCtx\) return false;/.test(g),
+              'a bound workspace with no context still passes the guard');
+  });
+}
+
+// A free variable is not a syntax error, so `node --check` is happy and the browser is not: a
+// mechanical replace put `if (!op.current()) return;` into two rebuilds that never made an `op`,
+// every unit test stayed green because nothing executes them, and `tools/probe.js` found it as «a
+// workflow row did not open a workflow» - a ReferenceError swallowed by the function's own catch.
+// The same trap this repository already records about mechanical replaces, arriving a third time.
+for (const app of ['crm', 'analytics']) {
+  test(`${app}: every function that uses an op makes one or is given one`, () => {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const bad = [];
+    for (const m of src.matchAll(/^(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm)) {
+      const body = src.slice(m.index, src.indexOf('\n}', src.indexOf('{', m.index)));
+      if (!/\bop\.(current|read|write|remove|root|say)\b/.test(body)) continue;
+      if (/beginWorkspaceOp\(\)/.test(body) || /\bop\b/.test(m[2])) continue;
+      bad.push(m[1]);
+    }
+    assert.deepEqual(bad, [], `these read \`op\` and never make one: ${bad.join(', ')}`);
+  });
+}

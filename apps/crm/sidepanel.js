@@ -124,6 +124,11 @@ const MSG = {
   notHere: 'Not in workspace - click to download',
   hereRepull: 'In workspace - click to re-download from Zoho',
   failed: 'Failed: ',
+  // The twin already had this name; the CRM had the string twice and nothing said so, because the
+  // duplicate scanner had lost its place at a regex containing a quote further up the file and never
+  // recovered. Fixing that regex is what made these two visible - a checker reading JavaScript
+  // without parsing it can go blind for the rest of a file and still report zero.
+  errPrefix: 'Error: ',
   clickRetry: ' - click to retry',
   // Prefixes, each concatenated with the platform's own sentence rather than replacing it.
   noFn: 'Function not found: ',
@@ -162,6 +167,16 @@ const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': 
 // half. Escaping both quote styles means a reader never has to work out which one the attribute
 // used, and the two graph windows already did it this way.
 const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Already through `escHtml`, so `& < >` are encoded; what is left is the delimiter that decides
+// where an attribute ends. `escA` cannot be used here - it encodes `&` too, and this value has been
+// encoded once already, so the query string of every link the assistant writes would come out as
+// `&amp;amp;`. Named rather than inline, because `tools/htmlcheck.py` reads the name to know an
+// attribute is safe, and a check that cannot see the escaping is a check that will be argued with.
+// The two delimiters written as escapes, not as themselves: a regex literal containing a quote is
+// the trap this repository already records against `sliceConst`, and it bites every scanner that
+// reads JavaScript without parsing it - the duplicate-message check and the slicer both lost their
+// place on the first version of this line.
+const escQ = (s) => String(s).replace(/[\u0022\u0027]/g, (c) => (c === '\u0022' ? '&quot;' : '&#39;'));
 const sanitize = (s) => String(s).replace(/[^\w.\-]/g, '_');
 // What the pull leaves so the next open does not have to read every meta. A cache beside the
 // index, checked against the folder walk on every load - see rebuildTree().
@@ -862,7 +877,14 @@ async function toBridge(msg) {
   // its first workspace, which is not a mismatch.
   if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
   const id = await zohoTabId(); if (!id) throw new Error(MSG.noTab);
-  await ensureBridge(id); const fid = await crmFrameId(id); return chrome.tabs.sendMessage(id, msg, { frameId: fid });
+  await ensureBridge(id); const fid = await crmFrameId(id);
+  // The identity travels with the command and is checked *in the page that will run it*. Everything
+  // above this line is a check against `lastCtx`, which is a five-second poll's memory of which org
+  // the tab was showing - and between reading it and reaching the tab there are three awaits. So the
+  // last word belongs to the only party that cannot be out of date about which org it is.
+  const expected = (msg && msg.cmd !== 'context' && bound)
+    ? { org: bound.org, origin: bound.base, instance: bound.instance } : null;
+  return chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg, { frameId: fid });
 }
 async function getContext() { try { const r = await toBridge({ cmd: 'context' }); return r?.ok ? r : null; } catch { return null; } }
 async function waitTabComplete(id, timeout = 9000) {
@@ -953,7 +975,12 @@ function guardOk() {
   // forgotten. It is not a mismatch, though, and refreshContext keeps the two apart: the mismatch
   // bar and its overlay are for two environments that could match, and this one never will.
   if (isSample()) return false;
-  if (!bound || !lastCtx) return true;
+  // A workspace with no binding yet is creating its first one, and there is nothing to compare
+  // against. A workspace that *is* bound and has no context is a different statement: it means the
+  // destination has not been verified, and returning true there let a command go to whatever Zoho
+  // tab `zohoTabId()` happened to find. «Do what you're certain of, or stop.»
+  if (!bound) return true;
+  if (!lastCtx) return false;
   if (bound.org !== lastCtx.org) return false;                                   // different org
   if ((bound.base || '') !== (lastCtx.origin || '')) return false;               // different host/env
   if (bound.instance && lastCtx.instance && bound.instance !== lastCtx.instance) return false; // different specific (sandbox) instance
@@ -1237,7 +1264,7 @@ function updateMetaIndex(mutate) {
   // into the wrong folder: work handed to it runs *later*, so `dir` inside is whatever is on screen
   // by the time its turn comes. The workspace is taken here, where the caller still means it.
   const op = beginWorkspaceOp();
-  _metaIndexWrites = _metaIndexWrites.then(async () => {
+  const job = _metaIndexWrites.then(async () => {
     let files = {};
     try {
       const prev = JSON.parse(await op.read(META_INDEX));
@@ -1245,13 +1272,19 @@ function updateMetaIndex(mutate) {
     } catch (_) {}
     await mutate(files);
     await op.write(META_INDEX, JSON.stringify({ v: SUMMARY_V, sv: META_SV, files }, null, 2));
-  }).catch(() => {});   // a summary that cannot be written is a cache that will be rebuilt, not a failure
-  return _metaIndexWrites;
+    return true;
+  });
+  // The queue must survive a failure - the next caller is a different write and has done nothing
+  // wrong - and the *caller* must not. It used to swallow the error here, so both savers went on to
+  // clear their dirty marks over a write that had been refused: the file was old and nothing on the
+  // next load would re-read it. The queue takes the caught version, the caller takes the real one.
+  _metaIndexWrites = job.then(() => {}, () => {});
+  return job.catch(() => false);
 }
 
 async function saveMetaIndex(metaPaths) {
   const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
-  await updateMetaIndex((files) => {
+  const written = updateMetaIndex((files) => {
     Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // sparito dal disco
     treeData.forEach((r) => {
       if (!onDisk.has(r.path)) return;
@@ -1261,7 +1294,9 @@ async function saveMetaIndex(metaPaths) {
     });
   });
   // Only the metas this pass actually described, and only the meta half: the source-derived facts
-  // belong to `saveGraphFacts()` and are not this writer's to declare done.
+  // belong to `saveGraphFacts()` and are not this writer's to declare done. And only if the write
+  // happened: a mark cleared over a refused write is a file nothing will ever read again.
+  if (!(await written)) return;
   metaPaths.forEach((mp) => _dirtyMeta.delete(mp.replace(/\.meta\.json$/, '.dg')));
 }
 
@@ -1407,7 +1442,7 @@ async function loadGraph() {
  *  size counts. Everything else in the graph is computed from those two and from the workspace as a
  *  whole, so nothing here is a stored judgement - only a stored reading. */
 async function saveGraphFacts(nodes, g) {
-  await updateMetaIndex((files) => {
+  const written = updateMetaIndex((files) => {
     nodes.forEach((nd) => {
       if (!nd.file) return;
       const node = g.nodes[nd.namespace + '.' + nd.name];
@@ -1429,7 +1464,9 @@ async function saveGraphFacts(nodes, g) {
     });
   });
   // The sources this pass read are now described, and only those - a file rewritten while this
-  // build was walking the folder keeps its mark and is read by the next one.
+  // build was walking the folder keeps its mark and is read by the next one. And only if the write
+  // happened, for the same reason as in the meta half.
+  if (!(await written)) return;
   nodes.forEach((nd) => { if (nd.file) _dirtySource.delete(nd.file); });
 }
 async function ensureGraph() {
@@ -2925,6 +2962,7 @@ async function buildHealth() {
   return { groups, coverage };
 }
 async function openHealth() {
+  const op = beginWorkspaceOp();   // an audit of the whole mirror takes as long as the mirror is big
   if (!dir) return;
   closeAI();   // one panel at a time
   $('healthview').classList.add('show'); $('health').classList.add('on'); document.body.classList.add('health-open');   // lit button + violet frame + covers the tabs, mirroring Ask AI
@@ -2935,7 +2973,9 @@ async function openHealth() {
   // operation does) the reads throw a generic "not allowed" DOMException. This click is a user
   // gesture, so requesting here re-grants it - and if the user declines, we say so plainly.
   if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted - click Refresh, then open Health again.</div>'; return; }
-  try { healthData = await buildHealth(); } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
+  // Built before it is published: `healthData` is what the view, its export and its counts all read,
+  // and an audit begun in one workspace is a description of that one.
+  try { const built = await buildHealth(); if (!op.current()) return; healthData = built; } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
   renderHealthView();
 }
 function renderHealthView() {
@@ -3120,7 +3160,7 @@ function friendlyError(e) {
     return 'The working folder is no longer readable - Chrome lets that permission lapse after a while. '
       + 'Press \u21bb Refresh in the toolbar to grant it again, then ask once more. Nothing was lost.';
   }
-  return 'Error: ' + m;
+  return MSG.errPrefix + m;
 }
 
 /** Re-grant the working folder before the assistant touches it.
@@ -3543,7 +3583,7 @@ function aiMarkdown(src) {
   // *replacement*, by function rather than by `$2`, so nothing else in the URL is touched twice -
   // `&` has already been through escHtml and must not be encoded again.
   t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    (m, text, href) => `<a href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${text}</a>`);
+    (m, text, href) => `<a href="${escQ(href)}" target="_blank" rel="noopener">${text}</a>`);
   t = t.replace(/\n/g, '<br>');
   t = t.replace(/\uE000(\d+)\uE001/g, (m, i) => codes[+i]);
   return t;
@@ -3591,7 +3631,7 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter) {
     }
     msgs.push({ role: 'assistant', content });
     const results = [];
-    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = 'Error: ' + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
+    for (const tu of toolUses) { aiToolEvent(tu.name, tu.input); let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; } results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) }); }
     msgs.push({ role: 'user', content: results });
   }
   aiMessages.push({ role: 'assistant', content: `(Reached the tool-step limit of ${maxIter}. Raise it in Settings or ask something more specific.)` }); aiRenderMessages();
@@ -6033,11 +6073,12 @@ async function loadScheduleIndex() {
   scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
 }
 async function rebuildSchedules() {
+  const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading schedules\u2026', 'busy');
-    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadScheduleIndex();
     renderSchedules();
     setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet - use Pull all.', 'ok');
@@ -6133,11 +6174,22 @@ async function loadWorkflowIndex() {
   const have = new Set();
   for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
   if (!op.current()) return;
+  // The list and its index are one fact and are published together. They were not: the index was
+  // filled at the very end, after a loop that reads one file per downloaded rule, so an interrupted
+  // loader left a list on screen whose rows opened nothing. Found by `tools/probe.py` in a browser,
+  // on a guard this same session had added - a guard that returns is a guard that must not leave
+  // half a state behind.
   workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
   // downloaded yet has neither, and says so as absence rather than as a zero - «0 scheduled» about a
   // workflow nobody has read is a measurement that was never taken.
+  // The loop below reads one file per downloaded rule, so the index it fills is filled long after the
+  // list it is an index *of* - and `wfIndex` is read by every workflow row on screen.
+  workflowData.forEach((e) => wfIndex.set(e.id, e));
+  // Enrichment from here on - two fields the list endpoint does not return, one file per rule. It may
+  // stop; what is already on screen stays consistent with what a click can find.
   for (const e of workflowData) {
+    if (!op.current()) return;
     if (!e.downloaded) continue;
     try {
       const rule = JSON.parse(await readFile(e.path));
@@ -6149,11 +6201,12 @@ async function loadWorkflowIndex() {
   workflowData.forEach((e) => wfIndex.set(e.id, e));
 }
 async function rebuildWorkflows() {
+  const op = beginWorkspaceOp();   // the workspace this rebuild is about
   if (!dir) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading workflows\u2026', 'busy');
-    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     await loadWorkflowIndex();
     renderWorkflows(); updateMissingButton();
     const dl = workflowData.filter((e) => e.downloaded).length;
@@ -6461,10 +6514,14 @@ async function rebuildActions() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading automation actions\u2026', 'busy');
-    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     const idx = await loadActionsIndex();
+    // Both publications after the last await, not before it. The first version of this guard sat
+    // above the walk of the rules - so the check ran, the walk took its time, and the two lists were
+    // published into whatever workspace had arrived meanwhile. A guard before an await is not a guard.
+    const users = await buildActionUsers();   // one walk of the rules, not one per item opened
     if (!op.current()) return;
-    actionUsers = await buildActionUsers();   // one walk of the rules, not one per item opened
+    actionUsers = users;
     actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
     buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
     renderActions();
@@ -6680,7 +6737,7 @@ async function rebuildConnections() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading connections…', 'busy');
-    const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     const cat = await loadConnectionsIndex();
     // usage: which functions reference each connection (join meta.connections[].name)
     const g = await ensureGraph().catch(() => null);

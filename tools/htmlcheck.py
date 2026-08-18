@@ -28,7 +28,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = sorted(p for p in (ROOT / 'apps').rglob('*.js'))
 
-ATTR_SAFE = re.compile(r'\bescA\s*\(')
+# `escQ` is the second of the two, for a value that has already been through `escHtml`: it encodes
+# the delimiters and nothing else, because encoding `&` twice is its own defect.
+ATTR_SAFE = re.compile(r'\b(escA|escQ)\s*\(')
 
 # A value is safe only if it demonstrably cannot contain a quote: a number, a quoted literal, a
 # boolean, or an expression that renders one. Everything else is reported.
