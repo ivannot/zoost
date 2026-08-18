@@ -23,7 +23,11 @@
   // A version instead of a flag. Same version: nothing to do. Different version: this one is newer
   // by construction (it is the one Chrome just loaded), so it re-patches over whatever is there -
   // the patches wrap whatever they find, so wrapping twice costs one extra call and loses nothing.
-  const HOOK_V = 2;
+  // Bumped whenever anything in this file changes behaviour: a page already running the previous
+  // build carries the previous number, and an equal number means «nothing to do» - so leaving it
+  // alone leaves the old hook in place in every open tab. That is what it did once, and it cost an
+  // evening of fixes that could not take effect.
+  const HOOK_V = 3;
   if (window.__zoostHook === HOOK_V) return;
   const replacing = window.__zoostHook;
   window.__zoostHook = HOOK_V;
