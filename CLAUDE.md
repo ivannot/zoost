@@ -169,6 +169,40 @@ into a call to itself, and both times every unit test passed because nothing exe
 caught it. Insert the helper **after** the replacement, and read the count it reports - «7 sites» when
 grep said 6 is the defect announcing itself.
 
+**Before saying «done», read the code the way somebody who did not write it would.** Five outside
+scans in one day found twenty-two real defects in code that was green - 530 tests, every checker at
+zero, the probe passing. Not one was subtle. They were missed because the author reads a diff for
+confirmation that it works, and a reader with no intention reads it for how it breaks; those are
+different activities, and the second one has to be *performed*, not hoped for.
+
+So it is a step, not an attitude: **spawn a subagent per area touched, with the fixed prompt below,
+then verify every finding yourself before reporting it.** A fresh subagent has no memory of the
+session - no knowledge of why a line is as it is, which is exactly the knowledge that hides the
+defect. What it cannot do is remove the *model's* blind spots: it shares them. It reduces what
+reaches an independent review; it does not replace one, and saying otherwise would be the false
+reassurance this file exists to refuse.
+
+The six questions, each earned by a defect that shipped:
+
+- **What global state is written after an `await`?** The folder can change under an operation, and a
+  check between two effects protects the first one only - one save left the source in one workspace
+  and its metadata in the next.
+- **Who else owns this flag?** `pullActive` was set by five pulls and consumed by one, so a change
+  arriving during the other four was remembered and never answered.
+- **Is this constant shared by uses with different parameters?** One page bound served walks reading
+  50 and 200 a page: a thousand functions on one side, eighty thousand rows on the other.
+- **Which exit says nothing?** A silent bail is indistinguishable from a working feature, and one of
+  them cost an evening - the hook was bowing out of every page and nobody could see it.
+- **Does partial data authorise a destructive act?** A list that stopped early was written as the
+  index and everything missing from it deleted, in two pulls, in two files.
+- **What survives a change of workspace?** A queue of relative paths followed the reader into the
+  next org and tried to delete a file there.
+
+Two rules about the list itself. **The seventh question will be written by the next defect nobody
+predicted** - add it the day it happens. And where one can be *derived*, derive it: «every walk that
+reads 200 a page counts against the wide bound» is a test that reads the requests, and it will hold
+when the prose has been forgotten.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because
