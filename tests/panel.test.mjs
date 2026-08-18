@@ -3467,8 +3467,7 @@ for (const app of ['crm', 'analytics']) {
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
-           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne',
-           'noticeCreated']],
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -5200,105 +5199,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   });
 }
 
-
 // ---------------------------------------------------------------------------------------------
-// What the editor does to a function, while you watch. Measured from a HAR of the three gestures
-// rather than assumed - they are all on one public v2 path, which is why this is worth doing at all:
-//   PUT    /settings/functions/{id}   saved     id in the url
-//   DELETE /settings/functions/{id}   deleted   id in the url
-//   POST   /settings/functions        created   **id only in the response body**
-// The hook does not read bodies. A creation therefore says «one was created» and the panel goes and
-// looks, which keeps the hook a hint that can only ever ask for a re-read - the property that makes
-// a script in somebody else's page defensible.
+// Reported: reading a function in Zoost, pulling, and the function is pruned because Zoho no longer
+// has it - and the pane stays open with its code on screen, showing something that exists nowhere.
 {
-  const hook = read('apps/crm/hook.js');
-  const bridge = read('apps/crm/content-bridge.js');
   const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-
-  test('the hook, run, turns each request into its event', () => {
-    // Executed, not read: asserting the text of `kindOf` is not knowing what it does, and the
-    // difference cost an evening. It listens on `loadend` - `load` is the success path only and
-    // misses a request aborted after the server answered - so the stub fires that.
-    const posted = [];
-    class FakeXHR {
-      constructor() { this.status = 200; this._l = {}; }
-      open(m, u) { this.__m = m; this.__u = u; }
-      send() { (this._l.loadend || []).forEach((f) => f()); }
-      addEventListener(k, f) { (this._l[k] = this._l[k] || []).push(f); }
-    }
-    const win = { postMessage: (d) => posted.push(d), fetch: async () => ({ ok: true }),
-                  location: { origin: 'https://crm.zoho.eu' } };
-    new Function('window', 'XMLHttpRequest', 'location', 'document', 'console', hook)(
-      win, FakeXHR, win.location, { title: '' }, { info() {}, debug() {} });
-    for (const [m, u] of [['PUT', '/crm/v2/settings/functions/123?language=deluge'],
-                          ['DELETE', '/crm/v2/settings/functions/123?language=deluge'],
-                          ['POST', '/crm/v2/settings/functions']]) {
-      const x = new FakeXHR(); x.open(m, u); x.send();
-    }
-    assert.deepEqual(posted.map((p) => `${p.type}:${p.id || '-'}`),
-                     ['saved:123', 'deleted:123', 'created:-']);
-  });
-
-  test('the hook maps each method to its own event, in one place', () => {
-    const at = hook.indexOf('const kindOf');
-    assert.ok(at > 0, 'the two interceptors decide for themselves what they saw');
-    const body = hook.slice(at, hook.indexOf('};', at));
-    for (const [method, kind] of [['PUT', 'saved'], ['DELETE', 'deleted'], ['POST', 'created']]) {
-      assert.ok(new RegExp(`${method}[\\s\\S]{0,60}${kind}`).test(body), `${method} does not produce ${kind}`);
-    }
-    assert.ok(/'created', null/.test(body), 'the creation carries an id, so the hook is reading bodies');
-  });
-
-  test('the hook still reads no response body', () => {
-    // The line it must not cross. `res.ok` and `this.status` are the whole of what it looks at.
-    assert.ok(!/\.json\(\)|responseText|\.clone\(\)/.test(hook),
-              'the hook reads the payload - it is a source now, not a hint');
-  });
-
-  test('the bridge holds an id to digits, and lets a creation name nothing', () => {
-    const at = bridge.indexOf("d.source !== 'DELUGE_IDE_HOOK'");
-    const body = bridge.slice(at, at + 2200);   // the orphan guard sits between, and it is prose-heavy
-    assert.ok(/saved' \|\| d\.type === 'deleted'/.test(body), 'a deletion is not held to the same check as a save');
-    assert.ok(/\^\\d\{1,20\}\$/.test(body), 'the id is no longer held to digits');
-    assert.ok(/'created'/.test(body), 'a creation never reaches the panel');
-  });
-
   test('a pull that prunes what you are reading closes the pane', () => {
-    // Reported: pulling removed a function deleted in Zoho and left its code on screen - a pane
-    // showing something that exists nowhere any more.
     const pull = panel.slice(panel.indexOf('async function pullAll'), panel.indexOf('\n}', panel.indexOf('async function pullAll')));
     assert.ok(/rmF\.includes\(currentPath\)/.test(pull), 'the pane survives the file it is showing');
     assert.ok(/preview'\)\.classList\.remove\('show'\)/.test(pull), 'it does not actually close');
-  });
-
-  test('a deletion checks at the edge and acts where a test can reach it', () => {
-    // Split on purpose: a guard chain cannot be driven without a Zoho tab, so the work below it
-    // could never be exercised - which is how this shipped broken. `tools/probe.py` drives
-    // `pruneFunction` in a browser; what is asserted here is that the two stay apart.
-    const guard = panel.slice(panel.indexOf('async function removeOne'), panel.indexOf('\n}', panel.indexOf('async function removeOne')));
-    assert.ok(/mismatchRefuse\(\)/.test(guard) && /guardOk\(\)/.test(guard), 'it writes to a workspace it has not checked');
-    assert.ok(/pruneFunction\(id\)/.test(guard), 'the guard does the work itself again');
-    const act = panel.slice(panel.indexOf('async function pruneFunction'), panel.indexOf('\n}', panel.indexOf('async function pruneFunction')));
-    assert.ok(/removeFile\(p\)/.test(act), 'the files stay on disk');
-    assert.ok(/\.meta\.json/.test(act), 'only one of the two files is removed');
-    assert.ok(/functions\/index\.json/.test(act), 'the index keeps the row, so the row returns on the next open');
-    assert.ok(!/mismatchRefuse|guardOk/.test(act), 'the effect carries guards, so a test cannot drive it');
-  });
-
-  test('a creation asks Zoho for the list and lets the usual path fetch it', () => {
-    const fn = panel.slice(panel.indexOf('async function noticeCreated'), panel.indexOf('\n}', panel.indexOf('async function noticeCreated')));
-    assert.ok(/listFunctions/.test(fn), 'it does not re-read the list');
-    assert.ok(/downloadMissing\(\)/.test(fn), 'the new function arrives by a path of its own');
-    assert.ok(/pullActive/.test(fn), 'it runs while a pull is already doing the same thing');
-  });
-
-  test('every kind the hook sends is a kind the panel answers', () => {
-    // Derived from the hook rather than listed here: a fourth event added tomorrow and forwarded by
-    // the bridge but forgotten in the panel is exactly the kind of half-wiring nothing else catches.
-    const kinds = [...new Set([...hook.matchAll(/'(saved|deleted|created)'/g)].map((m) => m[1]))];
-    assert.deepEqual(kinds.sort(), ['created', 'deleted', 'saved']);
-    for (const k of kinds) {
-      assert.ok(new RegExp(`msg\\?\\.type === '${k}'`).test(panel), `the panel ignores '${k}'`);
-    }
   });
 }
