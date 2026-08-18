@@ -3467,7 +3467,8 @@ for (const app of ['crm', 'analytics']) {
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
-           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne']],
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne',
+           'noticeCreated']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
@@ -5196,5 +5197,70 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // and a string that is not one of those arguments stays a string
     const plain = h.highlightDeluge('info "Contacts";', null, linkFor);
     assert.ok(!/c-link/.test(plain), 'a string outside an argument position was turned into a link');
+  });
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// What the editor does to a function, while you watch. Measured from a HAR of the three gestures
+// rather than assumed - they are all on one public v2 path, which is why this is worth doing at all:
+//   PUT    /settings/functions/{id}   saved     id in the url
+//   DELETE /settings/functions/{id}   deleted   id in the url
+//   POST   /settings/functions        created   **id only in the response body**
+// The hook does not read bodies. A creation therefore says «one was created» and the panel goes and
+// looks, which keeps the hook a hint that can only ever ask for a re-read - the property that makes
+// a script in somebody else's page defensible.
+{
+  const hook = read('apps/crm/hook.js');
+  const bridge = read('apps/crm/content-bridge.js');
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  test('the hook maps each method to its own event, in one place', () => {
+    const at = hook.indexOf('const kindOf');
+    assert.ok(at > 0, 'the two interceptors decide for themselves what they saw');
+    const body = hook.slice(at, hook.indexOf('};', at));
+    for (const [method, kind] of [['PUT', 'saved'], ['DELETE', 'deleted'], ['POST', 'created']]) {
+      assert.ok(new RegExp(`${method}[\\s\\S]{0,60}${kind}`).test(body), `${method} does not produce ${kind}`);
+    }
+    assert.ok(/'created', null/.test(body), 'the creation carries an id, so the hook is reading bodies');
+  });
+
+  test('the hook still reads no response body', () => {
+    // The line it must not cross. `res.ok` and `this.status` are the whole of what it looks at.
+    assert.ok(!/\.json\(\)|responseText|\.clone\(\)/.test(hook),
+              'the hook reads the payload - it is a source now, not a hint');
+  });
+
+  test('the bridge holds an id to digits, and lets a creation name nothing', () => {
+    const at = bridge.indexOf("d.source !== 'DELUGE_IDE_HOOK'");
+    const body = bridge.slice(at, at + 2200);   // the orphan guard sits between, and it is prose-heavy
+    assert.ok(/saved' \|\| d\.type === 'deleted'/.test(body), 'a deletion is not held to the same check as a save');
+    assert.ok(/\^\\d\{1,20\}\$/.test(body), 'the id is no longer held to digits');
+    assert.ok(/'created'/.test(body), 'a creation never reaches the panel');
+  });
+
+  test('a deletion removes the files, the index row and the open pane', () => {
+    const fn = panel.slice(panel.indexOf('async function removeOne'), panel.indexOf('\n}', panel.indexOf('async function removeOne')));
+    assert.ok(/removeFile\(p\)/.test(fn), 'the files stay on disk');
+    assert.ok(/\.meta\.json/.test(fn), 'only one of the two files is removed');
+    assert.ok(/functions\/index\.json/.test(fn), 'the index keeps the row, so the row returns on the next open');
+    assert.ok(/mismatchRefuse\(\)/.test(fn) && /guardOk\(\)/.test(fn), 'it writes to a workspace it has not checked');
+  });
+
+  test('a creation asks Zoho for the list and lets the usual path fetch it', () => {
+    const fn = panel.slice(panel.indexOf('async function noticeCreated'), panel.indexOf('\n}', panel.indexOf('async function noticeCreated')));
+    assert.ok(/listFunctions/.test(fn), 'it does not re-read the list');
+    assert.ok(/downloadMissing\(\)/.test(fn), 'the new function arrives by a path of its own');
+    assert.ok(/pullActive/.test(fn), 'it runs while a pull is already doing the same thing');
+  });
+
+  test('every kind the hook sends is a kind the panel answers', () => {
+    // Derived from the hook rather than listed here: a fourth event added tomorrow and forwarded by
+    // the bridge but forgotten in the panel is exactly the kind of half-wiring nothing else catches.
+    const kinds = [...new Set([...hook.matchAll(/'(saved|deleted|created)'/g)].map((m) => m[1]))];
+    assert.deepEqual(kinds.sort(), ['created', 'deleted', 'saved']);
+    for (const k of kinds) {
+      assert.ok(new RegExp(`msg\\?\\.type === '${k}'`).test(panel), `the panel ignores '${k}'`);
+    }
   });
 }

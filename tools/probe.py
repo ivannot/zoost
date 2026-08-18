@@ -455,6 +455,22 @@ CRM = """
       if (after.v === 3) say('the old summary was read and left on disk at its old version');
     }
 
+    // What the panel *does* when it is told - the half that was never tested, and the half where
+    // both directions of the live sync failed. The transport is proved elsewhere; this is the panel.
+    {
+      const victimF = treeData.find((e) => e.downloaded && e.path.endsWith('.dg'));
+      const id = String(victimF.id), p = victimF.path;
+      await pruneFunction(id);
+      await wait(900);
+      let gone = false; try { await readFile(p); } catch (_) { gone = true; }
+      if (!gone) say('removeOne left the source on disk');
+      let metaGone = false; try { await readFile(p.replace(/\.dg$/, '.meta.json')); } catch (_) { metaGone = true; }
+      if (!metaGone) say('removeOne left the metadata on disk');
+      if (treeData.some((e) => String(e.id) === id)) say('the row is still in the tree after removeOne');
+      const idx = JSON.parse(await readFile('functions/index.json'));
+      if (idx.some((e) => String(e.id) === id)) say('the index still carries the deleted function');
+    }
+
     // The sources kept in memory for `in: code` are a photograph too, and this one was invalidated
     // by whoever remembered to. `syncOne` - the panel following a save made in Zoho - writes the new
     // source and clears the diagram beside it, so a search after an edit answered with the text from
