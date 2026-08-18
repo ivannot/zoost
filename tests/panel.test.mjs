@@ -3467,7 +3467,7 @@ for (const app of ['crm', 'analytics']) {
 // reaches the platform refuses on its own.
 for (const [app, fns] of [
   ['crm', ['pullAll', 'pullModules', 'pullWorkflows', 'pullSchedules', 'pullConnections', 'pullActions',
-           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOne',
+           'pullFailures', 'downloadOne', 'downloadOneWf', 'resyncModule', 'loadWorkflowUsage', 'syncOneNow',
            'reconcileFunctions']],
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
@@ -5234,7 +5234,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     const panel = read('apps/crm/sidepanel.js');
     assert.ok(/reconcileFunctions\(\)/.test(panel), 'nothing reconciles');
     const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
-    assert.ok(/if \(reconciling\) return reconciling;/.test(fn), 'two notices start two reconciliations');
+    assert.ok(/if \(reconciling\) \{ reconcileAgain = true; return reconciling; \}/.test(fn),
+              'two notices start two reconciliations, or the second is forgotten');
     assert.ok(fn.indexOf('reconciling = (async') < fn.indexOf('await'), 'the promise is stored after the first await');
   });
 
@@ -5362,4 +5363,41 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       assert.ok(/nothing was removed/.test(fn), 'the reader is not told that nothing was removed');
     });
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ordering, from the same review. Two notices for one function used to start two reads and two
+// writes, and whichever answer came back second won - so out-of-order replies left the **older**
+// source on disk. Two real saves a moment apart do exactly the same, and there the loser is an edit
+// somebody made. A change arriving *during* a reconciliation was answered by the promise already
+// running, which is a «done» about a state older than the change. And a removal that failed was
+// forgotten while the index had already been rewritten without it, so nothing would ever look again.
+{
+  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
+
+  test('one save at a time per function, and one more after the last notice', () => {
+    const q = fn('function syncOne(id)');
+    assert.ok(/syncing\.has\(key\)/.test(q), 'two notices for one function still run together');
+    assert.ok(/syncAgain\.add\(key\)/.test(q), 'a notice arriving during a read is dropped');
+    assert.ok(/syncAgain\.delete\(key\)\) syncOne\(key\)/.test(q), 'the trailing read never happens');
+    assert.ok(q.indexOf('syncing.set(key, p)') > 0, 'nothing records the read in flight');
+  });
+
+  test('a change during a reconciliation is answered by one more round', () => {
+    const r = fn('function reconcileFunctions');
+    assert.ok(/reconcileAgain = true/.test(r), 'a notice during a run is forgotten');
+    assert.ok(/if \(reconcileAgain\) \{ reconcileAgain = false; reconcileFunctions\(\); \}/.test(r),
+              'the remembered change never gets its round');
+    assert.ok(/pullActive.*reconcileAgain = true/.test(r), 'a notice during a pull is dropped');
+  });
+
+  test('a removal that failed is tried again, not forgotten', () => {
+    assert.ok(/const failedRemovals = new Set\(\)/.test(panel), 'a failed removal is not kept');
+    const p = fn('async function pruneFunction');
+    assert.ok(/failedRemovals\.add\(path\)/.test(p), 'the path is lost when the removal fails');
+    const r = fn('function reconcileFunctions');
+    assert.ok(/for \(const p of \[\.\.\.failedRemovals\]\)/.test(r), 'nothing retries them');
+    assert.ok(r.indexOf('failedRemovals') < r.indexOf('const gone'), 'the retry runs after the new pruning');
+  });
 }

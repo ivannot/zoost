@@ -3631,16 +3631,20 @@ async function buildGraphFor(kind) {
  *  together - which is exactly what a creation sends, POST then PUT - start two reconciliations that
  *  both write the index.
  */
-let reconciling = null;
+let reconciling = null, reconcileAgain = false;
 function reconcileFunctions() {
-  if (reconciling) return reconciling;
+  // Single-flight is not enough on its own: a create or a delete arriving *while* the list is being
+  // read is a change the answer in flight cannot contain, and returning the promise already running
+  // says «done» about a state that predates it. So a notice during a run is remembered and answered
+  // by one more round afterwards - which also covers the notice that arrives while a pull is busy.
+  if (reconciling) { reconcileAgain = true; return reconciling; }
   reconciling = (async () => {
     if (mismatchRefuse()) return;
     if (!dir) { setStatus(MSG.noWorkspaceHere, 'warn'); return; }
     if (!(await hasPerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     await refreshContext();
     if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-    if (pullActive) return;                 // a pull is already doing this, and more
+    if (pullActive) { reconcileAgain = true; return; }   // let the pull finish, then check
     try {
       setStatus('Something changed in Zoho - checking\u2026', 'busy');
       const r = await toBridge({ cmd: 'listFunctions' });
@@ -3657,6 +3661,13 @@ function reconcileFunctions() {
       const live = new Set((r.entries || []).map((e) => String(e.id)));
       await writeFile('functions/index.json', JSON.stringify(r.entries, null, 2));
       // Pruned from what Zoho says, never from what the page said.
+      // Whatever a previous round could not finish removing, before anything else.
+      for (const p of [...failedRemovals]) {
+        let stillThere = true;
+        try { await readFile(p); } catch (_) { stillThere = false; }
+        if (!stillThere) { failedRemovals.delete(p); continue; }
+        try { await removeFile(p); failedRemovals.delete(p); } catch (_) {}
+      }
       const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
       let failed = 0;
       for (const e of gone) failed += await pruneFunction(e.id) ? 0 : 1;
@@ -3664,9 +3675,16 @@ function reconcileFunctions() {
       await downloadMissing();
       if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
     } catch (e) { setStatus('Could not check with Zoho: ' + errText(e), 'warn'); }
-  })().finally(() => { reconciling = null; });
+  })().finally(() => {
+    reconciling = null;
+    if (reconcileAgain) { reconcileAgain = false; reconcileFunctions(); }
+  });
   return reconciling;
 }
+
+// Paths a removal could not finish. Not a log: the next round tries them again, because by then the
+// index no longer mentions them and nothing else would ever look.
+const failedRemovals = new Set();
 
 /** Take a function out of the mirror. Returns whether it went completely - a half-removed function
  *  reported as removed comes back at the next open, and the reader was told it had gone. */
@@ -3689,11 +3707,36 @@ async function pruneFunction(id) {
   treeData = treeData.filter((e) => String(e.id) !== key);
   if (currentPath === path) { $('preview').classList.remove('show'); $('resizer').classList.remove('show'); currentPath = null; }
   renderTree(); updateMissingButton();
-  if (whole) setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok');
+  // A failure that is forgotten is a file nobody will ever come back to: the index has already been
+  // rewritten without it, so the next reconciliation cannot see it is still there. Kept by path, and
+  // retried at the top of the next round.
+  if (whole) { failedRemovals.delete(path); setStatus(`Deleted in Zoho: ${path.split('/').pop()} - removed from the mirror.`, 'ok'); }
+  else failedRemovals.add(path);
   return whole;
 }
 
-async function syncOne(id) {
+// One save at a time per function, and always one more after the last notice.
+//
+// Two notices for the same id used to start two `fetchOne`s and two writes, and whichever answer
+// arrived second won - so resolving them out of order left the **older** source on disk. Reported
+// with that exact experiment. Two real saves a moment apart do the same thing, and there the loser
+// is an edit the reader made.
+//
+// A queue per id with a trailing round: while one is in flight the id is marked, and the mark is
+// answered by exactly one more read after it finishes. Never dropped, never parallel.
+const syncing = new Map(), syncAgain = new Set();
+function syncOne(id) {
+  const key = String(id);
+  if (syncing.has(key)) { syncAgain.add(key); return syncing.get(key); }
+  const p = syncOneNow(key).finally(() => {
+    syncing.delete(key);
+    if (syncAgain.delete(key)) syncOne(key);
+  });
+  syncing.set(key, p);
+  return p;
+}
+
+async function syncOneNow(id) {
   if (mismatchRefuse()) return;
   if (!dir || !(await hasPerm(dir))) return;
   await refreshContext();
