@@ -357,14 +357,20 @@ async function loadTabPrefs() {
     }
   } catch (_) {}
 }
-async function loadAccess() {
-  tabAccess = {}; wsLastPull = null;
+// Built locally and published in one go, because these two are read by every tab: emptying them
+// before the first await meant an overtaken activation blanked the verdicts of the workspace that
+// had already arrived, and then filled them in from the one being left.
+async function loadAccess(op = beginWorkspaceOp()) {
+  let access = {}, last = null;
   try {
-    const cfg = await readCfg();
-    if (cfg && cfg.access && typeof cfg.access === 'object') tabAccess = cfg.access;
-    if (cfg && typeof cfg.lastPull === 'string') wsLastPull = cfg.lastPull;
+    const cfg = await opReadCfg(op);
+    if (cfg && cfg.access && typeof cfg.access === 'object') access = cfg.access;
+    if (cfg && typeof cfg.lastPull === 'string') last = cfg.lastPull;
   } catch (_) {}
+  if (!op.current()) return false;
+  tabAccess = access; wsLastPull = last;
   publishAccess();
+  return true;
 }
 // The settings page cannot read the workspace's `.zoost.json` - it has no folder handle and no
 // business acquiring one - but it has to be able to say *why* a tab is off, or "hidden" becomes the
@@ -4312,9 +4318,17 @@ async function activate(w, viaGesture) {
   // made every guard in that file always true. Both reported.
   const gen = ++wsGen;
   dir = w.handle; forgetDirs(); activeWsId = w.id; bound = w.binding || null;
-  await rememberActive('activeWs', w.id, gen); setEnabled(true);
-  if (gen !== wsGen) return;   // a second selection overtook this one while IndexedDB was writing
-  oldLayout = await hasOldLayout(w.handle);
+  // From here on this activation is an operation like any other: it awaits four times and every one
+  // of them is a place a second activation can finish first. It used to check once, after IndexedDB,
+  // and then keep going - so `oldLayout` was published from the workspace being left, and the reset,
+  // the access verdicts and the rebuild all ran against the one that had already arrived.
+  const op = beginWorkspaceOp();
+  await rememberActive('activeWs', w.id, gen);
+  if (!op.current()) return;
+  setEnabled(true);
+  const nextOldLayout = await hasOldLayout(op.root);
+  if (!op.current()) return;
+  oldLayout = nextOldLayout;
   // Not on a re-activation of the workspace already open - regranting a folder must not throw
   // away a conversation about the org you are still in.
   if (!sameWs) {
@@ -4328,8 +4342,10 @@ async function activate(w, viaGesture) {
   // Access verdicts belong to this workspace, so they are re-read here and the tab row rebuilt.
   // Carrying the previous org's answers over would hide a tab in an org that grants it - the same
   // class of mistake the environment guard exists to prevent, one field further in.
-  await loadAccess(); renderTabs();
-  const ok = viaGesture ? await ensurePerm(dir) : await hasPerm(dir);
+  if (!(await loadAccess(op))) return;
+  renderTabs();
+  const ok = viaGesture ? await ensurePerm(op.root) : await hasPerm(op.root);
+  if (!op.current()) return;
   if (ok) await rebuildActive(); else { setStatus('Workspace found - click Refresh to grant access.', 'warn'); await refreshContext(); }
 }
 
@@ -5999,7 +6015,13 @@ async function exportHtml() {
 
 // ---------- schedules ----------
 async function loadScheduleIndex() {
+  // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
+  // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
+  // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
+  // this class instead of waiting for the next reader to notice an instance of it.
+  const op = beginWorkspaceOp();
   let idx = []; try { idx = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  if (!op.current()) return;
   scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
 }
 async function rebuildSchedules() {
@@ -6093,10 +6115,16 @@ function wfScheduled(rule) {
 }
 
 async function loadWorkflowIndex() {
+  // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
+  // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
+  // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
+  // this class instead of waiting for the next reader to notice an instance of it.
+  const op = beginWorkspaceOp();
   wfIndex = new Map();
   let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
   const have = new Set();
   for await (const p of walk(dir)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) have.add(p.split('/').pop().replace(/\.json$/, '')); }
+  if (!op.current()) return;
   workflowData = idx.map((e) => ({ ...e, id: String(e.id), path: `workflows/${String(e.id)}.json`, downloaded: have.has(String(e.id)), error: false }));
   // One pass over the rules on disk for the two facts the list endpoint does not return. A rule not
   // downloaded yet has neither, and says so as absence rather than as a zero - «0 scheduled» about a
@@ -6416,12 +6444,18 @@ async function pullActions() {
   } catch (e) { await notePullFailure('actions', e, op); }
 }
 async function rebuildActions() {
+  // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
+  // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
+  // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
+  // this class instead of waiting for the next reader to notice an instance of it.
+  const op = beginWorkspaceOp();
   if (!dir) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading automation actions\u2026', 'busy');
     const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
     const idx = await loadActionsIndex();
+    if (!op.current()) return;
     actionUsers = await buildActionUsers();   // one walk of the rules, not one per item opened
     actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
     buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
@@ -6629,6 +6663,11 @@ async function loadConnectionsIndex() {
   return Array.isArray(idx) ? idx : [];
 }
 async function rebuildConnections() {
+  // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
+  // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
+  // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
+  // this class instead of waiting for the next reader to notice an instance of it.
+  const op = beginWorkspaceOp();
   if (!dir) return;
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
@@ -6639,6 +6678,7 @@ async function rebuildConnections() {
     const g = await ensureGraph().catch(() => null);
     const usedBy = {};
     if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
+    if (!op.current()) return;
     connectionData = cat.map((c) => ({ ...c, path: 'connections/' + c.name, uses: (usedBy[c.name] || []).slice() }));
     // connections a function references but that are NOT in the catalogue (renamed / removed)
     const catNames = new Set(cat.map((c) => c.name));

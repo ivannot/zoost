@@ -110,11 +110,21 @@
     let m;
     const lists = new Map();
     // The first two arguments, because that is as far as any documented signature puts a module.
-    const task = /\bzoho\.crm\.(?:v8\.)?(\w+)\s*\(\s*([^,)]*)(?:,\s*([^,)]*))?(?:,\s*([^,)]*))?/g;
+    // Split by `window.delugeArgs`, the depth-aware scanner the syntax highlighter already had. This
+    // used to cut the argument list at the first `,` or `)` it met, which is a different language:
+    // `getRelatedRecords(makeRelation("Prices", "Backup"), "Contacts", id)` reported the module as
+    // **Backup** - an argument of an argument - with `unknown` at zero, so a wrong answer arrived
+    // stated as a certain one, into Details, Health, the exports and the assistant. Two scanners for
+    // one job, and the weaker of the two was the one producing the data.
+    //
+    // `lastIndex` is deliberately not advanced past the call: a task nested inside another task's
+    // arguments is a reference of its own and has to be found too.
+    const task = /\bzoho\.crm\.(?:v8\.)?(\w+)\s*\(/g;
     const literal = (a) => { const l = String(a || '').trim().match(/^"([^"]*)"$|^'([^']*)'$/); return l ? (l[1] !== undefined ? l[1] : l[2]) : null; };
     while ((m = task.exec(bare))) {
       const sig = MODULE_TASK[m[1]]; if (!sig) continue;
-      const args = [m[2], m[3], m[4]];
+      const at = window.delugeArgs(bare, task.lastIndex);
+      const args = at.starts.map((st, i) => bare.slice(st, at.ends[i]));
       const mod = literal(args[sig.arg]);
       if (mod) add(mod, sig.mode, m[1]); else unknown++;
       // A task that names a second module names it as itself, not as a footnote to the first.

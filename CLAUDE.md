@@ -203,6 +203,26 @@ predicted** - add it the day it happens. And where one can be *derived*, derive 
 reads 200 a page counts against the wide bound» is a test that reads the requests, and it will hold
 when the prose has been forgotten.
 
+**Six reviews found the same defect six times, and the way out was not a seventh fix.** A value read
+from Zoho or from disk, an `await`, then a write into a module-level variable - by which time the
+workspace on screen may be another one. Each instance was fixed where it was found and reported as
+closed; the next review found the next one, in a function that did not resemble the last. That is
+what a rule living only as prose does: it is recalled by resemblance to its own wording, and the
+seventh instance never resembles it.
+
+`python3 tools/asynccheck.py` derives the instances instead - every global written after an `await`
+with no check in between, per panel - and it is a ledger like `tools/cssdupes.txt`: 59 sites are
+recorded as read, anything new fails, and **the ledger may only shrink**. It earned its place on the
+first run by finding four real ones *and* a fix I believed I had applied and had not: a Python
+edit script had died on an assertion before writing the file, so the function was untouched while
+the commit message said otherwise. The class this belongs to is the one this file already states -
+**a check that runs is worth more than a claim that was made** - and the specific lesson is narrower:
+an edit applied by a script is not applied until something that reads the file says so.
+
+What it cannot do is written in its own docstring rather than left to be discovered: it is
+line-based, a global written after an await is not automatically wrong, and it says nothing about
+*what* a guard checks. That is why it is a ledger and not a gate.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

@@ -30,13 +30,18 @@ const gsrc = (app) => read(`apps/${app}/graphview.js`) + '\n' + read(`apps/${app
 
 // The scanner comes with it: `stripNonCode` is now the façade over one pass that also hands back
 // the source with its string literals intact, which is what the module reading needs.
+// `delugeArgs` comes from highlight.js, which is where the one depth-aware scanner lives: the panel
+// loads both files and the graph window only that one. The extractor had a second, weaker copy of
+// the same job, and it was the copy producing the data.
 const { stripNonCode, scanDeluge, moduleRefs } = load([
   sliceFn('apps/crm/graph-core.js', 'scanDeluge'),
   sliceFn('apps/crm/graph-core.js', 'stripNonCode'),
   sliceConst('apps/crm/graph-core.js', 'MODULE_TASK'),
   sliceConst('apps/crm/graph-core.js', 'NOT_A_MODULE'),
+  sliceFn('apps/crm/highlight.js', 'delugeArgs'),
+  'window.delugeArgs = delugeArgs;',
   sliceFn('apps/crm/graph-core.js', 'moduleRefs'),
-]);
+], { window: {} });
 
 test('a URL inside a string is not mistaken for a line comment', () => {
   // The trap that made this a single left-to-right scan instead of chained regexes: removing line
@@ -3001,7 +3006,7 @@ test('every entry point that writes the mirror asks for the folder first', () =>
     const at = src.indexOf(`async function ${fn}(`);
     assert.ok(at > 0, `id=${fn} is gone from the Analytics panel`);
     const head = src.slice(at, at + 700);
-    assert.ok(/requirePerm\((?:dir|op\.root)\)/.test(head),
+    assert.ok(/requirePerm\((?:dir|op\.root)\)/.test(src.slice(at, at + 1200)),
       `id=${fn} writes the mirror without asking for the folder first`);
   }
 });
@@ -3438,7 +3443,11 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   assert.ok(/if \(!root \|\| rootGranted\) return;/.test(click),
     'the re-grant on click no longer depends on the verdict this now corrects');
   const load = sliceFn('apps/analytics/sidepanel.js', 'loadFromDisk');
-  assert.ok(/readFailed = null;/.test(load), 'the load starts from an old failure');
+  // It used to clear `readFailed` before the first read; now the four reads are a snapshot published
+  // in one go, so the failure is collected locally and assigned with the rest. Same fact, one
+  // publication - a load that has been overtaken must not leave its reason behind either.
+  assert.ok(/let failed = null;/.test(load) && /readFailed = failed;/.test(load),
+            'the load starts from an old failure, or leaves this one behind for the next workspace');
   assert.ok(/diskUnreadable = views\.length \? null : readFailed;/.test(load),
     'a stray failure from an unrelated read can speak about this workspace');
   const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason');
@@ -5156,7 +5165,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // code, and the module that was actually touched was missed. Every signature here was then read off
 // its own documentation page one at a time; these cases are that reading, held so it cannot rot.
 {
+  // Both files, in the order the panel loads them: the depth-aware argument scanner lives in
+  // highlight.js, which the graph window loads too, and graph-core.js reads it off `window`.
   const w = {};
+  new Function('window', read('apps/crm/highlight.js'))(w);
   new Function('window', read('apps/crm/graph-core.js'))(w);
   const mods = (dg) => w.buildGraph([{ namespace: 'standalone', name: 'a', api_name: 'a', file: 'a.dg', dg }])
     .nodes['standalone.a'];
@@ -6233,7 +6245,7 @@ test('analytics: the model is guarded, not only the disk', () => {
                 'a slow selection still writes itself over a faster one that came after it');
       assert.ok(/_activeWsWrites = _activeWsWrites\.then/.test(r), 'the writes are not ordered');
       assert.ok(/await rememberActive\(/.test(src), 'the selection does not go through it');
-      assert.ok(/if \(gen !== wsGen\) return;/.test(src),
+      assert.ok(/await rememberActive\([^\n]*\);\n\s*if \(!op\.current\(\)\) return;/.test(src),
                 'a selection that was overtaken carries on setting up the panel');
     });
   }
@@ -6282,5 +6294,99 @@ test('analytics: the model is guarded, not only the disk', () => {
     const ok = await vm.runInContext('writeToDisk', ctx)({ workspace: 'A', name: 'A', origin: 'oA' }, ctx.op);
     assert.equal(ok, false, 'an overtaken pull reported that it had written the workspace');
     assert.equal(ctx.bound, null, 'the panel is now bound to one workspace by id and another by name');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// One scanner, and it is the depth-aware one. There were two implementations of «which argument of
+// this call is which»: the syntax highlighter's counted brackets and quotes, the graph extractor's
+// cut at the first comma or bracket it met - and the weaker one was the one producing the data, so
+// `getRelatedRecords(makeRelation("Prices", "Backup"), "Contacts", id)` reported the module as
+// **Backup**, an argument of an argument, with the dynamic-reference count at zero. A wrong answer
+// stated as a certain one, into Details, Health, both exports and the assistant.
+{
+  const w = {};
+  new Function('window', read('apps/crm/highlight.js'))(w);
+  new Function('window', read('apps/crm/graph-core.js'))(w);
+  const refs = (dg) => w.buildGraph([{ namespace: 'standalone', name: 'a', api_name: 'a', file: 'a.dg', dg }]).nodes['standalone.a'];
+
+  const CASES = [
+    ['a nested call before the module', 'zoho.crm.getRelatedRecords(makeRelation("Prices", "Backup"), "Contacts", id);',
+     { modules: ['Contacts'], unknown: 0 }],
+    ['a comma inside a string', 'zoho.crm.getRelatedRecords("Prices, and more", "Contacts", id);',
+     { modules: ['Contacts'], unknown: 0 }],
+    ['a map literal in the way', 'zoho.crm.getRecords({"a": 1, "b": 2}, "Deals");',
+     { modules: [], unknown: 1 }],
+    ['a list literal in the way', 'zoho.crm.updateRecord({"x": 1, "y": [1, 2]}, id, m);',
+     { modules: [], unknown: 1 }],
+    ['a task nested in another task\'s arguments', 'zoho.crm.updateRecord("Deals", id, {"x": zoho.crm.getRecordById("Contacts", cid)});',
+     { modules: ['Deals', 'Contacts'], unknown: 0 }],
+  ];
+  for (const [what, dg, want] of CASES) {
+    test(`the module survives ${what}`, () => {
+      const n = refs(dg);
+      assert.deepEqual(n.modules.map((m) => m.name).sort(), want.modules.slice().sort(),
+                       `id=modules the arguments were split as if the call were flat`);
+      assert.equal(n.modulesUnknown, want.unknown,
+                   'id=unknown a computed module was read as a name, or a name counted as computed');
+    });
+  }
+
+  test('the extractor and the highlighter split a call the same way', () => {
+    // Not «both look right»: the same function, so they cannot disagree. It is in highlight.js
+    // because the panel loads both files and the graph window loads only that one.
+    assert.ok(typeof w.delugeArgs === 'function', 'the shared scanner is not published');
+    assert.ok(/window\.delugeArgs\(bare, task\.lastIndex\)/.test(read('apps/crm/graph-core.js')),
+              'the extractor has gone back to splitting arguments itself');
+    assert.ok(/const \{ starts, ends \} = delugeArgs\(code, call\.lastIndex\);/.test(read('apps/crm/highlight.js')),
+              'the highlighter keeps a second copy of the walk');
+    const src = 'f(one, g(a, b), "x, y", [1, 2], last)';
+    const a = w.delugeArgs(src, src.indexOf('(') + 1);
+    assert.deepEqual(a.starts.map((s, i) => src.slice(s, a.ends[i]).trim()),
+                     ['one', 'g(a, b)', '"x, y"', '[1, 2]', 'last'], 'the walk itself is not depth-aware');
+  });
+}
+
+// Analytics: a re-read that could not read is not a re-read, and one branch left the panel busy for
+// ever. Run rather than read - both were reported as reproduced, and a source check would have said
+// the same thing about the code that was already there.
+{
+  const RUN = async (fn, over) => {
+    const ctx = {
+      dir: {}, wsGen: 1, busy: false, pullFailed: [{ id: 'q1', stage: 'sql' }], sqls: {}, deps: {},
+      status: [], className: null, Object, JSON, String, Set, Promise, Error,
+      mismatchRefuse: () => false, requirePerm: async () => true, render() {}, openDetail: async () => {},
+      viewById: () => new Map([['q1', { id: 'q1', name: 'Q1', type: 'QueryTable' }]]),
+      mergeSchemaIntoViews() {}, writeLineage: async () => {}, writeSql: async () => {},
+      showEmergency() {}, endBusyElsewhere: () => { ctx.busy = false; },
+      $: () => ({ set className(v) { ctx.className = v; }, get className() { return ctx.className; } }),
+      setBusy: (on, text) => { ctx.busy = on; ctx.status.push(String(text || '')); },
+      chrome: { runtime: { onMessage: { addListener() {}, removeListener() { ctx.listenerGone = true; } } } },
+      beginWorkspaceOp: () => ({ root: ctx.dir, current: () => !over(), say() {} }),
+      toBridge: async (msg) => (msg.cmd === 'pullSql'
+        ? { sql: {}, failed: [{ id: 'q1', stage: 'sql' }] }
+        : { id: 'q1', parents: [], children: [], dashboards: [] }),
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', fn), ctx);
+    await vm.runInContext(`${fn}(${fn === 'pullOne' ? "'q1'" : ''})`, ctx);
+    return ctx;
+  };
+
+  test('analytics: a view whose SQL would not read is not reported as re-read', async () => {
+    const c = await RUN('pullOne', () => false);
+    assert.equal(c.pullFailed.length, 1, 'the failure this pull did not fix was cleared anyway');
+    assert.equal(c.className, 'warn', 'and it finished green');
+    assert.ok(c.status.some((s) => /SQL still could not be/.test(s)), 'with nothing said about it');
+  });
+
+  test('analytics: a retry overtaken in its SQL half does not leave the panel busy', async () => {
+    let switched = false;
+    const c = await RUN('retryFailed', () => switched);
+    assert.equal(c.busy, false, 'the buttons stay disabled until the panel is reopened');
+    switched = true;   // and the same with the switch landing inside the SQL call
+    const d = await RUN('retryFailed', () => true);
+    assert.equal(d.busy, false, 'an overtaken retry left Pull, export, Health and the assistant off');
+    assert.ok(d.listenerGone, 'and its progress listener behind');
   });
 }

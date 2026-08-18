@@ -482,16 +482,18 @@ async function selectWorkspace(w) {
   const gen = ++wsGen;
   dir = w.handle; forgetDirs();
   bound = { workspace: w.id, name: w.cfg.name || '', origin: w.cfg.origin || '', label: w.cfg.label || '', sample: !!w.cfg.sample };
+  const op = beginWorkspaceOp();
   await rememberActive('activeWsAnalytics', w.id, gen);
-  if (gen !== wsGen) return;   // a second selection overtook this one while IndexedDB was writing
+  if (!op.current()) return;   // a second selection overtook this one while IndexedDB was writing
   // Not on a re-selection of the workspace already open - regranting a folder must not throw
   // away a conversation about the workspace you are still in.
   if (!sameWs) {
     const n = dropWorkspaceState();
     if (n) status(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn');
   }
-  await loadFromDisk();
+  if (!(await loadFromDisk(op))) return;
   if (!sameWs) resetView();   // after the load: Health is rendered from what is now in memory
+  if (!op.current()) return;
   await refreshContext();
 }
 
@@ -870,6 +872,12 @@ async function pullAll() {
 // items that failed, and `pullOne()` re-reads a single view from its detail pane.
 async function pullOne(id) {
   const op = beginWorkspaceOp();   // the workspace this re-read belongs to
+  // `pullSql` reports a *per-item* failure in `failed` and does not throw: this read the ids it had
+  // asked for out of `pullFailed` regardless and finished ««Q1» re-read.», so a view whose SQL is
+  // still the old file - or absent - stopped being marked as incomplete. The panel, the export and
+  // the assistant then treat it as whole. Same shape as every «did not read» in the CRM: an answer
+  // that did not arrive is not an answer that says nothing is there.
+  const still = [];
   if (mismatchRefuse()) return;
   const v = viewById().get(id);
   if (!v) return;
@@ -880,14 +888,17 @@ async function pullOne(id) {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
       if (!op.current()) return endBusyElsewhere();
       if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
+      still.push(...(r.failed || []));
     }
     const d = await toBridge({ cmd: 'viewDependencies', id });
     if (!op.current()) return endBusyElsewhere();
     if (!deps) deps = {};
     deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
-    pullFailed = pullFailed.filter((f) => f.id !== id);
+    // Only this item's old report goes, and only if this pull actually replaced it.
+    pullFailed = pullFailed.filter((f) => String(f.id) !== String(id)).concat(still);
     await writeLineage(op); await writeSql(op);
-    setBusy(false, `«${v.name}» re-read.`); $('status').className = 'ok';
+    setBusy(false, still.length ? `«${v.name}»: lineage re-read, its SQL still could not be.` : `«${v.name}» re-read.`);
+    $('status').className = still.length ? 'warn' : 'ok';
     render(); await openDetail(id);
   } catch (e) {
     setBusy(false, `Could not re-read «${v.name}»: ` + (e.message || e));
@@ -908,7 +919,16 @@ async function retryFailed() {
     await requirePerm(op.root);
     const qIds = ids.filter((i) => { const v = viewById().get(i); return v && v.type === 'QueryTable'; });
     const still = [];
-    if (qIds.length) { const r = await toBridge({ cmd: 'pullSql', ids: qIds }); if (!op.current()) return; Object.assign(sqls, r.sql || {}); still.push(...(r.failed || [])); }
+    if (qIds.length) {
+      const r = await toBridge({ cmd: 'pullSql', ids: qIds });
+      // The sibling branch below said `return endBusyElsewhere()` and this one said `return`, so a
+      // switch during the SQL half left Pull, Refresh, export, the diagram, Health and the assistant
+      // disabled until the panel was reopened. The `finally` removes the listener and knows nothing
+      // about `busy`.
+      if (!op.current()) return endBusyElsewhere();
+      Object.assign(sqls, r.sql || {});
+      still.push(...(r.failed || []));
+    }
     const r2 = await toBridge({ cmd: 'scanDependencies', ids });
     // Before the model is touched, not only before the disk is: these ids belong to the workspace
     // this retry started in, and merging them into another one's memory is the same defect indoors.
@@ -981,11 +1001,20 @@ async function writeToDisk(info, op) {
 // and its SQL into the next.
 let wsGen = 0;
 
-async function loadFromDisk() {
-  readFailed = null;
-  const v = await readJson('views.json', null);
-  const s = await readJson('schema.json', null);
-  const l = await readJson('lineage.json', null);
+// Four files, read one after another, each resolved against whatever folder was current at that
+// moment - and published into the globals as they arrived. Two selections overlapping produced a
+// panel bound to one workspace, showing the other's view list, with the first one's schema: a state
+// no single file on disk can explain and nothing on screen can reveal. One operation, one snapshot,
+// one publication.
+async function loadFromDisk(op = beginWorkspaceOp()) {
+  let failed = null;
+  const readOne = async (rel) => { const r = await readJson(rel, null, op); failed = failed || readFailed; return r; };
+  const v = await readOne('views.json');
+  const s = await readOne('schema.json');
+  const l = await readOne('lineage.json');
+  const index = await readOne('sql/index.json');
+  if (!op.current()) return false;
+  readFailed = failed;
   views = (v && v.views) || []; folders = (v && v.folders) || [];
   schema = (s && s.tables) || {}; relations = (s && s.relations) || [];
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
@@ -997,7 +1026,6 @@ async function loadFromDisk() {
     $('smode').classList.remove('on');
     $('find').placeholder = 'Find\u2026';
   }
-  const index = await readJson('sql/index.json', null);
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   diskUnreadable = views.length ? null : readFailed;
@@ -1006,6 +1034,7 @@ async function loadFromDisk() {
   selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   render();
   if (views.length) status(`${views.length} views loaded from disk${v && v.pulledAt ? ' · pulled ' + v.pulledAt.slice(0, 10) : ''}.`, '');
+  return true;
 }
 
 // "Empty" and "unreadable" are different facts and were the same message: every surface wrote

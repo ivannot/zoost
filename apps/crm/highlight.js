@@ -45,6 +45,33 @@
    *  Computed before tokenizing rather than tracked as the tokenizer walks. The state machine that
    *  did it the other way had to know how many commas it had passed and got the second argument
    *  wrong; this reads the call as a whole, which is the only way the *positions* can be right. */
+  /** Where each argument of a Deluge call starts and ends, from just after its `(`.
+   *
+   *  Here rather than in `graph-core.js` because this file is loaded by both the panel and the graph
+   *  window and that one only by the panel - and because there were two implementations of this, one
+   *  depth-aware and one not. The weaker one was in the extractor, so it was the one producing the
+   *  data: `getRelatedRecords(makeRelation("Prices", "Backup"), "Contacts", id)` split at the first
+   *  comma it saw and reported the module as **Backup**, an argument of an argument, with the
+   *  dynamic-reference counter at zero - a wrong answer stated as a certain one. Same for a comma
+   *  inside a string and for a map literal.
+   *
+   *  Depth counts `(` `[` `{`, and quotes are skipped whole with their escapes. Positions, not text,
+   *  because the highlighter needs to mark a place and the extractor needs to read one. */
+  function delugeArgs(code, from) {
+    const starts = [from], ends = [];
+    let depth = 0, i = from;
+    for (; i < code.length; i++) {
+      const c = code[i];
+      if (c === '"' || c === "'") { const q = c; i++; while (i < code.length && code[i] !== q) { if (code[i] === '\\') i++; i++; } continue; }
+      if (c === '(' || c === '[' || c === '{') depth++;
+      else if (c === ')' || c === ']' || c === '}') { if (c === ')' && depth === 0) break; depth--; }
+      else if (c === ',' && depth === 0) { ends.push(i); starts.push(i + 1); }
+    }
+    ends.push(i);
+    return { starts, ends, end: i };
+  }
+  window.delugeArgs = delugeArgs;
+
   function argMarks(code) {
     const marks = new Map();
     const call = /\bzoho\.crm\.(?:v8\.)?(\w+)\s*\(/g;   // the V8 family is the same list under a prefix
@@ -53,18 +80,10 @@
       const sig = ARGS[m[1]]; if (!sig) continue;
       // Walk the argument list once, remembering where each argument starts. Depth-aware, so a
       // nested call or a map literal does not make the commas lie.
-      let i = call.lastIndex, depth = 0, arg = 0, at = i;
-      const starts = [i];
-      for (; i < code.length; i++) {
-        const c = code[i];
-        if (c === '"' || c === "'") { const q = c; i++; while (i < code.length && code[i] !== q) { if (code[i] === '\\') i++; i++; } continue; }
-        if (c === '(' || c === '[') depth++;
-        else if (c === ')' || c === ']') { if (depth === 0) break; depth--; }
-        else if (c === ',' && depth === 0) { arg++; starts[arg] = i + 1; if (arg > 3) break; }
-      }
+      const { starts, ends } = delugeArgs(code, call.lastIndex);
       const litAt = (idx) => {
         if (idx === undefined || starts[idx] === undefined) return null;
-        const lit = code.slice(starts[idx], i).match(/^\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/);
+        const lit = code.slice(starts[idx], ends[idx]).match(/^\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/);
         return lit ? { at: starts[idx] + lit[0].length - lit[1].length, name: lit[1].slice(1, -1) } : null;
       };
       const mod = litAt(sig.mod), rel = litAt(sig.rel), par = litAt(sig.parent);
@@ -73,7 +92,6 @@
       // The relation is resolved *within* its parent, because the same related-list name can exist
       // on more than one module - so the parent travels with it rather than being looked up later.
       if (rel) marks.set(rel.at, { kind: 'rel', name: rel.name, parent: mod ? mod.name : null });
-      void at;
     }
     return marks;
   }
