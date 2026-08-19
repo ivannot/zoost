@@ -6839,3 +6839,47 @@ test('crm: every caller of a null-returning loader copes with the null', () => {
               'a real failure is swallowed - the click does nothing and says nothing');
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «The workspace cannot change while a pull writes it» was true of the two main buttons only: the
+// per-row refreshes, the single-item downloads, the module resync and the health runtime pull all
+// ran with pullBusy false. Derived over the composed panel: every function whose name says it
+// re-reads Zoho for the user holds the flag for its whole span, through the one wrapper whose
+// finally is what makes an exception unable to leave the panel locked.
+test('crm: every user entry that re-reads Zoho holds the pull flag for its whole span', () => {
+  const src = crmPanel();
+  for (const fn of ['refreshSchedules', 'refreshActions', 'refreshConnections', 'resyncModule', 'pullHealthRuntime']) {
+    const body = sliceApp('crm', fn);
+    assert.ok(/return runPullAction\(async \(\) => \{/.test(body),
+              `${fn} re-reads Zoho without blocking the selector or refusing a second pull`);
+  }
+  // The row clicks that download one item wrap at the click, because downloadOne is also called
+  // from inside downloadMissing, which already holds the flag.
+  assert.ok(/runPullAction\(\(\) => downloadOne\(e\)\)/.test(src), 'a tree-row download runs unwrapped');
+  assert.ok(/runPullAction\(\(\) => downloadOneWf\(e\)\)/.test(src), 'a workflow-row download runs unwrapped');
+  const w = sliceFn('apps/crm/sidepanel.js', 'runPullAction');
+  assert.ok(/finally \{ setPullBusy\(false\); \}/.test(w), 'an exception in the work leaves the panel locked');
+  const pe = sliceFn('apps/crm/sidepanel.js', 'pullEverything');
+  assert.ok(/\} finally \{ setPullBusy\(false\); \}/.test(pe),
+            'pullEverything still releases by hand, so one throwing renderer locks the panel until reopen');
+});
+
+// An unmeasured use is not zero uses: rebuildConnections turned a failed graph build into
+// `uses: []` under a green status. Overtaken stays silent; a real failure is said and nothing
+// is published as measured.
+test('crm: a connections rebuild does not publish an unmeasured usage as zero', () => {
+  const body = sliceFn('apps/crm/connections.js', 'rebuildConnections');
+  assert.ok(!/ensureGraph\([^)]*\)\.catch\(\(\) => null\)/.test(body),
+            'a failed graph build is folded into an empty one again');
+  assert.ok(/=== WS_MOVED\) return;/.test(body), 'the overtaken case stopped being silent');
+  assert.ok(/could not build the usage graph/.test(body), 'a real failure says nothing');
+});
+
+// The memory follows the file: resyncModule swallowed a failed write and updated the screen from
+// memory - true for one screenful, undone by the next load.
+test('crm: a module resync publishes only what it managed to write', () => {
+  const body = sliceApp('crm', 'resyncModule');
+  assert.ok(!/op\.write\([^)]*\); \} catch \(_\) \{\}/.test(body), 'a failed write is swallowed again');
+  assert.equal((body.match(/Could not save/g) || []).length, 2,
+               'one of the two write sites reports nothing when the disk refuses');
+});
