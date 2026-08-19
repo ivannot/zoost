@@ -14,9 +14,22 @@ import { readdirSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
 // so a test about «the panel» reads them as the page composes them. Analytics is still one file.
-const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/export.js') + '\n' + read('apps/crm/health.js') + '\n' + read('apps/crm/sidepanel.js');
+// The page's files, in load order, read once - not per call: 50 call sites each concatenating
+// 700KB is real memory, and a blanket replace once made this function call itself (OOM, not probe,
+// caught it - the mechanical-replace trap, fourth time in this repository's records).
+let _crmPanelText = null;
+const crmPanel = () => (_crmPanelText ??= CRM_FILES.map(read).join('\n'));
 // Where an assistant function lives, per app: the CRM's moved to ai.js with the split.
 const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
+// A slice by name, wherever the split put it: tries the app's files in page order and keeps
+// sliceFn's own guarantee - a name found nowhere still throws, so cover cannot vanish silently.
+const CRM_FILES = ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'];
+function sliceApp(app, name) {
+  const files = app === 'crm' ? CRM_FILES : [`apps/${app}/sidepanel.js`];
+  let lastErr;
+  for (const f of files) { try { return sliceFn(f, name); } catch (e) { lastErr = e; } }
+  throw lastErr;
+}
 
 import { join } from 'node:path';
 
@@ -229,7 +242,7 @@ const focusCtx = {
   },
   JSON, Object,
 };
-const { aiFocus } = load([sliceFn('apps/crm/sidepanel.js', 'moduleRefusal'),
+const { aiFocus } = load([sliceFn('apps/crm/modules.js', 'moduleRefusal'),
                           sliceFn('apps/crm/ai.js', 'aiFocus')], focusCtx);
 
 function looking(at, extra = {}) {
@@ -405,7 +418,7 @@ test('a namespace from Zoho cannot become markup in a group header', () => {
   // The one real finding of the content audit: the functions tree grouped by namespace and wrote
   // the namespace straight into innerHTML. The other 378 content slots were numbers, our own
   // literals, or markup this code had just built.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.match(src, /<span>\$\{escHtml\(ns\)\}<\/span>/,
     'the group header must escape the namespace it renders');
 });
@@ -634,7 +647,7 @@ test('every empty list asks what is blocking before blaming the pull', () => {
 });
 
 test('no list still tells the reader to pull without asking first', () => {
-  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/^\s*\/\/.*$/gm, '');
   for (const m of src.matchAll(/'<b>No [^']*<\/b> Press <b>Pull[^']*'/g)) {
     const before = src.slice(Math.max(0, m.index - 140), m.index);
     assert.ok(before.includes('emptyReason() ||'),
@@ -769,7 +782,7 @@ test('the workspace bar carries the name the user gave it, next to the platform\
   // could hand its diagram a workspace with no label in it at all - and did, for as long as it has
   // had one. Reported. The line itself is one function in both files, so a fix on one side is a fix
   // on the other by construction rather than by anyone remembering.
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const w = [...js.matchAll(/workspace = \{[^}]*\}/g)].map((m) => m[0]);
   assert.ok(w.length >= 3, 'the graph stopped carrying its workspace');
   for (const one of w) assert.match(one, /label: bound\?\.label/, `a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
@@ -1343,7 +1356,7 @@ test('a refusal travels into the graph, and is not counted as unreferenced', () 
   // fields were not read either, so both directions are unknown rather than empty. Asserted against
   // the source because buildSchemaGraph walks the file system and cannot be lifted; this proves the
   // rule is written, not that it runs, and that limit is why the check above runs its function.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const graph = src.slice(src.indexOf('async function buildSchemaGraph('), src.indexOf('async function openSchemaFocus('));
   assert.match(graph, /unreadable: m\.unreadable \|\| null/, 'the refusal does not reach the graph');
   assert.match(graph, /dead_suspect = !n\.unreadable && n\.called_by\.length === 0/,
@@ -1360,7 +1373,7 @@ test('a refusal is a 4xx, and everything else stays a failure', () => {
   // The first version wrote `unreadable` on any thrown error, so a dropped connection would have
   // been dated on disk as a settled refusal and the row would have stopped looking retryable for
   // good. Same rule as the per-area access verdicts: only what Zoho actually answered counts.
-  const { isRefusal } = load([sliceFn('apps/crm/sidepanel.js', 'isRefusal')]);
+  const { isRefusal } = load([sliceFn('apps/crm/modules.js', 'isRefusal')]);
   for (const s of [400, 401, 403, 404, 429, 499]) assert.equal(isRefusal(s), true, `${s} is a refusal`);
   for (const s of [0, undefined, null, 200, 500, 502, 503]) assert.equal(isRefusal(s), false, `${s} is not`);
 });
@@ -1370,7 +1383,7 @@ test('the refused mark is neutral, and not one the panel uses for "try again"', 
   // retry" - advertising an action that changes nothing. The mark has to say "no", not "not yet",
   // and it cannot borrow one that already says something else: the hollow circle is "click to
   // download" three tabs away, which is the opposite claim.
-  const src = read('apps/crm/sidepanel.js');
+  const src = read('apps/crm/modules.js');   // the row this is about; the exports have their own copy
   // from the start index, not from zero: the functions list has an `el.querySelector('.st')` of its
   // own further up, and searching from the top sliced an empty string that matched nothing.
   const at = src.indexOf('const ref = moduleRefusal(m.unreadable);');
@@ -1391,7 +1404,7 @@ test('a module refusal is explained once in the pane, not once per empty section
   // Reported with a screenshot: the same sixty-word sentence three times in a 300px pane - the
   // banner, the fields area and the related lists area. A reason repeated under the reason stops
   // reading as an explanation. The banner explains; the sections state their own fact and stop.
-  const src = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/^\s*\/\/.*$/gm, '');
   // Whole function bodies, found by name and closed on the first `}` in column 1 - the same way the
   // rest of this file slices, and it does not depend on a comment surviving the strip above.
   const body = (name) => {
@@ -1460,7 +1473,7 @@ test('both panels say the same thing when the folder is not granted', () => {
     assert.match(b, shortcut, `${['crm', 'analytics'][i]}: does not mention the click-anywhere shortcut`);
   }
   // and the CRM has to actually draw it — that is why it never appeared
-  assert.match(read('apps/crm/sidepanel.js'), /function renderBlocked\(\)/, 'crm: nothing draws the blocker');
+  assert.match(crmPanel(), /function renderBlocked\(\)/, 'crm: nothing draws the blocker');
 });
 
 test('only the first b in an empty state is a heading', () => {
@@ -1494,7 +1507,7 @@ test('the click-anywhere shortcut exists on both, and stays out of the same plac
 
 // ---------- Workflows: the scheduled actions the list endpoint never returns ----------
 
-const { wfScheduled } = load([sliceFn('apps/crm/sidepanel.js', 'wfScheduled')]);
+const { wfScheduled } = load([sliceFn('apps/crm/automation.js', 'wfScheduled')]);
 
 // The shape as Zoho actually returns it, from a real rule (names replaced).
 const RULE = {
@@ -1565,7 +1578,7 @@ test('no shipped script writes a folder with a leading underscore', () => {
 });
 
 test("every per-kind index is <kind>/index.json, and both apps agree on the name", () => {
-  const crm = read('apps/crm/sidepanel.js');
+  const crm = crmPanel();
   for (const kind of ['functions', 'modules', 'modules/layouts', 'workflows', 'schedules', 'connections']) {
     assert.ok(crm.includes(`'${kind}/index.json'`), `${kind} has no ${kind}/index.json`);
   }
@@ -1575,7 +1588,7 @@ test("every per-kind index is <kind>/index.json, and both apps agree on the name
 });
 
 test('functions are written under functions/<namespace>/, not in the workspace root', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.ok(src.includes('`functions/${f.folder}/${f.stem}.dg`'), 'the sync path is not under functions/');
   assert.ok(src.includes('`functions/${f.folder}/${f.stem}.meta.json`'), 'the sidecar is not under functions/');
   assert.ok(!/[^/]\$\{f\.folder\}\/\$\{f\.stem\}\.dg/.test(src.replace(/functions\/\$\{f\.folder\}/g, 'X')),
@@ -1585,7 +1598,7 @@ test('functions are written under functions/<namespace>/, not in the workspace r
 test('the old layout is reported, never read', () => {
   // No reader knows the old paths — that is the point. What exists is an empty state that names the
   // real reason, so a workspace full of files does not report "nothing pulled yet".
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.match(src, /OLD_DIRS = \['_index', '_modules', '_layouts', '_workflows', '_schedules', '_connections'\]/);
   assert.match(src, /This workspace uses the old folder layout/);
   const readers = [...src.matchAll(/readFile\(\s*[`'"]_/g)];
@@ -1629,7 +1642,7 @@ test("the CRM's per-org caches are dropped there too, not only in the Functions 
   // graphCache, moduleFilesCache and aiConnCache were cleared in rebuildTree(), which only runs if you
   // happen to be on Functions. Switch workspace from the Workflows tab and the assistant answered
   // from the previous org's functions and schema, with no sign of it anywhere.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const fn = src.slice(src.indexOf('function dropWorkspaceState()'));
   const body = fn.slice(0, fn.indexOf('\n}'));
   for (const c of ['graphCache = null', 'moduleFilesCache = null', 'aiConnCache = null']) {
@@ -1661,7 +1674,7 @@ test('a layout lives under the module it describes, and the walks tell the two a
   // folder shape chosen to protect the code from a mistake I had just made, which is the wrong
   // direction. One named predicate, and the objection goes away; a layout is a property of a module
   // and now sits under it.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.match(src, /const isModuleFile = /);
   assert.match(src, /const isLayoutFile = /);
   assert.ok(!/p\.startsWith\('layouts\//.test(src), 'layouts/ is still addressed as a top-level folder');
@@ -2046,7 +2059,7 @@ test('a control that comes and goes may not move the numbers beside it', () => {
   // The layouts chevron appears only on a module with more than one, and it used to be absent
   // otherwise - so a row with several layouts was 12px wider on the right than its neighbours and
   // pushed its own field and layout counts left. Measured at 18px of drift. Reported.
-  const js = read('apps/crm/sidepanel.js'), css = read('apps/crm/sidepanel.html');
+  const js = crmPanel(), css = read('apps/crm/sidepanel.html');
   // Searched *after* the start, not from the top: moduleRefusal() is defined earlier in the file,
   // so a bare indexOf returned a slice that ran backwards and silently contained nothing.
   const from = js.indexOf('const multi = (m.layoutCount || 0) > 1');
@@ -2515,7 +2528,7 @@ test('the sample workspace has the shape the pull writes, field for field', () =
                    'associated_place', 'workflow', 'rest_api', 'connections', 'sv']) {
     assert.ok(k in meta, `the function meta has no ${k}`);
   }
-  const SV = +read('apps/crm/sidepanel.js').match(/const META_SV = (\d+)/)[1];
+  const SV = +crmPanel().match(/const META_SV = (\d+)/)[1];
   assert.equal(meta.sv, SV, `the meta says sv ${meta.sv} where the panel's META_SV is ${SV}`);
   assert.ok(Array.isArray(meta.rest_api), 'rest_api is not the list the reader tests with .some()');
   assert.ok(meta.connections.every((c) => c && typeof c === 'object' && c.name),
@@ -2582,7 +2595,7 @@ test('a workspace binding is in place before anything is enabled from it', () =>
   // image: here the state is read before it is written.
   // Comments stripped first: the note explaining this bug names setEnabled( above the line that
   // calls it, so searching the raw text found the explanation and reported the fix as the defect.
-  const js = read('apps/crm/sidepanel.js').replace(/^\s*\/\/.*$/gm, '');
+  const js = crmPanel().replace(/^\s*\/\/.*$/gm, '');
   const body = js.slice(js.indexOf('async function activate('), js.indexOf('\n}', js.indexOf('async function activate(')));
   const bind = body.indexOf('bound = w.binding');
   const enable = body.indexOf('setEnabled(');
@@ -2996,13 +3009,13 @@ test('byField() sorts exactly as the arrow it replaced did', () => {
 // Functions.
 
 test('viewMode starts unchosen, not on a tab named in the source', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.ok(/let viewMode = null,/.test(src),
     'viewMode is initialised to a tab id again - reordering the tabs will not move the panel');
 });
 
 test('the first draw selects the first ordered tab', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   assert.ok(/if \(vis\.length && \(viewMode === null \|\| !vis\.includes\(viewMode\)\)\) setMode\(vis\[0\]\);/.test(src),
     'the selection guard no longer covers the unchosen case, so the panel opens on whatever the ' +
     'source names rather than on the tab the user ordered first');
@@ -3142,7 +3155,7 @@ test('the folded state of one list cannot fold another', () => {
   // or two tabs collide - a function namespace and an action kind that happen to share a word would
   // fold each other, which is untraceable from either screen. Functions owns the bare key by being
   // first; everything since carries a prefix.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const keys = [...src.matchAll(/collapsed\.(?:has|add|delete)\(([^)]*)\)/g)].map((m) => m[1].trim());
   assert.ok(keys.length >= 8, `expected the five lists to use collapsed, found ${keys.length} uses`);
   const bare = keys.filter((k) => !/^'[a-z]+:'/.test(k));
@@ -3240,7 +3253,7 @@ test('every message named is defined, and every message defined is named', () =>
     const GROUPS = [
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
-      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
     let src = read(rel);
@@ -3281,7 +3294,7 @@ test('both panels report a lapsed folder permission in the same words', () => {
 // rendering the panel against a non-sample fixture with a tab reporting a different org:
 // before, `pull=OFF pullone=on`; after, both off, and both on again when the orgs line up.
 test('the mismatch guard drives every Zoho-bound button from one list', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const zoho = src.match(/const ZOHO_BTNS = \[([^\]]*)\]/);
   assert.ok(zoho, 'id=crm ZOHO_BTNS is gone - the list the guard derives from');
   assert.ok(/'pull'/.test(zoho[1]) && /'pullone'/.test(zoho[1]),
@@ -3539,7 +3552,7 @@ for (const [app, fns] of [
   ['analytics', ['pullAll', 'pullOne', 'retryFailed']],
 ]) {
   test(`${app}: every path to Zoho refuses a mismatch by itself`, () => {
-    const js = read(`apps/${app}/sidepanel.js`);
+    const js = panelBody(app);
     // The set is derived from the transport, so a path added tomorrow is measured rather than
     // remembered: everything that reaches the platform goes through toBridge.
     const reach = new Set();
@@ -3548,7 +3561,7 @@ for (const [app, fns] of [
       if (head > 0) reach.add(js.slice(head, js.indexOf('(', head)).split(' ').pop());
     }
     for (const fn of fns) {
-      const body = sliceFn(`apps/${app}/sidepanel.js`, fn);
+      const body = sliceApp(app, fn);
       assert.ok(/if \(mismatchRefuse\(\)\) return/.test(body), `${fn} reaches Zoho without asking`);
     }
     // toBridge and getContext are the transport and the poll: they are how the mismatch is detected
@@ -3974,7 +3987,7 @@ for (const app of ['crm', 'analytics']) {
     // Opening a function reads its file, so the tree marks the row a tick later: asking the DOM
     // where it was made every press start from the top again. Measured by pressing twice and
     // landing on row one.
-    const src = read('apps/crm/sidepanel.js');
+    const src = crmPanel();
     assert.ok(/let stepAnchor = null/.test(src), 'the anchor is gone, so holding the arrow stalls');
     const i = src.indexOf('function stepSelection');
     assert.ok(/stepAnchor = el\.dataset\.path/.test(src.slice(i, i + 1400)),
@@ -4126,7 +4139,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   // Comments stripped first: this file explains at length why the row is clicked, and an assertion
   // over the prose would find the very name it is asserting is gone. The trap this repository
   // already recorded about the duplicate-message check.
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const i = src.indexOf('function stepSelection');
   const body = src.slice(i, src.indexOf('\nfunction ', i + 10))
     .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
@@ -4209,7 +4222,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   });
 
   test('both halves are wired, or the links do nothing', () => {
-    const crm = read('apps/crm/sidepanel.js');
+    const crm = crmPanel();
     assert.ok(/a\.aplink\[data-ap\]/.test(crm), 'crm: the «Used in» links are drawn and never wired');
     const an = read('apps/analytics/sidepanel.js');
     const i = an.indexOf('<h5>Reads from</h5>');
@@ -4527,7 +4540,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   test('Name moves every naming the chain shows', () => {
     // It moved the functions and left the modules on whatever the Modules tab was set to, so half the
     // chain answered the button - reported. The kinds that cannot follow have one name each.
-    const js = read('apps/crm/sidepanel.js');
+    const js = crmPanel();
     const body = js.slice(js.indexOf("$('navname').onclick"), js.indexOf("$('navname').onclick") + 700);
     assert.ok(/nameMode = /.test(body), 'the function naming does not move');
     assert.ok(/moduleNameMode = /.test(body), 'the module naming does not move with it');
@@ -4671,7 +4684,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
 // its own lesson - the shim resolved every path by scanning all 10,000 keys, and forty seconds of
 // «the panel is slow» turned out to be the instrument. It is indexed now.)
 {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const load = src.slice(src.indexOf('async function rebuildTree'), src.indexOf('async function attachFnStats'));
 
   test('the index is read before anything is drawn, and the metas after', () => {
@@ -4784,7 +4797,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
     // An edge is a reference *resolved against the whole workspace*, and that answer changes when a
     // function is added or renamed - a name unique today is ambiguous tomorrow. Storing edges would
     // be a cached judgement, and nothing would say when it went stale.
-    const js = read('apps/crm/sidepanel.js');
+    const js = crmPanel();
     const at = js.indexOf('async function saveGraphFacts');
     const body = js.slice(at, at + 1400).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     assert.ok(/entry\.refs = /.test(body), 'the references are not written down');
@@ -4795,7 +4808,7 @@ test('code is shown the same way in both products: lines as written, box scrolls
 // ---------------------------------------------------------------------------------------------
 // Reading every source is what «search inside the code» means; blocking the panel for it is not.
 test('the sources are read in tranches, and the reader is told', () => {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const at = js.indexOf('async function getCodeCache');
   const body = js.slice(at, at + 900).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.ok(/TRANCHE/.test(body), 'the whole workspace is read in one go again');
@@ -4809,7 +4822,7 @@ test('the sources are read in tranches, and the reader is told', () => {
 // one that does the work, half of what a pull spends. Measured: writing a function went from 8
 // file-system calls to 4, opening a 5,000-function workspace from 20,015 to 10,732.
 test('the directory handles are cached, and dropped when the folder changes', () => {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const at = js.indexOf('async function dirFor');
   const body = js.slice(at, at + 700).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.ok(/cache\.has\(key\)/.test(body), 'nothing is cached');
@@ -4828,7 +4841,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
 // date. The fix is at the point where this panel writes, and `tools/probe.py` drives the whole thing
 // in a browser - this holds the mechanism so it cannot be removed without a red mark.
 {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
   test('every write marks the function it rewrote', () => {
@@ -4878,7 +4891,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
 // STATS_LIMIT - where the graph is not built during the load - and a test that cannot reach a hazard
 // must at least pin the design that removes it.
 {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (name) => {
     // async or not: the helper should find the function, not assert a keyword nobody promised.
@@ -4927,7 +4940,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
 // an opinion about that field. A promise chain is enough here: the contention is between two known
 // callers inside one document, not between processes.
 {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (name) => code.slice(code.indexOf('function ' + name), code.indexOf('\n}', code.indexOf('function ' + name)));
 
@@ -4974,7 +4987,7 @@ test('the directory handles are cached, and dropped when the folder changes', ()
 // resync left the assistant's catalogues behind. All five now derive from the path written, so a
 // write path added tomorrow inherits the invalidation without being told it exists.
 {
-  const js = read('apps/crm/sidepanel.js');
+  const js = crmPanel();
   const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const region = (start, end) => code.slice(code.indexOf(start), code.indexOf(end, code.indexOf(start)));
   const CACHES = ['codeCache', 'graphCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache', 'actionUsers'];
@@ -5299,7 +5312,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // Reported: reading a function in Zoost, pulling, and the function is pruned because Zoho no longer
 // has it - and the pane stays open with its code on screen, showing something that exists nowhere.
 {
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   test('a pull that prunes what you are reading closes the pane', () => {
     const pull = panel.slice(panel.indexOf('async function pullAll'), panel.indexOf('\n}', panel.indexOf('async function pullAll')));
     assert.ok(/rmF\.includes\(currentPath\)/.test(pull), 'the pane survives the file it is showing');
@@ -5326,7 +5339,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // nothing while risking a lost second save. The answer is that a notice asks Zoho what exists
     // now: hearing it twice costs a list call and cannot lose an edit.
     assert.ok(!/__zoostLast/.test(hook), 'the hook is collapsing notices again');
-    const panel = read('apps/crm/sidepanel.js');
+    const panel = crmPanel();
     assert.ok(/reconcileFunctions\(\)/.test(panel), 'nothing reconciles');
     const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
     assert.ok(/if \(reconciling\) \{ reconcileAgain = true; return reconciling; \}/.test(fn),
@@ -5400,7 +5413,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // out of that message and removing files with it. Holding the id to digits limits its shape, not its
 // authority. Raised by an outside review, and it was right.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   const fn = panel.slice(panel.indexOf('function reconcileFunctions'), panel.indexOf('\n}', panel.indexOf('function reconcileFunctions')));
 
   test('nothing is removed on the word of a message from the page', () => {
@@ -5426,7 +5439,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // - and the box stayed full while the list looked empty for no visible reason. Reported as
 // disorienting, which is exactly what it is: a control claiming to filter a list that never asked.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   const fn = panel.slice(panel.indexOf('function setMode'), panel.indexOf('\n}', panel.indexOf('function setMode')));
   test('each tab keeps its own Find', () => {
     assert.ok(/findByMode\[viewMode\] = \{ text: \$\('find'\)\.value, mode: searchMode \}/.test(fn),
@@ -5448,7 +5461,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // Raised by an outside review; a partial list is a statement about the reading, not about what
 // exists.
 {
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   for (const [name, start] of [['reconcileFunctions', 'function reconcileFunctions'], ['pullAll', 'async function pullAll']]) {
     test(`${name} removes nothing from a list that stopped early`, () => {
       const fn = panel.slice(panel.indexOf(start), panel.indexOf('\n}', panel.indexOf(start)));
@@ -5471,7 +5484,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // running, which is a «done» about a state older than the change. And a removal that failed was
 // forgotten while the index had already been rewritten without it, so nothing would ever look again.
 {
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
 
   test('one save at a time per function, and one more after the last notice', () => {
@@ -5494,7 +5507,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // modules or workflows pull used to sit in the flag until something else happened to ask.
     const end = fn('function endPull');
     assert.ok(/pendingAfterPull.*reconcileFunctions\(\)/.test(end), 'the pull never honours it');
-    const panelSrc = read('apps/crm/sidepanel.js');
+    const panelSrc = crmPanel();
     assert.ok(!/finally \{ pullActive = false; \}/.test(panelSrc),
               'a pull still ends on its own, so it cannot honour a notice');
   });
@@ -5517,7 +5530,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // mistaken for that click and never revealed. Raised by an outside review. The origin is an argument
 // of the call now: there is no state to leak between two navigations.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   test('where an open came from travels with the call', () => {
     assert.ok(!/openedByClick/.test(panel), 'the origin is a shared flag again');
     assert.ok(/function openFromTree\(path\) \{ openFile\(path, null, true\); \}/.test(panel),
@@ -5534,7 +5547,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // workspace wrote both of its files into the next. A handle identifies a folder exactly - the same
 // object, or a different workspace - so it is captured before the first await and compared after.
 {
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
 
   test('an answer is not written into a workspace you have left', () => {
@@ -5580,7 +5593,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // workspace mid-way left the source in one and the metadata in the next. `pruneFunction` removed the
 // same pair the same way. Raised by an outside review, with both halves reproduced.
 {
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
 
   test('every write and every removal is checked, not just the first', () => {
@@ -5645,7 +5658,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   }
 
   test('crm: every pull that writes an index checks it is still where it started', () => {
-    const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     for (const name of ['pullModules', 'pullSchedules', 'pullActions', 'pullConnections', 'pullWorkflows']) {
       const at = src.indexOf(`async function ${name}`);
       const body = src.slice(at, src.indexOf('\n}', at));
@@ -5656,7 +5669,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   });
 
   test('crm: a partial list never replaces an index, in any pull', () => {
-    const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     for (const [name, idx] of [['pullSchedules', 'schedules'], ['pullActions', 'actions'],
                                ['pullWorkflows', 'workflows'], ['pullAll', 'functions']]) {
       const at = src.indexOf(`async function ${name}`);
@@ -5673,7 +5686,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // hold the non-pull operations, where the folder can change underneath - and `writeFile`/`removeFile` resolve their path against whatever `dir` is at
 // the moment they run, not the one the operation started in.
 {
-  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
   test('every pull that writes captures the workspace it belongs to', () => {
     // The set comes from the source: a pull added tomorrow is measured rather than remembered.
@@ -5712,7 +5725,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // failed *write* did the same. Found by a cold scan of the panel and the bridge together.
 {
   const bridge = read('apps/crm/content-bridge.js');
-  const panel = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const panel = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = panel.slice(panel.indexOf('async function pullModules'), panel.indexOf('\n}', panel.indexOf('async function pullModules')));
 
   test('the bridge says whether the layouts were read, not just what they were', () => {
@@ -5744,7 +5757,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // `pullEverything` could start on top of the first. A boolean owned by several callers loses
 // whatever the outer one meant, which is the third time that shape has been found here.
 {
-  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const fn = src.slice(src.indexOf('function setPullBusy'), src.indexOf('\n}', src.indexOf('function setPullBusy')));
 
   test('the busy state counts its holders instead of switching', () => {
@@ -5771,7 +5784,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // nothing and said nothing. The marks were the wrong instrument - they name paths, and what is being
 // distrusted is the whole summary.
 {
-  const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const src = crmPanel().replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
   test('distrust is a state of the load, not the rows in memory', () => {
     const fn = src.slice(src.indexOf('function distrustEverything'), src.indexOf('\n}', src.indexOf('function distrustEverything')));
@@ -5823,7 +5836,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       notePullFailure: async (_a, e) => { throw e; },
     };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'pullActions') + '\npullActions();', ctx);
+    vm.runInContext(sliceFn('apps/crm/automation.js', 'pullActions') + '\npullActions();', ctx);
     await new Promise((r) => setImmediate(r));
     await new Promise((r) => setImmediate(r));
     await new Promise((r) => setImmediate(r));
@@ -5893,7 +5906,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // the same per-tab memory the search box has - and what must not survive is a value the rebuilt list
 // no longer offers, which is derived from the options rather than from which caller it was.
 {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const chips = sliceFn('apps/crm/sidepanel.js', 'buildTypeChips');
 
   test('buildTypeChips keeps the current filter when the list still offers it', () => {
@@ -6200,7 +6213,7 @@ test('analytics: the model is guarded, not only the disk', () => {
 // «Downloading 214/900» into a panel that had been showing another workspace for a minute - and
 // finished by announcing a failure count over it, because every refused write had counted as one.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
 
   test('an op speaks only into the workspace it belongs to', () => {
     const b = sliceFn('apps/crm/sidepanel.js', 'beginWorkspaceOp');
@@ -6210,7 +6223,7 @@ test('analytics: the model is guarded, not only the disk', () => {
 
   test('the long loops give up as soon as the workspace moves', () => {
     for (const fn of ['downloadMissing', 'downloadMissingWf', 'pullModules', 'pullEverything']) {
-      const body = sliceFn('apps/crm/sidepanel.js', fn);
+      const body = sliceApp('crm', fn);
       const loop = body.search(/\n\s*for \(/);
       const guard = body.indexOf('!op.current()');
       assert.ok(loop > 0, `${fn} no longer has the loop this is about`);
@@ -6222,7 +6235,7 @@ test('analytics: the model is guarded, not only the disk', () => {
     // And giving up must not leave the buttons off: the hold is released in a finally, not on the
     // one path that reaches the end.
     for (const fn of ['downloadMissing', 'downloadMissingWf']) {
-      const body = sliceFn('apps/crm/sidepanel.js', fn);
+      const body = sliceApp('crm', fn);
       assert.ok(/\} finally \{ setPullBusy\(false\)/.test(body),
                 `${fn} leaves both Pull buttons disabled when it stops early`);
     }
@@ -6254,10 +6267,10 @@ test('analytics: the model is guarded, not only the disk', () => {
 // ---------------------------------------------------------------------------------------------
 // Four more from the same scan, and two of them were mine from this morning.
 {
-  const crm = read('apps/crm/sidepanel.js');
+  const crm = crmPanel();
 
   test('a task detail that refused keeps the mappings, never the whole old row', () => {
-    const body = sliceFn('apps/crm/sidepanel.js', 'pullActions');
+    const body = sliceFn('apps/crm/automation.js', 'pullActions');
     assert.ok(/return \{ \.\.\.a, mappings: p\.mappings, detail_read: false, detail_kept: true,/.test(body),
               'the row this pull read is replaced by one from before it - name, module and date included');
     assert.ok(/detailMissed\.length \? ` \$\{detailMissed\.length\} task\(s\)/.test(body),
@@ -6628,7 +6641,7 @@ test('crm: a workflow-index read publishes its list and lookup atomically', asyn
     Map, Set, Array, String, JSON,
   };
   vm.createContext(ctx);
-  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'loadWorkflowIndex'), ctx);
+  vm.runInContext(sliceFn('apps/crm/automation.js', 'loadWorkflowIndex'), ctx);
   const pending = vm.runInContext('loadWorkflowIndex()', ctx);
   live = false; release('[{"id":"A","name":"workspace A"}]');
   await pending;
@@ -6712,7 +6725,7 @@ for (const app of ['crm', 'analytics']) {
 // screen; guarding only the background caches does not protect the DOM from an older continuation.
 for (const fn of ['openFile', 'openModule', 'openWorkflow']) {
   test(`crm: ${fn} is invalidated by the next detail navigation`, () => {
-    const body = sliceFn('apps/crm/sidepanel.js', fn);
+    const body = sliceApp('crm', fn);
     assert.ok(/const mine = \+\+previewLoad/.test(body), 'the opener has no navigation token');
     assert.ok(/previewCurrent\(mine, op\)/.test(body), 'the opener never checks whether it was overtaken');
   });
@@ -6769,7 +6782,7 @@ for (const app of ['crm', 'analytics']) {
 // (`filterByConnection` is a click handler). Derived over the six loaders: every await of one is
 // followed, on its own line or the next, by something that copes - a fallback, a catch, or a check.
 test('crm: every caller of a null-returning loader copes with the null', () => {
-  const src = read('apps/crm/sidepanel.js');
+  const src = crmPanel();
   const lines = src.split('\n');
   const bad = [];
   for (const fn of ['moduleNames', 'loadModuleFiles', 'getCodeCache', 'aiLoadActions', 'aiLoadConnections', 'failuresIndex']) {

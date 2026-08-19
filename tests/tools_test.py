@@ -2960,7 +2960,10 @@ class APartialListNeverLooksLikeACensus(unittest.TestCase):
 
     def test_every_cap_the_bridge_can_report_is_read_by_the_panel(self):
         bridge = (ROOT / 'apps' / 'crm' / 'content-bridge.js').read_text(encoding='utf-8')
-        panel = (ROOT / 'apps' / 'crm' / 'sidepanel.js').read_text(encoding='utf-8')
+        # The panel is several files since the split, loading into one scope; the caller of a
+        # bridge command may live in any of them.
+        panel = '\n'.join(f.read_text(encoding='utf-8')
+                          for f in sorted((ROOT / 'apps' / 'crm').glob('*.js')))
         cmds = []
         for m in re.finditer(r"msg\?\.cmd === '(\w+)'\) \{ (\w+)\(", bridge):
             cmd, fn = m.group(1), m.group(2)

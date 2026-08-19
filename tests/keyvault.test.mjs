@@ -472,7 +472,7 @@ test('the footer is outside the container the AI view covers', () => {
 // The CRM panel is two files since the split - ai.js and sidepanel.js share one scope on the page,
 // so a test about «the panel» reads them composed. Analytics is still one file.
 function panelSrc(app) {
-  const parts = ['sidepanel.js', 'ai.js', 'export.js', 'health.js']
+  const parts = ['sidepanel.js', 'ai.js', 'export.js', 'health.js', 'automation.js', 'modules.js', 'connections.js']
     .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
   return parts.join('\n');
 }

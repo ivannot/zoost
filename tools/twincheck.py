@@ -55,7 +55,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
 # The CRM panel is composed of two classic scripts since the split - one shared scope on the page -
 # so «the panel's code» is their concatenation, or every AI function reads as removed on one side.
-SCRIPTS = {'crm': [ROOT / 'apps/crm/sidepanel.js', ROOT / 'apps/crm/ai.js', ROOT / 'apps/crm/export.js', ROOT / 'apps/crm/health.js'],
+SCRIPTS = {'crm': [ROOT / 'apps/crm/sidepanel.js', ROOT / 'apps/crm/ai.js', ROOT / 'apps/crm/export.js', ROOT / 'apps/crm/health.js', ROOT / 'apps/crm/automation.js', ROOT / 'apps/crm/modules.js', ROOT / 'apps/crm/connections.js'],
            'analytics': [ROOT / 'apps/analytics/sidepanel.js']}
 
 # Same structural element, different name. The divergence is real and worth removing one day; until
