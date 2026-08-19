@@ -14,7 +14,7 @@ import { readdirSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
 // so a test about «the panel» reads them as the page composes them. Analytics is still one file.
-const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/export.js') + '\n' + read('apps/crm/sidepanel.js');
+const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/export.js') + '\n' + read('apps/crm/health.js') + '\n' + read('apps/crm/sidepanel.js');
 // Where an assistant function lives, per app: the CRM's moved to ai.js with the split.
 const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
 
@@ -3240,7 +3240,7 @@ test('every message named is defined, and every message defined is named', () =>
     const GROUPS = [
       ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
       ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
-      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js'],
     ];
     const group = GROUPS.find((g) => g.includes(rel));
     let src = read(rel);
@@ -4144,8 +4144,8 @@ test('crm: the arrows open a row the way that row opens', () => {
   // The MSG block travels with the function, as the other lifted helpers here do: the wording lives
   // in the shipped constant and a test that restated it would be proving its own copy.
   const { apLink } = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
-                           sliceConst('apps/crm/sidepanel.js', 'AP_OPEN'),
-                           sliceFn('apps/crm/sidepanel.js', 'apLink')],
+                           sliceConst('apps/crm/health.js', 'AP_OPEN'),
+                           sliceFn('apps/crm/health.js', 'apLink')],
                           { HEALTH_OPEN: { workflow: () => {}, schedule: () => {}, action: () => {}, module: () => {} },
                             AP_TAB: { workflow: 'workflows', schedule: 'schedules', action: 'actions', module: 'modules' },
                             tabReachable: () => true,
@@ -4198,8 +4198,8 @@ test('crm: the arrows open a row the way that row opens', () => {
 
   test('no link is drawn into an area the role forbids', () => {
     const { apLink: strict } = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
-                                     sliceConst('apps/crm/sidepanel.js', 'AP_OPEN'),
-                                     sliceFn('apps/crm/sidepanel.js', 'apLink')],
+                                     sliceConst('apps/crm/health.js', 'AP_OPEN'),
+                                     sliceFn('apps/crm/health.js', 'apLink')],
                                     { HEALTH_OPEN: { workflow: () => {}, module: () => {} },
                                       AP_TAB: { workflow: 'workflows', module: 'modules' },
                                       tabReachable: (tab) => tab !== 'workflows',
@@ -4292,7 +4292,7 @@ test('crm: the arrows open a row the way that row opens', () => {
     const { MSG } = load([sliceConst('apps/crm/sidepanel.js', 'MSG')]);
     Object.assign(ctx, { MSG });
     const fns = load([sliceConst('apps/crm/sidepanel.js', 'MSG'),
-                      sliceFn('apps/crm/sidepanel.js', `healthOpen${kind}`)], ctx);
+                      sliceFn('apps/crm/health.js', `healthOpen${kind}`)], ctx);
     return { fn: fns[`healthOpen${kind}`], ctx, opened, MSG };
   };
 
@@ -4353,7 +4353,7 @@ test('crm: the arrows open a row the way that row opens', () => {
   });
 
   test('the link carries the name, or there is nothing to try', () => {
-    const src = read('apps/crm/sidepanel.js');
+    const src = crmPanel();
     assert.ok(/data-apname=/.test(src), 'the name never reaches the opener');
     assert.ok(/open\(a\.dataset\.apid, a\.dataset\.apname\)/.test(src), 'the click drops the name');
   });

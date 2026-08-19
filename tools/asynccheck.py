@@ -40,7 +40,7 @@ LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
 # declaration - and reading each file's own declarations alone made those writes invisible the day
 # the panel was split. The names are the union of the page's files; the findings stay per file.
 PAGES = {
-    'crm': ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js'],
+    'crm': ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js'],
     'analytics': ['apps/analytics/sidepanel.js'],
 }
 FILES = [f for fs in PAGES.values() for f in fs]
