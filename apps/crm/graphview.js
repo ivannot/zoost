@@ -2,7 +2,8 @@
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
-/* graphview.js - Explorer + Visual graph. Reads graph from chrome.storage.local. */
+/* graphview.js - Explorer + Visual graph. The graph arrives via chrome.storage.session
+   (per browser session, like the unlocked key); the reader's own settings stay in .local. */
 let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

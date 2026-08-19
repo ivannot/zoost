@@ -42,6 +42,9 @@ echo "── unit: node ──"
 # character split across a socket read and `tools/probe.py` stops with it - which reads as a defect
 # in the product and is a defect in the environment. Said here, once, at the moment it matters.
 node -e 'const m=+process.versions.node.split(".")[0]; if (m < 20) { console.error(`node ${process.versions.node}: this suite needs 20 or newer - on 19 the reporter dies mid-stream and it looks like a product failure`); process.exit(1); }'
+# The same statement for Python: the tools use 3.10 syntax unless they carry the future import, and
+# a version check that exists for one runtime and not the other is a claim about which one bites.
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else (print(f"python {sys.version.split()[0]} - this suite needs 3.10+", file=sys.stderr) or 1))'
 node --test --test-reporter=spec tests/*.test.mjs
 
 echo

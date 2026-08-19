@@ -48,8 +48,6 @@ apps/crm/sidepanel.js	pickRoot	root
 apps/crm/sidepanel.js	pickRoot	rootGranted
 apps/crm/sidepanel.js	pullAll	currentPath
 apps/crm/sidepanel.js	pullFailures	failIndex
-apps/crm/sidepanel.js	pullHealthRuntime	failIndex
-apps/crm/sidepanel.js	pullHealthRuntime	healthData
 apps/crm/sidepanel.js	pullModules	index
 apps/crm/sidepanel.js	pullWorkflows	actionUsers
 apps/crm/sidepanel.js	reconcileFunctions	failedRemovals

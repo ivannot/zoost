@@ -409,7 +409,7 @@ than a crowded picture, which was the thing being avoided. Two numbers now, with
 | | what it is | measured how | what it does |
 |---|---|---|---|
 | `CROWDED_NODES` = 80 | where the drawing stops being clean | five generated graphs per size: no box covering another up to 80, 4 of 5 at 90 and 100, 1 of 5 at 120, none at 150 | the count turns amber and the tooltip says so. **It does not block** |
-| `DRAW_MAX_NODES` = 400 | where the layout stops being affordable | profiled end to end against the current collision pass: 200 in 0.5s, 400 in 1.3s, 600 in 2.2s, 1000 in 4.9s, 1200 in **7.2s** | refuses, and the view says why |
+| `DRAW_MAX_NODES` = 800 | where the layout stops being affordable | profiled end to end against the current collision pass: 200 in 0.5s, 400 in 1.3s, 600 in 2.2s, 1000 in 4.9s, 1200 in **7.2s**. 400 satisfied the two-second criterion and refused a real org of 725 - a number that served the rule and missed the user - so the ceiling is 800, about 3.6s behind a spinner, once, and the options page lets the reader raise it further | refuses, and the view says why |
 
 `FORCE_MAX_NODES` is gone, folded into the ceiling. It was 1200 on a profile of about 2.1 seconds taken
 against the all-pairs collision pass that has since been replaced - **so the change to that pass
@@ -436,11 +436,18 @@ neighbours give way would fight the reader, who has just said where they want th
 wanting it - never hiding content unknowingly - is served by *saying* what the drop covers, which is
 this project's position on numbers anyway. `Re-layout` is the way back.
 
-**Nothing is persisted, and the argument against it is better than the cost argument.** A saved
-arrangement is only coherent if the window is re-entered from the same button on the same context;
-change the entry point and a restored arrangement has lost coherence with the click that asked for it,
-which is worse than no arrangement. So the state dies with the window, and nothing about it reaches
-`chrome.storage` or the privacy page.
+**Nothing is persisted *automatically*, and the argument against it is better than the cost
+argument.** A silently restored arrangement is only coherent if the window is re-entered from the
+same button on the same context; change the entry point and it has lost coherence with the click
+that asked for it, which is worse than no arrangement. So nothing about the boxes reaches
+`chrome.storage` (the layout *sliders* do persist there, keyed by kind - a spread tuned on an ER
+diagram is the wrong start for a call graph).
+
+What exists instead is a **deliberate** save: an arrangement can be written to a `.json` file and
+loaded back, through the file picker, because twenty minutes of deciding which boxes sit side by
+side is work and it used to die with the window. The coherence objection is answered by checking
+rather than assuming - a loaded file names the workspace it was saved from, and loading it over a
+different one is refused with both names in the message.
 
 **An arrangement is kept across a re-layout, not defended against one - and the first attempt is worth
 recording because it was reported as a bug within the hour.** Refusing a re-layout was tried, in one

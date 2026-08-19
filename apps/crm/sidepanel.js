@@ -1013,9 +1013,12 @@ const labelOf = (e) => (nameMode === 'display' ? (e.display_name || e.api_name) 
 // Filter the functions tree to those that use a given connection (built from the pulled function
 // metadata). This is the "which/how many functions use connection X" answer, reusing the tree.
 async function filterByConnection(name) {
-  // WS_MOVED from an overtaken graph build ended as an unhandled rejection - a click that does
-  // nothing and says nothing. Overtaken means the filter no longer applies; stopping is the answer.
-  let g; try { g = await ensureGraph(); } catch (_) { return; }
+  // Overtaken (WS_MOVED) means the filter no longer applies and silence is right. Everything else -
+  // an unreadable folder, a source that will not parse - is a real failure, and swallowing it made
+  // the click do nothing and say nothing about a workspace that was still there. Only the one
+  // expected error is expected.
+  let g; try { g = await ensureGraph(); }
+  catch (e) { if ((e && e.message) === WS_MOVED) return; setStatus('Could not build the graph: ' + ((e && e.message) || e), 'bad'); return; }
   connFilterSet = new Set(Object.values(g.nodes).filter((n) => (n.connections || []).some((c) => c.name === name)).map((n) => n.file));
   connectionFilter = name;
   if (viewMode !== 'functions') setMode('functions'); else renderTree();
@@ -6583,12 +6586,19 @@ async function pullHealthRuntime() {
   const b = $('healthpull'); b.disabled = true;
   healthSay('Reading from Zoho\u2026');
   try {
+    // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
+    // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
+    // an outside scan: results of the workspace that was left, published into the one that arrived.
+    const op = beginWorkspaceOp();
     await pullFailures();
+    if (!op.current()) return;
     failIndex = null;                       // the file changed under it
-    healthData = await buildHealth();
+    const built = await buildHealth();
+    if (!op.current()) return;
+    healthData = built;
     renderHealthView();
-    const fx = await failuresIndex();
-    if (!fx) return;   // overtaken: the runtime it read belongs to the workspace that was left
+    const fx = await failuresIndex(op);
+    if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
     healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
   } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
   finally { b.disabled = false; }

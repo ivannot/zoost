@@ -5525,8 +5525,9 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 }
 
 // ---------------------------------------------------------------------------------------------
-// The workspace selector stays usable while an operation is talking to Zoho, so every await is a
-// place the folder underneath can change. Reproduced by an outside review: a fetch started in one
+// The workspace selector is blocked while a *pull* runs, and stays usable during everything else -
+// the assistant, exports, health, previews - so for those, every await is still a place the folder
+// underneath can change. Reproduced by an outside review: a fetch started in one
 // workspace wrote both of its files into the next. A handle identifies a folder exactly - the same
 // object, or a different workspace - so it is captured before the first await and compared after.
 {
@@ -5665,8 +5666,8 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 
 // ---------------------------------------------------------------------------------------------
 // Derived from the writes, because a list of function names is a list somebody has to remember. The
-// workspace selector is never disabled, so every await in every pull is a place the folder can
-// change underneath - and `writeFile`/`removeFile` resolve their path against whatever `dir` is at
+// workspace selector is refused during a pull *now* - these guards predate that, and they still
+// hold the non-pull operations, where the folder can change underneath - and `writeFile`/`removeFile` resolve their path against whatever `dir` is at
 // the moment they run, not the one the operation started in.
 {
   const src = read('apps/crm/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -6776,10 +6777,29 @@ test('crm: every caller of a null-returning loader copes with the null', () => {
     });
   }
   assert.deepEqual(bad, [], `these read a loader's answer without asking if it was overtaken:\n  ${bad.join('\n  ')}`);
-  // And the one caller that is a click handler with no try above it: `ensureGraph` throws WS_MOVED
-  // when overtaken, and from an onclick that ends as an unhandled rejection - a click that does
-  // nothing and says nothing, which is the silent-exit class this file already names.
-  assert.ok(/let g; try \{ g = await ensureGraph\(\); \} catch \(_\) \{ return; \}/.test(
-    sliceFn('apps/crm/sidepanel.js', 'filterByConnection')),
-    'a click on a connection can end as an unhandled rejection again');
 });
+
+// The one caller that is a click handler with no try above it. Two different absences: an overtaken
+// build (WS_MOVED) means the filter no longer applies and silence is right; a real failure -
+// unreadable folder, unparseable source - swallowed by the same catch made the click do nothing and
+// say nothing about a workspace that was still there. Run, not read, both ways.
+{
+  const fbc = sliceFn('apps/crm/sidepanel.js', 'filterByConnection');
+  const RUN = async (err) => {
+    const ctx = { WS_MOVED: 'moved', said: [], connFilterSet: null, connectionFilter: null,
+                  Error, Set, Object, String,
+                  setStatus: (m, k) => ctx.said.push(`${k}:${m}`),
+                  ensureGraph: async () => { throw new Error(err); },
+                  setMode() {}, renderTree() {}, runSearch() {} };
+    vm.createContext(ctx);
+    vm.runInContext(fbc, ctx);
+    await vm.runInContext('filterByConnection', ctx)('conn');
+    return ctx.said;
+  };
+  test('crm: an overtaken connection filter is silent, a broken one speaks', async () => {
+    assert.deepEqual(await RUN('moved'), [], 'the overtaken case reports an error nobody can act on');
+    const said = await RUN('permission lapsed');
+    assert.ok(said.some((m) => /^bad:.*permission lapsed/.test(m)),
+              'a real failure is swallowed - the click does nothing and says nothing');
+  });
+}

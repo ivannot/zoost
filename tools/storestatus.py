@@ -33,6 +33,10 @@ What it costs is freshness: the badge was at most ten minutes behind and is now 
 schedule. That was worth paying because the moment anyone cares is the hour after a submission, and
 this also runs at the end of the release chain, when that is exactly what has just happened.
 """
+# Runs on Python 3.9, which is still the system interpreter on some macOS releases: `str | None` in
+# an annotation is a TypeError at import time there, and this tool is exactly the kind of thing that
+# gets run on a machine nobody prepared. The future import makes every annotation a string.
+from __future__ import annotations
 import argparse
 import datetime
 import json

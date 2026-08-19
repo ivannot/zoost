@@ -930,7 +930,7 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
     the script *does*, not what its source contains.
     """
 
-    def _repo(self, tmp: str, notes: str | None):
+    def _repo(self, tmp, notes=None):
         root = pathlib.Path(tmp)
         (root / 'apps/crm').mkdir(parents=True)
         (root / 'apps/crm/manifest.json').write_text('{"version": "9.9.9"}', encoding='utf-8')

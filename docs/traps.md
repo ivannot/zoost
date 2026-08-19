@@ -45,7 +45,12 @@ These all failed **silently**, with no console error. They are the expensive kin
   there: the same call made after a round trip to the model is refused for want of activation, which is
   the error itself. The Health view hit this first and its fix was never generalised; that is the
   recurring shape, not the DOMException.
-- **Open, and measured rather than fixed: the Analytics pull writes the mirror with no permission
+- **Closed since: every Analytics writer asks first.** `pullAll()`, `pullOne()` and `retryFailed()`
+  each open with `requirePerm(op.root)` now - the workspace-op rework routed every writer through an
+  operation, and the permission ask travelled with it. The census below is kept as the method: walk
+  every top-level function that reaches a writer, count the guards, and let the twin asymmetry be
+  the signal.
+- **The original finding, for the record: the Analytics pull wrote the mirror with no permission
   guard at all.** Folding the CRM's nine copies of
   `if (!(await ensurePerm(dir))) throw new Error(<the folder message>);` into `requirePerm()`
   raised the obvious twin question - nine on one side, one on the other - and the answer is not that
