@@ -252,7 +252,13 @@ async function dirFor(parts, create, root = dir) {
  *  the same defect the CRM had in `syncOne`. Deriving it from the write means the next path that
  *  writes a query inherits this without knowing it exists. */
 function noteWrite(rel) {
-  if (rel.startsWith('sql/') && rel.endsWith('.sql')) sqlCache = null;
+  if (rel.startsWith('sql/') && rel.endsWith('.sql')) {
+    sqlCache = null;
+    // A successful rewrite may have repaired any file that previously refused to open. The path
+    // does not carry the view id, so discard the small negative cache whole rather than risk
+    // leaving one repaired query described as unreadable.
+    sqlDiskUnread.clear();
+  }
 }
 // The workspace an operation belongs to, taken once and carried - not read out of a global after
 // every await. A pull reads from Zoho, waits, and then writes: `dir` at that moment is whatever the
@@ -316,19 +322,24 @@ const readFile = (rel) => readFileAt(dir, rel);
 // The fallback stays, because most callers genuinely want «use this when there is nothing». What is
 // added is that a failure which is not «no such file» leaves a trace, so whoever asks can say which
 // of the two happened.
-let readFailed = null;
-const readJson = async (rel, fallback, op) => {
+async function readJson(rel, fallback, op, onFailure) {
   try { return JSON.parse(await (op ? op.read(rel) : readFile(rel))); } catch (e) {
+    // A late read belongs to the workspace it started in. In particular it must not revoke the
+    // permission verdict, or leave an unreadable-file reason, in the workspace that replaced it.
+    if (op && !op.current()) return fallback;
     // `NotAllowedError` is Chrome saying the folder permission has lapsed, and it is proof that the
     // cached verdict in `rootGranted` is wrong. Leaving that verdict alone is what made the state
     // circular: the panel only re-requests permission while it believes it has none, so believing it
     // has some meant no click - Refresh included - ever asked for it back. Reported exactly that way:
     // «the message is clearer but pressing Refresh changes nothing».
     if (e && e.name === 'NotAllowedError') rootGranted = false;
-    else if (e && e.name !== 'NotFoundError') readFailed = { rel, name: (e && e.name) || 'Error' };
+    // Losing permission is also a failed read. The global verdict and the caller-local reason are
+    // two different effects; making them an either/or let a partial SQL refresh replace an index
+    // it was not allowed to read with the empty fallback.
+    if (e && e.name !== 'NotFoundError' && onFailure) onFailure({ rel, name: (e && e.name) || 'Error' });
     return fallback;
   }
-};
+}
 // What the last load off disk ran into, and the only thing the empty state is allowed to speak about:
 // a stray failure from some unrelated read must not turn into a sentence about this workspace.
 let diskUnreadable = null;
@@ -867,6 +878,12 @@ function workspaceChangeRefuse() {
 // best. Only the busy state, which is what greys the buttons, is put down.
 function endBusyElsewhere() { busy = false; updateButtons(); }
 
+function refuseIncompleteSnapshot() {
+  views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
+  sqlCache = null; sqlUnread = 0; sqlDiskUnread.clear();
+  render();
+}
+
 // ---------- pull ----------
 async function pullAll() {
   if (pullBusy) return;
@@ -920,13 +937,21 @@ async function pullAll() {
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
     setBusy(false, `${views.length} views · ${Object.keys(schema).length} tables · ${cols} columns · ${relations.length} relations · ${qIds.length} SQL · ${orphans} nothing depends on`
-      + (pullFailed.length ? ` · ${pullFailed.length} could not be read` : ''));
-    $('status').className = pullFailed.length ? 'warn' : 'ok';
+      + (pullFailed.length ? ` · ${pullFailed.length} could not be read` : '')
+      + (next.cleanupFailed ? ` · ${next.cleanupFailed} old SQL file(s) could not be removed - the next pull retries` : ''));
+    $('status').className = (pullFailed.length || next.cleanupFailed) ? 'warn' : 'ok';
     render();
   } catch (e) {
+    // Once the `writing` marker landed, the files on disk may be from two moments. Keeping the old
+    // globals alive in this same panel let exports and the assistant combine that old snapshot with
+    // whichever SQL files had already been replaced. Refuse it immediately, not only after reopen.
+    const interrupted = !!(e && e.mirrorIncomplete && op.current());
+    if (interrupted) refuseIncompleteSnapshot();
     // A refusal is not a fault, and saying "Pull failed: 403" for one sends the user looking for a
     // bug in Zoost instead of to whoever administers their Analytics roles.
-    setBusy(false, e && e.forbidden
+    setBusy(false, interrupted
+      ? 'Pull was interrupted while writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
+      : e && e.forbidden
       ? `Your Zoho Analytics role does not grant access to this workspace${e.status ? ` (Zoho Analytics answered ${e.status})` : ''}. Nothing was written - what is on disk is unchanged.`
       : 'Pull failed: ' + (e.message || e));
     $('status').className = 'bad';
@@ -965,24 +990,31 @@ async function pullOne(id) {
   setBusy(true, `Re-reading «${v.name}»…`);
   try {
     await requirePerm(op.root);
+    const nextSqls = { ...sqls };
+    const nextDeps = { ...(deps || {}) };
     if (v.type === 'QueryTable') {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
       if (!op.current()) return endBusyElsewhere();
-      if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
+      if (r.sql && r.sql[id]) nextSqls[id] = r.sql[id];
       still.push(...(r.failed || []).map((f) => ({ ...f, stage: 'sql' })));
     }
     const d = await toBridge({ cmd: 'viewDependencies', id });
     if (!op.current()) return endBusyElsewhere();
-    if (!deps) deps = {};
-    deps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
+    nextDeps[id] = { id: d.id, parents: d.parents, children: d.children, dashboards: d.dashboards };
     // Only this item's old report goes, and only if this pull actually replaced it.
-    pullFailed = pullFailed.filter((f) => String(f.id) !== String(id)).concat(still);
-    await writeLineage(op); await writeSql(op);
+    const nextFailed = pullFailed.filter((f) => String(f.id) !== String(id)).concat(still);
+    await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
+    if (!op.current()) return endBusyElsewhere();
+    ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: nextFailed });
     setBusy(false, still.length ? `«${v.name}»: lineage re-read, its SQL still could not be.` : `«${v.name}» re-read.`);
     $('status').className = still.length ? 'warn' : 'ok';
     render(); await openDetail(id);
   } catch (e) {
-    setBusy(false, `Could not re-read «${v.name}»: ` + (e.message || e));
+    const interrupted = !!(e && e.mirrorIncomplete && op.current());
+    if (interrupted) refuseIncompleteSnapshot();
+    setBusy(false, interrupted
+      ? `Could not finish writing «${v.name}». The mirror is blocked because its files describe two different moments - run Pull all to repair it.`
+      : `Could not re-read «${v.name}»: ` + (e.message || e));
     $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
   } finally { setPullBusy(false); }
@@ -1000,6 +1032,8 @@ async function retryFailed() {
   setBusy(true, `Retrying ${ids.length} item(s)…`);
   try {
     await requirePerm(op.root);
+    const nextSqls = { ...sqls };
+    const nextDeps = { ...(deps || {}) };
     const qIds = ids.filter((i) => { const v = viewById().get(i); return v && v.type === 'QueryTable'; });
     const still = [];
     if (qIds.length) {
@@ -1009,36 +1043,42 @@ async function retryFailed() {
       // disabled until the panel was reopened. The `finally` removes the listener and knows nothing
       // about `busy`.
       if (!op.current()) return endBusyElsewhere();
-      Object.assign(sqls, r.sql || {});
+      Object.assign(nextSqls, r.sql || {});
       still.push(...(r.failed || []).map((f) => ({ ...f, stage: 'sql' })));
     }
     const r2 = await toBridge({ cmd: 'scanDependencies', ids });
     // Before the model is touched, not only before the disk is: these ids belong to the workspace
     // this retry started in, and merging them into another one's memory is the same defect indoors.
     if (!op.current()) return endBusyElsewhere();
-    if (!deps) deps = {};
-    Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []).map((f) => ({ ...f, stage: 'lineage' })));
-    pullFailed = still;
+    Object.assign(nextDeps, r2.deps || {}); still.push(...(r2.failed || []).map((f) => ({ ...f, stage: 'lineage' })));
+    await writePartialSnapshot(op, { sqls: nextSqls, deps: nextDeps, pullFailed: still });
+    if (!op.current()) return endBusyElsewhere();
+    ({ sqls, deps, pullFailed } = { sqls: nextSqls, deps: nextDeps, pullFailed: still });
     mergeSchemaIntoViews();
-    await writeLineage(op); await writeSql(op);
     setBusy(false, pullFailed.length ? `${pullFailed.length} still unreadable.` : 'All previously failed items are now in.');
     $('status').className = pullFailed.length ? 'warn' : 'ok';
     render();
   } catch (e) {
-    setBusy(false, 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
+    const interrupted = !!(e && e.mirrorIncomplete && op.current());
+    if (interrupted) refuseIncompleteSnapshot();
+    setBusy(false, interrupted
+      ? 'Retry could not finish writing. The mirror is blocked because its files describe two different moments - run Pull all to repair it.'
+      : 'Retry failed: ' + (e.message || e)); $('status').className = 'bad';
     showEmergency(!(e && e.forbidden));
   } finally { chrome.runtime.onMessage.removeListener(onProgress); setPullBusy(false); }
 }
 
 // Split out so a single-item refresh rewrites only what it touched, instead of the whole mirror.
-async function writeLineage(op) {
+async function writeLineage(op, nextDeps = deps, nextFailed = pullFailed) {
   if (!op || !op.current()) return;
-  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps, failed: pullFailed }, op);
+  await writeJson('lineage.json', { workspace: bound && bound.workspace, deps: nextDeps, failed: nextFailed }, op);
 }
-async function writeSql(op) {
+async function writeSql(op, nextSqls = sqls) {
   if (!op || !op.current()) return;
-  const index = await readJson('sql/index.json', {}, op);
-  for (const [id, q] of Object.entries(sqls)) {
+  let unreadable = null;
+  const index = await readJson('sql/index.json', {}, op, (failure) => { unreadable = failure; });
+  if (unreadable) throw new Error(`Could not read ${unreadable.rel} (${unreadable.name}).`);
+  for (const [id, q] of Object.entries(nextSqls)) {
     if (typeof q.sql !== 'string') continue;              // not re-read this session; its file is current
     const v = viewById().get(id);
     const stem = q.stem || stemOf(v ? v.name : id, id);
@@ -1046,6 +1086,21 @@ async function writeSql(op) {
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
   await writeJson('sql/index.json', index, op);
+}
+
+/** A one-view refresh still changes several files. Keep the old in-memory model until all of them
+ *  are durable, and bracket the disk writes with the same marker as Pull all. If any write fails,
+ *  loadFromDisk() and this live panel both refuse the hybrid instead of presenting it as a snapshot. */
+async function writePartialSnapshot(op, next) {
+  await op.write(PULL_STATE, JSON.stringify({ state: 'writing', startedAt: new Date().toISOString() }));
+  try {
+    await writeLineage(op, next.deps, next.pullFailed);
+    await writeSql(op, next.sqls);
+    await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
+  } catch (e) {
+    try { e.mirrorIncomplete = true; } catch (_) {}
+    throw e;
+  }
 }
 
 /** Remove the .sql files the new index no longer names - a deleted query's file, and the old stem
@@ -1058,9 +1113,14 @@ async function pruneSql(index, op) {
   let failed = 0;
   for await (const p of walk(op.root)) {
     if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p)) continue;
-    try { await op.remove(p); } catch (_) { failed++; }
+    try { await op.remove(p); }
+    catch (e) {
+      if ((e && e.message) === WS_MOVED) throw e;
+      failed++;
+    }
   }
-  if (failed) status(`${failed} old .sql file(s) could not be removed - the next pull will retry.`, 'warn');
+  if (failed) op.say(`${failed} old .sql file(s) could not be removed - the next pull will retry.`, 'warn');
+  return failed;
 }
 async function writeToDisk(info, op, next) {
   // The snapshot arrives as an argument and the globals are untouched until every write has landed:
@@ -1073,21 +1133,29 @@ async function writeToDisk(info, op, next) {
   // by running Pull all again, and the message says exactly that.
   const { views, folders, schema, relations, sqls, deps, pullFailed } = next;
   await op.write(PULL_STATE, JSON.stringify({ state: 'writing', startedAt: new Date().toISOString() }));
-  await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views }, op);
-  await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations }, op);
-  await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed }, op);
-  // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
-  // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
-  const index = {};
-  for (const [id, q] of Object.entries(sqls)) {
-    const v = views.find((x) => x.id === id);
-    const stem = stemOf(v ? v.name : id, id);
-    await op.write(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
-    index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
+  try {
+    await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views }, op);
+    await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations }, op);
+    await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed }, op);
+    // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
+    // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
+    const index = {};
+    for (const [id, q] of Object.entries(sqls)) {
+      const v = views.find((x) => x.id === id);
+      const stem = stemOf(v ? v.name : id, id);
+      await op.write(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
+      index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
+    }
+    await writeJson('sql/index.json', index, op);
+    next.cleanupFailed = await pruneSql(index, op);
+    await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
+  } catch (e) {
+    // The marker was written successfully, so any failure from here to `complete` means the disk is
+    // not a snapshot. Carry that fact to pullAll; an ordinary Error message cannot distinguish it
+    // from an API failure that happened before the first byte was touched.
+    try { e.mirrorIncomplete = true; } catch (_) {}
+    throw e;
   }
-  await writeJson('sql/index.json', index, op);
-  await pruneSql(index, op);
-  await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   await patchCfg({
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
@@ -1127,18 +1195,18 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
     return false;
   }
   let failed = null;
-  const readOne = async (rel) => { const r = await readJson(rel, null, op); failed = failed || readFailed; return r; };
+  const noteFailure = (f) => { failed = failed || f; };
+  const readOne = (rel) => readJson(rel, null, op, noteFailure);
   const v = await readOne('views.json');
   const s = await readOne('schema.json');
   const l = await readOne('lineage.json');
   const index = await readOne('sql/index.json');
   if (!op.current()) return false;
-  readFailed = failed;
   views = (v && v.views) || []; folders = (v && v.folders) || [];
   schema = (s && s.tables) || {}; relations = (s && s.relations) || [];
   deps = l && l.deps ? l.deps : null; pullFailed = (l && l.failed) || [];
   sqls = {};
-  sqlCache = null; sqlUnread = 0;
+  sqlCache = null; sqlUnread = 0; sqlDiskUnread.clear();
   if (searchMode === 'sql') {
     searchMode = 'name';
     $('smode').textContent = 'in: names';
@@ -1147,7 +1215,7 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   }
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
-  diskUnreadable = views.length ? null : readFailed;
+  diskUnreadable = views.length ? null : failed;
   // Another workspace on disk: the chain is dropped, because every step in it is a view id that
   // belongs to the one being left. This and the removal below are the only places that forget.
   selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show');
@@ -1172,12 +1240,30 @@ async function sqlBodyOf(id, op = beginWorkspaceOp()) {
   if (!op.current()) return null;
   const q = sqls[id];
   if (!q) return null;
-  if (typeof q.sql === 'string') return q.sql;
-  let body = null;
-  try { body = await op.read(`sql/${q.stem}.sql`); } catch (_) {}
+  if (typeof q.sql === 'string') { sqlDiskUnread.delete(String(id)); return q.sql; }
+  let body = null, failed = false;
+  try { body = await op.read(`sql/${q.stem}.sql`); } catch (_) { failed = true; }
   if (!op.current() || sqls[id] !== q) return null;
+  if (failed) sqlDiskUnread.add(String(id)); else sqlDiskUnread.delete(String(id));
   q.sql = body;
   return body;
+}
+
+/** Resolve the state that needs the file as well as the index. `sqlState()` can say that a query
+ *  is represented in `sql/index.json`; only this asynchronous half can say that the represented
+ *  `.sql` file still opens. Keeping the distinction in one helper prevents search, exports and the
+ *  assistant from each inventing a different meaning for `q.sql === null`. */
+async function sqlReadState(id, op = beginWorkspaceOp()) {
+  const st = sqlState(id);
+  // A disk error is an observation, not a permanent verdict: permissions, a cloud-backed folder or
+  // an external repair may make the same file readable on the next request. Pull failures and a
+  // genuinely absent index entry cannot be repaired by opening the old file, so only the former is
+  // retried here.
+  const retryDisk = st.kind === 'unread' && sqlDiskUnread.has(String(id)) && !!sqls[id];
+  if (st.kind !== 'read' && !retryDisk) return st;
+  const body = await sqlBodyOf(id, op);
+  if (body == null) return { kind: 'unread', error: 'the .sql file could not be read' };
+  return { kind: 'read', query: sqls[id], body };
 }
 
 // ---------- derived ----------
@@ -1292,6 +1378,7 @@ function renderTypeFilter() {
 let searchMode = 'name';        // 'name' | 'sql'
 let sqlCache = null;            // Map(id -> text), built once per workspace
 let sqlUnread = 0;              // files that would not open, reported rather than counted as misses
+const sqlDiskUnread = new Set();// ids whose index entry exists but whose last .sql open failed
 let _sqlSearchT = null;
 
 // What a term does inside one query: how many times, and the first line it is on. A declaration
@@ -1318,18 +1405,28 @@ async function ensureSqlCache(op = beginWorkspaceOp()) {
   if (entries.length) op.say(`Reading the SQL of ${entries.length} quer${entries.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
   const m = new Map();
   const loaded = new Map();
+  const readable = new Set();
+  const failedOpen = new Map();
   // A query whose *pull* failed has no entry in `sqls` at all, so counting only files that refused
   // to open under-reported the gap: the search said «searched everything» over queries it never had.
-  let unread = views.filter((v) => v.type === 'QueryTable' && sqlState(v.id).kind === 'unread').length;
+  // Count structural/pull gaps here. Disk failures represented in `entries` are retried below and
+  // counted exactly once only if that attempt fails too.
+  let unread = views.filter((v) => v.type === 'QueryTable'
+    && sqlState(v.id).kind === 'unread' && !sqlDiskUnread.has(String(v.id))).length;
   for (const [id, q] of entries) {
-    if (typeof q.sql === 'string') { m.set(id, q.sql); continue; }
+    // An explicit failed pull wins over an older indexed body: serving the old SQL as current would
+    // turn a visible coverage gap into a plausible but stale answer.
+    if (sqlState(id).kind === 'unread' && !sqlDiskUnread.has(String(id))) continue;
+    if (typeof q.sql === 'string') { readable.add(String(id)); m.set(id, q.sql); continue; }
     try {
       const body = await op.read(`sql/${q.stem}.sql`);
-      loaded.set(id, { q, body }); m.set(id, body);
-    } catch (_) { unread++; }
+      loaded.set(id, { q, body }); readable.add(String(id)); m.set(id, body);
+    } catch (_) { failedOpen.set(String(id), q); unread++; }
   }
   if (!op.current()) return null;
   loaded.forEach(({ q, body }, id) => { if (sqls[id] === q) q.sql = body; });
+  readable.forEach((id) => sqlDiskUnread.delete(id));
+  failedOpen.forEach((q, id) => { if (sqls[id] === q) sqlDiskUnread.add(id); });
   sqlUnread = unread;
   sqlCache = m;
   if (entries.length) op.say(`${m.size} quer${m.size === 1 ? 'y' : 'ies'} read${sqlUnread ? ` \u00b7 ${sqlUnread} could not be opened` : ''}.`, sqlUnread ? 'warn' : '');
@@ -1664,7 +1761,7 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
     ? `<ul>${d.dashboards.map((x) => `<li>${goTo(x, nameOf(x, m))}</li>`).join('')}</ul>`
     : '<div class="none">none</div>';
   const q = sqls[v.id];
-  const _sqlSt = sqlState(v.id);
+  const _sqlSt = await sqlReadState(v.id, op);
   const cols = q && q.sources
     // `s.columns` rather than `s.columns.length` straight: a pull always writes the list, and a
     // detail pane that throws half-drawn is not the place to find out that something did not. The
@@ -1919,6 +2016,7 @@ function sqlState(id) {
   if (!v || v.type !== 'QueryTable') return { kind: 'not-query' };
   const failure = (pullFailed || []).find((f) => String(f.id) === String(id) && f.stage === 'sql');
   if (failure) return { kind: 'unread', error: failure.error || 'the pull could not read it' };
+  if (sqlDiskUnread.has(String(id))) return { kind: 'unread', error: 'the .sql file could not be read' };
   const q = sqls[id];
   if (!q) return { kind: 'unread', error: 'its SQL is missing from the mirror' };
   return { kind: 'read', query: q };
@@ -1959,7 +2057,8 @@ function aiStructureText(v) {
 const AI_SEED_CAP_DEFAULT = 72000;
 let aiSeedSize = 0;                     // what the last index actually came to, shown in the chat
 
-async function aiBuildSeed(cap) {
+async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
+  if (!op.current()) throw new Error(WS_MOVED);
   cap = Math.max(4000, Number(cap) || AI_SEED_CAP_DEFAULT);
   const m = viewById();
   const byType = new Map();
@@ -2001,6 +2100,7 @@ async function aiBuildSeed(cap) {
   if (out.length + dashboards.length <= cap) out += dashboards;
   else if (dashboards) omitted.push(`the ${dashList.length} dashboards`);
 
+  if (!op.current()) throw new Error(WS_MOVED);
   aiSeedOmitted = omitted;
   if (out.length > cap) {          // even the tables alone overflow: an enormous workspace
     aiSeedOmitted = [`part of the table list - this workspace is larger than the index can hold`];
@@ -2023,15 +2123,15 @@ function productHelp() {
   try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
 }
 
-async function aiSystemPrompt(withTools, cap) {
-  const seed = await aiBuildSeed(cap);
+async function aiSystemPrompt(withTools, cap, op = beginWorkspaceOp()) {
+  const seed = await aiBuildSeed(cap, op);
   let focus = '';
   const cur = selectedId ? viewById().get(selectedId) : null;
   if (cur) {
     focus = `\n# CURRENT FOCUS\nThe user is looking at ${cur.name} (${cur.type}).\n${aiStructureText(cur)}\n`;
-    const q = sqls[cur.id];
-    if (sqlState(cur.id).kind === 'unread') focus += `\nIt is a query table whose SQL could not be read - do not conclude anything from its absence.`;
-    if (q) { const body = await sqlBodyOf(cur.id); if (body) focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(body, 4000)}\n\u0060\u0060\u0060\n`; }
+    const st = await sqlReadState(cur.id, op);
+    if (st.kind === 'unread') focus += `\nIt is a query table whose SQL could not be read - do not conclude anything from its absence.`;
+    if (st.kind === 'read') focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(sqlText(st.body), 4000)}\n\u0060\u0060\u0060\n`;
   }
   const toolsLine = withTools
     ? 'You have READ-ONLY tools over the local mirror: list_views, get_view, get_structure, get_sql, search_sql, search_columns, get_relations, who_uses, orphans. Use them to fetch exact structure and SQL instead of guessing. get_view returns the whole dossier for one view - structure, foreign keys, SQL and lineage - so prefer it over three narrower calls, and prefer search_columns or search_sql over opening views one at a time.'
@@ -2063,7 +2163,7 @@ function aiCap(lines, total, how, limit = 120) {
     + `\n… and ${total - limit} more (${total} in all). ${how}`;
 }
 
-async function aiExecTool(name, input) {
+async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   input = input || {};
   const m = viewById();
   if (name === 'list_views') {
@@ -2079,7 +2179,7 @@ async function aiExecTool(name, input) {
   // «View not found: undefined» for both searches, so two tools the system prompt advertises had
   // never once run. Reproduced by an outside scan; a registry-derived test now runs every tool.
   const GLOBAL = name === 'orphans' || name === 'search_sql' || name === 'search_columns';
-  const v = GLOBAL || name === 'get_relations' ? null : aiFindView(input.name);
+  const v = GLOBAL ? null : aiFindView(input.name);
   if (!v && !GLOBAL && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
   if (name === 'get_view') {
     // Everything about one view in one step. It used to answer the metadata alone, so any real
@@ -2095,11 +2195,11 @@ async function aiExecTool(name, input) {
     out += '\n' + aiStructureText(v) + '\n';
     const rs = relationsOf(v.id);
     if (rs.length) out += `\nrelations (${rs.length}):\n` + rs.map((r) => `${r.sourceName} → ${r.targetName}   ${r.relation}`).join('\n') + '\n';
-    const q = sqls[v.id];
-    if (q) {
-      const body = await sqlBodyOf(v.id);
-      const src = Object.entries(q.sources || {}).map(([, sd]) => `${sd.name} (${sd.columns.length} columns involved)`).join(', ');
-      out += `\nsource tables: ${src || '(none recorded)'}\nSQL:\n${sqlText(body)}\n`;
+    const st = await sqlReadState(v.id, op);
+    if (st.kind === 'unread') out += `\nSQL could not be read (${st.error}) - do not conclude anything from its absence.\n`;
+    else if (st.kind === 'read') {
+      const src = Object.entries(st.query.sources || {}).map(([, sd]) => `${sd.name} (${sd.columns.length} columns involved)`).join(', ');
+      out += `\nsource tables: ${src || '(none recorded)'}\nSQL:\n${sqlText(st.body)}\n`;
     }
     out += d
       ? `\nreads_from: ${d.parents.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\nread_by: ${d.children.map((x) => nameOf(x.id, m)).join(', ') || '(none)'}\non_dashboards: ${d.dashboards.map((x) => nameOf(x, m)).join(', ') || '(none)'}\n`
@@ -2109,13 +2209,12 @@ async function aiExecTool(name, input) {
   }
   if (name === 'get_structure') return aiStructureText(v);
   if (name === 'get_sql') {
-    const st = sqlState(v.id);
+    const st = await sqlReadState(v.id, op);
     if (st.kind === 'not-query') return `${v.name} is a ${v.type}, not a query table - it has no SQL.`;
     if (st.kind === 'unread') return `${v.name} IS a query table, but its SQL could not be read (${st.error}). Retry failed / Pull all fetches it - do not conclude anything from its absence.`;
     const q = st.query;
-    const body = await sqlBodyOf(v.id);
     const src = Object.entries(q.sources || {}).map(([, sdef]) => `${sdef.name} (${sdef.columns.length} columns involved)`).join(', ');
-    return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${sqlText(body)}`;
+    return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${sqlText(st.body)}`;
   }
   if (name === 'search_sql') {
     // With the matching line beside each name the model can usually answer without opening the
@@ -2124,9 +2223,10 @@ async function aiExecTool(name, input) {
     const hits = []; let searched = 0, unread = 0;
     const qts = views.filter((x) => x.type === 'QueryTable');
     for (const vv of qts) {
-      if (sqlState(vv.id).kind === 'unread') { unread++; continue; }
+      const st = await sqlReadState(vv.id, op);
+      if (st.kind === 'unread') { unread++; continue; }
       searched++;
-      const body = await sqlBodyOf(vv.id);
+      const body = st.body;
       if (!body || !body.toLowerCase().includes(q)) continue;
       const line = body.split('\n').find((l) => l.toLowerCase().includes(q)) || '';
       hits.push(`${vv.name}\n    ${line.trim().slice(0, 160)}`);
@@ -2226,7 +2326,7 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
   return { content, stop_reason };
 }
 
-async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true) {
+async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true, op = beginWorkspaceOp()) {
   const msgs = apiMessages.slice();
   for (let iter = 0; iter < maxIter; iter++) {
     let bubble = null, el = null;
@@ -2247,7 +2347,7 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     for (const tu of toolUses) {
       if (!current()) return;
       aiToolEvent(tu.name, tu.input);
-      let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; }
+      let out; try { out = await aiExecTool(tu.name, tu.input, op); } catch (e) { out = MSG.errPrefix + e.message; }
       if (!current()) return;
       results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) });
     }
@@ -2311,7 +2411,7 @@ async function aiSend() {
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
-    const system = await aiSystemPrompt(withTools, cfg.seedCap);
+    const system = await aiSystemPrompt(withTools, cfg.seedCap, op);
     if (!current()) return;
     // The workspace index sent to the model is capped. If it was cut, say so once - do not let the
     // user assume the model saw everything. Claude can still look things up; OpenAI cannot.
@@ -2322,7 +2422,7 @@ async function aiSend() {
         + (withTools ? 'Claude can still find them by name with its tools - the tables are always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific views by name.') });
       aiRenderMessages();
     }
-    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current);
+    if (withTools) await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current, op);
     else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     if (!current()) return;
     status('', '');
@@ -2350,13 +2450,15 @@ async function aiEngineChrome() {
 // asked anything. Showing it is the only way the setting that caps it can be a real choice rather
 // than a number in a form: build it once, measure, and say so.
 async function aiContextLabel() {
+  const op = beginWorkspaceOp();
   const el = $('aictx'); if (!el) return;
   const v = selectedId ? viewById().get(selectedId) : null;
   const focus = v ? `Focus: ${v.name}` : 'No view focused - open one to give structure-level context';
   let cost = '';
   try {
     const cfg = await aiGetCfg();
-    await aiBuildSeed(cfg.seedCap);
+    await aiBuildSeed(cfg.seedCap, op);
+    if (!op.current()) return;
     // Counts the product primer too. A figure reporting only the index would understate what is
     // actually billed, and this line exists precisely so the knob and its consequence sit in the
     // same sentence.
@@ -2451,7 +2553,7 @@ function exportSections(sc) {
   return out;
 }
 
-async function buildExportHtml(sc) {
+async function buildExportHtml(sc, op = beginWorkspaceOp()) {
   const secs = exportSections(sc);
   const esc2 = esc;
   const toc = secs.map((x) => `<li><a href="#${x.id}">${esc2(x.title)}</a></li>`).join('');
@@ -2466,10 +2568,9 @@ async function buildExportHtml(sc) {
         // Skipping an unread query made the export silently smaller than the workspace: a reader
         // cannot tell a query that was dropped from one that never existed. The heading is always
         // there; what varies is whether the source or the reason sits under it.
-        const st = sqlState(v.id);
+        const st = await sqlReadState(v.id, op);
         if (st.kind === 'unread') { body += `<h3>${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
-        const src = await sqlBodyOf(v.id);
-        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(sqlText(src))}</pre>`;
+        body += `<h3>${esc2(v.name)}</h3><pre>${esc2(sqlText(st.body))}</pre>`;
       }
     } else if (x.h) {
       const H = x.h;
@@ -2502,7 +2603,7 @@ ${body}
 </body></html>`;
 }
 
-async function buildExportMarkdown(sc) {
+async function buildExportMarkdown(sc, op = beginWorkspaceOp()) {
   const secs = exportSections(sc);
   const row = (r) => '| ' + r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ') + ' |';
   let out = `# ${bound.label || bound.name || bound.workspace}\n\nZoho Analytics workspace ${bound.label && bound.name ? `${bound.name} ` : ''}\`${bound.workspace}\` · exported ${new Date().toISOString().slice(0, 10)} by ${PRODUCT_NAME} v${chrome.runtime.getManifest().version}\n\n`;
@@ -2518,9 +2619,9 @@ async function buildExportMarkdown(sc) {
     else if (x.tables) for (const t of x.tables) out += `### ${t.name} (${t.kind}${t.system ? ', system' : ''})\n\n| Column | Type | References |\n| --- | --- | --- |\n` + t.columns.map((c) => row([c.name, c.type, fkText(t.id, c.name)])).join('\n') + '\n\n';
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
-        const st = sqlState(v.id);
+        const st = await sqlReadState(v.id, op);
         if (st.kind === 'unread') { out += `### ${v.name}\n\n> Its SQL could not be read (${st.error}) - Retry failed / Pull all fetches it.\n\n`; continue; }
-        const src = await sqlBodyOf(v.id);
+        const src = st.body;
         out += `### ${v.name}\n\n\u0060\u0060\u0060sql\n${src && src.trim() ? src : '-- ' + sqlText(src)}\n\u0060\u0060\u0060\n\n`;
       }
     } else if (x.h) {
@@ -2552,12 +2653,13 @@ async function doExport(kind) {
   try {
     await requirePerm(op.root);
     const md = kind === 'md';
-    const body = md ? await buildExportMarkdown(sc) : await buildExportHtml(sc);
+    const body = md ? await buildExportMarkdown(sc, op) : await buildExportHtml(sc, op);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && (bound.name || bound.workspace)) || 'workspace')}-${stamp}.${md ? 'md' : 'html'}`;
     await op.write(name, body);
     setBusy(false, `Exported → ${name} (in your workspace folder).`); $('status').className = 'ok';
   } catch (e) {
+    if (!op.current()) { endBusyElsewhere(); return; }
     setBusy(false, 'Export error: ' + (e.message || e)); $('status').className = 'bad';
   }
 }
@@ -2571,6 +2673,11 @@ function healthFindings() {
   const tables = Object.entries(schema);
   const related = new Set();
   for (const r of relations) { related.add(r.source); related.add(r.target); }
+  const unread = pullFailed.slice();
+  for (const id of sqlDiskUnread) {
+    if (!unread.some((f) => String(f.id) === String(id) && f.stage === 'sql'))
+      unread.push({ id, stage: 'sql', error: 'the .sql file could not be read' });
+  }
   return {
     counts: {
       views: views.length, folders: folders.length,
@@ -2581,7 +2688,7 @@ function healthFindings() {
     orphans: deps ? views.filter(isOrphanCandidate) : null,
     islands: tables.filter(([id]) => !related.has(id)).map(([id, t]) => ({ id, name: t.name, kind: t.kind })),
     undescribed: views.filter((v) => !v.description),
-    unread: pullFailed.slice(),
+    unread,
     noStructure: views.filter((v) => v.type !== 'Dashboard' && !structureChain(v, m)),
   };
 }
@@ -2700,10 +2807,12 @@ async function renameWorkspace() {
     // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
     if (!(await ensurePerm(op.root))) { status(MSG.folder, 'warn'); return; }
+    if (!op.current()) return;
     await patchCfg({ label }, op);
+    if (!op.current()) return;
     status(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await refreshWorkspaces();
-  } catch (e) { status('Could not save the name. ' + friendlyError(e), 'bad'); }
+  } catch (e) { if (op.current()) status('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = addWorkspace;

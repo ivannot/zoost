@@ -5,8 +5,9 @@
 
 // ---------- connections view (org-wide catalogue + usage) ----------
 let connectionData = [], connCatFilter = 'all';
-async function loadConnectionsIndex() {
-  let idx = []; try { idx = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
+async function loadConnectionsIndex(op = beginWorkspaceOp()) {
+  let idx = []; try { idx = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
+  if (!op.current()) return null;
   return Array.isArray(idx) ? idx : [];
 }
 async function rebuildConnections() {
@@ -19,8 +20,8 @@ async function rebuildConnections() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading connections…', 'busy');
-    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
-    const cat = await loadConnectionsIndex();
+    const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const cat = await loadConnectionsIndex(op); if (!cat || !op.current()) return;
     // usage: which functions reference each connection (join meta.connections[].name)
     // A graph that failed to build is not a graph with nothing in it: `.catch(() => null)` here
     // turned «source unreadable» into `uses: []` on every row, «1 connections.» in green, and a
@@ -38,8 +39,8 @@ async function rebuildConnections() {
     Object.keys(usedBy).forEach((name) => { if (!catNames.has(name)) connectionData.push({ name, label: name, connector: null, connected: null, createdBy: null, scopes: [], missing: true, path: 'connections/' + name, uses: usedBy[name].slice() }); });
     renderConnections();
     setStatus(connectionData.length ? `${connectionData.length} connections.` : (emptyReason() || 'No connections pulled yet - click Pull all.'), connectionData.length ? 'ok' : 'warn');
-  } catch (e) { setStatus('Connections error: ' + e.message, 'bad'); }
-  await refreshContext();
+  } catch (e) { if (op.current()) setStatus('Connections error: ' + e.message, 'bad'); }
+  if (op.current()) await refreshContext();
 }
 function renderConnections() {
   if (viewMode !== 'connections') return;

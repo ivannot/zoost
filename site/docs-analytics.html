@@ -180,6 +180,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       <tr><td class="k"><code>views.json</code></td><td>the census: every view with type, folder, owner, dates, tags</td></tr>
       <tr><td class="k"><code>schema.json</code></td><td>columns and data types per table, plus the relations</td></tr>
       <tr><td class="k"><code>lineage.json</code></td><td>what reads from what, both directions</td></tr>
+      <tr><td class="k"><code>.pull-state.json</code></td><td>the commit marker: an interrupted full pull is refused instead of shown as one snapshot</td></tr>
       <tr><td class="k"><code>sql/*.sql</code></td><td>one file per query table - the diffable part</td></tr>
       <tr><td class="k"><code>sql/index.json</code></td><td>id-to-file map, and which source columns each query involves</td></tr>
       <tr><td class="k"><code>export/</code></td><td>the reports you generate</td></tr>

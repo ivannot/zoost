@@ -50,6 +50,13 @@ so a single folder serves every Zoost product without the two ever meeting. Each
 **its own** subfolder (`APP_DIR`), never the root. The folder names are labels: renaming the folder,
 or renaming the Zoho portal, must not orphan a workspace — the list is built by reading each config.
 
+**An Analytics full pull is committed by `.pull-state.json`.** The File System Access API cannot
+atomically replace `views.json`, `schema.json`, `lineage.json`, the SQL files and their index. The
+panel therefore writes `state: writing` before the first of them and `state: complete` after the
+last. A loader that finds `writing` refuses the files as a hybrid and asks for Pull all; absence is
+accepted for mirrors made before the marker existed. Partial writers replace one view's SQL and
+lineage only and do not open a full-snapshot transaction.
+
 Workspaces found sitting directly in the working folder are the older flat layout. The panel does
 not adopt them; it says precisely how many there are and where to move them. Detecting them is not a
 compatibility fallback — nothing keeps working the old way — it is an empty state that tells the

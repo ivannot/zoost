@@ -10,15 +10,15 @@
  */
 
 // ---------- schedules ----------
-async function loadScheduleIndex() {
+async function loadScheduleIndex(op = beginWorkspaceOp()) {
   // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
   // short, but it is not instant, and what overtakes it is a change of workspace - so the list of
   // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
   // this class instead of waiting for the next reader to notice an instance of it.
-  const op = beginWorkspaceOp();
   let idx = []; try { idx = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
-  if (!op.current()) return;
+  if (!op.current()) return false;
   scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
+  return true;
 }
 async function rebuildSchedules() {
   const op = beginWorkspaceOp();   // the workspace this rebuild is about
@@ -26,12 +26,12 @@ async function rebuildSchedules() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading schedules\u2026', 'busy');
-    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
-    await loadScheduleIndex();
+    const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
+    if (!(await loadScheduleIndex(op))) return;
     renderSchedules();
     setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet - use Pull all.', 'ok');
-  } catch (e) { setStatus(MSG.refreshErr + e.message, 'bad'); }
-  await refreshContext();
+  } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
+  if (op.current()) await refreshContext();
 }
 function renderSchedules() {
   if (viewMode !== 'schedules') return;
@@ -162,13 +162,13 @@ async function rebuildWorkflows() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading workflows\u2026', 'busy');
-    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     if (!(await loadWorkflowIndex(op))) return;
     renderWorkflows(); updateMissingButton();
     const dl = workflowData.filter((e) => e.downloaded).length;
     setStatus(`${workflowData.length} workflows (${dl} downloaded).`, 'ok');
-  } catch (e) { setStatus(MSG.refreshErr + e.message, 'bad'); }
-  await refreshContext();
+  } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
+  if (op.current()) await refreshContext();
 }
 function renderWorkflows() {
   if (viewMode !== 'workflows') return;
@@ -262,14 +262,14 @@ async function pullSchedules() {
   try {
     if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling schedules\u2026', 'busy');
     const r = await toBridge({ cmd: 'listSchedules' }); if (!r?.ok) { const e = bridgeError(r, 'unknown'); await notePullFailure('schedules', e, op); return; }
     if (!op.current()) return;   // you changed workspace while this was reading
     if (r.capped) { setStatus('Zoho returned a partial list of schedules - nothing was replaced.', 'warn'); return; }
     await op.write('schedules/index.json', JSON.stringify(r.entries, null, 2));
-    await loadScheduleIndex(); if (viewMode === 'schedules') renderSchedules();
+    if (!(await loadScheduleIndex(op))) return; if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null, op);
   } catch (e) { await notePullFailure('schedules', e, op); }
@@ -281,7 +281,7 @@ async function pullConnections() {
   try {
     if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus('Connections: environment mismatch - refusing.', 'warn'); return; }
     setStatus('Pulling connections…', 'busy');
     const r = await toBridge({ cmd: 'pullConnections' });
@@ -373,8 +373,9 @@ const actionKindLabel = (k) => ACTION_LABEL[k] || String(k || '').replace(/_/g, 
 // a namespace truncates into something still recognisable and a sentence does not.
 const ACTION_SHORT = { email_notifications: 'Email', field_updates: 'Field', tasks: 'Task', webhooks: 'Webhook' };
 const actionKindShort = (k) => ACTION_SHORT[k] || actionKindLabel(k).split(' ')[0];
-async function loadActionsIndex() {
-  let idx = []; try { idx = JSON.parse(await readFile('actions/index.json')); } catch (_) {}
+async function loadActionsIndex(op = beginWorkspaceOp()) {
+  let idx = []; try { idx = JSON.parse(await op.read('actions/index.json')); } catch (_) {}
+  if (!op.current()) return null;
   return Array.isArray(idx) ? idx : [];
 }
 async function pullActions() {
@@ -383,7 +384,7 @@ async function pullActions() {
   try {
     if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) { setStatus(MSG.wrongTab, 'warn'); return; }
     setStatus('Pulling automation actions\u2026', 'busy');
     const r = await toBridge({ cmd: 'pullActions' });
@@ -423,7 +424,7 @@ async function pullActions() {
     let actions = r.actions || [];
     if (partial.size || detailMissed.length) {
       const seen = new Set(actions.map((a) => `${a.kind}:${a.id}`));
-      const prev = await loadActionsIndex();
+      const prev = (await loadActionsIndex(op)) || [];
       const kept = prev.filter((a) => partial.has(a.kind) && !seen.has(`${a.kind}:${a.id}`));
       if (kept.length) actions = actions.concat(kept);
       if (detailMissed.length) {
@@ -472,20 +473,20 @@ async function rebuildActions() {
   try {
     if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
     setStatus('Reading automation actions\u2026', 'busy');
-    const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
-    const idx = await loadActionsIndex();
+    const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
+    const idx = await loadActionsIndex(op); if (!idx || !op.current()) return;
     // Both publications after the last await, not before it. The first version of this guard sat
     // above the walk of the rules - so the check ran, the walk took its time, and the two lists were
     // published into whatever workspace had arrived meanwhile. A guard before an await is not a guard.
-    const users = await buildActionUsers();   // one walk of the rules, not one per item opened
+    const users = await buildActionUsers(op);   // one walk of the rules, not one per item opened
     if (!op.current()) return;
     actionUsers = users;
     actionData = idx.map((a) => ({ ...a, path: 'actions/' + a.kind + '/' + a.id }));
     buildTypeChips();          // the kinds come from the data, so the filter is built after it loads
     renderActions();
     setStatus(actionData.length ? `${actionData.length} automation action(s).` : (emptyReason() || 'No automation actions pulled yet - click Pull all.'), actionData.length ? 'ok' : 'warn');
-  } catch (e) { setStatus('Actions error: ' + e.message, 'bad'); }
-  await refreshContext();
+  } catch (e) { if (op.current()) setStatus('Actions error: ' + e.message, 'bad'); }
+  if (op.current()) await refreshContext();
 }
 function renderActions() {
   if (viewMode !== 'actions') return;

@@ -226,6 +226,9 @@
     J('schema.json', { workspace: WS, tables: schema, relations: relations });
     J('lineage.json', { workspace: WS, deps: deps, failed: failed });
     J('sql/index.json', sqlindex);
+    // A real full pull closes with this commit marker. Keeping it in the sample makes the loader's
+    // interrupted-snapshot gate part of the workspace people can exercise without a Zoho account.
+    J('.pull-state.json', { state: 'complete', completedAt: WHEN });
     J('.zoost.json', {
       workspace: WS, name: WS_NAME, label: WS_LABEL,
       origin: 'https://analytics.zoho.eu', sv: 1,

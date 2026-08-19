@@ -13,7 +13,7 @@ async function pullModules() {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Pulling modules…', 'busy');
@@ -63,7 +63,7 @@ async function pullModules() {
       if (!op.current()) return;
       try { await op.remove(p); prunedL++; } catch (e) { if ((e && e.message) === WS_MOVED) return; rFail.push(p); }
     }
-    await rebuildModules();
+    await rebuildModules(op);
     // Incomplete is said as incomplete, and recorded as such: «ok» over failed writes is how an old
     // file hides behind a fresh green line, and a removal that failed is a deleted module still on
     // screen - rebuildModules() reads the disk, so the residue is what the reader sees.
@@ -84,21 +84,21 @@ async function pullModules() {
 // keeps recording.
 let moduleLoad = 0;
 
-async function rebuildModules() {
-  if (!dir) return;
-  if (!(await ensurePerm(dir))) { setStatus(MSG.folder, 'warn'); return; }
+async function rebuildModules(op = beginWorkspaceOp()) {
+  if (!op.root) return;
+  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
   const mine = ++moduleLoad;
-  const current = () => mine === moduleLoad;
-  setStatus('Loading modules…', 'busy'); const _cfg = await readCfg(); if (_cfg) bound = _cfg; await cacheBinding(bound);
+  const current = () => mine === moduleLoad && op.current();
+  setStatus('Loading modules…', 'busy'); const _cfg = await opReadCfg(op); if (_cfg) bound = _cfg; await cacheBinding(bound);
   if (!current()) return;
   const names = [];
-  for await (const p of walk(dir)) if (isModuleFile(p)) names.push(p);
+  for await (const p of walk(op.root)) { if (!current()) return; if (isModuleFile(p)) names.push(p); }
   names.sort();
   if (!current()) return;
   const rows = [];
   for (const p of names) {
     try {
-      const m = JSON.parse(await readFile(p));
+      const m = JSON.parse(await op.read(p));
       rows.push({ path: p, api_name: m.api_name, gen: m.module_name || m.api_name, label: m.plural_label || m.singular_label || m.module_name || m.api_name, custom: m.generated_type === 'custom', generated_type: m.generated_type || '', fieldCount: (m.fields || []).length, lookupCount: (m.fields || []).filter((f) => f.lookup).length, layoutCount: (m.layouts || []).length, layouts: (m.layouts || []), viewable: (m.viewable !== false && m.visible !== false), navigable: moduleNavigable(m), unreadable: m.unreadable || null });
     } catch (_) {}
   }

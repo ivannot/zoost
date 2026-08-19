@@ -430,7 +430,7 @@ async function noteAccess(area, err, op) {
   const state = !err ? 'ok' : err.forbidden ? 'forbidden' : 'failed';
   const before = accessOf(area);
   const prev = tabAccess[area] || {};
-  tabAccess = Object.assign({}, tabAccess, { [area]: {
+  const nextAccess = Object.assign({}, tabAccess, { [area]: {
     state, status: (err && err.status) || 0,
     at: new Date().toISOString(),
     // `at` is when we asked; `pulledAt` is when we last actually got the data. They diverge the
@@ -438,9 +438,20 @@ async function noteAccess(area, err, op) {
     // section detectable instead of silently old.
     pulledAt: err ? (prev.pulledAt || null) : new Date().toISOString(),
   } });
-  try { await patchCfg({ access: tabAccess }, op); } catch (_) {}
+  // Disk is the authority. Publishing the optimistic value first made a failed config write hide a
+  // tab until the next reopen; publishing after an overtaken write put the old org's verdict beside
+  // the new workspace. Keep the old in-memory answer unless the same operation commits the new one.
+  try { await patchCfg({ access: nextAccess }, op); }
+  catch (e) {
+    if (op && !op.current()) return false;
+    setStatus(`Could not record the ${tabLabel(area)} access state: ${(e && e.message) || e}`, 'bad');
+    return false;
+  }
+  if (op && !op.current()) return false;
+  tabAccess = nextAccess;
   publishAccess();
   if (before !== state && (before === 'forbidden' || state === 'forbidden')) renderTabs();   // the set of tabs just changed
+  return true;
 }
 
 // What the user reads when an area is refused. Never the status line on its own: "403 on
@@ -753,7 +764,8 @@ const writeCfg = async (o, op) => (op ? op.write(CFG, JSON.stringify(o, null, 2)
 // The op reaches here because `.zoost.json` is the file that says which org this folder mirrors:
 // written into the wrong one, two workspaces answer to the same id and only a hand edit separates
 // them again. It is optional, so the render paths that mean the folder on screen are unchanged.
-const patchCfg = async (o, op) => writeCfg(Object.assign({}, (await readCfg()) || {}, o), op);
+const patchCfg = async (o, op) => writeCfg(Object.assign({},
+  (op ? await opReadCfg(op) : await readCfg()) || {}, o), op);
 
 // ---------- tabs ----------
 //
@@ -2725,7 +2737,7 @@ async function pullAll() {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance))) throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing to avoid cross-environment mix-ups.`);
     setStatus('Listing functions…', 'busy');
     const r = await toBridge({ cmd: 'listFunctions' }); if (!r?.ok) throw bridgeError(r, 'list failed');
@@ -2740,11 +2752,13 @@ async function pullAll() {
     const liveIds = new Set(r.entries.map((e) => String(e.id))); const rmF = [];
     for await (const p of walk(op.root)) {
       if (!p.startsWith('functions/')) continue;   // only a function has a .meta.json to prune by
-      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p); rmF.push(p.replace(/\.meta\.json$/, '.dg')); } } catch (_) {} }
+      if (p.endsWith('.meta.json')) { try { const mm = JSON.parse(await op.read(p)); if (!liveIds.has(String(mm.id))) { rmF.push(p.replace(/\.meta\.json$/, '.dg')); rmF.push(p); } } catch (_) {} }
     }
     // Each removal, not the loop: `removeFile` resolves its path against the folder that is current
     // *now*, so a switch part-way through deletes the rest out of a workspace this pull never walked.
-    let prunedF = 0; for (const p of rmF) { if (!op.current()) return; try { await op.remove(p); if (p.endsWith('.dg')) prunedF++; } catch (_) {} }
+    const removed = await removeFunctionPaths(rmF, op);
+    if (removed.moved) return;
+    const prunedF = removed.removed.filter((p) => p.endsWith('.dg')).length;
     // If you were reading one of the functions the pull has just pruned, the pane is showing
     // something that no longer exists - in Zoho or on disk. Reported: it stayed open, with the code
     // of a deleted function in it. It closes with the file, the same way a live deletion closes it.
@@ -2762,8 +2776,8 @@ async function pullAll() {
     // A pull cannot run on a sample - guardOk refuses it - so this can only ever be false here, and
     // writing it out is what stops the next field added to .zoost.json being dropped in this line.
     // Through the op, and asked again after it: `bound`, the binding cache, the tree and the
-    // download queue are all about the workspace the panel is showing, and `readCfg()` read it from
-    // whichever folder that was. A pull overtaken here published one org's identity as the other's.
+    // download queue are all about the workspace the panel is showing. The config read above and
+    // this publication both travel through the operation, never through the current global folder.
     const _c = (await opReadCfg(op)) || {};
     if (!op.current()) return;
     bound = { org: ctx.org, base: ctx.origin, instance: ctx.instance, label: _c.label || '', sample: !!_c.sample };
@@ -2771,12 +2785,13 @@ async function pullAll() {
     await rebuildTree();
     await downloadMissing();   // fetch each function's code, resiliently (partials stay; failures can be retried)
     if (prunedF) setStatus($('stxt').textContent + ` \u00b7 ${prunedF} deleted removed`, 'ok');
+    if (removed.failed) setStatus($('stxt').textContent + ` \u00b7 ${removed.failed} stale file(s) could not be removed - \u21bb Refresh retries`, 'warn');
     // The page loop has a ceiling like every other one here, and unlike every other one it was not
     // being said: the bridge returned `capped` and nothing read it, so a list that stopped early
     // looked exactly like a census. That is the one thing a mirror may never do, and it was
     // introduced the day the ceiling was - reported by an assistant reading the repository.
     if (r.capped) setStatus($('stxt').textContent + ` \u00b7 list stopped at ${r.total} - there are more functions in Zoho`, 'warn');
-    await noteAccess('functions', null, op);
+    await noteAccess('functions', removed.failed ? { status: 0, message: `${removed.failed} stale function file(s) could not be removed` } : null, op);
   } catch (e) { await notePullFailure('functions', e, op); } finally { endPull(); }
 }
 // The call graph with everything around it: what fires the code, and what the code reaches out to.
@@ -3075,6 +3090,28 @@ function reconcileFunctions() {
 // Paths a removal could not finish. Not a log: the next round tries them again, because by then the
 // index no longer mentions them and nothing else would ever look.
 const failedRemovals = new Set();
+
+/** Remove every half of one or more function pairs independently. A pair can be half gone: if the
+ *  first NotFound aborts the sequence, the second half is never retried and can live on disk for
+ *  ever. The source is always attempted before its metadata, so after a browser restart any residue
+ *  still carries the id that lets the next full pull find and retry it. */
+async function removeFunctionPaths(paths, op) {
+  const removed = [];
+  let failed = 0;
+  for (const p of paths) {
+    if (!op.current()) return { removed, failed, moved: true };
+    try {
+      await op.remove(p);
+      if (!op.current()) return { removed, failed, moved: true };
+      failedRemovals.delete(p); removed.push(p);
+    } catch (e) {
+      if (!op.current() || (e && e.message) === WS_MOVED) return { removed, failed, moved: true };
+      if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p);
+      else { failedRemovals.add(p); failed++; }
+    }
+  }
+  return { removed, failed, moved: false };
+}
 
 /** Take a function out of the mirror. Returns whether it went completely - a half-removed function
  *  reported as removed comes back at the next open, and the reader was told it had gone. */
@@ -3771,10 +3808,12 @@ async function renameWorkspace() {
     // DOMException the AI path used to. Third time this shape has surfaced - a write reached from a
     // control is a write that must re-request first.
     if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
+    if (!op.current()) return;
     await patchCfg({ label }, op);
+    if (!op.current()) return;
     setStatus(label ? `Workspace named \u00ab${label}\u00bb.` : 'Workspace name cleared - back to the folder name.', 'ok');
     await loadWorkspaces();
-  } catch (e) { setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
+  } catch (e) { if (op.current()) setStatus('Could not save the name. ' + friendlyError(e), 'bad'); }
 }
 $('wsrename').onclick = renameWorkspace;
 $('wsadd').onclick = () => addWorkspaceForTab();
@@ -4061,7 +4100,9 @@ async function downloadOne(entry) {
     // that fails keeps the old pair - readable is better than gone - and the next load will mark
     // the rename again, so the retry is free.
     if (entry.previousPath && entry.previousPath !== `functions/${f.folder}/${f.stem}.dg`) {
-      try { await op.remove(entry.previousPath); await op.remove(entry.previousPath.replace(/\.dg$/, '.meta.json')); } catch (_) {}
+      const cleanup = await removeFunctionPaths([entry.previousPath, entry.previousPath.replace(/\.dg$/, '.meta.json')], op);
+      if (cleanup.moved) return false;
+      entry.cleanupFailed = cleanup.failed;
     }
     entry.previousPath = null; entry.pathChanged = false;
     if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
@@ -4081,7 +4122,7 @@ async function downloadMissing() {
   const pending = treeData.filter((e) => !e.downloaded || e.stale || e.pathChanged);   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
-  let ok = 0, fail = 0;
+  let ok = 0, fail = 0, cleanup = 0;
   // The longest loop in the panel - one fetch and a pause per function, so minutes on a large org,
   // and every one of those minutes is a place the workspace can change underneath. It used to run to
   // the end regardless: each download refused, each refusal counted as a failure, and it finished by
@@ -4094,12 +4135,15 @@ async function downloadMissing() {
       let done = await downloadOne(e);
       if (!done && isTransient(e.errorMsg)) { await sleep(700); done = await downloadOne(e); }   // one backoff retry, transient failures only
       done ? ok++ : fail++;
+      if (done && e.cleanupFailed) cleanup += e.cleanupFailed;
       updateRow(e);
       await sleep(140);
     }
     if (!op.current()) return;
     updateMissingButton();
-    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".` : `All ${ok} functions downloaded.`, fail ? 'warn' : 'ok');
+    setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
+      : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`
+      : `All ${ok} functions downloaded.`, (fail || cleanup) ? 'warn' : 'ok');
   } finally { setPullBusy(false); $('missing').disabled = false; }
 }
 function updateRow(e) {
@@ -4185,7 +4229,7 @@ async function pullFailures() {
     pullActive = true;
     await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(MSG.wrongTab);
     setStatus('Reading failures\u2026', 'busy');
@@ -4213,7 +4257,7 @@ async function pullWorkflows() {
     pullActive = true;   // button state is owned by setPullBusy at the entry points (pullEverything / pullCurrent)
     await requirePerm(op.root);
     const ctx = await getContext(); if (!ctx) throw new Error(MSG.noTab);
-    const cfg = await readCfg();
+    const cfg = await opReadCfg(op);
     if (cfg?.org && (cfg.org !== ctx.org || (cfg.base && cfg.base !== ctx.origin) || (cfg.instance && ctx.instance && cfg.instance !== ctx.instance)))
       throw new Error(`This workspace is bound to ${envOf(cfg.base)} \u00ab${cfg.instance || '?'}\u00bb (org ${cfg.org}). Active tab is ${envOf(ctx.origin)} \u00ab${ctx.instance || '?'}\u00bb (org ${ctx.org}). Refusing.`);
     setStatus('Listing workflows\u2026', 'busy');
@@ -4223,7 +4267,7 @@ async function pullWorkflows() {
     // and the warning came *after* the pruning, so it described rules already gone.
     if (r.capped) {
       setStatus(`Zoho returned a partial list of workflows (stopped at ${r.total || 'the limit'}) - nothing was removed.`, 'warn');
-      await loadWorkflowIndex(); if (viewMode === 'workflows') renderWorkflows();
+      if (!(await loadWorkflowIndex(op))) return; if (viewMode === 'workflows') renderWorkflows();
       return;
     }
     if (!op.current()) return;   // you changed workspace while this was reading
@@ -4231,7 +4275,7 @@ async function pullWorkflows() {
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
     let prunedW = 0; const wfRmFail = [];
     for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (e) { if ((e && e.message) === WS_MOVED) return; wfRmFail.push(p); } } } }
-    await loadWorkflowIndex();
+    if (!(await loadWorkflowIndex(op))) return;
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
     // The writes above dropped \u00abwhich rule fires this action\u00bb - it is read out of these very rules.
@@ -4239,7 +4283,11 @@ async function pullWorkflows() {
     // this is that place: `actionFiredBy()` is called while a row is being drawn and cannot read a
     // file, so a map that is merely absent would be drawn as \u00abno rule fires this\u00bb, which is a
     // stronger claim than the stale one it replaced.
-    if (actionUsers === null) actionUsers = await buildActionUsers();
+    if (actionUsers === null) {
+      const users = await buildActionUsers(op);
+      if (!op.current()) return;
+      actionUsers = users;
+    }
     if (viewMode === 'actions') renderActions();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
     // A removal that failed is a deleted rule still on screen: loadWorkflowIndex() reads the disk,
@@ -4471,7 +4519,7 @@ async function pullHealthRuntime() {
       const fx = await failuresIndex(op);
       if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
       healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
-    } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
+    } catch (e) { if (op.current()) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); } }
     finally { b.disabled = false; }
   });
 }

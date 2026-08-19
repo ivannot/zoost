@@ -44,7 +44,8 @@ LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
 # they have their own tests and no per-workspace globals of the panels' kind.
 _LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
 def _page_files(app):
-    html = open(os.path.join(ROOT, 'apps', app, 'sidepanel.html'), encoding='utf-8').read()
+    with open(os.path.join(ROOT, 'apps', app, 'sidepanel.html'), encoding='utf-8') as src:
+        html = src.read()
     return [f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
             if not _LIB.search(m)]
 PAGES = {'crm': _page_files('crm'), 'analytics': _page_files('analytics')}

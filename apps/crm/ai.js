@@ -179,19 +179,19 @@ function aiModuleText(m) {
 const AI_SEED_CAP_DEFAULT = 72000;
 let aiSeedSize = 0, aiSeedOmitted = [];
 
-async function aiBuildSeed(cap) {
+async function aiBuildSeed(cap, op = beginWorkspaceOp()) {
   cap = Math.max(4000, Number(cap) || AI_SEED_CAP_DEFAULT);
-  const g = await ensureGraph();
+  const g = await ensureGraph(op);
   const nodes = Object.values(g.nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
   let funcs = `## Function index (${nodes.length})\n(NNNL = source lines, Nc = outbound API calls: invokeurl + Zoho service tasks)\n`;
   nodes.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; funcs += `- ${n.namespace}.${n.name}${n.rest ? ' [REST]' : ''}${used.length ? ' [' + used.join('/') + ']' : ''}${n.stats ? ` ${n.stats.lines}L ${n.stats.apiCalls}c` : ''}\n`; });
 
-  const mods = (await loadModuleFiles()) || {}; const mk = Object.keys(mods).sort();
+  const mods = (await loadModuleFiles(op)) || {}; const mk = Object.keys(mods).sort();
   // Marked in the index too, so a module Zoho refused is known to be unknowable before it is asked
   // about, rather than at the moment the answer would already have been guessed.
   const modules = `\n## Modules (${mk.length})\n` + mk.map((k) => '- ' + k + (mods[k] && mods[k].unreadable ? ' [not described by Zoho - fields, layouts and relations were never read]' : '')).join('\n') + '\n';
 
-  const conns = (await aiLoadConnections()) || [];
+  const conns = (await aiLoadConnections(op)) || [];
   const connections = conns.length
     ? `\n## Connections (${conns.length})\n` + conns.slice().sort((a, b) => b.uses.length - a.uses.length).map((c) => `- ${c.name}${c.connector ? ' [' + c.connector + ']' : ''} \u00b7 used by ${c.uses.length} function(s)${c.connected === false ? ' \u00b7 NOT CONNECTED' : ''}${c.missing ? ' \u00b7 not in catalogue' : ''}`).join('\n') + '\n'
     : '';
@@ -199,7 +199,7 @@ async function aiBuildSeed(cap) {
   // The actions are a vocabulary too: without their names the model cannot answer «which rule sends
   // the renewal notice» except by opening rules one at a time. Counts by kind, not the whole list -
   // an org can have hundreds, and `list_actions` is one call away.
-  const acts = (await aiLoadActions()) || { list: [], users: new Map(), addresses: false };
+  const acts = (await aiLoadActions(op)) || { list: [], users: new Map(), addresses: false };
   const byKind = {};
   acts.list.forEach((a) => (byKind[a.kind] = (byKind[a.kind] || 0) + 1));
   const unattached = acts.list.filter((a) => !a.associated && !(acts.users.get(a.kind + ':' + String(a.id)) || []).length).length;
@@ -215,6 +215,7 @@ async function aiBuildSeed(cap) {
   if (out.length + modules.length <= cap) out += modules; else omitted.push(`the ${mk.length} module names`);
   if (out.length + actions.length <= cap) out += actions; else if (actions) omitted.push(`the ${acts.list.length} automation actions`);
   if (out.length + connections.length <= cap) out += connections; else if (connections) omitted.push(`the ${conns.length} connections`);
+  if (!op.current()) throw new Error(WS_MOVED);
   aiSeedOmitted = omitted;
   if (out.length > cap) {                 // even the function list alone overflows
     aiSeedOmitted = ['part of the function index - this org is larger than the index can hold'];
@@ -242,7 +243,7 @@ async function aiBuildSeed(cap) {
 // by field. Naming fields here would be a second description of each shape, free to drift from the
 // pull that produces it - and inventing one that does not exist is how an assistant ends up
 // confidently discussing something that was never there.
-async function aiFocus() {
+async function aiFocus(op = beginWorkspaceOp()) {
   const p = currentPath;
   if (!p) return '';
   const block = (what, body, lang) =>
@@ -250,7 +251,7 @@ async function aiFocus() {
     + '```' + (lang || 'json') + '\n' + body + '\n```\n';
   try {
     if (p.endsWith('.dg')) {
-      const g = await ensureGraph();
+      const g = await ensureGraph(op);
       const n = Object.values(g.nodes).find((x) => x.file === p);
       if (n) return block(`the Deluge function ${n.namespace}.${n.name}`, aiTrunc(n.source_code || '', 5000), 'deluge');
       return '';
@@ -260,7 +261,7 @@ async function aiFocus() {
       // The list entry is the index - name, module, type. What the workflow *does* is its conditions
       // and actions, and those live in the file, which is exactly what "what does this do?" asks for.
       let detail = null;
-      try { detail = JSON.parse(await readFile(p)); } catch (_) {}
+      try { detail = JSON.parse(await op.read(p)); } catch (_) {}
       if (detail || e) {
         return block(`the workflow «${(e && e.name) || (detail && detail.name) || '?'}»`,
           aiTrunc(JSON.stringify(detail || e, null, 2), 6000))
@@ -282,12 +283,16 @@ async function aiFocus() {
     if (p.startsWith('actions/')) {
       const e = actionData.find((x) => x.path === p);
       if (e) {
-        if (!actionUsers) actionUsers = await buildActionUsers();   // the chat may be the first thing opened
+        if (!actionUsers) {
+          const users = await buildActionUsers(op);   // the chat may be the first thing opened
+          if (!op.current()) return '';
+          actionUsers = users;
+        }
         const fired = actionFiredBy(e);
         // The sender address obeys the same setting here as in the index and in both exports. A
         // focus block that carried it regardless would let the address out through the one door
         // nobody thought to close - and the whole point of that switch is that it has one meaning.
-        const { addresses } = (await aiLoadActions()) || { addresses: false };
+        const { addresses } = (await aiLoadActions(op)) || { addresses: false };
         const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
         if (!addresses && shown.from_address) shown.from_address = '(withheld - Settings can let the assistant see sender addresses)';
         return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
@@ -316,9 +321,9 @@ function productHelp() {
   try { return '\n' + window.ZOOST_PRODUCT_HELP.text() + '\n'; } catch (_) { return ''; }
 }
 
-async function aiSystemPromptB(withTools, cap) {
-  const seed = await aiBuildSeed(cap);
-  const focus = await aiFocus();
+async function aiSystemPromptB(withTools, cap, op = beginWorkspaceOp()) {
+  const seed = await aiBuildSeed(cap, op);
+  const focus = await aiFocus(op);
   const toolsLine = withTools
     ? 'You have READ-ONLY tools to explore the real org: list_functions, get_function, who_calls, get_callees, search_code, get_module, list_workflows, get_workflow, get_connection, list_failures. Use them to fetch exact code/schema instead of guessing or inventing. The ORG INDEX lists what exists - call tools for the details you need.'
     : 'Answer from the ORG INDEX and CURRENT FOCUS below. If you need code that is not shown, say which function/module you would need rather than inventing it.';
@@ -348,8 +353,8 @@ function aiCap(lines, total, how, limit = 120) {
     + `\n… and ${total - limit} more (${total} in all). ${how}`;
 }
 
-async function aiExecTool(name, input) {
-  const g = await ensureGraph(); const nodes = g.nodes; input = input || {};
+async function aiExecTool(name, input, op = beginWorkspaceOp()) {
+  const g = await ensureGraph(op); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
   if (name === 'list_functions') {
     const flt = (input.filter || '').toLowerCase();
@@ -367,9 +372,9 @@ async function aiExecTool(name, input) {
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
   if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
-  if (name === 'get_module') { const mods = (await loadModuleFiles()) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
+  if (name === 'get_module') { const mods = (await loadModuleFiles(op)) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
-    let d = null; try { d = JSON.parse(await readFile('failures/index.json')); } catch (_) {}
+    let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}
     if (!d || !Array.isArray(d.failures)) return 'No failures have been read yet - the user runs "Pull all" or the Failures tab to fetch them.';
     const q = String(input.filter || '').toLowerCase();
     const rows = d.failures.filter((f) => !q || (f.name || '').toLowerCase().includes(q) || (f.reason || '').toLowerCase().includes(q))
@@ -386,7 +391,7 @@ async function aiExecTool(name, input) {
       rows.length, 'Pass a filter to narrow by function name or reason.');
   }
   if (name === 'get_connection') {
-    const list = (await aiLoadConnections()) || [];
+    const list = (await aiLoadConnections(op)) || [];
     const q = String(input.name || '').toLowerCase();
     const c = list.find((x) => (x.name || '').toLowerCase() === q) || list.find((x) => (x.label || '').toLowerCase() === q);
     if (!c) return 'Connection not found: ' + input.name + (list.length ? '\nKnown: ' + list.map((x) => x.name).join(', ') : '\n(no connections pulled - run Pull all)');
@@ -399,12 +404,12 @@ async function aiExecTool(name, input) {
     // Both read the rules on disk rather than the index alone: the list endpoint returns neither the
     // scheduled actions nor the last execution, so an answer built from `workflows/index.json` would have been
     // confidently wrong about exactly the question this exists to answer.
-    let idx = []; try { idx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+    let idx = []; try { idx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
     if (!idx.length) return '(no workflows in this workspace - run Pull all)';
     const rows = [];
     let unread = 0;
     for (const w of idx) {
-      let det = null; try { det = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
+      let det = null; try { det = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
       if (!det) unread++;
       const s = wfScheduled(det);
       const fns = []; const instant = [];
@@ -452,7 +457,7 @@ async function aiExecTool(name, input) {
     return head + '\n' + aiCap(lines, sel.length, 'Narrow with `module`, `active` or `has_scheduled_actions`.');
   }
   if (name === 'list_actions') {
-    const acts = (await aiLoadActions()) || { list: [], users: new Map(), addresses: false };
+    const acts = (await aiLoadActions(op)) || { list: [], users: new Map(), addresses: false };
     if (!acts.list.length) return 'No automation actions in this workspace - they are pulled with «Pull all» or from the Actions tab.';
     const kind = String(input.kind || '').toLowerCase().replace(/[\s-]/g, '_');
     let sel = acts.list;
@@ -530,7 +535,7 @@ async function aiStreamAnthropic(a, msgs, system, tools, onText) {
   const content = blocks.filter(Boolean).map((b) => b.type === 'tool_use' ? { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} } : { type: 'text', text: b.text }).filter((b) => b.type !== 'text' || (b.text && b.text.trim() !== ''));
   return { content, stop_reason };
 }
-async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true) {
+async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, current = () => true, op = beginWorkspaceOp()) {
   const msgs = apiMessages.slice();
   for (let iter = 0; iter < maxIter; iter++) {
     let bubble = null, el = null;
@@ -551,7 +556,7 @@ async function aiRunAnthropicAgent(a, apiMessages, system, tools, maxIter, curre
     for (const tu of toolUses) {
       if (!current()) return;
       aiToolEvent(tu.name, tu.input);
-      let out; try { out = await aiExecTool(tu.name, tu.input); } catch (e) { out = MSG.errPrefix + e.message; }
+      let out; try { out = await aiExecTool(tu.name, tu.input, op); } catch (e) { out = MSG.errPrefix + e.message; }
       if (!current()) return;
       results.push({ type: 'tool_result', tool_use_id: tu.id, content: String(out) });
     }
@@ -617,7 +622,7 @@ async function aiSend() {
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
-    const system = await aiSystemPromptB(withTools, cfg.seedCap);
+    const system = await aiSystemPromptB(withTools, cfg.seedCap, op);
     if (!current()) return;
     // The org index sent to the model is capped. If it was cut, say so once - don't let the user
     // assume the model saw everything. Claude can still look things up; OpenAI (single-shot) cannot.
@@ -628,7 +633,7 @@ async function aiSend() {
         + (withTools ? 'Claude can still find them by name with its tools - the function list is always included in full.' : 'OpenAI answers in one pass and cannot look them up, so ask about specific functions by name.') });
       aiRenderMessages();
     }
-    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current); }
+    if (withTools) { await aiRunAnthropicAgent(cfg.anthropic, apiMessages, system, AI_TOOLS, cfg.maxIter || 20, current, op); }
     else { const reply = await aiCall(cfg, apiMessages, system); if (!current()) return; aiMessages.push({ role: 'assistant', content: reply || '(empty response)' }); }
     if (!current()) return;
     setStatus('', '');
@@ -677,6 +682,7 @@ function aiFocusLabel() {
   return null;
 }
 async function aiContextLabel() {
+  const op = beginWorkspaceOp();
   const el = $('aictx'); if (!el) return;
   const what = aiFocusLabel();
   const focus = what ? 'Focus: ' + what
@@ -684,7 +690,8 @@ async function aiContextLabel() {
   let cost = '';
   try {
     const cfg = await aiGetCfg();
-    await aiBuildSeed(cfg.seedCap);
+    await aiBuildSeed(cfg.seedCap, op);
+    if (!op.current()) return;
     cost = ` \u00b7 sent with every message: ${((aiSeedSize + productHelp().length) / 1000).toFixed(0)}k characters, ~${Math.round((aiSeedSize + productHelp().length) / 4).toLocaleString()} tokens`
       + (aiSeedOmitted.length ? ` \u00b7 ${aiSeedOmitted.join(' and ')} left out` : '');
   } catch (_) {}

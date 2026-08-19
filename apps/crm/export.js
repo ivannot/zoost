@@ -440,7 +440,7 @@ async function loadExportData(op = beginWorkspaceOp()) {
   // because the two must not be able to disagree - a reader moves between the HTML and the Markdown
   // and a number that differs between them is worse than a number missing from one.
   if (g) {
-    const known = (await moduleNames()) || new Map();
+    const known = (await moduleNames(op)) || new Map();
     const byKey = new Map();
     for (const n of Object.values(g.nodes)) {
       if (!n.file) continue;
@@ -684,7 +684,7 @@ async function exportMarkdown() {
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
     await op.write(name, md);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
-  } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
+  } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }
 async function exportHtml() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
@@ -699,5 +699,5 @@ async function exportHtml() {
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;
     await op.write(name, html);
     setStatus(`Exported \u2192 ${name} (in your workspace folder).`, 'ok');
-  } catch (e) { setStatus(MSG.exportErr + e.message, 'bad'); }
+  } catch (e) { if (op.current()) setStatus(MSG.exportErr + e.message, 'bad'); }
 }

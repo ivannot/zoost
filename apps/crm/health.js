@@ -89,7 +89,8 @@ async function buildHealth(op = beginWorkspaceOp()) {
   // in this workspace names it. A rule that was never pulled cannot name anything, so «no rule here
   // names it» is not «nothing uses it», and the description says which is which.
   let actIdx = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) actIdx = a; } catch (_) {}
-  const actUse = actionUsers || await buildActionUsers();
+  const actUse = actionUsers || await buildActionUsers(op);
+  if (!op.current()) throw new Error(WS_MOVED);
   const unattached = actIdx
     .filter((a) => !a.associated && !(actUse.get(a.kind + ':' + String(a.id)) || []).length)
     .sort((a, b) => (a.kind || '').localeCompare(b.kind || '') || byField('name')(a, b))
@@ -111,6 +112,7 @@ async function buildHealth(op = beginWorkspaceOp()) {
     { id: 'broken', tab: 'wiring', title: MSG.hBroken, desc: 'A workflow or schedule references a function not in this workspace.', bad: true, items: brokenItems },
     { id: 'fk', tab: 'wiring', title: MSG.hMissingRefs, desc: 'A lookup field points to a module not in this workspace (may be a system module).', bad: false, items: fkItems },
   ];
+  if (!op.current()) throw new Error(WS_MOVED);
   return { groups, coverage };
 }
 async function openHealth() {
@@ -127,7 +129,7 @@ async function openHealth() {
   if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted - click Refresh, then open Health again.</div>'; return; }
   // Built before it is published: `healthData` is what the view, its export and its counts all read,
   // and an audit begun in one workspace is a description of that one.
-  try { const built = await buildHealth(op); if (!op.current()) return; healthData = built; } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
+  try { const built = await buildHealth(op); if (!op.current()) return; healthData = built; } catch (e) { if (!op.current()) return; $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
   renderHealthView();
 }
 function renderHealthView() {

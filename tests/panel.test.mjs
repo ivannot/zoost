@@ -247,6 +247,13 @@ const focusCtx = {
     if (globalThis.__files && globalThis.__files[p]) return globalThis.__files[p];
     throw new Error('not on disk');
   },
+  beginWorkspaceOp: () => ({
+    current: () => true,
+    read: async (p) => {
+      if (globalThis.__files && globalThis.__files[p]) return globalThis.__files[p];
+      throw new Error('not on disk');
+    },
+  }),
   JSON, Object,
 };
 const { aiFocus } = load([sliceFn('apps/crm/modules.js', 'moduleRefusal'),
@@ -2601,6 +2608,8 @@ test('the sample workspace has the shape the pull writes, field for field', () =
   }
   const lin = JSON.parse(af['lineage.json']);
   assert.ok(lin.deps && 'failed' in lin, 'lineage.json is not {deps, failed}');
+  assert.equal(JSON.parse(af['.pull-state.json']).state, 'complete',
+               'the sample omits the marker that makes a real full pull one snapshot');
   const sq = Object.values(JSON.parse(af['sql/index.json']))[0];
   for (const k of ['stem', 'name', 'parents', 'sources']) assert.ok(k in sq, `a sql index entry has no ${k}`);
 });
@@ -2977,6 +2986,23 @@ test('notePullFailure() records the verdict before it says anything', async () =
     ['setStatus', 'connections pull error: boom', 'bad'],
     ['showEmergency', true],
   ]);
+});
+
+test('crm: an access verdict is published only after its workspace config commits', async () => {
+  let live = true, published = 0;
+  const ctx = {
+    TAB: { modules: {} }, tabAccess: { modules: { state: 'ok', pulledAt: 'old' } },
+    accessOf: (area) => ctx.tabAccess[area]?.state || null,
+    patchCfg: async () => { live = false; },
+    publishAccess: () => { published++; }, renderTabs: () => {}, setStatus: () => {},
+    tabLabel: (x) => x, Date, Object,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'noteAccess'), ctx);
+  const ok = await vm.runInContext('noteAccess', ctx)('modules', { forbidden: true, status: 403 }, { current: () => live });
+  assert.equal(ok, false, 'an overtaken config update was reported as committed');
+  assert.equal(ctx.tabAccess.modules.state, 'ok', 'the old workspace verdict entered the new workspace memory');
+  assert.equal(published, 0, 'the settings copy was published after the operation became stale');
 });
 
 test('a role refusal does not point at /emergency', async () => {
@@ -3423,7 +3449,7 @@ test('every Actions sort is offered, and every option sorts by something', () =>
 // together because a label that contradicts what the prompt carries is worse than one saying nothing.
 test('the chat knows what is focused, whatever kind it is', () => {
   const src = panelBody('crm');
-  const focus = src.slice(src.indexOf('async function aiFocus()'), src.indexOf('function productHelp()'));
+  const focus = src.slice(src.indexOf('async function aiFocus('), src.indexOf('function productHelp()'));
   const label = src.slice(src.indexOf('function aiFocusLabel()'), src.indexOf('async function aiContextLabel()'));
   for (const kind of ['workflows/', 'schedules/', 'connections/', 'modules/', 'actions/']) {
     assert.ok(focus.includes(`p.startsWith('${kind}')`), `id=crm aiFocus sends nothing for ${kind}`);
@@ -3496,10 +3522,11 @@ test('every kind of health finding has a way to open it', () => {
 // workspace that has already been pulled, and pulling changes nothing.
 test('analytics: a workspace that cannot be read is not reported as never pulled', () => {
   const js = read('apps/analytics/sidepanel.js');
-  const rj = js.slice(js.indexOf('const readJson ='), js.indexOf('let diskUnreadable'));
+  const rj = sliceFn('apps/analytics/sidepanel.js', 'readJson');
   assert.ok(/e\.name !== 'NotFoundError'/.test(rj),
     'every failure still becomes the fallback, so unreadable and absent are one fact');
-  assert.ok(/readFailed = \{ rel/.test(rj), 'a failed read leaves nothing behind to report');
+  assert.ok(/onFailure\(\{ rel/.test(rj), 'a failed read leaves nothing behind to report');
+  assert.ok(/op && !op\.current\(\)/.test(rj), 'an overtaken read can still alter the next workspace');
   // The state that was circular: the panel re-requests the folder permission only while it believes
   // it has none, so a cached "granted" that the browser disagrees with means no click ever asks for
   // it back - Refresh included. A NotAllowedError is the browser saying that verdict is wrong.
@@ -3509,18 +3536,34 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
   assert.ok(/if \(!root \|\| rootGranted\) return;/.test(click),
     'the re-grant on click no longer depends on the verdict this now corrects');
   const load = sliceFn('apps/analytics/sidepanel.js', 'loadFromDisk');
-  // It used to clear `readFailed` before the first read; now the four reads are a snapshot published
-  // in one go, so the failure is collected locally and assigned with the rest. Same fact, one
-  // publication - a load that has been overtaken must not leave its reason behind either.
-  assert.ok(/let failed = null;/.test(load) && /readFailed = failed;/.test(load),
-            'the load starts from an old failure, or leaves this one behind for the next workspace');
-  assert.ok(/diskUnreadable = views\.length \? null : readFailed;/.test(load),
+  // The four reads are one snapshot, so its failure stays in this invocation and is published with
+  // the rest. A global accumulator let a config read elsewhere describe the next workspace.
+  assert.ok(/let failed = null;/.test(load) && /noteFailure/.test(load),
+            'the load has no local place to collect its own failure');
+  assert.ok(/diskUnreadable = views\.length \? null : failed;/.test(load),
     'a stray failure from an unrelated read can speak about this workspace');
   const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason');
   assert.ok(why.indexOf('diskUnreadable') < why.indexOf('Nothing pulled yet'),
     'the panel blames the pull before it says the files could not be read');
   assert.ok(/Refresh/.test(why.slice(why.indexOf('diskUnreadable'))),
     'the unreadable state names no control to press');
+});
+
+test('analytics: only the load that observed a read failure may keep it', async () => {
+  const ctx = { rootGranted: true, readFile: async () => null, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'readJson'), ctx);
+  const readJson = vm.runInContext('readJson', ctx);
+  const seen = [];
+  const denied = new Error('denied'); denied.name = 'NotAllowedError';
+  await readJson('views.json', null, { current: () => false, read: async () => { throw denied; } }, (f) => seen.push(f));
+  assert.equal(ctx.rootGranted, true, 'an old workspace revoked the permission verdict of the new one');
+  assert.deepEqual(seen, [], 'an old workspace left its error behind for the new one');
+
+  const broken = new Error('broken'); broken.name = 'NotReadableError';
+  await readJson('schema.json', null, { current: () => true, read: async () => { throw broken; } }, (f) => seen.push(f));
+  assert.equal(JSON.stringify(seen), JSON.stringify([{ rel: 'schema.json', name: 'NotReadableError' }]),
+    'the active load lost the reason it needs to distinguish unreadable from absent');
 });
 
 // The mismatch bar told the reader that everything was disabled, in both products, word for word.
@@ -5721,6 +5764,26 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     }
   });
 
+  test('crm: an operation-bound pull also reads its binding from that operation', () => {
+    const names = [...src.matchAll(/async function (pull[A-Z]\w*)\s*\(/g)].map((m) => m[1]);
+    for (const name of names) {
+      const at = src.indexOf(`async function ${name}`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      if (!/beginWorkspaceOp\(\)/.test(body)) continue;
+      assert.ok(!/await readCfg\(\)/.test(body),
+                `${name} validates whichever folder is global now, not the workspace it captured`);
+    }
+    assert.match(src, /const patchCfg[\s\S]{0,180}op \? await opReadCfg\(op\) : await readCfg\(\)/,
+                 'patchCfg writes through an op but merges from the global workspace');
+    for (const loader of ['loadActionsIndex', 'loadConnectionsIndex']) {
+      const at = src.indexOf(`async function ${loader}`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      assert.match(body, /op = beginWorkspaceOp\(\)/, `${loader} cannot be tied to its caller's workspace`);
+      assert.match(body, /op\.read\(/, `${loader} still resolves its index through the global folder`);
+      assert.match(body, /op\.current\(\)/, `${loader} can return a file read from an overtaken workspace`);
+    }
+  });
+
   test('a graph built for one workspace is not kept for another', () => {
     const fn = src.slice(src.indexOf('async function ensureGraph'), src.indexOf('\n}', src.indexOf('async function ensureGraph')));
     assert.ok(/op = beginWorkspaceOp\(\)/.test(fn), 'the build does not remember where it started');
@@ -5844,7 +5907,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       MSG: { staleBridge: 'reload that tab', noTab: 'no tab', wrongTab: 'wrong tab' },
       mismatchRefuse: () => false, ensurePerm: async () => true, sameWs: () => true,
       getContext: async () => ({ org: 'o', origin: 'https://crm.example', instance: 'i' }),
-      readCfg: async () => null, toBridge: async () => resp,
+      readCfg: async () => null, opReadCfg: async () => null, toBridge: async () => resp,
       setStatus: (s) => ctx.status.push(s),
       // The op is what the pull writes through now. Its own capture is held by its own case; here it
       // stands in, so these stay about what pullActions decides to write.
@@ -6220,9 +6283,10 @@ test('analytics: the model is guarded, not only the disk', () => {
   const src = read('apps/analytics/sidepanel.js');
   for (const fn of ['pullOne', 'retryFailed']) {
     const body = sliceFn('apps/analytics/sidepanel.js', fn);
-    const first = body.search(/\b(sqls|deps|views|schema|pullFailed)\s*(\[[^\]]*\])?\s*=|Object\.assign\((sqls|deps)/);
+    const first = body.indexOf('({ sqls, deps, pullFailed } =');
     const guard = body.indexOf('op.current()');
-    assert.ok(guard > 0 && guard < first, `${fn} writes into the panel's memory before asking whether it is still there`);
+    assert.ok(first > 0 && guard > 0 && guard < first,
+              `${fn} publishes into the panel's memory before asking whether it is still there`);
   }
   // pullAll is held to the stronger rule: nothing lands in memory until the whole snapshot is on
   // disk - one destructuring after the writeToDisk gate, and no per-stage global assignment left.
@@ -6231,6 +6295,74 @@ test('analytics: the model is guarded, not only the disk', () => {
   const publish = pa.indexOf('({ views, folders, schema, relations, sqls, deps, pullFailed } = next)');
   assert.ok(gate > 0 && publish > gate, 'pullAll publishes memory before the snapshot is on disk');
   assert.ok(!/^\s*(views|schema|sqls|deps) = /m.test(pa), 'a stage still lands in a global one by one');
+});
+
+test('analytics: a write failure after the marker blocks the live snapshot too', async () => {
+  const writes = [];
+  const ctx = {
+    PULL_STATE: '.pull-state.json', PULL_SV: 1, CFG: '.zoost.json',
+    writeJson: async (p) => { writes.push(p); throw new Error('disk full'); },
+    patchCfg: async () => {}, pruneSql: async () => 0, readJson: async () => ({}),
+    stemOf: (n, id) => `${n}-${id}`, bound: null, Object, JSON, Date, Boolean, Error,
+  };
+  ctx.op = { current: () => true, write: async (p) => writes.push(p) };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
+  let error;
+  try {
+    await vm.runInContext('writeToDisk', ctx)(
+      { workspace: 'A', name: 'A', origin: 'oA' }, ctx.op,
+      { views: [], folders: [], schema: {}, relations: [], sqls: {}, deps: {}, pullFailed: [] });
+  } catch (e) { error = e; }
+  assert.ok(error && error.mirrorIncomplete, 'the live panel cannot distinguish a pre-write failure from a hybrid disk');
+  assert.equal(writes[0], '.pull-state.json', 'the incomplete verdict was raised before its marker existed');
+  assert.match(sliceFn('apps/analytics/sidepanel.js', 'pullAll'), /refuseIncompleteSnapshot\(\)/,
+               'the same open panel can still export or send the old globals over a hybrid disk');
+});
+
+test('analytics: partial refreshes publish only after a marked disk snapshot', async () => {
+  for (const fn of ['pullOne', 'retryFailed']) {
+    const body = sliceFn('apps/analytics/sidepanel.js', fn);
+    const write = body.indexOf('await writePartialSnapshot(op,');
+    const publish = body.indexOf('({ sqls, deps, pullFailed } =');
+    assert.ok(write > 0 && publish > write,
+              `${fn} exposes the new model before its lineage and SQL index are durable`);
+    assert.match(body, /mirrorIncomplete[\s\S]*refuseIncompleteSnapshot\(\)/,
+                 `${fn} leaves the live panel usable after a partial disk write`);
+  }
+
+  const writes = [];
+  const ctx = {
+    PULL_STATE: '.pull-state.json', JSON, Date, Error,
+    writeLineage: async () => { writes.push('lineage.json'); },
+    writeSql: async () => { writes.push('sql/index.json'); throw new Error('disk full'); },
+  };
+  ctx.op = { write: async (p) => writes.push(p) };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writePartialSnapshot'), ctx);
+  let error;
+  try {
+    await vm.runInContext('writePartialSnapshot', ctx)(ctx.op, { deps: {}, pullFailed: [], sqls: {} });
+  } catch (e) { error = e; }
+  assert.ok(error && error.mirrorIncomplete,
+            'a failed one-view refresh is indistinguishable from a coherent snapshot');
+  assert.deepEqual(writes.slice(0, 3), ['.pull-state.json', 'lineage.json', 'sql/index.json']);
+  assert.equal(writes.filter((p) => p === '.pull-state.json').length, 1,
+               'a failed partial refresh incorrectly marks its snapshot complete');
+});
+
+test('analytics: a partial SQL update never replaces an unreadable index with an empty one', async () => {
+  for (const name of ['NotReadableError', 'NotAllowedError']) {
+    const ctx = {
+      sqls: {}, Object, Error,
+      readJson: async (_p, fallback, _op, fail) => { fail({ rel: 'sql/index.json', name }); return fallback; },
+    };
+    ctx.op = { current: () => true };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeSql'), ctx);
+    await assert.rejects(() => vm.runInContext('writeSql', ctx)(ctx.op, {}),
+                         /Could not read sql\/index\.json/, `${name} was treated as an empty index`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -6448,6 +6580,7 @@ test('analytics: the model is guarded, not only the disk', () => {
       mismatchRefuse: () => false, requirePerm: async () => true, render() {}, openDetail: async () => {},
       viewById: () => new Map([['q1', { id: 'q1', name: 'Q1', type: 'QueryTable' }]]),
       mergeSchemaIntoViews() {}, writeLineage: async () => {}, writeSql: async () => {},
+      writePartialSnapshot: async () => {}, refuseIncompleteSnapshot() {},
       showEmergency() {}, endBusyElsewhere: () => { ctx.busy = false; },
       $: () => ({ set className(v) { ctx.className = v; }, get className() { return ctx.className; } }),
       setBusy: (on, text) => { ctx.busy = on; ctx.status.push(String(text || '')); },
@@ -6630,11 +6763,12 @@ test('analytics: a SQL search overtaken by a workspace switch publishes nothing'
   const delayed = new Promise((resolve) => { release = resolve; });
   const ctx = {
     sqlCache: null, sqlUnread: 0, sqls: { q1: { stem: 'query-one', sql: null } },
+    sqlDiskUnread: new Set(),
     views: [{ id: 'q1', type: 'QueryTable' }],
     sqlState: () => ({ kind: 'read' }),
     beginWorkspaceOp: () => ({ current: () => live, read: async () => delayed,
       say() {} }),
-    readFile: async () => delayed, status() {}, Map, Object,
+    readFile: async () => delayed, status() {}, Map, Set, Object, String,
   };
   vm.createContext(ctx);
   vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'), ctx);
@@ -6945,10 +7079,36 @@ test('crm: a module resync publishes only what it managed to write', () => {
     assert.ok(/!e\.downloaded \|\| e\.stale \|\| e\.pathChanged/.test(src),
               'downloadMissing does not pick a rename up');
     const dl = sliceApp('crm', 'downloadOne');
-    const rm = dl.indexOf('op.remove(entry.previousPath)');
+    const rm = dl.indexOf('removeFunctionPaths([entry.previousPath');
     const writes = dl.indexOf('.meta.json`, JSON.stringify(f.meta');
     assert.ok(rm > 0, 'the old pair of a rename is never removed - a live id means no prune takes it');
     assert.ok(rm > writes, 'the old pair is removed before both new files are written');
+  });
+
+  test('a half-removed renamed pair retries the remaining file independently', async () => {
+    const failedRemovals = new Set();
+    const attempts = [];
+    let pass = 1;
+    const op = { current: () => true, remove: async (p) => {
+      attempts.push(`${pass}:${p}`);
+      if (pass === 1 && p.endsWith('.meta.json')) { const e = new Error('busy'); e.name = 'NoModificationAllowedError'; throw e; }
+      if (pass === 2 && p.endsWith('.dg')) { const e = new Error('gone'); e.name = 'NotFoundError'; throw e; }
+    } };
+    const ctx = { failedRemovals, WS_MOVED: 'moved', Set, String, RegExp };
+    vm.createContext(ctx);
+    vm.runInContext(sliceApp('crm', 'removeFunctionPaths'), ctx);
+    const remove = vm.runInContext('removeFunctionPaths', ctx);
+    const paths = ['functions/old/f.dg', 'functions/old/f.meta.json'];
+    assert.equal((await remove(paths, op)).failed, 1);
+    assert.deepEqual([...failedRemovals], ['functions/old/f.meta.json'], 'the exact unfinished half is not queued');
+    pass = 2;
+    assert.equal((await remove(paths, op)).failed, 0);
+    assert.deepEqual([...failedRemovals], [], 'NotFound on the completed half prevents the other half being retried');
+    assert.ok(attempts.includes('2:functions/old/f.meta.json'), 'the metadata half was never retried');
+    const dl = sliceApp('crm', 'downloadOne');
+    const full = sliceApp('crm', 'pullAll');
+    assert.match(dl, /removeFunctionPaths\(/, 'rename cleanup bypasses the independent pair remover');
+    assert.match(full, /removeFunctionPaths\(/, 'full-pull deletion still swallows pair-removal failures');
   });
 
   test('a timestamp absent on either side marks nothing', () => {
@@ -6972,7 +7132,7 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     schema: { t1: { name: 'T1', columns: [{ name: 'Revenue', type: 'number' }] } },
     sqls: { q1: { id: 'q1', sql: 'select Revenue from T1', stem: 'q1', parents: [], sources: {} } },
     deps: { q1: { id: 'q1', parents: ['t1'], children: [], dashboards: [] } },
-    pullFailed: [], relations: [], bound: { workspace: 'w' },
+    pullFailed: [], relations: [], bound: { workspace: 'w' }, sqlDiskUnread: new Set(),
     String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
   };
   vm.createContext(ctx);
@@ -6984,7 +7144,7 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'),
     sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
     'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
-    ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlState', 'aiStructureText',
+    ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState', 'aiStructureText',
         'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece),
   ].join('\n'), ctx);
   // The registry is JavaScript, so it is evaluated as JavaScript - parsing it as JSON died on the
@@ -7004,6 +7164,95 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     assert.ok(!/View not found: undefined/.test(out),
               `${t.name} resolves a view it was never given - the tool is unreachable`);
   }
+
+  // "Returned a string" is not enough: the first registry-derived version of this test accepted
+  // both a named get_relations that returned "View not found" and a column search that emitted the
+  // same table twice. Exercise the meaning of the two optional/global dispatch paths as well.
+  ctx.relations = [{ source: 't1', target: 'q1', sourceName: 'T1', targetName: 'Q1', relation: '(T1.ID)=(Q1.ID)' }];
+  const namedRelations = await vm.runInContext('aiExecTool', ctx)('get_relations', { name: 'T1' });
+  assert.match(namedRelations, /^1 relation\(s\):/, `a named relation lookup never reaches its handler: ${namedRelations}`);
+  const columns = await vm.runInContext('aiExecTool', ctx)('search_columns', { query: 'Revenue' });
+  assert.match(columns, /^1 table\(s\)/, `one matching table is counted more than once: ${columns}`);
+  assert.equal((columns.match(/T1 \[/g) || []).length, 1, 'the same column hit is emitted twice');
+
+  ctx.sqls = {};
+  ctx.pullFailed = [{ id: 'q1', stage: 'sql', error: '429' }];
+  const dossier = await vm.runInContext('aiExecTool', ctx)('get_view', { name: 'Q1' });
+  assert.match(dossier, /SQL could not be read/i,
+               'get_view silently omits the SQL of a query whose pull failed');
+});
+
+test('analytics: a missing indexed SQL file makes search coverage incomplete', async () => {
+  const ctx = {
+    views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }], schema: {}, relations: [],
+    sqls: { q1: { id: 'q1', sql: null, stem: 'q1', parents: [], sources: {} } },
+    deps: {}, pullFailed: [], bound: { workspace: 'w' }, sqlDiskUnread: new Set(),
+    String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
+  };
+  vm.createContext(ctx);
+  const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
+  vm.runInContext([
+    sliceConst('apps/analytics/sidepanel.js', 'MSG'),
+    sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'),
+    sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+    'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { const e = new Error("missing"); e.name = "NotFoundError"; throw e; } });',
+    ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState',
+        'aiStructureText', 'structureChain', 'nameOf', 'relationsOf', 'shortDate',
+        'isOrphanCandidate', 'aiExecTool'].map(piece),
+  ].join('\n'), ctx);
+  const out = await vm.runInContext('aiExecTool', ctx)('search_sql', { query: 'revenue' });
+  assert.match(out, /Searched 0\/1 query tables - 1 SQL source\(s\) were unreadable/,
+               `a file that could not be opened was counted as searched: ${out}`);
+  assert.equal(vm.runInContext("sqlState('q1').kind", ctx), 'unread',
+               'the failed disk read is forgotten by the shared SQL state');
+});
+
+test('analytics: an indexed SQL read failure is counted once and retried', async () => {
+  let fail = true;
+  const ctx = {
+    views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }],
+    sqls: { q1: { id: 'q1', sql: null, stem: 'q1', parents: [], sources: {} } },
+    pullFailed: [], sqlDiskUnread: new Set(['q1']), sqlCache: null, sqlUnread: 0,
+    viewById: () => new Map([['q1', { id: 'q1', name: 'Q1', type: 'QueryTable' }]]),
+    beginWorkspaceOp: () => ({
+      current: () => true, say: () => {},
+      read: async () => { if (fail) throw new Error('temporary'); return 'select 1'; },
+    }),
+    String, Object, Array, Map, Set,
+  };
+  vm.createContext(ctx);
+  vm.runInContext([
+    sliceFn('apps/analytics/sidepanel.js', 'sqlState'),
+    sliceFn('apps/analytics/sidepanel.js', 'sqlBodyOf'),
+    sliceFn('apps/analytics/sidepanel.js', 'sqlReadState'),
+    sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache'),
+  ].join('\n'), ctx);
+
+  await vm.runInContext('ensureSqlCache()', ctx);
+  assert.equal(ctx.sqlUnread, 1, 'one unread file is counted once, not once before and once after retry');
+  assert.equal(ctx.sqlDiskUnread.has('q1'), true, 'the failed disk observation was not retained');
+
+  fail = false;
+  ctx.sqlCache = null;
+  const recovered = await vm.runInContext("sqlReadState('q1')", ctx);
+  assert.equal(recovered.kind, 'read', 'a temporary disk failure became a permanent session verdict');
+  assert.equal(recovered.body, 'select 1');
+  assert.equal(ctx.sqlDiskUnread.has('q1'), false, 'a successful retry did not clear the old failure');
+});
+
+test('analytics: health includes SQL files found unreadable after loading the index', () => {
+  const ctx = {
+    views: [{ id: 'q1', name: 'Q1', type: 'QueryTable', description: '' }], folders: [],
+    schema: {}, relations: [], sqls: { q1: { stem: 'q1' } }, deps: null, pullFailed: [],
+    sqlDiskUnread: new Set(['q1']),
+    viewById: () => new Map([['q1', { id: 'q1', name: 'Q1', type: 'QueryTable' }]]),
+    structureChain: () => [], isOrphanCandidate: () => false, Object, Array, Set, String,
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'healthFindings'), ctx);
+  const h = vm.runInContext('healthFindings()', ctx);
+  assert.equal(h.unread.length, 1, 'the health report hides a SQL file that failed after index load');
+  assert.equal(h.unread[0].id, 'q1');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -7044,7 +7293,7 @@ test('analytics: every declared tool runs on the minimum input its schema declar
   test('analytics: get_sql answers «could not be read», run against a failed pull', async () => {
     const ctx = {
       views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }], schema: {}, relations: [],
-      sqls: {}, deps: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: '429' }],
+      sqls: {}, deps: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: '429' }], sqlDiskUnread: new Set(),
       String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
     };
     vm.createContext(ctx);
@@ -7052,14 +7301,14 @@ test('analytics: every declared tool runs on the minimum input its schema declar
     vm.runInContext([sliceConst('apps/analytics/sidepanel.js', 'MSG'),
       sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'), sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
       'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
-      ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlState', 'aiStructureText',
+      ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlReadState', 'sqlState', 'aiStructureText',
           'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece)].join('\n'), ctx);
     const out = await vm.runInContext('aiExecTool', ctx)('get_sql', { name: 'Q1' });
     assert.ok(/could not be read/.test(out), `a failed pull reads as «not a query table»: ${String(out).slice(0, 90)}`);
   });
 
   test('analytics: an empty query stays distinct from an unread one', async () => {
-    const ctx = { views: [{ id: 'q', type: 'QueryTable' }], sqls: { q: { sql: '' } }, pullFailed: [],
+    const ctx = { views: [{ id: 'q', type: 'QueryTable' }], sqls: { q: { sql: '' } }, pullFailed: [], sqlDiskUnread: new Set(),
                   viewById: () => new Map([['q', { id: 'q', type: 'QueryTable' }]]), String, Map };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'sqlState'), ctx);
@@ -7091,6 +7340,45 @@ test('crm: a function that holds an op never reads through the global resolver',
   assert.deepEqual(bad, [], `these hold an op and read past it:\n  ${bad.join('\n  ')}`);
 });
 
+// Passing an operation into a reader closes only the first edge. If that reader calls another
+// operation-aware helper with no `op`, the helper silently captures whichever workspace is visible
+// at that later instant. This is how modules, schedules, Health, exports and the assistant all kept
+// one unguarded hop while every individual helper looked correct in isolation.
+test('an operation-bound call chain never starts a fresh workspace halfway through', () => {
+  const products = {
+    crm: CRM_FILES,
+    analytics: ['apps/analytics/sidepanel.js'],
+  };
+  const bad = [];
+  for (const [app, files] of Object.entries(products)) {
+    const helpers = new Set();
+    const funcs = [];
+    for (const file of files) {
+      const src = read(file);
+      for (const m of src.matchAll(/^(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm)) {
+        let body;
+        try { body = sliceFn(file, m[1]); }
+        catch (_) { body = src.slice(m.index, src.indexOf('\n', m.index)); }
+        funcs.push({ file, name: m[1], params: m[2], body });
+        if (/\bop\b/.test(m[2])) helpers.add(m[1]);
+      }
+    }
+    for (const f of funcs) {
+      const clean = f.body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const holdsOp = /\bop\b/.test(f.params) || /\b(?:const|let)\s+op\s*=\s*beginWorkspaceOp\(\)/.test(clean);
+      if (!holdsOp) continue;
+      for (const helper of helpers) {
+        if (helper === f.name) continue;
+        const call = new RegExp(`\\b${helper}\\s*\\(([^;\\n]*)\\)`, 'g');
+        for (const m of clean.matchAll(call)) {
+          if (!/\bop\b/.test(m[1])) bad.push(`${app}: ${f.name}() -> ${helper}()`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(bad, [], `these call chains change workspace identity halfway through:\n  ${bad.join('\n  ')}`);
+});
+
 // A window that cannot open leaves nobody to consume its key: the payload sat in session storage
 // until the browser closed, which is longer than the privacy page promises. And the pruner: old
 // .sql files of deleted or renamed queries accumulated with no map left to even call them residue.
@@ -7120,9 +7408,26 @@ test('crm: a function that holds an op never reads through the global resolver',
       Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
-    await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op);
+    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op);
+    assert.equal(failed, 0, 'a successful cleanup does not report its result to the pull');
     assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
                      'a deleted or renamed query leaves its file behind with no map naming it');
+  });
+
+  test('analytics: a failed SQL prune survives the final success status', async () => {
+    const said = [];
+    const ctx = { status: (m, k) => said.push([m, k]), WS_MOVED: 'moved',
+      op: { root: {}, current: () => true, say: (m, k) => said.push([m, k]),
+            remove: async () => { throw new Error('busy'); } },
+      walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
+    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op);
+    assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
+    assert.equal(said.length, 1);
+    assert.equal(said[0][1], 'warn');
+    const pa = sliceFn('apps/analytics/sidepanel.js', 'pullAll');
+    assert.match(pa, /cleanupFailed/, 'pullAll overwrites the cleanup warning with its final success line');
   });
 
   test('the two privacy pages describe the same graph retention', () => {
