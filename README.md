@@ -151,7 +151,9 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **Built for multi-org reality**
 - Multiple workspaces, each bound to a specific org + host + instance. If your Zoho tab and your
   workspace don't match, org-bound actions are disabled and a guided bar helps you align them
-  (switch workspace, or switch tab - with a clean logout when crossing accounts).
+  (switch workspace, or switch tab - with a clean logout when crossing accounts). While a pull is
+  writing a workspace, switching to another one is refused until it finishes - one operation, one
+  workspace.
 
 Everything runs locally in your browser. The extension talks to your own Zoho CRM (your session)
 and, **only if you enable the AI**, to the LLM provider you configure. Nothing reaches me, ever.

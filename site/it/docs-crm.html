@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:17950dba37346255 -->
+<!-- translated-from: site/docs-crm.html sha256:8f7d29e187aaa6e1 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · aggiornata il <span class="dd" data-stamp="updated">18 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · aggiornata il <span class="dd" data-stamp="updated">19 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -163,6 +163,11 @@
     solo di parole tue sarebbe un elenco che non puoi confrontare con Zoho. Il nome è scritto nel
     <code>.zoost.json</code> del workspace, quindi sopravvive a un nuovo pull e viaggia con la cartella.
     Svuota il campo per tornare al nome della piattaforma.</p>
+  <p>Mentre una pull è in corso, l'elenco dei workspace e i suoi pulsanti sono spenti, e
+    scegliere un altro workspace viene rifiutato con <em>Pull in progress</em>. Un'operazione, un
+    workspace: una pull scrive molti file per diversi minuti, e lasciare che la destinazione cambi
+    sotto di lei a metà è il modo in cui mezza org finisce nella cartella di un'altra.
+    Aspetta che la pull finisca - l'elenco torna da solo.</p>
 
   <h2 id="pull">3. Pull e sincronizzazione</h2>
   <ul>

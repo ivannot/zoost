@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you administer or develop on Zoho CRM and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of your org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · updated <span class="dd" data-stamp="updated">18 August 2026</span></p>
+  <p class="upd" data-app="crm">Covers Zoost CRM <span class="dv" data-stamp="version">1.44.0</span> · updated <span class="dd" data-stamp="updated">19 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -149,6 +149,11 @@
     and a list showing only your own words would be one you could not check against Zoho. The name is
     stored in the workspace's own <code>.zoost.json</code>, so it survives a re-pull and travels with the
     folder. Clear the field to go back to the platform's name.</p>
+  <p>While a pull is running, the workspace list and its buttons are off, and picking another
+    workspace is refused with <em>Pull in progress</em>. One operation, one workspace: a pull writes
+    many files over several minutes, and letting the target change under it half-way is how half an
+    org ends up in another org's folder. Wait for the pull to finish - the list comes back by
+    itself.</p>
 
   <h2 id="pull">3. Pulling and syncing</h2>
   <ul>

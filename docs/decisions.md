@@ -77,8 +77,9 @@ one org and still narrowing the next, and for the connection filter, which is a 
 from the workspace being left - so the functions list could come back empty for a reason nothing on
 screen explained. `dropWorkspaceState()` drops the data (and `healthData`, which was the one thing
 left off that list); `resetView()` puts the interface back and rebuilds any overlay that is open. The
-split is not cosmetic: **`dropWorkspaceState()` is what Clear in the chat calls**, and Clear must not
-close the reader's preview or empty their search box. Both panels have both.
+split is not cosmetic: Clear must not close the reader's preview or empty their search box. Both
+panels have both. (Clear went through `dropWorkspaceState()` whole for a while, and that turned out
+to be its own defect - see below.)
 
 **A health finding that names something must open it, and a ternary is how two of four got left out.**
 «Automation actions nothing fires» rendered a plain list for as long as it existed, because the click
@@ -95,10 +96,33 @@ message, so the model was asked to reason across two orgs with nothing marking t
 and found while fixing it: `graphCache`, `aiModCache` and `aiConnCache` were cleared inside
 `rebuildTree()`, which only runs on the Functions tab, so switching workspace from Workflows left the
 assistant answering from the *previous* org's schema with no sign of it anywhere.
-`dropWorkspaceState()` does both, exists on both sides, and is what `Clear` calls too — two ways to
-empty the chat that reset different things is how the twins drifted on the large-index warning. It is
-skipped when the "switch" is a re-activation of the workspace already open, because regranting a
-lapsed folder permission must not throw away a conversation about the org you never left.
+`dropWorkspaceState()` does both and exists on both sides. It is skipped when the "switch" is a
+re-activation of the workspace already open, because regranting a lapsed folder permission must not
+throw away a conversation about the org you never left.
+
+**Clear is not a workspace change, and routing it through the same function was the defect, not the
+rule.** For a while `Clear` called `dropWorkspaceState()` whole - chosen so two ways of emptying the
+chat could not drift, which is a real hazard and was the twins' actual history. But that function
+also drops every cache *and the queue of removals still owed to the disk*, which are facts about the
+mirror with no relation to a conversation: measured, Clear alone took the retry queue from 1 to 0.
+The shared part is the conversation, so `clearConversationState()` is that part, `Clear` calls it,
+and `dropWorkspaceState()` calls it too and then drops what belongs to the workspace.
+
+**The workspace cannot change while a pull is writing it - the selector refuses, and says so.**
+For months the panels were built as if switching org mid-pull had to keep working: every operation
+captured the folder and the generation before its first await, every write re-checked, and a ledger
+grew to 78 sites where a global was written after an await. That requirement was never stated by
+anybody - it was written into a comment by one session, read as a constraint by every session after
+it, and defended at increasing cost until the user was finally asked and said he found the behaviour
+confusing. The lesson is recorded in CLAUDE.md: a sentence about what the product must do is a
+requirement, and requirements are the user's.
+
+So now: while `pullBusy` holds, the workspace list and its buttons are disabled, and a change that
+arrives anyway - a keyboard, a race - is refused with «Pull in progress», putting the selection back.
+The op machinery stays, deliberately: pulls are not the only long operations (the assistant, an
+export, a health audit, a preview all read across awaits), those still run with the selector live,
+and for them «certain, or stopped» still needs the op to say which workspace an answer belongs to.
+What the block removes is the class where the *mirror on disk* could take another org's files.
 
 **And what is dropped when a *file* changes is decided by the write, never by the caller.** The same
 defect as the paragraph above, one layer down and four times over: each thing read off the mirror and
