@@ -20,9 +20,14 @@ cd "$(dirname "$0")/.."
 
 STAMP=.git/zoost-lastsync
 
-# Nothing under apps/ newer than the stamp: nothing to do. `-print -quit` stops at the first hit, so
-# this does not walk the tree when it does not have to.
-if [ -f "$STAMP" ] && [ -z "$(find apps -type f -newer "$STAMP" -print -quit 2>/dev/null)" ]; then
+# Nothing under apps/ or dist/store newer than the stamp: nothing to do. `-print -quit` stops at the
+# first hit, so this does not walk the trees when it does not have to. dist/store is in the watch
+# because it was not: shots.py rendered a new screenshot set for a release and this exited at the
+# stamp without copying it, so the dashboard was about to be fed the previous version's images -
+# found by the author, on the release where it mattered.
+if [ -f "$STAMP" ] \
+   && [ -z "$(find apps -type f -newer "$STAMP" -print -quit 2>/dev/null)" ] \
+   && [ -z "$(find dist/store -type f -newer "$STAMP" -print -quit 2>/dev/null)" ]; then
   exit 0
 fi
 
