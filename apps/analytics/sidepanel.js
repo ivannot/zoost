@@ -46,6 +46,11 @@ const PULL_TITLE = 'Pull all - views, structure, relations, SQL and lineage';
 const APP_DIR = 'analytics';                  // this app's subfolder inside the working folder
 const APP_DIRS = ['crm', 'analytics'];        // known product folders - not "foreign" content
 const CFG = '.zoost.json';
+// The pull's own commit marker: `writing` from the first byte of a full pull to its last, `complete`
+// after. A mirror mid-write is five files from two moments; the loader refuses it rather than
+// presenting it as one. Partial writers (a single re-read, a retry) do not touch it - they replace
+// one file, which is atomic enough on its own.
+const PULL_STATE = '.pull-state.json';
 // The data centre to fall back on when the panel knows neither a workspace nor a tab. A
 // display-only copy of a setting: read into a URL, never written from here.
 let zohoDc = 'zoho.com';
@@ -270,6 +275,7 @@ function beginWorkspaceOp() {
     root, gen, current,
     read: (p) => through(() => readFileAt(root, p)),
     write: (p, body) => through(() => writeFileAt(root, p, body)),
+    remove: (p) => through(() => removeFileAt(root, p)),
     // Progress belongs to a workspace as much as a write does. Reported on the CRM side: a pull kept
     // counting into the panel after the user had opened another workspace, so the work looked like it
     // was happening there. Here the counting arrives as a message from the bridge, which is the same
@@ -293,6 +299,12 @@ async function readFileAt(root, rel) {
 }
 // The shorthands every render path uses: they read and write the workspace on screen, which is the
 // one they mean. A path that survives an await must take an op instead.
+async function removeFileAt(root, path) {
+  if (root !== dir) throw new Error(WS_MOVED);
+  const parts = path.split('/'); const name = parts.pop();
+  let d = root; for (const q of parts) d = await d.getDirectoryHandle(q);
+  await d.removeEntry(name); noteWrite(path);
+}
 const writeFile = (rel, content) => writeFileAt(dir, rel, content);
 const readFile = (rel) => readFileAt(dir, rel);
 // «Not there» and «could not be read» are different facts, and this returned the same fallback for
@@ -869,31 +881,41 @@ async function pullAll() {
     setBusy(true, 'Reading the workspace…');
     const info = await toBridge({ cmd: 'workspaceInfo' });
 
+    // Built whole, published whole. The four stages used to land in the globals one by one, so a
+    // stage that failed left the panel holding the new views over the old schema - a photograph of
+    // two different moments, on screen and in every export until the next successful pull.
+    // Reproduced by an outside scan with `workspaceErd` failing after `listViews`.
     setBusy(true, 'Reading the view list…');
     const vl = await toBridge({ cmd: 'listViews' });
     if (!op.current()) return endBusyElsewhere();   // the answer describes the workspace we were in, not this one
-    views = vl.views || []; folders = vl.folders || [];
 
     setBusy(true, 'Reading structure and relations…');
     const sc = await toBridge({ cmd: 'workspaceErd' });
     if (!op.current()) return endBusyElsewhere();
-    schema = sc.tables || {}; relations = sc.relations || [];
 
-    const qIds = views.filter((v) => v.type === 'QueryTable').map((v) => v.id);
+    const nextViews = vl.views || [];
+    const qIds = nextViews.filter((v) => v.type === 'QueryTable').map((v) => v.id);
     setBusy(true, `Reading SQL… 0 / ${qIds.length}`);
     const sq = await toBridge({ cmd: 'pullSql', ids: qIds });
     if (!op.current()) return endBusyElsewhere();
-    sqls = sq.sql || {};
 
-    const allIds = views.map((v) => v.id);
+    const allIds = nextViews.map((v) => v.id);
     setBusy(true, `Reading lineage… 0 / ${allIds.length}`);
     const dp = await toBridge({ cmd: 'scanDependencies', ids: allIds });
     if (!op.current()) return endBusyElsewhere();
-    deps = dp.deps || {};
-    pullFailed = [].concat(sq.failed || [], dp.failed || []);
 
+    // The stage travels with each failure: «could not read» means nothing actionable until it says
+    // which half - and sqlState() tells an unread query from an absent one by exactly this field.
+    const next = {
+      views: nextViews, folders: vl.folders || [],
+      schema: sc.tables || {}, relations: sc.relations || [],
+      sqls: sq.sql || {}, deps: dp.deps || {},
+      pullFailed: [].concat((sq.failed || []).map((f) => ({ ...f, stage: 'sql' })),
+                            (dp.failed || []).map((f) => ({ ...f, stage: 'lineage' }))),
+    };
+    if (!(await writeToDisk(info, op, next))) return endBusyElsewhere();
+    ({ views, folders, schema, relations, sqls, deps, pullFailed } = next);
     mergeSchemaIntoViews();
-    if (!(await writeToDisk(info, op))) return endBusyElsewhere();
 
     const orphans = views.filter(isOrphanCandidate).length;
     const cols = Object.values(schema).reduce((n, t) => n + t.columns.length, 0);
@@ -947,7 +969,7 @@ async function pullOne(id) {
       const r = await toBridge({ cmd: 'pullSql', ids: [id] });
       if (!op.current()) return endBusyElsewhere();
       if (r.sql && r.sql[id]) sqls[id] = r.sql[id];
-      still.push(...(r.failed || []));
+      still.push(...(r.failed || []).map((f) => ({ ...f, stage: 'sql' })));
     }
     const d = await toBridge({ cmd: 'viewDependencies', id });
     if (!op.current()) return endBusyElsewhere();
@@ -988,14 +1010,14 @@ async function retryFailed() {
       // about `busy`.
       if (!op.current()) return endBusyElsewhere();
       Object.assign(sqls, r.sql || {});
-      still.push(...(r.failed || []));
+      still.push(...(r.failed || []).map((f) => ({ ...f, stage: 'sql' })));
     }
     const r2 = await toBridge({ cmd: 'scanDependencies', ids });
     // Before the model is touched, not only before the disk is: these ids belong to the workspace
     // this retry started in, and merging them into another one's memory is the same defect indoors.
     if (!op.current()) return endBusyElsewhere();
     if (!deps) deps = {};
-    Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []));
+    Object.assign(deps, r2.deps || {}); still.push(...(r2.failed || []).map((f) => ({ ...f, stage: 'lineage' })));
     pullFailed = still;
     mergeSchemaIntoViews();
     await writeLineage(op); await writeSql(op);
@@ -1026,7 +1048,31 @@ async function writeSql(op) {
   await writeJson('sql/index.json', index, op);
 }
 
-async function writeToDisk(info, op) {
+/** Remove the .sql files the new index no longer names - a deleted query's file, and the old stem
+ *  of a renamed one. Without this they accumulated silently, and once the index was replaced there
+ *  was no map left to even say which were residue. Runs only after the new files and the new index
+ *  are written; a removal that fails stays for the next pull, which derives the same keep-set and
+ *  retries for free. */
+async function pruneSql(index, op) {
+  const keep = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
+  let failed = 0;
+  for await (const p of walk(op.root)) {
+    if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p)) continue;
+    try { await op.remove(p); } catch (_) { failed++; }
+  }
+  if (failed) status(`${failed} old .sql file(s) could not be removed - the next pull will retry.`, 'warn');
+}
+async function writeToDisk(info, op, next) {
+  // The snapshot arrives as an argument and the globals are untouched until every write has landed:
+  // this used to read the globals, which pullAll had already replaced stage by stage.
+  //
+  // The marker brackets the writes. Five files written in sequence cannot be atomic on this API, so
+  // the next best thing is a mirror that *knows* it is mid-write: `.pull-state.json` says `writing`
+  // until the last byte is out, and a load that finds it still saying so refuses the snapshot
+  // instead of presenting files from two different moments as one. An interrupted pull is repaired
+  // by running Pull all again, and the message says exactly that.
+  const { views, folders, schema, relations, sqls, deps, pullFailed } = next;
+  await op.write(PULL_STATE, JSON.stringify({ state: 'writing', startedAt: new Date().toISOString() }));
   await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views }, op);
   await writeJson('schema.json', { workspace: info.workspace, tables: schema, relations }, op);
   await writeJson('lineage.json', { workspace: info.workspace, deps, failed: pullFailed }, op);
@@ -1040,6 +1086,8 @@ async function writeToDisk(info, op) {
     index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
   }
   await writeJson('sql/index.json', index, op);
+  await pruneSql(index, op);
+  await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   await patchCfg({
     workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV,
     lastPull: new Date().toISOString(),
@@ -1068,6 +1116,16 @@ let wsGen = 0;
 // no single file on disk can explain and nothing on screen can reveal. One operation, one snapshot,
 // one publication.
 async function loadFromDisk(op = beginWorkspaceOp()) {
+  // A mirror whose last full pull never finished is five files from two moments. The marker is the
+  // only thing that can say so; without this check the loader presented the hybrid as one snapshot.
+  const ps = await readJson(PULL_STATE, null, op);
+  if (ps && ps.state === 'writing') {
+    if (!op.current()) return false;
+    views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
+    render();
+    status('The last pull was interrupted mid-write, so the files on disk describe two different moments - run Pull all to repair the mirror.', 'warn');
+    return false;
+  }
   let failed = null;
   const readOne = async (rel) => { const r = await readJson(rel, null, op); failed = failed || readFailed; return r; };
   const v = await readOne('views.json');
@@ -1260,7 +1318,9 @@ async function ensureSqlCache(op = beginWorkspaceOp()) {
   if (entries.length) op.say(`Reading the SQL of ${entries.length} quer${entries.length === 1 ? 'y' : 'ies'}\u2026`, 'busy');
   const m = new Map();
   const loaded = new Map();
-  let unread = 0;
+  // A query whose *pull* failed has no entry in `sqls` at all, so counting only files that refused
+  // to open under-reported the gap: the search said «searched everything» over queries it never had.
+  let unread = views.filter((v) => v.type === 'QueryTable' && sqlState(v.id).kind === 'unread').length;
   for (const [id, q] of entries) {
     if (typeof q.sql === 'string') { m.set(id, q.sql); continue; }
     try {
@@ -1604,6 +1664,7 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
     ? `<ul>${d.dashboards.map((x) => `<li>${goTo(x, nameOf(x, m))}</li>`).join('')}</ul>`
     : '<div class="none">none</div>';
   const q = sqls[v.id];
+  const _sqlSt = sqlState(v.id);
   const cols = q && q.sources
     // `s.columns` rather than `s.columns.length` straight: a pull always writes the list, and a
     // detail pane that throws half-drawn is not the place to find out that something did not. The
@@ -1616,6 +1677,7 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
     + `<div class="lin"><h5>Read by <span class="lv">- the same count the list shows</span></h5>${li(d.children)}</div>`
     + `<div class="lin"><h5>On dashboards</h5>${dash}</div>`
     + (cols ? `<div class="lin"><h5>Source columns involved</h5><ul>${cols}</ul></div>` : '')
+    + (_sqlSt.kind === 'unread' ? `<div class="lin"><h5>SQL</h5><div class="none">not read - ${esc(_sqlSt.error)}. Retry failed / Pull all fetches it.</div></div>` : '')
     + '</div>';
   // Wired like the Relations tab's: naming a view and not taking you to it is the half a reader
   // notices. Reported for this box, in its general form - it should read like any hypertext.
@@ -1711,7 +1773,11 @@ async function publishGraph(g, op) {
   if (op && !op.current()) return false;
   await chrome.storage.session.set({ [key]: graphForWindow(g) });
   if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
-  await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 });
+  // A window that cannot open leaves nobody to consume the key, so it goes at once - otherwise the
+  // payload sat in session storage until the browser closed, which is longer than the privacy page
+  // is allowed to promise.
+  try { await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 }); }
+  catch (e) { try { await chrome.storage.session.remove(key); } catch (_) {} throw e; }
   return true;
 }
 function graphForWindow(g) {
@@ -1839,12 +1905,30 @@ async function aiUnlock() {
 }
 function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }
 
-const aiFindView = (q) => {
+// A `function`, not a multi-line arrow: the slicer lifts declarations, and an arrow-const is cut at
+// its first line - the rule slice.mjs already states, met here by the registry-derived tool test.
+/** What is known about one view's SQL - one answer, four values, used by every surface.
+ *  «Not read» and «absent» were one fact: a QueryTable whose pull failed was missing from `sqls`,
+ *  so get_sql said it was «not a query table», searches said «no matches» over queries they never
+ *  opened, and the exports skipped it whole. Reproduced by an outside scan.
+ *    not-query   - the view is not a QueryTable at all
+ *    read        - the SQL is here (an *empty* query is still `read`; emptiness is Zoho's answer)
+ *    unread      - the pull failed for this one, or the mirror lost the file; `error` says which */
+function sqlState(id) {
+  const v = viewById().get(id);
+  if (!v || v.type !== 'QueryTable') return { kind: 'not-query' };
+  const failure = (pullFailed || []).find((f) => String(f.id) === String(id) && f.stage === 'sql');
+  if (failure) return { kind: 'unread', error: failure.error || 'the pull could not read it' };
+  const q = sqls[id];
+  if (!q) return { kind: 'unread', error: 'its SQL is missing from the mirror' };
+  return { kind: 'read', query: q };
+}
+function aiFindView(q) {
   if (!q) return null;
   const low = String(q).toLowerCase();
   return views.find((v) => v.id === String(q)) || views.find((v) => (v.name || '').toLowerCase() === low)
     || views.find((v) => (v.name || '').toLowerCase().includes(low)) || null;
-};
+}
 function aiStructureText(v) {
   const m = viewById();
   const chain = structureChain(v, m);
@@ -1946,6 +2030,7 @@ async function aiSystemPrompt(withTools, cap) {
   if (cur) {
     focus = `\n# CURRENT FOCUS\nThe user is looking at ${cur.name} (${cur.type}).\n${aiStructureText(cur)}\n`;
     const q = sqls[cur.id];
+    if (sqlState(cur.id).kind === 'unread') focus += `\nIt is a query table whose SQL could not be read - do not conclude anything from its absence.`;
     if (q) { const body = await sqlBodyOf(cur.id); if (body) focus += `\nIts SQL:\n\u0060\u0060\u0060sql\n${aiTrunc(body, 4000)}\n\u0060\u0060\u0060\n`; }
   }
   const toolsLine = withTools
@@ -1990,8 +2075,12 @@ async function aiExecTool(name, input) {
     return `${rows.length} of ${views.length} views:\n`
       + aiCap(lines, rows.length, 'Narrow with `filter` (a name substring), `type`, or `min_columns`.');
   }
-  const v = name === 'orphans' || name === 'get_relations' ? null : aiFindView(input.name);
-  if (!v && name !== 'orphans' && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
+  // Global tools take a `query`, not a view: resolving `input.name` first answered
+  // «View not found: undefined» for both searches, so two tools the system prompt advertises had
+  // never once run. Reproduced by an outside scan; a registry-derived test now runs every tool.
+  const GLOBAL = name === 'orphans' || name === 'search_sql' || name === 'search_columns';
+  const v = GLOBAL || name === 'get_relations' ? null : aiFindView(input.name);
+  if (!v && !GLOBAL && !(name === 'get_relations' && !input.name)) return 'View not found: ' + input.name;
   if (name === 'get_view') {
     // Everything about one view in one step. It used to answer the metadata alone, so any real
     // question cost three or four calls - which is how a limit of eight ran out on a single
@@ -2020,8 +2109,10 @@ async function aiExecTool(name, input) {
   }
   if (name === 'get_structure') return aiStructureText(v);
   if (name === 'get_sql') {
-    const q = sqls[v.id];
-    if (!q) return `${v.name} is a ${v.type}, not a query table - it has no SQL.`;
+    const st = sqlState(v.id);
+    if (st.kind === 'not-query') return `${v.name} is a ${v.type}, not a query table - it has no SQL.`;
+    if (st.kind === 'unread') return `${v.name} IS a query table, but its SQL could not be read (${st.error}). Retry failed / Pull all fetches it - do not conclude anything from its absence.`;
+    const q = st.query;
     const body = await sqlBodyOf(v.id);
     const src = Object.entries(q.sources || {}).map(([, sdef]) => `${sdef.name} (${sdef.columns.length} columns involved)`).join(', ');
     return `${v.name}\nsource tables: ${src || '(none recorded)'}\n\n${sqlText(body)}`;
@@ -2030,14 +2121,21 @@ async function aiExecTool(name, input) {
     // With the matching line beside each name the model can usually answer without opening the
     // query at all - a bare list of names made every hit cost another call.
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
-    const hits = [];
-    for (const vv of views.filter((x) => x.type === 'QueryTable')) {
+    const hits = []; let searched = 0, unread = 0;
+    const qts = views.filter((x) => x.type === 'QueryTable');
+    for (const vv of qts) {
+      if (sqlState(vv.id).kind === 'unread') { unread++; continue; }
+      searched++;
       const body = await sqlBodyOf(vv.id);
       if (!body || !body.toLowerCase().includes(q)) continue;
       const line = body.split('\n').find((l) => l.toLowerCase().includes(q)) || '';
       hits.push(`${vv.name}\n    ${line.trim().slice(0, 160)}`);
     }
-    return hits.length ? `${hits.length} query table(s) contain "${input.query}":\n` + aiCap(hits, hits.length, MSG.narrow, 60) : '(no matches)';
+    // Coverage travels with the answer: «no matches» over 47 of 50 queries is a different fact from
+    // «no matches» over all of them, and only the search knows which it was.
+    const cover = unread ? ` Searched ${searched}/${qts.length} query tables - ${unread} SQL source(s) were unreadable, so absence is not exhaustive.` : '';
+    return hits.length ? `${hits.length} query table(s) contain "${input.query}":${cover}\n` + aiCap(hits, hits.length, MSG.narrow, 60)
+                       : `(no matches)${cover}`;
   }
   if (name === 'search_columns') {
     const q = String(input.query || '').toLowerCase(); if (!q) return '(empty query)';
@@ -2365,7 +2463,11 @@ async function buildExportHtml(sc) {
     else if (x.tables) body += x.tables.map((t) => `<h3>${esc2(t.name)} <small>${esc2(t.kind)}${t.system ? ' · system' : ''}</small></h3>` + tbl(['Column', 'Type', 'References'], t.columns.map((c) => [c.name, c.type, fkText(t.id, c.name)]))).join('');
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
-        const q = sqls[v.id]; if (!q) continue;
+        // Skipping an unread query made the export silently smaller than the workspace: a reader
+        // cannot tell a query that was dropped from one that never existed. The heading is always
+        // there; what varies is whether the source or the reason sits under it.
+        const st = sqlState(v.id);
+        if (st.kind === 'unread') { body += `<h3>${esc2(v.name)}</h3><p class="note">Its SQL could not be read (${esc2(st.error)}) - Retry failed / Pull all fetches it.</p>`; continue; }
         const src = await sqlBodyOf(v.id);
         body += `<h3>${esc2(v.name)}</h3><pre>${esc2(sqlText(src))}</pre>`;
       }
@@ -2416,7 +2518,8 @@ async function buildExportMarkdown(sc) {
     else if (x.tables) for (const t of x.tables) out += `### ${t.name} (${t.kind}${t.system ? ', system' : ''})\n\n| Column | Type | References |\n| --- | --- | --- |\n` + t.columns.map((c) => row([c.name, c.type, fkText(t.id, c.name)])).join('\n') + '\n\n';
     else if (x.id === 'sql') {
       for (const v of views.filter((v2) => v2.type === 'QueryTable')) {
-        const q = sqls[v.id]; if (!q) continue;
+        const st = sqlState(v.id);
+        if (st.kind === 'unread') { out += `### ${v.name}\n\n> Its SQL could not be read (${st.error}) - Retry failed / Pull all fetches it.\n\n`; continue; }
         const src = await sqlBodyOf(v.id);
         out += `### ${v.name}\n\n\u0060\u0060\u0060sql\n${src && src.trim() ? src : '-- ' + sqlText(src)}\n\u0060\u0060\u0060\n\n`;
       }

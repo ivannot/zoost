@@ -16,7 +16,7 @@ async function loadScheduleIndex() {
   // one org arrived in the panel showing another. Found by `tools/asynccheck.py`, which derives
   // this class instead of waiting for the next reader to notice an instance of it.
   const op = beginWorkspaceOp();
-  let idx = []; try { idx = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  let idx = []; try { idx = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
   if (!op.current()) return;
   scheduleData = idx.map((e) => ({ ...e, id: String(e.id), path: 'schedules/' + String(e.id) }));
 }

@@ -1148,7 +1148,10 @@ async function rebuildTree() {
       index.set(id, { path, category: e.category, source: e.source, name: e.name, rest: e.rest });
       const row = { path, api_name: e.api_name, display_name: e.display_name || e.api_name,
                     namespace: e.namespace, rest: e.rest, id, category: e.category, source: e.source,
-                    downloaded: false, stale: false, error: false, updatedTime: null };
+                    downloaded: false, stale: false, error: false, updatedTime: null,
+                    // What Zoho's list said, kept apart from what the sidecar says: the two
+                    // disagreeing is exactly the fact «stale» exists to carry.
+                    listUpdated: e.updatedTime || null };
       byPath.set(path, row); byId.set(id, row);
       return row;
     });
@@ -1231,8 +1234,17 @@ async function rebuildTree() {
         // user finds it.
         const row = byPath.get(dg) || byId.get(String(meta.id));
         if (!row) return;
-        row.downloaded = true;
-        row.stale = (meta.sv || 0) < META_SV;
+        // Found by id at another path: the function was renamed in Zoho, so the file on disk is the
+        // *old* pair. Marking it downloaded - which this did - meant the new path was never fetched
+        // and the old pair never pruned (its id is still live, so the pull's prune keeps it).
+        row.pathChanged = row.path !== dg;
+        row.previousPath = row.pathChanged ? dg : null;
+        row.downloaded = !row.pathChanged;
+        // Three reasons to re-fetch, each its own fact: an older sidecar schema, a rename, and a
+        // source that changed in Zoho while nobody was watching - the list's `updatedTime` against
+        // the sidecar's. Absence on either side is not a measurement and marks nothing.
+        row.stale = row.pathChanged || (meta.sv || 0) < META_SV
+          || !!(row.listUpdated && meta.updatedTime && row.listUpdated !== meta.updatedTime);
         row.updatedTime = meta.updatedTime || null;
         row.namespace = meta.nameSpace || row.namespace;
         if (meta.display_name) row.display_name = meta.display_name;
@@ -1416,7 +1428,11 @@ async function publishGraph(g, op, ws) {
   if (op && !op.current()) return false;
   await chrome.storage.session.set({ [key]: graphForWindow(g) });
   if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
-  await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 });
+  // A window that cannot open leaves nobody to consume the key, so it goes at once - otherwise the
+  // payload sat in session storage until the browser closed, which is longer than the privacy page
+  // is allowed to promise.
+  try { await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 }); }
+  catch (e) { try { await chrome.storage.session.remove(key); } catch (_) {} throw e; }
   return true;
 }
 function graphForWindow(g) {
@@ -2809,7 +2825,7 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   const actIndex = new Map();
   let actRows = [];
   try {
-    const rows = JSON.parse(await readFile('actions/index.json'));
+    const rows = JSON.parse(await op.read('actions/index.json'));
     if (Array.isArray(rows)) { actRows = rows; rows.forEach((r) => actIndex.set(r.kind + ':' + String(r.id), r)); }
   } catch (_) { /* not pulled: the rules still draw, with fewer edges */ }
 
@@ -2818,7 +2834,7 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   // whose whole subject is what connects to what, and «nothing automates this module» is a
   // measurement the health view already makes. The label comes from the modules index when it is on
   // disk; without it the API name is what there is, and that is what it says.
-  let modIdx = []; try { modIdx = JSON.parse(await readFile('modules/index.json')); } catch (_) {}
+  let modIdx = []; try { modIdx = JSON.parse(await op.read('modules/index.json')); } catch (_) {}
   const modLabel = {};
   (Array.isArray(modIdx) ? modIdx : []).forEach((m) => { if (m && m.api_name) modLabel[m.api_name] = m.plural_label || m.label || m.api_name; });
   const modOf = (api) => {
@@ -2842,9 +2858,9 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   });
 
   // ---- workflows: their own file says which functions each condition fires -------------------
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
   for (const w of wfIdx) {
-    let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {}
+    let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {}
     const node = ctxNode(CTX_ID.wf(w.id), w.name || String(w.id), 'workflows', w.module || '',
       `workflows/${w.id}.json`, { entity: 'workflows', _downloaded: !!d, _active: w.status !== 'inactive' });
     nodes[node.id] = node;
@@ -2873,7 +2889,7 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   }
 
   // ---- schedules: the index row carries the function it runs ---------------------------------
-  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => {
     const node = ctxNode(CTX_ID.sch(sc.id), sc.name || String(sc.id), 'schedules', sc.frequency || '',
       'schedules/index.json', { entity: 'schedules', _active: sc.status !== 'inactive' });
@@ -2883,7 +2899,7 @@ async function callGraphWithContext(op = beginWorkspaceOp()) {
   });
 
   // ---- connections: the join key is the name inside invokeurl [...connection:"..."] ------------
-  let cat = []; try { cat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
+  let cat = []; try { cat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   const conn = {};
   const ensureConn = (name, meta) => {
     const id = CTX_ID.conn(name);
@@ -4040,6 +4056,15 @@ async function downloadOne(entry) {
     // after the last await puts one org's function into another org's index and lights its row.
     // Wrong indoors before it is wrong on disk, and it never reaches the disk to be caught there.
     if (!op.current()) return false;
+    // A rename leaves the old pair on disk with a live id, which no prune will ever take. It goes
+    // now, and only now: both new files are written, so the new path is authoritative. A removal
+    // that fails keeps the old pair - readable is better than gone - and the next load will mark
+    // the rename again, so the retry is free.
+    if (entry.previousPath && entry.previousPath !== `functions/${f.folder}/${f.stem}.dg`) {
+      try { await op.remove(entry.previousPath); await op.remove(entry.previousPath.replace(/\.dg$/, '.meta.json')); } catch (_) {}
+    }
+    entry.previousPath = null; entry.pathChanged = false;
+    if (!op.current()) return false;   // the removals above awaited, and the row is the panel's memory
     entry.path = `functions/${f.folder}/${f.stem}.dg`; entry.namespace = f.folder;
     entry.display_name = f.meta.display_name || entry.display_name; entry.downloaded = true; entry.stale = false; entry.error = false; entry.errorMsg = '';
     index.set(entry.id, { path: entry.path, category: f.meta.category, source: f.meta.source, name: f.meta.name, rest: (f.meta.rest_api || []).some((x) => x.active) });
@@ -4053,7 +4078,7 @@ async function downloadMissing() {
   // from `updateMissingButton` would be an assignment on top of the five-second re-render - set
   // once, never revisited, which measured as «still off after the tab came back into line».
   if (!zohoReady()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  const pending = treeData.filter((e) => !e.downloaded || e.stale);   // stale = older schema (before connections/author); re-fetch to backfill
+  const pending = treeData.filter((e) => !e.downloaded || e.stale || e.pathChanged);   // stale = older schema, a rename, or Zoho's updatedTime moved
   if (!pending.length) { setStatus('All functions downloaded.', 'ok'); updateMissingButton(); return; }
   setPullBusy(true); $('missing').disabled = true;   // both Pull buttons, and pullCurrent refuses to start on top
   let ok = 0, fail = 0;
@@ -4204,8 +4229,8 @@ async function pullWorkflows() {
     if (!op.current()) return;   // you changed workspace while this was reading
     await op.write('workflows/index.json', JSON.stringify(r.entries, null, 2));
     const liveIds = new Set(r.entries.map((e) => String(e.id)));
-    let prunedW = 0;
-    for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (_) {} } } }
+    let prunedW = 0; const wfRmFail = [];
+    for await (const p of walk(op.root)) { if (p.startsWith('workflows/') && p.endsWith('.json') && !p.endsWith('/index.json')) { const wid = p.split('/').pop().replace(/\.json$/, ''); if (!liveIds.has(wid)) { try { await op.remove(p); prunedW++; } catch (e) { if ((e && e.message) === WS_MOVED) return; wfRmFail.push(p); } } } }
     await loadWorkflowIndex();
     if (viewMode === 'workflows') { renderWorkflows(); updateMissingButton(); }
     await downloadMissingWf();
@@ -4217,8 +4242,11 @@ async function pullWorkflows() {
     if (actionUsers === null) actionUsers = await buildActionUsers();
     if (viewMode === 'actions') renderActions();
     if (prunedW) setStatus($('stxt').textContent + ` \u00b7 ${prunedW} deleted removed`, 'ok');
+    // A removal that failed is a deleted rule still on screen: loadWorkflowIndex() reads the disk,
+    // so the residue is what the reader sees - said, recorded, retried by the next pull for free.
+    if (wfRmFail.length) setStatus($('stxt').textContent + ` \u00b7 ${wfRmFail.length} deleted rule(s) could not be removed - the next pull retries`, 'warn');
     if (r.capped) setStatus($('stxt').textContent + ' \u00b7 list stopped early - some workflows may be missing', 'warn');
-    await noteAccess('workflows', null, op);
+    await noteAccess('workflows', wfRmFail.length ? { status: 0, message: `${wfRmFail.length} stale workflow file(s) could not be removed` } : null, op);
   } catch (e) { await notePullFailure('workflows', e, op); } finally { endPull(); }
 }
 async function openWorkflowInZoho(id) {
@@ -4436,7 +4464,7 @@ async function pullHealthRuntime() {
       await pullFailures();
       if (!op.current()) return;
       failIndex = null;                       // the file changed under it
-      const built = await buildHealth();
+      const built = await buildHealth(op);
       if (!op.current()) return;
       healthData = built;
       renderHealthView();

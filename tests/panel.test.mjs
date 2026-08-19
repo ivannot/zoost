@@ -972,7 +972,7 @@ test('the call graph carries what fires the code and what the code reaches', asy
     readFile: async (p) => { if (!(p in files)) throw new Error('not on disk'); return files[p]; },
     Object, JSON, Set, Date,
   };
-  ctx.beginWorkspaceOp = () => ({ current: () => true, root: ctx.dir, read: async () => '{}' });
+  ctx.beginWorkspaceOp = () => ({ current: () => true, root: ctx.dir, read: ctx.readFile });
   ctx.ensureGraph = ctx.ensureGraph;   // the stub the block already builds
   const { callGraphWithContext } = load([
     sliceConst('apps/crm/sidepanel.js', 'CTX_ID'),
@@ -6218,12 +6218,19 @@ test('analytics: the model is guarded, not only the disk', () => {
   // panel, so a retry that merges one workspace's ids into another one's memory is wrong on screen
   // before it is wrong on disk - and it never reaches the disk to be caught there.
   const src = read('apps/analytics/sidepanel.js');
-  for (const fn of ['pullAll', 'pullOne', 'retryFailed']) {
+  for (const fn of ['pullOne', 'retryFailed']) {
     const body = sliceFn('apps/analytics/sidepanel.js', fn);
     const first = body.search(/\b(sqls|deps|views|schema|pullFailed)\s*(\[[^\]]*\])?\s*=|Object\.assign\((sqls|deps)/);
     const guard = body.indexOf('op.current()');
     assert.ok(guard > 0 && guard < first, `${fn} writes into the panel's memory before asking whether it is still there`);
   }
+  // pullAll is held to the stronger rule: nothing lands in memory until the whole snapshot is on
+  // disk - one destructuring after the writeToDisk gate, and no per-stage global assignment left.
+  const pa = sliceFn('apps/analytics/sidepanel.js', 'pullAll');
+  const gate = pa.indexOf('await writeToDisk(info, op, next)');
+  const publish = pa.indexOf('({ views, folders, schema, relations, sqls, deps, pullFailed } = next)');
+  assert.ok(gate > 0 && publish > gate, 'pullAll publishes memory before the snapshot is on disk');
+  assert.ok(!/^\s*(views|schema|sqls|deps) = /m.test(pa), 'a stage still lands in a global one by one');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -6366,13 +6373,15 @@ test('analytics: the model is guarded, not only the disk', () => {
       bound: null, folders: [], views: [], schema: {}, relations: [], deps: {}, pullFailed: [], sqls: {},
       writeJson: async () => {}, patchCfg: async () => {}, stemOf: (n) => String(n),
       readJson: async () => ({ label: 'B', sample: true }),
-      PULL_SV: 1, CFG: '.zoost.json', Object, JSON, Date, Boolean,
+      PULL_SV: 1, CFG: '.zoost.json', PULL_STATE: '.pull-state.json',
+      pruneSql: async () => {}, Object, JSON, Date, Boolean,
     };
     ctx.op = { current: () => live, write: async () => {} };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
     ctx.readJson = async () => { live = false; return { label: 'B', sample: true }; };
-    const ok = await vm.runInContext('writeToDisk', ctx)({ workspace: 'A', name: 'A', origin: 'oA' }, ctx.op);
+    const ok = await vm.runInContext('writeToDisk', ctx)({ workspace: 'A', name: 'A', origin: 'oA' }, ctx.op,
+      { views: [], folders: [], schema: {}, relations: [], sqls: {}, deps: {}, pullFailed: [] });
     assert.equal(ok, false, 'an overtaken pull reported that it had written the workspace');
     assert.equal(ctx.bound, null, 'the panel is now bound to one workspace by id and another by name');
   });
@@ -6621,6 +6630,8 @@ test('analytics: a SQL search overtaken by a workspace switch publishes nothing'
   const delayed = new Promise((resolve) => { release = resolve; });
   const ctx = {
     sqlCache: null, sqlUnread: 0, sqls: { q1: { stem: 'query-one', sql: null } },
+    views: [{ id: 'q1', type: 'QueryTable' }],
+    sqlState: () => ({ kind: 'read' }),
     beginWorkspaceOp: () => ({ current: () => live, read: async () => delayed,
       say() {} }),
     readFile: async () => delayed, status() {}, Map, Object,
@@ -6877,9 +6888,248 @@ test('crm: a connections rebuild does not publish an unmeasured usage as zero', 
 
 // The memory follows the file: resyncModule swallowed a failed write and updated the screen from
 // memory - true for one screenful, undone by the next load.
+test('crm: the module index names only files that landed', () => {
+  // «0/1 modules» under a green line, with noteAccess recording the area as read: the index row was
+  // pushed whether or not its file was written, so the mirror described files it did not have.
+  const body = sliceApp('crm', 'pullModules');
+  const tryAt = body.indexOf('await op.write(`modules/${sanitize(m.api_name');
+  const pushAt = body.indexOf("index.push({ api_name: m.api_name");
+  assert.ok(tryAt > 0 && pushAt > tryAt, 'the index row is pushed before (or without) its write');
+  // In the same try: a push that merely comes later is a push that also runs when the write threw.
+  assert.ok(!/catch/.test(body.slice(tryAt, pushAt)),
+            'the write and its index row are separated by a catch, so a failed file still gets a row');
+  assert.ok(/wFail\.push\(m\.api_name\)/.test(body), 'a failed module write is swallowed again');
+  assert.ok(/gap \? 'warn' : 'ok'/.test(body), 'failed writes still end in a green status');
+});
+
+test('crm: a failed graph build is never folded into a zero', () => {
+  const conn = sliceFn('apps/crm/ai.js', 'aiLoadConnections');
+  // No catch of any shape between the build and its use: `.catch(() => null)` and a try/catch that
+  // substitutes an empty graph are the same invented zero wearing different clothes.
+  assert.ok(!/ensureGraph\([^)]*\)\.catch/.test(conn) && !/try[^}]*ensureGraph/.test(conn),
+            'aiLoadConnections caches an invented «used by 0» over a graph that failed');
+  const led = sliceFn('apps/crm/export.js', 'loadExportData');
+  assert.ok(!/try \{ g = await ensureGraph/.test(led) && /const g = await ensureGraph\(op\);/.test(led),
+            'an export can still ship «Functions: 0» over a graph that failed');
+});
+
 test('crm: a module resync publishes only what it managed to write', () => {
   const body = sliceApp('crm', 'resyncModule');
   assert.ok(!/op\.write\([^)]*\); \} catch \(_\) \{\}/.test(body), 'a failed write is swallowed again');
   assert.equal((body.match(/Could not save/g) || []).length, 2,
                'one of the two write sites reports nothing when the disk refuses');
 });
+
+// ---------------------------------------------------------------------------------------------
+// «Pull all» promised the whole org and delivered «whatever is not yet on disk»: the org list
+// carries `updatedTime` (measured on a captured response), the bridge dropped it, and staleness was
+// derived from the sidecar's schema version alone - so a function edited by a colleague, or while
+// the panel was closed, kept its old source through every pull. A rename was worse: the by-id merge
+// marked the row downloaded at a path that did not exist, and the old pair's id stayed live, so no
+// prune ever took it.
+{
+  const src = crmPanel();
+
+  test('the list keeps Zoho\'s updatedTime, and staleness compares it against the sidecar', () => {
+    assert.ok(/updatedTime: f\.updatedTime \|\| null/.test(read('apps/crm/content-bridge.js')),
+              'the bridge drops the one field that says a function changed');
+    assert.ok(/listUpdated: e\.updatedTime \|\| null/.test(src), 'the tree forgets what the list said');
+    assert.ok(/row\.listUpdated && meta\.updatedTime && row\.listUpdated !== meta\.updatedTime/.test(src),
+              'the two timestamps are never compared, so an edited function is never stale');
+  });
+
+  test('a renamed function is re-fetched at its new path, and the old pair goes only after both writes', () => {
+    assert.ok(/row\.pathChanged = row\.path !== dg;/.test(src),
+              'a sidecar found by id at another path still counts as downloaded');
+    assert.ok(/row\.downloaded = !row\.pathChanged;/.test(src), 'the rename does not mark the new path as missing');
+    assert.ok(/!e\.downloaded \|\| e\.stale \|\| e\.pathChanged/.test(src),
+              'downloadMissing does not pick a rename up');
+    const dl = sliceApp('crm', 'downloadOne');
+    const rm = dl.indexOf('op.remove(entry.previousPath)');
+    const writes = dl.indexOf('.meta.json`, JSON.stringify(f.meta');
+    assert.ok(rm > 0, 'the old pair of a rename is never removed - a live id means no prune takes it');
+    assert.ok(rm > writes, 'the old pair is removed before both new files are written');
+  });
+
+  test('a timestamp absent on either side marks nothing', () => {
+    // Absence is not a measurement: a list entry with no updatedTime (or an old sidecar without one)
+    // must not push the whole workspace into a re-download.
+    const m = src.match(/row\.stale = row\.pathChanged \|\| \(meta\.sv \|\| 0\) < META_SV\s*\n\s*\|\| !!\(row\.listUpdated && meta\.updatedTime/);
+    assert.ok(m, 'the comparison no longer requires both sides to have spoken');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Two of the assistant's advertised tools had never once run: `search_sql` and `search_columns`
+// take a `query`, and the dispatcher resolved `input.name` first - «View not found: undefined» for
+// both, from the day they were written. Derived from the registry, so a tool added tomorrow is
+// exercised with the minimum its own schema declares, and schema and dispatcher cannot diverge
+// silently again.
+test('analytics: every declared tool runs on the minimum input its schema declares', async () => {
+  const src = read('apps/analytics/sidepanel.js');
+  const ctx = {
+    views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }, { id: 't1', name: 'T1', type: 'Table' }],
+    schema: { t1: { name: 'T1', columns: [{ name: 'Revenue', type: 'number' }] } },
+    sqls: { q1: { id: 'q1', sql: 'select Revenue from T1', stem: 'q1', parents: [], sources: {} } },
+    deps: { q1: { id: 'q1', parents: ['t1'], children: [], dashboards: [] } },
+    pullFailed: [], relations: [], bound: { workspace: 'w' },
+    String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
+  };
+  vm.createContext(ctx);
+  // Consts and functions both: sliceFn only lifts declarations, so the arrow-consts come through
+  // sliceConst - and anything genuinely absent must throw here, not answer '' and hide a hole.
+  const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
+  vm.runInContext([
+    sliceConst('apps/analytics/sidepanel.js', 'MSG'),
+    sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'),
+    sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+    'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
+    ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlState', 'aiStructureText',
+        'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece),
+  ].join('\n'), ctx);
+  // The registry is JavaScript, so it is evaluated as JavaScript - parsing it as JSON died on the
+  // first apostrophe in a description.
+  const tctx = {}; vm.createContext(tctx);
+  vm.runInContext(sliceConst('apps/analytics/sidepanel.js', 'AI_TOOLS') + '; this.__t = AI_TOOLS;', tctx);
+  const tools = tctx.__t;
+  assert.ok(tools.length >= 5, `only ${tools.length} tools parsed from the registry`);
+  for (const t of tools) {
+    const props = (t.input_schema && t.input_schema.properties) || {};
+    const input = {};
+    if (props.name) input.name = 'Q1';
+    if (props.query) input.query = 'revenue';
+    if (props.filter) input.filter = '';
+    const out = await vm.runInContext('aiExecTool', ctx)(t.name, input);
+    assert.ok(typeof out === 'string' && out.length, `${t.name} answered nothing`);
+    assert.ok(!/View not found: undefined/.test(out),
+              `${t.name} resolves a view it was never given - the tool is unreachable`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// «Not read» and «absent» were one fact: a QueryTable whose SQL pull failed was simply missing from
+// `sqls`, so get_sql called it «not a query table», searches answered «no matches» over queries they
+// never opened, the panel's unread counter missed it, and both exports skipped it whole - a reader
+// cannot tell a dropped query from one that never existed. One state function now, four values,
+// consulted by every surface.
+{
+  const an = read('apps/analytics/sidepanel.js');
+
+  test('analytics: sqlState is the one answer, and every surface asks it', () => {
+    const fn = sliceFn('apps/analytics/sidepanel.js', 'sqlState');
+    assert.ok(/kind: 'not-query'/.test(fn) && /kind: 'unread'/.test(fn) && /kind: 'read'/.test(fn),
+              'the four-value state lost a value');
+    assert.ok(/f\.stage === 'sql'/.test(fn), 'a lineage failure would read as an unread query');
+    for (const [what, re] of Object.entries({
+      'get_sql': /IS a query table, but its SQL could not be read/,
+      'search_sql coverage': /absence is not exhaustive/,
+      'the focused prompt': /whose SQL could not be read - do not conclude anything/,
+      'the detail pane': /<h5>SQL<\/h5><div class="none">not read/,
+      'the HTML export': /Its SQL could not be read \(\$\{esc2\(st\.error\)\}\)/,
+      'the Markdown export': /> Its SQL could not be read \(\$\{st\.error\}\)/,
+    })) assert.ok(re.test(an), `${what} still treats an unread query as an absent one`);
+    // Every failure records its stage, or sqlState cannot tell sql from lineage.
+    assert.ok(!/still\.push\(\.\.\.\(r2?\.failed \|\| \[\]\)\);/.test(an),
+              'a partial pull records failures with no stage');
+    assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(sliceFn('apps/analytics/sidepanel.js', 'pullAll')),
+              'the full pull records sql failures with no stage');
+  });
+
+  test('analytics: the unread counter includes queries whose pull failed', () => {
+    const fn = sliceFn('apps/analytics/sidepanel.js', 'ensureSqlCache');
+    assert.ok(/sqlState\(v\.id\)\.kind === 'unread'/.test(fn),
+              'the counter only sees files that refused to open, not pulls that failed');
+  });
+
+  test('analytics: get_sql answers «could not be read», run against a failed pull', async () => {
+    const ctx = {
+      views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }], schema: {}, relations: [],
+      sqls: {}, deps: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: '429' }],
+      String, Number, Object, Array, JSON, Set, Map, RegExp, Promise, Error,
+    };
+    vm.createContext(ctx);
+    const piece = (n) => { try { return sliceFn('apps/analytics/sidepanel.js', n); } catch { return sliceConst('apps/analytics/sidepanel.js', n); } };
+    vm.runInContext([sliceConst('apps/analytics/sidepanel.js', 'MSG'),
+      sliceConst('apps/analytics/sidepanel.js', 'SQL_UNREADABLE'), sliceConst('apps/analytics/sidepanel.js', 'SQL_EMPTY'),
+      'const beginWorkspaceOp = () => ({ current: () => true, read: async () => { throw new Error("x"); } });',
+      ...['viewById', 'aiFindView', 'aiCap', 'aiTrunc', 'sqlText', 'sqlBodyOf', 'sqlState', 'aiStructureText',
+          'structureChain', 'nameOf', 'relationsOf', 'shortDate', 'isOrphanCandidate', 'aiExecTool'].map(piece)].join('\n'), ctx);
+    const out = await vm.runInContext('aiExecTool', ctx)('get_sql', { name: 'Q1' });
+    assert.ok(/could not be read/.test(out), `a failed pull reads as «not a query table»: ${String(out).slice(0, 90)}`);
+  });
+
+  test('analytics: an empty query stays distinct from an unread one', async () => {
+    const ctx = { views: [{ id: 'q', type: 'QueryTable' }], sqls: { q: { sql: '' } }, pullFailed: [],
+                  viewById: () => new Map([['q', { id: 'q', type: 'QueryTable' }]]), String, Map };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'sqlState'), ctx);
+    assert.equal(vm.runInContext("sqlState('q').kind", ctx), 'read',
+                 'Zoho answering with an empty query is reported as a failed read');
+    ctx.pullFailed = [{ id: 'q', stage: 'sql', error: '429' }];
+    assert.equal(vm.runInContext("sqlState('q').kind", ctx), 'unread', 'a recorded failure does not win');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A reader that received an operation and then reads through the *global* resolver is reading the
+// next workspace with the old one's blessing: the outer guard discards the result, but every byte
+// was fetched from folder B on A's behalf. Derived over the panel's files: inside any function that
+// holds an op, a bare `readFile(` or `walk(dir)` is a finding.
+test('crm: a function that holds an op never reads through the global resolver', () => {
+  const bad = [];
+  for (const f of CRM_FILES) {
+    const src = read(f);
+    for (const m of src.matchAll(/^(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm)) {
+      const end = src.indexOf('\n}', src.indexOf('{', m.index));
+      const body = src.slice(m.index, end).replace(/^\s*\/\/.*$/gm, '');
+      const hasOp = /\bop\b/.test(m[2]) || /beginWorkspaceOp\(\)/.test(body);
+      if (!hasOp) continue;
+      if (/(?<!op\.)(?<!\w)readFile\(/.test(body)) bad.push(`${f}: ${m[1]}() readFile`);
+      if (/walk\(dir\)/.test(body)) bad.push(`${f}: ${m[1]}() walk(dir)`);
+    }
+  }
+  assert.deepEqual(bad, [], `these hold an op and read past it:\n  ${bad.join('\n  ')}`);
+});
+
+// A window that cannot open leaves nobody to consume its key: the payload sat in session storage
+// until the browser closed, which is longer than the privacy page promises. And the pruner: old
+// .sql files of deleted or renamed queries accumulated with no map left to even call them residue.
+{
+  for (const app of ['crm', 'analytics']) {
+    test(`${app}: a graph key does not outlive a window that never opened`, async () => {
+      const ops = [];
+      const ctx = { crypto: { randomUUID: () => 'tok' }, bound: null, lastCtx: null,
+        graphForWindow: (g) => g, Error, Object,
+        chrome: { storage: { session: { set: async (o) => ops.push('set:' + Object.keys(o)[0]),
+                                        remove: async (k) => ops.push('remove:' + k) } },
+                  windows: { create: async () => { throw new Error('no window for you'); } },
+                  runtime: { getURL: (u) => u } } };
+      vm.createContext(ctx);
+      vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'publishGraph'), ctx);
+      await assert.rejects(() => vm.runInContext('publishGraph', ctx)({ nodes: {} }, null, {}));
+      assert.deepEqual([...ops], ['set:graphData:tok', 'remove:graphData:tok'],
+                       `the payload stays in session storage with nobody to consume it: ${ops}`);
+    });
+  }
+
+  test('analytics: the pull prunes the .sql files its new index no longer names', async () => {
+    const removed = [];
+    const ctx = { status() {},
+      op: { root: {}, current: () => true, remove: async (p) => removed.push(p) },
+      walk: async function* () { yield 'sql/kept.sql'; yield 'sql/renamed-old.sql'; yield 'sql/deleted.sql'; yield 'views.json'; },
+      Set, Object, RegExp };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
+    await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op);
+    assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
+                     'a deleted or renamed query leaves its file behind with no map naming it');
+  });
+
+  test('the two privacy pages describe the same graph retention', () => {
+    const en = read('site/privacy.html'), it = read('site/it/privacy.html');
+    assert.ok(/window consumes its own copy the moment it opens/.test(en),
+              'the English page still says the drawing is replaced by the next one');
+    assert.ok(/la finestra consuma la\s+propria copia nel momento in cui si apre/.test(it),
+              'the Italian page still describes the old retention');
+  });
+}

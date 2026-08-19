@@ -12,8 +12,8 @@
 // ---------- health / audit ----------
 let healthData = null, healthTab = 'functions';
 function nmNode(n) { return escHtml(nameMode === 'display' ? (n.display_name || n.name) : (n.api_name || n.name)); }
-async function buildHealth() {
-  const g = await ensureGraph();
+async function buildHealth(op = beginWorkspaceOp()) {
+  const g = await ensureGraph(op);
   const nodes = Object.values(g.nodes);
   const fnById = {}, fnByName = {};
   nodes.forEach((n) => { if (n.id) fnById[String(n.id)] = n; [n.name, n.api_name, n.display_name].forEach((k) => { if (k) fnByName[String(k).toLowerCase()] = n; }); });
@@ -23,13 +23,13 @@ async function buildHealth() {
   const unresolved = nodes.filter((n) => n.unresolved && n.unresolved.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">calls: ${escHtml(n.unresolved.join(', '))}</span>` }));
   const ambiguous = nodes.filter((n) => n.ambiguous && n.ambiguous.length).sort(byName).map((n) => ({ html: `${fnLink(n)} <span class="meta">ambiguous: ${escHtml(n.ambiguous.join(', '))}</span>` }));
   const broken = [];
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
-  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
-  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdx) { let d = null; try { d = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} if (!d) continue; (d.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => { if (!(fnById[String(a.id)] || fnByName[(a.name || '').toLowerCase()])) broken.push({ kind: 'workflow', id: w.id, name: w.name, fn: a.name }); }); }); }
+  let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
   scheds.forEach((sc) => { if (!(fnById[String(sc.function_id)] || fnByName[(sc.function_name || '').toLowerCase()])) broken.push({ kind: 'schedule', id: sc.id, name: sc.name, fn: sc.function_name }); });
   const brokenItems = broken.map((b) => ({ html: `<span>${escHtml(b.kind)}</span> <a data-kind="${escA(b.kind)}" data-id="${escA(String(b.id || ''))}">${escHtml(b.name || '?')}</a> <span class="meta">\u2192 missing function \u00ab${escHtml(b.fn || '?')}\u00bb</span>` }));
   const missingFK = []; const modApis = new Set(); const modObjs = [];
-  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
+  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); modObjs.push(m); modApis.add(m.api_name); } catch (_) {} } }
   modObjs.forEach((m) => { if (/__s$/.test(m.api_name || '')) return; (m.fields || []).forEach((fl) => { let t = fl.lookup; if (t && typeof t === 'object') t = t.api_name || (typeof t.module === 'string' ? t.module : (t.module && t.module.api_name)) || null; if (!t || typeof t !== 'string') return; if (/__s$/.test(t)) return; if (!modApis.has(t)) missingFK.push({ module: m.api_name, field: fl.api_name || fl.label, target: t }); }); });
   // The module named here *is* in the workspace - it is its lookup's target that is not - so it
   // opens, and the target stays plain text because there is nothing to open.
@@ -39,7 +39,7 @@ async function buildHealth() {
   // groups below need it. It sits above them because moving one of them up put a use of `fx`
   // before its declaration - a temporal dead zone that `node --check` waves through and only
   // running the function finds, which is the trap this repository has already recorded twice.
-  const fx = (await failuresIndex()) || { at: null, usage: null, runs: null, credits: null, capped: false, byName: new Map(), all: [] };
+  const fx = (await failuresIndex(op)) || { at: null, usage: null, runs: null, credits: null, capped: false, byName: new Map(), all: [] };
   // Measured cost, beside the static proxies that were the only thing here before. «180 lines and
   // five outbound calls» is a guess about what a function costs; «it ran 239 times yesterday» is
   // what it cost. Both stay: the proxy covers every function, the measurement covers the busiest
@@ -88,7 +88,7 @@ async function buildHealth() {
   // Two sources disagree politely and both are shown: Zoho's own «in use» flag, and whether any rule
   // in this workspace names it. A rule that was never pulled cannot name anything, so «no rule here
   // names it» is not «nothing uses it», and the description says which is which.
-  let actIdx = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) actIdx = a; } catch (_) {}
+  let actIdx = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) actIdx = a; } catch (_) {}
   const actUse = actionUsers || await buildActionUsers();
   const unattached = actIdx
     .filter((a) => !a.associated && !(actUse.get(a.kind + ':' + String(a.id)) || []).length)
@@ -127,7 +127,7 @@ async function openHealth() {
   if (!(await ensurePerm(dir))) { $('healthbody').innerHTML = '<div class="hd">Folder access is not granted - click Refresh, then open Health again.</div>'; return; }
   // Built before it is published: `healthData` is what the view, its export and its counts all read,
   // and an audit begun in one workspace is a description of that one.
-  try { const built = await buildHealth(); if (!op.current()) return; healthData = built; } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
+  try { const built = await buildHealth(op); if (!op.current()) return; healthData = built; } catch (e) { $('healthbody').innerHTML = `<div class="hd">Could not analyze: ${escHtml(e.message)}</div>`; return; }
   renderHealthView();
 }
 function renderHealthView() {

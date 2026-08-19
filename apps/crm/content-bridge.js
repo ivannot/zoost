@@ -214,6 +214,10 @@
       namespace: (f.workflow && f.workflow.namespace) || f.category || 'misc',
       category: f.category, source: f.source,
       rest: (f.rest_api || []).some((r) => r.active),
+      // Measured on a captured list response: the org list carries `updatedTime`, and dropping it
+      // here is what left «Pull all» unable to see a function edited by a colleague - the sidecar's
+      // copy is from the last download, and with nothing to compare it against, nothing was stale.
+      updatedTime: f.updatedTime || null,
     }));
     return { total: raw.length, readable: all.length, skipped: raw.length - all.length, entries, capped };
   }

@@ -144,10 +144,14 @@ async function aiLoadConnections(op = beginWorkspaceOp()) {
   if (aiConnCache) return aiConnCache;
   let cat = []; try { cat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(cat)) cat = [];
-  const g = await ensureGraph(op).catch(() => null);
+  // A graph that failed to build is not a graph with no uses in it: `.catch(() => null)` here made
+  // `get_connection` answer «used_by (0)», *and cached it*, so the invented zero outlived the error.
+  // The failure propagates - the tool loop already turns a thrown tool into an error message the
+  // model can read - and only the overtaken case stays silent.
+  const g = await ensureGraph(op);
   if (!op.current()) return null;
   const used = {};
-  if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (used[c.name] ||= []).push(n.namespace + '.' + n.name); }));
+  Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (used[c.name] ||= []).push(n.namespace + '.' + n.name); }));
   const list = cat.map((c) => ({ ...c, uses: (used[c.name] || []).slice() }));
   const known = new Set(cat.map((c) => c.name));
   Object.keys(used).forEach((nm) => { if (!known.has(nm)) list.push({ name: nm, label: nm, connector: null, connected: null, missing: true, uses: used[nm].slice() }); });

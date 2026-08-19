@@ -416,22 +416,26 @@ function buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts,
     + `<script>function filt(){var q=document.getElementById('q').value.trim().toLowerCase();document.querySelectorAll('.item').forEach(function(s){s.style.display=(!q||s.dataset.name.indexOf(q)>=0)?'':'none';});document.querySelectorAll('tr.relrow').forEach(function(r){r.style.display=(!q||r.dataset.name.indexOf(q)>=0)?'':'none';});}<\/script></body></html>`;
 }
 
-async function loadExportData() {
+async function loadExportData(op = beginWorkspaceOp()) {
     const metaById = new Map();
-  for await (const p of walk(dir)) {
-    if (p.endsWith('.meta.json')) { try { const m = JSON.parse(await readFile(p)); metaById.set(String(m.id), { meta: m, dg: p.replace(/\.meta\.json$/, '.dg') }); } catch (_) {} }
+  for await (const p of walk(op.root)) {
+    if (p.endsWith('.meta.json')) { try { const m = JSON.parse(await op.read(p)); metaById.set(String(m.id), { meta: m, dg: p.replace(/\.meta\.json$/, '.dg') }); } catch (_) {} }
   }
-  let idx = null; try { idx = JSON.parse(await readFile('functions/index.json')); } catch (_) {}
+  let idx = null; try { idx = JSON.parse(await op.read('functions/index.json')); } catch (_) {}
   const entries = (idx && idx.length) ? idx : [...metaById.values()].map((v) => ({ id: v.meta.id, api_name: v.meta.api_name, display_name: v.meta.display_name, namespace: v.meta.nameSpace, category: v.meta.category, source: v.meta.source, rest: (v.meta.rest_api || []).some((r) => r.active) }));
   const fns = [];
   for (const e of entries) {
     const d = metaById.get(String(e.id)); let code = '';
-    if (d) { try { code = await readFile(d.dg); } catch (_) {} }
+    if (d) { try { code = await op.read(d.dg); } catch (_) {} }
     fns.push({ api_name: e.api_name, display_name: e.display_name || e.api_name, namespace: (d && (d.meta.nameSpace)) || e.namespace, rest: e.rest, code, downloaded: !!d, associated_place: (d && d.meta && d.meta.associated_place) || null, modified_by: (d && d.meta.modified_by) || null, updatedTime: (d && d.meta.updatedTime) || null, connections: (d && d.meta.connections) || [], stats: d ? fnStats(code) : null });
   }
   const mods = [];
-  for await (const p of walk(dir)) { if (isModuleFile(p)) { try { const m = JSON.parse(await readFile(p)); try { m._layouts = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
-  let g = null; try { g = await ensureGraph(); } catch (_) {}
+  for await (const p of walk(op.root)) { if (isModuleFile(p)) { try { const m = JSON.parse(await op.read(p)); try { m._layouts = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) { m._layouts = []; } mods.push(m); } catch (_) {} } }
+  // A report with «Functions: 0» because the graph failed is a report that lies about the org: the
+  // HTML crashed on g.nodes and the Markdown shipped the zero. The failure stops the export and says
+  // why; a reader gets a report about the workspace, or none.
+  const g = await ensureGraph(op);
+  if (!op.current()) throw new Error(WS_MOVED);
   // The module reading, resolved once for both reports. It is done here rather than in each builder
   // because the two must not be able to disagree - a reader moves between the HTML and the Markdown
   // and a number that differs between them is worse than a number missing from one.
@@ -459,11 +463,11 @@ async function loadExportData() {
   const modRefs = {};
   mods.forEach((m) => (m.fields || []).forEach((fl) => { if (fl.lookup) (modRefs[fl.lookup] ||= []).push({ module: m.api_name, field: fl.api_name }); }));
   const wfs = [];
-  let wfIdx = []; try { wfIdx = JSON.parse(await readFile('workflows/index.json')); } catch (_) {}
-  for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await readFile(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
-  let scheds = []; try { scheds = JSON.parse(await readFile('schedules/index.json')); } catch (_) {}
+  let wfIdx = []; try { wfIdx = JSON.parse(await op.read('workflows/index.json')); } catch (_) {}
+  for (const w of wfIdx) { let detail = null; try { detail = JSON.parse(await op.read(`workflows/${w.id}.json`)); } catch (_) {} wfs.push({ ...w, id: String(w.id), detail }); }
+  let scheds = []; try { scheds = JSON.parse(await op.read('schedules/index.json')); } catch (_) {}
   // connections catalogue + usage (which functions reference each), joined on connectionLinkName
-  let connCat = []; try { connCat = JSON.parse(await readFile('connections/index.json')); } catch (_) {}
+  let connCat = []; try { connCat = JSON.parse(await op.read('connections/index.json')); } catch (_) {}
   if (!Array.isArray(connCat)) connCat = [];
   const connUse = {};
   fns.forEach((f) => (f.connections || []).forEach((c) => { if (c && c.name) (connUse[c.name] ||= []).push(f.api_name); }));
@@ -473,11 +477,11 @@ async function loadExportData() {
   // The failures index is one file that says when it was read - not a folder - so it is loaded
   // whole and carries its own date into the report. `params` is not in it: the bridge never sent it.
   let fails = { at: null, usage: null, failures: [] };
-  try { const d = JSON.parse(await readFile('failures/index.json')); if (d && Array.isArray(d.failures)) fails = d; } catch (_) {}
+  try { const d = JSON.parse(await op.read('failures/index.json')); if (d && Array.isArray(d.failures)) fails = d; } catch (_) {}
   // The automation actions, and the map of which rules fire each - built from the rules that were
   // just read rather than from the panel's cache, because an export must not depend on which tab
   // the reader happened to open.
-  let acts = []; try { const a = JSON.parse(await readFile('actions/index.json')); if (Array.isArray(a)) acts = a; } catch (_) {}
+  let acts = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) acts = a; } catch (_) {}
   const actUsers = new Map();
   wfs.forEach((w) => ((w.detail && w.detail.conditions) || []).forEach((c) => {
     const list = [];
@@ -674,7 +678,7 @@ async function exportMarkdown() {
   try {
     await requirePerm(op.root);
     setStatus('Building AI (Markdown) export\u2026', 'busy');
-    const data = await loadExportData();
+    const data = await loadExportData(op);
     const md = buildExportMarkdown(data, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.md`;
@@ -689,7 +693,7 @@ async function exportHtml() {
   try {
     await requirePerm(op.root);
     setStatus('Building HTML export\u2026', 'busy');
-    const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData();
+    const { fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers } = await loadExportData(op);
     const html = buildExportHtml(fns, mods, g, modRefs, wfs, scheds, conns, fails, acts, actUsers, scope);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const name = `export/zoost-${sanitize((bound && bound.instance) || 'workspace')}-${stamp}.html`;

@@ -20,7 +20,7 @@ async function pullModules() {
     const r = await toBridge({ cmd: 'pullModules' }); if (!r?.ok) throw bridgeError(r, 'pull failed');
     op.say(`Writing ${r.modules.length} modules…`, 'busy');
     const keepLayoutFiles = new Set(); const index = []; const layIndex = [];
-    let mw = 0, lw = 0;
+    let mw = 0, lw = 0; const wFail = [], rFail = [];
     for (const m of r.modules) {
       if (!op.current()) return;   // one file per module and per layout set: a loop long enough to be left
       const fullLayouts = Array.isArray(m.layouts) ? m.layouts : [];
@@ -28,7 +28,8 @@ async function pullModules() {
       if (fullLayouts.length) {
         // A write that failed is not permission to delete what is already there: the old file is
         // still the best answer anybody has, and losing it costs a re-pull of the expensive half.
-        try { await op.write(lf, JSON.stringify(fullLayouts, null, 2)); lw++; } catch (_) {}
+        try { await op.write(lf, JSON.stringify(fullLayouts, null, 2)); lw++; }
+        catch (e) { if ((e && e.message) === WS_MOVED) return; wFail.push(`${m.api_name} (layouts)`); }
         keepLayoutFiles.add(lf);
       } else if (m.layouts_read !== true) {
         // Zoho did not answer - refused, rate-limited, or never asked because the fields call had
@@ -39,27 +40,37 @@ async function pullModules() {
       }
       // keep a compact summary inside the module JSON (drives the preview line + index)
       m.layouts = fullLayouts.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false, status: l.status || null, sections: (l.sections || []).length }));
-      index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
-      layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
-      try { await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++; } catch (_) {}
+      // Into the index only when its file landed: an index row whose file is old or absent is the
+      // mirror lying about itself - measured by an outside scan as «0/1 modules» under a green
+      // status, with noteAccess recording the area as read.
+      try {
+        await op.write(`modules/${sanitize(m.api_name || 'unknown')}.json`, JSON.stringify(m, null, 2)); mw++;
+        index.push({ api_name: m.api_name, module_name: m.module_name, generated_type: m.generated_type, fields: (m.fields || []).length, layouts: m.layouts.length, related_lists: (m.related_lists || []).length });
+        layIndex.push({ module: m.api_name, generated: m.module_name, layouts: m.layouts });
+      } catch (e) { if ((e && e.message) === WS_MOVED) return; wFail.push(m.api_name); }
     }
     if (!op.current()) return;   // you changed workspace while this was reading
     await op.write('modules/index.json', JSON.stringify(index, null, 2));
     await op.write('modules/layouts/index.json', JSON.stringify(layIndex, null, 2));
     const liveFiles = new Set(r.modules.map((m) => `modules/${sanitize(m.api_name || 'unknown')}.json`));
     let prunedM = 0;
-    for await (const p of walk(op.root)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await op.remove(p); prunedM++; } catch (_) {} } }
+    for await (const p of walk(op.root)) { if (isModuleFile(p) && !liveFiles.has(p)) { try { await op.remove(p); prunedM++; } catch (e) { if ((e && e.message) === WS_MOVED) return; rFail.push(p); } } }
     // Only what this pull *knows* is gone: a module Zoho answered for, with no layouts. Anything it
     // could not read, or could not write, keeps whatever is on disk.
     let prunedL = 0;
     for await (const p of walk(op.root)) {
       if (!isLayoutFile(p) || keepLayoutFiles.has(p)) continue;
       if (!op.current()) return;
-      try { await op.remove(p); prunedL++; } catch (_) {}
+      try { await op.remove(p); prunedL++; } catch (e) { if ((e && e.message) === WS_MOVED) return; rFail.push(p); }
     }
     await rebuildModules();
-    setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.`, 'ok');
-    await noteAccess('modules', null, op);
+    // Incomplete is said as incomplete, and recorded as such: «ok» over failed writes is how an old
+    // file hides behind a fresh green line, and a removal that failed is a deleted module still on
+    // screen - rebuildModules() reads the disk, so the residue is what the reader sees.
+    const gap = (wFail.length ? ` ${wFail.length} write(s) failed: ${wFail.slice(0, 3).join(', ')}${wFail.length > 3 ? '…' : ''}.` : '')
+      + (rFail.length ? ` ${rFail.length} stale file(s) could not be removed - the next pull retries.` : '');
+    setStatus(`Modules pull complete: ${mw}/${r.modules.length} modules, ${lw} layout sets${prunedM ? `, ${prunedM} removed` : ''}${prunedL ? `, ${prunedL} layout set(s) removed` : ''}.${gap}`, gap ? 'warn' : 'ok');
+    await noteAccess('modules', gap ? { status: 0, message: gap.trim() } : null, op);
   } catch (e) { await notePullFailure('modules', e, op); } finally { endPull(); }
 }
 
@@ -401,10 +412,10 @@ async function buildSchemaGraph(focusApi, depth, op = beginWorkspaceOp()) {
   }
   // functions (for the code<->module bridge)
   const funcs = [];
-  for await (const p of walk(dir)) {
+  for await (const p of walk(op.root)) {
     if (!p.endsWith('.dg')) continue;
     try {
-      const dg = await readFile(p); let meta = {}; try { meta = JSON.parse(await readFile(p.replace(/\.dg$/, '.meta.json'))); } catch (_) {}
+      const dg = await op.read(p); let meta = {}; try { meta = JSON.parse(await op.read(p.replace(/\.dg$/, '.meta.json'))); } catch (_) {}
       funcs.push({ file: p, api_name: meta.api_name || p.split('/').pop().replace(/\.dg$/, ''), name: meta.name, ns: meta.nameSpace || p.split('/')[0], dg });
     } catch (_) {}
   }
