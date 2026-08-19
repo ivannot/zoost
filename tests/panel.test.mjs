@@ -14,7 +14,7 @@ import { readdirSync } from 'node:fs';
 
 // The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
 // so a test about «the panel» reads them as the page composes them. Analytics is still one file.
-const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/sidepanel.js');
+const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/export.js') + '\n' + read('apps/crm/sidepanel.js');
 // Where an assistant function lives, per app: the CRM's moved to ai.js with the split.
 const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
 
@@ -3234,14 +3234,17 @@ test('every message named is defined, and every message defined is named', () =>
     // identically and names the messages the window defines, and the table itself cannot move there
     // because its wording differs per product. So the pair is read together - splitting a file must
     // not turn one of its own messages into an undefined one.
-    const mate = rel.endsWith('/graphlogic.js') ? rel.replace('/graphlogic.js', '/graphview.js')
-      : rel.endsWith('/graphview.js') ? rel.replace('/graphview.js', '/graphlogic.js')
-      // The CRM panel is the same shape since the split: ai.js names messages the table in
-      // sidepanel.js defines, and the two load into one scope.
-      : rel.endsWith('crm/ai.js') ? rel.replace('/ai.js', '/sidepanel.js')
-      : rel.endsWith('crm/sidepanel.js') ? rel.replace('/sidepanel.js', '/ai.js') : null;
+    // Files that load into one scope are one program for this purpose: a graph window is
+    // logic+view, and the CRM panel is sidepanel+ai+export since the split. The groups are
+    // listed once; a file in one reads with its whole group.
+    const GROUPS = [
+      ['apps/crm/graphlogic.js', 'apps/crm/graphview.js'],
+      ['apps/analytics/graphlogic.js', 'apps/analytics/graphview.js'],
+      ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js'],
+    ];
+    const group = GROUPS.find((g) => g.includes(rel));
     let src = read(rel);
-    if (mate) src += '\n' + read(mate);
+    if (group) src = group.map(read).join('\n');
     const used = new Set([...src.matchAll(/\bMSG\.(\w+)/g)].map((m) => m[1]));
     const at = src.indexOf('const MSG = {');
     if (at < 0) {
@@ -5374,7 +5377,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // emitted twice, chapter and contents entry both, from the commit that introduced it: the HTML
 // checks read the pages we *ship* and had never read the HTML we *generate*, which is the gap.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = read('apps/crm/export.js');
   const body = panel.slice(panel.indexOf('function buildExportHtml'), panel.indexOf('function buildExportMarkdown'));
 
   test('the export names each chapter once', () => {
