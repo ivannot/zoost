@@ -63,10 +63,12 @@ function renderSchedules() {
   });
 }
 async function refreshSchedules() {
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus('Refreshing schedules…', 'busy');
-  await pullSchedules();
-  setStatus(`${scheduleData.length} schedules.`, 'ok');
+  return runPullAction(async () => {
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+    setStatus('Refreshing schedules…', 'busy');
+    await pullSchedules();
+    setStatus(`${scheduleData.length} schedules.`, 'ok');
+  });
 }
 async function openSchedule(e) {
   previewLoad++;
@@ -213,7 +215,7 @@ function renderWorkflows() {
             + (e.schedDelays && e.schedDelays.length ? ' - after ' + e.schedDelays.join(', ') : ''))}">⏱ ${e.sched}</span>`
         : '';
       el.innerHTML = `<span class="st ${stCls}" title="${escA(wfTitle)}">${stCh}</span><span>${escHtml(e.name)}</span><span class="wftype">${escHtml(e.type)}</span>${schedBadge}${e.active ? '' : '<span class="wfoff">off</span>'}`;
-      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOneWf(e).then(() => { updateRow(e); updateMissingButton(); }); };
+      el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); runPullAction(() => downloadOneWf(e)).then(() => { updateRow(e); updateMissingButton(); }); };
       el.onclick = () => openWorkflow(e);
       tree.appendChild(el);
     });
@@ -578,9 +580,11 @@ function renderActions() {
   });
 }
 async function refreshActions() {
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus('Refreshing automation actions\u2026', 'busy');
-  await pullActions();
+  return runPullAction(async () => {
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+    setStatus('Refreshing automation actions\u2026', 'busy');
+    await pullActions();
+  });
 }
 /** One mapped field of a task, rendered from what it is rather than from what Zoho called it.
  *

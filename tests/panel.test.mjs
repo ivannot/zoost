@@ -23,7 +23,14 @@ const crmPanel = () => (_crmPanelText ??= CRM_FILES.map(read).join('\n'));
 const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
 // A slice by name, wherever the split put it: tries the app's files in page order and keeps
 // sliceFn's own guarantee - a name found nowhere still throws, so cover cannot vanish silently.
-const CRM_FILES = ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'];
+// Derived from the page, in its load order: four manual copies of this list existed (here, the two
+// composition maps in the Python checkers, keyvault.test) and a slice added to the HTML could have
+// shipped without entering any of them. The HTML is what Chrome loads, so it is the one authority.
+const CRM_FILES = [...read('apps/crm/sidepanel.html').matchAll(/<script\s+src="([^"]+\.js)"><\/script>/g)]
+  .map((m) => `apps/crm/${m[1]}`)
+  // The page also loads the shared libraries (keyvault, sample-org, the graph engine…), each with
+  // its own tests and its own message tables - «the panel» for these checks is its slices.
+  .filter((f) => !/(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$/.test(f));
 function sliceApp(app, name) {
   const files = app === 'crm' ? CRM_FILES : [`apps/${app}/sidepanel.js`];
   let lastErr;
@@ -783,9 +790,12 @@ test('the workspace bar carries the name the user gave it, next to the platform\
   // had one. Reported. The line itself is one function in both files, so a fix on one side is a fix
   // on the other by construction rather than by anyone remembering.
   const js = crmPanel();
-  const w = [...js.matchAll(/workspace = \{[^}]*\}/g)].map((m) => m[0]);
-  assert.ok(w.length >= 3, 'the graph stopped carrying its workspace');
-  for (const one of w) assert.match(one, /label: bound\?\.label/, `a graph is handed over without the workspace name: ${one.slice(0, 60)}`);
+  // One function now - graphIdentity() - where three inline objects used to drift; every publish
+  // goes through publishGraph, which stamps it.
+  assert.ok(/const graphIdentity = \(\) => \(\{[^}]*label: bound\?\.label/.test(js),
+            'the graph stopped carrying its workspace');
+  const pubs = (js.match(/await publishGraph\(/g) || []).length;
+  assert.ok(pubs >= 4, `only ${pubs} publishes go through the stamped path`);
   const an = read('apps/analytics/sidepanel.js');
   const aw = [...an.matchAll(/workspace: \{[^}]*\}/g)].map((m) => m[0]).filter((x) => /instance:/.test(x));
   assert.ok(aw.length >= 1, 'id=analytics the graph stopped carrying its workspace');
@@ -962,6 +972,8 @@ test('the call graph carries what fires the code and what the code reaches', asy
     readFile: async (p) => { if (!(p in files)) throw new Error('not on disk'); return files[p]; },
     Object, JSON, Set, Date,
   };
+  ctx.beginWorkspaceOp = () => ({ current: () => true, root: ctx.dir, read: async () => '{}' });
+  ctx.ensureGraph = ctx.ensureGraph;   // the stub the block already builds
   const { callGraphWithContext } = load([
     sliceConst('apps/crm/sidepanel.js', 'CTX_ID'),
     // Zoho writes both `functions` and `function`; the predicate travels with the function that
@@ -1005,7 +1017,8 @@ test('the diagram window can change subject, and says why when it cannot', async
     $: () => stat,
     DATA: { kind: 'calls' },
     chrome: { runtime: { sendMessage: async (m) => { sent.push(m); return { ok: false, error: 'no working folder is open in the panel' }; } } },
-    location: { reload: () => { reloaded = true; } },
+    location: { reload: () => { reloaded = true; }, search: '?graph=t1' },
+    URLSearchParams,
     alert: (m) => { alerted = m; },
   };
   const { wireSubject } = load([gfn('crm', 'wireSubject')], ctx);
@@ -1018,6 +1031,7 @@ test('the diagram window can change subject, and says why when it cannot', async
   await box.onclick({ target: seg[1] });
   assert.equal(sent.length, 1, 'the other subject did not ask for anything');
   assert.equal(sent[0].kind, 'schema');
+  assert.equal(sent[0].token, 't1', 'the switch does not say which window is asking');
   assert.equal(reloaded, false, 'it reloaded on a failed switch');
   assert.match(alerted, /no working folder is open in the panel/, 'the panel\'s own reason was swallowed');
   assert.match(alerted, /side panel/, 'the message does not name where the folder lives');
@@ -1045,6 +1059,9 @@ test('the panel refuses to build a graph it cannot read, without asking for a ge
     // moved there when it stopped carrying the Deluge source with it.
     chrome: { storage: { local: { set: async () => {} }, session: { set: async () => {} } } },
     setStatus: () => {}, bound: null, lastCtx: null,
+    WS_MOVED: 'moved',
+    beginWorkspaceOp: () => ({ current: () => true, root: {}, say: () => {} }),
+    graphIdentity: () => ({ instance: null, org: null, label: null }),
   }, over);
 
   let ctx = mk({});
@@ -3779,16 +3796,19 @@ for (const app of ['crm', 'analytics']) {
 
   test('nothing writes a graph to storage.local, and the window reads session', () => {
     for (const app of ['crm', 'analytics']) {
-      const panel = read(`apps/${app}/sidepanel.js`);
+      const panel = panelBody(app);
       const win = read(`apps/${app}/graphview.js`);
       assert.ok(!/storage\.local\.set\(\{\s*graphData/.test(panel),
                 `${app}: a graph is still written to storage.local, where it stays on disk`);
-      const writes = panel.match(/storage\.session\.set\(\{ graphData: [^}]*\}\)/g) || [];
+      // One key per window since the token change; every write still goes through graphForWindow.
+      const writes = panel.match(/storage\.session\.set\(\{ \[[^\]]*\]: [^}]*\}\)/g) || [];
       assert.ok(writes.length, `${app}: no graph is handed to the window at all`);
       writes.forEach((w) => assert.ok(/graphForWindow\(/.test(w),
         `${app}: a payload skips graphForWindow, so it may carry the source: ${w}`));
-      assert.ok(/storage\.session\.get\('graphData'\)/.test(win),
-                `${app}: the window still reads the graph from local storage`);
+      assert.ok(!/storage\.session\.set\(\{ graphData:/.test(panel),
+                `${app}: a writer still uses the shared slot, so two windows can consume each other's graph`);
+      assert.ok(/storage\.session\.get\(key\)/.test(win), `${app}: the window does not read its own key`);
+      assert.ok(/'graphData:' \+ token/.test(win), `${app}: the window ignores the token in its URL`);
       assert.ok(!/source_code/.test(win), `${app}: the window reads source_code, so stripping it breaks it`);
     }
   });

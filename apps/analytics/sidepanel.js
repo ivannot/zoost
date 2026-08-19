@@ -1700,6 +1700,20 @@ function buildSchemaGraph() {
 // And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
 // setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
 // structure resting on disk until the next diagram replaces it.
+/** Hand a graph to its own window: one key per window, not one slot for all of them - see the CRM
+ *  twin for the race this closes. The identity is stamped by buildSchemaGraph() itself, which is
+ *  synchronous and runs at the entry - so unlike the CRM there is no second photograph to take;
+ *  what the op guards here is the two awaits between the build and the window. Returns false when
+ *  the workspace moved before the window opened. */
+async function publishGraph(g, op) {
+  const token = crypto.randomUUID();
+  const key = 'graphData:' + token;
+  if (op && !op.current()) return false;
+  await chrome.storage.session.set({ [key]: graphForWindow(g) });
+  if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
+  await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 });
+  return true;
+}
 function graphForWindow(g) {
   const out = Object.assign({}, g, { nodes: {} });
   for (const [id, n] of Object.entries(g.nodes || {})) {
@@ -1711,6 +1725,7 @@ function graphForWindow(g) {
 }
 
 async function openSchemaGraph(focusId, depth) {
+  const op = beginWorkspaceOp();
   try {
     if (!Object.keys(schema).length) throw new Error('nothing pulled yet - run Pull all first');
     const g = buildSchemaGraph();
@@ -1719,8 +1734,7 @@ async function openSchemaGraph(focusId, depth) {
     // The name travels with the id, because the window can only report what it was handed: asked to
     // centre on a view the diagram does not contain, it would otherwise have to name a number.
     else if (focusId) { g.focus = focusId; g.focusName = nameOf(focusId, viewById()); }
-    await chrome.storage.session.set({ graphData: graphForWindow(g) });
-    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    if (!(await publishGraph(g, op))) return;
     status(`Schema: ${g.counts.nodes} tables, ${g.counts.edges} relations.`, 'ok');
   } catch (e) { status('Schema graph error: ' + (e.message || e), 'bad'); }
 }

@@ -37,7 +37,7 @@ buildExportHtml	09ed677fdedf	0ad5e298b237	divergent
 buildExportMarkdown	8bff5c9e643f	27b56f35ee82	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
-buildSchemaGraph	56a3776f4170	ee1997168a94	divergent
+buildSchemaGraph	9bc085e43673	ee1997168a94	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
 clearFocus	e18fb77e57ea	e18fb77e57ea	identical
@@ -149,7 +149,7 @@ noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	8c6fe19aa7e4	0c5941e396f4	divergent
-openSchemaGraph	9545037888e6	a7c076c85bf1	divergent
+openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
 openZohoHome	2df809b3babd	ccaa6b79d370	divergent
 orphanNote	37b836d68cf4	d2b31003f0c6	divergent
@@ -160,6 +160,7 @@ passKind	684df355a097	bdf6d02817df	divergent
 pdfTitle	93b3d0697faa	d692e674db7f	divergent
 pickRoot	d5773996ddb6	e548144342d4	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
+publishGraph	d0be8011ce8b	b8f2e1dcd089	divergent
 pullAll	fdb27a3fec34	16648d424ff9	divergent
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
 refRow	854405aca965	947afeea3b64	divergent

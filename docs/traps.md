@@ -185,7 +185,8 @@ These all failed **silently**, with no console error. They are the expensive kin
   sit flush against the pane below was tried and reverted - it makes the header and the content argue
   about where the line is, and he said so.
 - **A repaint does not happen inside the task that schedules it, and one `requestAnimationFrame` is
-  not a painted frame.** The diagram window's Visual tab runs an O(n²) force layout on the main
+  not a painted frame.** (Historical note - the Visual tab named here has since been removed; the
+  lesson is about repaints, not about that tab.) It ran an O(n²) force layout on the main
   thread - measured at 53ms for 50 nodes, 359ms for 150, 1.4s for 300 and 5.9s at the 600-node cap -
   and the window simply froze with the previous view still on screen. A spinner drawn in the same
   task never reaches the screen, and neither does one drawn inside a single rAF: that callback runs

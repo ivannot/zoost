@@ -39,10 +39,15 @@ LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
 # write in ai.js to a `let` declared in sidepanel.js is exactly as global as one next to the
 # declaration - and reading each file's own declarations alone made those writes invisible the day
 # the panel was split. The names are the union of the page's files; the findings stay per file.
-PAGES = {
-    'crm': ['apps/crm/sidepanel.js', 'apps/crm/ai.js', 'apps/crm/export.js', 'apps/crm/health.js', 'apps/crm/automation.js', 'apps/crm/modules.js', 'apps/crm/connections.js'],
-    'analytics': ['apps/analytics/sidepanel.js'],
-}
+# Derived from each page's own <script> tags: the HTML is what Chrome loads, so a slice added there
+# tomorrow enters this check without anyone remembering a list. The shared libraries are excluded -
+# they have their own tests and no per-workspace globals of the panels' kind.
+_LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
+def _page_files(app):
+    html = open(os.path.join(ROOT, 'apps', app, 'sidepanel.html'), encoding='utf-8').read()
+    return [f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
+            if not _LIB.search(m)]
+PAGES = {'crm': _page_files('crm'), 'analytics': _page_files('analytics')}
 FILES = [f for fs in PAGES.values() for f in fs]
 
 # A check that can stop the function before the write lands.

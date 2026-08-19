@@ -22,9 +22,15 @@ async function rebuildConnections() {
     const _cfg = await readCfg(); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     const cat = await loadConnectionsIndex();
     // usage: which functions reference each connection (join meta.connections[].name)
-    const g = await ensureGraph().catch(() => null);
+    // A graph that failed to build is not a graph with nothing in it: `.catch(() => null)` here
+    // turned «source unreadable» into `uses: []` on every row, «1 connections.» in green, and a
+    // Used/Unused filter that was false exactly when nothing had been measured. Overtaken is the
+    // one silent exit; everything else is a real failure and is said.
+    let g;
+    try { g = await ensureGraph(op); }
+    catch (e) { if ((e && e.message) === WS_MOVED) return; setStatus('Connections: could not build the usage graph - ' + ((e && e.message) || e), 'bad'); return; }
     const usedBy = {};
-    if (g) Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
+    Object.values(g.nodes).forEach((n) => (n.connections || []).forEach((c) => { if (c && c.name) (usedBy[c.name] ||= []).push(n); }));
     if (!op.current()) return;
     connectionData = cat.map((c) => ({ ...c, path: 'connections/' + c.name, uses: (usedBy[c.name] || []).slice() }));
     // connections a function references but that are NOT in the catalogue (renamed / removed)
@@ -73,9 +79,11 @@ function renderConnections() {
   });
 }
 async function refreshConnections() {
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus('Refreshing connections…', 'busy');
-  await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
+  return runPullAction(async () => {
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+    setStatus('Refreshing connections…', 'busy');
+    await pullConnections();   // re-pulls the whole catalogue and rebuilds the view (like the schedules dot)
+  });
 }
 function openConnection(c) {
   previewLoad++;

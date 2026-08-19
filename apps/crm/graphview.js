@@ -2,7 +2,7 @@
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
-/* graphview.js - Explorer + Visual graph. The graph arrives via chrome.storage.session
+/* graphview.js - Explorer + boxed call/schema diagram. The graph arrives via chrome.storage.session
    (per browser session, like the unlocked key); the reader's own settings stay in .local. */
 let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
@@ -147,8 +147,14 @@ const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
-  const store = await chrome.storage.session.get('graphData');
-  DATA = store.graphData;
+  // One key per window: the token rides the URL, so two diagrams open together cannot consume each
+  // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
+  // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
+  const token = new URLSearchParams(location.search).get('graph');
+  const key = token ? 'graphData:' + token : 'graphData';
+  const store = await chrome.storage.session.get(key);
+  DATA = store[key];
+  if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
   if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   $('s-nodes').textContent = DATA.counts.nodes;
@@ -526,8 +532,8 @@ function select(id, nopush) {
   document.querySelectorAll('.crumbs a[data-id]').forEach((a) => (a.onclick = () => select(a.dataset.id)));
   if (schema) wireLayoutZone(n);
   $('main').scrollTop = 0;
-  // Focus mode: the Explorer selection IS the context. Set it here so that switching to Visual or
-  // the boxed diagram afterwards already shows this item. It was gated on `schema`, so on a call
+  // Focus mode: the Explorer selection IS the context. Set it here so that switching to the boxed
+  // diagram afterwards already shows this item. It was gated on `schema`, so on a call
   // graph selecting a function left the diagram centred on whatever it opened with - the same
   // "one of a set" miss as everywhere else: the rule is about the three projections agreeing, and
   // it has nothing to do with which kind of thing is being projected.
@@ -722,7 +728,7 @@ function wireSubject() {
     const was = $('statline').innerHTML;
     $('statline').innerHTML = '<b>Building\u2026</b> asking the panel for the other graph';
     try {
-      const r = await chrome.runtime.sendMessage({ type: 'graphSwitch', kind: el.dataset.k });
+      const r = await chrome.runtime.sendMessage({ type: 'graphSwitch', kind: el.dataset.k, token: new URLSearchParams(location.search).get('graph') });
       if (!r || !r.ok) throw new Error((r && r.error) || 'no answer');
       location.reload();
     } catch (err) {
@@ -869,7 +875,7 @@ function erShowMaybeHeavy() {
   } else requestAnimationFrame(erShow);
 }
 
-// Explorer, Visual and ER are three projections of one context. A selection that cannot be projected
+// Explorer and the diagram are two projections of one context. A selection that cannot be projected
 // must not leave the other two showing the previous one: reported, selecting a module Zoho would not
 // describe left the ER diagram on the last valid item, so the list said one thing and the diagram
 // another - the worst possible state, because both looked right on their own.
@@ -1108,8 +1114,8 @@ function egoStat() {
   erCountRefresh();
 }
 function setFocus(id) {
-  // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
-  // projections of the same context, so whoever changes the focus updates all of them.
+  // Re-centre the shared focus WITHOUT changing view. Explorer and the diagram are two
+  // projections of the same context, so whoever changes the focus updates both.
   if (!id || !N[id] || id === curFocus) return;
   // Except a module Zoho refused to describe. It has no fields and no lookups *that anyone read*, so
   // all three projections would come out empty - and an empty diagram reads as "this relates to
@@ -1136,8 +1142,9 @@ function setFocus(id) {
   if (curView === 'er') erShow(); else if (curView === 'rel') relRender();
 }
 // `nameMode` decides what a node is called - the display label or the internal api_name - and it
-// feeds label(), which the list and the boxes both use. Its button lived in the Visual toolbar and
-// came out with it; it belongs with the other diagram controls, since that is what it changes.
+// feeds label(), which the list and the boxes both use. Its button lived in the toolbar of the
+// Visual view (a canvas force graph, removed - docs/diagrams.md keeps the story) and came out with
+// it; it belongs with the other diagram controls, since that is what it changes.
 $('nameToggle').onclick = () => {
   nameMode = nameMode === 'display' ? 'internal' : 'display';
   $('nameToggle').textContent = 'Name: ' + nameMode;

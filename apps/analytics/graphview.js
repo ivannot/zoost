@@ -2,7 +2,7 @@
 const PRODUCT_NAME = chrome.runtime.getManifest().name;   // renaming happens in manifest.json only
 const PRODUCT_URL = 'https://zoost.it';
 const PRODUCT_AUTHOR = 'Ivan Notaristefano';
-/* graphview.js - Explorer + Visual graph. The graph arrives via chrome.storage.session
+/* graphview.js - Explorer + boxed call/schema diagram. The graph arrives via chrome.storage.session
    (per browser session, like the unlocked key); the reader's own settings stay in .local. */
 let DATA = null, N = {}, ids = [], sel = null, hist = [], nameMode = 'display';
 const $ = (id) => document.getElementById(id);
@@ -116,8 +116,14 @@ const KINDCOL = (k) => declaredHue(k) || (k ? hueFor(k) : '');
 const NSCOL = (ns) => KINDCOL(ns) || '#94a3b8';
 
 (async function init() {
-  const store = await chrome.storage.session.get('graphData');
-  DATA = store.graphData;
+  // One key per window: the token rides the URL, so two diagrams open together cannot consume each
+  // other's payload. Consumed on read - a window owns its graph from here on, and a stale slot must
+  // not outlive it. Without a token (the render harness opens the page bare) the plain key answers.
+  const token = new URLSearchParams(location.search).get('graph');
+  const key = token ? 'graphData:' + token : 'graphData';
+  const store = await chrome.storage.session.get(key);
+  DATA = store[key];
+  if (DATA && token) { try { await chrome.storage.session.remove(key); } catch (_) {} }
   if (!DATA) { $('main').innerHTML = '<div class="empty">No graph data. Open it from the side panel.</div>'; return; }
   N = DATA.nodes; ids = Object.keys(N).sort((a, b) => a.localeCompare(b));
   $('s-nodes').textContent = DATA.counts.nodes;
@@ -667,7 +673,8 @@ function erShowMaybeHeavy() {
   } else requestAnimationFrame(erShow);
 }
 
-// ---------------- Visual (canvas force graph) ----------------
+// ---------------- layout state (born in the removed Visual canvas view; the boxed diagram
+// still seeds its positions from it - docs/diagrams.md keeps the story) ----------------
 let nodesA = [], edgesA = [], posX = {}, posY = {}, vx = {}, vy = {};
 let laidOutKey = '';   // the set the force positions belong to, never a boolean - see settle()
 let egoDepth = 2, egoSet = null, egoLevel = {}, curFocus = null, maxEgoDepth = 6;
@@ -850,8 +857,8 @@ function egoStat() {
   erCountRefresh();
 }
 function setFocus(id) {
-  // Re-centre the shared focus WITHOUT changing view. Explorer / Visual / ER are three
-  // projections of the same context, so whoever changes the focus updates all of them.
+  // Re-centre the shared focus WITHOUT changing view. Explorer and the diagram are two
+  // projections of the same context, so whoever changes the focus updates both.
   if (!id || !N[id] || id === curFocus) return;
   // Asking to look at something is asking for it back: the Explorer beside the diagram still lists
   // what has been taken off it, so the focus can be moved to a box that is not drawn, and a diagram

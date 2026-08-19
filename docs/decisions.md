@@ -291,7 +291,8 @@ states it** - the same discipline as grepping a corrected claim rather than the 
 guard above returns early from `setFocus()`, so the ER diagram went on drawing the last valid item
 while the Explorer list said this one - reported, and caused by the fix rather than surviving it.
 Both panes looked right on their own, which is the worst state a two-pane interface can be in.
-`updateProjectableTabs()` runs on every `select()`: **Visual, ER and Relations are unavailable while
+`updateProjectableTabs()` runs on every `select()` (historical note - superseded: the tabs named here
+were Visual, ER and Relations; Visual has since been removed): **the diagram tabs are unavailable while
 the selection cannot be projected**, and if the reader is already looking at one of them it goes back
 to Explorer instead of leaving a stale diagram under a new title. **Disabled, not hidden** - this is
 the textbook temporarily-unavailable case, one click on another module restores it, and a tab strip
@@ -356,3 +357,96 @@ it travelled all the way into the diagram as if it were a table.
 node called "undefined". The bridge now accepts an object with `objId`/`id` or a bare id, requires it
 to look like a Zoho id, drops what does not, and **counts what it dropped** so a silent gap becomes a
 stated one.
+
+## The summary cache: three defects and what each taught
+
+<!-- Moved from CLAUDE.md 2026-08-19: true about one area, read when touching the cache. -->
+
+**What the summary holds is a reading, never a judgement.** `functions/meta-index.json` keeps, per
+function, what opening its files produced: the stale mark, the modified date, the *references* the
+parser found in the source, and the size counts. It does **not** keep edges - an edge is a reference
+resolved against the whole workspace, and that answer changes the day a function is added or renamed,
+so a stored edge would be a cached verdict with nothing to say when it went stale. The resolution runs
+on every build, from one extractor: `buildGraph()` hands back what it read so the panel writes down
+the parser's own findings rather than running a second regex over the same text. A test builds the
+graph both ways and compares it node for node, because the whole point of the shortcut is that nobody
+should have to wonder whether it sees something different.
+
+Measured on 5,000 functions: opening 60,015 file-system calls -> **8** warm; the diagram 40,014 ->
+**17** after the first build; a code search 60,012 -> **0** after the first. What stays is reading
+each source once - searching text means having read it - and that now happens in tranches with the
+count on screen instead of a dead panel.
+
+**A cache is not finished until you have proved it cannot serve an old photograph.** The summary
+above was checked against the folder walk and the comment said the readings «age exactly when the
+file changes, which the walk detects». They do not: a walk sees paths appear and disappear, not a
+file whose bytes changed while its name stayed the same. An outside review asked for the invariant to
+be *proved* rather than assumed - and both halves failed the first test written for it. A function
+pulled again in place kept its old references in the diagram, and its old date in the tree.
+
+The fix is at the point where this panel writes: every write marks the function it touched, the next
+load re-reads exactly those, and the mark clears only when the summary has been written out again.
+No fingerprint and no second read to check the first: we know what we wrote, because we wrote it.
+**What no cheap check can see is somebody else's write** - an editor, a `git checkout`, a synced
+folder - so ↻ Refresh now distrusts the summary and reads everything, and its tooltip says so.
+
+**And a cache with two writers has a third failure nobody looks for: they overwrite each other.**
+`saveMetaIndex()` describes what a `.meta.json` says and `saveGraphFacts()` what a `.dg` says, into
+one file - and the first version of the first one *rebuilt the file from scratch*, throwing away
+every reference and size the other had written. Nothing broke: the diagram simply read five thousand
+sources again, and the summary looked complete while being useless to it. A silent loss of the whole
+optimisation, found only because a review asked how the two interleave. Two writers, one file: merge,
+never replace, and let each clear only the marks it refreshed.
+
+The ordering question that found it is worth keeping too. `attachFnStats()` is started and
+deliberately not awaited, so a graph build runs *inside* the tree load - which means «did the
+metadata writer declare a function done before the source was re-read» had no answer in the code, only
+in how the promises happened to resolve. Now each reader snapshots the marks **before its first
+await** and each writer clears **only its own**, so there is no ordering to reason about. The hazard
+was reachable only above `STATS_LIMIT`, where the build does not happen during the load - which is
+exactly the kind of window that is never hit in testing and always hit by somebody's real org.
+
+**And when two producers write one file, give the file one writer.** Both savers did
+read-modify-write on the summary, and merging was not enough: each read version X, each merged its
+own half, and whoever wrote second put back what the other had just changed. Proved by marking a
+function stale and running the two together - the file came back saying it was fresh, undone by the
+writer that has no opinion about that field at all. `updateMetaIndex(mutator)` queues each change
+behind the one in flight and reads the merge base *inside* the queue, so there is one writer and two
+producers. No lock and no version field: the contention is between two known callers in one document.
+
+The half worth remembering is the diagnosis. Each of the three defects in this cache was found by
+someone asking *how do the two halves interleave* and refusing «the promises resolve favourably» as
+an answer - and each time the fix was not more bookkeeping but a sharper question: **what is a fact,
+who produced it, and who has the authority to call it fresh.**
+
+The rule this leaves: **for every fast path, write the test that tries to make it lie before you
+write the fast path.** `tools/probe.py` rewrites a source and a meta in a real browser and checks
+that the diagram and the tree both moved; it goes red on a one-line regression, which was proved by
+putting the defect back.
+
+**Then the rule was turned on the caches that were already here, and four of the six were wrong.**
+That is the part worth keeping: the discipline was written the day the summary was fixed, and the
+summary was the *only* cache it had ever been applied to. Asking the same question of the rest -
+what does this hold, what makes it untrue, who is supposed to notice - found `in: code` searching a
+function as it read before the edit Zoho had just synced, «which rule fires this action» describing
+rules the workflows pull had replaced, and both of the assistant's catalogues answering from the org
+state of a minute earlier. None of them is visible: **the mirror on disk is right in every case, and
+the panel is confidently out of date about it** - there is nothing on screen to compare against,
+which is why they had survived since they were written. The two that were right were right by luck.
+
+The class, which is not about caches: **invalidation must derive from the event, never from the
+memory of whoever caused it.** Each of these was dropped at the call site that had just written the
+file - three call sites remembered and two did not, and the three that were right were right by
+luck, since nothing would have said otherwise. The fix is the one this repository keeps arriving at
+from different directions: put the knowledge at the single point the event passes through.
+`noteWrite(rel)` in both panels now maps *what was written* to *what must be forgotten*, and it is
+reached from `writeFile` **and `removeFile`** - a deletion is a write, and the pull that prunes
+functions Zoho no longer has was the sixth path that had to remember. A write path added tomorrow
+inherits all of it without being told it exists.
+
+And the discipline itself is now a check rather than a sentence, because this file has already
+established what happens to the other kind: `tests/panel.test.mjs` derives every `*Cache` declared
+in `apps/*/*.js` and fails when one is named by no test - no allow-list, so tomorrow's is covered by
+the naming convention the code already follows. It says what it misses, too: a cache whose name does
+not end in `Cache` escapes it, and being *mentioned* by a test is not the same as its staleness
+being *proved*. The mention is what makes an absence visible; the proof is still judgement.

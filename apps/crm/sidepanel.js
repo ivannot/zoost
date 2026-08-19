@@ -1041,8 +1041,8 @@ function fnRowEl(e) {
   const lineSlot = `<span class="rest rfl"${st ? ` title="${st.lines} lines · ${st.codeLines} code lines · ${(st.chars / 1024).toFixed(1)} KB"` : ''}>${st ? st.lines + 'L' : ''}</span>`;
   const callSlot = `<span class="rest rc"${st && st.apiCalls ? ` title="${st.apiCalls} outbound call(s): ${st.invokeurl} invokeurl · ${st.crm} zoho.crm · ${st.zoho} other Zoho service${st.sendmail ? ' · ' + st.sendmail + ' sendmail' : ''}"` : ''}>${st && st.apiCalls ? st.apiCalls + '↗' : ''}</span>`;
   el.innerHTML = `<span class="st ${stCls}" title="${escA(stTitle)}">${stCh}</span><span class="fname">${escHtml(labelOf(e))}</span>${restSlot}${nsSlot}${lineSlot}${callSlot}`;
-  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
-  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else downloadOne(e).then(() => { updateRow(e); updateMissingButton(); }); };
+  el.querySelector('.st').onclick = (ev) => { ev.stopPropagation(); runPullAction(() => downloadOne(e)).then(() => { updateRow(e); updateMissingButton(); }); };
+  el.onclick = () => { if (e.downloaded) openFromTree(e.path); else runPullAction(() => downloadOne(e)).then(() => { updateRow(e); updateMissingButton(); }); };
   return el;
 }
 // Sorting by a number answers a different question from browsing by namespace, so a numeric sort
@@ -1398,6 +1398,27 @@ function fnStats(src) {
 // And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
 // setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
 // structure resting on disk until the next diagram replaces it.
+/** The workspace identity, photographed at the entry of a graph action - not read after the build.
+ *  Every diagram entry read `bound`/`lastCtx` *after* its awaits, so a build begun in one workspace
+ *  could be stamped with the identity of the next: data of A presented as B, which a mirror can
+ *  never do. Reproduced by an outside scan. */
+const graphIdentity = () => ({ instance: bound?.instance || lastCtx?.instance || null,
+                               org: bound?.org || lastCtx?.org || null, label: bound?.label || null });
+/** Hand a graph to its own window: one key per window, not one slot for all of them.
+ *  Two windows - a call graph and an ER - shared `graphData`, so two opens close together could each
+ *  consume the other's payload. The token rides the URL; the window consumes exactly its own key.
+ *  Checked against the op before the write and again before the window, and the key is removed
+ *  rather than left if the workspace moved between the two. Returns false when it did. */
+async function publishGraph(g, op, ws) {
+  g.workspace = ws;
+  const token = crypto.randomUUID();
+  const key = 'graphData:' + token;
+  if (op && !op.current()) return false;
+  await chrome.storage.session.set({ [key]: graphForWindow(g) });
+  if (op && !op.current()) { try { await chrome.storage.session.remove(key); } catch (_) {} return false; }
+  await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html?graph=' + token), type: 'normal', width: 1240, height: 840 });
+  return true;
+}
 function graphForWindow(g) {
   const out = Object.assign({}, g, { nodes: {} });
   for (const [id, n] of Object.entries(g.nodes || {})) {
@@ -2771,8 +2792,8 @@ function ctxNode(id, name, category, namespace, file, extra) {
     description: '', connections: [], entity: category,
   }, extra || {});
 }
-async function callGraphWithContext() {
-  const g = await ensureGraph();
+async function callGraphWithContext(op = beginWorkspaceOp()) {
+  const g = await ensureGraph(op);
   const nodes = {};
   for (const [id, n] of Object.entries(g.nodes)) {
     nodes[id] = Object.assign({}, n, { calls: n.calls.slice(), called_by: n.called_by.slice(), entity: 'functions' });
@@ -2894,14 +2915,15 @@ async function callGraphWithContext() {
 }
 async function openGraph() {
   if (!dir) return;
+  const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
-    await requirePerm(dir);
-    setStatus('Building graph…', 'busy'); await refreshContext(); const g = await callGraphWithContext();
-    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.session.set({ graphData: graphForWindow(g) });
-    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    await requirePerm(op.root);
+    if (!op.current()) return;
+    setStatus('Building graph…', 'busy'); await refreshContext();
+    const g = await callGraphWithContext(op);
+    if (!(await publishGraph(g, op, ws))) return;
     setStatus(`Graph: ${g.counts.nodes} nodes, ${g.counts.edges} edges.`, 'ok');
-  } catch (e) { setStatus(MSG.graphErr + e.message, 'bad'); }
+  } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(MSG.graphErr + e.message, 'bad'); }
 }
 
 // ---------- health / audit ----------
@@ -2921,20 +2943,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'pullProgress' && pullActive) setStatus(`Pulling… ${msg.done}/${msg.total}`, 'busy');
   // The diagram window asking for the other drawing. It has no folder access of its own - by design,
   // and it stays that way - so the graph is built here and left in storage for it to reload from.
-  if (msg?.type === 'graphSwitch') { buildGraphFor(msg.kind).then(sendResponse); return true; }
+  if (msg?.type === 'graphSwitch') { buildGraphFor(msg.kind, msg.token).then(sendResponse); return true; }
 });
-async function buildGraphFor(kind) {
+async function buildGraphFor(kind, token) {
+  const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
     if (!dir) throw new Error('no working folder is open in the panel');
     // ensurePerm only *asks* when the permission has lapsed, and asking needs a user gesture the
     // panel does not have here. If it has lapsed the switch stops and says so, rather than throwing
     // a DOMException whose message names neither the folder nor the remedy.
     if (!(await hasPerm(dir))) throw new Error('the working folder needs re-granting - click once in the panel');
-    const g = kind === 'schema' ? await buildSchemaGraph() : await callGraphWithContext();
+    const g = kind === 'schema' ? await buildSchemaGraph(undefined, undefined, op) : await callGraphWithContext(op);
     if (!g.counts.nodes) throw new Error(kind === 'schema' ? 'no modules pulled yet' : 'no functions pulled yet');
-    g.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.session.set({ graphData: graphForWindow(g) });
-    setStatus(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
+    if (!op.current()) throw new Error(WS_MOVED);
+    g.workspace = ws;
+    // The window's own key: it sent its token with the ask, and reloads the same URL afterwards.
+    await chrome.storage.session.set({ ['graphData:' + token]: graphForWindow(g) });
+    op.say(`Diagram switched to ${kind === 'schema' ? 'modules' : 'functions'}.`, 'ok');
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
@@ -3919,6 +3944,18 @@ function workspaceChangeRefuse() {
   updateWsButtons();
   return true;
 }
+/** Every user entry that re-reads Zoho holds the pull flag for its whole span - which is what
+ *  blocks the workspace selector and refuses a second pull on top. The promise «the workspace
+ *  cannot change while a pull writes it» was true of the two main buttons only: the per-row
+ *  refreshes, the single-item downloads and the module resync all ran with `pullBusy` false, so
+ *  the selector stayed live under exactly the writes it exists to protect. Reproduced by an
+ *  outside scan on refreshSchedules(). The depth counter absorbs nesting; `finally` is what makes
+ *  an exception unable to leave the panel locked. */
+async function runPullAction(work) {
+  if (pullBusy) return false;
+  setPullBusy(true);
+  try { await work(); return true; } finally { setPullBusy(false); }
+}
 async function pullCurrent() {
   if (pullBusy) return;
   const label = tabLabel(viewMode || 'functions').toLowerCase();   // the registry is the only list of these
@@ -3946,18 +3983,19 @@ async function pullEverything() {
   if (pullBusy) return;
   const op = beginWorkspaceOp();   // «Pull all» is one act, and it belongs to the workspace it began in
   setPullBusy(true);
+  try {
   const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
   const skipped = [];
   for (const t of TABS) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
     // so without this the remaining areas would carry on pulling the tab's org into the folder the
     // user had just opened, which is only refused if that folder is already bound to another org.
-    if (!op.current()) { setPullBusy(false); return; }
+    if (!op.current()) return;
     if (isForbidden(t.id)) continue;
     if (!isPulled(t.id)) { skipped.push(t.id); continue; }
     try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
   }
-  if (!op.current()) { setPullBusy(false); return; }
+  if (!op.current()) return;
   try { await rebuildActive(); } catch (_) {}
   renderTabs();                                   // a refusal discovered just now changes the set
   // Both notes, because they are different facts and neither may be swallowed: one is what Zoho
@@ -3966,7 +4004,9 @@ async function pullEverything() {
   const note = forbiddenNote()
     + (skipped.length ? ` · ${skipped.map(tabLabel).join(', ')} skipped by your settings` : '');
   if (note) setStatus($('stxt').textContent + note, 'warn');
-  setPullBusy(false);
+  // In a finally, because the body above calls renderers and helpers that are not individually
+  // guarded - one exception used to leave `pullBusy` true and the whole panel locked until reopen.
+  } finally { setPullBusy(false); }
 }
 
 // ---------- modules ----------
@@ -4380,30 +4420,32 @@ $('pull').onclick = pullEverything; $('pullone').onclick = pullCurrent; // One g
  *  pressing Pull runtime looked as though nothing happened at all, refusal included. */
 function healthSay(text, cls) { const el = $('healthmsg'); if (el) { el.textContent = text || ''; el.className = cls || ''; } }
 async function pullHealthRuntime() {
-  // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
-  // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
-  // switching tabs to fix something no tab can fix.
-  if (isSample()) { sampleRefuse(); healthSay(MSG.sampleNoOrg, 'warn'); return; }
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
-  const b = $('healthpull'); b.disabled = true;
-  healthSay('Reading from Zoho\u2026');
-  try {
-    // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
-    // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
-    // an outside scan: results of the workspace that was left, published into the one that arrived.
-    const op = beginWorkspaceOp();
-    await pullFailures();
-    if (!op.current()) return;
-    failIndex = null;                       // the file changed under it
-    const built = await buildHealth();
-    if (!op.current()) return;
-    healthData = built;
-    renderHealthView();
-    const fx = await failuresIndex(op);
-    if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
-    healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
-  } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
-  finally { b.disabled = false; }
+  return runPullAction(async () => {
+    // A sample is not a mismatch, and saying so is the difference between an explanation and a wrong
+    // answer: there is no org behind it to re-read, and «the tab does not match» would send somebody
+    // switching tabs to fix something no tab can fix.
+    if (isSample()) { sampleRefuse(); healthSay(MSG.sampleNoOrg, 'warn'); return; }
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
+    const b = $('healthpull'); b.disabled = true;
+    healthSay('Reading from Zoho\u2026');
+    try {
+      // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
+      // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
+      // an outside scan: results of the workspace that was left, published into the one that arrived.
+      const op = beginWorkspaceOp();
+      await pullFailures();
+      if (!op.current()) return;
+      failIndex = null;                       // the file changed under it
+      const built = await buildHealth();
+      if (!op.current()) return;
+      healthData = built;
+      renderHealthView();
+      const fx = await failuresIndex(op);
+      if (!fx || !op.current()) return;   // overtaken: the runtime it read belongs to the workspace that was left
+      healthSay(runtimeSummary(fx.all.length, fx.capped), 'ok');
+    } catch (e) { setStatus(MSG.rereadErr + e.message, 'bad'); healthSay(MSG.rereadErr + e.message, 'bad'); }
+    finally { b.disabled = false; }
+  });
 }
 $('healthpull').onclick = pullHealthRuntime;
 $('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; modNamesCache = null; await rebuildActive();

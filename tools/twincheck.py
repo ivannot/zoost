@@ -55,8 +55,14 @@ ROOT = Path(__file__).resolve().parent.parent
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
 # The CRM panel is composed of two classic scripts since the split - one shared scope on the page -
 # so «the panel's code» is their concatenation, or every AI function reads as removed on one side.
-SCRIPTS = {'crm': [ROOT / 'apps/crm/sidepanel.js', ROOT / 'apps/crm/ai.js', ROOT / 'apps/crm/export.js', ROOT / 'apps/crm/health.js', ROOT / 'apps/crm/automation.js', ROOT / 'apps/crm/modules.js', ROOT / 'apps/crm/connections.js'],
-           'analytics': [ROOT / 'apps/analytics/sidepanel.js']}
+# Derived from each page's own <script> tags - the HTML is the authority on what composes a panel -
+# minus the shared libraries, which are compared by their own byte-identical entries in the ledger.
+_LIB = re.compile(r'(sample-org|idb|keyvault|product-help|highlight|graph-core|tabs)\.js$')
+def _page_scripts(app):
+    html = (ROOT / f'apps/{app}/sidepanel.html').read_text(encoding='utf-8')
+    return [ROOT / f'apps/{app}/{m}' for m in re.findall(r'<script\s+src="([^"]+\.js)"></script>', html)
+            if not _LIB.search(m)]
+SCRIPTS = {'crm': _page_scripts('crm'), 'analytics': _page_scripts('analytics')}
 
 # Same structural element, different name. The divergence is real and worth removing one day; until
 # then it is declared here so the tool compares them as the one thing they are.

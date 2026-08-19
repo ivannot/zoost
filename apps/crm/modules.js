@@ -180,34 +180,43 @@ function renderModules() {
   }
 }
 async function resyncModule(m) {
-  const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
-  if (mismatchRefuse()) return;
-  if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return; }
-  if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
-  setStatus(`Resyncing ${m.api_name}…`, 'busy');
-  const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
-  let mod = {}; try { mod = JSON.parse(await op.read(m.path)); } catch (_) {}
-  // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
-  // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
-  // module Zoho has just described, which is the same class of lie in the other direction.
-  if (!r?.ok) {
-    if (isRefusal(r?.status)) {
-      mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
-      try { await op.write(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
-      m.unreadable = mod.unreadable; m.error = false;
-      renderModules(); if (currentPath === m.path) openModule(m.path);
-      setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
+  return runPullAction(async () => {
+    const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
+    if (mismatchRefuse()) return;
+    if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'bad'); return; }
+    if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); return; }
+    setStatus(`Resyncing ${m.api_name}…`, 'busy');
+    const r = await toBridge({ cmd: 'fetchModuleFields', apiName: m.api_name });
+    let mod = {}; try { mod = JSON.parse(await op.read(m.path)); } catch (_) {}
+    // Re-asking is the whole point of this dot, so the answer is recorded either way - a refusal
+    // dated today, or its removal. Leaving a stale `unreadable` behind would keep the banner up on a
+    // module Zoho has just described, which is the same class of lie in the other direction.
+    if (!r?.ok) {
+      if (isRefusal(r?.status)) {
+        mod.unreadable = { status: r.status, code: r.code || null, message: r.detail || r.error || 'no answer', at: new Date().toISOString() };
+        // The memory follows the file, never the other way round: with the write swallowed, the
+        // panel showed the new verdict, the disk kept the old one, and the next load put the old
+        // one back - a UI that told the truth for exactly one screenful. Same rule as below.
+        try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
+        catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
+        if (!op.current()) return;
+        m.unreadable = mod.unreadable; m.error = false;
+        renderModules(); if (currentPath === m.path) openModule(m.path);
+        setStatus(`${m.api_name}: ${moduleRefusal(m.unreadable).text}`, 'warn');
+        return;
+      }
+      m.error = true; renderModules();
+      setStatus(`Resync of ${m.api_name} failed: ${r?.error || 'no answer'}`, 'warn');
       return;
     }
-    m.error = true; renderModules();
-    setStatus(`Resync of ${m.api_name} failed: ${r?.error || 'no answer'}`, 'warn');
-    return;
-  }
-  mod.fields = r.fields; delete mod.unreadable;
-  try { await op.write(m.path, JSON.stringify(mod, null, 2)); } catch (_) {}
-  m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
-  renderModules(); if (currentPath === m.path) openModule(m.path);
-  setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
+    mod.fields = r.fields; delete mod.unreadable;
+    try { await op.write(m.path, JSON.stringify(mod, null, 2)); }
+    catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(`Could not save ${m.api_name}: ${(e && e.message) || e}`, 'bad'); return; }
+    if (!op.current()) return;
+    m.fieldCount = r.fields.length; m.lookupCount = r.fields.filter((f) => f.lookup).length; m.error = false; m.unreadable = null;
+    renderModules(); if (currentPath === m.path) openModule(m.path);
+    setStatus(`Resynced ${m.api_name} (${m.fieldCount} fields).`, 'ok');
+  });
 }
 /** The values of a picklist, on request and downwards. Laid out on one line - eight of them, then
  *  «…(+31)» - a module with long options made the fields table scroll sideways with no end, and a
@@ -367,17 +376,18 @@ async function openModule(path, layoutId) {
 }
 
 // ---------- modules: schema graph (modules as nodes, lookups as edges) + function bridge ----------
-async function buildSchemaGraph(focusApi, depth) {
-  // modules
+async function buildSchemaGraph(focusApi, depth, op = beginWorkspaceOp()) {
+  // Reads through the op: this walks and reads for seconds on a large org, and it used to resolve
+  // every path against whatever folder was current by then.
   const modPaths = [];
-  for await (const p of walk(dir)) if (isModuleFile(p)) modPaths.push(p);
+  for await (const p of walk(op.root)) if (isModuleFile(p)) modPaths.push(p);
   const mods = [];
-  for (const p of modPaths) { try { const m = JSON.parse(await readFile(p)); m._path = p; mods.push(m); } catch (_) {} }
+  for (const p of modPaths) { try { const m = JSON.parse(await op.read(p)); m._path = p; mods.push(m); } catch (_) {} }
   // Field -> layout membership. The module JSON only carries a layout summary; the full
   // sections/fields structure lives in modules/layouts/<Module>.json (written by Pull Modules).
   for (const m of mods) {
     let full = [];
-    try { full = JSON.parse(await readFile(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
+    try { full = JSON.parse(await op.read(`modules/layouts/${sanitize(m.api_name || 'unknown')}.json`)); } catch (_) {}
     if (!Array.isArray(full) || !full.length) continue;
     m._layList = full.map((l) => ({ id: l.id, name: l.name, visible: l.visible !== false }));
     const memb = {};
@@ -454,42 +464,41 @@ async function buildSchemaGraph(focusApi, depth) {
 // Open the call graph centred on one function, at a depth. The same shape as openSchemaFocus for
 // modules, and deliberately so: the window, the controls and the wording are the ones already there.
 async function openCallFocus(id, depth) {
+  const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
-    await requirePerm(dir);
-    setStatus(`Building the graph for ${id}\u2026`, 'busy');
-    const g = await callGraphWithContext();
+    await requirePerm(op.root);
+    op.say(`Building the graph for ${id}\u2026`, 'busy');
+    const g = await callGraphWithContext(op);
     if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });
-    gg.workspace = { instance: bound?.instance || lastCtx?.instance || null, org: bound?.org || lastCtx?.org || null, label: bound?.label || null };
-    await chrome.storage.session.set({ graphData: graphForWindow(gg) });
-    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    if (!(await publishGraph(gg, op, ws))) return;
     const n = g.nodes[id];
     setStatus(`Graph of ${id} (depth ${gg.depth}): calls ${n.calls.length}, called by ${n.called_by.length}.`, 'ok');
-  } catch (e) { setStatus(MSG.graphErr + e.message, 'bad'); }
+  } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus(MSG.graphErr + e.message, 'bad'); }
 }
 async function openSchemaFocus(apiName, depth) {
+  const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
-    await requirePerm(dir);
-    setStatus(`Building relations graph for ${apiName}\u2026`, 'busy');
-    const g = await buildSchemaGraph();   // full graph; the ER window filters by focus + depth client-side (adjustable there)
+    await requirePerm(op.root);
+    op.say(`Building relations graph for ${apiName}\u2026`, 'busy');
+    const g = await buildSchemaGraph(undefined, undefined, op);   // full graph; the ER window filters by focus + depth client-side (adjustable there)
     if (!g.counts.nodes) throw new Error('No modules pulled yet - pull in Modules mode.');
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
     if (g.nodes[apiName].unreadable) throw new Error(`Zoho would not describe ${apiName}, so it has no fields and no relations to draw.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
-    await chrome.storage.session.set({ graphData: graphForWindow(g) });
-    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    if (!(await publishGraph(g, op, ws))) return;
     setStatus(`Relations of ${apiName} (depth ${g.depth}): ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
-  } catch (e) { setStatus('Relations graph error: ' + e.message, 'bad'); }
+  } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus('Relations graph error: ' + e.message, 'bad'); }
 }
 async function openSchemaGraph() {
+  const op = beginWorkspaceOp(), ws = graphIdentity();
   try {
-    await requirePerm(dir);
-    setStatus('Building schema graph…', 'busy'); await refreshContext();
-    const g = await buildSchemaGraph();
+    await requirePerm(op.root);
+    op.say('Building schema graph…', 'busy'); await refreshContext();
+    const g = await buildSchemaGraph(undefined, undefined, op);
     if (!g.counts.nodes) throw new Error((emptyReason() || 'No modules pulled yet - click Pull in Modules mode.'));
-    await chrome.storage.session.set({ graphData: graphForWindow(g) });
-    await chrome.windows.create({ url: chrome.runtime.getURL('graphview.html'), type: 'normal', width: 1240, height: 840 });
+    if (!(await publishGraph(g, op, ws))) return;
     setStatus(`Schema: ${g.counts.nodes} modules, ${g.counts.edges} lookups.`, 'ok');
-  } catch (e) { setStatus('Schema graph error: ' + e.message, 'bad'); }
+  } catch (e) { if ((e && e.message) !== WS_MOVED) setStatus('Schema graph error: ' + e.message, 'bad'); }
 }
