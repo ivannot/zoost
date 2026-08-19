@@ -11,6 +11,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read, ROOT } from './slice.mjs';
 import { readdirSync } from 'node:fs';
+
+// The CRM panel is two files since the split - ai.js and sidepanel.js load into one shared scope,
+// so a test about «the panel» reads them as the page composes them. Analytics is still one file.
+const crmPanel = () => read('apps/crm/ai.js') + '\n' + read('apps/crm/sidepanel.js');
+// Where an assistant function lives, per app: the CRM's moved to ai.js with the split.
+const aiFile = (app) => (app === 'crm' ? `apps/${app}/ai.js` : `apps/${app}/sidepanel.js`);
+
 import { join } from 'node:path';
 
 /** A named function or const out of a graph window, wherever it now lives: everything both products
@@ -223,7 +230,7 @@ const focusCtx = {
   JSON, Object,
 };
 const { aiFocus } = load([sliceFn('apps/crm/sidepanel.js', 'moduleRefusal'),
-                          sliceFn('apps/crm/sidepanel.js', 'aiFocus')], focusCtx);
+                          sliceFn('apps/crm/ai.js', 'aiFocus')], focusCtx);
 
 function looking(at, extra = {}) {
   Object.assign(globalThis, { __cur: at, __wf: [], __sc: [], __cn: [], __md: [], __files: {} }, extra);
@@ -1637,7 +1644,7 @@ test('Clear and switching workspace empty the chat through the same function', (
   // workspace also drops every cache and the queue of removals still owed on disk, none of which has
   // anything to do with a conversation. The shared part is the conversation; the rest is not shared.
   for (const app of ['crm', 'analytics']) {
-    const src = read(`apps/${app}/sidepanel.js`);
+    const src = app === 'crm' ? crmPanel() : read(`apps/${app}/sidepanel.js`);
     const clear = /function aiClear\(\)[^\n]*clearConversationState\(\);/.test(src)
                || /function aiClear\(\)[^\n]*dropWorkspaceState\(\);/.test(src);
     assert.ok(clear, `${app}: aiClear does not use the shared helper`);
@@ -2714,7 +2721,9 @@ test('the panel does not claim what it has not looked at, and a poll does not un
 // duplicate back is a red test rather than something noticed later by eye. They read the source with
 // comments stripped, because the helper's own comment quotes the string it replaced.
 
-const panelBody = (app) => read(`apps/${app}/sidepanel.js`).replace(/^\s*\/\/.*$/gm, '');
+// The panel as the page composes it: the CRM is ai.js + sidepanel.js since the split, and a test
+// about «the panel» must not care which file a function landed in.
+const panelBody = (app) => (app === 'crm' ? crmPanel() : read(`apps/${app}/sidepanel.js`)).replace(/^\s*\/\/.*$/gm, '');
 const countOf = (s, lit) => s.split(lit).length - 1;
 
 test('the sample refusal is written once per panel', () => {
@@ -3226,7 +3235,11 @@ test('every message named is defined, and every message defined is named', () =>
     // because its wording differs per product. So the pair is read together - splitting a file must
     // not turn one of its own messages into an undefined one.
     const mate = rel.endsWith('/graphlogic.js') ? rel.replace('/graphlogic.js', '/graphview.js')
-      : rel.endsWith('/graphview.js') ? rel.replace('/graphview.js', '/graphlogic.js') : null;
+      : rel.endsWith('/graphview.js') ? rel.replace('/graphview.js', '/graphlogic.js')
+      // The CRM panel is the same shape since the split: ai.js names messages the table in
+      // sidepanel.js defines, and the two load into one scope.
+      : rel.endsWith('crm/ai.js') ? rel.replace('/ai.js', '/sidepanel.js')
+      : rel.endsWith('crm/sidepanel.js') ? rel.replace('/sidepanel.js', '/ai.js') : null;
     let src = read(rel);
     if (mate) src += '\n' + read(mate);
     const used = new Set([...src.matchAll(/\bMSG\.(\w+)/g)].map((m) => m[1]));
@@ -3972,7 +3985,7 @@ test('Clear is absent while there is nothing to clear, in both panels', () => {
   // is something here you cannot have». Clear stayed on an empty conversation, offering to remove
   // nothing. Reported by the author, against his own rule.
   for (const app of ['crm', 'analytics']) {
-    const js = read(`apps/${app}/sidepanel.js`);
+    const js = panelBody(app);
     const i = js.indexOf('function aiRenderMessages');
     assert.ok(i > 0, `${app}: the conversation is not rendered here any more`);
     const body = js.slice(i, i + 900);
@@ -5897,7 +5910,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // Three from the same cold scans, each invisible on screen: a number at its ceiling that looks like
 // the whole truth, a helper that would throw if anything called it, and a page serialised per request.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   const bridge = read('apps/crm/content-bridge.js');
 
   test('the failures list says it was read to a ceiling, on every surface that shows it', () => {
@@ -6050,7 +6063,7 @@ test('every cache in a shipped panel is named by something that tests it', () =>
 // the pull that had just run. The distinction `layouts_read` already makes, made once more, and said
 // on each surface that shows the list.
 {
-  const panel = read('apps/crm/sidepanel.js');
+  const panel = crmPanel();
   const bridge = read('apps/crm/content-bridge.js');
 
   test('the bridge records whether the related lists were read at all', () => {
@@ -6253,7 +6266,7 @@ test('analytics: the model is guarded, not only the disk', () => {
     const clear = sliceFn('apps/crm/sidepanel.js', 'clearConversationState');
     for (const c of ['failedRemovals', 'graphCache', 'codeCache'])
       assert.ok(!new RegExp(c).test(clear), `Clear still throws away ${c}`);
-    assert.ok(/clearConversationState\(\);/.test(sliceFn('apps/crm/sidepanel.js', 'aiClear')),
+    assert.ok(/clearConversationState\(\);/.test(sliceFn('apps/crm/ai.js', 'aiClear')),
               'Clear still goes through the workspace-change path');
     const drop = sliceFn('apps/crm/sidepanel.js', 'dropWorkspaceState');
     assert.ok(/failedRemovals\.clear\(\)/.test(drop) && /clearConversationState\(\)/.test(drop),
@@ -6449,7 +6462,7 @@ for (const app of ['crm', 'analytics']) {
     vm.runInContext(sliceConst(`apps/${app}/sidepanel.js`, app === 'crm' ? 'escHtml' : 'esc') + '\n'
       + (app === 'analytics' ? 'const escHtml = esc;\n' : '')
       + sliceConst(`apps/${app}/sidepanel.js`, 'escQ') + '\n'
-      + sliceFn(`apps/${app}/sidepanel.js`, 'aiMarkdown'), ctx);
+      + sliceFn(aiFile(app), 'aiMarkdown'), ctx);
     return vm.runInContext('aiMarkdown', ctx)(src);
   };
   for (const app of ['crm', 'analytics']) {
@@ -6661,7 +6674,7 @@ for (const app of ['crm', 'analytics']) {
       String, Error,
     };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'aiSend'), ctx);
+    vm.runInContext(sliceFn(aiFile(app), 'aiSend'), ctx);
     const pending = vm.runInContext('aiSend()', ctx);
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     ctx.aiMessages = [];
@@ -6685,7 +6698,7 @@ for (const app of ['crm', 'analytics']) {
     let cfgReads = 0;
     const ctx = { aiBusy: true, aiGetCfg: async () => { cfgReads++; return {}; } };
     vm.createContext(ctx);
-    vm.runInContext(sliceFn(`apps/${app}/sidepanel.js`, 'aiSend'), ctx);
+    vm.runInContext(sliceFn(aiFile(app), 'aiSend'), ctx);
     await vm.runInContext('aiSend()', ctx);
     assert.equal(cfgReads, 0, 'a disabled button was bypassed by the keyboard shortcut');
   });

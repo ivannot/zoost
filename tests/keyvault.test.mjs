@@ -415,7 +415,7 @@ test('a failed unlock says so beside the field, not only in the status bar', () 
   // The element existed, the text arrived, and nothing was on screen. A verdict about a field belongs
   // next to that field; the status line is a second copy, not the only one.
   for (const app of ['crm', 'analytics']) {
-    const js = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
+    const js = panelSrc(app);
     const html = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.html'), 'utf8');
     assert.match(html, /id="ailockmsg"/, `${app}: no message element inside the unlock row`);
     assert.match(js, /function aiLockMsg\(text\)/, `${app}: aiLockMsg() is gone`);
@@ -469,14 +469,26 @@ test('the footer is outside the container the AI view covers', () => {
  * shipped, `node --check` passed (the syntax is fine) and only *running* the function found it. The
  * constant is read from the panel rather than restated here, so the test cannot pass on a wording
  * the product no longer uses. */
+// The CRM panel is two files since the split - ai.js and sidepanel.js share one scope on the page,
+// so a test about «the panel» reads them composed. Analytics is still one file.
+function panelSrc(app) {
+  const parts = ['sidepanel.js', 'ai.js']
+    .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
+  return parts.join('\n');
+}
 function errText(app) {
-  const src = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
+  // The CRM's assistant lives in ai.js since the panel was split; MSG stays in sidepanel.js. The
+  // search covers both files so the twin that has not been split reads exactly as before.
+  const files = ['ai.js', 'sidepanel.js']
+    .map((f) => { try { return fs.readFileSync(path.join(ROOT, 'apps', app, f), 'utf8'); } catch { return ''; } });
+  const src = files.find((t) => t.includes('function friendlyError(e)')) || '';
+  const msgSrc = files.find((t) => /\nconst MSG = \{/.test(t)) || '';
   const start = src.indexOf('function friendlyError(e)');
-  if (start < 0) throw new Error(`${app}/sidepanel.js: friendlyError() not found — renamed or removed.`);
+  if (start < 0) throw new Error(`${app}: friendlyError() not found — renamed or removed.`);
   const end = src.indexOf('\n}', src.indexOf('{', start)) + 2;
   const ctx = vm.createContext({});
-  const msg = src.match(/\nconst MSG = \{[\s\S]*?\n\};/);
-  if (!msg) throw new Error(`${app}/sidepanel.js: MSG not found — renamed or removed.`);
+  const msg = msgSrc.match(/\nconst MSG = \{[\s\S]*?\n\};/);
+  if (!msg) throw new Error(`${app}: MSG not found — renamed or removed.`);
   vm.runInContext(msg[0], ctx);
   vm.runInContext(src.slice(start, end), ctx);
   return vm.runInContext('friendlyError', ctx);
@@ -506,7 +518,7 @@ test('the AI path re-grants the folder at the click, where a gesture still exist
   // activation, so the same call made inside the agent loop — after a round trip to the model — is
   // refused for want of a gesture, which is the error itself. Both entry points are real clicks.
   for (const app of ['crm', 'analytics']) {
-    const js = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
+    const js = panelSrc(app);
     assert.match(js, /async function aiEnsureFiles\(\)/, `${app}: aiEnsureFiles() is gone`);
     const send = js.slice(js.indexOf('async function aiSend'), js.indexOf('aiBusy = true', js.indexOf('async function aiSend')));
     assert.match(send, /await aiEnsureFiles\(\)/, `${app}: aiSend asks the model before it asks for the folder`);
@@ -834,7 +846,7 @@ test('the assistant sends you to the part of the settings it means', () => {
   // the reader on it, and an already-open window is moved rather than merely focused - otherwise
   // asking twice does nothing visible and reads as a broken button.
   for (const app of ['crm', 'analytics']) {
-    const panel = fs.readFileSync(path.join(ROOT, 'apps', app, 'sidepanel.js'), 'utf8');
+    const panel = panelSrc(app);
     assert.ok(/openSettings\('#ai'\)/.test(panel), `${app}: the gear opens the top of the page`);
     const i = panel.indexOf('async function openSettings');
     const body = panel.slice(i, i + 700);

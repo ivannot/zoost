@@ -53,7 +53,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # that must hold across all of them — that a file names its own product and no other — and it globs
 # rather than holding a list, so a file added tomorrow is covered without anyone remembering.
 PANELS = {'crm': ROOT / 'apps/crm/sidepanel.html', 'analytics': ROOT / 'apps/analytics/sidepanel.html'}
-SCRIPTS = {'crm': ROOT / 'apps/crm/sidepanel.js', 'analytics': ROOT / 'apps/analytics/sidepanel.js'}
+# The CRM panel is composed of two classic scripts since the split - one shared scope on the page -
+# so «the panel's code» is their concatenation, or every AI function reads as removed on one side.
+SCRIPTS = {'crm': [ROOT / 'apps/crm/sidepanel.js', ROOT / 'apps/crm/ai.js'],
+           'analytics': [ROOT / 'apps/analytics/sidepanel.js']}
 
 # Same structural element, different name. The divergence is real and worth removing one day; until
 # then it is declared here so the tool compares them as the one thing they are.
@@ -491,7 +494,7 @@ def main():
     print('\n'.join(solo) if solo else '  none')
     findings += len(solo)
 
-    js = {k: p.read_text(encoding='utf-8') for k, p in SCRIPTS.items()}
+    js = {k: '\n'.join(f.read_text(encoding='utf-8') for f in fs) for k, fs in SCRIPTS.items()}
     hnd = {k: handlers(v) for k, v in js.items()}
     print('\n== shared controls whose attached behaviour differs ==')
     bdiffs = []

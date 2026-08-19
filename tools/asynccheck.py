@@ -34,7 +34,16 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(ROOT, 'tools', 'asyncglobals.txt')
-FILES = ['apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js']
+# ai.js since the split: same page, same shared scope, same class of state.
+# Grouped per page, not per file: classic scripts on one page share a single lexical scope, so a
+# write in ai.js to a `let` declared in sidepanel.js is exactly as global as one next to the
+# declaration - and reading each file's own declarations alone made those writes invisible the day
+# the panel was split. The names are the union of the page's files; the findings stay per file.
+PAGES = {
+    'crm': ['apps/crm/sidepanel.js', 'apps/crm/ai.js'],
+    'analytics': ['apps/analytics/sidepanel.js'],
+}
+FILES = [f for fs in PAGES.values() for f in fs]
 
 # A check that can stop the function before the write lands.
 GUARD = re.compile(r'op\.current\(\)|\bcurrent\(\)|sameWs\(|gen !== wsGen|gen === wsGen'
@@ -99,10 +108,22 @@ def writes_in(code):
         yield name, bool(re.match(r'\s*await\b', rest)), m.start()
 
 
+def page_globals(rel):
+    for files in PAGES.values():
+        if rel in files:
+            names = set()
+            for f in files:
+                with open(os.path.join(ROOT, f), encoding='utf-8') as fh:
+                    names |= globals_of(fh.read())
+            return names
+    with open(os.path.join(ROOT, rel), encoding='utf-8') as fh:
+        return globals_of(fh.read())
+
+
 def findings(rel):
     with open(os.path.join(ROOT, rel), encoding='utf-8') as fh:
         src = fh.read()
-    names = globals_of(src)
+    names = page_globals(rel)
     out = []
     for fname, body, at in functions(src):
         if 'await' not in body:

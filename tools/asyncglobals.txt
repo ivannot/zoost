@@ -25,12 +25,12 @@ apps/analytics/sidepanel.js	refreshWorkspaces	dir
 apps/analytics/sidepanel.js	refreshWorkspaces	wsList
 apps/analytics/sidepanel.js	restoreRoot	root
 apps/analytics/sidepanel.js	restoreRoot	rootGranted
+apps/crm/ai.js	aiBuildSeed	aiSeedOmitted
+apps/crm/ai.js	aiBuildSeed	aiSeedSize
+apps/crm/ai.js	aiBuildSeed	aiSeedTruncated
+apps/crm/ai.js	aiFocus	actionUsers
 apps/crm/sidepanel.js	addSampleWorkspace	rootGranted
 apps/crm/sidepanel.js	addSampleWorkspace	sampleBusy
-apps/crm/sidepanel.js	aiBuildSeed	aiSeedOmitted
-apps/crm/sidepanel.js	aiBuildSeed	aiSeedSize
-apps/crm/sidepanel.js	aiBuildSeed	aiSeedTruncated
-apps/crm/sidepanel.js	aiFocus	actionUsers
 apps/crm/sidepanel.js	crmFrameId	_crmFrame
 apps/crm/sidepanel.js	filterByConnection	connFilterSet
 apps/crm/sidepanel.js	filterByConnection	connectionFilter
