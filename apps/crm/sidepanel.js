@@ -2703,14 +2703,21 @@ async function openRxMenu() {
   // The read yielded: the tab, the mode or the workspace may have moved meanwhile, and every one of
   // those hides the button. A menu for a control that is no longer there is not opened.
   if ($('rxpick').style.display === 'none') return;
-  const items = list || [];
+  // Alphabetical by name, the way a reader scans a menu - storage order is append order, which
+  // says when a pattern was saved and nothing else. The Settings list keeps storage order: rows
+  // being edited must not reshuffle under the hands renaming them.
+  const items = (list || []).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   const rawQ = $('find').value.trim();
   // The save row exists only when there is something it could do: a pattern in the box that parses,
   // regex mode on, and a list that was actually read - saving over one that was not would overwrite
   // entries nobody has seen. A control that can do nothing goes away rather than sitting there.
   const savable = list !== null && regexMode && rawQ && !!rxCompile(rawQ).re;
+  // A pattern already in the list is named, not re-offered: a second copy would be two menu
+  // entries that search identically, and the name is how the reader finds the one they have.
+  const already = savable ? items.find((x) => x.pattern === rawQ) : null;
   menu.innerHTML = items.map((x, i) => `<button data-rx="${escA(i)}"><span>${escHtml(x.name)}</span><span class="rxpat">${escHtml(x.pattern)}</span></button>`).join('')
-    + (savable ? `<div class="rxsave"><input id="rxsavename" placeholder="Name this pattern\u2026" maxlength="60" aria-label="Name for the pattern in the search box"><button data-save="1" title="Save the pattern in the search box under this name">Save</button><div class="rxerr" id="rxsaveerr"></div></div>` : '')
+    + (already ? `<div class="rxsave"><span class="rxnote">This pattern is already saved as "${escHtml(already.name)}".</span></div>`
+      : savable ? `<div class="rxsave"><input id="rxsavename" placeholder="Name this pattern\u2026" maxlength="60" aria-label="Name for the pattern in the search box"><button data-save="1" title="Save the pattern in the search box under this name">Save</button><div class="rxerr" id="rxsaveerr"></div></div>` : '')
     + `<button class="rxman" data-man="1">${list === null ? 'The saved patterns could not be read. ' : (items.length ? '' : 'No saved patterns yet. ')}Manage\u2026</button>`;
   menu.querySelectorAll('[data-rx]').forEach((b) => {
     b.onclick = () => {
@@ -2734,6 +2741,8 @@ async function openRxMenu() {
         $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
         return;
       }
+      const dupP = items.find((x) => x.pattern === rawQ);
+      if (dupP) { $('rxsaveerr').textContent = `This pattern is already saved as "${dupP.name}".`; return; }
       try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
       catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
       openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
@@ -2880,6 +2889,10 @@ async function getCodeCache(op = beginWorkspaceOp()) {
     }
   }
   if (!op.current()) return null;
+  // The line this loop opened is closed by the loop: a «busy» status left standing reads as a hang,
+  // and it stood - «Reading sources 150/150…» with the spinner going, over a search long finished.
+  // The Analytics twin (ensureSqlCache) has always closed its own. Reported.
+  if (rows.length > TRANCHE) op.say(`${m.size} source(s) read.`, 'ok');
   codeCache = m; return m;
 }
 async function contentSearch() {

@@ -3887,10 +3887,41 @@ for (const app of ['crm', 'analytics']) {
   const { rxProblems } = load([sliceFn('apps/crm/options.js', 'rxProblems')]);
 
   test('the seed and the validation are byte-identical in the twins', () => {
-    assert.equal(sliceFn('apps/crm/background.js', 'rxDefaults'),
-      sliceFn('apps/analytics/background.js', 'rxDefaults'), 'why=the seeds have drifted');
+    // Four copies of the starters: two backgrounds (the seeders) and two options pages (Restore
+    // the starters). Any one drifting means restore brings back something the seed never wrote.
+    const seed = sliceFn('apps/crm/background.js', 'rxDefaults');
+    for (const f of ['apps/analytics/background.js', 'apps/crm/options.js', 'apps/analytics/options.js']) {
+      assert.equal(sliceFn(f, 'rxDefaults'), seed, 'why=the starters in ' + f + ' have drifted from the seed');
+    }
     assert.equal(sliceFn('apps/crm/options.js', 'rxProblems'),
       sliceFn('apps/analytics/options.js', 'rxProblems'), 'why=the validation has drifted');
+  });
+
+  test('restoring the starters brings back only what is missing, and only when something is', () => {
+    for (const app of ['crm', 'analytics']) {
+      const o = read(`apps/${app}/options.js`);
+      const h = o.slice(o.indexOf("$('rxRestore').onclick"), o.indexOf("$('saveRx')"));
+      assert.ok(/if \(!have\.has\(d\.name\.toLowerCase\(\)\)\) rxCur\.push\(d\)/.test(h),
+        'why=' + app + ' restore overwrites kept or edited entries instead of adding the absent ones');
+      assert.ok(/rxDefaults\(\)\.some\(\(d\) => !have\.has\(d\.name\.toLowerCase\(\)\)\)/.test(o),
+        'why=' + app + ' shows a restore button with nothing to restore');
+    }
+  });
+
+  test('an expression already in the list is refused everywhere it could be saved twice', () => {
+    assert.ok(/are the same expression/.test(
+      rxProblems([{ name: 'A', pattern: 'x+' }, { name: 'B', pattern: 'x+' }])),
+      'why=the Settings page saves two entries that search identically');
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"));
+      assert.ok(/items\.find\(\(x\) => x\.pattern === rawQ\)/.test(m),
+        'why=' + app + ' menu re-offers Save for a pattern the list already holds');
+      assert.ok(/already saved as/.test(m),
+        'why=' + app + ' hides the fact instead of naming the entry that holds the pattern');
+      assert.ok(/\.slice\(\)\.sort\(\(a, b\) => a\.name\.localeCompare\(b\.name, undefined, \{ sensitivity: 'base' \}\)\)/.test(m),
+        'why=' + app + ' menu lists patterns in append order, which a reader cannot scan');
+    }
   });
 
   test('the seed only writes over a key that has never existed', () => {
@@ -4026,6 +4057,16 @@ for (const app of ['crm', 'analytics']) {
       assert.ok(/if \(e\.key === 'Escape'\) \$\('rxmenu'\)/.test(panel),
         'why=' + app + ' menu cannot be dismissed from the keyboard');
     }
+  });
+
+  test('the cache loop closes the status line it opened', () => {
+    // «Reading sources 150/150…» stood with the spinner going after the read had finished, and a
+    // busy status left standing is indistinguishable from a hang. The Analytics twin has always
+    // said «N queries read.» at the end; this holds the CRM to the same shape.
+    const crm = read('apps/crm/sidepanel.js');
+    const cc = crm.slice(crm.indexOf('async function getCodeCache'), crm.indexOf('async function contentSearch'));
+    assert.ok(/source\(s\) read\.`, 'ok'\)/.test(cc),
+      'why=the busy line from the tranche loop is never closed');
   });
 
   test('a content search that finished late cannot land, and SQL typing is debounced', () => {

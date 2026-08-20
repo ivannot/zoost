@@ -200,10 +200,12 @@
     <p class="sub">Named regular expressions, offered by the <b>▾</b> menu beside the panel's search box
       when the full-text search is on. JavaScript syntax, case-insensitive, <code>^</code> and
       <code>$</code> match at each line. The two starters - an email address, and the 18-digit numeric
-      id Zoho gives every record - can be edited or removed like anything you add.</p>
+      id Zoho gives every record - can be edited or removed like anything you add, and
+      <b>Restore the starters</b> puts back whichever is missing without touching the rest.</p>
     <div id="rxlist"></div>
     <div class="row" style="margin-top:12px">
       <button id="rxAdd">Add pattern</button>
+      <button id="rxRestore" style="display:none" title="Put back whichever of the two starters is missing - everything else stays exactly as it is">Restore the starters</button>
       <button id="saveRx" class="primary">Save patterns</button>
     </div>
   </section>

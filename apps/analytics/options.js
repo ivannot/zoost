@@ -455,6 +455,16 @@ $('zohoDc').onchange = async () => {
 const SEC_DIAGRAM = 'Diagram layout';
 
 // ---------- saved search patterns ----------
+// The same two starters the background seeds - a deliberate copy, because an options page and a
+// service worker share no scope; a test holds all four copies to the same bytes.
+function rxDefaults() {
+  return [
+    { name: 'Email address', pattern: '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}' },
+    // No documented format exists: Zoho's own community puts CRM record ids at 18 digits
+    // (Creator at 19), and the bound keeps ordinary numbers out of the matches.
+    { name: 'Zoho ID', pattern: '\\b\\d{18}\\b' },
+  ];
+}
 // The list behind the panel's ▾ menu. The background seeded the first two on install; this page
 // and the menu's own Save row are the writers, and an emptied list stays empty.
 // What stops a list from saving, named per row - or null. A declaration for tests/slice.mjs, and
@@ -470,6 +480,10 @@ function rxProblems(list) {
   const names = list.map((x) => String(x.name || '').trim().toLowerCase());
   const dup = names.find((n, i) => names.indexOf(n) !== i);
   if (dup) return `Two patterns share the name "${dup}" - the menu could not tell them apart.`;
+  for (let i = 0; i < list.length; i++) {
+    const j = list.findIndex((x) => String(x.pattern || '') === String(list[i].pattern || ''));
+    if (j !== i) return `"${String(list[j].name).trim()}" and "${String(list[i].name).trim()}" are the same expression - one of them is enough.`;
+  }
   return null;
 }
 let rxCur = [];
@@ -480,8 +494,12 @@ let rxLoadFailed = true;
 function renderRx() {
   if (rxLoadFailed) {
     $('rxlist').innerHTML = '<p class="sub"><b>The stored list could not be read.</b> Nothing is shown and nothing can be saved over it - reload this page to try again.</p>';
+    $('rxRestore').style.display = 'none';
     return;
   }
+  // Offered only while a starter is missing: restoring what is already there is nothing to do.
+  const have = new Set(rxCur.map((x) => x.name.trim().toLowerCase()));
+  $('rxRestore').style.display = rxDefaults().some((d) => !have.has(d.name.toLowerCase())) ? '' : 'none';
   $('rxlist').innerHTML = rxCur.map((x, i) => `<div class="rxrow" data-i="${escA(i)}">
     <input type="text" class="rxname" value="${escA(x.name)}" placeholder="Name" aria-label="Pattern name">
     <input type="text" class="rxpat" value="${escA(x.pattern)}" placeholder="Regular expression" aria-label="Pattern">
@@ -505,6 +523,13 @@ async function loadRx() {
   renderRx();
 }
 $('rxAdd').onclick = () => { rxCur.push({ name: '', pattern: '' }); renderRx(); markDirty('rxShortcuts'); };
+$('rxRestore').onclick = () => {
+  // Only what is absent comes back: the starters you kept - possibly edited - stay exactly as
+  // they are, and so does everything you added. Save is still what persists it, like any edit.
+  const have = new Set(rxCur.map((x) => x.name.trim().toLowerCase()));
+  rxDefaults().forEach((d) => { if (!have.has(d.name.toLowerCase())) rxCur.push(d); });
+  renderRx(); markDirty('rxShortcuts');
+};
 $('saveRx').onclick = async () => {
   if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
   const bad = rxProblems(rxCur);
