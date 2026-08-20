@@ -1966,8 +1966,9 @@ test('every element the side panel reaches for is in its own markup', () => {
   // window's list above. Five are built into innerHTML by the module detail pane and wired straight
   // after; `pvfailgo` is the same shape in the failures block; and `q` is not in this document at
   // all - it is the search box of the **exported HTML report**, written into a <script> string for a
-  // file that opens somewhere else entirely.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q']);
+  // file that opens somewhere else entirely. `rxsavename` and `rxsaveerr` are the ▾ menu's Save
+  // row, built into its innerHTML only when there is a pattern worth saving and wired straight after.
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr']);
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
@@ -3978,6 +3979,25 @@ for (const app of ['crm', 'analytics']) {
       const h = panel.slice(panel.indexOf("$('rxmode').onclick"), panel.indexOf("$('rxpick').onclick"));
       assert.ok(/if \(!regexMode\) \$\('find'\)\.value = '';/.test(h),
         'why=' + app + ' keeps the pattern as a literal search when the toggle goes off');
+      // The same rule on the other way out of full-text: the in: switch back to names.
+      const sm = panel.slice(panel.indexOf("$('smode').onclick"), panel.indexOf("$('rxmode').onclick"));
+      assert.ok(/&& regexMode\) \{ regexMode = false; \$\('rxmode'\)\.classList\.remove\('on'\); \$\('find'\)\.value = ''; \}/.test(sm),
+        'why=' + app + ' carries the pattern into the name search when the scope switch leaves full-text');
+    }
+  });
+
+  test('the menu saves only what it could: a parsing pattern, onto a list that was read', () => {
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      const m = panel.slice(panel.indexOf('async function openRxMenu'), panel.indexOf("$('rxpick').onclick"));
+      assert.ok(/const savable = list !== null && regexMode && rawQ && !!rxCompile\(rawQ\)\.re/.test(m),
+        'why=' + app + ' offers Save over an unread list, or for a pattern that does not parse');
+      assert.ok(/x\.name\.trim\(\)\.toLowerCase\(\) === name\.toLowerCase\(\)/.test(m),
+        'why=' + app + ' saves two patterns the menu cannot tell apart');
+      assert.ok(/\[\.\.\.items, \{ name, pattern: rawQ \}\]/.test(m),
+        'why=' + app + ' overwrites the list instead of appending to it');
+      assert.ok(/if \(e\.key === 'Enter'\) doSave\(\)/.test(m),
+        'why=' + app + ' makes the keyboard walk to the Save button');
     }
   });
 

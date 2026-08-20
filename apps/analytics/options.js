@@ -455,8 +455,8 @@ $('zohoDc').onchange = async () => {
 const SEC_DIAGRAM = 'Diagram layout';
 
 // ---------- saved search patterns ----------
-// The list behind the panel's ▾ menu. The background seeded the first two on install; from here on
-// this page is the only writer, and an emptied list stays empty.
+// The list behind the panel's ▾ menu. The background seeded the first two on install; this page
+// and the menu's own Save row are the writers, and an emptied list stays empty.
 // What stops a list from saving, named per row - or null. A declaration for tests/slice.mjs, and
 // byte-identical in both apps' options pages: a test holds the twins to the same rules.
 function rxProblems(list) {

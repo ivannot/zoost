@@ -4,8 +4,8 @@ chrome.sidePanel
   .catch((e) => console.warn('[zoost/analytics] setPanelBehavior:', e));
 
 // The two saved search patterns everyone starts with. Seeded once, and only when the key has never
-// existed: an emptied list stays empty, or the presets would be undeletable. The panel and the
-// options page only read; this is the one writer of the initial state.
+// existed: an emptied list stays empty, or the presets would be undeletable. The options page and
+// the panel menu's Save row write later ones; this is the one writer of the initial state.
 // A declaration, byte-identical in both apps' backgrounds: a test holds the twins to the same seed.
 function rxDefaults() {
   return [

@@ -3267,6 +3267,9 @@ $('smode').onclick = async () => {
   $('smode').classList.toggle('on', searchMode === 'sql');
   $('rxmode').style.display = $('rxpick').style.display = searchMode === 'sql' ? '' : 'none';
   if (searchMode !== 'sql') $('rxmenu').classList.remove('show');
+  // Leaving full-text with the pattern on takes the pattern with it, like the toggle going off:
+  // a regex read as a name filter is a search for text that does not exist. Reported.
+  if (searchMode !== 'sql' && regexMode) { regexMode = false; $('rxmode').classList.remove('on'); $('find').value = ''; }
   $('find').placeholder = searchMode === 'name' ? 'Find\u2026' : 'Find inside the SQL\u2026';
   if (searchMode === 'sql' && !(await ensureSqlCache(op))) return;
   if (!op.current()) return;
@@ -3282,8 +3285,8 @@ $('rxmode').onclick = () => {
   render();
 };
 // The saved patterns, offered where they are used. The background seeds the first two; the list
-// itself lives in Settings, where it can be added to, edited and emptied - the menu only reads,
-// fresh on every open, so there is nothing here to fall out of date.
+// itself lives in Settings, where it can be added to, edited and emptied; the menu reads it
+// fresh on every open, and can append to it - its Save row, when there is a pattern to save.
 async function loadRxShortcuts() {
   try {
     const st = await chrome.storage.local.get('rxShortcuts');
@@ -3292,16 +3295,20 @@ async function loadRxShortcuts() {
       : [];
   } catch (_) { return null; }   // null, not []: a read that failed is not an empty list
 }
-$('rxpick').onclick = async (ev) => {
-  ev.stopPropagation();
+async function openRxMenu() {
   const menu = $('rxmenu');
-  if (menu.classList.contains('show')) { menu.classList.remove('show'); return; }
   const list = await loadRxShortcuts();
   // The read yielded: the tab, the mode or the workspace may have moved meanwhile, and every one of
   // those hides the button. A menu for a control that is no longer there is not opened.
   if ($('rxpick').style.display === 'none') return;
   const items = list || [];
+  const rawQ = $('find').value.trim();
+  // The save row exists only when there is something it could do: a pattern in the box that parses,
+  // regex mode on, and a list that was actually read - saving over one that was not would overwrite
+  // entries nobody has seen. A control that can do nothing goes away rather than sitting there.
+  const savable = list !== null && regexMode && rawQ && !!rxCompile(rawQ).re;
   menu.innerHTML = items.map((x, i) => `<button data-rx="${escA(i)}"><span>${esc(x.name)}</span><span class="rxpat">${esc(x.pattern)}</span></button>`).join('')
+    + (savable ? `<div class="rxsave"><input id="rxsavename" placeholder="Name this pattern\u2026" maxlength="60" aria-label="Name for the pattern in the search box"><button data-save="1" title="Save the pattern in the search box under this name">Save</button><div class="rxerr" id="rxsaveerr"></div></div>` : '')
     + `<button class="rxman" data-man="1">${list === null ? 'The saved patterns could not be read. ' : (items.length ? '' : 'No saved patterns yet. ')}Manage\u2026</button>`;
   menu.querySelectorAll('[data-rx]').forEach((b) => {
     b.onclick = () => {
@@ -3315,11 +3322,38 @@ $('rxpick').onclick = async (ev) => {
       render();
     };
   });
+  const sv = menu.querySelector('[data-save]');
+  if (sv) {
+    const doSave = async () => {
+      const name = $('rxsavename').value.trim();
+      // The same rules the Settings page enforces, refused with the reason in place.
+      if (!name) { $('rxsaveerr').textContent = 'A pattern needs a name.'; return; }
+      if (items.some((x) => x.name.trim().toLowerCase() === name.toLowerCase())) {
+        $('rxsaveerr').textContent = `"${name}" is already taken - the menu could not tell them apart.`;
+        return;
+      }
+      try { await chrome.storage.local.set({ rxShortcuts: [...items, { name, pattern: rawQ }] }); }
+      catch (_) { $('rxsaveerr').textContent = 'Could not write the list - try from Settings.'; return; }
+      openRxMenu();   // re-read and redraw: the new entry appearing in the list is the confirmation
+    };
+    sv.onclick = doSave;
+    $('rxsavename').onkeydown = (e) => {
+      // The panel's own shortcuts stay out of the input; Escape still bubbles to close the menu.
+      if (e.key !== 'Escape') e.stopPropagation();
+      if (e.key === 'Enter') doSave();
+    };
+  }
   menu.querySelector('[data-man]').onclick = () => { menu.classList.remove('show'); openSettings('#rx'); };
   const r = $('rxpick').getBoundingClientRect();
   menu.style.top = `${r.bottom + 4}px`;
   menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
   menu.classList.add('show');
+}
+$('rxpick').onclick = (ev) => {
+  ev.stopPropagation();
+  const menu = $('rxmenu');
+  if (menu.classList.contains('show')) { menu.classList.remove('show'); return; }
+  openRxMenu();
 };
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#rxmenu') && !e.target.closest('#rxpick')) $('rxmenu').classList.remove('show');
