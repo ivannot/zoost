@@ -2,6 +2,7 @@
 4bf05c2e1c376147  README.md: **How it works.** The system prompt carries a compact **index of the whole org** (every function signature, modules, automations, and the connections with their usage counts) plus the function you're currently viewing.
 28acb604bf71a4e9  README.md: **Or press `+ Sample` and skip all of it.** It writes a workspace of invented data into the working folder - a couple of hundred functions with real call chains, modules with lookups, workflows, schedules and connections - so you can open the tree, the graph, the audit and the exports before pointing Zoost at anything of your own.
 b63bb54006e525c8  README.md: **Protecting the key (optional).** By default the key is stored in clear text, because Chrome offers extensions no encryption at rest and no credential store: a key the extension can read on its own is a key anyone with the browser profile can read, and encrypting it with a secret kept beside it would be protection in appearance only.
+dcdc92c5b3096dc7  README.md: **Streaming is the Anthropic path only**: with OpenAI the assistant is a single pass - no tools, no streaming - it receives the index and what you have open, and asks you for what it is missing rather than going to read it.
 675bb607e7df4628  README.md: - **Connection usage counts cover Deluge functions only.** A connection may also be used by Zoho Flow, Circuits, widgets or client scripts, which Zoost does not read - so "unused" means "unused by your functions", a candidate to review, not a verdict.
 07b87e93a2cf66ac  README.md: - **Deploy from repo → Zoho** (write-back) is intentionally not implemented; pull + save-sync only.
 2ae5cb33c8821630  README.md: - **Every area records when it was last read**, so excluding one from the pull cannot quietly leave a four-month-old chapter looking as current as the rest.
@@ -11,7 +12,7 @@ b63bb54006e525c8  README.md: **Protecting the key (optional).** By default the k
 c17baa3e7c509d8d  README.md: - **Workspace select · + · ✎ · 🗑** - `+` creates the workspace for the org in the active Zoho tab; **✎** gives it a name of your own, shown instead of the folder's (the platform's own name stays in the tooltip and in the bar underneath, and clearing the field goes back to it); the **🗑** (Remove) button deletes that subfolder (local mirror only, re-pullable).
 1451aa2e8c605a3b  README.md: - Not every issue will be fixed and not every pull request will be merged.
 d874573debc501f2  README.md: - Only Anthropic and OpenAI are supported.
-d22f824cbfea49ce  README.md: - With Anthropic it runs as an **agent with read-only tools** - `get_function`, `who_calls`, `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`, `get_connection`, `list_functions` - so it explores the whole org itself instead of guessing.
+5e94319e0914363f  README.md: - With Anthropic it runs as an **agent with read-only tools** - `list_functions`, `get_function`, `who_calls`, `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`, `get_connection`, `list_failures`, `list_actions` - so it explores the whole org itself instead of guessing.
 41df0ae90c4d221e  README.md: - host permissions `crm.zoho.*` / `crmsandbox.zoho.*` - read/save via your authenticated Zoho session; `api.anthropic.com` / `api.openai.com` - used **only** if you enable the AI with those providers.
 cd1749ea548085ba  README.md: --- ## The interface **Top bars** - **Working folder** - set once; every workspace is a subfolder inside it, identified by the org id in its own `.zoost.json` (so renaming a folder or a Zoho portal never orphans a workspace).
 88a26fcb684de52d  README.md: --- ## Versioning The manifest `version` is bumped on every release and this README tracks the feature set.
@@ -45,10 +46,11 @@ f590caafb5d2f25b  README.md: The extension talks to your own Zoho CRM (your sess
 b20a89448f8b996d  README.md: The first two restate what Manifest V3 enforces anyway; the last two are stricter than the default and free, because nothing shipped uses a form or a `<base>`.
 cbb4cdb9b433f57e  README.md: Turning a tab off clears it, since a tab is usually turned off for an area the account cannot read.
 a589731b8e463414  README.md: Two providers, both tested - nothing claimed that has not been tried.
+7c43b62a28c368c1  README.md: What can be claimed from a browser is what Zoost sends, never what a server does with it.
+2db35528e7d53ebc  README.md: What holds it together is `tools/twincheck.py`, which records every twin with a hash of each side and reports the one-sided change.
 2a4cc8fdd23a104d  README.md: Zoost never drives Zoho's interface: it navigates by URL and reads through the API - it does not script clicks it cannot be sure of.
 c5c4beb67ffe7d26  README.md: Zoost never reads a template's content, nor who the recipients are.
 29e6d39f01535e5e  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) | | `apps/analytics` | **Zoost - workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them - plus what nothing depends on.
-fc33c48e40f4e6f0  README.md: | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) | Nothing is shared between the two yet, on purpose: they read different platforms with different shapes, and factoring code out before both sides actually need it costs more than the duplication.
 36f9a820226cd1a5  README.md: | | What it mirrors | | |---|---|---| | **Zoost - workbench for Zoho CRM** | Deluge functions, module schema, layouts, related lists, workflows and what they fire, schedules, connections, and what Zoho reports as failing at runtime | [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) · [about](https://zoost.it/crm) · [guide](https://zoost.it/docs-crm) | | **Zoost - workbench for Zoho Analytics** | workspaces, tables, query tables and their SQL, reports, dashboards, foreign keys, lineage, and what nothing depends on any more | [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) · [about](https://zoost.it/analytics) · [guide](https://zoost.it/docs-analytics) | Neither replaces Zoho's editor.
 555edee5df9c6aa4  site/404.html: Nothing is broken - you are just at an address with nothing behind it.
 6fb6b8ae27a62931  site/ai.html: Every tool reads the mirror on your disk.
@@ -307,8 +309,10 @@ e2962f186cc6eb0b  site/how-to.html: Whether you should is a different question, 
 469f9e338e5d7eff  site/index.html: A four-hundred-line function may be a perfectly clean mapping table, and only you know which of yours those are.
 19ed6ecdef004f49  site/index.html: And if it can reach neither, stop: one that has read nothing will answer anyway, from memory, and that answer looks exactly like a real one.
 51714cca3d78b63e  site/index.html: And it asks where the answers do not match what is promised, because a prompt fishing for compliments would be worth nothing.
+dfa64342a9bb38bc  site/index.html: And nothing of ours runs on zoost.it until you press Report a problem : it opens the report page and writes the text into the box, so that you read it before anything is sent.
 594fe33f16d22f4f  site/index.html: And with Zoost you can see all of it at once.
 b3f588c6496edf41  site/index.html: Assistants differ in what they can open, so it asks for that first - use both if you can reach both, one if only one, and say which.
+96aaee7713102f18  site/index.html: Both ask for their own platform's domains in every data centre, api.anthropic.com / api.openai.com , and zoost.it .
 c03de625dbaec76b  site/index.html: Each Zoost keeps its own subfolder inside it, so a single folder serves them all and the two never meet.
 fa7c3c02eeb3c83e  site/index.html: Every figure says what it does not cover, right beside itself.
 2ff03cad17324dce  site/index.html: For somebody who works in Zoho every day: what can it actually do - the capabilities you find implemented, not the ones described; where is it weak; what would frustrate them on a large, untidy organisation; and would you recommend it to them?
@@ -316,6 +320,7 @@ fa7c3c02eeb3c83e  site/index.html: Every figure says what it does not cover, rig
 a13c0794a211b477  site/index.html: How to judge it without me Every command is on the nerd page , and with them a prompt you can paste into whichever assistant you use: it reads the whole repository and answers at three levels - what this is in plain language, what it can do for somebody who works in Zoho every day, and what you need if you are the one approving it.
 1c6cdb1dd78dbf07  site/index.html: If only one, use that one and say so.
 6552e9bcb3baa36a  site/index.html: If you want the technical version, with every claim taken apart one at a time, it is on the nerd page .
+400436a92c8a47fa  site/index.html: It is named here rather than left to be found: what a browser can state is what Zoost sends , never what a server does with it.
 9363d78429d0bd6f  site/index.html: It uses their session and their permissions, and can do nothing they could not do.
 9e62568da47ddfbf  site/index.html: Its source is the next tab along, where every call that resolves to a function you have is a link through to it.
 3f119e77b69090c8  site/index.html: Never the data itself - in Zoho CRM no contacts, no deals, no notes; in Zoho Analytics never the rows inside a table.
@@ -326,7 +331,6 @@ c551b0dd44894a52  site/index.html: Nothing reaches the platform, and you delete 
 f7ed85dc5c973391  site/index.html: One working folder holds every client at once, each bound to the org, host and instance it came from.
 6a5d3790a5d678db  site/index.html: Open the sample workspace → invented data · no Zoho org · nothing to connect The workbenches Zoost CRM on the Chrome Web Store Zoost - workbench for Zoho CRM Deluge functions as versionable files, full-text search across every one of them, a reference graph of what calls what, which functions read and write each module, module schema with layouts, the related-list API names you keep having to look up, workflows, schedules and the connections catalogue.
 1e3f9f7825036f1a  site/index.html: Reading tells you what a program is built to do; it cannot tell you what Zoho will answer tomorrow, or what somebody does with a file once they have saved it - and an assistant will sound just as sure either way, so it is asked to say where its answer stops.
-5e0e0b80dbfa59c1  site/index.html: The hosts are the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, one.zoho.* , and api.anthropic.com / api.openai.com .
 42a7f66e15f228f4  site/index.html: The same shape of tool one product over: the workspace drawn, every join written the way Zoho Analytics writes it.
 5ae675e2916926d0  site/index.html: The two AI hosts are reached only if someone turns the assistant on.
 03b6370f78671137  site/index.html: The workbenches What every Zoost has in common Try it with invented data Free · Apache-2.0 · no account · source you can read, all of it You are about to change one function What else moves?
@@ -337,7 +341,7 @@ fa2d2003cff4f14e  site/index.html: Two things leave only if you send them: what 
 42e8cb1d23151817  site/index.html: What it asks Chrome for Four permissions - sidePanel , storage , scripting , tabs - and a named list of hosts, never <all_urls> .
 b84139d2caa52134  site/index.html: What it does → How to use it → Install ↗ Zoost Analytics on the Chrome Web Store Zoost - workbench for Zoho Analytics Every view in a workspace with its type, folder and dates, the columns and foreign keys of every table, the SQL behind each query table as its own file, an ER diagram of the whole thing, and the list of what nothing seems to depend on any more.
 482b466bb7f7447b  site/index.html: What it reads Configuration only: code, field definitions, automations, the structure of a workspace.
-454b40a487034f93  site/index.html: What it writes To Zoho, nothing.
+9ea4af958b0f82d6  site/index.html: What it writes To Zoho, nothing: it calls no endpoint that creates, edits or deletes.
 11d13c7fcf6270c9  site/index.html: Zoost copies the whole org to plain files on your own disk, then draws the map: what calls what, what depends on what, what nothing uses any more.
 648d4dfeb91165c0  site/index.html: Zoost is small, and it is published exactly as it was written: nothing packed, nothing hidden.
 dcef1d689c7eb370  site/it/ai.html: C'è un limite strutturale, ed è quello che decide tutto il resto della pagina.
@@ -707,10 +711,11 @@ a3e6750f654b38b6  site/it/index.html: Chiudi con tre cose: quello che viene prom
 b0ea928b02d206f1  site/it/index.html: E chiede dove le risposte non corrispondono a quello che viene promesso, perché un prompt che va a caccia di complimenti non varrebbe niente.
 e8c5467deb460f00  site/it/index.html: E con Zoost puoi vederlo tutto insieme.
 114614b9e4aee3ff  site/it/index.html: E se non arriva a nessuno dei due, fermati: uno che non ha letto niente risponde lo stesso, a memoria, e quella risposta sembra identica a una vera.
+9699c28c27685e63  site/it/index.html: E su zoost.it non gira niente di nostro finché non premi Segnala un problema : apre la pagina della segnalazione (in inglese: è una sola, così la segnalazione che arriva è in una lingua sola) e ci scrive dentro il testo, così lo leggi prima che parta qualsiasi cosa.
+a3eb59d44eb5360d  site/it/index.html: Entrambe chiedono i domini della propria piattaforma in ogni data centre, api.anthropic.com / api.openai.com e zoost.it .
 484d0aea5262547c  site/it/index.html: Fa tre domande, per tre persone diverse: cos'è e se vale dieci minuti, cosa sa fare davvero per chi sta dentro Zoho tutto il giorno, e cosa deve sapere chi la deve autorizzare.
 fee4a110e0024a13  site/it/index.html: Fattela rileggere - tutta, da una macchina, senza installare niente.
 3ef6a81962d34e6f  site/it/index.html: Gli assistenti non riescono ad aprire le stesse cose, quindi la prima cosa che chiede è proprio quella - usali tutti e due se ci arrivi, uno solo se arrivi a uno solo, e dillo.
-92f7b70c5471d7f8  site/it/index.html: Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, one.zoho.* e api.anthropic.com / api.openai.com .
 e0e6002ea5da7e44  site/it/index.html: Gratis, aperti, tuoi da forkare Apache-2.0, nessun passaggio di build, nessuna dipendenza.
 b52421c7f5d7a0a8  site/it/index.html: I workbench Cosa hanno in comune tutti gli Zoost Provalo su dati inventati Gratuiti · Apache-2.0 · nessun account · sorgente leggibile, tutto quanto Il sito è tutto in italiano, guide e privacy policy comprese; la mappa per gli assistenti resta in inglese, perché a leggerla è una macchina.
 0f330556921fa1e0  site/it/index.html: Indica due posti, perché il confronto è tutto il senso: le promesse stanno su questo sito, le risposte stanno nel codice, e l'uno che controlla l'altro vale più di ciascuno da solo.
@@ -744,6 +749,8 @@ ac8cc9b7b85fd67c  site/it/index.html: Usa la sua sessione e i suoi permessi; non
 df6d46747427fffb  site/it/index.html: Zoost CRM sul Chrome Web Store Zoost - workbench for Zoho CRM Le funzioni Deluge come file da mettere sotto Git, la ricerca full-text su tutte in una volta, il grafo di chi chiama chi, quali funzioni leggono e scrivono ogni modulo, lo schema dei moduli con i layout, gli API name delle related list che tocca sempre andare a ripescare, i workflow, le schedulazioni e il catalogo delle connessioni.
 e32a3b1c5bd6e896  site/it/index.html: Zoost porta l'org intera sul tuo disco, in file che si aprono con qualsiasi editor, e sopra ci disegna la mappa: chi chiama chi, chi dipende da chi e cosa non serve più a nessuno.
 7d80d260c1a1a50e  site/it/index.html: Zoost è piccolo, ed è pubblicato esattamente com'è stato scritto: niente di compresso, niente di nascosto.
+b0fb9fc7bd100def  site/it/index.html: È scritta qui invece di essere lasciata trovare: da un browser si può affermare che cosa Zoost manda , mai che cosa il server ne faccia.
+b39284f035c84205  site/it/nerd.html: C'è chi ha dato per scontato che il server dietro fosse da qualche parte non leggibile - ragionevole per quasi tutti i siti, sbagliato per questo.
 49983475f95ff67d  site/it/nerd.html: Chi lo ha battuto è la cosa meno verificabile di un programma, e la meno interessante quando tutto il resto si può leggere.
 f4dce595924508b1  site/it/nerd.html: Come distingue «Zoho non ha restituito niente» da «Zoho ha rifiutato» e da «la risposta non era nella forma che il codice legge»?
 483013f913d99628  site/it/nerd.html: Come legge Zoho Analytics Prende il workspace dall'URL della scheda su cui sei - /workspace/{id} - quindi non c'è niente da estrarre, quindi niente da sbagliare.
@@ -759,12 +766,14 @@ c94108102978562a  site/it/nerd.html: E un'attestazione dice chi ha costruito un 
 b602ba9098ebef76  site/it/nerd.html: Google pubblica giorni dopo l'invio, non minuti, quindi il tag più recente qui è quasi sempre avanti rispetto a quello che lo Store distribuisce.
 2525c9769acdba30  site/it/nerd.html: Il CSRF segue il metodo HTTP invece del percorso: ogni POST porta X-ZCSRF-TOKEN , nessuna GET lo fa, misurato su una cattura di 104 richieste senza eccezioni.
 a53a31a747a1b5bc  site/it/nerd.html: Il codice: https://github.com/ivannot/zoost (due estensioni Chrome: apps/crm e apps/analytics) Le affermazioni: https://zoost.it/it/nerd , il README e il campo description dentro ogni manifest.json Di' prima quali di questi sei riuscito ad aprire.
+31645e7f8b79ba1c  site/it/nerd.html: Il pannello costruisce il testo, lo oscura e apre quella pagina (in inglese, ce n'è una sola) - attraverso il DOM, mai attraverso l'indirizzo, perché un URL finisce nella cronologia del browser e si sincronizza con essa.
 269b6c4f23f7c5c7  site/it/nerd.html: In questa pagina Interfacce non documentate O certi, o fermi Cosa non viene mai chiamato Cosa è promesso e cosa no Come viene costruita una release Verificalo tu Cosa non dimostra niente di tutto questo Interfacce non documentate Né Zoho CRM né Zoho Analytics pubblicano API per quasi niente di quello che Zoost legge.
 dbe3c715ed89cdc9  site/it/nerd.html: L'archivio allegato alla Release è il file inviato al Chrome Web Store - mai una build fatta su un portatile.
 9b08e0b1e3c13ca9  site/it/nerd.html: L'assistente AI facoltativo dovrebbe essere l'unica eccezione, e solo dopo che qualcuno ha inserito una chiave propria.
 14ac0af47f90e547  site/it/nerd.html: La pagina nerd Tutto quello che le pagine di prodotto lasciano fuori di proposito: su cosa si regge Zoost, cosa si rifiuta di fare, come viene costruita una release e come verificare ognuna di queste cose senza doverti fidare della mia parola.
 bf1b349c86f1f0c2  site/it/nerd.html: La riproducibilità regge tutto il resto invece di essere un ornamento: pubblicare uno SHA-256 non vale niente se due build dello stesso commit sono diverse, e le mie lo erano, perché zip memorizza la data di modifica di ogni file e percorre la cartella nell'ordine del filesystem.
 8915a0339d71b387  site/it/nerd.html: Le eccezioni sono poche, deliberate e scritte: un'attesa limitata per un elemento noto dopo una navigazione, un solo tentativo in più su un errore davvero transitorio (rete, 429, 5xx e mai un 4xx deterministico), e il recupero tramite un'azione che è stata misurata - la prima chiamata /deluge/ dopo un login nuovo viene rifiutata, una qualsiasi chiamata a Zoho CRM la sistema; questo è stato riprodotto apposta invece che ipotizzato.
+fbde53867d0befde  site/it/nerd.html: Mandare una segnalazione L'unico percorso qui che finisce in un posto pubblico, quindi è scritto per esteso invece che riassunto.
 4c7c3b7b057ce3c9  site/it/nerd.html: Nessun aggancio a un'etichetta che cambia con la lingua dell'interfaccia.
 3deeaaf9c667c437  site/it/nerd.html: Nessun click sintetico dentro una pagina che non è mia.
 028ce7323fee6ba5  site/it/nerd.html: Niente è garantito - lo dice la licenza e lo dice questa pagina.
@@ -774,10 +783,12 @@ e3154aa353fd4b89  site/it/nerd.html: O certi, o fermi Nessun ciclo di tentativi 
 e29f01092166be20  site/it/nerd.html: Ora la build marca ogni file con la data del commit, ordina l'elenco dei file e passa -X .
 6378c1d0e35dff0f  site/it/nerd.html: Quello che non è coperto è l'altro capo: Google reimpacchetta e rifirma ogni estensione, quindi quello che distribuisce non è identico byte per byte a quello che è stato caricato.
 200ce27aec50985a  site/it/nerd.html: Quindi le definizioni dei report restano non coperte , e ogni superficie lo dice invece di lasciar credere che il mirror sia completo.
+083698287c0e0788  site/it/nerd.html: Rifiuta se non passa il controllo anti-abuso, limita le richieste per indirizzo tramite un hash con sale , così niente di quello che questo sito scrive può essere ricondotto a un indirizzo - nemmeno da chi legge l'archivio.
 306bd5215f64b6eb  site/it/nerd.html: Rispondi dal codice per tutto quello che il codice può stabilire; se non sei riuscito a raggiungere il codice, fermati invece di rispondere con quello che già sai.
 4d9e16631d27a8c8  site/it/nerd.html: Se qualcosa di tutto questo è inaccettabile per la tua organizzazione, è meglio scoprirlo qui che dopo averla installata.
 8b65eed0c207c257  site/it/nerd.html: Tirare a indovinare un parametro per sopprimere i dati è esattamente il punto in cui una dichiarazione di sola lettura si rompe per sbaglio.
 9d6b38a92a0d3c4a  site/it/nerd.html: Trova ogni richiesta che non sia una GET e dimmi a cosa serve ciascuna.
+e10cde4bf1c065b1  site/it/nerd.html: Tu lo leggi, puoi modificarlo, e niente si muove finché non premi Invia.
 9dc80820439a0939  site/it/nerd.html: Tutto quello che chiede sta in questa pagina, quindi la sua risposta e questa pagina si possono confrontare riga per riga - che è l'unico motivo per lanciarli tutti e due.
 0615b2c5d8138bb4  site/it/nerd.html: Verificalo tu gh attestation verify <file> --repo ivannot/zoost chiede a GitHub se ha costruito esattamente quell'archivio tools/verify.sh lo ricostruisce sulla tua macchina e confronta gli hash RELEASES.md commit, tag e SHA-256 di ogni versione inviata - comprese le due righe che dichiara di non poter verificare, e perché llms.txt la stessa mappa scritta per un assistente a cui viene chiesto di valutare il prodotto invece di riassumere la pagina Nessuno dei due comandi ti chiede di fidarti di me.
 5a96417e721b15e9  site/it/nerd.html: Zoost dichiara di non leggere mai le tue righe, quindi non lo chiama.
@@ -901,6 +912,7 @@ af407f331faf29d1  site/llms.txt: Zoho Analytics: never the rows inside a table; 
 d6c76ca7065f7dc7  site/nerd.html: And an attestation says who built a file, never that the file is good.
 5eaf6a960441f7b6  site/nerd.html: CSRF follows the HTTP method rather than the path: every POST carries X-ZCSRF-TOKEN , no GET does, measured across a 104-request capture with no exceptions.
 37a380d22fdb0174  site/nerd.html: Check it yourself gh attestation verify <file> --repo ivannot/zoost asks GitHub whether it built that exact archive tools/verify.sh rebuilds it on your machine and compares the hashes RELEASES.md commit, tag and SHA-256 of every submitted version - including the two entries it says it cannot verify, and why llms.txt the same map written for an assistant asked to assess the product rather than summarise the landing page Neither command asks you to take my word for it.
+0013393784ff918e  site/nerd.html: Cloudflare, which serves the page, sees the address the way any host does, and the anti-abuse check is given it because that is what the check is for, redacts the text again on the way through - a client is never believed twice - caps the size, and rebuilds the issue body from validated pieces inside a fence nothing can climb out of.
 e45c8a1f9d8896da  site/nerd.html: Diffing against that one gives a mismatch that says nothing about either file.
 3331fd75e1f749b2  site/nerd.html: Every GitHub Action is pinned to a commit hash, never to a moving tag.
 cae0e87ab612b8a7  site/nerd.html: Everything it asks about is in this page, so its answer and this page can be compared line by line - which is the only reason to run both.
@@ -908,6 +920,7 @@ cae0e87ab612b8a7  site/nerd.html: Everything it asks about is in this page, so i
 63588171fe620c14  site/nerd.html: Guessing at a parameter to suppress the data is exactly where a read-only claim gets broken by accident.
 7c0698220398204f  site/nerd.html: How does it tell «Zoho returned nothing» apart from «Zoho refused» and from «the response was not the shape this reads»?
 9b17fcbe480b3753  site/nerd.html: It is named here because anyone checking the read-only claim literally will find it, and finding it unannounced would read as a caught lie rather than as what it is.
+a1706468433910b4  site/nerd.html: It refuses unless an anti-abuse check passes, rate-limits per address by a salted hash , so nothing this site writes down can be walked back to an address - not even by whoever reads the store.
 a17c97c442623dd6  site/nerd.html: It says it never writes to Zoho.
 359064d6d5840f09  site/nerd.html: Nothing is guaranteed - the licence says so and so does this page.
 dd791388d10b6429  site/nerd.html: On this page Undocumented interfaces Certain, or stopped What is never called What is promised, and what is not How a release is built Check it yourself What none of it proves Undocumented interfaces Neither Zoho CRM nor Zoho Analytics publishes an API for most of what Zoost reads.
@@ -920,8 +933,10 @@ f216a3fc063092a9  site/nerd.html: So report definitions stay uncovered , and eve
 5c4f78e11d5a97d3  site/nerd.html: The build now stamps every file with the commit's own date, sorts the file list, and passes -X .
 76cf2582b0cd5564  site/nerd.html: The exceptions are narrow, deliberate and written down: a bounded wait for a known element after a navigation, one retry on a genuinely transient failure (network, 429, 5xx and never a deterministic 4xx), and recovery by an action that was measured to work - the first /deluge/ call after a fresh login is refused, any ordinary Zoho CRM call fixes it, and that was reproduced deliberately rather than guessed at.
 0a49847bbc90460d  site/nerd.html: The optional AI assistant is supposed to be the only exception, and only once someone enters their own key.
+ebabebf45c8b052c  site/nerd.html: The panel builds the text, redacts it, and opens this page - through the DOM, never through the address, because a URL is written to your browser history and syncs with it.
 2efe0b9d3934f4bb  site/nerd.html: What is never called Neither extension calls an endpoint that creates, edits or deletes anything.
 f516b3a1a25a4a16  site/nerd.html: What is still not covered is the far end: Google repackages and re-signs every extension, so what it serves is not byte-identical to what was uploaded.
+07f8fe5f3b092338  site/nerd.html: You read it, you may edit it, and nothing moves until you press Send.
 e6d1abbcefdbea2e  site/nerd.html: Zoost states it never reads your rows, so it does not call it.
 9df22ecc3408ccf1  site/privacy.html: 4.2 The AI provider - only if you enable it Read this before enabling the assistant The AI assistant is off by default and requires you to enter your own API key.
 8ceaaa09f8a1ffac  site/privacy.html: A policy can only be tightened this way: Chrome refuses a manifest that tries to relax the first two.
