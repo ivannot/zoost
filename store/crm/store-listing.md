@@ -167,11 +167,15 @@ The extension does not read browsing history, does not enumerate tabs unrelated 
 ## 9. Host permission justification (max 1000)
 
 ```
-Two groups, both strictly necessary.
+Three groups, all strictly necessary.
 
-1. The Zoho CRM hosts in the manifest: the crm.* and crmsandbox.* domain of every Zoho data centre, plus the matching one.* hosts. On the first two the extension calls the Zoho CRM API, with the session the user is already signed in with, to read their own Deluge functions and configuration metadata. The one.* hosts it does not read at all - they are there only so the panel can tell which organisation a Zoho One tab belongs to. Several domains is not a wider scope: Zoho runs a data centre per region, an org lives on exactly one, and which one is not ours to choose. The extension is inert on every other site.
+1. The Zoho CRM hosts: the crm.* and crmsandbox.* domain of every Zoho data centre, plus the matching one.* hosts. On the first two the extension calls the Zoho CRM API, with the user's existing session, to read their own Deluge functions and configuration. The one.* hosts it does not read - they only tell the panel which org a Zoho One tab belongs to. Several domains is not a wider scope: Zoho runs one data centre per region.
 
-2. The two AI providers, Anthropic and OpenAI, needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to that provider. These two are the only AI destinations the extension can reach; no other endpoint is configurable.
+2. Anthropic and OpenAI, needed only by the optional AI assistant, and only after the user enters their own API key. The request goes straight from the browser to that provider; no other AI endpoint is configurable.
+
+3. zoost.it, for one action only: when the user sends a problem report, the extension writes the text into the report page it has just opened. Opening a tab needs no permission; writing into it does. Nothing is read back, and it is never contacted on its own.
+
+The extension is inert on every other site.
 ```
 
 ---

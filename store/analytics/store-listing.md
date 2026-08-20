@@ -151,7 +151,9 @@ It also uses tab access to navigate the current tab to a workspace URL the user 
 ```
 The Zoho Analytics hosts declared in the manifest: the analytics.* domain of every Zoho data centre. The extension reads the workspace's structure from Zoho Analytics' own endpoints on whichever of them the user's account lives on. It cannot know which one in advance, and the set is exactly the regions Zoho runs, no wider.
 
-The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to the provider the user chose. These two are the only AI destinations the extension can reach, and they are the two that are tested; no other endpoint is configurable.
+The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them. The request goes from the browser straight to the provider the user chose; no other AI endpoint is configurable.
+
+zoost.it, for one action and no other: when the user sends a problem report, the extension writes the text into the report page it has just opened. Opening a tab needs no permission; writing into it does. Nothing is read back, and the host is never contacted on its own.
 
 No other host is requested, and none of these are contacted unless the user acts.
 ```
