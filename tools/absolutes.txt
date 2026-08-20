@@ -812,6 +812,7 @@ c1d8ace26c2abff8  site/it/privacy.html: Nessun'altra destinazione è possibile: 
 e02b9f523f697bee  site/it/privacy.html: Nessuna delle due lo chiede: da qui non è testabile, e un host che non possiamo provare non è un host che chiediamo.
 98b974ad98c7a3df  site/it/privacy.html: Niente di tutto questo viene trasmesso da nessuna parte.
 7d6dc729bbd13540  site/it/privacy.html: Non contiene mai il tuo codice, il tuo SQL, il contenuto di nessun file né la tua chiave API: per costruirla non viene letto nessun tuo file.
+b3ecf36401f8c39b  site/it/privacy.html: Non porta nessun trace, e la issue che apre lo dice nella prima riga.
 2e1ab5c1f5a1628b  site/it/privacy.html: Non può mai mandare le righe dentro una tabella, perché non le legge mai: quindi l'assistente conosce la struttura del tuo workspace e mai i suoi valori.
 5d47214fea4fcd04  site/it/privacy.html: Non viene trasmesso niente in background, a scadenze fisse o in caso di errore.
 2e3e0218c4532a77  site/it/privacy.html: Opera rigorosamente dentro i permessi Zoho che hai già: può leggere esattamente quello che può leggere il tuo utente Zoho, niente di più.
@@ -825,7 +826,7 @@ a0294b8c08526d36  site/it/privacy.html: Puoi cancellare tutto in qualsiasi momen
 c865f2d8a26e2388  site/it/privacy.html: Quali estensioni copre Questa policy copre tutte le estensioni della famiglia Zoost.
 12bfd810125cc099  site/it/privacy.html: Quando qualcosa fallisce, il pannello può preparare una segnalazione : ti mostra il testo per intero, e non manda niente.
 2b9d4568a548185c  site/it/privacy.html: Quello che non dichiariamo è che sia esaustivo: riconoscere un nome è un giudizio, ed è esattamente per questo che il testo ti viene messo davanti prima che succeda qualsiasi cosa, e che puoi sbloccarlo e tagliare quello che vuoi - la segnalazione parte allora marcata come alterata, così nessuno scambia un trace modificato per una prova.
-b1d8b57cb3075129  site/it/privacy.html: Se decidi di andare avanti apre zoost.it/report e mette il testo nella casella di quella pagina - dentro il contenuto della pagina, mai nell'indirizzo, così non ne resta traccia nella cronologia del tuo browser.
+4fcc8bcc8f2957cd  site/it/privacy.html: Se decidi di andare avanti apre zoost.it/report (in inglese) e mette il testo nella casella di quella pagina - dentro il contenuto della pagina, mai nell'indirizzo, così non ne resta traccia nella cronologia del tuo browser.
 81a846c5af407b27  site/it/privacy.html: Sono estensioni separate con permessi separati, ma si comportano in modo identico sotto ogni aspetto descritto in questo documento: nessun server, nessun account, nessuna telemetria, un mirror locale in una cartella che scegli tu e un assistente AI opzionale che parla soltanto con un provider che configuri tu.
 2810ed53a7e5f987  site/it/privacy.html: Sopra non ci viene costruito niente: nessun cookie, nessun tracker, nessuna profilazione, nessuna mailing list, niente di qui viene collegato a quello che fa l'estensione.
 d6cbcd1d55073cda  site/it/privacy.html: Spariscono tutte e due alla chiusura del browser, al più tardi; il disegno normalmente sparisce molto prima - la finestra consuma la propria copia nel momento in cui si apre, e se la finestra non può aprirsi la copia viene rimossa subito.
@@ -839,13 +840,6 @@ de52838845b160c7  site/it/privacy.html: Zoost non chiede nessun accesso alla cro
 d8f6f183e44acc78  site/it/privacy.html: Zoost non ha server, non ha account, non ha analytics e non ha nessuna forma di tracciamento.
 ff661b77a8be190b  site/it/privacy.html: chrome.storage.session Due cose, tutte e due in memoria e mai scritte su disco.
 07add6ba9b51ad4d  site/it/privacy.html: tabs - per rilevare a quale org Zoho CRM, o a quale workspace Zoho Analytics, appartiene la scheda attiva, così che un workspace di produzione non possa mai essere sincronizzato per sbaglio contro una sandbox.
-ef0a2f0d45477466  site/it/report.html: A zoost.it non è ancora arrivato niente: è nel tuo browser, e ci resta finché non premi Invia .
-bcbeb5a1221caf5e  site/it/report.html: Il pannello ha già tolto id, indirizzi, nomi fra virgolette e gli URL che ha visto; quello che resta non dovrebbe nominare nessuna parte del tuo lavoro.
-b512e9db705bd151  site/it/report.html: Non metterci niente di sensibile : nessun nome di persone o aziende, nessun indirizzo email, nessun id, nessun codice.
-207fc771c955e3a6  site/it/report.html: Quello che vuoi aggiungere Questa casella è tua: cosa stavi facendo, cosa ti aspettavi, tutto quello che il trace qui sopra non può sapere.
-7772a62b6ee4afe0  site/it/report.html: Qui non c'è niente da segnalare.
-c4eb1f08bb561719  site/it/report.html: Se ne cancelli o ne cambi una parte la segnalazione è comunque benvenuta, ma non è più una prova: parte marcata come alterata , perché una diagnosi costruita su un trace modificato di nascosto è peggio di nessuna diagnosi.
-070e1c8adde90d44  site/it/report.html: Segnala un problema Il pannello ha preparato il testo qui sotto e l'ha scritto direttamente in questa pagina - non è mai passato dall'indirizzo, quindi non è nemmeno nella cronologia.
 101df12639f67e0d  site/it/try.html: A cosa risponde invece è a ogni domanda sul comportamento - che poi sono quelle che decidono se una cosa si può installare tranquillamente.
 e0bca0509f3c1890  site/it/try.html: Cosa vale mentre un sample è aperto: Non viene chiesto niente a nessuno.
 e0128f0ce945a31f  site/it/try.html: Dietro un sample non c'è nessuna org, quindi non c'è niente da aprire.
@@ -977,10 +971,10 @@ d76ab061eb0df075  site/privacy.html: You can erase all of it at any time by remo
 1d98511c7eb01419  site/privacy.html: Zoost Analytics can send view names, column names, relations and the SQL of your query tables - and never the rows inside your tables , because it does not read them: the endpoints that return cell values are deliberately not called.
 3c36ade63d268673  site/privacy.html: chrome.storage.session Two things, both in memory and never written to disk.
 b65c6155ad052c27  site/privacy.html: tabs - to detect which Zoho CRM org, or which Zoho Analytics workspace, the active tab belongs to, so that a production workspace can never be synced against a sandbox by mistake.
-12e233eb62d147df  site/report.html: Anything you want to add This box is yours: what you were doing, what you expected, anything the trace above cannot know.
+ec9d7c6c6f16a2f2  site/report.html: Anything you want to add What happened This box is yours: what you were doing, what you expected, anything the trace above cannot know.
 cf666d4f923eda6b  site/report.html: Nothing has reached zoost.it yet: it is in your browser, and it stays there until you press Send .
 881c8ca001f8a48c  site/report.html: Report a problem Your panel prepared the text below and wrote it straight into this page - it was never put in the address, so it is not in your history either.
-c14e386c8cbc7ec3  site/report.html: There is nothing to report here.
+b9c1f28c46cd04bf  site/report.html: You got here without a report, so there is nothing for this page to show you - a Zoost panel writes the text itself, from its Report this problem button.
 08e2ef5430e859e5  site/try.html: Chrome asks for permission on that folder and on nothing else.
 b3214e36a311cb05  site/try.html: Every other page here argues that Zoost is worth trusting.
 cb2aa50475ed8f75  site/try.html: Every part of the product works: search across all the sources, the call graph and the entity-relationship diagram, the health audit with its stated coverage gaps, and both exports.
