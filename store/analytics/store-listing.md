@@ -49,7 +49,7 @@ WHAT IT DOES
 
 - ER diagram that stays readable. Tables as boxes, relations as arrows, the join on the arc. Focus one table, adjust the depth, walk the graph by clicking. Click an arc to isolate one relation and fade the rest. Boxes can be dragged: the automatic layout is a starting point, and what you arrange is what the PDF prints. Live sliders for spacing, spread, label gap and label size, and Save PDF for wall-size prints.
 
-- The SQL of your query tables. Read in the panel, written to disk one file each, and searched across all of them at once - the "in: SQL" switch beside the search box looks inside every query in the workspace, literally or as a regular expression (with named patterns you save and manage yourself), and shows the line each match is on. Each one also records which source tables it reads and which of their columns it actually involves.
+- The SQL of your query tables. Read in the panel, written to disk one file each, and searched across all of them at once - the "in: SQL" switch beside the search box looks inside every query in the workspace, literally or as a regular expression (with named patterns you save and manage yourself), and shows, per query, the first matching line and how many times the pattern occurs. Each one also records which source tables it reads and which of their columns it actually involves.
 
 - What nothing depends on. Ask Zoho Analytics its own dependency question for every view, and see which ones nothing in the workspace reads. Stated as candidates, never as a verdict: a shared link, a scheduled export, an embedded report or an API consumer is invisible to that graph, and Zoost says so next to the number.
 
@@ -115,7 +115,7 @@ The extension's entire interface is a side panel shown beside the Zoho Analytics
 ## 6. storage justification (max 1000)
 
 ```
-chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the saved search patterns (named regular expressions the search box offers), and the id of the sample workspace if one was created, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256). It also carries the graph data from the side panel to the diagram window, a separate extension page that cannot be handed the object directly.
+chrome.storage.local holds the user's own settings, on their machine only: the AI provider, model name and API key, the agent's tool-step limit, the diagram layout defaults, the fallback Zoho data centre, the saved search patterns (named regular expressions the search box offers), and the sample workspace's id, so the panel can offer to open it before it may read the folder. The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256). It also carries the graph data from the side panel to the diagram window, a separate extension page that cannot be handed the object directly.
 
 chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked. It is memory-only and cleared when the browser closes.
 

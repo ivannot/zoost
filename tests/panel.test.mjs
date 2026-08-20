@@ -3970,6 +3970,17 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 
+  test('switching the toggle off empties the box; switching it on keeps the seed', () => {
+    // Reported: the pattern stayed in the box with .* off, and a regex read as a literal is a
+    // search for text that does not exist.
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      const h = panel.slice(panel.indexOf("$('rxmode').onclick"), panel.indexOf("$('rxpick').onclick"));
+      assert.ok(/if \(!regexMode\) \$\('find'\)\.value = '';/.test(h),
+        'why=' + app + ' keeps the pattern as a literal search when the toggle goes off');
+    }
+  });
+
   test('the menu element exists before the scripts that touch it at load', () => {
     // #rxmenu first landed after the <script> tags, and the top-level init crashed on
     // null.classList in setMode - found only by the render harness actually loading the page.

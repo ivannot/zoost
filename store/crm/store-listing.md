@@ -131,7 +131,7 @@ No content is injected into the page for UI purposes. The sidePanel permission i
 ```
 storage persists the user's own settings between sessions, in chrome.storage.local only. Nothing is stored remotely or synced.
 
-What is kept: the selected AI engine, model id and API key (optional; encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; the user's saved search patterns (named regular expressions the search box offers); which side panel tabs are shown, in what order, and which a pull asks Zoho for; which data types the user's Zoho role refused, kept so the options page can say why a tab is gone; and the id of the sample workspace, if any, so the panel can offer to open it before it may read the folder.
+What is kept: the selected AI engine, model id and API key (optional; encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; the fallback Zoho data centre; saved search patterns (named regular expressions the search box offers); which side panel tabs are shown, in what order, and which a pull asks Zoho for; which data types the user's Zoho role refused, so the options page can say why a tab is gone; and the id of the sample workspace, if any, so the panel can offer to open it before it may read the folder.
 
 chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked: memory-only, cleared when the browser closes.
 

@@ -2677,6 +2677,10 @@ $('smode').onclick = () => {
 $('rxmode').onclick = () => {
   regexMode = !regexMode;
   $('rxmode').classList.toggle('on', regexMode);
+  // Switching the toggle off clears the box: a pattern read as a literal is a search for text
+  // that does not exist, and the reader would be left staring at «no matches» for \b\d{18}\b.
+  // Switching it on keeps what was typed - a literal is often the seed of the pattern.
+  if (!regexMode) $('find').value = '';
   runSearch();
 };
 // The saved patterns, offered where they are used. The background seeds the first two; the list
