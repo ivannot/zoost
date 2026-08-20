@@ -101,6 +101,11 @@
   #emerg.on{display:inline} #emerg:hover{text-decoration:underline}
   #repopen{display:none;margin-left:8px;flex:none;background:none;border:0;padding:0;color:var(--accent);font-size:11px;text-decoration:underline;cursor:pointer;white-space:nowrap}
   #repopen.on{display:inline}
+  /* The row does not clear itself: every other status line is replaced by the next one, and
+     after a report is sent nothing else happens, so it sat there for good. */
+  #repdismiss{display:none;margin-left:8px;flex:none;background:none;border:0;padding:0 2px;
+    color:var(--muted);font-size:11px;cursor:pointer;line-height:1}
+  #repdismiss.on{display:inline} #repdismiss:hover{color:var(--ink)}
   .spin{width:11px;height:11px;border:2px solid #33415a;border-top-color:var(--sel);border-radius:50%;animation:sp .7s linear infinite;display:none;flex:none}
   #status.busy .spin{display:inline-block}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -693,7 +698,7 @@
   </div>
   <div class="controls"><div class="chips" id="typechips"></div></div>
 
-  <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button></div>
+  <div id="status"><span class="spin"></span><span id="stxt">No workspace.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button><button id="repdismiss" title="Dismiss this - the report page stays open in its own window">✕</button></div>
 
   <div id="main">
     <!-- tabindex so the list can hold the focus: without it the keyboard cannot address the

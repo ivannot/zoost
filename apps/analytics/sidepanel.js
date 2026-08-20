@@ -316,7 +316,7 @@ function noteStep(text) {
 //
 // Cleared by every status write and set again by the one failure path that should carry it, so it
 // cannot linger over a later success. One place to clear, one place to set.
-function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on', !!on); const b = $('repopen'); if (b) b.classList.toggle('on', !!on); }
+function showEmergency(on) { for (const id of ['emerg', 'repopen', 'repdismiss']) { const e = $(id); if (e) e.classList.toggle('on', !!on); } }
 
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
@@ -3635,6 +3635,7 @@ async function aiEngineWord() {
 // front of the reader and stays there until they press Send. So the reading happens once, where the
 // sending is. The one thing it did cost is now stated on the site: opening the page is an ordinary
 // visit to zoost.it, which a reader who changes their mind on the panel side never made.
+$('repdismiss').onclick = () => showEmergency(false);
 $('repopen').onclick = async () => {
   reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;

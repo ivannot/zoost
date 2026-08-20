@@ -207,7 +207,7 @@ setReportFallback	f9d85a9ab235	7ef979cd431d	divergent
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	cde7a07ce71f	aa578e8faf85	divergent
-showEmergency	9ffb4800f2ce	9ffb4800f2ce	identical
+showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 srcBlock	411409a2d53a	411409a2d53a	identical

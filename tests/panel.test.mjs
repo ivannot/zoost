@@ -4066,6 +4066,25 @@ for (const app of ['crm', 'analytics']) {
   });
 
 
+  test('the emergency row can be dismissed, in both panels', () => {
+    // Reported: after a report is sent nothing else happens, and every other status line is cleared
+    // by the *next* one - so that row sat there for good, offering to report a problem that had
+    // already been reported. The three parts appear and go together, which is the part a later edit
+    // gets wrong: adding a fourth and forgetting it leaves a stray control on an empty row.
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      const html = read(`apps/${app}/sidepanel.html`);
+      assert.ok(html.includes('id="repdismiss"'), `why=${app} has no way to clear the row`);
+      assert.ok(/\$\('repdismiss'\)\.onclick = \(\) => showEmergency\(false\);/.test(js),
+        `why=${app} draws the control without wiring it`);
+      const fn = js.slice(js.indexOf('function showEmergency('));
+      const line = fn.slice(0, fn.indexOf('\n'));
+      for (const id of ['emerg', 'repopen', 'repdismiss']) {
+        assert.ok(line.includes(`'${id}'`), `why=${app} leaves ${id} behind when the row is toggled`);
+      }
+    }
+  });
+
   test('the report is read once, on the page, and the panel has no dialog of its own', () => {
     // It used to be shown in a panel dialog whose button said «Send…» and sent nothing - the same
     // text read twice, with the button that mattered on the second copy. Nothing leaves when the
