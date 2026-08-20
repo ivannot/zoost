@@ -4066,6 +4066,54 @@ for (const app of ['crm', 'analytics']) {
   });
 
 
+  test('«outdated» compares what the list said with what the list said', () => {
+    // The regression this replaces shipped on 19 Aug 2026 and was reported the next morning: the org
+    // list reports `updatedTime` as epoch milliseconds and a function's detail reports it as
+    // «2026-03-13 11:20:59.0», and the two were compared with `!==`. True for every function, for
+    // ever. Measured on a real org: 160 of 160 rows «outdated», of which the panel showed one,
+    // because the other 159 were loaded from the summary - which did not make the comparison at all.
+    const { movedInZoho } = load([sliceConst('apps/crm/sidepanel.js', 'movedInZoho')]);
+    assert.equal(movedInZoho(1773397259000, 1773397259000), false, 'the same instant reads as moved');
+    assert.equal(movedInZoho(1773397259000, '1773397259000'), false, 'a number and its own text differ');
+    assert.equal(movedInZoho(1773397259000, 1773397260000), true, 'a function edited in Zoho is missed');
+    // The shapes that caused it: never comparable, so never a measurement.
+    assert.equal(movedInZoho(1773397259000, null), false, 'a copy fetched before this field existed is not evidence');
+    assert.equal(movedInZoho(null, 1773397259000), false, 'a list that said nothing is not evidence');
+    assert.equal(movedInZoho(1773397259000, '2026-03-13 11:20:59.0'), true,
+      'the string form must never be handed to this - the call sites are what keep the pair honest');
+    const src = read('apps/crm/sidepanel.js');
+    assert.ok(!/row\.listUpdated\s*!==\s*meta\.updatedTime/.test(src),
+      'why=crm compares an epoch against a formatted string again');
+    // Both paths, or the answer depends on which one loaded the workspace.
+    for (const anchor of ['row.stale = (s.sv || 0) < META_SV', 'row.stale = row.pathChanged']) {
+      const at = src.indexOf(anchor);
+      assert.ok(at > 0, `why=the ${anchor} path is gone`);
+      assert.ok(src.slice(at, at + 260).includes('movedInZoho('),
+        'why=one of the two load paths does not apply the rule the other does');
+    }
+  });
+
+  test('the tab decides whether the missing/outdated button is shown', () => {
+    // Reported: leaving Functions with «Refresh 1 outdated» up and switching to Schedules left the
+    // button there, over a list it says nothing about. It was the *renderers* that set it, and only
+    // two of the six views call it - so on the other four the button kept whatever the last view had
+    // put there. The mode is what the function reads on its first line, so the mode is what must
+    // call it.
+    const src = read('apps/crm/sidepanel.js');
+    const fn = src.slice(src.indexOf('function setMode(mode) {'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    assert.ok(body.includes('updateMissingButton()'),
+      'why=setMode leaves the button to whichever renderer happens to update it');
+    assert.ok(body.indexOf('updateMissingButton()') < body.indexOf('rebuildActive()'),
+      'why=the button is updated after the rebuild is kicked off, so it flickers with the old count');
+    // And the function itself must still be the one that knows which tabs have no such button.
+    const um = src.slice(src.indexOf('function updateMissingButton()'));
+    for (const tab of ['modules', 'schedules', 'connections', 'actions']) {
+      assert.ok(um.slice(0, um.indexOf('\n}')).includes(`'${tab}'`),
+        `why=${tab} is not among the tabs the button hides itself on`);
+    }
+  });
+
   test('the emergency row can be dismissed, in both panels', () => {
     // Reported: after a report is sent nothing else happens, and every other status line is cleared
     // by the *next* one - so that row sat there for good, offering to report a problem that had
@@ -7601,8 +7649,15 @@ test('crm: a module resync publishes only what it managed to write', () => {
     assert.ok(/updatedTime: f\.updatedTime \|\| null/.test(read('apps/crm/content-bridge.js')),
               'the bridge drops the one field that says a function changed');
     assert.ok(/listUpdated: e\.updatedTime \|\| null/.test(src), 'the tree forgets what the list said');
-    assert.ok(/row\.listUpdated && meta\.updatedTime && row\.listUpdated !== meta\.updatedTime/.test(src),
+    // This used to assert the comparison *as first written* - `row.listUpdated !== meta.updatedTime`
+    // - which is an epoch against a formatted string and is therefore true for every function. The
+    // test was written from the same assumption as the code and held the defect in place for a day.
+    // A test that spells out an expression can only prove the expression is still there; what is
+    // asserted now is the pair being like-for-like, and the behaviour lives in movedInZoho's cases.
+    assert.ok(/movedInZoho\(row\.listUpdated, meta\.listUpdated\)/.test(src),
               'the two timestamps are never compared, so an edited function is never stale');
+    assert.ok(/f\.meta\.listUpdated = entry\.listUpdated \|\| null/.test(src),
+              'nothing records what the list said when the copy was fetched, so there is no pair to compare');
   });
 
   test('a renamed function is re-fetched at its new path, and the old pair goes only after both writes', () => {
@@ -7647,8 +7702,10 @@ test('crm: a module resync publishes only what it managed to write', () => {
   test('a timestamp absent on either side marks nothing', () => {
     // Absence is not a measurement: a list entry with no updatedTime (or an old sidecar without one)
     // must not push the whole workspace into a re-download.
-    const m = src.match(/row\.stale = row\.pathChanged \|\| \(meta\.sv \|\| 0\) < META_SV\s*\n\s*\|\| !!\(row\.listUpdated && meta\.updatedTime/);
-    assert.ok(m, 'the comparison no longer requires both sides to have spoken');
+    const { movedInZoho } = load([sliceConst('apps/crm/sidepanel.js', 'movedInZoho')]);
+    assert.equal(movedInZoho(null, 1773397259000), false, 'a list that said nothing pushes a re-download');
+    assert.equal(movedInZoho(1773397259000, null), false, 'a sidecar that said nothing pushes a re-download');
+    assert.equal(movedInZoho(0, 0), false, 'zero is treated as a measurement');
   });
 }
 

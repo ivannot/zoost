@@ -319,8 +319,22 @@ const META_INDEX = 'functions/meta-index.json';
 // `{"fresh":1,"cached":0}`. **Changing what the extractor writes means moving this line, in the
 // same commit** - the test below holds the readers to it, but only a person can know the meaning
 // changed.
-const SUMMARY_V = 4;
+const SUMMARY_V = 5;   // 5 adds `listUpdated` per file; a 4 is re-derived from the folder rather than misread
 const META_SV = 2;   // current function-meta schema version; functions on disk below this are "stale" and get re-fetched
+/** Has Zoho's copy moved since this one was fetched?
+ *
+ * **Both arguments must come from the same source.** The org *list* reports `updatedTime` as epoch
+ * milliseconds; a function's own *detail* reports it as «2026-03-13 11:20:59.0» in the org's
+ * timezone. The first version of this compared one against the other with `!==`, which is true for
+ * every function, for ever - shipped on 19 Aug 2026 and reported the next morning as «Refresh 1
+ * outdated» that no pull could clear. So the sidecar stores the epoch it was fetched against, and
+ * this compares epochs with epochs. Parsing the string instead would have worked on this machine and
+ * failed for anyone whose browser sits in a different timezone from the org: the same defect, hidden.
+ *
+ * Absence on either side is not a measurement: a sidecar written before this field existed says
+ * nothing about when it was fetched, and claiming freshness we cannot know is worse than silence.
+ */
+const movedInZoho = (listMs, fetchedMs) => !!(listMs && fetchedMs && Number(listMs) !== Number(fetchedMs));
 // A deletion is a write: what was read from that path is no longer what is there. It goes through
 // the same knowledge, so pruning a function Zoho no longer has drops it from the search and the
 // diagram without the pull having to remember.
@@ -1349,7 +1363,10 @@ async function rebuildTree() {
     const row = byPath.get(dg);
     if (!s || !row || dirtyMeta.has(dg)) { missing.push(mp); continue; }
     row.downloaded = true;
-    row.stale = (s.sv || 0) < META_SV;
+    // The same rule as the slow path below. It was only there, so whether a workspace reported
+    // anything outdated depended on which of the two paths had loaded it.
+    row.stale = (s.sv || 0) < META_SV || movedInZoho(row.listUpdated, s.listUpdated);
+    row.fetchedAgainst = s.listUpdated || null;
     row.updatedTime = s.updatedTime || null;
     if (s.namespace) row.namespace = s.namespace;
     if (s.display_name) row.display_name = s.display_name;
@@ -1389,7 +1406,8 @@ async function rebuildTree() {
         // source that changed in Zoho while nobody was watching - the list's `updatedTime` against
         // the sidecar's. Absence on either side is not a measurement and marks nothing.
         row.stale = row.pathChanged || (meta.sv || 0) < META_SV
-          || !!(row.listUpdated && meta.updatedTime && row.listUpdated !== meta.updatedTime);
+          || movedInZoho(row.listUpdated, meta.listUpdated);
+        row.fetchedAgainst = meta.listUpdated || null;
         row.updatedTime = meta.updatedTime || null;
         row.namespace = meta.nameSpace || row.namespace;
         if (meta.display_name) row.display_name = meta.display_name;
@@ -1475,6 +1493,7 @@ async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
       if (!onDisk.has(r.path)) return;
       const e = files[r.path] || (files[r.path] = {});
       e.id = String(r.id); e.sv = r.stale ? 1 : META_SV; e.updatedTime = r.updatedTime || null;
+      e.listUpdated = r.fetchedAgainst || null;   // what the list said when this copy was fetched
       e.namespace = r.namespace || ''; e.display_name = r.display_name || '';
     });
   }, op);
@@ -3545,6 +3564,11 @@ async function syncOneNow(id) {
     if (!op.current()) return;
     await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
     if (!op.current()) return;
+    // Deliberately nothing: this ran because the function was *just saved* in Zoho, so the org list
+    // this panel holds predates the save. Writing that value would claim this copy had been checked
+    // against a list that has not seen the change - a claim in the direction that hides one. The
+    // next pull refreshes both sides and the pair becomes meaningful again.
+    f.meta.listUpdated = null;
     await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     // The memory is an effect too: after the last write the row looked up in `treeData` is the new
     // workspace's, and marking it downloaded gave one org's row the other org's path.
@@ -4250,6 +4274,13 @@ function setMode(mode) {
   // Changing tab closes the pane and keeps the chain: the whole point of a history that spans the
   // tabs is that a workflow reached from a function is one step away from it, not a fresh start.
   currentPath = null; updateNav(); $('preview').classList.remove('show'); $('resizer').classList.remove('show');
+  // Whose button this is, decided here rather than left to whoever draws the list. It was the
+  // renderers that set it, and only two of the six call it - so leaving Functions with «Refresh 1
+  // outdated» on screen and landing on Schedules left that button sitting over a list it says
+  // nothing about, offering to refresh something the reader cannot see. Reported. Every rebuild that
+  // does call it still does, and recomputes from its own data; this makes the *mode* the thing that
+  // decides, which is what the function already reads on its first line.
+  updateMissingButton();
   rebuildActive();
 }
 // Rebuild the segment row from the registry. Called whenever the set can have changed: at start-up,
@@ -4436,6 +4467,9 @@ async function downloadOne(entry) {
     if (!r?.ok || !r.file) throw new Error(r?.error || 'not found');
     const f = r.file;
     await op.write(`functions/${f.folder}/${f.stem}.dg`, f.dg);
+    // What the list said about this function at the moment it was fetched, kept beside what the
+    // detail said. Two sources, two shapes - the comparison that decides «outdated» needs the pair.
+    f.meta.listUpdated = entry.listUpdated || null;
     await op.write(`functions/${f.folder}/${f.stem}.meta.json`, JSON.stringify(f.meta, null, 2));
     // The files are safe - the writer refuses a folder that is not this op's - and `index` and the
     // row are not: they are the panel's memory of the workspace *on screen*, so publishing into them

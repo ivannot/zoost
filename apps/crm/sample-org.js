@@ -249,7 +249,13 @@
     const words = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ');
     return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? ' ' + words.slice(1).join(' ').toLowerCase() : '');
   }
-  function deluge(ns, name, params, calls) {
+  // The same instant the sidecar's `updatedTime` string names, as the org list reports it: epoch
+// milliseconds. 2026-07-01..09 at 09:00:00 UTC. Two shapes of one moment, which is the shape the
+// real thing has and the shape a fixture has to have for the panel's «outdated» test to mean
+// anything.
+const LIST_MS = (i) => Date.UTC(2026, 6, 1 + (i % 9), 9, 0, 0);
+
+function deluge(ns, name, params, calls) {
     const sig = (params.length ? 'map ' : 'void ') + name +
       '(' + params.map((p) => 'string ' + p).join(', ') + ')';
     // `namespace.name(...)` - the form CALL_RE looks for, which is how Deluge actually calls a
@@ -303,6 +309,10 @@
         return_type: params.length ? 'map' : 'void',
         params: params.map((p) => ({ name: p, type: 'string' })),
         description: '', updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
+        // What the org list said when this copy was fetched. The list reports epoch milliseconds and
+        // the detail reports a formatted string: a sample that carried only one of the two could not
+        // show a mismatch between them, and that is exactly the defect it failed to show once.
+        listUpdated: LIST_MS(i),
         modified_by: AUTHOR, associated_place: usedIn[ns + '.' + name] || null, workflow: '',
         rest_api: (name === 'exportCsv' || name === 'openTicket')
           ? [{ type: 'GET', active: true }] : [],
@@ -312,6 +322,7 @@
       });
       index.push({ id: id, api_name: api, name: name, display_name: labelOf(name),
                    namespace: ns, category: cat, source: 'crm',
+                   updatedTime: LIST_MS(i),
                    rest: name === 'exportCsv' || name === 'openTicket' });
       say(i + 1, list.length, 'functions');
     });
@@ -325,7 +336,7 @@
       const api = snake(name);
       metaIndex['functions/' + ns + '/' + api + '.dg'] = {
         id: String(9000 + i), sv: (o.edgeCases && EDGE.stale.includes(ns + '.' + name)) ? 1 : 2,
-        updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00',
+        updatedTime: '2026-07-0' + (1 + (i % 9)) + 'T09:00:00+00:00', listUpdated: LIST_MS(i),
         namespace: ns, display_name: labelOf(name),
       };
     });
