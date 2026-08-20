@@ -68,7 +68,11 @@ def pages() -> list:
     """
     out = []
     for p in sorted(SITE.glob('*.html'), key=lambda x: (x.name != 'index.html', x.name)):
-        if p.name == '404.html':      # served everywhere, addressed nowhere, and carries noindex
+        # Both exceptions are pages with no reader who arrives at them: 404.html is served at every
+        # address that has nothing behind it, and report.html is opened by the panel with a report
+        # already in it. Both carry `noindex`, and listing a noindex page in a sitemap is the site
+        # asking for a page to be indexed and telling it not to be, in two files.
+        if p.name in ('404.html', 'report.html'):
             continue
         out.append(p.relative_to(SITE).as_posix())
         twin = SITE / 'it' / p.name
