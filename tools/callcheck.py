@@ -10,7 +10,8 @@ walked the workspace with `walk()`, which exists in the CRM panel and has never 
 line was written from the CRM side. Every Pull all threw `ReferenceError: walk is not defined`
 **inside the try block that marks the mirror incomplete**, so a pull that had written every one of
 its bytes correctly ended as «the last pull was interrupted mid-write - run Pull all to repair», and
-the repair ran into the same wall. It shipped in Zoho Analytics 1.28.0.
+the repair ran into the same wall. It is in Zoho Analytics 1.28.0 - the package Google was reviewing
+when this was found, with the Store still serving 1.27.0, which does not contain it.
 
 What it does: for each page in `apps/<app>/`, it reads the scripts that page loads, collects every
 name those scripts declare, and reports every name they *call* that is neither declared there nor a

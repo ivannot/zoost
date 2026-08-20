@@ -3617,7 +3617,7 @@ class CallCheckFindsACallWithNothingToCall(unittest.TestCase):
     `node --check` accepts a free variable, the panels are not importable, and no test runs a pull. It
     threw inside the try block that marks the mirror incomplete, so a pull that had written every byte
     correctly reported «the last pull was interrupted mid-write» and the repair hit the same wall. It
-    shipped in Zoho Analytics 1.28.0.
+    is in Zoho Analytics 1.28.0, the package Google was reviewing when this was found.
 
     Fixtures rather than assertions about the tree: the tree changes, the shapes do not. The second
     case is the half that is usually missing - a checker that reports everything is not a strict one,

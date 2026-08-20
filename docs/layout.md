@@ -320,8 +320,10 @@ accepts a free variable, `twincheck` compares functions that exist on both sides
 on neither page, the panels are not importable so no unit test runs it, and the probe drives the
 sample workspace, where no pull happens. It threw inside the one `try` block that marks the mirror
 incomplete, so a pull that had written every one of its bytes correctly ended as «the last pull was
-interrupted mid-write - run Pull all to repair», and the repair hit the same wall. **It shipped in
-Zoho Analytics 1.28.0**, and it was found by a sweep rather than by any of the gates.
+interrupted mid-write - run Pull all to repair», and the repair hit the same wall. **It is in Zoho
+Analytics 1.28.0, the package Google was reviewing when this was found** - the Store was still serving
+1.27.0, which does not contain it. Nobody was affected, and the margin was one review queue: it was
+found by a sweep rather than by any of the gates.
 
 ```bash
 python3 tools/callcheck.py          # every function a page calls must be in one of the scripts it loads

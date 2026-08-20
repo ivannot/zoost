@@ -4,10 +4,11 @@ A sweep of both extensions, the site, the Worker, the release workflows and the 
 `main` at `d04f9ad`. Asked for as «find anomalies, bugs and security problems, and fix what is
 anomalous», with no area excluded.
 
-Four defects. Two of them were shipped - one to the Chrome Web Store, one to `main` - and neither was
-subtle once it was looked at, which is the sweep's own finding about itself: **the gates in this
-repository check what somebody thought to check, and a sweep asks what nobody has.** Every entry ends
-in a rule, and three of the four rules have a machine behind them by the end of this note.
+Four defects. One was on `main` and red in the battery; one was inside the package Google was
+reviewing, one approval away from every Analytics user. Neither was subtle once it was looked at,
+which is the sweep's own finding about itself: **the gates in this repository check what somebody
+thought to check, and a sweep asks what nobody has.** Every entry ends in a rule, and three of the
+four rules have a machine behind them by the end of this note.
 
 Nothing here is a guarantee that no defects remain. What this sweep could not establish is at the
 bottom, in its own words.
@@ -21,8 +22,14 @@ unlikely. Every Pull all therefore threw `ReferenceError: walk is not defined`, 
 the one `try` block that marks the mirror incomplete*: a pull that had written every one of its bytes
 correctly ended as «the last pull was interrupted mid-write - run Pull all to repair», `.pull-state.json`
 stayed at `writing`, the loader refused the snapshot, and the repair ran into the same wall. The
-workspace could never be pulled again. **It shipped in Zoho Analytics 1.28.0**, which is the version
-on the Store.
+workspace could never be pulled again.
+
+**Where it actually is, corrected.** This note first said it had shipped, «the version the Store is
+serving». It has not: `/api/versions` - the Store's own answer, read through Google's API - reports
+Analytics **1.27.0 published** and **1.28.0 PENDING_REVIEW**, and 1.27.0 does not contain the call
+(`pruneSql()` arrives with 1.28.0). So nobody was affected, and the margin was one review queue. The
+error was mine and it is the class this repository already names: a version number was inferred from
+the manifest and the tag instead of asked of the one system that knows.
 
 Nothing here could see it. `node --check` accepts a free variable; `twincheck` compares functions that
 exist on both sides and this one existed on neither page; the panels are not importable, so no unit
@@ -112,6 +119,8 @@ one that needs a deploy to verify, and say which is which.
   sources.
 - A scope-aware sweep of every shipped script for free variables, over the AST rather than the text,
   found `walk()` and nothing else in either app, and nothing in the site scripts or the tools.
+- What the Store is actually serving, asked of `/api/versions` rather than inferred: Zoho CRM 1.44.0
+  published with 1.45.0 in review, Zoho Analytics 1.27.0 published with 1.28.0 in review.
 - Read for this sweep and clean: both manifests and their CSP, the page-world hook and the message
   boundary at both ends, `keyvault.js`, the export's HTML escaping and the Deluge highlighter,
   `/api/report` and the rest of the Worker, and `release.yml`.
