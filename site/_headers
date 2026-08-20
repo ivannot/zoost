@@ -38,3 +38,21 @@
 
 /site.webmanifest
   Cache-Control: public, max-age=86400
+
+# Three headers the site was serving none of - checked against the live response, not assumed. They
+# are here rather than in a content-security-policy because these three cannot break a page that is
+# already correct, and a CSP for this site can: `/report` loads Cloudflare's Turnstile and every page
+# carries an inline <style>, so a policy would have to allow both and would have to be verified
+# against the deployed site rather than reasoned about. That is a separate, deliberate piece of work.
+#
+#   nosniff          a .txt or a .json is never re-read as markup because a byte at the front of it
+#                    looked like markup. llms.txt is served as text/plain and is *meant* to be read
+#                    literally, which is the case this protects.
+#   referrer-policy  what Chrome and Firefox already do by default, said out loud, so the path a
+#                    reader came from never leaves the site with a cross-origin request.
+#   frame-options    nothing here is meant to be embedded, and /report has a button that publishes
+#                    to a public issue tracker. A page that can be framed can be framed invisibly.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
