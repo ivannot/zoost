@@ -95,7 +95,7 @@ Guide: https://zoost.it/docs-crm
 Privacy policy: https://zoost.it/privacy
 Home: https://zoost.it
 
-When something fails, the panel can build a problem report - versions, the error, the last few status lines and counters - show it to you in full, and let you trim it before you send it from a page on zoost.it, where it becomes a public issue. It never carries your code, your names, your org or your key, and nothing is ever sent automatically.
+When something fails, the panel can build a problem report - versions, the error, the last few status lines and counters - show it to you in full, and let you trim it before you send it from a page on zoost.it, where it becomes a public issue. It carries no code and no key at all; names, paths and ids are stripped wherever they can be recognised - which is why you are shown the whole text first. Nothing is ever sent automatically.
 
 Free and open source, licensed under the Apache License 2.0. Maintained in spare time on a best-effort basis; there is no guaranteed support or response time.
 

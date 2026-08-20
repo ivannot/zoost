@@ -218,8 +218,48 @@ def worker_routes_answer(findings: list, notes: list) -> None:
                              capture_output=True, text=True, timeout=30).stdout.split('|')
         return (out + ['', '', ''])[:3]
 
+    def post(url, origin):
+        return subprocess.run(['curl', '-sS', '-o', '/dev/null', '--max-time', '20', '-w',
+                               '%{http_code}', '-X', 'POST', '-H', 'content-type: application/json',
+                               '-H', f'origin: {origin}', '--data', '{}', '-A',
+                               'zoost auditcheck (+https://zoost.it)', url],
+                              capture_output=True, text=True, timeout=30).stdout.strip()
+
+    def post_only(path):
+        """Whether the route refuses everything but POST, read out of its own handler.
+
+        `/api/report` answers **405** to a GET, which is correct and which the 200-or-finding rule
+        above called «the Worker is not being reached» - the check calling a working endpoint broken,
+        the exact failure this function's docstring already warns about, one route later. The
+        contract is not listed here for the same reason the routes are not: it is derived, so a
+        POST-only route added tomorrow arrives with its contract attached.
+        """
+        m = re.search(r"url\.pathname === '%s'\) return (\w+)\(" % re.escape(path), worker)
+        if not m:
+            return False
+        h = re.search(r'(?:async )?function %s\(' % m.group(1), worker)
+        return bool(h) and "request.method !== 'POST'" in worker[h.end():h.end() + 400]
+
     checked = 0
     for path in re.findall(r"url\.pathname === '([^']+)'", worker):
+        if post_only(path):
+            checked += 1
+            code, _, _ = head(BASE_URL + path)
+            if code == '404':
+                findings.append(f'{path}: answers 404 to a GET - the Worker is not being reached '
+                                f'(check run_worker_first against not_found_handling)')
+            elif code != '405':
+                findings.append(f'{path}: answers {code} to a GET, and its handler refuses '
+                                f'everything but POST - so something in front of it is answering')
+            else:
+                # A POST carrying a foreign origin is refused by the handler's first gate, before
+                # the body is read, before the limiter and before anything is written - so this is
+                # a live probe of the whole route that cannot open an issue or spend a quota.
+                code2 = post(BASE_URL + path, 'https://example.invalid')
+                if code2 != '403':
+                    findings.append(f'{path}: a POST from another origin answers {code2}, not 403 - '
+                                    f'the gate that stops any page on the web posting here is open')
+            continue
         code, ctype, _ = head(BASE_URL + path)
         checked += 1
         if code != '200':
