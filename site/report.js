@@ -5,6 +5,12 @@
  * server: true, and not the whole question, because the navigation itself is recorded in the
  * browser's history and syncs with it. Nothing about the report is in this page's URL now.
  *
+ * Which of the two readers arrived is therefore **not knowable at load**: the panel writes after the
+ * page is complete, and a bookmark writes nothing ever. So the page does not try to know. It opens in
+ * the state that needs no arrival - somebody describing a problem in their own words - and moves to
+ * the trace the moment text lands in the box. An empty locked textarea under «this is what will be
+ * sent» is what it used to show a reader who came from a link, and that reads as broken software.
+ *
  * This page loads one third-party script, Cloudflare's Turnstile, which is what stands between the
  * endpoint and a script posting to the maintainer's issue tracker all day. Nothing else here phones
  * anywhere: no analytics, no beacon, no autosave, and the report is never stored.
@@ -13,21 +19,31 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
-  // Both are shown: the form, which the panel is about to fill, and the note for somebody who
-  // arrived here by hand - who can paste into the same box. Nothing is hidden waiting for an
-  // arrival that may never come, because a page that looks broken until an extension writes to it
-  // is a page that looks broken.
-  $('form').style.display = '';
-  $('none').style.display = '';
+  // What a hand-written report puts where the trace would be. The endpoint requires a report to
+  // begin with «Zoost », so this both satisfies that and says, in the issue, what is missing.
+  var HAND = 'Zoost report written by hand on zoost.it - no panel, no trace.';
 
   var original = '';
   var body = $('body');
-  // What the panel wrote is the baseline. Whatever the reader does to it afterwards is measured
-  // against this, and reported - a trimmed trace is still welcome, but it is no longer evidence.
+  var hand = true;
+
+  // The arrival, and the only signal there is: the panel sets the value and dispatches `input`.
+  // A reader typing into the box cannot reach this - in the hand state the box is not on the page.
   body.addEventListener('input', function () {
-    if (!original) { original = body.value; return; }
+    if (!original) { original = body.value; toTrace(); return; }
     markEdited();
   });
+
+  function toTrace() {
+    hand = false;
+    $('trace').style.display = '';
+    $('subpanel').style.display = '';
+    $('addpanel').style.display = '';
+    $('addheadpanel').style.display = '';
+    $('subhand').style.display = 'none';
+    $('addhand').style.display = 'none';
+    $('addhead').style.display = 'none';
+  }
 
   function markEdited() {
     var changed = body.value !== original;
@@ -42,11 +58,16 @@
 
   $('send').onclick = function () {
     var msg = $('msg');
-    var text = body.value.trim();
-    if (!text) { msg.textContent = 'There is nothing left to send.'; return; }
-    if (!/^Zoost /.test(text)) {
-      msg.textContent = 'The first line has to stay as the panel wrote it - it is what identifies this as a Zoost report.';
-      return;
+    var says = $('says').value.slice(0, 2000);
+    var text = hand ? HAND : body.value.trim();
+    if (hand) {
+      if (!says.trim()) { msg.textContent = 'Please describe the problem first - that is the whole of what would be sent.'; return; }
+    } else {
+      if (!text) { msg.textContent = 'There is nothing left to send.'; return; }
+      if (!/^Zoost /.test(text)) {
+        msg.textContent = 'The first line has to stay as the panel wrote it - it is what identifies this as a Zoost report.';
+        return;
+      }
     }
     var field = document.querySelector('[name="cf-turnstile-response"]');
     if (!field) {
@@ -62,8 +83,8 @@
     fetch('/api/report', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ report: text, says: $('says').value.slice(0, 2000), token: token,
-        edited: original !== '' && text !== original.trim() }),
+      body: JSON.stringify({ report: text, says: says, token: token, hand: hand,
+        edited: !hand && original !== '' && text !== original.trim() }),
     }).then(function (r) {
       return r.json().then(function (j) { return { ok: r.ok, j: j }; });
     }).then(function (res) {

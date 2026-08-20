@@ -33,7 +33,9 @@ The panel will build you something that is safe to paste: when something fails, 
 problem** produces a report from a fixed list of fields, with ids, addresses, quoted names and URLs
 already taken out, shows it to you in full, and lets you delete any part of it before it goes. That
 is the preferred way to report a break. It becomes a public issue, so it is still not the channel
-for a security problem - those go to ivan@zoost.it, as below.
+for a security problem - those go to ivan@zoost.it, as below. Without an account, or without a panel
+in front of you, https://zoost.it/report takes a description written by hand and opens the issue for
+you; it carries no trace, and it is labelled so nobody reads it as one.
 Redact them. If a bug can only be explained with real code, describe the shape of it instead.
 
 ## Suggesting a feature

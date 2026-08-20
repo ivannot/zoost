@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/report.html sha256:e56225456a0440e0 -->
+<!-- translated-from: site/report.html sha256:aa93c524745256ea -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Segnala un problema - Zoost</title>
@@ -48,18 +48,18 @@
 <div class="wrap">
 
   <h1>Segnala un problema</h1>
-  <p class="sub">Il pannello ha preparato il testo qui sotto e l'ha scritto direttamente in questa
-    pagina - non è mai passato dall'indirizzo, quindi non è nemmeno nella cronologia. A zoost.it non
-    è ancora arrivato niente: è nel tuo browser, e ci resta finché non premi <b>Invia</b>.</p>
+  <p class="sub" id="subpanel" style="display:none">Il pannello ha preparato il testo qui sotto e l'ha
+    scritto direttamente in questa pagina - non è mai passato dall'indirizzo, quindi non è nemmeno
+    nella cronologia. A zoost.it non è ancora arrivato niente: è nel tuo browser, e ci resta finché non
+    premi <b>Invia</b>.</p>
+  <p class="sub" id="subhand">Sei arrivato qui senza una segnalazione, quindi questa pagina non ha
+    niente da mostrarti - il testo lo scrive un pannello Zoost, dal suo pulsante
+    <b>Report this problem</b>. Puoi comunque descrivere il problema con parole tue qui sotto, e verrà
+    inviato come issue pubblica. Se hai un account GitHub,
+    <a href="https://github.com/ivannot/zoost/issues">aprire tu una issue</a> è meglio: resta tua, puoi
+    aggiungerci qualcosa e vedi la risposta.</p>
 
-  <div id="none" class="note" style="display:none">
-    <p><b>Qui non c'è niente da segnalare.</b> Questa pagina mostra un report preparato da un pannello Zoost -
-      si apre dal pulsante <b>Report this problem</b> del pannello. Se sei arrivato qui per segnalare
-      qualcosa a mano, <a href="https://github.com/ivannot/zoost/issues">apri una issue</a> o scrivi a
-      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
-  </div>
-
-  <div id="form" style="display:none">
+  <div id="trace" style="display:none">
     <h2>Cosa verrà inviato</h2>
     <p>Leggilo. Il pannello ha già tolto id, indirizzi, nomi fra virgolette e gli URL che ha visto;
       quello che resta non dovrebbe nominare nessuna parte del tuo lavoro.</p>
@@ -71,27 +71,33 @@
     <p><button id="edit" class="btn">Modifica lo stesso</button>
       <span id="editedNote" class="ednote" style="display:none">Questa segnalazione partirà marcata
       <b>alterata da chi la invia</b>.</span></p>
-
-    <h2>Prima di inviare</h2>
-    <ul>
-      <li>Diventa una <b>issue pubblica</b> sul <a href="https://github.com/ivannot/zoost/issues">repository di
-        Zoost</a>, sotto l'account di Ivan: visibile a chiunque, indicizzata e <b>permanente</b>.</li>
-      <li>Se quello che stai segnalando è un <b>problema di sicurezza</b>, non mandarlo qui. Scrivi a
-        <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>, che è un canale privato.</li>
-      <li>Non c'è un tempo di risposta garantito. Zoost è mantenuto nel tempo libero.</li>
-    </ul>
-
-    <h2>Quello che vuoi aggiungere</h2>
-    <p>Questa casella è tua: cosa stavi facendo, cosa ti aspettavi, tutto quello che il trace qui sopra non
-      può sapere. <b>Non metterci niente di sensibile</b>: nessun nome di persone o aziende, nessun indirizzo
-      email, nessun id, nessun codice. Diventa parte della stessa issue pubblica. Indirizzi e numeri lunghi
-      vengono tolti per strada, ma è una rete di sicurezza, non un permesso.</p>
-    <textarea id="says" rows="4" spellcheck="true" placeholder="Facoltativo: cosa stavi facendo quando si è rotto." aria-label="Cosa stavi facendo (facoltativo)"></textarea>
-
-    <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"></div>
-    <p><button id="send" class="btn p">Invia come issue pubblica</button></p>
-    <p id="msg" role="status"></p>
   </div>
+
+  <h2>Prima di inviare</h2>
+  <ul>
+    <li>Diventa una <b>issue pubblica</b> sul <a href="https://github.com/ivannot/zoost/issues">repository di
+      Zoost</a>, sotto l'account di Ivan: visibile a chiunque, indicizzata e <b>permanente</b>.</li>
+    <li>Se quello che stai segnalando è un <b>problema di sicurezza</b>, non mandarlo qui. Scrivi a
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>, che è un canale privato.</li>
+    <li>Non c'è un tempo di risposta garantito. Zoost è mantenuto nel tempo libero.</li>
+  </ul>
+
+  <h2 id="addheadpanel" style="display:none">Quello che vuoi aggiungere</h2>
+  <h2 id="addhead">Cosa è successo</h2>
+  <p id="addpanel" style="display:none">Questa casella è tua: cosa stavi facendo, cosa ti aspettavi, tutto
+    quello che il trace qui sopra non può sapere. <b>Non metterci niente di sensibile</b>: nessun nome di
+    persone o aziende, nessun indirizzo email, nessun id, nessun codice. Diventa parte della stessa issue
+    pubblica. Indirizzi e numeri lunghi vengono tolti per strada, ma è una rete di sicurezza, non un permesso.</p>
+  <p id="addhand">Scrivi cosa è andato storto, cosa stavi facendo e cosa ti aspettavi invece - e quale
+    delle due estensioni era. Senza un trace questo è tutto quello su cui si potrà ragionare.
+    <b>Non metterci niente di sensibile</b>: nessun nome di persone o aziende, nessun indirizzo email,
+    nessun id, nessun codice. Diventa una issue pubblica. Indirizzi e numeri lunghi vengono tolti per
+    strada, ma è una rete di sicurezza, non un permesso.</p>
+  <textarea id="says" rows="4" maxlength="2000" spellcheck="true" placeholder="Cosa stavi facendo quando si è rotto." aria-label="Cosa è successo"></textarea>
+
+  <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"></div>
+  <p><button id="send" class="btn p">Invia come issue pubblica</button></p>
+  <p id="msg" role="status"></p>
 
 </div>
 </main>
@@ -129,6 +135,6 @@
 
 <script src="/site.js?v=81346a6d03" defer></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/report.js?v=3ae1105664"></script>
+<script src="/report.js?v=c8ac5f0f4d"></script>
 </body>
 </html>

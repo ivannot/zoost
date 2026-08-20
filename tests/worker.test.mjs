@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read } from './slice.mjs';
 import { readdirSync } from 'node:fs';
+import vm from 'node:vm';
 
 // Globbed, never listed: a page added tomorrow is covered without anyone remembering it.
 const listPages = () => ['', 'it/'].flatMap((d) =>
@@ -542,5 +543,105 @@ test('every page carries a description and a card type', () => {
     assert.equal(og[1], d[1], `id=${f} tells a search engine one summary and a social card another`);
     assert.ok(/<meta name="twitter:card"/.test(s), `id=${f} has no twitter:card`);
     assert.ok(/<meta property="og:image"/.test(s), `id=${f} has no og:image`);
+  }
+});
+
+/* The report page's two states.
+ *
+ * Reported: arriving at /it/report from a bookmark showed an empty locked box under «this is what
+ * will be sent», which reads as broken software. The page cannot know who arrived - the panel writes
+ * after load, a bookmark never writes - so it opens in the state that needs no arrival and moves when
+ * text lands. These run the real file against a fake DOM, because a mode machine is only ever proven
+ * by running it.
+ */
+const reportPage = (opts = {}) => {
+  const el = () => ({ style: { display: '' }, value: '', textContent: '', innerHTML: '',
+    readOnly: true, disabled: false, focus() {}, listeners: {},
+    addEventListener(k, fn) { (this.listeners[k] ||= []).push(fn); } });
+  const els = {};
+  const sent = [];
+  const doc = {
+    getElementById(id) { return (els[id] ||= el()); },
+    querySelector() { return opts.noWidget ? null : { value: 'a-token' }; },
+  };
+  const ctx = vm.createContext({
+    document: doc, window: {},
+    fetch: (url, init) => { sent.push({ url, body: JSON.parse(init.body) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: 'https://x/1' }) }); },
+  });
+  vm.runInContext(read('site/report.js'), ctx);
+  return { els, sent, get: (id) => doc.getElementById(id),
+    say(text) { doc.getElementById('says').value = text; },
+    arrive(text) { els.body.value = text; els.body.listeners.input.forEach((f) => f()); },
+    type(text) { els.body.value = text; els.body.listeners.input.forEach((f) => f()); },
+    send() { els.send.onclick(); } };
+};
+
+test('the page opens in the state a reader with no report arrives in', () => {
+  const p = reportPage();
+  // The script never even asks for the trace block until a report arrives: the markup's own state
+  // is the by-hand one, so a reader with JavaScript off sees the same thing rather than a page that
+  // never finishes loading.
+  assert.equal(p.els.trace, undefined, 'the script touches the trace block on load');
+  assert.equal(p.sent.length, 0);
+});
+
+test('the trace appears when the panel writes, and not before', () => {
+  const p = reportPage();
+  p.arrive('Zoost 1.0 · Chrome\n\nwhat happened\n  boom');
+  for (const id of ['trace', 'subpanel', 'addpanel', 'addheadpanel']) {
+    assert.equal(p.els[id].style.display, '', `id=${id} should be shown once a report has arrived`);
+  }
+  for (const id of ['subhand', 'addhand', 'addhead']) {
+    assert.equal(p.els[id].style.display, 'none', `id=${id} should be gone once a report has arrived`);
+  }
+});
+
+test('a report written by hand is sent as one, and says so', () => {
+  const p = reportPage();
+  p.say('The panel will not open on Firefox.');
+  p.send();
+  assert.equal(p.sent.length, 1);
+  const b = p.sent[0].body;
+  assert.equal(b.hand, true, 'a hand-written report must be labelled as one, or it reads as evidence');
+  assert.equal(b.edited, false);
+  assert.ok(/^Zoost /.test(b.report), 'the endpoint refuses anything that does not begin with Zoost');
+  assert.equal(b.says, 'The panel will not open on Firefox.');
+});
+
+test('a hand-written report with nothing in it is not sent', () => {
+  const p = reportPage();
+  p.send();
+  assert.equal(p.sent.length, 0, 'an empty description is the whole of what would be sent');
+  assert.ok(/describe the problem/.test(p.get('msg').textContent));
+});
+
+test('a report from the panel travels as a trace, and the notes stay notes', () => {
+  const p = reportPage();
+  p.arrive('Zoost 1.0 · Chrome\n\nwhat happened\n  boom');
+  p.say('I pressed Pull all.');
+  p.send();
+  const b = p.sent[0].body;
+  assert.equal(b.hand, false);
+  assert.equal(b.edited, false, 'nothing was edited, so nothing may say it was');
+  assert.ok(b.report.includes('what happened'));
+  assert.equal(b.says, 'I pressed Pull all.');
+});
+
+test('editing the trace is carried to the issue', () => {
+  const p = reportPage();
+  p.arrive('Zoost 1.0 · Chrome\n\nwhat happened\n  boom');
+  p.type('Zoost 1.0 · Chrome\n\nwhat happened\n  (cut)');
+  assert.equal(p.els.editedNote.style.display, '', 'the reader is not told their report is marked');
+  p.send();
+  assert.equal(p.sent[0].body.edited, true);
+});
+
+test('both report pages hide the trace and show the by-hand text in their markup', () => {
+  for (const f of ['site/report.html', 'site/it/report.html']) {
+    const s = read(f);
+    assert.ok(/<div id="trace" style="display:none">/.test(s), `id=${f} shows an empty trace box`);
+    assert.ok(/id="subpanel" style="display:none"/.test(s), `id=${f} claims a panel wrote something`);
+    assert.ok(/<p class="sub" id="subhand">/.test(s), `id=${f} has nothing for a reader who arrives cold`);
   }
 });

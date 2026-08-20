@@ -1260,6 +1260,25 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
         self.assertIn('reportFence(clean)', fn)
         self.assertNotIn('body: text', fn)
 
+    def test_a_hand_written_report_is_never_dressed_as_a_trace(self):
+        # The page grew a path for somebody with no panel and no GitHub account: they describe the
+        # problem in their own words. The danger is not the text, it is the *frame* - an issue titled
+        # «Panel report» carrying a description reads as evidence, and a diagnosis built on that is
+        # the same failure as a quietly edited trace, one door along.
+        fn = self.worker[self.worker.index('async function report('):]
+        fn = fn[:fn.index('\n}')]
+        self.assertIn("const hand = (body && body.hand) === true;", fn)
+        self.assertIn("'Written by hand: '", fn)
+        self.assertIn("labels: hand ? ['from-page']", fn)
+        # Its notes are the whole of it, so an empty one is nothing to send - checked before the
+        # limiter is touched, like every other shape check.
+        self.assertIn("if (hand && !says.trim())", fn)
+        self.assertLess(fn.index('hand && !says.trim()'), fn.index('reportRateKey'),
+                        'an empty hand-written report spends a slot of the daily limit')
+        # And it must not carry the trace fence: there is no trace, and an empty fenced block above
+        # a description is the page saying it has evidence it does not have.
+        self.assertIn('hand ? reportFence(extra) : reportFence(clean)', fn)
+
     def test_the_fence_cannot_be_climbed_out_of(self):
         # A report containing a fence would end the block and the rest would render as markdown -
         # which is how a link, an image or an HTML comment gets into an issue nobody wrote.

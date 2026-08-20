@@ -507,7 +507,12 @@ async function report(request, env) {
   // and that is not the case this defends against: it tells an honest sender's reviewer that the
   // text in front of them is no longer what the browser produced.
   const edited = (body && body.edited) === true;
+  // A report written on the page by somebody with no panel in front of them - somebody without a
+  // GitHub account, which is the whole reason this path exists. It carries no trace, so it is
+  // labelled and titled as what it is: nobody should read a description as evidence.
+  const hand = (body && body.hand) === true;
   if (!text.trim()) return bad(400, 'There is nothing to send.');
+  if (hand && !says.trim()) return bad(400, 'There is nothing to send.');
   if (text.length > REPORT_MAX) return bad(413, 'That is larger than a panel report - please open an issue by hand.');
   // It has to look like what the panel writes. This is not a security boundary; it stops the
   // endpoint being a general-purpose way to post anything at all to the repository.
@@ -544,18 +549,26 @@ async function report(request, env) {
   // Held to a plain charset: the title is the one part not inside a fence, and it lands in the
   // maintainer's notification email. Nothing here can carry markup, a link, or a control character.
   const first = clean.split('\n')[0].slice(0, 80).replace(/[^\w .,:·+()\/-]/g, ' ').replace(/\s+/g, ' ').trim();
+  // A hand-written report's first line is a fixed header, so titling from it would name every one
+  // of them identically. What it is about is in the notes, which is where the title comes from.
+  const handFirst = extra.split('\n')[0].slice(0, 80).replace(/[^\w .,:·+()\/-]/g, ' ').replace(/\s+/g, ' ').trim();
   const issue = {
-    title: (edited ? 'Panel report (altered): ' : 'Panel report: ') + (first || 'a problem'),
+    title: hand
+      ? 'Written by hand: ' + (handFirst || 'a problem')
+      : (edited ? 'Panel report (altered): ' : 'Panel report: ') + (first || 'a problem'),
     body: [
-      edited
-        ? '**The sender edited this trace before sending it.** It is no longer what the browser produced, '
-          + 'so treat it as a description rather than as evidence - lines may be missing or changed.'
-        : 'Sent from a Zoost panel by a user who read it first. Redacted by the panel and again here.',
+      hand
+        ? '**Written by hand on zoost.it, with no panel and no trace.** Nothing here was produced by a '
+          + 'browser: it is a description, and everything a trace would have said has to be asked for.'
+        : edited
+          ? '**The sender edited this trace before sending it.** It is no longer what the browser produced, '
+            + 'so treat it as a description rather than as evidence - lines may be missing or changed.'
+          : 'Sent from a Zoost panel by a user who read it first. Redacted by the panel and again here.',
       '',
-      reportFence(clean),
-      extra.trim() ? '\n**What they were doing**\n\n' + reportFence(extra) : '',
+      hand ? reportFence(extra) : reportFence(clean),
+      !hand && extra.trim() ? '\n**What they were doing**\n\n' + reportFence(extra) : '',
     ].join('\n'),
-    labels: edited ? ['from-panel', 'altered-trace'] : ['from-panel'],
+    labels: hand ? ['from-page'] : edited ? ['from-panel', 'altered-trace'] : ['from-panel'],
   };
   const made = await fetch(`https://api.github.com/repos/${REPORT_REPO}/issues`, {
     method: 'POST',

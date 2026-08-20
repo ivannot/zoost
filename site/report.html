@@ -47,18 +47,17 @@
 <div class="wrap">
 
   <h1>Report a problem</h1>
-  <p class="sub">Your panel prepared the text below and wrote it straight into this page - it was
-    never put in the address, so it is not in your history either. Nothing has reached zoost.it yet:
-    it is in your browser, and it stays there until you press <b>Send</b>.</p>
+  <p class="sub" id="subpanel" style="display:none">Your panel prepared the text below and wrote it
+    straight into this page - it was never put in the address, so it is not in your history either.
+    Nothing has reached zoost.it yet: it is in your browser, and it stays there until you press
+    <b>Send</b>.</p>
+  <p class="sub" id="subhand">You got here without a report, so there is nothing for this page to show
+    you - a Zoost panel writes the text itself, from its <b>Report this problem</b> button. You can
+    still describe the problem in your own words below, and it will be sent as a public issue. If you
+    have a GitHub account, <a href="https://github.com/ivannot/zoost/issues">opening an issue
+    yourself</a> is better: you keep it, you can add to it, and you see the reply.</p>
 
-  <div id="none" class="note" style="display:none">
-    <p><b>There is nothing to report here.</b> This page shows a report that a Zoost panel prepared -
-      open it from the panel's <b>Report this problem</b> button. If you came here to report something
-      by hand, <a href="https://github.com/ivannot/zoost/issues">open an issue</a> or write to
-      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>.</p>
-  </div>
-
-  <div id="form" style="display:none">
+  <div id="trace" style="display:none">
     <h2>What will be sent</h2>
     <p>Read it. The panel has already taken out ids, addresses, names in quotes and the URLs it saw;
       what remains should name no part of your business.</p>
@@ -70,27 +69,34 @@
     <p><button id="edit" class="btn">Edit it anyway</button>
       <span id="editedNote" class="ednote" style="display:none">This report will be sent marked
       <b>altered by the sender</b>.</span></p>
-
-    <h2>Before you send</h2>
-    <ul>
-      <li>This becomes a <b>public issue</b> on <a href="https://github.com/ivannot/zoost/issues">the
-        Zoost repository</a>, under Ivan's account, visible to anyone, indexed, and <b>permanent</b>.</li>
-      <li>If what you are reporting is a <b>security problem</b>, do not send it here. Write to
-        <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>, which is private.</li>
-      <li>There is no guaranteed response time. Zoost is maintained in spare time.</li>
-    </ul>
-
-    <h2>Anything you want to add</h2>
-    <p>This box is yours: what you were doing, what you expected, anything the trace above cannot know.
-      <b>Do not put anything sensitive in it</b> - no names of people or companies, no email addresses,
-      no ids, no code. It becomes part of the same public issue. Addresses and long numbers are stripped
-      from it on the way, but that is a safety net, not a licence.</p>
-    <textarea id="says" rows="4" spellcheck="true" placeholder="Optional: what you were doing when it broke." aria-label="What you were doing (optional)"></textarea>
-
-    <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"></div>
-    <p><button id="send" class="btn p">Send as a public issue</button></p>
-    <p id="msg" role="status"></p>
   </div>
+
+  <h2>Before you send</h2>
+  <ul>
+    <li>This becomes a <b>public issue</b> on <a href="https://github.com/ivannot/zoost/issues">the
+      Zoost repository</a>, under Ivan's account, visible to anyone, indexed, and <b>permanent</b>.</li>
+    <li>If what you are reporting is a <b>security problem</b>, do not send it here. Write to
+      <a href="mailto:ivan@zoost.it">ivan@zoost.it</a>, which is private.</li>
+    <li>There is no guaranteed response time. Zoost is maintained in spare time.</li>
+  </ul>
+
+  <h2 id="addheadpanel" style="display:none">Anything you want to add</h2>
+  <h2 id="addhead">What happened</h2>
+  <p id="addpanel" style="display:none">This box is yours: what you were doing, what you expected,
+    anything the trace above cannot know.
+    <b>Do not put anything sensitive in it</b> - no names of people or companies, no email addresses,
+    no ids, no code. It becomes part of the same public issue. Addresses and long numbers are stripped
+    from it on the way, but that is a safety net, not a licence.</p>
+  <p id="addhand">Say what went wrong, what you were doing, and what you expected instead - and which
+    of the two extensions it was. Without a trace this is all anyone will have to go on.
+    <b>Do not put anything sensitive in it</b> - no names of people or companies, no email addresses,
+    no ids, no code. It becomes a public issue. Addresses and long numbers are stripped from it on the
+    way, but that is a safety net, not a licence.</p>
+  <textarea id="says" rows="4" maxlength="2000" spellcheck="true" placeholder="What you were doing when it broke." aria-label="What happened"></textarea>
+
+  <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"></div>
+  <p><button id="send" class="btn p">Send as a public issue</button></p>
+  <p id="msg" role="status"></p>
 
 </div>
 </main>
@@ -125,7 +131,7 @@
   </div>
 </footer>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/report.js?v=3ae1105664"></script>
+<script src="/report.js?v=c8ac5f0f4d"></script>
 
 </body>
 </html>
