@@ -453,9 +453,73 @@ $('zohoDc').onchange = async () => {
 };
 
 const SEC_DIAGRAM = 'Diagram layout';
+
+// ---------- saved search patterns ----------
+// The list behind the panel's ▾ menu. The background seeded the first two on install; from here on
+// this page is the only writer, and an emptied list stays empty.
+// What stops a list from saving, named per row - or null. A declaration for tests/slice.mjs, and
+// byte-identical in both apps' options pages: a test holds the twins to the same rules.
+function rxProblems(list) {
+  for (let i = 0; i < list.length; i++) {
+    const name = String(list[i].name || '').trim();
+    const pattern = String(list[i].pattern || '');
+    if (!name) return `Row ${i + 1} has no name.`;
+    if (!pattern.trim()) return `"${name}" has no pattern.`;
+    try { new RegExp(pattern, 'gim'); } catch (e) { return `"${name}" does not parse: ${String((e && e.message) || e)}`; }
+  }
+  const names = list.map((x) => String(x.name || '').trim().toLowerCase());
+  const dup = names.find((n, i) => names.indexOf(n) !== i);
+  if (dup) return `Two patterns share the name "${dup}" - the menu could not tell them apart.`;
+  return null;
+}
+let rxCur = [];
+// A read that threw is not an empty list: rendering the two the same would let Save write [] over
+// a list that still exists - absent data authorising a destructive act, the exact class the pull
+// already refuses. The flag gates the save and names the state instead.
+let rxLoadFailed = true;
+function renderRx() {
+  if (rxLoadFailed) {
+    $('rxlist').innerHTML = '<p class="sub"><b>The stored list could not be read.</b> Nothing is shown and nothing can be saved over it - reload this page to try again.</p>';
+    return;
+  }
+  $('rxlist').innerHTML = rxCur.map((x, i) => `<div class="rxrow" data-i="${escA(i)}">
+    <input type="text" class="rxname" value="${escA(x.name)}" placeholder="Name" aria-label="Pattern name">
+    <input type="text" class="rxpat" value="${escA(x.pattern)}" placeholder="Regular expression" aria-label="Pattern">
+    <button class="rxdel" title="Remove this pattern">✕</button></div>`).join('')
+    || '<p class="sub">No saved patterns - the panel\u2019s menu offers none until one is added.</p>';
+  $('rxlist').querySelectorAll('.rxrow').forEach((row) => {
+    const i = +row.dataset.i;
+    row.querySelector('.rxname').oninput = (e) => { rxCur[i].name = e.target.value; };
+    row.querySelector('.rxpat').oninput = (e) => { rxCur[i].pattern = e.target.value; };
+    row.querySelector('.rxdel').onclick = () => { rxCur.splice(i, 1); renderRx(); markDirty('rxShortcuts'); };
+  });
+}
+async function loadRx() {
+  try {
+    const st = await chrome.storage.local.get('rxShortcuts');
+    rxCur = Array.isArray(st.rxShortcuts)
+      ? st.rxShortcuts.map((x) => ({ name: String((x && x.name) || ''), pattern: String((x && x.pattern) || '') }))
+      : [];
+    rxLoadFailed = false;
+  } catch (_) { rxCur = []; rxLoadFailed = true; }
+  renderRx();
+}
+$('rxAdd').onclick = () => { rxCur.push({ name: '', pattern: '' }); renderRx(); markDirty('rxShortcuts'); };
+$('saveRx').onclick = async () => {
+  if (rxLoadFailed) { toast('The stored list could not be read - saving now could overwrite it. Reload this page.', true); return; }
+  const bad = rxProblems(rxCur);
+  if (bad) { toast(bad, true); return; }
+  markOwn('rxShortcuts'); dirty.delete('rxShortcuts'); conflictBox('rxShortcuts', false);
+  // No settingsStamp here: the panel reads this list fresh every time the menu opens, so there is
+  // nothing cached anywhere to tell about the change.
+  await chrome.storage.local.set({ rxShortcuts: rxCur.map((x) => ({ name: x.name.trim(), pattern: x.pattern })) });
+  toast('Patterns saved.');
+};
+
 const SECTIONS = {
   zohoDc: { label: 'Data centre', reload: loadDc },
   aicfg: { label: 'AI assistant', reload: loadAi },
+  rxShortcuts: { label: 'Saved search patterns', reload: loadRx },
   // Two keys, one section, so the label is a name rather than two copies one edit apart.
   erParams: { label: SEC_DIAGRAM, reload: loadLay },
   erDrawMax: { label: SEC_DIAGRAM, reload: loadLay },
@@ -515,6 +579,7 @@ try {
   loadAi();
   loadLay();
   loadDc();
+  loadRx();
 })();
 $('ai_lock').onchange = () => { aiPassChanging = false; $('ai_pass').value = ''; $('ai_pass2').value = ''; $('ai_passcur').value = ''; syncLockRow(); };
 ['ai_a_key', 'ai_o_key', 'ai_a_model', 'ai_o_model'].forEach((id) => {

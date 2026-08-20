@@ -369,6 +369,12 @@
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
   .smode:hover{background:#1e2a3d;color:var(--ink)}
   .smode.on{background:var(--sel);color:#fff;border-left-color:var(--sel)}
+  .rxmenu{position:fixed;z-index:60;background:#182131;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.45);min-width:200px;max-width:min(340px,calc(100vw - 16px));display:none;padding:4px 0}
+  .rxmenu.show{display:block}
+  .rxmenu button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px 10px;color:var(--ink);font-size:12px;border-radius:0}
+  .rxmenu button:hover{background:#1e2a3d}
+  .rxmenu .rxpat{display:block;color:var(--muted);font-family:ui-monospace,monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rxmenu .rxman{border-top:1px solid var(--border);color:var(--muted);margin-top:4px;padding-top:8px}
   .srhdr{color:var(--muted);font-size:11px;padding:6px 10px}
   .sr{padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer}
   .sr:hover{background:#182338}
@@ -377,6 +383,7 @@
   .srline{font:11px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
   .srln{color:#5b6b82;margin-right:6px}
   .sr mark{background:rgba(59,111,224,.35);color:#fff;border-radius:2px}
+  ::highlight(zoost-find){background:rgba(59,111,224,.45);color:#fff}
   .wftype{color:var(--muted);font-size:9px;margin-left:auto;text-transform:uppercase}
   .wfoff{color:#f59e0b;font-size:9px;margin-left:6px;text-transform:uppercase}
   /* Actions that do not run immediately. Its own hue, not the amber `off` uses: "delayed" is a
@@ -672,6 +679,8 @@
     <div class="findgrp">
       <div class="findwrap"><input id="find" placeholder="Find…" autocomplete="off"><span class="fx" id="findx" title="Clear">✕</span></div>
       <button id="smode" class="smode" title="What the search looks at: file names, or the full text inside the sources">in: names</button>
+      <button id="rxmode" class="smode" style="display:none" title="Treat the search text as a regular expression - JavaScript syntax, case-insensitive, ^ and $ match at each line">.*</button>
+    <button id="rxpick" class="smode" style="display:none" title="Saved patterns - pick one to search with it. The list is yours to edit, in Settings">▾</button>
     </div>
     <div class="ntog"><button id="nameToggle" title="Toggle internal / display name">Name: display</button></div>
   </div>
@@ -742,6 +751,7 @@
     <a href="https://github.com/sponsors/ivannot" target="_blank" rel="noopener" title="Support development on GitHub Sponsors (0% fees, needs a GitHub account)">Sponsor</a> <span class="sep">·</span>
     <a href="https://ko-fi.com/ivannot" target="_blank" rel="noopener" title="Buy me a coffee on Ko-fi (no account needed)">☕ Ko-fi</a>
   </div>
+<div id="rxmenu" class="rxmenu"></div>
   <script src="sample-org.js"></script>
   <script src="idb.js"></script>
 <script src="keyvault.js"></script>

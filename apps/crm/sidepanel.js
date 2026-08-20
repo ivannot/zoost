@@ -73,6 +73,8 @@ const previewCurrent = (mine, op) => mine === previewLoad && op.current();
 // the strip and ignored by the thing the strip is for. Null until that first render, never after.
 let viewMode = null, moduleData = [], moduleFilter = 'all', moduleNameMode = 'display';
 let searchMode = 'name', codeCache = null, _searchT = null;
+let regexMode = false;          // the .* toggle: the search text read as a pattern, full-text mode only
+let searchSeq = 0;              // every runSearch() bumps it, so a content search that finished late knows it
 let workflowData = [], workflowFilter = 'all', wfIndex = new Map();
 let scheduleData = [], scheduleFilter = 'all';
 const collapsed = new Set();
@@ -1069,6 +1071,15 @@ const TREE_SORTS = {
 };
 function renderTree() {
   if (viewMode !== 'functions') return;
+  // A content search owns the list while it is active. Every caller that repaints the tree - a
+  // pull's progress, a live save, a chip, the name toggle, a tab switch restoring its stash -
+  // would otherwise draw the *name* view under a box still searching code, which is how a regex
+  // came back from a tab round-trip as «No matches.» over the names. Reported. Debounced through
+  // the same timer as typing, so a paint storm during a pull coalesces into one search.
+  if (searchMode === 'content' && $('find').value.trim()) {
+    clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220);
+    return;
+  }
   const term = $('find').value.trim().toLowerCase();
   const shown = treeData
     .filter((e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter))
@@ -1696,6 +1707,7 @@ async function openFile(path, line = null, byClick = false) {
     : escHtml(code);
   $('pvcode').querySelectorAll('a.c-link[data-file]').forEach((a) => { a.onclick = () => openFile(a.dataset.file); });
   $('pvcode').querySelectorAll('a.c-link[data-mod]').forEach((a) => { a.onclick = () => healthOpenModule(a.dataset.mod); });
+  paintFindMarks($('pvcode'), findMarkRe());
   showPreview(byClick);
   if (line) { const lh = parseFloat(getComputedStyle($('pvcode')).lineHeight) || 16; $('pvbody').scrollTop = Math.max(0, (line - 3) * lh); }
   showCallers(path, mine, op);
@@ -2657,10 +2669,68 @@ $('smode').onclick = () => {
   searchMode = searchMode === 'name' ? 'content' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: code';
   $('smode').classList.toggle('on', searchMode === 'content');
+  $('rxmode').style.display = $('rxpick').style.display = searchMode === 'content' ? '' : 'none';
+  if (searchMode !== 'content') $('rxmenu').classList.remove('show');
   $('find').placeholder = searchMode === 'name' ? MSG.findByName : MSG.findInCode;
   runSearch();
 };
+$('rxmode').onclick = () => {
+  regexMode = !regexMode;
+  $('rxmode').classList.toggle('on', regexMode);
+  runSearch();
+};
+// The saved patterns, offered where they are used. The background seeds the first two; the list
+// itself lives in Settings, where it can be added to, edited and emptied - the menu only reads,
+// fresh on every open, so there is nothing here to fall out of date.
+async function loadRxShortcuts() {
+  try {
+    const st = await chrome.storage.local.get('rxShortcuts');
+    return Array.isArray(st.rxShortcuts)
+      ? st.rxShortcuts.filter((x) => x && typeof x.name === 'string' && typeof x.pattern === 'string' && x.name && x.pattern)
+      : [];
+  } catch (_) { return null; }   // null, not []: a read that failed is not an empty list
+}
+$('rxpick').onclick = async (ev) => {
+  ev.stopPropagation();
+  const menu = $('rxmenu');
+  if (menu.classList.contains('show')) { menu.classList.remove('show'); return; }
+  const list = await loadRxShortcuts();
+  // The read yielded: the tab, the mode or the workspace may have moved meanwhile, and every one of
+  // those hides the button. A menu for a control that is no longer there is not opened.
+  if ($('rxpick').style.display === 'none') return;
+  const items = list || [];
+  menu.innerHTML = items.map((x, i) => `<button data-rx="${escA(i)}"><span>${escHtml(x.name)}</span><span class="rxpat">${escHtml(x.pattern)}</span></button>`).join('')
+    + `<button class="rxman" data-man="1">${list === null ? 'The saved patterns could not be read. ' : (items.length ? '' : 'No saved patterns yet. ')}Manage\u2026</button>`;
+  menu.querySelectorAll('[data-rx]').forEach((b) => {
+    b.onclick = () => {
+      menu.classList.remove('show');
+      // The same guard as above, one interaction later: a pattern applied into a view whose search
+      // no longer offers regex would filter names by a literal `\\b\\d{18}\\b`.
+      if ($('rxpick').style.display === 'none') return;
+      const x = items[+b.dataset.rx];
+      $('find').value = x.pattern;
+      if (!regexMode) { regexMode = true; $('rxmode').classList.add('on'); }
+      runSearch();
+    };
+  });
+  menu.querySelector('[data-man]').onclick = () => { menu.classList.remove('show'); openSettings('#rx'); };
+  const r = $('rxpick').getBoundingClientRect();
+  menu.style.top = `${r.bottom + 4}px`;
+  menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  menu.classList.add('show');
+};
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#rxmenu') && !e.target.closest('#rxpick')) $('rxmenu').classList.remove('show');
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('rxmenu').classList.remove('show'); });
+
 function runSearch() {
+  // A contentSearch cannot be cancelled once running; what can be done is make its result refuse to
+  // land. Any newer search - or the render of an emptied box - moves the sequence past it.
+  searchSeq++;
+  // The open preview shows the same search: matches painted in the source, cleared when the search
+  // empties, changes mode or stops parsing - one call, because null clears.
+  paintFindMarks($('pvcode'), findMarkRe());
   if (viewMode === 'modules') { renderModules(); return; }
   if (viewMode === 'workflows') { renderWorkflows(); return; }
   if (viewMode === 'schedules') { renderSchedules(); return; }
@@ -2669,6 +2739,84 @@ function runSearch() {
   if (searchMode === 'content') { clearTimeout(_searchT); _searchT = setTimeout(contentSearch, 220); }
   else renderTree();
 }
+
+// Where a pattern matches inside one text, as [start, end) pairs - the pure half of the detail
+// highlighter, lifted alone by tests/slice.mjs. Zero-length matches are stepped over, the same
+// guard as everywhere else a user pattern runs.
+function matchSpans(text, re) {
+  const out = [];
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(text))) {
+    if (!m[0]) { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+    out.push([m.index, m.index + m[0].length]);
+  }
+  return out;
+}
+
+// Paint every match of the active full-text search inside `root`, through the CSS Custom Highlight
+// API: ranges over the rendered text nodes, no DOM mutation - so the syntax colouring underneath is
+// untouched, and a match that crosses its token boundaries still paints whole. Byte-identical in
+// both panels; the ::highlight(zoost-find) rule in each page gives the marks their colour.
+function paintFindMarks(root, re) {
+  if (!('highlights' in CSS)) return;   // without the API the search still works, unpainted
+  CSS.highlights.delete('zoost-find');
+  if (!root || !re) return;
+  const nodes = [];
+  let text = '';
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) { nodes.push({ n, at: text.length }); text += n.nodeValue; }
+  const spans = matchSpans(text, re);
+  if (!spans.length) return;
+  const ranges = [];
+  let i = 0;
+  for (const [a, b] of spans) {
+    while (i + 1 < nodes.length && nodes[i + 1].at <= a) i++;
+    let j = i;
+    while (j + 1 < nodes.length && nodes[j + 1].at < b) j++;
+    const r = new Range();
+    r.setStart(nodes[i].n, a - nodes[i].at);
+    r.setEnd(nodes[j].n, b - nodes[j].at);
+    ranges.push(r);
+  }
+  CSS.highlights.set('zoost-find', new Highlight(...ranges));
+}
+
+// The active full-text search as a compiled pattern, or null when there is nothing to paint: name
+// mode, an empty box, or a pattern that does not parse.
+function findMarkRe() {
+  if (searchMode !== 'content') return null;
+  const q = $('find').value.trim();
+  if (!q) return null;
+  if (!regexMode) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
+  return rxCompile(q).re || null;
+}
+
+// The search text as a pattern, or the reason it is not one. Case-insensitive like the plain
+// search, and `m` so ^ and $ mean "at a line edge", which is what a reader of code or SQL expects.
+// A declaration rather than an arrow because `tests/slice.mjs` lifts it out and runs it alone, and
+// byte-identical in both panels: a test holds the twins to the same source.
+function rxCompile(term) {
+  try { return { re: new RegExp(term, 'gim') }; } catch (e) { return { error: String((e && e.message) || e) }; }
+}
+
+// One line with every match wrapped in <mark>, escaped piece by piece - escaping first and then
+// matching the escaped text would miss any pattern that touches `<` or `&`. A zero-length match is
+// stepped over rather than marked: `x*` matches the empty string everywhere, and the escaper is a
+// parameter because the two panels name theirs differently.
+function markLine(line, re, escFn) {
+  let out = '';
+  let last = 0;
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(line))) {
+    if (!m[0]) { re.lastIndex++; if (re.lastIndex > line.length) break; continue; }
+    out += escFn(line.slice(last, m.index)) + '<mark>' + escFn(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  return out + escFn(line.slice(last));
+}
+
 /** Every source, once. Searching text means having read it - there is no index that spares this, and
  *  writing one would be a second answer to «what does this function say» that could disagree with the
  *  file. What can be spared is the *waiting*: the reads happen in tranches with a yield between them,
@@ -2700,16 +2848,34 @@ async function contentSearch() {
   const op = beginWorkspaceOp();
   const term = $('find').value.trim(); const tree = $('tree');
   if (!term) { renderTree(); return; }
+  const rx = regexMode ? rxCompile(term) : null;
+  if (rx && rx.error) {
+    // «No matches» for a pattern that never ran would be the lie this panel exists to refuse.
+    tree.innerHTML = `<div class="treemsg"><b>The pattern does not parse.</b> ${escHtml(rx.error)}. Nothing was searched - fix the pattern or switch .* off.</div>`;
+    return;
+  }
+  const mine = searchSeq;
   tree.innerHTML = '<div class="treemsg">Searching\u2026</div>';
-  const cache = await getCodeCache(op); if (!cache || !op.current()) return;
+  const cache = await getCodeCache(op); if (mine !== searchSeq || !cache || !op.current()) return;
   const tl = term.toLowerCase();
   const results = [];
   const passType = (e) => typeFilter === 'all' || (typeFilter === 'rest' ? e.rest : e.namespace === typeFilter);
   for (const e of treeData) {
     if (!e.downloaded || !passType(e)) continue;
     const code = cache.get(e.id); if (!code) continue;
-    const lc = code.toLowerCase(); let idx = lc.indexOf(tl); if (idx < 0) continue;
-    let count = 0, i = idx; while (i >= 0) { count++; i = lc.indexOf(tl, i + tl.length); }
+    let idx = -1, count = 0;
+    if (rx) {
+      const re = rx.re; re.lastIndex = 0; let m;
+      while ((m = re.exec(code))) {
+        if (!m[0]) { re.lastIndex++; if (re.lastIndex > code.length) break; continue; }
+        if (idx < 0) idx = m.index;
+        count++;
+      }
+      if (idx < 0) continue;
+    } else {
+      const lc = code.toLowerCase(); idx = lc.indexOf(tl); if (idx < 0) continue;
+      let i = idx; while (i >= 0) { count++; i = lc.indexOf(tl, i + tl.length); }
+    }
     const ls = code.lastIndexOf('\n', idx) + 1; let le = code.indexOf('\n', idx); if (le < 0) le = code.length;
     const lineNo = code.slice(0, idx).split('\n').length;
     results.push({ e, count, lineNo, line: code.slice(ls, le).trim().slice(0, 140) });
@@ -2719,12 +2885,12 @@ async function contentSearch() {
   if (!results.length) { tree.innerHTML = `<div class="treemsg">No matches for "${escHtml(term)}".</div>`; return; }
   const total = results.reduce((n, r) => n + r.count, 0);
   const hdr = document.createElement('div'); hdr.className = 'srhdr'; hdr.textContent = `${total} match(es) in ${results.length} file(s)`; tree.appendChild(hdr);
-  const reTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hlRe = rx ? rx.re : new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
   results.forEach((r) => {
     const el = document.createElement('div'); el.className = 'sr'; el.dataset.path = r.e.path;
-    const hi = escHtml(r.line).replace(new RegExp('(' + reTerm + ')', 'ig'), '<mark>$1</mark>');
+    const hi = markLine(r.line, hlRe, escHtml);
     el.innerHTML = `<div class="srname">${escHtml(labelOf(r.e))} <span class="srcount">${r.count}</span></div><div class="srline"><span class="srln">${r.lineNo}</span> ${hi}</div>`;
-    el.onclick = () => openFromTree(r.e.path);
+    el.onclick = () => openFile(r.e.path, r.lineNo, true);   // at the match's line, not the top
     tree.appendChild(el);
   });
 }
@@ -3559,6 +3725,10 @@ function dropWorkspaceState() {
  *  underneath it, which is this. */
 function resetView() {
   $('find').value = '';
+  // The stashes are per *tab*, not per workspace: restored across an org change they would run one
+  // org's search - text, mode and the .* toggle together - against another. All of it goes.
+  Object.keys(findByMode).forEach((k) => delete findByMode[k]);
+  regexMode = false; $('rxmode').classList.remove('on'); $('rxmenu').classList.remove('show');
   connectionFilter = null; connFilterSet = null;
   currentPath = null; navClear();
   $('preview').classList.remove('show'); $('resizer').classList.remove('show');
@@ -3855,11 +4025,13 @@ function setMode(mode) {
   // The text and *how* it is searched are one thing: putting away «needle» without «in: code» and
   // handing it back as a name search means the same box quietly means something else on the way
   // back. Reported. Saved and restored together.
-  if (viewMode && viewMode !== mode) findByMode[viewMode] = { text: $('find').value, mode: searchMode };
+  if (viewMode && viewMode !== mode) findByMode[viewMode] = { text: $('find').value, mode: searchMode, rx: regexMode };
   viewMode = mode;
   // Restored, not cleared: coming back to a tab you were searching in should find it as you left it.
   const back = findByMode[mode] || { text: '', mode: 'name' };
   $('find').value = back.text;
+  regexMode = !!back.rx;
+  $('rxmode').classList.toggle('on', regexMode);
   if (mode === 'functions' && back.mode === 'content') {
     searchMode = 'content'; $('smode').textContent = 'in: code'; $('smode').classList.add('on');
     $('find').placeholder = MSG.findInCode;   // the label said code and the box said name
@@ -3867,6 +4039,8 @@ function setMode(mode) {
   if (mode !== 'functions') { connectionFilter = null; connFilterSet = null; }   // the connection filter is functions-only
   if (mode !== 'functions' && searchMode === 'content') { searchMode = 'name'; $('smode').textContent = 'in: names'; $('smode').classList.remove('on'); $('find').placeholder = MSG.findByName; }
   $('smode').style.display = mode === 'functions' ? '' : 'none';
+  $('rxmode').style.display = $('rxpick').style.display = mode === 'functions' && searchMode === 'content' ? '' : 'none';
+  if (!(mode === 'functions' && searchMode === 'content')) $('rxmenu').classList.remove('show');
   $('modebar').querySelectorAll('.seg').forEach((b) => b.classList.toggle('active', b.dataset.tab === mode));
   // A jump can land on a tab the reader hid in Settings - a health row, an «Used in» link, a step of
   // the history. `renderTabs()` gives the tab you are *on* a segment even when it is hidden, and

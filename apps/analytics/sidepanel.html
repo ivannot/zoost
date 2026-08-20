@@ -189,8 +189,15 @@
   .smode{padding:4px 10px;font-size:11px;white-space:nowrap;flex:none;background:#182131;border:0;border-left:1px solid var(--border);border-radius:0;color:var(--muted)}
   .smode:hover{background:#1e2a3d;color:var(--ink)}
   .smode.on{background:var(--sel);color:#fff;border-left-color:var(--sel)}
+  .rxmenu{position:fixed;z-index:60;background:#182131;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.45);min-width:200px;max-width:min(340px,calc(100vw - 16px));display:none;padding:4px 0}
+  .rxmenu.show{display:block}
+  .rxmenu button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px 10px;color:var(--ink);font-size:12px;border-radius:0}
+  .rxmenu button:hover{background:#1e2a3d}
+  .rxmenu .rxpat{display:block;color:var(--muted);font-family:ui-monospace,monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rxmenu .rxman{border-top:1px solid var(--border);color:var(--muted);margin-top:4px;padding-top:8px}
   .sqlhit{font:11px var(--mono);color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sqlhit mark{background:var(--sel);color:#fff;border-radius:2px;padding:0 1px}
+  ::highlight(zoost-find){background:rgba(59,111,224,.45);color:#fff}
   .sqlhit .n{color:var(--sel-text);margin-right:6px}
   .findwrap{position:relative;flex:1;min-width:90px;display:flex}
   .findwrap input{width:100%;padding:6px 26px 6px 10px;background:transparent;border:0;color:var(--ink);font:12px var(--sans);outline:none}
@@ -492,6 +499,8 @@
   <div class="findgrp">
     <div class="findwrap"><input id="find" type="search" placeholder="Find…" autocomplete="off"><span class="fx" id="findclear" title="Clear">✕</span></div>
     <button id="smode" class="smode" title="What the search looks at: names, folders and columns, or the full text of every query's SQL">in: names</button>
+    <button id="rxmode" class="smode" style="display:none" title="Treat the search text as a regular expression - JavaScript syntax, case-insensitive, ^ and $ match at each line">.*</button>
+    <button id="rxpick" class="smode" style="display:none" title="Saved patterns - pick one to search with it. The list is yours to edit, in Settings">▾</button>
   </div>
 </div>
 <div class="controls">
@@ -586,6 +595,7 @@
   <button class="primary" id="gozoho">Go to Zoho Analytics ↗</button>
   <button class="znav" id="offsample" title="Write a workspace of invented data into the working folder and open it - nothing is fetched, and it can be deleted like any other">+ Sample workspace</button>
 </div>
+<div id="rxmenu" class="rxmenu"></div>
 
 <script src="sample-org.js"></script>
 <script src="idb.js"></script>

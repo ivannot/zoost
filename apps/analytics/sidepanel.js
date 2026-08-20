@@ -1212,7 +1212,10 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
     $('smode').textContent = 'in: names';
     $('smode').classList.remove('on');
     $('find').placeholder = 'Find\u2026';
+    $('rxmode').style.display = $('rxpick').style.display = 'none';
+    $('rxmenu').classList.remove('show');
   }
+  if (regexMode) { regexMode = false; $('rxmode').classList.remove('on'); }
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   diskUnreadable = views.length ? null : failed;
@@ -1376,15 +1379,109 @@ function renderTypeFilter() {
 // to a reader and what this panel could not do: the text is not in memory, it is read per view when
 // you open one. So the first search of a session reads every .sql file once and keeps it.
 let searchMode = 'name';        // 'name' | 'sql'
+let regexMode = false;          // the .* toggle: the search text read as a pattern, full-text mode only
 let sqlCache = null;            // Map(id -> text), built once per workspace
 let sqlUnread = 0;              // files that would not open, reported rather than counted as misses
 const sqlDiskUnread = new Set();// ids whose index entry exists but whose last .sql open failed
 let _sqlSearchT = null;
 
+
+// Where a pattern matches inside one text, as [start, end) pairs - the pure half of the detail
+// highlighter, lifted alone by tests/slice.mjs. Zero-length matches are stepped over, the same
+// guard as everywhere else a user pattern runs.
+function matchSpans(text, re) {
+  const out = [];
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(text))) {
+    if (!m[0]) { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+    out.push([m.index, m.index + m[0].length]);
+  }
+  return out;
+}
+
+// Paint every match of the active full-text search inside `root`, through the CSS Custom Highlight
+// API: ranges over the rendered text nodes, no DOM mutation - so the syntax colouring underneath is
+// untouched, and a match that crosses its token boundaries still paints whole. Byte-identical in
+// both panels; the ::highlight(zoost-find) rule in each page gives the marks their colour.
+function paintFindMarks(root, re) {
+  if (!('highlights' in CSS)) return;   // without the API the search still works, unpainted
+  CSS.highlights.delete('zoost-find');
+  if (!root || !re) return;
+  const nodes = [];
+  let text = '';
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) { nodes.push({ n, at: text.length }); text += n.nodeValue; }
+  const spans = matchSpans(text, re);
+  if (!spans.length) return;
+  const ranges = [];
+  let i = 0;
+  for (const [a, b] of spans) {
+    while (i + 1 < nodes.length && nodes[i + 1].at <= a) i++;
+    let j = i;
+    while (j + 1 < nodes.length && nodes[j + 1].at < b) j++;
+    const r = new Range();
+    r.setStart(nodes[i].n, a - nodes[i].at);
+    r.setEnd(nodes[j].n, b - nodes[j].at);
+    ranges.push(r);
+  }
+  CSS.highlights.set('zoost-find', new Highlight(...ranges));
+}
+
+// The active full-text search as a compiled pattern, or null when there is nothing to paint: name
+// mode, an empty box, or a pattern that does not parse.
+function findMarkRe() {
+  if (searchMode !== 'sql') return null;
+  const q = $('find').value.trim();
+  if (!q) return null;
+  if (!regexMode) return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim');
+  return rxCompile(q).re || null;
+}
+
+// The search text as a pattern, or the reason it is not one. Case-insensitive like the plain
+// search, and `m` so ^ and $ mean "at a line edge", which is what a reader of code or SQL expects.
+// A declaration rather than an arrow because `tests/slice.mjs` lifts it out and runs it alone, and
+// byte-identical in both panels: a test holds the twins to the same source.
+function rxCompile(term) {
+  try { return { re: new RegExp(term, 'gim') }; } catch (e) { return { error: String((e && e.message) || e) }; }
+}
+
+// One line with every match wrapped in <mark>, escaped piece by piece - escaping first and then
+// matching the escaped text would miss any pattern that touches `<` or `&`. A zero-length match is
+// stepped over rather than marked: `x*` matches the empty string everywhere, and the escaper is a
+// parameter because the two panels name theirs differently.
+function markLine(line, re, escFn) {
+  let out = '';
+  let last = 0;
+  let m;
+  re.lastIndex = 0;
+  while ((m = re.exec(line))) {
+    if (!m[0]) { re.lastIndex++; if (re.lastIndex > line.length) break; continue; }
+    out += escFn(line.slice(last, m.index)) + '<mark>' + escFn(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  return out + escFn(line.slice(last));
+}
+
 // What a term does inside one query: how many times, and the first line it is on. A declaration
 // rather than an arrow because `tests/slice.mjs` lifts it out and runs it alone.
-function sqlHit(text, term) {
+function sqlHit(text, term, re) {
   if (!text || !term) return null;
+  if (re) {
+    re.lastIndex = 0;
+    let count = 0, first = -1, m2;
+    while ((m2 = re.exec(text))) {
+      if (!m2[0]) { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+      if (first < 0) first = m2.index;
+      count++;
+    }
+    // A pattern whose only matches are empty matches nothing: there is no text to show a reader.
+    if (first < 0) return null;
+    const s2 = text.lastIndexOf('\n', first) + 1;
+    let e2 = text.indexOf('\n', first);
+    if (e2 < 0) e2 = text.length;
+    return { count, line: text.slice(s2, e2).trim().slice(0, 160), lineNo: text.slice(0, first).split('\n').length };
+  }
   const lc = text.toLowerCase(), t = term.toLowerCase();
   let idx = lc.indexOf(t);
   if (idx < 0) return null;
@@ -1441,7 +1538,10 @@ function visibleViews() {
   if (q && searchMode === 'sql') {
     // Only what has SQL can match, and only what has been read: a query whose file would not open is
     // counted by ensureSqlCache() and reported, not quietly turned into «no match».
-    out = out.filter((v) => sqlCache && sqlHit(sqlCache.get(v.id), q));
+    const rx = regexMode ? rxCompile($('find').value.trim()) : null;
+    // A broken pattern searched nothing, so it matches nothing: render() names the error, and this
+    // empties the list so the keyboard cannot step onto rows the reader was just told do not exist.
+    out = rx && rx.error ? [] : out.filter((v) => sqlCache && sqlHit(sqlCache.get(v.id), q, rx && rx.re));
   } else if (q) {
     out = out.filter((v) => {
       if ((v.name || '').toLowerCase().includes(q) || (v.folderName || '').toLowerCase().includes(q)) return true;
@@ -1531,6 +1631,18 @@ function render() {
     list.innerHTML = `<div class="empty">${emptyReason()}</div>`;
     return;
   }
+  // The detail pane shows the same search: matches painted in the open SQL, cleared when the
+  // search empties, changes mode or stops parsing - one call, because null clears.
+  paintFindMarks(document.querySelector('#detail pre.sql'), findMarkRe());
+  const rawQ = $('find').value.trim();
+  if (searchMode === 'sql' && regexMode && rawQ) {
+    const rxErr = rxCompile(rawQ).error;
+    if (rxErr) {
+      // «No matches» for a pattern that never ran would be the lie this panel exists to refuse.
+      list.innerHTML = `<div class="empty"><b>The pattern does not parse.</b> ${esc(rxErr)}. Nothing was searched - fix the pattern or switch .* off.</div>`;
+      return;
+    }
+  }
   const rows = visibleViews();
   if (!rows.length) {
     list.innerHTML = `<div class="empty"><b>No view matches.</b>
@@ -1567,13 +1679,14 @@ function render() {
   };
   // In SQL mode the row says where the term is, the way the CRM's search results do: the line, its
   // number, and how many times the term appears in that query.
+  const hlRe = rawQ && searchMode === 'sql'
+    ? (regexMode ? rxCompile(rawQ).re : new RegExp(rawQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gim'))
+    : null;
   const sqlLine = (v) => {
-    if (searchMode !== 'sql' || !sqlCache) return '';
-    const q2 = $('find').value.trim();
-    const h = q2 ? sqlHit(sqlCache.get(v.id), q2) : null;
+    if (searchMode !== 'sql' || !sqlCache || !hlRe) return '';
+    const h = sqlHit(sqlCache.get(v.id), rawQ, regexMode ? hlRe : null);
     if (!h) return '';
-    const re = new RegExp('(' + q2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
-    return `<div class="sqlhit"><span class="n">${h.lineNo}</span>${esc(h.line).replace(re, '<mark>$1</mark>')}`
+    return `<div class="sqlhit"><span class="n">${h.lineNo}</span>${markLine(h.line, hlRe, esc)}`
       + (h.count > 1 ? ` <span class="n">\u00d7${h.count}</span>` : '') + '</div>';
   };
   list.innerHTML = `<table class="vtbl">
@@ -1591,7 +1704,14 @@ function render() {
       <td class="num">${esc(shortDate(v.dataModifiedAt))}</td>
       ${deps ? `<td class="num">${usedBy(v)}</td>` : ''}
     </tr>`).join('')}</tbody></table>`;
-  list.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => openDetail(tr.dataset.id); });
+  list.querySelectorAll('tr[data-id]').forEach((tr) => {
+    tr.onclick = () => {
+      // A row opened from an SQL search opens on the SQL tab: that is where the match the reader
+      // clicked for lives, painted. The same pattern as the lineage links one block down.
+      if (searchMode === 'sql' && $('find').value.trim()) detailTab = 'sql';
+      openDetail(tr.dataset.id);
+    };
+  });
   list.querySelectorAll('a.fk[data-lin]').forEach((a2) => {
     a2.onclick = (ev) => { ev.stopPropagation(); detailTab = 'lin'; openDetail(a2.dataset.lin); };
   });
@@ -1741,6 +1861,7 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
       // piece itself, which is the only reason it may be handed to innerHTML at all.
       ? `<pre class="sql">${window.highlightSql ? window.highlightSql(sql) : esc(sql)}</pre>`
       : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL file could not be read.' : 'No SQL text.'}</b> ${esc(sqlText(sql))}</div>`) + '</div>';
+    paintFindMarks(body.querySelector('pre.sql'), findMarkRe());
     return;
   }
   // lineage
@@ -3133,17 +3254,74 @@ $('list').addEventListener('keydown', (e) => {
   stepSelection(step || 0, edge);
 });
 
-$('find').oninput = render;
+$('find').oninput = () => {
+  // Debounced in SQL mode only: a user-authored pattern runs over every cached query body, and
+  // doing that on each keystroke means doing it on the half-typed patterns too.
+  if (searchMode === 'sql') { clearTimeout(_sqlSearchT); _sqlSearchT = setTimeout(render, 220); }
+  else render();
+};
 $('smode').onclick = async () => {
   const op = beginWorkspaceOp();
   searchMode = searchMode === 'name' ? 'sql' : 'name';
   $('smode').textContent = searchMode === 'name' ? 'in: names' : 'in: SQL';
   $('smode').classList.toggle('on', searchMode === 'sql');
+  $('rxmode').style.display = $('rxpick').style.display = searchMode === 'sql' ? '' : 'none';
+  if (searchMode !== 'sql') $('rxmenu').classList.remove('show');
   $('find').placeholder = searchMode === 'name' ? 'Find\u2026' : 'Find inside the SQL\u2026';
   if (searchMode === 'sql' && !(await ensureSqlCache(op))) return;
   if (!op.current()) return;
   render();
 };
+$('rxmode').onclick = () => {
+  regexMode = !regexMode;
+  $('rxmode').classList.toggle('on', regexMode);
+  render();
+};
+// The saved patterns, offered where they are used. The background seeds the first two; the list
+// itself lives in Settings, where it can be added to, edited and emptied - the menu only reads,
+// fresh on every open, so there is nothing here to fall out of date.
+async function loadRxShortcuts() {
+  try {
+    const st = await chrome.storage.local.get('rxShortcuts');
+    return Array.isArray(st.rxShortcuts)
+      ? st.rxShortcuts.filter((x) => x && typeof x.name === 'string' && typeof x.pattern === 'string' && x.name && x.pattern)
+      : [];
+  } catch (_) { return null; }   // null, not []: a read that failed is not an empty list
+}
+$('rxpick').onclick = async (ev) => {
+  ev.stopPropagation();
+  const menu = $('rxmenu');
+  if (menu.classList.contains('show')) { menu.classList.remove('show'); return; }
+  const list = await loadRxShortcuts();
+  // The read yielded: the tab, the mode or the workspace may have moved meanwhile, and every one of
+  // those hides the button. A menu for a control that is no longer there is not opened.
+  if ($('rxpick').style.display === 'none') return;
+  const items = list || [];
+  menu.innerHTML = items.map((x, i) => `<button data-rx="${escA(i)}"><span>${esc(x.name)}</span><span class="rxpat">${esc(x.pattern)}</span></button>`).join('')
+    + `<button class="rxman" data-man="1">${list === null ? 'The saved patterns could not be read. ' : (items.length ? '' : 'No saved patterns yet. ')}Manage\u2026</button>`;
+  menu.querySelectorAll('[data-rx]').forEach((b) => {
+    b.onclick = () => {
+      menu.classList.remove('show');
+      // The same guard as above, one interaction later: a pattern applied into a view whose search
+      // no longer offers regex would filter names by a literal `\\b\\d{18}\\b`.
+      if ($('rxpick').style.display === 'none') return;
+      const x = items[+b.dataset.rx];
+      $('find').value = x.pattern;
+      if (!regexMode) { regexMode = true; $('rxmode').classList.add('on'); }
+      render();
+    };
+  });
+  menu.querySelector('[data-man]').onclick = () => { menu.classList.remove('show'); openSettings('#rx'); };
+  const r = $('rxpick').getBoundingClientRect();
+  menu.style.top = `${r.bottom + 4}px`;
+  menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  menu.classList.add('show');
+};
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#rxmenu') && !e.target.closest('#rxpick')) $('rxmenu').classList.remove('show');
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('rxmenu').classList.remove('show'); });
+
 $('findclear').onclick = () => { $('find').value = ''; render(); $('find').focus(); };
 $('typesel').onchange = () => { typeFilter = $('typesel').value || null; render(); };
 $('sort').onchange = () => { sortKey = $('sort').value; render(); };

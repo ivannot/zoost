@@ -3804,6 +3804,221 @@ for (const app of ['crm', 'analytics']) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The .* toggle: the same box, the text read as a pattern. `rxCompile` decides whether it parses,
+// `sqlHit` takes the compiled pattern as its third argument, and `markLine` draws the marks. The
+// helpers are byte-identical in the two panels, and that is asserted, because a twin that drifts
+// is two search boxes that answer the same pattern differently.
+{
+  const { rxCompile, markLine, sqlHit } = load([
+    sliceFn('apps/analytics/sidepanel.js', 'rxCompile'),
+    sliceFn('apps/analytics/sidepanel.js', 'markLine'),
+    sliceFn('apps/analytics/sidepanel.js', 'sqlHit'),
+  ]);
+  const SQL = 'SELECT a.x\nFROM "Orders" o\nJOIN "Accounts" a ON a.id = o.acc\nWHERE o.total > 0';
+
+  test('the two panels carry the same helpers, byte for byte', () => {
+    for (const fn of ['rxCompile', 'markLine']) {
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+        'why=' + fn + ' has drifted between the twins');
+    }
+  });
+
+  test('a pattern that parses comes back as a regexp, case-insensitive and per-line anchored', () => {
+    const { re, error } = rxCompile('^join\\b');
+    assert.equal(error, undefined);
+    // Not `instanceof RegExp`: the slice runs in its own vm context, whose RegExp is another realm's.
+    assert.equal(typeof re.exec, 'function');
+    assert.equal(re.flags, 'gim');
+  });
+
+  test('a pattern that does not parse comes back as its reason, never as a throw', () => {
+    const r = rxCompile('a(');
+    assert.equal(r.re, undefined);
+    assert.ok(/group|parenthes/i.test(r.error), r.error);
+  });
+
+  test('sqlHit with a pattern: count, first line, line number', () => {
+    const h = sqlHit(SQL, 'o\\.\\w+', rxCompile('o\\.\\w+').re);
+    assert.equal(h.count, 2, 'o.acc and o.total');
+    assert.equal(h.lineNo, 3);
+    assert.ok(h.line.includes('o.acc'), h.line);
+  });
+
+  test('^ and $ anchor at each line, which is what a reader of SQL means by them', () => {
+    assert.equal(sqlHit(SQL, 'x', rxCompile('^JOIN').re).lineNo, 3);
+    assert.equal(sqlHit(SQL, 'x', rxCompile('acc$').re).count, 1);
+  });
+
+  test('a pattern whose only matches are empty matches nothing', () => {
+    assert.equal(sqlHit(SQL, 'x', rxCompile('q*').re), null);
+  });
+
+  test('a reused pattern starts from the top of each text - g keeps no state between calls', () => {
+    const re = rxCompile('JOIN').re;
+    assert.equal(sqlHit(SQL, 'x', re).count, 1);
+    assert.equal(sqlHit(SQL, 'x', re).count, 1, 'the second call saw the stale lastIndex');
+  });
+
+  test('markLine wraps every match and escapes everything else', () => {
+    const esc0 = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    assert.equal(markLine('a < b JOIN c', rxCompile('join').re, esc0), 'a &lt; b <mark>JOIN</mark> c');
+    assert.equal(markLine('x & <y>', rxCompile('nothing').re, esc0), 'x &amp; &lt;y&gt;');
+  });
+
+  test('markLine matches the raw text, so a pattern touching < still marks it', () => {
+    const esc0 = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    assert.equal(markLine('if (a < 3)', rxCompile('a < \\d').re, esc0), 'if (<mark>a &lt; 3</mark>)');
+  });
+
+  test('markLine steps over zero-length matches instead of looping', () => {
+    const esc0 = (t) => t;
+    assert.equal(markLine('abc', rxCompile('z*').re, esc0), 'abc');
+    assert.equal(markLine('aab', rxCompile('a*').re, esc0), '<mark>aa</mark>b');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The saved patterns behind the ▾ menu. The background seeds two on install - and only when the key
+// has never existed, or an emptied list would grow its presets back. The options page is the only
+// writer after that, and `rxProblems` is the whole of what it refuses.
+{
+  const { rxDefaults } = load([sliceFn('apps/crm/background.js', 'rxDefaults')]);
+  const { rxProblems } = load([sliceFn('apps/crm/options.js', 'rxProblems')]);
+
+  test('the seed and the validation are byte-identical in the twins', () => {
+    assert.equal(sliceFn('apps/crm/background.js', 'rxDefaults'),
+      sliceFn('apps/analytics/background.js', 'rxDefaults'), 'why=the seeds have drifted');
+    assert.equal(sliceFn('apps/crm/options.js', 'rxProblems'),
+      sliceFn('apps/analytics/options.js', 'rxProblems'), 'why=the validation has drifted');
+  });
+
+  test('the seed only writes over a key that has never existed', () => {
+    for (const app of ['crm', 'analytics']) {
+      const bg = read(`apps/${app}/background.js`);
+      assert.ok(/st\.rxShortcuts === undefined/.test(bg),
+        'why=' + app + ' would re-seed an emptied list, making the presets undeletable');
+    }
+  });
+
+  test('both seeded patterns parse under the flags the search uses', () => {
+    for (const { pattern } of rxDefaults()) new RegExp(pattern, 'gim');
+  });
+
+  test('the email pattern finds an address and nothing pretending to be one', () => {
+    const re = new RegExp(rxDefaults()[0].pattern, 'gim');
+    assert.ok(re.test('write to First.Last+tag@sub.example.co about it'));
+    re.lastIndex = 0;
+    assert.ok(!re.test('an @ alone, or version 2.5, is not an address'));
+  });
+
+  test('the Zoho id pattern is exactly 18 digits, bounded', () => {
+    const re = () => new RegExp(rxDefaults()[1].pattern, 'gim');
+    assert.ok(re().test('deleteRecord(349725000131663089);'));
+    assert.ok(!re().test('order 12345'), 'an ordinary number is not an id');
+    assert.ok(!re().test('x1234567890123456789x'), '19 digits is not this id');
+  });
+
+  test('matchSpans finds every span once and steps over the empty ones', () => {
+    const { matchSpans } = load([sliceFn('apps/analytics/sidepanel.js', 'matchSpans')]);
+    const re = /a+/gim;
+    // Compared as JSON: the slice runs in its own vm realm, whose Array prototype fails strict
+    // deep-equality against this one.
+    assert.equal(JSON.stringify(matchSpans('aa b a', re)), '[[0,2],[5,6]]');
+    assert.equal(JSON.stringify(matchSpans('aa b a', re)), '[[0,2],[5,6]]', 'the second call saw the stale lastIndex');
+    assert.equal(JSON.stringify(matchSpans('bcd', /z*/gim)), '[]', 'an all-empty match set is no spans');
+  });
+
+  test('the detail painter is the same in both panels, and both pages give it its colour', () => {
+    for (const fn of ['matchSpans', 'paintFindMarks']) {
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+        'why=' + fn + ' has drifted between the twins');
+    }
+    for (const app of ['crm', 'analytics']) {
+      assert.ok(/::highlight\(zoost-find\)/.test(read(`apps/${app}/sidepanel.html`)),
+        'why=' + app + ' registers ranges under a name its page never styles');
+    }
+  });
+
+  test('the detail pane shows the search: painted on render, repainted on every change', () => {
+    const crm = read('apps/crm/sidepanel.js');
+    assert.equal((crm.match(/paintFindMarks\(\$\('pvcode'\), findMarkRe\(\)\)/g) || []).length, 2,
+      'why=the CRM preview is painted on open or on search change, but not both');
+    assert.ok(/openFile\(r\.e\.path, r\.lineNo, true\)/.test(crm),
+      'why=a search hit opens the file at the top instead of at its line');
+    const an = read('apps/analytics/sidepanel.js');
+    assert.equal((an.match(/paintFindMarks\(.*pre\.sql.*findMarkRe\(\)\)/g) || []).length, 2,
+      'why=the Analytics SQL tab is painted on render or on search change, but not both');
+    assert.ok(/detailTab = 'sql';\n      openDetail/.test(an),
+      'why=a row opened from an SQL search opens on a tab without the match');
+  });
+
+  test('a valid list is nothing to refuse', () => {
+    assert.equal(rxProblems([{ name: 'Email', pattern: 'a+' }, { name: 'Id', pattern: '\\d{18}' }]), null);
+    assert.equal(rxProblems([]), null, 'an empty list is a choice, not a problem');
+  });
+
+  test('a read that failed is not an empty list, anywhere it could be mistaken for one', () => {
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/catch \(_\) \{ return null; \}/.test(panel),
+        'why=' + app + ' panel turns a failed storage read into \u00abno saved patterns\u00bb');
+      const opts = read(`apps/${app}/options.js`);
+      assert.ok(/let rxLoadFailed = true;/.test(opts),
+        'why=' + app + ' options can save over a list that was never read');
+      assert.ok(/if \(rxLoadFailed\)/.test(opts.slice(opts.indexOf("$('saveRx')"))),
+        'why=' + app + ' Save does not ask whether the load succeeded');
+    }
+  });
+
+  test('the menu element exists before the scripts that touch it at load', () => {
+    // #rxmenu first landed after the <script> tags, and the top-level init crashed on
+    // null.classList in setMode - found only by the render harness actually loading the page.
+    for (const app of ['crm', 'analytics']) {
+      const html = read(`apps/${app}/sidepanel.html`);
+      const div = html.indexOf('id="rxmenu"');
+      const script = html.search(/<script src=/);
+      assert.ok(div >= 0 && script >= 0 && div < script,
+        'why=' + app + ' scripts run before the menu element exists');
+    }
+  });
+
+  test('hiding the picker closes its menu, and a menu opened late refuses to act', () => {
+    for (const app of ['crm', 'analytics']) {
+      const panel = read(`apps/${app}/sidepanel.js`);
+      const hides = (panel.match(/\$\('rxpick'\)\.style\.display = ('none'|\$\('rxpick'\))/g) || []).length;
+      const closes = (panel.match(/\$\('rxmenu'\)\.classList\.remove\('show'\)/g) || []).length;
+      assert.ok(closes >= 3, 'why=' + app + ' can hide the \u25be button and leave its menu floating (' + closes + ' close sites)');
+      assert.ok(/if \(\$\('rxpick'\)\.style\.display === 'none'\) return;/.test(panel),
+        'why=' + app + ' opens or applies the menu for a control that is no longer there');
+      // Anchored to the menu: the panels already close their dialogs on Escape, so a bare match
+      // would pass with this listener deleted - proven by deleting it.
+      assert.ok(/if \(e\.key === 'Escape'\) \$\('rxmenu'\)/.test(panel),
+        'why=' + app + ' menu cannot be dismissed from the keyboard');
+    }
+  });
+
+  test('a content search that finished late cannot land, and SQL typing is debounced', () => {
+    const crm = read('apps/crm/sidepanel.js');
+    assert.ok(/searchSeq\+\+/.test(crm), 'why=nothing moves the sequence');
+    assert.ok(/mine !== searchSeq \|\| !cache/.test(crm),
+      'why=a stale contentSearch overwrites the newer result after its await');
+    const an = read('apps/analytics/sidepanel.js');
+    assert.ok(/clearTimeout\(_sqlSearchT\); _sqlSearchT = setTimeout\(render, 220\)/.test(an),
+      'why=every keystroke runs the pattern over every cached query body');
+    assert.ok(/out = rx && rx\.error \? \[\]/.test(an),
+      'why=a broken pattern leaves every view in visibleViews, and the keyboard steps onto them');
+  });
+
+  test('what stops a save is named: the row, the pattern, the clash', () => {
+    assert.ok(/Row 2 has no name/.test(rxProblems([{ name: 'a', pattern: 'x' }, { name: ' ', pattern: 'y' }])));
+    assert.ok(/"a" has no pattern/.test(rxProblems([{ name: 'a', pattern: '  ' }])));
+    assert.ok(/does not parse/.test(rxProblems([{ name: 'a', pattern: 'x(' }])));
+    assert.ok(/share the name/.test(rxProblems([{ name: 'A', pattern: 'x' }, { name: ' a ', pattern: 'y' }])),
+      'two names one trim-and-case apart are the same menu entry');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // What the diagram window is handed. Reported by an assistant reading the repository, and the day
 // before I had called the same finding false: `graph-core.js` does delete the source from every
 // node - which is what I measured - and then `loadGraph()` puts it straight back as `source_code`,
@@ -5505,13 +5720,24 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const panel = crmPanel();
   const fn = panel.slice(panel.indexOf('function setMode'), panel.indexOf('\n}', panel.indexOf('function setMode')));
   test('each tab keeps its own Find', () => {
-    assert.ok(/findByMode\[viewMode\] = \{ text: \$\('find'\)\.value, mode: searchMode \}/.test(fn),
+    assert.ok(/findByMode\[viewMode\] = \{ text: \$\('find'\)\.value, mode: searchMode, rx: regexMode \}/.test(fn),
               'leaving a tab throws away what was typed in it, or how it was being searched');
+    assert.ok(/regexMode = !!back\.rx/.test(fn), 'the .* toggle does not come back with the text it searched');
     assert.ok(/\$\('find'\)\.value = back\.text/.test(fn), 'arriving on a tab does not restore its own');
     assert.ok(/back\.mode === 'content'/.test(fn),
               'the text comes back as a name search, so the same box means something else');
     assert.ok(fn.indexOf("findByMode[viewMode]") < fn.indexOf('viewMode = mode'),
               'it saves after the mode has already changed, so it saves under the wrong tab');
+  });
+  test('no caller can draw the name view over an active content search', () => {
+    // The tab round-trip restored «in: code» + the pattern and then let rebuildTree paint the
+    // name-filtered tree: a regex matched zero names and the panel said «No matches.» about a
+    // search it never ran. The guard lives in renderTree itself so all eighteen callers inherit it.
+    const rt = panel.slice(panel.indexOf('function renderTree'), panel.indexOf('const term', panel.indexOf('function renderTree')));
+    assert.ok(/searchMode === 'content' && \$\('find'\)\.value\.trim\(\)/.test(rt),
+      'why=renderTree draws names while the box is searching code');
+    assert.ok(/_searchT = setTimeout\(contentSearch, 220\)/.test(rt),
+      'why=the deferral does not actually re-run the search');
   });
 }
 

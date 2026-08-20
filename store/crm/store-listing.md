@@ -34,7 +34,7 @@ WHAT IT DOES
 
 - Local mirror, and Git if you want it. Zoho CRM's own version history covers a function, one at a time. Everything else the pull captures - module schema, layouts, related lists, workflows, schedules, connections, and what Zoho reports as failing - arrives on your disk as plain files, so with Git it gets a history too, and one diff answers what changed across every kind at once. Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over. Functions deleted in Zoho are pruned locally on the next pull, so the folder stays a faithful mirror rather than an accumulating pile.
 
-- Search across every function at once. Full-text search over all your Deluge sources - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it.
+- Search across every function at once. Full-text search over all your Deluge sources, literal or regular expression - the closest thing to grep for Zoho CRM, and something the platform does not offer. Find every reference to a field, a module, an endpoint or a hardcoded id before you change it. Named patterns - an email address, Zoho's 18-digit record id, and any you add - are one click away and yours to manage.
 
 - Auto-sync on save. Save a function in the native Zoho editor and the matching local file updates by itself, so your working copy always mirrors production.
 
@@ -131,7 +131,7 @@ No content is injected into the page for UI purposes. The sidePanel permission i
 ```
 storage persists the user's own settings between sessions, in chrome.storage.local only. Nothing is stored remotely or synced.
 
-What is kept: the selected AI engine, model id and API key (optional, off by default; used only to call the chosen provider, and encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; which side panel tabs are shown, in what order, and which a pull asks Zoho for; a display-only copy of which data types the user's Zoho role granted or refused, so the options page can say why a tab is gone; and the id of the sample workspace, if any, so the panel can offer to open it before it may read the folder.
+What is kept: the selected AI engine, model id and API key (optional; encrypted with AES-GCM/PBKDF2-SHA256 if the user sets a passphrase); export defaults; ER diagram preferences; the user's saved search patterns (named regular expressions the search box offers); which side panel tabs are shown, in what order, and which a pull asks Zoho for; which data types the user's Zoho role refused, kept so the options page can say why a tab is gone; and the id of the sample workspace, if any, so the panel can offer to open it before it may read the folder.
 
 chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked: memory-only, cleared when the browser closes.
 

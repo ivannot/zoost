@@ -52,7 +52,7 @@
   <p class="sub">Short and practical. It assumes you build reports in Zoho Analytics and know your way
     around a filesystem. Ten minutes gets you from install to a versioned mirror of a workspace.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.28.0</span> · updated <span class="dd" data-stamp="updated">19 August 2026</span></p>
+  <p class="upd" data-app="analytics" data-updated-key="analytics">Covers Zoost Analytics <span class="dv" data-stamp="version">1.28.0</span> · updated <span class="dd" data-stamp="updated">20 August 2026</span></p>
 
   <div class="toc">
     <b>On this page</b>
@@ -306,7 +306,14 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     that matches shows the line the term is on and how many times it appears in that query. The
     first search of a session reads every <code>.sql</code> file once - the panel says how many, and
     says so again if any of them would not open, because a query it could not read is not a query
-    with no match.</p>
+    with no match. The <b class="ui">.*</b> toggle beside the switch reads the text as a
+    <b>regular expression</b> - JavaScript syntax, case-insensitive, <code>^</code> and <code>$</code>
+    match at each line - and a pattern that does not parse says so instead of answering "no matches".
+    Next to it, <b class="ui">▾</b> opens your saved patterns - an email address and Zoho's 18-digit
+    record id to begin with - and the list is yours to add to, edit or empty in <b>Settings</b>. A row
+    opened from this search opens on its <b>SQL</b> tab, with every match painted in the source - the
+    same search, followed through. One honest limit: a pattern built to backtrack can make the search
+    slow. It runs on your machine, over your files, and nowhere else.</p>
   <p>On disk every query is its own file too, so <code>grep</code> and <code>git log -p</code> work on
     them like any other source - the same search, from the other side.</p>
   <p><b class="ui">Open in Zoho ↗</b> beside the diagram button takes you to that view in Zoho
@@ -335,7 +342,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
     Zoho Analytics remains the only thing that can tell you a query compiles.</p>
 
 <figure class="shot">
-    <img src="/img/analytics-search.webp?v=1cc944ab32" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/analytics-search.webp?v=84a4d926fb" width="1760" height="1100" loading="lazy" decoding="async"
          alt="The Analytics panel with the search scope on «in: SQL»: seven query tables matching JOIN, each row showing the line it is on.">
     <figcaption>Chapter 8: <b>in: SQL</b> looks inside every query in the workspace at once - here the
       seven that join something, each with the line the term is on.</figcaption>

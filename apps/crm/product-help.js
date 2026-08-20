@@ -122,8 +122,10 @@ THE MAIN BUTTONS, AND WHAT HAPPENS WHEN YOU PRESS THEM
   someone who does not have Zoost or Zoho CRM. Markdown is for giving to another AI assistant.
   A dialog appears first, choosing what goes in; source code is flagged because it is the most
   sensitive part. Sections whose data is older than the rest are unticked, with the date and reason.
-- "Find": searches names, or the full text of every function at once - the thing Zoho CRM has no way
-  of doing. Useful before changing a field: it finds every function that mentions it.
+- "Find": searches names, or the full text of every function at once - literally or, with the .*
+  toggle, as a regular expression - the thing Zoho CRM has no way of doing. Useful before changing a
+  field: it finds every function that mentions it. The \u25be menu beside the toggle offers saved
+  patterns, managed in Settings.
 - "Clear" in this chat: empties the conversation, and that is not only housekeeping. The whole thread is
   re-sent with every message - the questions, the answers, and everything the assistant opened along
   the way - and nothing trims it, so a long conversation costs more per question and drags old

@@ -46,6 +46,10 @@
   button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
   button.primary:hover{background:#c4256b}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .rxrow{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+  .rxrow .rxname{width:170px;flex:none}
+  .rxrow .rxpat{flex:1;font-family:ui-monospace,monospace}
+  .rxrow .rxdel{padding:6px 10px;flex:none}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
   .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
   .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
@@ -189,6 +193,19 @@
       <a href="https://help.zoho.com/portal/en/kb/analytics/knowledge-base/data-modeling-preparation/query-tables-for-data-preparation-1/articles/what-are-the-sql-dialects-supported-by-zoho-analytics" target="_blank" rel="noopener">Supported SQL dialects</a>.
       Zoost does not run, validate or deploy SQL - whatever the assistant writes is a draft for you to
       paste into Zoho Analytics, which is the only thing that can tell you it compiles.</div>
+  </section>
+
+  <section data-section="rxShortcuts">
+    <h2 id="rx">Saved search patterns</h2>
+    <p class="sub">Named regular expressions, offered by the <b>▾</b> menu beside the panel's search box
+      when the full-text search is on. JavaScript syntax, case-insensitive, <code>^</code> and
+      <code>$</code> match at each line. The two starters - an email address, and the 18-digit numeric
+      id Zoho gives every record - can be edited or removed like anything you add.</p>
+    <div id="rxlist"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="rxAdd">Add pattern</button>
+      <button id="saveRx" class="primary">Save patterns</button>
+    </div>
   </section>
 
   <section data-section="erParams">

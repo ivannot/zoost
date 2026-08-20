@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/docs-crm.html sha256:280e00a7d034b947 -->
+<!-- translated-from: site/docs-crm.html sha256:05bb6125c095d021 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Come si usa Zoost CRM</title>
@@ -54,7 +54,7 @@
     in un filesystem. Dieci minuti bastano per passare dall'installazione a un mirror versionato della tua
     org.</p>
   <!-- Filled from the repo by site.js; the values below are the fallback when it cannot run. -->
-  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.45.0</span> · aggiornata il <span class="dd" data-stamp="updated">19 agosto 2026</span></p>
+  <p class="upd" data-app="crm">Riferita a Zoost CRM <span class="dv" data-stamp="version">1.45.0</span> · aggiornata il <span class="dd" data-stamp="updated">20 agosto 2026</span></p>
 
   <p class="note" data-it-only>I nomi dei comandi restano <b>in inglese</b>, perché l'estensione è in inglese: quello
     che leggi qui fra i riquadri è esattamente quello che vedrai nel pannello. La
@@ -285,7 +285,16 @@ git commit -m "baseline"</code></pre>
     <li><b class="ui">Find</b> ha accanto un selettore di ambito: <b class="ui">in: names</b> cerca nei nomi
       dei file, <b class="ui">in: code</b> fa una <b>ricerca full-text su tutti i sorgenti delle funzioni
       dell'org</b> - la cosa più vicina a un <code>grep</code> sul tuo Deluge, e qualcosa che Zoho non offre.
-      Usala prima di rinominare un campo o di ritirare un endpoint.</li>
+      Usala prima di rinominare un campo o di ritirare un endpoint. Il selettore <b class="ui">.*</b> lì
+      accanto legge il testo come <b>espressione regolare</b> - sintassi JavaScript, senza distinzione fra
+      maiuscole e minuscole, <code>^</code> e <code>$</code> valgono su ogni riga - e un pattern che non si
+      lascia interpretare lo dice, invece di rispondere «nessun risultato». Subito dopo, <b class="ui">▾</b>
+      apre i tuoi pattern salvati - per cominciare un indirizzo email e l'id Zoho a 18 cifre - e l'elenco è
+      tuo: lo allunghi, lo modifichi o lo svuoti nei <b>Settings</b>. Un risultato apre il file
+      <b>alla sua riga</b>, e ogni corrispondenza è dipinta dentro il sorgente che l'anteprima mostra -
+      la stessa ricerca, seguita fino in fondo. Un limite detto subito: un pattern
+      costruito per fare backtracking può rallentare la ricerca. Gira sulla tua macchina, sui tuoi file, e
+      da nessun'altra parte.</li>
     <li>Su un modulo, la tabella dei campi ha una colonna per layout: un pallino vuol dire che il campo è su
       quel layout, un pallino ambra che lì è obbligatorio. Le righe evidenziate in crema sono campi che non stanno su <b>nessun</b> layout - solo API.</li>
   </ul>
@@ -309,7 +318,7 @@ git commit -m "baseline"</code></pre>
     nominerebbero i file di un'altra organizzazione.</p>
 
   <figure class="shot">
-    <img src="/img/crm-search.webp?v=fb4b16b9c5" width="1760" height="1100" loading="lazy" decoding="async"
+    <img src="/img/crm-search.webp?v=1946d8e98b" width="1760" height="1100" loading="lazy" decoding="async"
          alt="Il pannello che cerca nel testo di tutte le funzioni insieme, con quattro corrispondenze in due file.">
     <figcaption>Capitolo 5: <b>in: code</b> trasforma la casella in una ricerca dentro il sorgente di ogni funzione - qui quattro corrispondenze in due file, con la riga in cui stanno.</figcaption>
   </figure>

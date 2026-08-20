@@ -45,6 +45,10 @@
   button.primary:hover{background:#2f6fe0}
   button.danger{color:#f4a9a9;border-color:#5c3436}
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .rxrow{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+  .rxrow .rxname{width:170px;flex:none}
+  .rxrow .rxpat{flex:1;font-family:ui-monospace,monospace}
+  .rxrow .rxdel{padding:6px 10px;flex:none}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
   .prov{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
   .prov h3{font-size:12px;margin:0 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:10px}
@@ -251,6 +255,19 @@
     <div class="row" style="margin-top:12px">
       <button id="scFull">Everything</button><button id="scSafe">Share-safe</button>
       <button id="saveScope" class="primary">Save defaults</button>
+    </div>
+  </section>
+
+  <section data-section="rxShortcuts">
+    <h2 id="rx">Saved search patterns</h2>
+    <p class="sub">Named regular expressions, offered by the <b>▾</b> menu beside the panel's search box
+      when the full-text search is on. JavaScript syntax, case-insensitive, <code>^</code> and
+      <code>$</code> match at each line. The two starters - an email address, and the 18-digit numeric
+      id Zoho gives every record - can be edited or removed like anything you add.</p>
+    <div id="rxlist"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="rxAdd">Add pattern</button>
+      <button id="saveRx" class="primary">Save patterns</button>
     </div>
   </section>
 
