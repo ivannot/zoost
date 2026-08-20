@@ -293,8 +293,8 @@ it mattered. They are in the header now, above the tabs. **They are also the col
 carries its hue and its word, and they are on screen always, which the canvas legend never was - so
 that legend is gone rather than being a second key for one dimension.
 
-**A hue alone asks the reader to hold a key in their head.** «I colori sono utili ma non
-sufficienti» - the boxes name their category next to it now, and the category comes first, because it
+**A hue alone asks the reader to hold a key in their head.** «The colours help but are not
+enough» - the boxes name their category next to it now, and the category comes first, because it
 is the dimension everything in this window is coloured and filtered by.
 
 **And they steer all three projections, not just the list.** «Show me this without the connections»
@@ -462,9 +462,9 @@ has left the screen keeps its entry, so switching a category off and on again fi
 
 **Taking off the drawing what you are not looking at, one box at a time.** The filters answer «which
 kinds am I looking at»; this answers the other half, and the reader's own statement of it is the
-specification: *«un arco mette in relazione due elementi e io posso cliccare in corrispondenza di
-questi due elementi per eliminare quello che c'e a monte o a valle, rimuovendo anche in cascata tutto
-cio che c'e collegato»*. So an arc carries a `-` at **each** of the two points where it meets a box:
+specification: *«an arc relates two elements and I can click at each of
+those two elements to remove what is upstream or downstream, taking away in cascade everything that
+is connected to it»*. So an arc carries a `-` at **each** of the two points where it meets a box:
 the one on A takes B away and whatever came into the drawing with it, the one on B says the same of A.
 A `+` where a removal was made brings it back. It is a filter on the *drawing*, not on the layout -
 nothing is laid out again, so it composes with an arrangement, and the PDF prints what you see.
@@ -479,7 +479,7 @@ off this» - true, and no use whatever to somebody trying to clear the view. The
 graphs: **a rule that is right about the data can still be the wrong answer to what the reader is
 doing**, and the way that showed up was a control that was absent in most of the places he looked.
 
-**What «in cascata tutto cio che c'e collegato» has to mean, because it cannot mean itself.** Taken
+**What «in cascade everything that is connected to it» has to mean, because it cannot mean itself.** Taken
 literally, everything connected to B includes the way back round to A and then the whole component, so
 the first click would empty the diagram. What goes is B **and whatever was in the drawing only through
 B**: two walks from the box the control sits on, one with B and one without, and the difference is the
@@ -535,7 +535,7 @@ The dashes went in on the second pass and the first pass's reasoning was wrong i
 it put one name per line on the belief that **a tooltip does not wrap**. It does, and the reader's own
 screenshot is the proof - a workflow called «Formazione specialistica valorizza esito e Crea Compito
 dopo colloquio» takes three lines by itself, so «one line, one box» stops being true exactly where the
-names are long enough for it to matter. Reported as «sembra tutto attaccato». A dash survives the wrap:
+names are long enough for it to matter. Reported as «it all looks stuck together». A dash survives the wrap:
 a continuation line has none, so what is one item and what is two is never in question. `erTipText` is one helper for the mark and for the card button, because the same click described
 two ways, ten pixels apart, is the drift this repository spends its length on.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """imgcheck.py - the site's screenshots, checked rather than remembered.
 
-«Copertura visiva totale delle feature» is an intention until something measures it. The site is
+«Total visual coverage of the features» is an intention until something measures it. The site is
 built so that a capability which exists in the panel and is described nowhere makes `featurecheck.py`
 speak; this is the same rule one dimension over - a screen that exists and is *shown* nowhere.
 

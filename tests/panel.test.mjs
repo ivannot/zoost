@@ -3643,7 +3643,7 @@ for (const [app, fns] of [
 }
 
 // Asked for as a rule, by somebody who edits the DOM to remove `disabled` and sees what happens:
-// «bisogna aggiungere un controllo che quelle funzioni non possano essere invocate». So the refusal
+// «a check has to be added so that those functions cannot be invoked». So the refusal
 // is at the action - above - and again at the transport, which is the only door to the platform.
 // Two of them, because a guard on the caller can be forgotten on the next caller, and one in the
 // door cannot.
@@ -5007,7 +5007,7 @@ test('crm: the arrows open a row the way that row opens', () => {
 
 // ---------------------------------------------------------------------------------------------
 // The history: back, forward, and the chain itself. Reported as missing once the panel had become a
-// hypertext - «rende poco utile questa navigabilita'» - because a link you cannot come back from is
+// hypertext - «it makes this navigability of little use» - because a link you cannot come back from is
 // a trapdoor. What is worth holding is not the buttons but the two rules that are easy to get subtly
 // wrong: arriving where you already are is not a step, and stepping somewhere new after going back
 // drops what was ahead. Both were verified in a real browser too; these hold them at the unit.
@@ -5101,8 +5101,8 @@ test('crm: the arrows open a row the way that row opens', () => {
 
   test('the history covers what AI and Health cover, tab row included', () => {
     // Three shapes in three days, and the last is the one that reads: a dropdown, then a strip
-    // wedged between the search row and the list, now an overlay - «deve essere la stessa di ai e
-    // health, nascondendo di fatto anche tutti i tab». Held against those two rather than against
+    // wedged between the search row and the list, now an overlay - «it must be the same as ai and
+    // health, hiding every tab as they do». Held against those two rather than against
     // numbers: whatever they cover, this covers.
     for (const app of ['crm', 'analytics']) {
       const css = read(`apps/${app}/sidepanel.html`);
@@ -5266,8 +5266,8 @@ test('code is shown the same way in both products: lines as written, box scrolls
 });
 
 // ---------------------------------------------------------------------------------------------
-// The code can be taken out of the panel. Asked for: «l'sql su analytics e deluge su crm devono
-// poter essere copiabili». One control, the same in both, in the row above the code - it was floated
+// The code can be taken out of the panel. Asked for: «the SQL in Analytics and the Deluge in CRM
+// must be copyable». One control, the same in both, in the row above the code - it was floated
 // over the pane first and landed on the control at the end of that row, which is what a button
 // positioned into somebody else's box does sooner or later.
 {
@@ -6947,8 +6947,8 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
 });
 
 // ---------------------------------------------------------------------------------------------
-// Reported from a real org: «ho fatto un pull all e mentre girava ho aperto la org di test - vedevo
-// che il pull era ancora in moto». The writes were already refused by then; what was not was the
+// Reported from a real org: «I ran a Pull all and while it was going I opened the
+// test org - I could see the pull was still running». The writes were already refused by then; what was not was the
 // *running*. A pull is minutes of fetching with a pause between items, and it went on counting
 // «Downloading 214/900» into a panel that had been showing another workspace for a minute - and
 // finished by announcing a failure count over it, because every refused write had counted as one.

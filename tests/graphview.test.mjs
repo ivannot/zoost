@@ -792,7 +792,7 @@ for (const app of ['crm', 'analytics']) {
     assert.equal(tip(['Alpha'], 'Alpha', true), 'Putting back Alpha');
     // the box the control names first, then what comes with it alphabetically, one dash per box - a
     // tooltip *does* wrap, so a long name takes several lines and only the dash says where one box
-    // ends and the next begins. Reported as «sembra tutto attaccato», against a version with none.
+    // ends and the next begins. Reported as «it all looks stuck together», against a version with none.
     assert.equal(tip(['Zulu', 'Alpha', 'Mike'], 'Zulu', false),
       'Removing 3 boxes:\n\n- Zulu\n- Alpha\n- Mike');
     // and it is capped, with the number that stays true at any size

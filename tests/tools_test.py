@@ -1033,8 +1033,8 @@ class ReleaseNotesAreARequirement(unittest.TestCase):
         # has to replace them. That step lived only in the routine - so it depended on somebody
         # remembering it at the end of a long day, and it was missed on exactly the release that
         # changed both interfaces: Analytics was carrying 1.23.0's pictures into 1.26.0 and the CRM's
-        # set had no recorded version at all. Reported as a rule: «non sono io a dovertelo chiedere,
-        # e' un automatismo».
+        # set had no recorded version at all. Reported as a rule: «it is not for me to have to ask you,
+        # it is something the machine does».
         #
         # What is asserted is the derivation, not the wording: the version the listing records
         # against the version being tagged, and the note only when they differ - a reminder that
@@ -3462,6 +3462,113 @@ class ShippedFilesAreText(unittest.TestCase):
                     if bad:
                         findings.append(f"{f.relative_to(ROOT)}: {[hex(b) for b in sorted(bad)]}")
         self.assertEqual(findings, [], "a control byte makes the file binary to ordinary tools")
+
+
+class FindingsNotesEndInARule(unittest.TestCase):
+    """A review note records the defect, the fix, and the rule that stops it coming back.
+
+    Asked for on 20 August 2026, about a note that had been left at the repository root under the name
+    of the *activity* that produced it: «what has to be tracked is the problems, the solutions and
+    above all the rules that stop those anomalies happening again». The activity is over the moment it
+    ends; the rule is the only part that is still worth reading a year later.
+
+    Held mechanically because the shape is what decays: writing up eleven defects is satisfying, and
+    the eleventh rule is the one that gets left out at midnight."""
+
+    FINDINGS = ROOT / 'docs' / 'findings'
+
+    def test_there_is_at_least_one_and_the_index_points_at_the_folder(self):
+        main = (ROOT / 'CLAUDE.md').read_text(encoding='utf-8')
+        self.assertIn('docs/findings', main, 'the notes exist and the index does not mention them')
+        self.assertTrue(sorted(self.FINDINGS.glob('*.md')), 'docs/findings is empty')
+
+    def test_each_file_is_dated_and_says_what_it_was(self):
+        for f in sorted(self.FINDINGS.glob('*.md')):
+            self.assertRegex(f.name, r'^\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$',
+                             f'{f.name}: a note is YYYY-MM-DD-what-it-was.md, in English and sortable')
+
+    def test_every_entry_ends_in_a_rule(self):
+        # The three parts, in order: what broke, what was done, what stops it recurring. A note whose
+        # entries stop at the fix is a changelog, and this repository has one of those already.
+        for f in sorted(self.FINDINGS.glob('*.md')):
+            body = f.read_text(encoding='utf-8')
+            # A note may take another shape - the first one here is a reply to an outside audit, and
+            # «what was refused and why» is half of its argument. What no note may lack is the rules,
+            # so that is what is required of every one of them; the three-part form is held wherever
+            # it is used, which is what every note written since the convention does.
+            self.assertIn('rule', body.lower(), f'{f.name}: a review note with no rule in it')
+            entries = [e for e in re.split(r'^#+ ', body, flags=re.M)[1:] if '**What broke.**' in e]
+            self.assertTrue(entries or '## The rules it left behind' in body,
+                            f'{f.name}: neither the three-part form nor a collected set of rules')
+            for e in entries:
+                title = e.splitlines()[0][:60]
+                self.assertIn('**The rule.**', e, f'{f.name}: «{title}» stops at the fix')
+                self.assertIn('**The fix.**', e, f'{f.name}: «{title}» does not say what was done')
+                self.assertLess(e.index('**The fix.**'), e.index('**The rule.**'),
+                                f'{f.name}: «{title}» states the rule before the fix')
+
+
+class LangCheckHoldsOneLanguage(unittest.TestCase):
+    """One language in the repository, and the checker that says so.
+
+    The rule arrived on 20 August 2026 - «everything in English; Italian only on the Italian pages» -
+    after a note written in Italian was found at the repository root and two `background.js` files
+    were seen to have opened with an Italian comment since the first commit. A rule about language is
+    the easiest of all to break here, because the author thinks in Italian, so it got a check the same
+    day rather than a paragraph.
+
+    What is asserted is the discrimination, not the tree: a word list that fires on English would be
+    abandoned within a week, and one that misses Italian is decoration."""
+
+    def _mod(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('langcheck', ROOT / 'tools' / 'langcheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        return mod
+
+    ITALIAN = [
+        '// Apre il side panel quando clicchi l\'icona della toolbar.',
+        'Reported as «i colori sono utili ma non sufficienti».',
+        'questa pagina non esiste',
+        'devono essere allineate a sinistra',
+    ]
+    ENGLISH = [
+        '# 50 rows per page, and the wide walk reads 200',
+        'This is a non-negotiable: no write path to Zoho.',
+        'come back to it later, once the pull has finished',
+        'const perPage = 200;  // measured against the API',
+        'a summary cache that must never outlive the folder it describes',
+    ]
+
+    def test_it_finds_italian_and_leaves_english_alone(self):
+        rx = self._mod().RX
+        for line in self.ITALIAN:
+            self.assertTrue(rx.search(line), f'not reported as Italian: {line}')
+        for line in self.ENGLISH:
+            self.assertIsNone(rx.search(line), f'English reported as Italian: {line}')
+
+    def test_the_italian_pages_are_the_only_place_it_does_not_look(self):
+        m = self._mod()
+        self.assertTrue(m.skipped('site/it/index.html'))
+        self.assertTrue(m.skipped('tools/absolutes.txt'), 'the ledger of published claims is not exempt')
+        self.assertFalse(m.skipped('apps/crm/sidepanel.js'))
+        self.assertFalse(m.skipped('docs/naming.md'))
+        self.assertFalse(m.skipped('site/index.html'), 'an English page is not exempt because it is a page')
+
+    def test_a_ledger_entry_is_a_line_and_a_place(self):
+        # The same sentence copied into a second file is a second finding: an accepted quotation is
+        # accepted where it stands, not everywhere. And editing an accepted line un-accepts it.
+        m = self._mod()
+        self.assertNotEqual(m.key('docs/naming.md', 'una frase'), m.key('docs/layout.md', 'una frase'))
+        self.assertNotEqual(m.key('docs/naming.md', 'una frase'), m.key('docs/naming.md', 'un altra frase'))
+        self.assertEqual(m.key('docs/naming.md', ' una frase '), m.key('docs/naming.md', 'una frase'))
+
+    def test_the_ledger_is_in_step_with_the_tree(self):
+        # Being behind is itself a finding, exactly as in twincheck and csscheck: a ledger that
+        # records lines which are no longer there stops being a record of anything.
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'langcheck.py')],
+                             capture_output=True, text=True, cwd=str(ROOT))
+        self.assertEqual(out.returncode, 0, out.stdout)
 
 
 class AsyncCheckFinds(unittest.TestCase):

@@ -21,7 +21,7 @@ its file first.** A rule you did not read is a rule that gets broken and then re
 | [`docs/panels.md`](docs/panels.md) | before rearranging the chrome, the tabs, a settings form or a second window - and for what the Zoho Analytics data model actually exposes, measured rather than assumed |
 | [`docs/assistant.md`](docs/assistant.md) | before changing what the assistant is told, what it may read, or anything touching the API key and the passphrase that protects it |
 | [`docs/boundaries.md`](docs/boundaries.md) | before touching anything that crosses one: the hook in Zoho's page, the bridge, what a message is allowed to cause, what the assistant may reach, what «read-only» means and where it is enforced |
-| [`docs/audit-2026-08.md`](docs/audit-2026-08.md) | before acting on an outside review. The worked example of «evidence, not a verdict»: what the August 2026 audit got right, what it got wrong, what was refused and why - and the two defects found by the machinery built to check it |
+| [`docs/findings/`](docs/findings) | before acting on any review of this codebase, and after finishing one. A dated note per sweep - what broke, what was done, and the rule that stops it coming back. `2026-08-13-outside-audit.md` is the worked example of «evidence, not a verdict» |
 | [`docs/traps.md`](docs/traps.md) | when something does nothing and says nothing. Every entry in it failed silently once |
 | [`docs/naming.md`](docs/naming.md) | before writing anything a user or a reviewer can read: the product names, the site, the translations, and the checks that hold them |
 | [`docs/releases.md`](docs/releases.md) | when something in the chain misbehaves - Cloudflare, the Store API, the workflows, the attestations. The routine itself is below, in this file |
@@ -700,6 +700,15 @@ justifications. Hand me the finished text ready to paste, and tell me which dash
 change alongside the package — they are reviewed together, and an inconsistency between manifest,
 description and privacy policy is what delays or fails a review.
 
+**A review of the codebase → a dated note in `docs/findings/`, and every entry ends in a rule.**
+Not a report of an activity: the activity is over and nobody will read about it. What is worth keeping
+is the *defect*, what was done about it, and - the part that pays for the file - **the rule that stops
+it happening again**, named as a class rather than as the incident. Where the rule can be checked by a
+machine, the note names the check and the check goes in on the same day; where it cannot, the note
+says so instead of leaving it to be discovered. One file per sweep, `YYYY-MM-DD-<what-it-was>.md`, so
+they sort by date and say what they were. `tests/tools_test.py` holds the shape: an entry without a
+rule is a finding.
+
 **A change touching permissions, data flow or naming → stop and say so before writing code.**
 Those have consequences outside the repository.
 
@@ -824,9 +833,8 @@ tracked, and it also refuses machine-shaped absolute paths anywhere in the tree 
 copy of this rule I wrote checked `tools/` and `tests/run.sh` only, and I put the path in **this
 file** in the same commit, under a test that said it was written in one place.
 
-**And it is not something to remember at all: a hook syncs it after every change.** «Ogni volta che
-aggiorni qualcosa devo poter fare i test - non devo chiederti io tutte le volte di copiare sulla
-directory di test.» The rule below was real and insufficient: it only fired when the *battery* was
+**And it is not something to remember at all: a hook syncs it after every change.** «Every time you change something I have to be able to
+test it - I should not have to ask you to copy it to the test folder each time.» The rule below was real and insufficient: it only fired when the *battery* was
 run, so a UI change checked with `tools/probe.py` alone, or with `node --test`, left the folder Chrome
 loads from a version behind - and he found it by testing something that had already been fixed. The
 fix is the second step this file demands of every rule that keeps being broken: `tools/synctest.sh`
@@ -907,6 +915,17 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   title arriving as «Zoost Zoho CRM» was diagnosed as the charset dropping a dash the product no
   longer has, from sample text I had written myself. **A rule about an exception outlives the
   exception**, so when one is removed, the sentence that granted it goes in the same change.
+- **One language: English.** Code, comments, notes, tests, tool output, file names, commit messages -
+  all of it. The only Italian in this repository is the site's **Italian pages**, and the strings and
+  quotations that belong to them: a citation of Italian copy inside a note about that copy stays as it
+  was said, because translating a quotation falsifies it. Asked for on 20 August 2026, after a review
+  note written in Italian was found at the repository root and two `background.js` files were seen to
+  have opened with an Italian comment since the first commit - the author thinks in Italian, so the
+  words arrive already written and this is the rule most easily broken by whoever has just read it.
+  So it is not prose: **`python3 tools/langcheck.py`**, in `tests/run.sh`, is a ledger like
+  `tools/cssdupes.txt` - `tools/notenglish.txt` records the 29 deliberate lines with their reason,
+  anything new is a finding, and the ledger may only shrink. What it cannot do is in its docstring: it
+  knows Italian by a word list, so it is a net and not a proof.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
 - **An absolute claim invites a literal check, and a literal check is what this project asks for.**
   `llms.txt` moves an assistant from summarising the page to verifying it sentence by sentence, and in

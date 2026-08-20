@@ -172,3 +172,29 @@ payloads are left exactly as they were; nothing published depends on them, becau
 now rendered from the workspace `+ Sample` delivers.
 
 **The screenshots of both listings changed** and have to be re-uploaded at the next submission.
+
+---
+
+## The rules it left behind
+
+This note predates the shape the later ones use - what broke, the fix, **the rule** - and it is left
+in its own form, because it is a reply to somebody else's document and its argument is what was taken
+against what was refused. What it must not lack is the last part, so the rules it produced are
+collected here. Each of them is enforced somewhere, and where nothing enforces it that is said.
+
+- **An absolute is a claim about what we send, never about what the other side does.** «Zoost never
+  writes to Zoho» became «these are the endpoints Zoost calls», asserted per endpoint in the bridge -
+  and a second endpoint handed to the same helper fails the test.
+- **A boundary is asserted at both ends or at neither.** The page-world channel is narrowed and
+  checked from the panel *and* from the hook; one side alone is a promise.
+- **«Nothing there», «you may not», and «the shape moved» are three answers.** Collapsing them into an
+  empty result is how a permission problem and a broken parser arrive as the same silence.
+- **Every walk that pages has one ceiling, and every result says whether it hit it.** A truncated
+  read that does not admit it authorises a destructive act somewhere downstream.
+- **A control that exists must be reachable.** `forget()` was written, tested by nobody, and called by
+  nothing; `tools/featurecheck.py` now derives the controls from the panels and holds the site to
+  them, which is the same defect one layer out.
+- **A review is evidence, not a verdict.** Six findings were real, three were wrong or already
+  satisfied, three were refused with reasons, and two defects nobody had reported were found by the
+  machinery built to check the review. Agreeing with a confident document is as much a failure as
+  ignoring it.

@@ -1,0 +1,36 @@
+# Derived by tools/langcheck.py - do not edit by hand; run it with --accept.
+# Every line here is Italian that is *meant* to be: a quotation of the Italian site,
+# or a string those pages are built from. The ledger may only shrink.
+60c557ea95b387da  docs/layout.md: point at the product you are looking at. Italian inflects it for gender, so «Questa ti disegna la
+4acf4995d319b4a8  docs/naming.md: a guide that says *premi Scarica tutto* names a button the reader will never find — and the note
+a56ceb20b3fafe35  docs/naming.md: viene spedito» against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio
+3a7cfa531c668027  docs/naming.md: switch, «la versione inglese di questa pagina» — all carry it now.
+f2fe621e3e0470ee  docs/naming.md: *sono* le chiavi esterne»; «quello che *serve*» for "what it serves", inverting the sentence;
+0162b0a0f80979b9  docs/naming.md: «i campi presenti in **nessun** layout» and «tabelle in nessuna relazione», a bare negative
+49a3d2e24c94bf2c  docs/releases.md: matched `mai`, `never`, `soltanto`, `only` - and never `read-only`, which is the one absolute this
+7f4475919d1372cb  site/404.html: <p class="note">Questa pagina non esiste. <a href="/it/">La versione italiana del sito</a> e
+358518614d6e4a89  site/404.html: <a href="/it/try">la pagina per provarlo</a> sono qui.</p>
+2fbe9668f0f562c5  site/site.css: «"Cosa si rompe se cambio questo?", seguito su tutta l'org» ran across the answer next to it.
+72b90cad71726037  site/site.js: rejected: 'Rifiutata', staged: 'Approvata, non ancora pubblicata',
+d0c88c4c2c1e3f3c  site/site.js: awaiting: 'in attesa di revisione', notSubmitted: 'non ancora inviata',
+12444db0f7d12bf4  site/site.js: none: 'nessuna', unknown: 'sconosciuta',
+fb6bf52c19a9c956  site/site.js: inStep: "ed è l'ultima release. Qui non c'è niente da fare.",
+e93d2db5cc787f76  site/site.js: cantAsk: 'Non è stato possibile interrogare lo Store, quindi questa pagina non può dire se ci sia qualcosa avanti.',
+18969a303e7ef867  site/site.js: releasesPage: 'La pagina delle release ha la risposta',
+2eb3aa258c8feef5  site/site.js: noNotes: 'Per questa versione non sono state pubblicate note.',
+2536222a76bde5c2  site/site.js: queued: 'inviata, in attesa di revisione', refused: 'questo invio è stato rifiutato',
+3c38f6d035f1fc8e  site/site.js: askFailed: 'Non è stato possibile eseguire questo controllo adesso.',
+97b46114ddca025f  site/site.js: storeStale: 'Questa lettura è più vecchia del solito - il controllo che interroga Google gira ogni mezz\'ora.',
+048b0386151a0f04  tests/tools_test.py: word; the Italian pages said eleven of them differently — «leggi ciò che viene spedito» against
+207ecf1079358a8c  tests/tools_test.py: «leggi quello che viene distribuito». Nothing wrong in either, and that is the point: a reader
+d0372c955dd3a4c1  tests/tools_test.py: '<p>Seconda affermazione condivisa, anche questa lunga abbastanza.</p>'
+d0372c955dd3a4c1  tests/tools_test.py: '<p>Seconda affermazione condivisa, anche questa lunga abbastanza.</p>'
+084fcbb799fb74ba  tests/tools_test.py: '// Apre il side panel quando clicchi l\'icona della toolbar.',
+a7203f53e96e94b8  tests/tools_test.py: 'Reported as «i colori sono utili ma non sufficienti».',
+c67ff172ee11cff1  tests/tools_test.py: 'questa pagina non esiste',
+afb8397dc20b1735  tests/tools_test.py: 'devono essere allineate a sinistra',
+b8afae2985f4d224  tools/auditcheck.py: r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
+5f32609377eae3a9  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat', re.I)
+cda47b8dc268550f  tools/sitecheck.py: Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
+46d274eb652a77c6  tools/sitecheck.py: twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
+86b84dc40e6fb8d0  tools/sitecheck.py: against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».

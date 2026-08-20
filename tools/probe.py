@@ -130,8 +130,8 @@ CRM = """
     // be misplaced by a resize, which is what was reported.
     $('navtab').click(); await wait(300);
     if (!$('navview').classList.contains('show')) say('the history view did not open');
-    // Held against Health itself, not against numbers: «deve essere identico a quello di ai e health,
-    // così come deve avere lo stesso comportamento e inibire tutti gli altri tasti». So the health
+    // Held against Health itself, not against numbers: «it must be identical to the one in ai and health,
+    // behave the same way, and disable every other control». So the health
     // view is opened, measured, closed - and the history has to match it rectangle for rectangle and
     // dim the same set of controls.
     $('health').click(); await wait(600);

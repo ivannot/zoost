@@ -1,4 +1,4 @@
-// Apre il side panel quando clicchi l'icona della toolbar.
+// Opens the side panel when the toolbar icon is clicked.
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((e) => console.warn('[zoost/analytics] setPanelBehavior:', e));

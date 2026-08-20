@@ -16,6 +16,10 @@ site/_worker.js  the Worker script (see the Cloudflare notes further down)
 store/crm/       Chrome Web Store listing copy, permission justifications, release notes
 store/analytics/ the same for the other product — both are published, and reviewed separately
 docs/            these notes, opened when the area they cover is about to be touched
+docs/findings/   one dated note per review of the codebase: what broke, what was done, and the
+                 rule that stops it coming back. Named YYYY-MM-DD-what-it-was.md so they sort by
+                 date and say what they were - never by the tool or the activity that produced
+                 them, which is over the moment it ends
 tools/           the checkers, the renderers and the release chain — everything derived or verified
 tests/           node's own runner and Python's unittest; `bash tests/run.sh` is all of it
 fixtures/        the sample org as data, and the graph fixtures the panel itself produces
@@ -83,8 +87,8 @@ notice and hard to name. It was reported by the user, which is the failure. **A 
 
 **No date a reader can see is typed, anywhere.** The argument is the author's and it is the general
 form of everything else here: a date written into a file is unverifiable by construction and free to
-disagree with the record it claims to describe - *«potrei per assurdo inserire una data diversa da
-quella registrata»*. Every system involved already holds its own: **GitHub** timestamps every commit
+disagree with the record it claims to describe - *«I could, absurdly, type in a date different from the
+one on record»*. Every system involved already holds its own: **GitHub** timestamps every commit
 and tag, **Google** reports the state of a submission, **Cloudflare** reports when the site went live.
 So `tools/stamp.py` *writes* the version and date on every page - the version from the app's
 `manifest.json`, the date from the last commit touching the page - and `sitecheck.py` reports a date

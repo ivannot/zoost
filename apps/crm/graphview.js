@@ -57,7 +57,7 @@ const MSG = {
   // name like «Formazione specialistica valorizza esito e Crea Compito dopo colloquio» takes three
   // lines by itself, so «one line, one box» stops being true exactly where the names are long enough
   // to need it. The dash survives the wrap: a continuation line has none, so what is one item and what
-  // is two is never in question. Reported as «sembra tutto attaccato».
+  // is two is never in question. Reported as «it all looks stuck together».
   cutTip: (names, more) => (names.length === 1 && !more
     ? `Removing ${names[0]}`
     : `Removing ${names.length + more} boxes:\n\n`
@@ -1748,7 +1748,7 @@ function erRender() {
     // differs from its label; a function's does not, and printing the same word twice says nothing -
     // its namespace is the fact worth having there.
     // The colour says which kind it is and the word says it again, because a hue alone asks the
-    // reader to hold a key in their head - reported as «i colori sono utili ma non sufficienti».
+    // reader to hold a key in their head - reported as «the colours help but are not enough».
     // Category first: it is the dimension everything else in this window is coloured and filtered by.
     const sub = DATA.kind === 'schema' ? (n.api_name || '')
       : [KINDOF(n), n.namespace].filter(Boolean).join(' \u00b7 ');

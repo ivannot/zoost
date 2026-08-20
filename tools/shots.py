@@ -718,7 +718,7 @@ PANELS = [
     """),
 
     # --- the screens the site describes and had no picture of -----------------------------------
-    # «Copertura visiva totale delle feature» - every capability the pages claim should be visible
+    # «Total visual coverage of the features» - every capability the pages claim should be visible
     # somewhere, not only described. tools/coverage.py holds the map and reports what is missing.
     ("crm-preview", "crm", "crm/sampleorg-1234567890", """
         // A function open, on its Details tab: who calls it, where it is used, what is failing in

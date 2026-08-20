@@ -1488,7 +1488,7 @@ function updateMetaIndex(mutate, suppliedOp = null) {
 async function saveMetaIndex(metaPaths, op = beginWorkspaceOp()) {
   const onDisk = new Set(metaPaths.map((p) => p.replace(/\.meta\.json$/, '.dg')));
   const written = updateMetaIndex((files) => {
-    Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // sparito dal disco
+    Object.keys(files).forEach((k) => { if (!onDisk.has(k)) delete files[k]; });   // gone from the folder
     treeData.forEach((r) => {
       if (!onDisk.has(r.path)) return;
       const e = files[r.path] || (files[r.path] = {});
@@ -2470,8 +2470,8 @@ let stepAnchor = null;      // where the keyboard is, which the DOM learns a tic
  *
  *  Every list here had the first half; only the functions tree had the second, so a jump from a
  *  health row, a link in the code or a step of the history selected a module, a workflow or a
- *  connection that the reader then had to scroll to find. Reported exactly that way: «l'item
- *  evidenziato deve sempre essere visibile». `openFile()` keeps its own two lines because it also
+ *  connection that the reader then had to scroll to find. Reported exactly that way: «the highlighted
+ *  item must always be visible». `openFile()` keeps its own two lines because it also
  *  moves the arrow anchor; everything else calls this, so the next list inherits both halves.
  */
 /** Move the view to the current item. Called when the geometry is final, never by whoever opened it.

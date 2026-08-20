@@ -763,7 +763,7 @@ def no_date_is_typed(findings: list) -> None:
 
     The author's argument, and it is the stronger form of everything else in this file: a date typed
     into a file is unverifiable by construction, and free to disagree with the record it claims to
-    describe - «potrei per assurdo inserire una data diversa da quella registrata». GitHub timestamps
+    describe - «I could, absurdly, type in a date different from the one on record». GitHub timestamps
     every commit and tag, Google reports the state of a submission, Cloudflare reports when the site
     went live. Anything else is someone's memory of an event, written down.
 

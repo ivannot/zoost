@@ -57,7 +57,7 @@ const MSG = {
   // name like «Formazione specialistica valorizza esito e Crea Compito dopo colloquio» takes three
   // lines by itself, so «one line, one box» stops being true exactly where the names are long enough
   // to need it. The dash survives the wrap: a continuation line has none, so what is one item and what
-  // is two is never in question. Reported as «sembra tutto attaccato».
+  // is two is never in question. Reported as «it all looks stuck together».
   cutTip: (names, more) => (names.length === 1 && !more
     ? `Removing ${names[0]}`
     : `Removing ${names.length + more} boxes:\n\n`
