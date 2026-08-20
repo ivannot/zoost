@@ -3706,5 +3706,65 @@ class TheAssistantsToolsAreNamedWhereTheyAreClaimed(unittest.TestCase):
                               f'{page}: {rel} has {n} tools and the page never says «{words[n]}»')
 
 
+class AFileCountInProseIsAClaim(unittest.TestCase):
+    """A page was green because one sentence on it was right, while two others were wrong.
+
+    `nerd.html` carried three file counts: the one the check was looking for, «twenty ... Zoho CRM»,
+    and two stale ones - «eleven for Zoho Analytics» and «Twelve files for Zoho CRM and ten for Zoho
+    Analytics», left from when the apps were smaller. The check searched for the *correct* word beside
+    the product name and stopped at the first hit, so the stale sentence supplied the token the correct
+    one was being looked for in: a checker satisfied by the very text it exists to catch. Reported by a
+    reader running the assessment prompt this site ships.
+
+    The fixture is the shape, not the tree: the counts move, the failure mode does not."""
+
+    def _findings(self, page_text, crm_files, analytics_files):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('sitecheck', ROOT / 'tools' / 'sitecheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            for app, n in (('crm', crm_files), ('analytics', analytics_files)):
+                d = root / 'apps' / app
+                d.mkdir(parents=True)
+                for i in range(n):
+                    (d / f'{i}.js').write_text('', encoding='utf-8')
+            (root / 'site').mkdir()
+            (root / 'site' / 'nerd.html').write_text(page_text, encoding='utf-8')
+            mod.ROOT, mod.SITE = root, root / 'site'
+            out = []
+            mod.file_count_is_derived(out)
+            return out
+
+    RIGHT = '<p>Twenty files of plain JavaScript for Zoho CRM, twelve for Zoho Analytics.</p>'
+
+    def test_a_correct_sentence_does_not_absolve_a_stale_one(self):
+        page = self.RIGHT + '<p>Twelve files for Zoho CRM and ten for Zoho Analytics.</p>'
+        found = self._findings(page, 20, 12)
+        self.assertTrue(any('twelve' in f and 'Zoho CRM' in f for f in found), found)
+        self.assertTrue(any('ten' in f for f in found), found)
+
+    def test_every_phrasing_the_site_uses_is_read(self):
+        # A comma, an «and», a number that opens the sentence: all three are on the site today, and a
+        # checker that demanded one of them would be a checker that edits prose.
+        for what, page in {
+            'a comma': self.RIGHT,
+            'an and': '<p>about twenty files for Zoho CRM and twelve for Zoho Analytics</p>',
+            'opening the sentence': '<p>Twenty files for Zoho CRM and twelve for Zoho Analytics, no bundler.</p>',
+        }.items():
+            with self.subTest(what):
+                self.assertEqual(self._findings(page, 20, 12), [])
+
+    def test_a_number_that_counts_something_else_is_left_alone(self):
+        # «nine tools» and «twelve data centres» sit beside a product name too. Only a sentence about
+        # files is a claim about files.
+        page = self.RIGHT + '<p>Nine tools in Zoho Analytics, and twelve data centres for Zoho CRM.</p>'
+        self.assertEqual(self._findings(page, 20, 12), [])
+
+    def test_the_count_follows_the_tree(self):
+        # The point of deriving it: add a script and the prose is wrong until somebody moves it.
+        self.assertTrue(self._findings(self.RIGHT, 21, 12))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

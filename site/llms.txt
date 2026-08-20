@@ -51,8 +51,8 @@ Stated here rather than buried, because it is the part an assessment needs.
 
 - **No write path to Zoho.** Neither extension calls an endpoint that creates, edits or deletes a
   function, a view, a record or a setting. Note the precise claim: this is a property of *which*
-  endpoints are called, not something the browser enforces, and every call either makes is in
-  about twenty readable files. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` -
+  endpoints are called, not something the browser enforces, and every call either makes is in the
+  twenty readable files of the Zoho CRM extension and the twelve of the Zoho Analytics one. One Zoho Analytics endpoint is a POST whose URL contains `CREATE` -
   `ZDBCreateERD.ma`, the call that returns the workspace's ER model. It computes; it does not
   create. It is named here because a reader checking the claim will find it.
 - **They never read customer records.** Zoho CRM: no contacts, no deals, no notes - only the

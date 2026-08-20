@@ -336,33 +336,62 @@ def translations_have_the_same_shape(findings: list) -> None:
 
 
 def file_count_is_derived(findings: list) -> None:
-    """«Twelve files of plain JavaScript for Zoho CRM and ten for Zoho Analytics» - counted, not guessed.
+    """«Twenty files of plain JavaScript for Zoho CRM, twelve for Zoho Analytics» - counted, not guessed.
 
     It read «about twenty» in five places, which was true enough and is the shape of claim that ages in
     silence: nobody re-counts a number that was approximate on purpose. The pages state the real figure
     now, so the real figure has to be checked - it is what «you can read all of it in an afternoon»
     rests on, and it is the sentence an approver is most likely to test.
+
+    **The first version of this asked the wrong question, and passed for a wrong reason.** It searched
+    for the *correct* word beside the product name and stopped at the first hit - so a page was green
+    as soon as one sentence on it was right, whatever the others said. `nerd.html` carried three
+    figures: «twenty ... and eleven for Zoho Analytics», stale by one, and «Twelve files for Zoho CRM
+    and ten for Zoho Analytics», stale by a rewrite - and the check went on reporting zero, because
+    the stale sentence itself supplied the token the correct one was being looked for in. A checker
+    that verifies presence can be satisfied by the very text it exists to catch.
+
+    So it reads every claim instead of looking for one. Each number word that sits in a sentence about
+    files is attributed to the **first product named after it**, which is how all three phrasings on
+    this site are written - «Twenty files ... for Zoho CRM, twelve for Zoho Analytics» - and every one
+    of them has to be that product's own count. A number with no product after it is not a claim about
+    an app and is left alone.
     """
     counts = {a.name: len(list(a.glob('*.js'))) for a in sorted((ROOT / 'apps').iterdir()) if a.is_dir()}
+    products = {'Zoho CRM': 'crm', 'Zoho Analytics': 'analytics'}
+    # The unit is the block - a paragraph, a list item, a table cell - and not a window of characters
+    # around the number. A window has to be wide enough to reach «file» across a line break, and a
+    # window that wide reaches into the sentence *next door*: the first version of this both invented
+    # a finding about «nine tools» and would have gone quiet on «Venti file per Zoho CRM e\n dodici
+    # per Zoho Analytics», where the noun is on the line before. A block has neither problem.
+    BLOCK = re.compile(r'(?=<(?:p|li|td|h[1-6])\b)|\n\s*\n|\n(?=- )')
     for rel in ('index.html', 'nerd.html', 'llms.txt', 'it/index.html', 'it/nerd.html'):
         page = SITE / rel
         if not page.exists():
             continue
-        text = page.read_text(encoding='utf-8')
-        if 'JavaScript' not in text and 'javascript' not in text:
-            continue
         lang = 1 if rel.startswith('it/') else 0
-        for app, n in counts.items():
-            word = NUM.get(n, (str(n), str(n)))[lang]
-            product = 'Zoho CRM' if app == 'crm' else 'Zoho Analytics'
-            # The number has to sit next to the product it counts, and the sentence in between is
-            # the writer's business: «twelve files of plain JavaScript for Zoho CRM» and «and ten for
-            # Zoho Analytics» are both fine. A checker that demands one phrasing is a checker that
-            # edits prose.
-            near = re.search(rf'\b{word}\b[^.<]{{0,80}}?{re.escape(product)}', text, re.I)
-            if not near:
-                findings.append(f'site/{rel}: {app} ships {n} .js files, and «{word}» does not appear '
-                                f'beside «{product}» - a number in prose is a claim, and it is checkable')
+        value = {names[lang]: n for n, names in NUM.items()}
+        words = re.compile(r'\b(' + '|'.join(sorted(value, key=len, reverse=True)) + r')\b', re.I)
+        seen = set()
+        for block in BLOCK.split(page.read_text(encoding='utf-8')):
+            # A number is about files only if its block is. Without this the check reads «nine tools»
+            # and «twelve data centres» as file counts, both of which are on these pages.
+            if not block or not re.search(r'\bfiles?\b', block, re.I):
+                continue
+            for m in words.finditer(block):
+                word = m.group(1).lower()
+                after = block[m.end():]
+                named = [(after.index(p), app) for p, app in products.items() if p in after]
+                if not named:
+                    continue                  # a number with no product after it counts nothing here
+                app = min(named)[1]
+                if value[word] != counts[app] and (word, app) not in seen:
+                    seen.add((word, app))
+                    right = NUM.get(counts[app], (str(counts[app]),) * 2)[lang]
+                    name = [p for p, a in products.items() if a == app][0]
+                    findings.append(f'site/{rel}: «{word} ... {name}» - {app} ships {counts[app]} .js '
+                                    f'files, so that number is «{right}». A count in prose is a claim, '
+                                    f'and it is the one an approver tests.')
 
 
 def data_centre_count_is_derived(findings: list) -> None:
