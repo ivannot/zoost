@@ -31,6 +31,11 @@ c67ff172ee11cff1  tests/tools_test.py: 'questa pagina non esiste',
 afb8397dc20b1735  tests/tools_test.py: 'devono essere allineate a sinistra',
 b8afae2985f4d224  tools/auditcheck.py: r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
 5f32609377eae3a9  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat', re.I)
+5b807b2eb99100a9  tools/langcheck.py: 'della', 'delle', 'dello', 'degli', 'questo', 'questa', 'queste', 'questi', 'quello', 'quella',
+8c60a9097a6fa9ac  tools/langcheck.py: 'perché', 'perche', 'viene', 'vengono', 'quando', 'quindi', 'invece', 'senza', 'sempre',
+e2148af1f3f54292  tools/langcheck.py: 'ogni', 'tutti', 'tutte', 'tutto', 'nella', 'nelle', 'dalla', 'dalle', 'sulla', 'sulle',
+5af11691fedd4223  tools/langcheck.py: 'essere', 'devono', 'deve', 'sono', 'anche', 'ancora', 'perchè', 'cosa', 'niente',
+70e8e2ca830a9596  tools/langcheck.py: 'nessun', 'nessuna', 'soltanto', 'oppure', 'adesso', 'allora', 'clicchi', 'aggiorni',
 cda47b8dc268550f  tools/sitecheck.py: Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
 46d274eb652a77c6  tools/sitecheck.py: twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
 86b84dc40e6fb8d0  tools/sitecheck.py: against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».

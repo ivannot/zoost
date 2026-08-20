@@ -36,7 +36,8 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LEDGER = ROOT / 'tools' / 'notenglish.txt'
+LEDGER_REL = 'tools/notenglish.txt'
+LEDGER = ROOT / LEDGER_REL
 
 # Words that are Italian and are not English, not fragments of English, and not code identifiers.
 # `per`, `non` and `come` are deliberately absent: «per page», «non-negotiable» and «come back» are
@@ -59,6 +60,10 @@ def skipped(rel: str) -> bool:
             # A ledger of the claims made on every page, the Italian ones included: it is a record of
             # what those pages say, so it is Italian by definition and translating it would falsify it.
             or rel == 'tools/absolutes.txt'
+            # This tool's own ledger. It quotes every line it records, so scanning it makes the check
+            # report its own record back at itself - and `--accept` never converges, because each run
+            # writes lines that the next run finds. Derived files are read, not judged.
+            or rel == LEDGER_REL
             or rel.startswith('dist/'))
 
 
