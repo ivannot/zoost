@@ -3674,5 +3674,37 @@ class CallCheckFindsACallWithNothingToCall(unittest.TestCase):
         self.assertTrue(any('b.js' in f for f in found), found)
 
 
+class TheAssistantsToolsAreNamedWhereTheyAreClaimed(unittest.TestCase):
+    """The README listed nine of the assistant's tools and the code has eleven.
+
+    Under-promising, so it cost nobody anything - and it is the same defect as over-promising with the
+    sign flipped: a list presented as *the* list, kept by hand, that had stopped matching. Found by an
+    assistant running the assessment prompt this project ships on its own site, which is the prompt
+    doing exactly what it is for.
+
+    Derived from `ai.js`, so a tool added tomorrow is required in the prose without anyone remembering
+    - and a tool removed stops being required, which is the direction that keeps a ledger honest."""
+
+    def _tools(self, rel: str) -> set:
+        src = (ROOT / rel).read_text(encoding='utf-8')
+        block = re.findall(r"\{\s*name:\s*'([a-z_]+)',\s*description:", src)
+        self.assertTrue(block, f'{rel}: no tool definitions found - the shape moved, fix the reader')
+        return set(block)
+
+    def test_the_readme_names_every_tool_the_crm_assistant_has(self):
+        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+        missing = sorted(t for t in self._tools('apps/crm/ai.js') if f'`{t}`' not in readme)
+        self.assertEqual(missing, [], 'README.md claims the agent\'s tools and does not name these')
+
+    def test_the_count_in_the_prose_is_the_count_in_the_code(self):
+        # The word, not the digit: this is prose. Nine became eleven and the sentence did not move.
+        words = {9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve', 13: 'thirteen'}
+        for rel, page in (('apps/crm/ai.js', 'README.md'), ('apps/analytics/sidepanel.js', 'site/ai.html')):
+            n = len(self._tools(rel))
+            with self.subTest(rel):
+                self.assertIn(words[n], (ROOT / page).read_text(encoding='utf-8'),
+                              f'{page}: {rel} has {n} tools and the page never says «{words[n]}»')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

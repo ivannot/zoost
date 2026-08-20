@@ -46,8 +46,10 @@ mine.
 - The licence lets you fork and go your own way. That is a legitimate outcome, not a failure.
 
 If you are about to depend on this for something that matters, read the code - that is precisely
-why it is here - and keep in mind that it calls no endpoint that creates, edits or deletes anything in Zoho, so the
-worst it can do to your org is nothing. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
+why it is here - and keep in mind that it calls no endpoint that creates, edits or deletes anything in
+Zoho, so the worst it can do to your org is nothing. The one call that is a POST is named on
+[the nerd page](https://zoost.it/nerd): `ZDBCreateERD.ma`, which returns a Zoho Analytics workspace's
+ER model. What can be claimed from a browser is what Zoost sends, never what a server does with it. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull
 request, and [SECURITY.md](SECURITY.md) before reporting a vulnerability.
 
 ---
@@ -141,12 +143,17 @@ The pieces exist scattered across other tools; the **combination** doesn't:
 **AI assistant (bring your own key)**
 - A persistent chat, grounded on your real org. **Provider-agnostic BYOK**: Anthropic (Claude)
   or **OpenAI** (ChatGPT). Two providers, both tested - nothing claimed that has not been tried.
-- With Anthropic it runs as an **agent with read-only tools** - `get_function`, `who_calls`,
-  `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`, `get_connection`,
-  `list_functions` -
-  so it explores the whole org itself instead of guessing. Every tool it opens is shown in the chat (🔧).
-- **Streaming** responses, **Markdown** rendering, and a configurable **tool-step limit** so you
-  control how much it reasons - and spends.
+- With Anthropic it runs as an **agent with read-only tools** - `list_functions`, `get_function`,
+  `who_calls`, `get_callees`, `search_code`, `get_module`, `list_workflows`, `get_workflow`,
+  `get_connection`, `list_failures`, `list_actions` - so it explores the whole org itself instead of
+  guessing. Every tool it opens is shown in the chat (🔧). The list is eleven and a test derives it
+  from `ai.js`: it was nine here while the code had eleven, which is the harmless direction and still
+  a claim that had stopped being true.
+- **Markdown** rendering and a configurable **tool-step limit** so you control how much it reasons -
+  and spends. **Streaming is the Anthropic path only**: with OpenAI the assistant is a single pass -
+  no tools, no streaming - it receives the index and what you have open, and asks you for what it is
+  missing rather than going to read it. Said here because "streaming responses" sat in this list as
+  if it were true of both.
 
 **Built for multi-org reality**
 - Multiple workspaces, each bound to a specific org + host + instance. If your Zoho tab and your
@@ -193,8 +200,13 @@ and they carry their own version numbers.
 | `apps/crm` | **Zoost - workbench for Zoho CRM.** Everything this README describes. | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/flffecjpbmjfonhoojaiemgjanbjkmpj) |
 | `apps/analytics` | **Zoost - workbench for Zoho Analytics.** Mirrors a workspace to disk: every view with its type and folder, the columns and types of every table and query table, the SQL behind each query table as its own `.sql` file, and the lineage between them - plus what nothing depends on. | Released, on the [Chrome Web Store](https://chromewebstore.google.com/detail/gmelnigbgklfjgceldicakkomhgplgge) |
 
-Nothing is shared between the two yet, on purpose: they read different platforms with different
-shapes, and factoring code out before both sides actually need it costs more than the duplication.
+**No code is shared between the two, and some of it is duplicated on purpose.** They read different
+platforms with different shapes, and factoring code out before both sides actually need it costs more
+than the copy - `graphlogic.js`, `idb.js` and `keyvault.js` are byte-identical in the two apps, and
+66 of the 138 function names both define are too. That is a decision, not an accident: the extensions
+are developed loaded unpacked, so a `shared/` folder assembled at build time would exist in the
+package and not in the tree being tested. What holds it together is `tools/twincheck.py`, which
+records every twin with a hash of each side and reports the one-sided change.
 
 ---
 
@@ -324,7 +336,8 @@ environments.
 relevant function / workflow / schedule.
 
 **AI** (Ask AI) - a toggle that opens the assistant panel below the button bar; single persistent chat,
-streaming + Markdown, tool activity shown inline, ⚙ settings, Clear.
+Markdown, tool activity shown inline (streaming and tools on the Anthropic path; OpenAI answers in one
+pass), ⚙ settings, Clear.
 
 **Connections** - the org's connections catalogue (pulled with **Pull all**), each with how many
 functions use it, the connector, and its status. Filter to **Unused** (used by no function) or
