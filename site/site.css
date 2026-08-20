@@ -541,7 +541,16 @@ main textarea:focus{outline:2px solid var(--sel);outline-offset:1px}
 /* The Turnstile widget draws itself into an iframe; this is only the room it sits in. */
 .cf-turnstile{margin:18px 0}
 /* The mark next to the unlocked trace: a warning about what the report now is, not an error. */
-.ednote{color:var(--warn,#d08a2a);font-size:13px;margin-left:10px}
+.ednote{color:var(--warn,#d08a2a);font-size:13px}
+/* The way out of a locked trace, and deliberately the least attractive thing on the page. Unlocking
+   costs the report its standing as evidence, so the control that does it is put where the eye
+   finishes rather than where it starts, and is drawn as plain muted text - a button shaped like a
+   button invites the instinctive click, and this is the one click on this page that should be
+   deliberate. It is still a <button>, still reachable by keyboard, and still says what it does. */
+.editrow{display:flex;justify-content:flex-end;align-items:baseline;gap:12px;margin:6px 0 0}
+.quiet{background:none;border:0;padding:0;color:var(--muted);font-size:12.5px;
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
+.quiet:hover{color:var(--ink)}
 main .note.warn{border-color:#6b4a1c;color:#e2c98a}
 main .meta{font:12.5px var(--mono);color:var(--muted)}
 
