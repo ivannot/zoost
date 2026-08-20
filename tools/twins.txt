@@ -47,7 +47,6 @@ closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	8e2a65db1025	8e2a65db1025	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
 closeNavMenu	67073a3b5d66	67073a3b5d66	identical
-closeReport	954ebfb9d4ab	954ebfb9d4ab	identical
 closeScope	7e880dca67a7	9961035b74ab	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
@@ -158,7 +157,6 @@ noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
 noteStep	9c9fb28465ba	9c9fb28465ba	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
-openReport	3d96bc53f794	3d96bc53f794	identical
 openRxMenu	cdc4b8f98ab9	4e4329e39c5e	divergent
 openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical

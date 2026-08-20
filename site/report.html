@@ -93,7 +93,11 @@
     way, but that is a safety net, not a licence.</p>
   <textarea id="says" rows="4" maxlength="2000" spellcheck="true" placeholder="What you were doing when it broke." aria-label="What happened"></textarea>
 
-  <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"></div>
+  <!-- interaction-only: the widget is drawn only when a person has to do something about it. In the
+       ordinary case it draws nothing, which is the point - a green «Success!» box above a button
+       nobody has pressed yet reads as «your report has been sent», and it has not been. -->
+  <div class="cf-turnstile" data-sitekey="0x4AAAAAAEWqREeFLi9On-3I" data-theme="dark"
+    data-appearance="interaction-only" data-size="flexible"></div>
   <p><button id="send" class="btn p">Send as a public issue</button></p>
   <p id="msg" role="status"></p>
 
@@ -130,7 +134,7 @@
   </div>
 </footer>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script src="/report.js?v=922c0786c1"></script>
+<script src="/report.js?v=8c94565e18"></script>
 
 </body>
 </html>

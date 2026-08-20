@@ -84,7 +84,10 @@
       return;
     }
     var token = field.value || '';
-    if (!token) { msg.textContent = 'Please complete the check above first.'; return; }
+    // The widget is `interaction-only`, so in the ordinary case there is nothing on screen to
+    // point at: «complete the check above» would name something the reader cannot see. Either
+    // it is still running, or it has just drawn itself and is waiting - the sentence covers both.
+    if (!token) { msg.textContent = 'The anti-abuse check has not finished. If a box has appeared above, complete it; otherwise press Send again in a moment.'; return; }
     $('send').disabled = true;
     msg.textContent = 'Sending\u2026';
     fetch('/api/report', {

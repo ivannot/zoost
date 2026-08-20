@@ -95,7 +95,7 @@ Guide: https://zoost.it/docs-crm
 Privacy policy: https://zoost.it/privacy
 Home: https://zoost.it
 
-When something fails, the panel can build a problem report - versions, the error, the last few status lines and counters - show it to you in full, and let you trim it before you send it from a page on zoost.it, where it becomes a public issue. It carries no code and no key at all; names, paths and ids are stripped wherever they can be recognised - which is why you are shown the whole text first. Nothing is ever sent automatically.
+When something fails, the panel can build a problem report - versions, the error, the last few status lines and counters - open it on a page on zoost.it with the text already in it, where you read it, trim it if you want, and send it - or not. It becomes a public issue only when you press send. It carries no code and no key at all; names, paths and ids are stripped wherever they can be recognised - which is why you are shown the whole text first. Nothing is ever sent automatically.
 
 Free and open source, licensed under the Apache License 2.0. Maintained in spare time on a best-effort basis; there is no guaranteed support or response time.
 
@@ -173,7 +173,7 @@ Three groups, all strictly necessary.
 
 2. Anthropic and OpenAI, needed only by the optional AI assistant, and only after the user enters their own API key. The request goes straight from the browser to that provider; no other AI endpoint is configurable.
 
-3. zoost.it, for one action only: when the user sends a problem report, the extension writes the text into the report page it has just opened. Opening a tab needs no permission; writing into it does. Nothing is read back, and it is never contacted on its own.
+3. zoost.it, for one action only: when the user sends a problem report, the extension writes the text into the report page it has just opened. Opening a window needs no permission; writing into it does. Nothing is read back, and it is never contacted on its own.
 
 The extension is inert on every other site.
 ```

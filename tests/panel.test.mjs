@@ -4029,7 +4029,7 @@ for (const app of ['crm', 'analytics']) {
       const src = read(`apps/${app}/sidepanel.js`);
       assert.ok(/addEventListener\('error'/.test(src) && /unhandledrejection/.test(src),
         'why=' + app + ' never captures a thrown error, so the report is only the status buffer');
-      assert.ok(/reportFacts\(err \|\| lastThrown/.test(src),
+      assert.ok(/reportFacts\(lastThrown/.test(src),
         'why=' + app + ' builds the report without the error it captured');
     }
   });
@@ -4040,11 +4040,47 @@ for (const app of ['crm', 'analytics']) {
     for (const app of ['crm', 'analytics']) {
       const src = read(`apps/${app}/sidepanel.js`);
       assert.ok(!/zoost\.it\/report#/.test(src), 'why=' + app + ' still puts the report in a URL');
-      assert.ok(/chrome\.scripting\.executeScript/.test(src.slice(src.indexOf("$('repgo')"))),
+      assert.ok(/chrome\.scripting\.executeScript/.test(src.slice(src.indexOf("$('repopen').onclick"))),
         'why=' + app + ' does not put the text into the page it opened');
       const mf = JSON.parse(read(`apps/${app}/manifest.json`));
       assert.ok(mf.host_permissions.includes('https://zoost.it/*'),
         'why=' + app + ' injects into a host it has no permission for, so the button does nothing');
+    }
+  });
+
+  test('the report page opens in a window of its own, not in a tab of this one', () => {
+    // Reported after the first real send: the side panel belongs to its window, so a new tab opened
+    // beside it - the reader was asked to read a report with the panel that wrote it still on screen.
+    // A window has no panel in it. The listener must then watch the tab *inside* that window, which
+    // is the part a careless change breaks silently: the injection simply never fires.
+    for (const app of ['crm', 'analytics']) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      const block = src.slice(src.indexOf("$('repopen').onclick"), src.indexOf('function setReportFallback'));
+      assert.ok(/chrome\.windows\.create/.test(block), 'why=' + app + ' opens the report in a tab');
+      assert.ok(!/chrome\.tabs\.create/.test(block), 'why=' + app + ' still opens a tab');
+      assert.ok(/win\.tabs\[0\]/.test(block),
+        'why=' + app + ' does not take the tab out of the window it just opened');
+      assert.ok(/if \(!tabId\) \{ setReportFallback\(\); return; \}/.test(block),
+        'why=' + app + ' bails silently when the window comes back without a tab');
+    }
+  });
+
+
+  test('the report is read once, on the page, and the panel has no dialog of its own', () => {
+    // It used to be shown in a panel dialog whose button said «Send…» and sent nothing - the same
+    // text read twice, with the button that mattered on the second copy. Nothing leaves when the
+    // page opens, so the step defended nothing. A regression here is not cosmetic: it is a second
+    // «Send» that does not send, which is the shape of the thing that was removed.
+    for (const app of ['crm', 'analytics']) {
+      const js = read(`apps/${app}/sidepanel.js`);
+      const html = read(`apps/${app}/sidepanel.html`);
+      for (const id of ['repdlg', 'repbody', 'repgo', 'repcancel', 'repcopy']) {
+        assert.ok(!html.includes(`id="${id}"`), `why=${app} still has the dialog element ${id}`);
+        assert.ok(!js.includes(`'${id}'`), `why=${app} still wires ${id}`);
+      }
+      const block = js.slice(js.indexOf("$('repopen').onclick"), js.indexOf('function setReportFallback'));
+      assert.ok(/buildReport\(reportFacts\(/.test(block),
+        `why=${app} does not build the report where the page is opened`);
     }
   });
 

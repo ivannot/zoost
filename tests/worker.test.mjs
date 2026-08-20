@@ -679,3 +679,15 @@ test('the messages the page shows are in the page script, in one language', () =
   assert.ok(!/\bM\.\w+/.test(js), 'a per-language message table outlived the second language');
   assert.ok(js.includes('Keep that '), 'the sender is not told the link is their only way back');
 });
+
+test('the anti-abuse widget is drawn only when it has something to ask', () => {
+  // Reported after the first real send: a green «Success!» box sitting above an unpressed button
+  // reads as «this has been sent». interaction-only draws nothing in the ordinary case - so the
+  // message for a missing token may not point at anything on screen, and must not say «above».
+  const html = read('site/report.html');
+  assert.ok(/data-appearance="interaction-only"/.test(html),
+    'the widget announces itself before the reader has sent anything');
+  const js = read('site/report.js');
+  assert.ok(!/Please complete the check above first/.test(js),
+    'the page points the reader at a widget that is not drawn');
+});

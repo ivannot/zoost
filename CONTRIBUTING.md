@@ -31,7 +31,8 @@ The single most useful thing you can include is **how to reproduce it**. Specifi
 **Never paste Deluge source, org ids, instance names, API keys or CRM data into an issue.**
 The panel will build you something that is safe to paste: when something fails, **Report this
 problem** produces a report from a fixed list of fields, with ids, addresses, quoted names and URLs
-already taken out, shows it to you in full, and lets you delete any part of it before it goes. That
+already taken out, and opens it on a page with the text in front of you - yours to read, to trim, and
+to send or not. That
 is the preferred way to report a break. It becomes a public issue, so it is still not the channel
 for a security problem - those go to ivan@zoost.it, as below. Without an account, or without a panel
 in front of you, https://zoost.it/report takes a description written by hand and opens the issue for

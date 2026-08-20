@@ -4932,45 +4932,39 @@ async function aiEngineWord() {
     return c.active === 'anthropic' || c.active === 'openai' ? c.active : 'not configured';
   } catch (_) { return 'unknown'; }
 }
-async function openReport(err) {
-  reportText = buildReport(reportFacts(err || lastThrown, await aiEngineWord()));
-  $('repbody').textContent = reportText;
-  $('scrim').classList.add('on'); $('repdlg').classList.add('on');
-}
-function closeReport() { $('scrim').classList.remove('on'); $('repdlg').classList.remove('on'); }
-$('repopen').onclick = () => openReport();
-$('repx').onclick = closeReport;
-$('repcancel').onclick = closeReport;
-$('repcopy').onclick = async () => {
-  try { await navigator.clipboard.writeText(reportText); $('repcopy').textContent = 'Copied'; }
-  catch (_) { $('repcopy').textContent = 'Could not copy'; }
-  setTimeout(() => { $('repcopy').textContent = 'Copy'; }, 1500);
-};
-// The report is handed to the page through the DOM, never through the address.
+// The report is handed to the page through the DOM, never through the address. It used to travel in
+// the URL fragment, on the reasoning that a fragment is never transmitted to a server - true, and
+// not the whole question: the navigation itself is written to Chrome's history and syncs with it, so
+// the report would have left the machine with no click at all. Found by an audit of this feature.
 //
-// It used to travel in the URL fragment, on the reasoning that a fragment is never transmitted to a
-// server - which is true, and which was not the whole question. `chrome.tabs.create` commits a
-// navigation, Chrome records the visited URL in its history, and with history sync on that record
-// goes to the user's Google account: the report would have left the machine with no click at all,
-// and before the page had even offered to let them trim it. Found by an audit of this feature.
-//
-// So the page is opened empty and the text is put into it afterwards, into the box the reader is
-// looking at. Nothing is stored, nothing is navigated to, and the only copy outside this panel is
-// the one in that textarea.
-$('repgo').onclick = async () => {
+// One click, one place to read it. The panel used to show the text in a dialog and call its button
+// «Send…», which sent nothing: the reader read the same text twice and only the second copy had the
+// button that mattered. What that step was defending - «read it before it leaves the machine» - is
+// not what it did, because nothing leaves when the page opens: the text is written into a page in
+// front of the reader and stays there until they press Send. So the reading happens once, where the
+// sending is. The one thing it did cost is now stated on the site: opening the page is an ordinary
+// visit to zoost.it, which a reader who changes their mind on the panel side never made.
+$('repopen').onclick = async () => {
+  reportText = buildReport(reportFacts(lastThrown, await aiEngineWord()));
   const text = reportText;
-  closeReport();
   try {
-    const tab = await chrome.tabs.create({ url: 'https://zoost.it/report' });
+    // A **window**, not a tab. The side panel belongs to the window it is open in, so a new tab
+    // opens with this panel still down the side of it - the reader is asked to read a report with
+    // the thing that produced it sitting next to the text. A fresh window has no panel in it.
+    // `chrome.windows` needs no permission of its own; the writing still does, and that is the
+    // `zoost.it` host already declared.
+    const win = await chrome.windows.create({ url: 'https://zoost.it/report', focused: true });
+    const tabId = win && win.tabs && win.tabs[0] && win.tabs[0].id;
+    if (!tabId) { setReportFallback(); return; }
     const put = (t) => {
       const b = document.getElementById('body');
       if (b) { b.value = t; b.dispatchEvent(new Event('input', { bubbles: true })); }
     };
     // Once, when that tab has finished loading - and only that tab.
     const onDone = (id, info) => {
-      if (id !== tab.id || info.status !== 'complete') return;
+      if (id !== tabId || info.status !== 'complete') return;
       chrome.tabs.onUpdated.removeListener(onDone);
-      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: put, args: [text] })
+      chrome.scripting.executeScript({ target: { tabId }, func: put, args: [text] })
         .catch(() => {});
     };
     chrome.tabs.onUpdated.addListener(onDone);
