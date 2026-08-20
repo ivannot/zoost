@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:576776f019423851 -->
+<!-- translated-from: site/nerd.html sha256:42d4e033545194e3 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -107,7 +107,10 @@
       lo stesso file che risponde al badge delle versioni. C'è chi ha dato per scontato che il server
       dietro fosse da qualche parte non leggibile - ragionevole per quasi tutti i siti, sbagliato per
       questo. Rifiuta se non passa il controllo anti-abuso, limita le richieste per indirizzo tramite
-      un <i>hash con sale</i>, così nessun indirizzo viene conservato o registrato, oscura di nuovo il
+      un <i>hash con sale</i>, così niente di quello che questo sito scrive può essere ricondotto a un
+      indirizzo - nemmeno da chi legge l'archivio. Cloudflare, che serve la pagina, l'indirizzo lo vede
+      come lo vede qualsiasi host, e al controllo anti-abuso viene passato perché è esattamente a
+      quello che serve, oscura di nuovo il
       testo mentre passa - di un client non ci si fida due volte - limita la dimensione e ricostruisce
       il corpo della issue da pezzi convalidati, dentro un recinto da cui il contenuto non può uscire.
       Diventa una issue pubblica su GitHub, sotto il mio account, e tu ne ricevi il link.</p>
