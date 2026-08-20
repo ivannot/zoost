@@ -208,8 +208,8 @@ for creditworthiness or lending.
 August 2026. Google's disclosure rule covers «information provided by a user», and «handle» is
 defined as «collecting, transmitting, using, or sharing» - so «the user sends it, not us» is not an
 exemption, and anyone reaching for that argument should stop here. The answer is narrower: **the
-extension transmits nothing.** It builds a text out of its own diagnostics, shows it in full, and
-writes it into a page the user is looking at; the sending is done by that page, on a click, and the
+extension transmits nothing.** It builds a text out of its own diagnostics and writes it into a page
+it opens in front of the user; the reading and the sending both happen there, on that page, and the
 page is covered by §8 of the privacy policy, which is about the website. Nothing in the report
 matches a category either - versions, an error inside Zoost's own files, redacted status lines and
 counters are none of the nine. What the policy does require, we do: the practice is disclosed before
