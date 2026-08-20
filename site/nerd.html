@@ -95,6 +95,23 @@
       would read as a caught lie rather than as what it is.</p>
   </div>
 
+  <div class="box">
+    <h3>Sending a problem report</h3>
+    <p>The one path here that ends in a public place, so it is written out rather than summarised.
+      The panel builds the text, redacts it, and opens <a href="/report">this page</a> - through the
+      DOM, never through the address, because a URL is written to your browser history and syncs with
+      it. You read it, you may edit it, and nothing moves until you press Send.</p>
+    <p>What Send posts to is <code>/api/report</code>, and <b>that endpoint is in this repository</b>
+      - <a href="https://github.com/ivannot/zoost/blob/main/site/_worker.js">site/_worker.js</a>, the
+      same file that answers the version badge. Reviewers have assumed the server behind it was
+      somewhere unreadable, which is a fair assumption about most sites and wrong about this one. It
+      refuses unless an anti-abuse check passes, rate-limits per address by a <i>salted hash</i> so no
+      address is stored or logged, redacts the text again on the way through - a client is never
+      believed twice - caps the size, and rebuilds the issue body from validated pieces inside a fence
+      nothing can climb out of. It becomes a public issue on GitHub, under my account, and you get its
+      link.</p>
+  </div>
+
   <h2 id="certain-or-stopped">Certain, or stopped</h2>
   <p>No retry loops against a guess. No matching a button label that changes with the interface
     language. No synthetic clicks into a page I do not own. Where a path is not certain, the feature

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/nerd.html sha256:417db2459f968b23 -->
+<!-- translated-from: site/nerd.html sha256:576776f019423851 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La pagina nerd - come funziona davvero Zoost</title>
@@ -93,6 +93,24 @@
     valutazione, confronta il workspace prima e dopo, e l'audit trail se il tuo piano ne ha uno. È
     nominata qui perché chi controlla alla lettera l'affermazione «non scrive» la troverà, e trovarla
     non annunciata sembrerebbe una bugia colta sul fatto invece di quello che è.</p>
+  </div>
+
+  <div class="box">
+    <h3>Mandare una segnalazione</h3>
+    <p>L'unico percorso qui che finisce in un posto pubblico, quindi è scritto per esteso invece che
+      riassunto. Il pannello costruisce il testo, lo oscura e apre <a href="/report">quella pagina</a>
+      (in inglese, ce n'è una sola) - attraverso il DOM, mai attraverso l'indirizzo, perché un URL
+      finisce nella cronologia del browser e si sincronizza con essa. Tu lo leggi, puoi modificarlo, e
+      niente si muove finché non premi Invia.</p>
+    <p>Quello a cui Invia manda i dati è <code>/api/report</code>, e <b>quell'endpoint è in questo
+      repository</b>: <a href="https://github.com/ivannot/zoost/blob/main/site/_worker.js">site/_worker.js</a>,
+      lo stesso file che risponde al badge delle versioni. C'è chi ha dato per scontato che il server
+      dietro fosse da qualche parte non leggibile - ragionevole per quasi tutti i siti, sbagliato per
+      questo. Rifiuta se non passa il controllo anti-abuso, limita le richieste per indirizzo tramite
+      un <i>hash con sale</i>, così nessun indirizzo viene conservato o registrato, oscura di nuovo il
+      testo mentre passa - di un client non ci si fida due volte - limita la dimensione e ricostruisce
+      il corpo della issue da pezzi convalidati, dentro un recinto da cui il contenuto non può uscire.
+      Diventa una issue pubblica su GitHub, sotto il mio account, e tu ne ricevi il link.</p>
   </div>
 
   <h2 id="certain-or-stopped">O certi, o fermi</h2>
