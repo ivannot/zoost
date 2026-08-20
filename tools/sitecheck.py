@@ -262,6 +262,38 @@ def hosts_declared(findings: list) -> None:
                 findings.append(f'apps/{app}/manifest.json: host_permissions reach {fam}.* and '
                                 f'site/privacy.html never names it')
 
+    # The other page that enumerates hosts is the homepage's «If you have to approve it» table, and
+    # it was checked by nothing - so it listed `one.zoho.*` as if both products asked for it (only
+    # Zoho CRM does) and never mentioned `zoost.it`, which is in both manifests, three lines above a
+    # sentence saying «the manifest is the authority». Found by an assistant running the assessment
+    # prompt the site itself ships, which is the check working exactly as intended and is also the
+    # reason it is now a checker: the table for whoever approves the extension is the last place a
+    # host should be missing from.
+    #
+    # What is required there is not every family - «the domains of every data centre» covers those,
+    # and spelling out `crm.zohocloud` on a landing page would be worse prose. It is every host that
+    # is **not** a data centre of the product itself: the AI hosts, `one.zoho`, `zoost.it`. A host of
+    # a new kind added tomorrow is required without anyone remembering.
+    apps = {mf.parent.name: json.loads(mf.read_text(encoding='utf-8'))
+            for mf in sorted(ROOT.glob('apps/*/manifest.json'))}
+    outside = set()
+    for app, data in apps.items():
+        for h in data.get('host_permissions', []):
+            host = re.sub(r'^https?://', '', h).split('/')[0]
+            parts = host.split('.')
+            fam = '.'.join(parts[:2]) if len(parts) > 2 else host
+            if not parts[0].startswith(app):          # crm.*, crmsandbox.*, analytics.* are the data centres
+                outside.add(fam)
+    for page in ('index.html', 'it/index.html'):
+        f = SITE / page
+        if not f.exists():
+            continue
+        body = f.read_text(encoding='utf-8')
+        for fam in sorted(outside):
+            if fam not in body:
+                findings.append(f'site/{page}: the table for whoever approves it enumerates the '
+                                f'hosts and never names {fam}, which both manifests can reach')
+
 
 WORDS = {6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve'}
 IT_WORDS = {6: 'sei', 7: 'sette', 8: 'otto', 9: 'nove', 10: 'dieci', 11: 'undici', 12: 'dodici'}
