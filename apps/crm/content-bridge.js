@@ -26,7 +26,16 @@
   const MAX_PAGES = 400;          // functions: 50 a page, so 20,000
   const MAX_PAGES_WIDE = 40;      // workflows and schedules: 200 a page, so 8,000
   const BASE = location.origin;
-  const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
+  // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
+  // the *value* - which is padding on anything base64, and a silent one: the request goes out with
+  // two thirds of a token and comes back as an unexplained 400 or 401, indistinguishable from a
+  // session that has expired. The value is everything after the first `=`, which is what a cookie
+  // is. A declaration rather than an arrow so `tests/slice.mjs` can lift it, and byte-identical in
+  // both bridges.
+  function cookie(n) {
+    const c = document.cookie.split('; ').find((x) => x.startsWith(n + '='));
+    return c ? c.slice(n.length + 1) : undefined;
+  }
 
   function instanceName() {
     const p = location.pathname.split('/').filter(Boolean);   // e.g. ['crm','yourinstance','tab','Contacts']

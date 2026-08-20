@@ -95,7 +95,16 @@
   // shape as the CRM bridge's prefixed token, a different name. Deterministic places are checked in
   // order; if none has it the caller stops with a message naming exactly what was looked for, rather
   // than sending a request that would come back as an unexplained failure.
-  const cookie = (n) => document.cookie.split('; ').find((c) => c.startsWith(n + '='))?.split('=')[1];
+  // One cookie by name. `split('=')[1]` was what this did, and it truncates at the first `=` inside
+  // the *value* - which is padding on anything base64, and a silent one: the request goes out with
+  // two thirds of a token and comes back as an unexplained 400 or 401, indistinguishable from a
+  // session that has expired. The value is everything after the first `=`, which is what a cookie
+  // is. A declaration rather than an arrow so `tests/slice.mjs` can lift it, and byte-identical in
+  // both bridges.
+  function cookie(n) {
+    const c = document.cookie.split('; ').find((x) => x.startsWith(n + '='));
+    return c ? c.slice(n.length + 1) : undefined;
+  }
   function zdbCsrf() {
     // Verified by intercepting what the Analytics app itself sends: the value is the 128-character
     // `CSRF_TOKEN` cookie, and `CT_CSRF_TOKEN` on this host holds the identical value. Reading

@@ -134,6 +134,36 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- both bridges: reading one cookie out of the jar ----------
+//
+// `csrfToken()` above is tested with the jar injected, so the *reading* was covered by nothing. It
+// was `split('=')[1]`, which stops at the first `=` in the value - padding on anything base64 - and
+// the failure is silent: two thirds of a token goes out and Zoho answers 400, which looks exactly
+// like a session that has expired. Held in both bridges because the helper is byte-identical there.
+for (const app of ['crm', 'analytics']) {
+  const { cookie } = load([sliceFn(`apps/${app}/content-bridge.js`, 'cookie')],
+    { get document() { return { cookie: globalThis.__raw }; } });
+  const withRaw = (raw, fn) => { globalThis.__raw = raw; try { return fn(); } finally { delete globalThis.__raw; } };
+
+  test(`${app}: a value containing = is read whole, not truncated at the first one`, () => {
+    withRaw('a=1; CSRF_TOKEN=abc==; z=9', () => assert.equal(cookie('CSRF_TOKEN'), 'abc=='));
+  });
+
+  test(`${app}: an ordinary value reads as itself`, () => {
+    withRaw('CSRF_TOKEN=plain; other=x', () => assert.equal(cookie('CSRF_TOKEN'), 'plain'));
+  });
+
+  test(`${app}: a cookie that is not there is absent, never an empty string`, () => {
+    // The callers read it as truthy to decide whether to fall back to another name; '' and undefined
+    // happen to behave alike there, and the distinction is what stops that being luck.
+    withRaw('other=x', () => assert.equal(cookie('CSRF_TOKEN'), undefined));
+  });
+
+  test(`${app}: a longer name that starts with this one is not mistaken for it`, () => {
+    withRaw('CSRF_TOKEN_OLD=stale; CSRF_TOKEN=live', () => assert.equal(cookie('CSRF_TOKEN'), 'live'));
+  });
+}
+
 // ---------- CRM: which areas are behind, derived and not declared ----------
 
 const stale = load([
