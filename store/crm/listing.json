@@ -1,11 +1,11 @@
 {
   "_": "Each store field as submitted, hashed. `python3 tools/storecopy.py <app> --changed` compares against it and says which boxes need pasting.",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "sections": {
     "1": "9f38d625bb02",
     "2": "b57222d305af",
     "3": "bd3ad8735cb4",
-    "4": "981ef4f14880",
+    "4": "453622e374e0",
     "5": "1d8c85f189f6",
     "6": "4dcf5a58e904",
     "7": "507337705c65",
