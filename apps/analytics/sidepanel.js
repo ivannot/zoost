@@ -186,7 +186,126 @@ let detailLoad = 0;
 const detailCurrent = (mine, op) => mine === detailLoad && op.current();
 
 // ---------- status ----------
-function status(text, kind) { $('statustext').textContent = text; $('status').className = kind || ''; showEmergency(false); }
+function status(text, kind) { noteStep(text); $('statustext').textContent = text; $('status').className = kind || ''; showEmergency(false); }
+
+// ---------- problem reports ----------
+//
+// Nothing here is sent by the extension. It builds a text, shows it to the reader in full, and -
+// only on a click - opens zoost.it/report with the payload in the URL *fragment*, which by the
+// rules of the protocol is never transmitted to a server: the page reads it locally, shows it
+// again, and the reader is the one who submits it. So «no telemetry, nothing automatic» stays true
+// in the strong sense, and the report that does travel has been read twice by the person sending it.
+//
+// Two defences, because one is a promise and the other is a mechanism. The mechanism: what goes in
+// comes from a **whitelist of known fields**, never from a sweep of state - a field added tomorrow
+// is a decision, not an accident. The promise, kept honest by a test: free text passes `redact()`.
+
+// Everything that is never collected. It was dead - declared here, read by nothing, while the
+// comment claimed a test enforced it: a decoration wearing the clothes of a mechanism, found by an
+// audit. `tests/panel.test.mjs` now reads this very array out of the source and checks that neither
+// `reportFacts` nor `buildReport` mentions any of it, so the list and the check cannot drift.
+const REPORT_NEVER = ['apiKey', 'apiKeyEnc', 'source', 'sql', 'code', 'name', 'displayName',
+  'folderName', 'owner', 'org', 'instance', 'path', 'root'];
+
+// Free text - an error message, a status line - with everything that could name your business
+// taken out of it. Aggressive on purpose: a message can embed an org id, an instance, a function
+// name in quotes. What it keeps is the *shape* of the sentence, which is what diagnoses.
+// It cannot be proven exhaustive, and it is not the only defence: the whitelist above decides what
+// is offered at all, the reader sees the result before sending, and the Worker redacts again.
+// A declaration, byte-identical in both panels and in the report page: one text, one meaning.
+function redact(text) {
+  if (text == null) return { text: '', n: 0 };
+  let n = 0;
+  const out = String(text)
+    // Ours, and the whole diagnostic value of a stack: kept, minus the extension id, which is noise.
+    .replace(/chrome-extension:\/\/[a-z]+\//gi, '')
+    .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, () => { n++; return '<email>'; })
+    .replace(/https?:\/\/[^\s)"']+/gi, () => { n++; return '<url>'; })
+    .replace(/\b\d{8,}\b/g, () => { n++; return '<id>'; })
+    .replace(/«[^»]*»/g, () => { n++; return '«…»'; })
+    .replace(/"[^"]*"/g, () => { n++; return '"…"'; });
+  return { text: out, n };
+}
+
+// Free text that this panel *interpolated names into*, treated as hostile. `redact()` is not enough
+// for it and an audit proved it: the status line says `Synced: functions/Commissions/Recalc_Fees.dg`
+// and `Working folder: <a client's name>`, and none of that is an email, a URL or a long number. The
+// call sites are ~150 and nothing can constrain what one written tomorrow will interpolate, so this
+// takes the opposite approach: anything shaped like an identifier, a path or a host goes, and what
+// survives is the sentence around it - which is what actually diagnoses.
+// It cannot be proven exhaustive. That is why the reader is shown the result and asked to read it,
+// and why the wording on the site says «what it recognises», never «never».
+function redactHard(text) {
+  if (text == null) return { text: '', n: 0 };
+  let n = 0;
+  const hit = (mark) => () => { n++; return mark; };
+  const out = String(text)
+    .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, hit('<email>'))
+    .replace(/https?:\/\/[^\s)"']+/gi, hit('<url>'))
+    .replace(/[a-z]:\\[^\s"']*/gi, hit('<path>'))
+    // A path, or a Zoho namespace: anything with a slash joining two names.
+    .replace(/[\w.-]+(?:\/[\w.-]+)+/g, hit('<path>'))
+    // Quoted, in every style the panels and the platform actually use - Chrome's own DOMException
+    // messages quote with apostrophes, which the first version did not touch.
+    .replace(/«[^»]*»|"[^"]*"|'[^']*'|[‘“][^’”]*[’”]|`[^`]*`/g, hit('«…»'))
+    // No word boundary: an id glued to a prefix - `zcrm_349725000131663089` - kept its digits.
+    .replace(/\d{6,}/g, hit('<id>'))
+    // A host without a scheme, which the URL rule above never saw: `crm.zoho.eu`.
+    .replace(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b/gi, hit('<host>'))
+    // What is left of an identifier: dotted or underscored, which is what a function, a module api
+    // name and a mirror filename all look like.
+    .replace(/\b\w+[._]\w[\w._]*\b/g, hit('<name>'));
+  return { text: out, n };
+}
+
+// The report as the reader will see it and as the page will re-render it: a pure function of an
+// object nobody had to be trusted about. Every value it prints is either a number, a boolean, one
+// of a fixed set of words, or free text that has been through `redact()`.
+function buildReport(r) {
+  const L = [];
+  const red = { n: 0 };
+  // Two levels, because the two kinds of text are not alike. The stack is ours by construction -
+  // chrome-extension://<id>/sidepanel.js - so it keeps its file and line, which is the whole of its
+  // value. Everything else was built by interpolating whatever was to hand, and is treated as such.
+  const clean = (s) => { const o = redactHard(s); red.n += o.n; return o.text; };
+  const ours = (s) => { const o = redact(s); red.n += o.n; return o.text; };
+  L.push(`${r.product} ${r.version} · ${clean(r.browser)}`);
+  L.push('');
+  L.push('what happened');
+  L.push(`  ${clean(r.message) || '(no message)'}`);
+  if (r.stack) ours(r.stack).split('\n').slice(0, 12).forEach((s) => L.push(`  ${s.trim()}`));
+  L.push('');
+  L.push('state');
+  L.push(`  tab: ${r.tab} · search: ${r.search} · pull: ${r.pullActive ? 'running' : 'idle'}`);
+  L.push(`  workspace: ${r.sample ? 'the sample - invented data' : 'a real one'} · assistant: ${r.ai || 'not configured'}`);
+  if (r.counts && Object.keys(r.counts).length) {
+    L.push(`  counts: ${Object.entries(r.counts).map(([k, v]) => `${k} ${Number(v)}`).join(' · ')}`);
+  }
+  if (r.refused && r.refused.length) L.push(`  areas your Zoho role refused: ${r.refused.join(', ')}`);
+  if (r.steps && r.steps.length) {
+    L.push('');
+    L.push('last steps, oldest first');
+    r.steps.forEach((s) => L.push(`  ${clean(s)}`));
+  }
+  L.push('');
+  L.push(`redactions: ${red.n} · no source, no SQL, no keys, and no file of yours was read to build this.`);
+  L.push('Names, paths and ids are stripped where they are recognised - which is why you are being shown it.');
+  return L.join('\n');
+}
+
+// The last lines the status bar said, in memory only - never written to disk, gone when the panel
+// closes. Thirty because a failure is usually three or four steps after the thing that caused it,
+// and a reader has to be able to read the whole buffer before deciding to publish it.
+const REPORT_STEPS_MAX = 30;
+const reportSteps = [];
+function noteStep(text) {
+  if (!text) return;
+  const t = String(text);
+  if (reportSteps[reportSteps.length - 1] === t) return;   // a progress line repeating itself
+  reportSteps.push(t);
+  if (reportSteps.length > REPORT_STEPS_MAX) reportSteps.shift();
+}
+
 
 // The pointer to zoost.it/emergency: a link that lives in the markup and is only ever shown or
 // hidden. Nothing here is ever built from what Zoho answered, which is what keeps the status line
@@ -194,7 +313,7 @@ function status(text, kind) { $('statustext').textContent = text; $('status').cl
 //
 // Cleared by every status write and set again by the one failure path that should carry it, so it
 // cannot linger over a later success. One place to clear, one place to set.
-function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on', !!on); }
+function showEmergency(on) { const a = $('emerg'); if (a) a.classList.toggle('on', !!on); const b = $('repopen'); if (b) b.classList.toggle('on', !!on); }
 
 // ---------- filesystem ----------
 async function ensurePerm(h) { const o = { mode: 'readwrite' }; if ((await h.queryPermission(o)) === 'granted') return true; return (await h.requestPermission(o)) === 'granted'; }
@@ -368,7 +487,7 @@ async function pickRoot() {
     if (!(await ensurePerm(h))) { status('Permission to the folder was not granted.', 'bad'); return; }
     root = h; rootGranted = true; await window.idbHandle.set('rootDir', h);
     await refreshWorkspaces();
-    status(`Working folder: ${h.name}`, 'ok');
+    status(`Working folder: \u00ab${h.name}\u00bb`, 'ok');
   } catch (e) {
     if (e && e.name === 'AbortError') return;         // the user closed the picker - not an error
     status('Could not open that folder: ' + (e.message || e), 'bad');
@@ -382,7 +501,7 @@ async function grantRoot() {
   try {
     if (!(await ensurePerm(root))) { status('Access denied - Zoost cannot read the working folder.', 'bad'); return; }
     rootGranted = true;
-    status(`Access granted to ${root.name}.`, 'ok');
+    status(`Access granted to \u00ab${root.name}\u00bb.`, 'ok');
     await refreshWorkspaces();
   } catch (e) { status('Grant failed: ' + (e.message || e), 'bad'); }
 }
@@ -582,7 +701,7 @@ async function delWorkspace() {
     dir = null; bound = null; forgetDirs();
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null;
     $('detail').classList.remove('show'); $('resizer').classList.remove('show'); selectedId = null; navClear();
-    status(`Removed ${w.folder}.`, 'ok');
+    status(`Removed \u00ab${w.folder}\u00bb.`, 'ok');
     await refreshWorkspaces();
     render();
   } catch (e) { status('Remove failed: ' + (e.message || e), 'warn'); }
@@ -3053,7 +3172,7 @@ async function writeSampleWorkspace() {
         await new Promise((r) => setTimeout(r, 0));   // let the status line actually paint
       }
     }
-    status(`Sample workspace written - ${Object.keys(files).length} files in ${gen.folderName()}. Nothing was fetched from Zoho Analytics.`, 'ok');
+    status(`Sample workspace written - ${Object.keys(files).length} files in \u00ab${gen.folderName()}\u00bb. Nothing was fetched from Zoho Analytics.`, 'ok');
     await refreshWorkspaces();
   } catch (e) { status('Could not write the sample: ' + e.message, 'bad'); }
 }
@@ -3456,3 +3575,100 @@ window.addEventListener('focus', () => refreshContext());
   await loadScope(); await loadZohoDc(); await restoreRoot(); await refreshContext();
 })();
 $('help').href = DOCS_URL;   // set here, not in the markup - same as the CRM panel
+
+// What the report is allowed to know, gathered in one place so a reader can see the whole of it at
+// once. Every value is a number, a boolean or one of a fixed set of words; the two free-text fields
+// - the message and the stack - go through `redact()` inside buildReport. Nothing here reads the
+// mirror, the sources, the SQL or any name.
+function reportFacts(err, ai) {
+  const m = chrome.runtime.getManifest();
+  const ua = navigator.userAgent.match(/Chrome\/(\d+)/);
+  return {
+    product: m.name,
+    version: m.version,
+    browser: 'Chrome ' + (ua ? ua[1] : '?'),
+    message: (err && (err.message || err)) || $('statustext').textContent,
+    stack: (err && err.stack) || '',
+    tab: 'views' + (detailTab ? '/' + detailTab : ''),
+    search: searchMode === 'sql' ? (regexMode ? 'SQL, pattern' : 'SQL') : 'names',
+    pullActive: !!pullBusy,
+    sample: isSample(),
+    counts: {
+      views: (views || []).length,
+      tables: Object.keys(schema || {}).length,
+      queries: Object.keys(sqls || {}).length,
+    },
+    refused: [],
+    ai,
+    steps: reportSteps.slice(),
+  };
+}
+// The last thing that actually threw. `openReport()` is opened from a button, so it has no error
+// to hand - and without this the report was *only* the status buffer, which is the half that has to
+// be redacted hardest and the half that says least. Two listeners, no call-site changes: an uncaught
+// error and a rejected promise are exactly the failures worth a stack.
+let lastThrown = null;
+window.addEventListener('error', (e) => { if (e && e.error) lastThrown = e.error; });
+window.addEventListener('unhandledrejection', (e) => { if (e && e.reason instanceof Error) lastThrown = e.reason; });
+let reportText = '';
+// Which engine is set, and nothing else about it: never the key, never the passphrase, not even
+// whether one is stored - an AI failure is engine-shaped, and that is the whole of what helps.
+async function aiEngineWord() {
+  try {
+    const r = await chrome.storage.local.get('aicfg');
+    const c = (r && r.aicfg) || {};
+    return c.active === 'anthropic' || c.active === 'openai' ? c.active : 'not configured';
+  } catch (_) { return 'unknown'; }
+}
+async function openReport(err) {
+  reportText = buildReport(reportFacts(err || lastThrown, await aiEngineWord()));
+  $('repbody').textContent = reportText;
+  $('scrim').classList.add('on'); $('repdlg').classList.add('on');
+}
+function closeReport() { $('scrim').classList.remove('on'); $('repdlg').classList.remove('on'); }
+$('repopen').onclick = () => openReport();
+$('repx').onclick = closeReport;
+$('repcancel').onclick = closeReport;
+$('repcopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(reportText); $('repcopy').textContent = 'Copied'; }
+  catch (_) { $('repcopy').textContent = 'Could not copy'; }
+  setTimeout(() => { $('repcopy').textContent = 'Copy'; }, 1500);
+};
+// The report is handed to the page through the DOM, never through the address.
+//
+// It used to travel in the URL fragment, on the reasoning that a fragment is never transmitted to a
+// server - which is true, and which was not the whole question. `chrome.tabs.create` commits a
+// navigation, Chrome records the visited URL in its history, and with history sync on that record
+// goes to the user's Google account: the report would have left the machine with no click at all,
+// and before the page had even offered to let them trim it. Found by an audit of this feature.
+//
+// So the page is opened empty and the text is put into it afterwards, into the box the reader is
+// looking at. Nothing is stored, nothing is navigated to, and the only copy outside this panel is
+// the one in that textarea.
+$('repgo').onclick = async () => {
+  const text = reportText;
+  closeReport();
+  try {
+    const tab = await chrome.tabs.create({ url: 'https://zoost.it/report' });
+    const put = (t) => {
+      const b = document.getElementById('body');
+      if (b) { b.value = t; b.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    // Once, when that tab has finished loading - and only that tab.
+    const onDone = (id, info) => {
+      if (id !== tab.id || info.status !== 'complete') return;
+      chrome.tabs.onUpdated.removeListener(onDone);
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: put, args: [text] })
+        .catch(() => {});
+    };
+    chrome.tabs.onUpdated.addListener(onDone);
+  } catch (_) {
+    setReportFallback();
+  }
+};
+// If the tab cannot be opened or written to, say so and leave the reader somewhere to go - a silent
+// bail here is a button that looks like it worked.
+function setReportFallback() {
+  try { navigator.clipboard.writeText(reportText); } catch (_) {}
+  status('Could not open the report page - the report is on your clipboard. Paste it at zoost.it/report.', 'warn');
+}

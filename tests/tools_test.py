@@ -1217,13 +1217,90 @@ class EveryWorkerRouteStillReachesTheWorker(unittest.TestCase):
         # is declared in the config this test already reads, so it lands in `declared` and never
         # here. **A name reappearing here means a credential has come back into a web-facing
         # runtime**, which is a decision, not a detail.
-        SECRETS = set()
+        # Three came back with /api/report, and this is the decision being recorded rather than
+        # slipped in. The endpoint turns a report the reader has already seen into a public issue,
+        # so it needs to prove the caller is human and to post as somebody.
+        #   TURNSTILE_SECRET  verifies the captcha. Useless to a thief on its own.
+        #   REPORT_SALT       salts the per-IP rate-limit hash, so KV holds no address. Optional:
+        #                     it falls back to the Turnstile secret, which is why it is not required.
+        #   GH_TOKEN          the one that matters. It must be a **fine-grained** token whose only
+        #                     permission is `issues: write` on ivannot/zoost - no code, no releases,
+        #                     no other repository, no account scope. With that shape the worst a
+        #                     compromised Worker can do is open issues on a public tracker, which is
+        #                     already something anyone with a GitHub account can do by hand.
+        # The endpoint refuses outright when either required secret is missing, so a misconfigured
+        # deploy cannot serve an unprotected write path.
+        SECRETS = {'TURNSTILE_SECRET', 'GH_TOKEN', 'REPORT_SALT'}
         read = set(re.findall(r'\benv\.([A-Z][A-Z0-9_]*)', self.worker))
         declared = set(re.findall(r'"binding":\s*"([^"]+)"', self.cfg))
         self.assertTrue(read, 'nothing is read off env - has the signature changed?')
         self.assertEqual(read - declared, SECRETS,
                          'a name read off env is neither declared in wrangler.jsonc nor a known '
                          'secret: declare the binding, or add it to SECRETS if it is one')
+
+    def test_the_report_endpoint_refuses_when_it_is_not_configured(self):
+        # A write path to a public repository with its captcha switched off is worse than a missing
+        # feature, so «not configured» must fail closed. Read from the source because the guard is
+        # the first thing in the handler and its order is what makes it a guard.
+        fn = self.worker[self.worker.index('async function report('):]
+        fn = fn[:fn.index('\n}')]
+        self.assertIn("!env.TURNSTILE_SECRET || !env.GH_TOKEN", fn)
+        self.assertLess(fn.index('TURNSTILE_SECRET'), fn.index('siteverify'),
+                        'the configuration check runs after the captcha call, so an unconfigured '
+                        'deploy would still reach out')
+        self.assertLess(fn.index('siteverify'), fn.index('api.github.com'),
+                        'the issue is created before the captcha is verified')
+
+    def test_the_report_endpoint_never_passes_text_through(self):
+        fn = self.worker[self.worker.index('async function report('):]
+        fn = fn[:fn.index('\n}')]
+        # Every place the user's text reaches the issue goes through both, in this order.
+        self.assertIn('reportRedact(text)', fn)
+        self.assertIn('reportRedact(says)', fn)
+        self.assertIn('reportFence(clean)', fn)
+        self.assertNotIn('body: text', fn)
+
+    def test_the_fence_cannot_be_climbed_out_of(self):
+        # A report containing a fence would end the block and the rest would render as markdown -
+        # which is how a link, an image or an HTML comment gets into an issue nobody wrote.
+        out = subprocess.run(
+            ['node', '-e', """
+             const src = require('fs').readFileSync('site/_worker.js', 'utf8');
+             const fn = src.slice(src.indexOf('function reportFence'));
+             eval(fn.slice(0, fn.indexOf('\\n}') + 2));
+             const evil = 'x\\n```\\n<img src=x onerror=alert(1)>\\n```';
+             const out = reportFence(evil);
+             const fences = (out.match(/```/g) || []).length;
+             console.log(JSON.stringify({ fences, has: /`{3}/.test(out.slice(4, -4)) }));
+             """],
+            capture_output=True, text=True, cwd=str(ROOT))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        got = json.loads(out.stdout)
+        self.assertEqual(got['fences'], 2, 'the content still carries a fence of its own')
+        self.assertFalse(got['has'], 'a backtick run survived inside the block')
+
+    def test_the_two_redactions_agree(self):
+        # The panel redacts and the Worker redacts again, deliberately as two copies - shared code
+        # between a client and the thing that distrusts it lets one edit switch off both. What they
+        # may not do is *disagree*, or the second pass would be theatre.
+        out = subprocess.run(
+            ['node', '-e', """
+             const fs = require('fs');
+             const w = fs.readFileSync('site/_worker.js', 'utf8');
+             const p = fs.readFileSync('apps/crm/sidepanel.js', 'utf8');
+             const wf = w.slice(w.indexOf('function reportRedact'));
+             eval(wf.slice(0, wf.indexOf('\\n}') + 2));
+             const pf = p.slice(p.indexOf('function redact('));
+             eval(pf.slice(0, pf.indexOf('\\n}') + 2));
+             const cases = ['mail a@b.co', 'org 349725000131663089', 'to \\u00abAcme\\u00bb now',
+                            'said "secret"', 'GET https://crm.zoho.eu/x', 'plain words'];
+             console.log(JSON.stringify(cases.map((c) => [reportRedact(c), redact(c).text])));
+             """],
+            capture_output=True, text=True, cwd=str(ROOT))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        for worker_said, panel_said in json.loads(out.stdout):
+            self.assertEqual(worker_said, panel_said,
+                             'the Worker and the panel disagree about what is sensitive')
 
     def test_a_404_page_is_configured_at_all(self):
         # If this is ever removed the rules above stop mattering - and the reader should be told why

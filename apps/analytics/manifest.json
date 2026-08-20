@@ -29,7 +29,8 @@
     "https://analytics.zoho.uk/*",
     "https://analytics.zoho.ae/*",
     "https://api.anthropic.com/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://zoost.it/*"
   ],
   "background": {
     "service_worker": "background.js"

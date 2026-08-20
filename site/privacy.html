@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
 <meta name="theme-color" content="#0d121c">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/site.css?v=cf0c90bb8a">
+<link rel="stylesheet" href="/site.css?v=9d49dbaf33">
 
 </head>
 <body>
@@ -91,11 +91,30 @@
     organisation's policies; this document covers only what the Zoost extensions do with it.</p>
 
   <h2>2. What the developer collects</h2>
-  <p><b>Nothing.</b> The extension contains no analytics, no telemetry, no error reporting, no
-    advertising identifiers, no cookies and no remotely hosted code. There is no backend service
-    operated by the developer, so there is no place for your data to arrive.</p>
-  <p>The developer therefore does not sell, share, transfer or otherwise process your personal data,
-    because it never receives any.</p>
+  <p><b>Nothing, unless you send it - and then only what you have read first.</b> The extension
+    contains no analytics, no telemetry, no advertising identifiers, no cookies and no remotely hosted
+    code. Nothing is ever transmitted in the background, on a schedule, or on an error.</p>
+  <p>There is one channel, and it starts with a click of yours. When something fails, the panel can
+    prepare a <b>problem report</b>: it shows you the whole text, and sends nothing. If you choose to
+    go on, it opens <a href="/report">zoost.it/report</a> and puts the text into the box on that page
+    - through the page's own contents, never through the address, so nothing about it is recorded in
+    your browser's history. There it is shown to you again, and it is sent only when you press send.
+    It then becomes a <b>public issue</b> on the Zoost repository on GitHub, which is permanent.</p>
+  <p>What the report may contain is a fixed list decided in the code, not a sweep of whatever is
+    around: the extension and browser versions, the error and where in Zoost's own files it happened,
+    the last few lines the status bar showed, and counters - how many functions, how many views. It
+    never contains your source code, your SQL, the contents of any file, or your API key: no file of
+    yours is read to build it.</p>
+  <p>The status lines are the part to understand. They are sentences this panel wrote while you
+    worked, and some of them mention things by name - a folder you chose, a function that synced.
+    Before you see the report, everything that can be <b>recognised</b> as a name, a path, an id, an
+    address or a quoted value is replaced with a placeholder, by the extension and again by the
+    server, and the report says how many replacements were made. What we do not claim is that this is
+    exhaustive: recognising a name is a judgement, and that is exactly why the text is put in front of
+    you before anything happens, and why you can unlock it and cut anything you like - the report then
+    travels marked as altered, so nobody mistakes an edited trace for evidence.</p>
+  <p>Apart from that, the developer does not sell, share, transfer or otherwise process your personal
+    data, because it never receives any.</p>
 
   <h2>3. What is stored, and where</h2>
   <p>Everything Zoost stores lives on the computer you are using.</p>

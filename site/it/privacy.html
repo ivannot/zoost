@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:3285c43a3375a738 -->
+<!-- translated-from: site/privacy.html sha256:3fb43ba8bcce84c2 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -22,7 +22,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
 <meta name="theme-color" content="#0d121c">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/site.css?v=cf0c90bb8a">
+<link rel="stylesheet" href="/site.css?v=9d49dbaf33">
 
 </head>
 <body>
@@ -94,10 +94,29 @@
     tua organizzazione; questo documento copre soltanto quello che le estensioni Zoost fanno con quei dati.</p>
 
   <h2>2. Cosa raccoglie lo sviluppatore</h2>
-  <p><b>Niente.</b> L'estensione non contiene analytics, telemetria, segnalazione degli errori,
-    identificatori pubblicitari, cookie né codice ospitato altrove. Non esiste nessun servizio di
-    backend gestito dallo sviluppatore, quindi non c'è nessun posto in cui i tuoi dati possano
-    arrivare.</p>
+  <p><b>Niente, a meno che non lo mandi tu - e allora soltanto quello che hai letto prima.</b>
+    L'estensione non contiene analytics, telemetria, identificatori pubblicitari, cookie né codice
+    ospitato altrove. Non viene trasmesso niente in background, a scadenze fisse o in caso di errore.</p>
+  <p>Esiste un solo canale, e parte da un tuo clic. Quando qualcosa fallisce, il pannello può preparare
+    una <b>segnalazione</b>: ti mostra il testo per intero, e non manda niente. Se decidi di andare
+    avanti apre <a href="/it/report">zoost.it/report</a> e mette il testo nella casella di quella
+    pagina - dentro il contenuto della pagina, mai nell'indirizzo, così non ne resta traccia nella
+    cronologia del tuo browser. Lì te lo rimostra, e parte solo quando premi invia. Da lì diventa una
+    <b>issue pubblica</b> sul repository di Zoost su GitHub, ed è permanente.</p>
+  <p>Cosa può contenere la segnalazione è un elenco fisso deciso nel codice, non una raccolta di
+    quello che c'è in giro: le versioni di estensione e browser, l'errore e in quale file di Zoost è
+    successo, le ultime righe che ha mostrato la barra di stato e dei contatori - quante funzioni,
+    quante viste. Non contiene mai il tuo codice, il tuo SQL, il contenuto di nessun file né la tua
+    chiave API: per costruirla non viene letto nessun tuo file.</p>
+  <p>Le righe di stato sono la parte da capire. Sono frasi che il pannello ha scritto mentre lavoravi,
+    e alcune nominano delle cose: una cartella che hai scelto, una funzione che si è sincronizzata.
+    Prima che tu veda la segnalazione, tutto ciò che è <b>riconoscibile</b> come un nome, un percorso,
+    un id, un indirizzo o un valore fra virgolette viene sostituito con un segnaposto, dall'estensione
+    e di nuovo dal server, e la segnalazione dice quante sostituzioni ha fatto. Quello che non
+    dichiariamo è che sia esaustivo: riconoscere un nome è un giudizio, ed è esattamente per questo che
+    il testo ti viene messo davanti prima che succeda qualsiasi cosa, e che puoi sbloccarlo e tagliare
+    quello che vuoi - la segnalazione parte allora marcata come alterata, così nessuno scambia un trace
+    modificato per una prova.</p>
   <p>Di conseguenza lo sviluppatore non vende, non condivide, non trasferisce e non tratta in nessun
     altro modo i tuoi dati personali, perché non ne riceve nessuno.</p>
 

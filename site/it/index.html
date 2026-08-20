@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/index.html sha256:e964af39a7787654 -->
+<!-- translated-from: site/index.html sha256:f57bf7be62a442cb -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zoost - workbench per i prodotti Zoho su cui lavori ogni giorno</title>
@@ -27,7 +27,7 @@
  "url":"https://zoost.it/","logo":"https://zoost.it/icon-512.png",
  "sameAs":["https://github.com/ivannot/zoost"]}
 </script>
-<link rel="stylesheet" href="/site.css?v=cf0c90bb8a">
+<link rel="stylesheet" href="/site.css?v=9d49dbaf33">
 </head>
 <body class="lp">
 <a class="skip" href="#content">Vai al contenuto</a>
@@ -236,9 +236,10 @@ in un browser in esecuzione.</code></pre>
       </div>
       <div>
         <h3>Dalla tua macchina non esce niente</h3>
-        <p>Nessun server, nessun account da creare, nessuna telemetria. L'unica eccezione è l'assistente
-          AI, che è facoltativo e resta spento finché non gli dai una chiave tua -
-          <a href="/it/ai">cosa aggiunge e quando non serve</a>.</p>
+        <p>Nessun account da creare, nessuna telemetria, nessun server fra te e la tua org. Due cose
+          escono solo se le mandi tu: quello che chiedi all'assistente AI, che è facoltativo e resta spento
+          finché non gli dai una chiave tua - <a href="/it/ai">cosa aggiunge e quando non serve</a> - e una
+          <a href="/it/report">segnalazione di problema</a>, che leggi per intero prima.</p>
       </div>
       <div>
         <h3>Puoi controllare, non solo fidarti</h3>
@@ -284,7 +285,7 @@ in un browser in esecuzione.</code></pre>
       <tbody>
         <tr><td class="k">Cosa legge</td><td>Solo configurazione: codice, definizioni dei campi, automazioni, la struttura di un workspace. <b>Mai i dati veri e propri</b>: in Zoho CRM né contatti, né trattative, né note; in Zoho Analytics mai le righe dentro una tabella.</td></tr>
         <tr><td class="k">Cosa scrive</td><td>Su Zoho niente: non chiama nessun endpoint che crei, modifichi o cancelli qualcosa.</td></tr>
-        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun server, nessun account, nessuna telemetria.</td></tr>
+        <tr><td class="k">Dove finiscono i dati</td><td>In una cartella sul computer di chi la usa, e basta. Nessun account, nessuna telemetria, e niente esce se non lo manda lei: una domanda a un provider AI, o una <a href="/it/report">segnalazione</a> letta per intero.</td></tr>
         <tr><td class="k">L'unica eccezione</td><td>Un assistente AI facoltativo, che resta spento finché non gli si dà una chiave API propria. Solo allora le parti che gli servono vanno ad Anthropic o a OpenAI. Non può raggiungere nient'altro.</td></tr>
         <tr><td class="k">Cosa può vedere</td><td>Esattamente quello che quella persona vede già dentro Zoho. Usa la sua sessione e i suoi permessi; non può fare niente che lei non potrebbe fare.</td></tr>
         <tr><td class="k">Cosa chiede a Chrome</td><td>Quattro permessi - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - e un elenco di host scritti uno per uno, mai <code>&lt;all_urls&gt;</code>. Gli host sono i domini di Zoho CRM o di Zoho Analytics di ogni data centre, i sandbox di Zoho CRM, <code>one.zoho.*</code> e <code>api.anthropic.com</code> / <code>api.openai.com</code>. Su <code>one.zoho.*</code> non gira nessuno script nostro: sta lì solo perché il pannello capisca a quale org appartiene una scheda Zoho One. I due host AI si raggiungono solo se qualcuno accende l'assistente. Il manifest fa fede.</td></tr>

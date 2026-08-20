@@ -533,6 +533,15 @@ td.p{font:12.5px var(--mono);color:var(--teal);white-space:nowrap}
  * full ink. `main .note` matches it and wins by coming later, which is a tie broken on purpose
  * rather than a scope that says «only in the docs» about something both halves of the site use. */
 main .note{border-left:2px solid var(--border);padding-left:14px;color:var(--muted);font-size:14px;max-width:70ch}
+/* The report page's two boxes. One definition, here, because a selector written beside its first
+   user is the defect this stylesheet exists to stop - `.k`, `.card`, `.note` and `b.ui` each cost
+   a page that rendered them as nothing. */
+main textarea{width:100%;box-sizing:border-box;font:13px/1.5 var(--mono,ui-monospace,monospace);background:var(--code-bg,#0f1522);color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:12px;resize:vertical}
+main textarea:focus{outline:2px solid var(--sel);outline-offset:1px}
+/* The Turnstile widget draws itself into an iframe; this is only the room it sits in. */
+.cf-turnstile{margin:18px 0}
+/* The mark next to the unlocked trace: a warning about what the report now is, not an error. */
+.ednote{color:var(--warn,#d08a2a);font-size:13px;margin-left:10px}
 main .note.warn{border-color:#6b4a1c;color:#e2c98a}
 main .meta{font:12.5px var(--mono);color:var(--muted)}
 

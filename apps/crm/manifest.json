@@ -47,7 +47,8 @@
     "https://one.zohocloud.ca/*",
     "https://one.zoho.sa/*",
     "https://one.zoho.uk/*",
-    "https://one.zoho.ae/*"
+    "https://one.zoho.ae/*",
+    "https://zoost.it/*"
   ],
   "background": {
     "service_worker": "background.js"

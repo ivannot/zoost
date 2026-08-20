@@ -104,6 +104,8 @@
      quietly beat `[hidden]`, which is a trap this project has already paid for once. */
   #emerg{display:none;margin-left:auto;color:var(--accent);text-decoration:none;white-space:nowrap}
   #emerg.on{display:inline} #emerg:hover{text-decoration:underline}
+  #repopen{display:none;margin-left:8px;flex:none;background:none;border:0;padding:0;color:var(--accent);font-size:11px;text-decoration:underline;cursor:pointer;white-space:nowrap}
+  #repopen.on{display:inline}
   .spin{width:11px;height:11px;border:2px solid #33415a;border-top-color:var(--sel);border-radius:50%;animation:sp .7s linear infinite;display:none;flex:none}
   #status.busy .spin{display:inline-block}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -432,6 +434,7 @@
   .scrim{position:fixed;inset:0;background:rgba(6,10,18,.6);z-index:85;display:none}
   .scrim.on{display:block}
   .dlg{position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;display:none;flex-direction:column;background:#141b29;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .repbody{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace;font-size:11px;line-height:1.45;background:#0f1522;border:1px solid var(--border);border-radius:6px;padding:8px;margin:0;max-height:46vh;overflow:auto;color:var(--ink)}
   .dlg.on{display:flex}
   .dlg.full{left:0;top:0;transform:none;width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0}
   .dlg.full .db{padding:16px 18px}
@@ -472,7 +475,7 @@
   <span class="dot"></span><span class="who" id="who">No Zoho Analytics tab detected</span><span class="bound" id="bound"></span>
 </div>
 <div id="mmbar"><div id="mmtext"></div><div class="mmbtns"><button id="mmsw"></button><button id="mmgo"></button></div></div>
-<div id="status"><i class="spin"></i><span id="statustext">Ready.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a></div>
+<div id="status"><i class="spin"></i><span id="statustext">Ready.</span><a id="emerg" href="https://zoost.it/emergency" target="_blank" rel="noreferrer">A fix may already be released ↗</a><button id="repopen" class="repopen" title="Build a report about this - you read it, you trim it, you send it">Report this problem</button></div>
 
 <div class="genbar">
   <fieldset class="wsgroup">
@@ -587,6 +590,18 @@
   <div class="df"><span id="scwarn" class="scwarn"></span><button id="expcancel">Cancel</button><button id="expgo" class="zbtn">Export</button></div>
 </div>
 
+<div id="repdlg" class="dlg full">
+  <div class="dh"><span>Report this problem</span><span class="dx" id="repx">✕</span></div>
+  <div class="db">
+    <p class="dnote"><b>This becomes a public issue on GitHub, for ever.</b> Read it before you send it -
+      it is the whole of what travels, and nothing else is collected. If the problem is a
+      <b>security</b> one, close this and write to <b>ivan@zoost.it</b> instead: that is not a public channel.</p>
+    <pre id="repbody" class="repbody"></pre>
+    <p class="dnote">Send opens a page on zoost.it that shows this again. The extension itself sends nothing:
+      the text travels in the part of the address a browser never transmits, and the page is where you submit it.</p>
+  </div>
+  <div class="df"><button id="repcopy">Copy</button><button id="repcancel">Cancel</button><button id="repgo" class="zbtn">Send…</button></div>
+</div>
 <div id="aboutdlg" class="dlg full">
   <div class="dh"><span>About</span><span class="dx" id="aboutx">✕</span></div>
   <div class="db" id="aboutbody"></div>

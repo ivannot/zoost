@@ -1968,7 +1968,10 @@ test('every element the side panel reaches for is in its own markup', () => {
   // all - it is the search box of the **exported HTML report**, written into a <script> string for a
   // file that opens somewhere else entirely. `rxsavename` and `rxsaveerr` are the ▾ menu's Save
   // row, built into its innerHTML only when there is a pattern worth saving and wired straight after.
-  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr']);
+  // `body` is not this document's at all: it is the textarea on zoost.it/report, named inside the
+  // function the panel injects into that page. It belongs to the same family as `q`, which is the
+  // search box of the exported HTML report.
+  const RUNTIME = new Set(['laybody', 'laymod', 'laysel', 'pvfailgo', 'reldepth', 'relopen', 'q', 'rxsavename', 'rxsaveerr', 'body']);
   for (const app of ['crm', 'analytics']) {
     const js = read(`apps/${app}/sidepanel.js`), html = read(`apps/${app}/sidepanel.html`);
     const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
@@ -3875,6 +3878,183 @@ for (const app of ['crm', 'analytics']) {
     const esc0 = (t) => t;
     assert.equal(markLine('abc', rxCompile('z*').re, esc0), 'abc');
     assert.equal(markLine('aab', rxCompile('a*').re, esc0), '<mark>aa</mark>b');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Problem reports. The product's whole claim is that nothing leaves the machine on its own, and
+// this is the one feature that could break it - so it is held to the mechanism rather than to the
+// sentence: a whitelist decides what is offered, `redact()` scrubs every free-text field, the
+// reader sees the result, and only a click opens the page that can send it.
+{
+  const { redact, buildReport } = load([
+    sliceFn('apps/crm/sidepanel.js', 'redact'),
+    sliceFn('apps/crm/sidepanel.js', 'redactHard'),
+    sliceFn('apps/crm/sidepanel.js', 'buildReport'),
+  ]);
+
+  test('the report core is one text in both panels', () => {
+    for (const fn of ['redact', 'buildReport', 'noteStep']) {
+      assert.equal(sliceFn('apps/crm/sidepanel.js', fn), sliceFn('apps/analytics/sidepanel.js', fn),
+        'why=' + fn + ' has drifted between the twins');
+    }
+  });
+
+  test('redact takes out what could name a business, and counts what it took', () => {
+    const r = redact('mail ivan@example.com about org 349725000131663089');
+    assert.ok(!/example\.com/.test(r.text), r.text);
+    assert.ok(!/349725000131663089/.test(r.text), r.text);
+    assert.equal(r.n, 2, 'the reader is not told how much was removed');
+  });
+
+  test('a quoted name never survives, in either quoting style the panels use', () => {
+    assert.ok(!/Acme/.test(redact('bound to EU \u00abAcme Ltd\u00bb').text));
+    assert.ok(!/Secret/.test(redact('Failed: "Secret.Process"').text));
+  });
+
+  test('our own stack is kept - it is the whole diagnostic value', () => {
+    const r = redact('at pullAll (chrome-extension://abcdefghijklmnop/sidepanel.js:1234:5)');
+    assert.ok(/sidepanel\.js:1234:5/.test(r.text), r.text);
+    assert.ok(/pullAll/.test(r.text), 'the function name went with the extension id');
+    assert.ok(!/abcdefghijklmnop/.test(r.text), 'the extension id is noise and stays out');
+  });
+
+  test('a Zoho URL is not a place the report may name', () => {
+    const r = redact('GET https://crm.zoho.eu/crm/v2/settings/modules failed');
+    assert.ok(!/zoho\.eu/.test(r.text), r.text);
+    assert.ok(/failed/.test(r.text), 'the shape of the sentence is what diagnoses');
+  });
+
+  test('redact is total: null, undefined and empty are not crashes', () => {
+    for (const v of [null, undefined, '', 0]) assert.equal(redact(v).n, 0);
+  });
+
+  test('the report prints numbers as numbers and nothing a caller smuggled in', () => {
+    const out = buildReport({
+      product: 'Zoost CRM', version: '1.45.0', browser: 'Chrome 141',
+      message: 'boom', tab: 'functions', search: 'code', pullActive: false,
+      sample: true, ai: 'anthropic', counts: { functions: '412; rm -rf', modules: 31 }, refused: [],
+    });
+    assert.ok(/functions NaN/.test(out) || /functions 412/.test(out) === false || /rm -rf/.test(out) === false,
+      'a count reached the report as text: ' + out);
+    assert.ok(!/rm -rf/.test(out), 'free text arrived through a numeric field');
+  });
+
+  test('the report says how many redactions it made, every time', () => {
+    const out = buildReport({ product: 'p', version: 'v', browser: 'b', message: 'org 349725000131663089', tab: 't', search: 's', pullActive: false, sample: false });
+    assert.ok(/redactions: 1/.test(out), out);
+    assert.ok(/no source, no SQL, no keys/.test(out), 'the report does not state its own scope');
+    assert.ok(/stripped where they are recognised/.test(out),
+      'why=the report claims more than the redaction can deliver, or says nothing about its limits');
+  });
+
+  // A fresh buffer per case: the array is module state, so two cases sharing one load would make
+  // the second depend on what the first pushed.
+  const freshBuffer = () => load([
+    sliceConst('apps/crm/sidepanel.js', 'REPORT_STEPS_MAX'),
+    sliceConst('apps/crm/sidepanel.js', 'reportSteps'),
+    sliceFn('apps/crm/sidepanel.js', 'noteStep'),
+  ]);
+
+  test('the steps buffer is bounded and drops the oldest, so a long session cannot fill a report', () => {
+    const m = freshBuffer();
+    for (let i = 0; i < 100; i++) m.noteStep('line ' + i);
+    assert.equal(m.REPORT_STEPS_MAX, 30);
+    assert.equal(m.reportSteps.length, 30, 'the buffer grew past its bound');
+    assert.equal(m.reportSteps[0], 'line 70', 'it dropped the newest instead of the oldest');
+  });
+
+  test('a progress line repeating itself does not fill the buffer with one sentence', () => {
+    const m = freshBuffer();
+    m.noteStep('same'); m.noteStep('same'); m.noteStep('other');
+    assert.equal(m.reportSteps.length, 2, m.reportSteps.join('|'));
+  });
+
+  test('neither the builder nor the gatherer names a field the product promises never to collect', () => {
+    // Derived from REPORT_NEVER itself, which was dead code claiming to be a mechanism until an
+    // audit said so. Both functions are checked: the first version read only buildReport, and
+    // everything sensitive would have arrived through reportFacts.
+    for (const app of ['crm', 'analytics']) {
+      const never = JSON.parse(sliceConst(`apps/${app}/sidepanel.js`, 'REPORT_NEVER')
+        .replace(/^[^=]*=\s*/, '').replace(/;\s*$/, '').replace(/'/g, '"'));
+      assert.ok(never.length >= 10, 'why=the list of what is never collected has been emptied');
+      // The manifest is *ours* - `getManifest().name` is "Zoost - workbench for…", not anything of
+      // the user's - so its reads are taken out before the check, and named here rather than left
+      // as a mysterious exception.
+      const src = (sliceFn(`apps/${app}/sidepanel.js`, 'buildReport') + sliceFn(`apps/${app}/sidepanel.js`, 'reportFacts'))
+        .replace(/chrome\.runtime\.getManifest\(\)/g, 'MF').replace(/\bm\.(name|version)\b/g, 'MF');
+      for (const field of never) {
+        assert.ok(!new RegExp('\\.' + field + '\\b').test(src),
+          'why=' + app + ' reads .' + field + ' into the report');
+      }
+    }
+  });
+
+  test('the hard redaction takes out what an audit found the status lines actually carry', () => {
+    const { redactHard } = load([sliceFn('apps/crm/sidepanel.js', 'redactHard')]);
+    // Every one of these is a real status string from these panels, with a real value in it.
+    const cases = [
+      ['Synced: functions/Commissions/Recalc_ACME_Fees.dg', /ACME|Recalc|Commissions/],
+      ['Working folder: \u00abAcmeCorp Ltd\u00bb', /AcmeCorp/],
+      ['Workspace ready: acmecorp-681234567 - Pull to fill it.', /681234567/],
+      ['Could not open zcrm_349725000131663089', /349725000131663089/],
+      ['GET crm.zoho.eu failed', /zoho\.eu/],
+      ["Grant failed: user denied 'MyClientFolder'", /MyClientFolder/],
+      ['Opened \u00abDeals_Custom\u00bb in Zoho.', /Deals_Custom/],
+    ];
+    for (const [input, mustGo] of cases) {
+      const out = redactHard(input).text;
+      assert.ok(!mustGo.test(out), 'why=' + JSON.stringify(input) + ' survived as ' + JSON.stringify(out));
+      assert.ok(redactHard(input).n > 0, 'why=nothing was counted for ' + JSON.stringify(input));
+    }
+  });
+
+  test('no status line interpolates a name outside quotes, so the net can find it', () => {
+    // The net cannot recognise a bare name - «AcmeCorp Ltd» is words. The panels quote names with
+    // « » everywhere else, so the fix and the house style are the same thing; this holds it.
+    for (const app of ['crm', 'analytics']) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      const re = /(?:setStatus|status)\(`([^`]*)`/g;
+      let m;
+      while ((m = re.exec(src))) {
+        const tpl = m[1];
+        const bare = /(^|[^\u00ab\/\w])\$\{[^}]*(?:\.name|\.stem|\.folder|genName)[^}]*\}/.test(tpl);
+        assert.ok(!bare, 'why=' + app + ' puts a name into the status line unquoted: ' + tpl.slice(0, 70));
+      }
+    }
+  });
+
+  test('the report carries a stack when something actually threw', () => {
+    for (const app of ['crm', 'analytics']) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      assert.ok(/addEventListener\('error'/.test(src) && /unhandledrejection/.test(src),
+        'why=' + app + ' never captures a thrown error, so the report is only the status buffer');
+      assert.ok(/reportFacts\(err \|\| lastThrown/.test(src),
+        'why=' + app + ' builds the report without the error it captured');
+    }
+  });
+
+  test('the report is handed to the page through the DOM, never through the address', () => {
+    // It travelled in the URL fragment until an audit pointed out that the navigation itself is
+    // recorded in history and syncs with it - the report leaving the machine with no click.
+    for (const app of ['crm', 'analytics']) {
+      const src = read(`apps/${app}/sidepanel.js`);
+      assert.ok(!/zoost\.it\/report#/.test(src), 'why=' + app + ' still puts the report in a URL');
+      assert.ok(/chrome\.scripting\.executeScript/.test(src.slice(src.indexOf("$('repgo')"))),
+        'why=' + app + ' does not put the text into the page it opened');
+      const mf = JSON.parse(read(`apps/${app}/manifest.json`));
+      assert.ok(mf.host_permissions.includes('https://zoost.it/*'),
+        'why=' + app + ' injects into a host it has no permission for, so the button does nothing');
+    }
+  });
+
+  test('the status funnel is what fills the buffer, in both panels', () => {
+    // One funnel, so a message printed by code written tomorrow is in the report without anyone
+    // remembering - and a second funnel added later is the thing this would catch.
+    assert.ok(/const setStatus = \(t, cls = ''\) => \{ noteStep\(t\);/.test(read('apps/crm/sidepanel.js')),
+      'why=the CRM status line does not reach the report');
+    assert.ok(/function status\(text, kind\) \{ noteStep\(text\);/.test(read('apps/analytics/sidepanel.js')),
+      'why=the Analytics status line does not reach the report');
   });
 }
 

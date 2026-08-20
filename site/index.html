@@ -26,7 +26,7 @@
  "url":"https://zoost.it/","logo":"https://zoost.it/icon-512.png",
  "sameAs":["https://github.com/ivannot/zoost"]}
 </script>
-<link rel="stylesheet" href="/site.css?v=cf0c90bb8a">
+<link rel="stylesheet" href="/site.css?v=9d49dbaf33">
 </head>
 <body class="lp">
 <a class="skip" href="#content">Skip to content</a>
@@ -224,8 +224,10 @@ you would want to test in a running browser.</code></pre>
       </div>
       <div>
         <h3>Nothing leaves the machine</h3>
-        <p>No server, no account, no telemetry. The only exception is the optional AI assistant, and only if you give
-          it your own key - <a href="/ai">what it adds, and when it is not worth one</a>.</p>
+        <p>No account, no telemetry, and no server between you and your org. Two things leave only if you
+          send them: what you ask the optional AI assistant, with your own key -
+          <a href="/ai">what it adds, and when it is not worth one</a> - and a
+          <a href="/report">problem report</a>, which you read in full first.</p>
       </div>
       <div>
         <h3>Checkable, not just claimed</h3>
@@ -270,7 +272,7 @@ you would want to test in a running browser.</code></pre>
       <tbody>
         <tr><td class="k">What it reads</td><td>Configuration only: code, field definitions, automations, the structure of a workspace. <b>Never the data itself</b> - in Zoho CRM no contacts, no deals, no notes; in Zoho Analytics never the rows inside a table.</td></tr>
         <tr><td class="k">What it writes</td><td>To Zoho, nothing. It calls no endpoint that creates, edits or deletes.</td></tr>
-        <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No server, no account, no telemetry.</td></tr>
+        <tr><td class="k">Where the data goes</td><td>A folder on that person's own computer. No account, no telemetry, and nothing sent anywhere unless they send it: a question to an AI provider, or a <a href="/report">problem report</a> they have read in full.</td></tr>
         <tr><td class="k">The one exception</td><td>An optional AI assistant, off until someone enters their own API key. Then, and only then, the parts it needs go to Anthropic or OpenAI. It can reach nowhere else.</td></tr>
         <tr><td class="k">What it can see</td><td>Exactly what that person can already see in Zoho. It uses their session and their permissions, and can do nothing they could not do.</td></tr>
         <tr><td class="k">What it asks Chrome for</td><td>Four permissions - <code>sidePanel</code>, <code>storage</code>, <code>scripting</code>, <code>tabs</code> - and a named list of hosts, never <code>&lt;all_urls&gt;</code>. The hosts are the Zoho CRM or Zoho Analytics domains of every data centre, the Zoho CRM sandboxes, <code>one.zoho.*</code>, and <code>api.anthropic.com</code> / <code>api.openai.com</code>. No content script of ours runs on <code>one.zoho.*</code>: it is there so the panel can tell which org a Zoho One tab belongs to. The two AI hosts are reached only if someone turns the assistant on. The manifest is the authority.</td></tr>

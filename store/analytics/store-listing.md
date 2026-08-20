@@ -88,6 +88,8 @@ Guide: https://zoost.it/docs-analytics
 Privacy policy: https://zoost.it/privacy
 Home: https://zoost.it
 
+When something fails, the panel can build a problem report - versions, the error, the last few status lines and counters - show it to you in full, and let you trim it before you send it from a page on zoost.it, where it becomes a public issue. It never carries your SQL, your names, your workspace or your key, and nothing is ever sent automatically.
+
 Free and open source, Apache-2.0. Maintained in spare time on a best-effort basis; there is no guaranteed support or response time. Independent and unofficial: not affiliated with, endorsed by or sponsored by Zoho Corporation.
 ```
 

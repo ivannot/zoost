@@ -430,6 +430,150 @@ async function ahead(request, env, ctx) {
 // asset layer, so pointing here at the `.html` form would send a published extension's users through
 // two redirects to reach one page — and it is the same confusion between a file's path and its URL
 // that made every canonical on this site point at a redirect.
+// ---------------------------------------------------------------------------------------------
+// /api/report - the one endpoint on this site that *writes* anywhere.
+//
+// It turns a report the reader has already seen twice into a public issue on the Zoost repository.
+// Everything about it is built on the assumption that whoever calls it is hostile: the address is in
+// the extension's source, so it is public, and what it does is post under the maintainer's name.
+//
+// The rules, in the order they are applied:
+//   1. POST, same-origin, JSON, or nothing happens.
+//   2. It refuses unless BOTH secrets are configured. A write path to a public repository with its
+//      captcha switched off is worse than a missing feature - so «not configured» fails closed.
+//   3. Turnstile must pass. It is the only thing standing between this and a script.
+//   4. Rate limited per IP, by a salted hash: this endpoint never stores or logs an address.
+//   5. Size caps, and the text must look like something a Zoost panel produced.
+//   6. Redacted **again**, here. The panel already did it; a client is never believed twice.
+//   7. The issue body is *rebuilt* from validated pieces and fenced. Nothing is passed through.
+const REPORT_REPO = 'ivannot/zoost';
+const REPORT_MAX = 8000;          // a panel report is 2-6 KB; past this it is not one
+const REPORT_SAYS_MAX = 2000;
+const REPORT_PER_IP_PER_DAY = 5;
+
+// The same rules as the panel's own redact(), applied to text this Worker did not build. Kept as a
+// separate copy on purpose: shared code between a client and the thing that distrusts it is a way
+// for one edit to switch off both. tests/tools_test.py holds the two to the same behaviour.
+function reportRedact(text) {
+  return String(text == null ? '' : text)
+    .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, '<email>')
+    .replace(/https?:\/\/[^\s)"']+/gi, '<url>')
+    .replace(/\b\d{8,}\b/g, '<id>')
+    .replace(/«[^»]*»/g, '«…»')
+    .replace(/"[^"]*"/g, '"…"');
+}
+
+// A fence the content cannot climb out of: every backtick run in the text is defanged, and the
+// fence itself is longer than anything left. Without this a report containing ``` would end the
+// block and the rest would be rendered as markdown - which is how a link, an image or an HTML
+// comment gets into an issue nobody wrote.
+function reportFence(text) {
+  return '```\n' + String(text).replace(/`/g, 'ˋ') + '\n```';
+}
+
+async function reportRateKey(env, ip) {
+  // Salted with a secret, so the stored key cannot be walked back to an address even by whoever
+  // reads the KV. No address is written anywhere, and nothing here is logged.
+  const data = new TextEncoder().encode(String(ip) + '|' + (env.REPORT_SALT || env.TURNSTILE_SECRET || ''));
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return 'rl:report:' + [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function report(request, env) {
+  const bad = (status, error) => new Response(JSON.stringify({ error }), {
+    status, headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+  if (request.method !== 'POST') return bad(405, 'Use POST.');
+  // `new URL('null')` throws, and a sandboxed iframe or a hand-made request sends exactly that -
+  // which turned a 403 into an unhandled exception and a platform error page.
+  const origin = request.headers.get('origin') || '';
+  if (origin) {
+    let host = null;
+    try { host = new URL(origin).hostname; } catch (_) { return bad(403, 'Wrong origin.'); }
+    if (host !== new URL(request.url).hostname) return bad(403, 'Wrong origin.');
+  }
+  // Fails closed. A missing secret is a misconfiguration, and the safe reading of a misconfigured
+  // write path is «refuse», not «accept without the check».
+  if (!env.TURNSTILE_SECRET || !env.GH_TOKEN) {
+    return bad(503, 'Reporting is not configured on this server. Please open an issue by hand, or email ivan@zoost.it.');
+  }
+
+  let body;
+  try { body = await request.json(); } catch (_) { return bad(400, 'Malformed request.'); }
+  const text = String((body && body.report) || '');
+  const says = String((body && body.says) || '').slice(0, REPORT_SAYS_MAX);
+  const token = String((body && body.token) || '');
+  // The page reports whether the reader unlocked and changed the trace. A client could lie about it,
+  // and that is not the case this defends against: it tells an honest sender's reviewer that the
+  // text in front of them is no longer what the browser produced.
+  const edited = (body && body.edited) === true;
+  if (!text.trim()) return bad(400, 'There is nothing to send.');
+  if (text.length > REPORT_MAX) return bad(413, 'That is larger than a panel report - please open an issue by hand.');
+  // It has to look like what the panel writes. This is not a security boundary; it stops the
+  // endpoint being a general-purpose way to post anything at all to the repository.
+  if (!/^Zoost /.test(text.trim())) return bad(400, 'That does not look like a Zoost report.');
+
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const key = await reportRateKey(env, ip);
+  // Fails closed. The first version swallowed a KV error into `seen = 0`, so an outage of the store
+  // switched the limit off entirely - a rate limit that disappears exactly when things are going
+  // wrong is not one. Refusing costs a reader a message that names the other two ways in.
+  let seen = 0;
+  try { seen = Number(await env.STATUS.get(key)) || 0; }
+  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
+  if (seen >= REPORT_PER_IP_PER_DAY) return bad(429, 'That is several reports from here today. Please open an issue by hand, or email ivan@zoost.it.');
+  // Counted **before** the issue is created, not after. Counting afterwards let concurrent requests
+  // all read the same number and all go through; KV is eventually consistent, so this is still a
+  // ceiling rather than a lock - but it is the ceiling it claims to be, not one race wide.
+  try { await env.STATUS.put(key, String(seen + 1), { expirationTtl: 86400 }); } catch (_) {}
+
+  const ok = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }),
+  }).then((r) => r.json()).catch(() => null);
+  // The hostname too: a token is minted for a site key, and if that key's allowed-domain list is
+  // ever widened - a preview deployment, a second site - a token minted elsewhere would otherwise
+  // be accepted here. Checking it costs one comparison and keeps the widening honest.
+  if (!ok || !ok.success) return bad(403, 'The check did not pass. Please try again.');
+  if (ok.hostname && ok.hostname !== new URL(request.url).hostname) return bad(403, 'The check did not pass. Please try again.');
+
+  // Rebuilt, never passed through: two fenced blocks and a sentence saying where they came from.
+  const clean = reportRedact(text);
+  const extra = reportRedact(says);
+  // Held to a plain charset: the title is the one part not inside a fence, and it lands in the
+  // maintainer's notification email. Nothing here can carry markup, a link, or a control character.
+  const first = clean.split('\n')[0].slice(0, 80).replace(/[^\w .,:·+()\/-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const issue = {
+    title: (edited ? 'Panel report (altered): ' : 'Panel report: ') + (first || 'a problem'),
+    body: [
+      edited
+        ? '**The sender edited this trace before sending it.** It is no longer what the browser produced, '
+          + 'so treat it as a description rather than as evidence - lines may be missing or changed.'
+        : 'Sent from a Zoost panel by a user who read it first. Redacted by the panel and again here.',
+      '',
+      reportFence(clean),
+      extra.trim() ? '\n**What they were doing**\n\n' + reportFence(extra) : '',
+    ].join('\n'),
+    labels: edited ? ['from-panel', 'altered-trace'] : ['from-panel'],
+  };
+  const made = await fetch(`https://api.github.com/repos/${REPORT_REPO}/issues`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer ' + env.GH_TOKEN,
+      accept: 'application/vnd.github+json',
+      'user-agent': 'zoost-report-worker',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(issue),
+  }).then((r) => r.json()).catch(() => null);
+  if (!made || !made.html_url) return bad(502, 'GitHub refused it. Please open an issue by hand, or email ivan@zoost.it.');
+
+  return new Response(JSON.stringify({ url: made.html_url }), {
+    status: 200, headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
 const MOVED = {
   '/docs': '/docs-crm',
   '/docs.html': '/docs-crm',
@@ -440,6 +584,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/api/versions') return versions(request, env, ctx);
     if (url.pathname === '/api/ahead') return ahead(request, env, ctx);
+    if (url.pathname === '/api/report') return report(request, env);
     const to = MOVED[url.pathname];
     if (to) return Response.redirect(new URL(to, url).toString(), 301);
 

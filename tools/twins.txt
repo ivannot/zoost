@@ -10,6 +10,7 @@ aiCap	113394dc8123	113394dc8123	identical
 aiClear	bc37da0fa783	edbcc54cb5ca	divergent
 aiContextLabel	6b65dd4c3db5	9e759687172d	divergent
 aiEngineChrome	1b258b12d73a	ae6ca83689d5	divergent
+aiEngineWord	eda86661e8e6	eda86661e8e6	identical
 aiEnsureFiles	46ca4cb53f51	46ca4cb53f51	identical
 aiExecTool	e9856c12421d	ee81072522f9	divergent
 aiGetCfg	b01820a97b0f	b01820a97b0f	identical
@@ -37,6 +38,7 @@ buildExportHtml	09ed677fdedf	4d67279b5a1a	divergent
 buildExportMarkdown	8bff5c9e643f	e7cc032e283d	divergent
 buildRelChips	2e3d8ecc9b7e	0e5c805843f0	divergent
 buildRels	f936cc070ef9	278ac4d260b7	divergent
+buildReport	3de3b69b14b5	3de3b69b14b5	identical
 buildSchemaGraph	fbecf3b254ed	ee1997168a94	divergent
 byWsLabel	85a8a45c6c14	85a8a45c6c14	identical
 chipEl	5c4af366101f	5c4af366101f	identical
@@ -45,6 +47,7 @@ closeAI	b99322ae2ed2	b99322ae2ed2	identical
 closeAbout	8e2a65db1025	8e2a65db1025	identical
 closeHealth	33e8c3372102	39acab54b873	divergent
 closeNavMenu	67073a3b5d66	67073a3b5d66	identical
+closeReport	954ebfb9d4ab	954ebfb9d4ab	identical
 closeScope	7e880dca67a7	9961035b74ab	divergent
 collideBoxes	65fd5448020e	65fd5448020e	identical
 computeMaxDepth	30efce461424	30efce461424	identical
@@ -116,7 +119,7 @@ fieldsTableHtml	e8fbeef081a2	f77b38839d80	divergent
 findMarkRe	1e57d1af56a5	4b046384501d	divergent
 focusFirstAsked	5b5bf2f9eac0	5b5bf2f9eac0	identical
 friendlyError	5e9b454554e7	5e9b454554e7	identical
-grantRoot	784657581fed	4ec64827ffe9	divergent
+grantRoot	1e1447674d2d	50f056678e38	divergent
 graphForWindow	9db12f0021b7	9db12f0021b7	identical
 graphStat	2d3e00ec6edc	c9709b0f9729	divergent
 hueFor	14a512e6b267	14a512e6b267	identical
@@ -152,8 +155,10 @@ navTo	34dc8391f4a8	7e4b2c83f68b	divergent
 navWhen	6d2200ac5636	6d2200ac5636	identical
 noFocusHere	3e2039406c53	721f572314ba	divergent
 noteSampleWs	eed5b3589f3a	eed5b3589f3a	identical
+noteStep	9c9fb28465ba	9c9fb28465ba	identical
 openExternal	9d884c69b151	9d884c69b151	identical
 openHealth	1ccc9b2b0408	0c5941e396f4	divergent
+openReport	3d96bc53f794	3d96bc53f794	identical
 openRxMenu	cdc4b8f98ab9	4e4329e39c5e	divergent
 openSchemaGraph	040b78cc9838	0e79eab584fe	divergent
 openSettings	128b4edeca70	128b4edeca70	identical
@@ -165,11 +170,13 @@ parseArrangement	6ad270723301	6ad270723301	identical
 pass	56e18c27fc90	4bb92032e77b	divergent
 passKind	684df355a097	bdf6d02817df	divergent
 pdfTitle	93b3d0697faa	d692e674db7f	divergent
-pickRoot	d5773996ddb6	e548144342d4	divergent
+pickRoot	1896dce1f5b5	3f6e88e32e8d	divergent
 productHelp	ca39deff43e8	ca39deff43e8	identical
 publishGraph	4a835674f38b	6bce18c95fec	divergent
 pullAll	97e829488969	4905ea8927dc	divergent
 readFileAt	fa651bb6ae5d	fa651bb6ae5d	identical
+redact	118bf5e6b5ae	118bf5e6b5ae	identical
+redactHard	242058967c20	242058967c20	identical
 refRow	854405aca965	947afeea3b64	divergent
 refreshContext	7439569be023	04476640cfcc	divergent
 relPass	aaf819b714b6	c4654cd487fb	divergent
@@ -181,6 +188,7 @@ render	1f1f526caa02	5d6f78c492ac	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	de56c9b9ed2d	5037a60baf16	divergent
 renderRx	da8caf217c7f	da8caf217c7f	identical
+reportFacts	6c856cd16f2a	24f523b42a89	divergent
 requirePerm	8477c2cb408e	8477c2cb408e	identical
 resetView	601213423bbe	f67417c0398c	divergent
 revealRow	6b2397b90c08	6b2397b90c08	identical
@@ -197,10 +205,11 @@ serializeArrangement	4f2534e0811c	4f2534e0811c	identical
 setDepth	3206752ae3ec	3206752ae3ec	identical
 setFocus	a5fe49c5cb0d	afe3da2e18b3	divergent
 setPullBusy	14aabfcaebc3	ce2ae8471a4f	divergent
+setReportFallback	f9d85a9ab235	7ef979cd431d	divergent
 setScope	12561489336e	92b65c48afac	divergent
 settle	a03c9dabbef8	a03c9dabbef8	identical
 showAbout	cde7a07ce71f	aa578e8faf85	divergent
-showEmergency	8b9ac1ed618e	8b9ac1ed618e	identical
+showEmergency	9ffb4800f2ce	9ffb4800f2ce	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
 srcBlock	411409a2d53a	411409a2d53a	identical
@@ -229,7 +238,7 @@ wireForget	aec6f1b54698	aec6f1b54698	identical
 wireLayoutZone	7878ca213c5a	7878ca213c5a	identical
 workspaceChangeRefuse	dea661053adc	d28870c5e809	divergent
 writeFileAt	d6a3e4360b80	d6a3e4360b80	identical
-writeSampleWorkspace	af9f7648decc	5a7d8829ecce	divergent
+writeSampleWorkspace	61cba1747bc9	e42d55f49ab8	divergent
 wsLine	f5ef6e5dc8e9	f5ef6e5dc8e9	identical
 wsOptionText	dd8b45a6cc23	18116777c5f7	divergent
 wsOptionTitle	71c68d9469b5	ec5f3ef6335a	divergent
