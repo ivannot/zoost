@@ -363,6 +363,25 @@ reading an annotated tag out of an Atom feed, the shape guard on what the Store 
 tested too**, and that is not ceremony: two of the three shipped broken on the day they were written,
 and a broken checker reports success over the thing it exists to catch, which is worse than none.
 
+**A test written from the same premise as the code cannot fail on it, and a fixture with one source
+cannot show a defect between two.** Both halves happened in one day. «Outdated» was decided by
+`row.listUpdated !== meta.updatedTime` - an epoch in milliseconds from the org *list* against a
+formatted string from a function's *detail*, so every function in every real org was outdated for
+ever. It shipped with two tests, and one of them asserted that exact expression with a regex: written
+from the same belief, it could only confirm the belief was still spelled the same way. Nothing in the
+sample could contradict it either, because the sample's `index.json` carried no `updatedTime` at all
+- one source, so no pair, so no mismatch. It was found by a user, on his own org, the next morning.
+
+Three rules, and the third is the general one. **Assert the behaviour on real values, never the
+expression** - `movedInZoho(1773397259000, '2026-03-13 11:20:59.0')` is a case; `/a !== b/.test(src)`
+is a photograph. **A fixture must carry every source the code compares**, or the comparison is
+untested by construction. And **when a value crosses a boundary, the two sides are two shapes until
+something proves otherwise** - this repository has now met that class four times: the `\x1e` record
+separator, the CSRF cookie family, the `.dg`/`.meta.json` pair, and this. The fix is never to parse
+one into the other on the machine you happen to be on: it worked here, and would have failed for
+anyone whose browser sits in a different timezone from the org. Store the same kind of value on both
+sides and compare like with like.
+
 **A check worth running once is worth keeping.** Verifying a fix by hand — the `node -e` throwaway,
 the loop that tries five inputs — is already writing a test; the only difference is whether it
 survives the session. It goes into `tests/` before the commit that fixes the thing. No ceremony and
