@@ -691,3 +691,21 @@ test('the anti-abuse widget is drawn only when it has something to ask', () => {
   assert.ok(!/Please complete the check above first/.test(js),
     'the page points the reader at a widget that is not drawn');
 });
+
+test('every control on the report page says it can be clicked', () => {
+  // A <button> gets no pointer from the browser; an <a> does. `.btn` was written for links, so the
+  // day it was first put on a real button - Send - the button looked dead. Derived rather than
+  // listed: every class on a <button> in a shipped page must carry a cursor somewhere in site.css.
+  const css = read('site/site.css');
+  const rule = (cls) => {
+    const m = css.match(new RegExp(`\\.${cls}\\b[^{]*\\{[^}]*\\}`, 'g')) || [];
+    return m.join(' ');
+  };
+  for (const f of listPages().filter((p) => p.endsWith('.html'))) {
+    for (const m of read(f).matchAll(/<button[^>]*class="([^"]+)"/g)) {
+      const classes = m[1].split(/\s+/);
+      assert.ok(classes.some((c) => /cursor:\s*pointer/.test(rule(c))),
+        `id=${f} draws a button with class "${m[1]}" that no rule gives a pointer`);
+    }
+  }
+});

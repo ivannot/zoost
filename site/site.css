@@ -568,8 +568,13 @@ main .meta{font:12.5px var(--mono);color:var(--muted)}
 body.crm{--sel:#2563eb;--sel-soft:#16263f;--sel-text:#6b95f1;--sel-hover:#2f6fe0}
 body.analytics{--sel:#be2a6b;--sel-soft:#3a1226;--sel-text:#e770a5;--sel-hover:#c4256b}
 .btn.p:hover{background:var(--sel-hover)}
+/* `cursor:pointer` because a <button> does not get one from the browser and an <a> does - this class
+   was written for links, and the day it was first put on a real button the button looked dead. Every
+   other user of .btn on this site is an anchor, which already had the pointer, so this changes
+   nothing for them. */
 .btn{display:inline-block;text-decoration:none;font:600 14.5px var(--sans);padding:11px 20px;
-    border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a}
+    border-radius:9px;border:1px solid var(--border);color:var(--ink);background:#22304a;
+    cursor:pointer}
 .card code,p code,li code{font:12.5px var(--mono);color:var(--teal);background:#0f1826;
     border:1px solid var(--line);border-radius:5px;padding:1px 5px}
 .dep{margin:0;padding:16px 18px;background:#0f1826;border:1px solid var(--line);border-radius:10px;
