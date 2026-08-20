@@ -185,6 +185,21 @@ The one disclosure to make, and to word carefully:
 Certify: not sold to third parties, not used for purposes unrelated to the single purpose, not used
 for creditworthiness or lending.
 
+**The problem report, and why no box changes.** Read against the policy rather than assumed, in
+August 2026. Google's disclosure rule covers «information provided by a user», and «handle» is
+defined as «collecting, transmitting, using, or sharing» - so «the user sends it, not us» is not an
+exemption, and anyone reaching for that argument should stop here. The answer is narrower: **the
+extension transmits nothing.** It builds a text out of its own diagnostics, shows it in full, and
+writes it into a page the user is looking at; the sending is done by that page, on a click, and the
+page is covered by §8 of the privacy policy, which is about the website. Nothing in the report
+matches a category either - versions, an error inside Zoost's own files, redacted status lines and
+counters are none of the nine. What the policy does require, we do: the practice is disclosed before
+installation (§3 here, and privacy.html), and the consent is affirmative in the sense the FAQ asks
+for - «a specific action clearly agreeing», which is the text shown in full plus the press on Send.
+One consequence to remember at release time: a change in data practice after installation must be
+disclosed prominently, so the release notes say it, not only this file.
+
+
 ---
 
 ## Notes before submitting
