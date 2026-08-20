@@ -880,8 +880,14 @@ but the miss is yours to prevent. Before calling a feature done, diff it against
   carries meaning a hyphen cannot, and a lone `—` standing for "no value" in a table cell, which is a
   placeholder rather than punctuation and has whitespace on neither side — which is how the
   replacement told them apart, rather than by a list.
-  **The product name keeps its long dash**, because `name` in `manifest.json` is the authority and
-  changing it is a change to the product's identity, not to its typography.
+  **The product name used to be the exception and no longer is**: both manifests now read
+  `Zoost - workbench for Zoho <product>`, so the only long dashes left are the two above. The rule
+  that survived the change is the one about *authority*, not about the dash - `name` in
+  `manifest.json` says what the product is called, and prose that spells it otherwise is wrong about
+  a fact rather than about typography. This line was itself read as licence a session later: an issue
+  title arriving as «Zoost Zoho CRM» was diagnosed as the charset dropping a dash the product no
+  longer has, from sample text I had written myself. **A rule about an exception outlives the
+  exception**, so when one is removed, the sentence that granted it goes in the same change.
 - British-leaning English in user-facing copy; comments explain **why**, not what.
 - **An absolute claim invites a literal check, and a literal check is what this project asks for.**
   `llms.txt` moves an assistant from summarising the page to verifying it sentence by sentence, and in
