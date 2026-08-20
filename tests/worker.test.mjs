@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sliceFn, sliceConst, load, read } from './slice.mjs';
-import { readdirSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
 
 // Globbed, never listed: a page added tomorrow is covered without anyone remembering it.
@@ -556,13 +556,21 @@ test('every page carries a description and a card type', () => {
  */
 const reportPage = (opts = {}) => {
   const el = () => ({ style: { display: '' }, value: '', textContent: '', innerHTML: '',
-    readOnly: true, disabled: false, focus() {}, listeners: {},
+    readOnly: true, disabled: false, dataset: {}, focus() {}, listeners: {},
     addEventListener(k, fn) { (this.listeners[k] ||= []).push(fn); } });
   const els = {};
   const sent = [];
+  // The message table comes off the shipped page, so these cases assert the sentences a reader
+  // actually gets - not a set the test invented and would keep passing over.
+  const tag = read('site/report.html').match(/<p id="msg"[\s\S]*?>/)[0];
+  els.msg = el();
+  for (const m of tag.matchAll(/data-(\w+)="([^"]*)"/g)) els.msg.dataset[m[1]] = m[2];
   const doc = {
     getElementById(id) { return (els[id] ||= el()); },
-    querySelector() { return opts.noWidget ? null : { value: 'a-token' }; },
+    querySelector(sel) {
+      if (sel.indexOf('hreflang') !== -1) return (els.langlink ||= el());
+      return opts.noWidget ? null : { value: 'a-token' };
+    },
   };
   const ctx = vm.createContext({
     document: doc, window: {},
@@ -637,11 +645,37 @@ test('editing the trace is carried to the issue', () => {
   assert.equal(p.sent[0].body.edited, true);
 });
 
-test('both report pages hide the trace and show the by-hand text in their markup', () => {
-  for (const f of ['site/report.html', 'site/it/report.html']) {
+test('the report page hides the trace and shows the by-hand text in its markup', () => {
+  for (const f of ['site/report.html']) {
     const s = read(f);
     assert.ok(/<div id="trace" style="display:none">/.test(s), `id=${f} shows an empty trace box`);
     assert.ok(/id="subpanel" style="display:none"/.test(s), `id=${f} claims a panel wrote something`);
     assert.ok(/<p class="sub" id="subhand">/.test(s), `id=${f} has nothing for a reader who arrives cold`);
   }
+});
+
+test('the language link goes when a trace arrives, because following it would lose the report', () => {
+  const p = reportPage();
+  p.arrive('Zoost 1.0 · Chrome\n\nwhat happened\n  boom');
+  assert.equal(p.els.langlink.style.display, 'none',
+    'the header still offers a navigation that throws the report away without saying so');
+});
+
+
+
+test('the report page is English only, and nothing points at a translation of it', () => {
+  // Decided rather than drifted: the panel is English, the issue tracker is English, and a page
+  // that exists in two languages needs the panel to choose one - so there is one page. The check
+  // exists because the opposite is a href away, and a link to a page that does not exist answers 404.
+  assert.ok(!existsSync(new URL('../site/it/report.html', import.meta.url)),
+    'site/it/report.html is back - it was removed on purpose, one page or two is a decision');
+  for (const f of listPages().concat(['site/report.js', 'apps/crm/sidepanel.js', 'apps/analytics/sidepanel.js'])) {
+    assert.ok(!read(f).includes('/it/report'), `id=${f} points at a page that does not exist`);
+  }
+});
+
+test('the messages the page shows are in the page script, in one language', () => {
+  const js = read('site/report.js');
+  assert.ok(!/\bM\.\w+/.test(js), 'a per-language message table outlived the second language');
+  assert.ok(js.includes('Keep that '), 'the sender is not told the link is their only way back');
 });

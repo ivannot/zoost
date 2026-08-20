@@ -19,6 +19,7 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
 
+
   // What a hand-written report puts where the trace would be. The endpoint requires a report to
   // begin with «Zoost », so this both satisfies that and says, in the issue, what is missing.
   var HAND = 'Zoost report written by hand on zoost.it - no panel, no trace.';
@@ -36,6 +37,12 @@
 
   function toTrace() {
     hand = false;
+    // The header's language link is a navigation, and a navigation loses the report - the panel
+    // wrote it into *this* document and there is nowhere else it exists. Losing it silently is the
+    // worst of the three options; the panel already opened the page in the browser's own language,
+    // so the link has nothing left to offer a reader who is holding a trace.
+    var lang = document.querySelector('a.ncta[hreflang]');
+    if (lang) lang.style.display = 'none';
     $('trace').style.display = '';
     $('subpanel').style.display = '';
     $('addpanel').style.display = '';
@@ -79,7 +86,7 @@
     var token = field.value || '';
     if (!token) { msg.textContent = 'Please complete the check above first.'; return; }
     $('send').disabled = true;
-    msg.textContent = 'Sending…';
+    msg.textContent = 'Sending\u2026';
     fetch('/api/report', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -91,7 +98,12 @@
       if (res.ok && res.j && res.j.url) {
         // The link is the receipt: the reader can see exactly what was published, and delete
         // nothing - which is why they were asked to read it here rather than after the fact.
-        msg.innerHTML = 'Sent. It is now <a href="' + encodeURI(res.j.url) + '">this issue</a>. Thank you.';
+        // The link is the only handle they will ever have: nothing here knows who sent this, so
+        // there is no notification to receive and no account to see a reply under. Said plainly,
+        // because a reader who assumes otherwise waits for an answer that cannot arrive.
+        msg.innerHTML = 'Sent. It is now <a href="' + encodeURI(res.j.url) + '">this issue</a>. Keep that '
+          + 'link: nothing here knows who you are, so there is no notification to come and no account to '
+          + 'see a reply under - opening it again is the only way back to what was said.';
         $('send').style.display = 'none';
         return;
       }

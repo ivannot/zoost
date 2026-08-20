@@ -87,10 +87,13 @@ const setStatus = (t, cls = '') => { noteStep(t); $('stxt').textContent = t; $('
 // ---------- problem reports ----------
 //
 // Nothing here is sent by the extension. It builds a text, shows it to the reader in full, and -
-// only on a click - opens zoost.it/report with the payload in the URL *fragment*, which by the
-// rules of the protocol is never transmitted to a server: the page reads it locally, shows it
-// again, and the reader is the one who submits it. So «no telemetry, nothing automatic» stays true
-// in the strong sense, and the report that does travel has been read twice by the person sending it.
+// only on a click - opens zoost.it/report and writes the text **into that page**, through the DOM.
+// It used to travel in the URL fragment, on the reasoning that a fragment is never transmitted to a
+// server: true, and not the whole question, because the navigation itself is written to the
+// browser's history and syncs with it. Nothing about the report is in any address now. The page
+// shows it again, and the reader is the one who submits it. So «no telemetry, nothing automatic»
+// stays true in the strong sense, and the report that does travel has been read twice by the person
+// sending it.
 //
 // Two defences, because one is a promise and the other is a mechanism. The mechanism: what goes in
 // comes from a **whitelist of known fields**, never from a sweep of state - a field added tomorrow
