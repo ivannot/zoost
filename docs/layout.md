@@ -312,6 +312,27 @@ python3 tools/twincheck.py          # shared chrome: ids, classes, inline styles
 python3 tools/twincheck.py --all    # everything, product-specific parts included
 ```
 
+**And a fourth, for the one thing none of the three can see: a call to a function that is not in the
+page.** `pruneSql()` in the Analytics panel enumerated the workspace with `walk()`, which is a *CRM*
+panel function and has never existed on the Analytics side - the line was written from the CRM side,
+which is what the twin rule makes likely rather than unlikely. Nothing here caught it: `node --check`
+accepts a free variable, `twincheck` compares functions that exist on both sides and this one existed
+on neither page, the panels are not importable so no unit test runs it, and the probe drives the
+sample workspace, where no pull happens. It threw inside the one `try` block that marks the mirror
+incomplete, so a pull that had written every one of its bytes correctly ended as «the last pull was
+interrupted mid-write - run Pull all to repair», and the repair hit the same wall. **It shipped in
+Zoho Analytics 1.28.0**, and it was found by a sweep rather than by any of the gates.
+
+```bash
+python3 tools/callcheck.py          # every function a page calls must be in one of the scripts it loads
+```
+
+One page is one scope, which is what a browser does with classic scripts, so the check is per page
+and not per file. Its limits are in its docstring rather than left to be met: it is file-scoped and
+not block-scoped, it reads *calls* and not every free variable, and the globals it accepts are a list
+- so a platform API nobody here has used yet is a false finding and one line to add. It reports zero
+on this tree, which is what makes it a gate rather than a ledger.
+
 **The duplication between the two products is not removed, it is held - `tools/twins.txt`.** 66 of
 the 138 function names both apps define are **byte-identical**, 26,247 characters of deliberate copy:
 `settle()`, `erLayout`, `aiStreamAnthropic`, `wireAsideFold`, `mergeKeys`, `syncLockRow`. The decision

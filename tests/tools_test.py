@@ -3609,5 +3609,70 @@ class AsyncCheckFinds(unittest.TestCase):
         # A checker that reports everything is one nobody reads - the other half of proving it works.
         self.assertEqual(self._run(self.CONTROL), [])
 
+class CallCheckFindsACallWithNothingToCall(unittest.TestCase):
+    """A helper that exists in one panel and is *called* in the other.
+
+    `pruneSql()` in the Analytics panel enumerated the workspace with `walk()`, which is a CRM panel
+    function and has never existed there - the line was written from the CRM side. Nothing caught it:
+    `node --check` accepts a free variable, the panels are not importable, and no test runs a pull. It
+    threw inside the try block that marks the mirror incomplete, so a pull that had written every byte
+    correctly reported «the last pull was interrupted mid-write» and the repair hit the same wall. It
+    shipped in Zoho Analytics 1.28.0.
+
+    Fixtures rather than assertions about the tree: the tree changes, the shapes do not. The second
+    case is the half that is usually missing - a checker that reports everything is not a strict one,
+    it is a broken one, and the two are indistinguishable until somebody needs it.
+    """
+
+    PAGE = '<!doctype html><html><body><script src="a.js"></script><script src="b.js"></script></body></html>'
+
+    def _findings(self, files):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('callcheck', ROOT / 'tools' / 'callcheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as tmp:
+            app = pathlib.Path(tmp) / 'apps' / 'demo'
+            app.mkdir(parents=True)
+            (app / 'page.html').write_text(self.PAGE, encoding='utf-8')
+            for name, body in files.items():
+                (app / name).write_text(body, encoding='utf-8')
+            mod.ROOT = pathlib.Path(tmp)
+            return mod.scan()[0]
+
+    def test_a_call_to_a_function_no_script_on_the_page_declares(self):
+        found = self._findings({'a.js': 'async function go() { for await (const p of walk(root)) {} }\n',
+                                'b.js': 'const other = () => 1;\n'})
+        self.assertTrue(any('walk()' in f for f in found), found)
+
+    def test_a_helper_in_the_other_script_of_the_same_page_is_not_one(self):
+        # Two scripts on one page share a scope, which is what a browser does with classic scripts.
+        found = self._findings({'a.js': 'async function go() { for await (const p of walk(root)) {} }\n',
+                                'b.js': 'async function* walk(d) { yield d; }\n'})
+        self.assertEqual(found, [])
+
+    def test_the_shapes_that_declare_a_name_without_the_word_function(self):
+        # Every one of these was a false finding on the first run against the real tree, and each is
+        # a way this repository actually writes a declaration.
+        for what, body in {
+            'an object method': 'window.x = { async _db() { return 1; } };\nwindow.x._db();\n',
+            'an anonymous function expression': 'window.hl = function (code, resolve) { return resolve(code); };\n',
+            'an arrow parameter': 'const run = (fn) => fn();\n',
+            'a destructured constant': 'const { helper } = window.lib;\nhelper();\n',
+        }.items():
+            with self.subTest(what):
+                self.assertEqual(self._findings({'a.js': body, 'b.js': ''}), [])
+
+    def test_a_pattern_containing_a_quote_does_not_swallow_the_file(self):
+        # `/'/` read as a string blanked 54% of the CRM panel on this tool's first run, and it
+        # reported 87 findings with a straight face. A regular expression is not a string.
+        found = self._findings({'a.js': "const q = (s) => s.replace(/'/g, '');\nfunction later() { return q('x'); }\n",
+                                'b.js': ''})
+        self.assertEqual(found, [])
+
+    def test_it_says_when_a_page_loads_a_script_that_is_not_there(self):
+        found = self._findings({'a.js': 'const a = 1;\n'})   # b.js never written
+        self.assertTrue(any('b.js' in f for f in found), found)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -435,6 +435,18 @@ async function removeFileAt(root, path) {
 }
 const writeFile = (rel, content) => writeFileAt(dir, rel, content);
 const readFile = (rel) => readFileAt(dir, rel);
+// Every file in a workspace, path first. The twin of the CRM panel's, and it was *called* here
+// before it existed: `pruneSql` walks the tree to find the .sql files the new index no longer names,
+// and the line was written from the CRM side where the helper is. Nothing said so - `node --check`
+// is happy with a free variable, no test runs a pull, and the ReferenceError landed inside the one
+// try block that marks the mirror incomplete, so a pull that had written every byte correctly ended
+// as «the last pull was interrupted mid-write» and the repair ran into the same wall.
+async function* walk(d, prefix = '') {
+  for await (const [name, h] of d.entries()) {
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'directory') yield* walk(h, prefix + name + '/'); else yield prefix + name;
+  }
+}
 // «Not there» and «could not be read» are different facts, and this returned the same fallback for
 // both - so a workspace whose files were all on disk was announced as never pulled, and the reader
 // was sent to press Pull all over a folder that had simply gone unreadable. Reported. The file three
