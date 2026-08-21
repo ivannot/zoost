@@ -476,7 +476,7 @@ PANEL_STUB = """// **When is the picture final?** Under `--virtual-time-budget` 
 }})();
 window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, host_permissions: {hosts} }}), sendMessage: (m, cb) => cb && cb(null),
-              onMessage: {{ addListener: () => {{}} }}, lastError: null, getURL: (p) => p,
+              onMessage: {{ addListener: () => {{}}, removeListener: () => {{}} }}, lastError: null, getURL: (p) => p,
               onInstalled: {{ addListener: () => {{}} }} }},
   storage: {{ local: {{ get: async () => ({{}}), set: async () => {{}},
                         onChanged: {{ addListener: () => {{}} }} }},
@@ -490,7 +490,15 @@ window.chrome = {{
     query: async () => [{{ id: 1, url: {taburl}, active: true }}],
     get: async () => ({{ id: 1, status: 'complete' }}),
     create: () => {{}},
-    sendMessage: async (id, msg) => (msg && msg.cmd === 'context' ? {ctx} : {{ ok: true }}),
+    // The bridge. `context` is answered here because every panel asks for it before anything else;
+    // everything else is `{{ ok: true }}` unless the driving script has installed an answer, which is
+    // what lets tools/probe.py run a whole pull through the shipped code instead of photographing a
+    // mirror somebody else wrote. A shot that installs nothing behaves exactly as it did.
+    sendMessage: async (id, msg) => {{
+      if (msg && msg.cmd === 'context') return {ctx};
+      const answer = window.__bridge && msg && window.__bridge[msg.cmd];
+      return answer ? answer(msg) : {{ ok: true }};
+    }},
     onUpdated: {{ addListener: () => {{}} }}, onActivated: {{ addListener: () => {{}} }},
   }},
   windows: {{ getAll: async () => [], create: () => {{}} }},
@@ -597,7 +605,7 @@ OPTIONS_STUB = """// **When is the picture final?** Under `--virtual-time-budget
 window.chrome = {{
   runtime: {{ getManifest: () => ({{ name: {name}, version: '0.0.0', host_permissions: {hosts} }}), id: 'shot',
               openOptionsPage: () => {{}}, sendMessage: async () => ({{ ok: true }}),
-              onMessage: {{ addListener: () => {{}} }}, lastError: null }},
+              onMessage: {{ addListener: () => {{}}, removeListener: () => {{}} }}, lastError: null }},
   storage: {{ local: {{ get: async (k) => ({stored}), set: async () => {{}}, remove: async () => {{}},
                         onChanged: {{ addListener: () => {{}} }} }},
               session: {{ get: async () => ({{}}), set: async () => {{}} }},

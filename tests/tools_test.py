@@ -3766,5 +3766,76 @@ class AFileCountInProseIsAClaim(unittest.TestCase):
         self.assertTrue(self._findings(self.RIGHT, 21, 12))
 
 
+class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
+    """The author is in the release chain, and his answer has to be worth something.
+
+    A defect that made every Pull all fail reached a submitted package, because nothing here executed
+    a pull - and the parts that need a real Zoho org cannot be executed here by anyone. `probe.py`
+    now runs both pulls headless; what is left is his to run, and `tools/handcheck.py` records it.
+
+    The three properties that make it a gate rather than a ritual, each held here because each is the
+    way this would rot: an answer is about a **commit** and not a version, a **failure** is sayable,
+    and a shipped file that no entry covers is a **finding** - otherwise the catalogue ages into
+    decoration while every run stays green."""
+
+    def _mod(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('handcheck', ROOT / 'tools' / 'handcheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        return mod
+
+    def test_every_entry_says_what_to_do_and_what_a_pass_looks_like(self):
+        for c in self._mod().CHECKS:
+            with self.subTest(c['id']):
+                self.assertTrue(c['do'] and all(c['do']), f'{c["id"]}: nothing to do')
+                self.assertTrue(c['covers'], f'{c["id"]}: covers nothing, so it never applies')
+                # A pass has to be an observation. «Works» is a verdict, and a verdict is what the
+                # person answering is being asked to avoid.
+                self.assertNotRegex(c['pass'], r'\b(works|correctly|properly|fine)\b',
+                                    f'{c["id"]}: says «works» where it should say what is on screen')
+
+    def test_every_shipped_file_of_both_apps_is_covered_by_some_entry(self):
+        # The derivation only helps if the catalogue spans the product. A file nobody says how to
+        # exercise is exactly where the next one of these hides.
+        mod = self._mod()
+        for app in ('crm', 'analytics'):
+            files = [f'apps/{app}/{p.name}' for p in (ROOT / 'apps' / app).glob('*.js')]
+            left = mod.uncovered(app, files)
+            self.assertEqual(left, [], f'{app}: no manual check covers these')
+
+    def test_an_answer_about_another_commit_does_not_count(self):
+        mod = self._mod()
+        app = 'crm'
+        with tempfile.TemporaryDirectory() as tmp:
+            mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
+            mod.changed = lambda a: [f'apps/{app}/sidepanel.js']
+            mod.head = lambda: 'a' * 40
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                mod.record(app, [1], 'pass', '')
+                mod.head = lambda: 'b' * 40          # one line changed after he answered
+                rc = mod.check(app)
+            self.assertEqual(rc, 1, out.getvalue())
+            self.assertIn('the code has moved since', out.getvalue())
+
+    def test_a_failure_is_recordable_and_refuses_the_tag(self):
+        mod = self._mod()
+        with tempfile.TemporaryDirectory() as tmp:
+            mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
+            mod.changed = lambda a: ['apps/crm/sidepanel.js']
+            mod.head = lambda: 'c' * 40
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                mod.record('crm', [1], 'fail', 'the tree came back empty')
+                rc = mod.check('crm')
+            self.assertEqual(rc, 1)
+            self.assertIn('the tree came back empty', out.getvalue())
+
+    def test_release_refuses_to_tag_without_it(self):
+        src = (ROOT / 'tools' / 'release.sh').read_text(encoding='utf-8')
+        self.assertIn('handcheck.py "$APP" --check', src,
+                      'release.sh can tag over a release nobody exercised')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -1011,9 +1011,20 @@ What that request means, in order. Do all of it without being asked:
    material; the file is written for somebody who has the extension installed and has never read a
    commit. `release.sh` **refuses to tag without it** and so does the workflow, because this is the
    one thing in the release that cannot be added afterwards by anyone but the author.
+2c. **Hand him the manual checks: `python3 tools/handcheck.py <app>`.** It prints what has to be
+   exercised **on a real org** for this release - derived from the shipped files that changed since
+   that app's tag - and how to answer. He runs them, records each with `--pass` or `--fail`, and the
+   record is committed with the release. **This is not a formality: `release.sh` refuses to tag
+   without it**, and an answer stops counting the moment the code moves, because it names a commit.
+
+   It exists because a defect that made every Pull all fail reached a submitted package. Nothing here
+   could execute a pull; both pulls now run headless in `tools/probe.py` against the sample, and what
+   is left needs an org, a role, a data centre and a person. He asked to be in the chain rather than
+   around it - so the instructions are yours to produce, clearly, every release, and the answer is
+   his. A file that changed and no check covers is a finding, so the catalogue grows with the product.
 3. **`tools/release.sh <app>`** — it used to refuse a dirty tree and nothing else, so a red suite
    could be tagged: the one step that is public and irreversible was the one that checked least. It
-   now refuses on exactly six things, and knowing them beforehand is the difference between a
+   now refuses on exactly seven things, and knowing them beforehand is the difference between a
    two-minute release and an afternoon:
 
    | it stops if | fix |
@@ -1023,6 +1034,7 @@ What that request means, in order. Do all of it without being asked:
    | `store/<app>/whatsnew/<version>.md` is missing | write it; `python3 tools/whatsnew.py <app>` gathers the material |
    | `bash tests/run.sh` is red | fix it; a tag is public |
    | `python3 tools/auditcheck.py --before-tag` has a finding | **most often an unread absolute claim**: read them, then `--accept` |
+   | the manual checks are not recorded for this commit | `python3 tools/handcheck.py <app>` - he runs them, `--pass` records them |
    | two local builds of the same commit differ | the build is not reproducible - stop, that guarantee is load-bearing |
 
    The fifth is the one that surprises, because it fails for something written weeks earlier and

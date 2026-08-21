@@ -4537,6 +4537,18 @@ async function downloadMissing() {
       await sleep(140);
     }
     if (!op.current()) return;
+    // The summary index describes the .meta.json files, and after a *first* pull it described none of
+    // them: `rebuildTree()` writes it, and in a pull it runs before this loop - when the folder is
+    // still empty. So the fast path this panel is built on was empty on disk exactly after the
+    // operation that fills the workspace, and the next open re-derived it from a folder walk: right
+    // answer, 60,015 file-system calls on a five-thousand-function org instead of 8, and nothing said
+    // so. Found by the pull probe on its first run, which is the whole argument for that probe.
+    // On one line, and it has to stay on one: the check that every op-holding caller hands its op on
+    // reads a call up to the first newline, so a break here reads as a call that dropped the
+    // workspace. It went red on exactly that, which is the guard being strict rather than wrong.
+    const onDisk = treeData.filter((r) => r.downloaded).map((r) => r.path.replace(/\.dg$/, '.meta.json'));
+    if (ok) await saveMetaIndex(onDisk, op);
+    if (!op.current()) return;
     updateMissingButton();
     setStatus(fail ? `Downloaded ${ok}, ${fail} still missing - use "Complete missing".`
       : cleanup ? `All ${ok} functions downloaded; ${cleanup} old file(s) could not be removed - \u21bb Refresh retries.`

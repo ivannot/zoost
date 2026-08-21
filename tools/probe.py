@@ -702,6 +702,167 @@ AN = """
 """
 
 
+# A whole pull, through the shipped panel, in a browser. This is the case that did not exist.
+#
+# `pruneSql()` called `walk()`, which is a CRM panel function and was in no script the Analytics panel
+# loads. Every Pull all threw, inside the try that marks the mirror incomplete, so the panel reported
+# «the last pull was interrupted mid-write» over files it had written correctly - and the repair it
+# advised hit the same wall. It reached a tagged, submitted package, because nothing in this
+# repository executed a pull: the unit tests lift one function at a time, and the probe drove a
+# workspace that was already on disk.
+#
+# What makes it a test rather than a demonstration: the fixture for «what Zoho answers» is built from
+# the sample workspace itself - the one the shipped generator writes - so the assertion at the end is
+# that the mirror the pull produced is the workspace it started from. A pull that stops early, writes
+# half, or throws cannot pass it.
+PULL_AN = r"""
+  const say = (m) => { throw new Error(m); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    const fs = window.__fsshim;
+    const base = 'analytics/sample-workspace/';
+    const J = (p) => JSON.parse(fs.read(base + p));
+    const before = fs.dump().filter((p) => p.startsWith(base));
+    // Prefixed, every one of them: `views`, `schema` and `deps` are the panel's own globals, and a
+    // local of the same name shadows the thing the last assertion has to read. It shadowed it, and
+    // the assertion read `window.views` instead - which is undefined, because a module-scope `let`
+    // is not a property of the window. Two ways to be wrong about one name, in three lines.
+    const fxViews = J('views.json'), fxSchema = J('schema.json'), fxLineage = J('lineage.json');
+    const fxIndex = J('sql/index.json'), cfg = J('.zoost.json');
+    // Read now, not when the bridge is asked: the tree is cleared below, and a closure that reads it
+    // lazily hands the pull an empty string for every query - which the panel would faithfully write
+    // out as an empty .sql. Caught by the assertion at the end, which is why it reads contents and
+    // not only names.
+    const bodies = {};
+    for (const id of Object.keys(fxIndex)) bodies[id] = fs.read(base + 'sql/' + fxIndex[id].stem + '.sql');
+
+    // The bridge, answering out of the workspace that was on disk. Every command the pull sends is
+    // here; one that is missing falls through to `{ ok: true }`, which is why the assertions below
+    // read the *result* instead of trusting that each call was made.
+    window.__bridge = {
+      workspaceInfo: () => ({ ok: true, workspace: cfg.workspace, name: cfg.name, origin: cfg.origin }),
+      listViews: () => ({ ok: true, views: fxViews.views, folders: fxViews.folders }),
+      workspaceErd: () => ({ ok: true, tables: fxSchema.tables, relations: fxSchema.relations }),
+      pullSql: (m) => {
+        const sql = {};
+        for (const id of m.ids) {
+          const e = fxIndex[id]; if (!e) continue;
+          sql[id] = { sql: bodies[id], stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
+        }
+        return { ok: true, sql, failed: [] };
+      },
+      scanDependencies: () => ({ ok: true, deps: fxLineage.deps, failed: fxLineage.failed || [] }),
+    };
+
+    // Start from an empty workspace that is bound to this org and is *not* a sample: a sample refuses
+    // to pull, which is correct and would make this pass by never running.
+    fs.clear();
+    const real = Object.assign({}, cfg); delete real.sample; delete real.sampleAt;
+    fs.load({ [base + '.zoost.json']: JSON.stringify(real, null, 2) });
+    await restoreRoot();
+    await refreshWorkspaces();
+    await wait(400);
+    const w = wsList.find((x) => String(x.id) === String(cfg.workspace));
+    if (!w) say('the workspace is not in the list after refreshWorkspaces: ' + wsList.map((x) => x.id));
+    await selectWorkspace(w);
+    await wait(400);
+
+    await pullAll();
+    await wait(600);
+
+    // 1. It finished. The panel says so and the marker on disk says so - those two came apart exactly
+    //    when this broke, which is why both are read.
+    const line = document.getElementById('statustext').textContent;
+    if (/interrupted|could not|failed/i.test(line)) say('the pull ended on: ' + line);
+    const state = JSON.parse(fs.read(base + '.pull-state.json') || '{}').state;
+    if (state !== 'complete') say('the marker on disk says ' + state);
+
+    // 2. It wrote the same workspace it was given. Names first: a missing file is the shape a
+    //    half-finished pull leaves, and it reads better than a diff of contents.
+    const after = fs.dump().filter((p) => p.startsWith(base));
+    const missing = before.filter((p) => !after.includes(p) && !/[.]zoost[.]json$/.test(p));
+    if (missing.length) say(missing.length + ' file(s) the pull did not write, e.g. ' + missing[0]);
+
+    // 3. And the SQL is the SQL, not an empty file with the right name.
+    const anyStem = Object.values(fxIndex)[0].stem;
+    const wrote = fs.read(base + 'sql/' + anyStem + '.sql');
+    if (!wrote || !wrote.trim()) say('sql/' + anyStem + '.sql came out empty');
+    if (Object.keys(J('sql/index.json')).length !== Object.keys(fxIndex).length)
+      say('the SQL index does not carry every query');
+
+    // 4. The panel is showing what it just pulled, not its memory of what was there before.
+    if (fxViews.views.length !== views.length)
+      say('the panel holds ' + views.length + ' views against ' + fxViews.views.length + ' pulled');
+    document.title = 'PULL OK';
+  })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
+"""
+
+
+# The same, one product over: the CRM's functions pull, which is the longest path in that panel -
+# list, prune what Zoho no longer has, write the summary index, then download every source one by one.
+# `downloadMissing()` is where the panel spends minutes on a real org, and nothing here had ever run it.
+PULL_CRM = r"""
+  const say = (m) => { throw new Error(m); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    const fs = window.__fsshim;
+    const base = 'crm/sampleorg-1234567890/';
+    const J = (p) => JSON.parse(fs.read(base + p));
+    const fxIndex = J('functions/index.json'), cfg = J('.zoost.json');
+    // Read before the tree is cleared, for the reason the Analytics one has written on it.
+    const src = {};
+    for (const path of fs.dump()) {
+      if (!path.startsWith(base + 'functions/') || !path.endsWith('.meta.json')) continue;
+      const meta = JSON.parse(fs.read(path));
+      const rel = path.slice((base + 'functions/').length);
+      src[String(meta.id)] = { folder: rel.split('/')[0], stem: rel.split('/').pop().replace(/\.meta\.json$/, ''),
+                               dg: fs.read(path.replace(/\.meta\.json$/, '.dg')), meta };
+    }
+    if (!Object.keys(src).length) say('the fixture has no functions to serve');
+
+    window.__bridge = {
+      listFunctions: () => ({ ok: true, total: fxIndex.length, readable: fxIndex.length, skipped: 0,
+                              capped: false, entries: fxIndex }),
+      fetchOne: (m) => (src[String(m.id)] ? { ok: true, file: src[String(m.id)] }
+                                          : { ok: false, error: 'no such function: ' + m.id }),
+    };
+
+    fs.clear();
+    const real = Object.assign({}, cfg); delete real.sample; delete real.sampleAt;
+    fs.load({ [base + '.zoost.json']: JSON.stringify(real, null, 2) });
+    // The CRM panel has no restoreRoot(): the folder comes back through loadWorkspaces() alone,
+    // which is a difference between the twins and not a mistake in either.
+    await loadWorkspaces();
+    await wait(500);
+
+    await pullAll();
+    await wait(1500);
+    // `pullAll` hands over to `downloadMissing`, which is the part that takes the time. Wait for the
+    // panel to say it is done rather than for a number of seconds: a sleep long enough for a slow
+    // machine is a probe that takes that long on every machine.
+    for (let i = 0; i < 120 && !/downloaded|still missing/.test($('stxt').textContent); i++) await wait(250);
+
+    const line = $('stxt').textContent;
+    if (/still missing|failed|could not/i.test(line)) say('the pull ended on: ' + line);
+    const after = fs.dump().filter((p) => p.startsWith(base + 'functions/'));
+    const dg = after.filter((p) => p.endsWith('.dg')).length;
+    if (dg !== fxIndex.length) say(dg + ' sources written against ' + fxIndex.length + ' in the org');
+    const metas = after.filter((p) => p.endsWith('.meta.json')).length;
+    if (metas !== dg) say(metas + ' sidecars against ' + dg + ' sources - a pair is half written');
+    // The summary index the panel reads on every open: written by the pull, and checked against the
+    // folder walk on load. If it is missing or short, the next open re-derives it in silence and the
+    // fast path this repository measured is gone without anything saying so.
+    const summary = JSON.parse(fs.read(base + 'functions/meta-index.json') || '{}');
+    if (Object.keys(summary.files || {}).length !== dg)
+      say('the summary index names ' + Object.keys(summary.files || {}).length + ' of ' + dg + ' files');
+    // And a source is the source, not an empty file with the right name.
+    const one = after.find((p) => p.endsWith('.dg'));
+    if (!(fs.read(one) || '').trim()) say(one + ' came out empty');
+    document.title = 'PULL OK';
+  })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
+"""
+
+
 def main() -> int:
     if not shots.have_chrome():
         print("probe: no Chrome here - nothing driven, and nothing claimed.", flush=True)
@@ -709,7 +870,9 @@ def main() -> int:
     shots._browser_for(1280, 800, 1.0)
     try:
         for key, app, ws, script in (("probe-crm", "crm", "crm/sampleorg-1234567890", CRM),
-                                     ("probe-analytics", "analytics", "analytics/sample-workspace", AN)):
+                                     ("probe-analytics", "analytics", "analytics/sample-workspace", AN),
+                                     ("pull-analytics", "analytics", "analytics/sample-workspace", PULL_AN),
+                                     ("pull-crm", "crm", "crm/sampleorg-1234567890", PULL_CRM)):
             print(f"  {key:18s} driving\u2026", flush=True)
             dest = shots.render_panel((key, app, ws, script))
             dest.unlink(missing_ok=True)          # a probe is not a picture to publish

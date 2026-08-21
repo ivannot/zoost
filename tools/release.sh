@@ -80,6 +80,21 @@ python3 tools/auditcheck.py --before-tag >/dev/null || {
   echo "auditcheck has findings. Run: python3 tools/auditcheck.py --before-tag"; exit 1; }
 echo "   suite and checkers pass"
 
+# And the half of the testing that no machine here can do. A defect that made every Pull all fail
+# reached a submitted package: nothing in this repository executed a pull, and the parts that need a
+# real Zoho org cannot be executed here by anyone. `tools/probe.py` now runs both pulls headless
+# against the sample workspace; what is left needs an org, a role, a data centre and a person.
+#
+# So the author is in the chain rather than around it: he runs what only he can run and records the
+# answer, and this refuses to tag without it. The record names a commit, so an answer about code that
+# has since changed does not count - which is the property that makes it a gate and not a ritual.
+echo "== what only a person can run"
+python3 tools/handcheck.py "$APP" --check || {
+  echo
+  echo "The manual checks are not recorded for this commit. What to run, and how to answer:"
+  echo "    python3 tools/handcheck.py $APP"
+  exit 1; }
+
 # The build has to be deterministic, and this is where that is proven cheaply:
 # finding that out after the tag is pushed means an orphaned tag to clean up.
 ./build.sh "$APP" >/dev/null

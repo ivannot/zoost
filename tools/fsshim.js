@@ -127,5 +127,10 @@
     clear() { for (const k of Object.keys(tree)) delete tree[k]; forget(); },
     root: () => dirHandle(''),
     dump: () => Object.keys(tree).sort(),
+    // The contents, not only the names. `tools/probe.py` builds the answers a pull's bridge would
+    // give out of a workspace that is already here, then clears the tree and makes the panel write
+    // it back - so the fixture for «what Zoho returns» is the mirror the shipped generator wrote,
+    // and the assertion afterwards is that the two are the same workspace.
+    read: (p) => tree[p],
   };
 })();
