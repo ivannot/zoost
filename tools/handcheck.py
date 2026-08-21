@@ -72,6 +72,7 @@ CHECKS = [
     },
     {
         'id': 'pull-again',
+        'by': "probe.py: pull-analytics runs a second pull over the first",
         'title': 'Pull all a second time, over the workspace the first one wrote',
         'do': ['Press Pull all again on the same workspace, without changing anything.'],
         'pass': ('It finishes the same way, nothing is reported as failed to remove, and the counts '
@@ -80,6 +81,7 @@ CHECKS = [
     },
     {
         'id': 'progress',
+        'by': "probe.py: pull-analytics reads the status line as it changes",
         'title': 'The panel says what it is doing, the whole way through',
         'do': ['Watch the status line during the pull above.'],
         'pass': ('No stretch where the line stands still on a finished stage while the spinner turns. '
@@ -88,6 +90,7 @@ CHECKS = [
     },
     {
         'id': 'wrong-tab',
+        'by': "probe.py: pull-analytics moves the tab and asserts the refusal",
         'title': 'The guard on the wrong Zoho tab',
         'do': ['With a workspace bound to one org, open a Zoho tab for another (or a sandbox).',
                'Try a pull.'],
@@ -118,6 +121,7 @@ CHECKS = [
     },
     {
         'id': 'diagram',
+        'by': "shots.py: both diagram windows are rendered on every image run",
         'title': 'The diagram window opens on the real workspace',
         'do': ['Open the call graph (Zoho CRM) or the ER model (Zoho Analytics) from the panel.'],
         'pass': 'It draws, the focus lands where you asked, and the counts agree with the panel.',
@@ -125,6 +129,7 @@ CHECKS = [
     },
     {
         'id': 'sample',
+        'by': "shots.py: the crm-sample shot clears the folder and presses + Sample",
         'title': 'The sample workspace still writes and opens',
         'do': ['Press + Sample in a working folder.'],
         'pass': ('It writes, the tree fills, and the panel says nothing was fetched from Zoho. This is '
@@ -143,6 +148,7 @@ CHECKS = [
     },
     {
         'id': 'chrome',
+        'by': "probe.py: the toolbar is measured at the panel's minimum width",
         'title': 'The panel at its narrowest, and the help inside it',
         'do': ['Drag the side panel to its minimum width.',
                'Open the ? help from the panel.'],
@@ -152,6 +158,7 @@ CHECKS = [
     },
     {
         'id': 'detail',
+        'by': "probe.py: both panels open an item and read what came back",
         'title': 'One item opened, and read',
         'do': ['Open a Deluge function (Zoho CRM) or a query table (Zoho Analytics) from the tree.'],
         'pass': ('The source is coloured, and a name inside it that Zoost can open is a link that goes '
@@ -170,20 +177,13 @@ CHECKS = [
     },
     {
         'id': 'restart',
-        'title': 'The working folder after a browser restart',
-        'do': ['Quit Chrome entirely and open the panel again.'],
-        'pass': ('It says the folder needs re-granting and one click anywhere in the panel restores '
-                 'it - a stored handle loses its permission between sessions, and that is the path '
-                 'every returning user takes.'),
-        'covers': ['apps/*/idb.js', 'apps/*/sidepanel.js'],
-    },
-    {
-        'id': 'settings',
-        'title': 'Settings saves and the panel obeys it',
+        'title': 'A full browser restart: the folder, and what you changed in Settings',
         'do': ['Change something in Settings - a hidden tab, a saved pattern, the AI model.',
-               'Come back to the panel.'],
-        'pass': 'The change is there, and it survives closing and reopening the panel.',
-        'covers': ['apps/*/options.js', 'apps/*/options.html', 'apps/*/sidepanel.js',
+               'Quit Chrome entirely, open it again, and open the panel.'],
+        'pass': ('It says the folder needs re-granting and one click anywhere in the panel restores '
+                 'it; the change you made in Settings is still there. A stored handle loses its '
+                 'permission between sessions, and that is the path every returning user takes.'),
+        'covers': ['apps/*/idb.js', 'apps/*/sidepanel.js', 'apps/*/options.js', 'apps/*/options.html',
                    'apps/crm/tabs.js'],
     },
 ]
@@ -206,6 +206,26 @@ def last_tag(app: str) -> str:
     return sorted(tags, key=lambda t: [int(n) for n in t.rsplit('-v', 1)[1].split('.')])[-1] if tags else ''
 
 
+def changed_between(app: str, since: str) -> list:
+    """Shipped files of this app touched between a commit and now. What makes an answer expire."""
+    out = sh('git', 'diff', '--name-only', f'{since}..HEAD', '--', f'apps/{app}')
+    return [p for p in out.splitlines() if p]
+
+
+def stale_for(check: dict, app: str, since: str) -> list:
+    """Which of the files this check exercises have moved since it was answered.
+
+    The first version expired an answer whenever **any** line of the product changed, which is honest
+    and expensive: a fix in the diagram window sent him back to re-run a pull on a real org. What an
+    answer is about is the code that check exercises, and that is derivable - so a run of six things
+    costs six re-runs only when all six were touched. Asked for as a rule: «minimise the manual
+    operations, they are slow and they carry human error»."""
+    if not since:
+        return []
+    return [f for f in changed_between(app, since)
+            if any(pathlib.PurePath(f).match(g) for g in check['covers'])]
+
+
 def changed(app: str) -> list:
     """Shipped files of this app touched since its last tag. Only `apps/<app>/` - the site, the tools
     and the other product cannot change what a person has to exercise here."""
@@ -222,7 +242,17 @@ def applies(check: dict, app: str, files: list) -> bool:
 
 
 def record_path(app: str) -> pathlib.Path:
-    return ROOT / 'store' / app / 'handchecks' / f'{version(app)}.json'
+    """One ledger per product, not one per version.
+
+    Per version was the first shape and it threw the answers away at every bump: a release that
+    changed a label sent him back through a pull on a real org, an assistant conversation and two
+    browser restarts, for nothing. «If between one release and the next only a label changed, it makes
+    no sense to redo all the tests - they must be run only if something inside that perimeter moved.»
+
+    So an answer is kept with the commit it was given on, and it stands until the code *that check
+    exercises* moves - across releases, across versions. What each answer was about is still recorded:
+    the version is a field of the answer rather than the name of the file."""
+    return ROOT / 'store' / app / 'handchecks.json'
 
 
 def read_record(app: str) -> dict:
@@ -245,7 +275,9 @@ def uncovered(app: str, files: list) -> list:
 
 def plan(app: str) -> int:
     files = changed(app)
-    todo = [c for c in CHECKS if applies(c, app, files)]
+    all_applying = [c for c in CHECKS if applies(c, app, files)]
+    todo = [c for c in all_applying if not c.get('by')]
+    machine = [c for c in all_applying if c.get('by')]
     rec = read_record(app)
     commit = head()
     print(f'{app} {version(app)} - {len(files)} shipped file(s) changed since {last_tag(app) or "the beginning"}')
@@ -259,13 +291,22 @@ def plan(app: str) -> int:
     print()
     for n, c in enumerate(todo, 1):
         was = (rec.get('checks') or {}).get(c['id'])
+        moved = stale_for(c, app, (was or {}).get('commit', '')) if was else []
         mark = '' if not was else (f'   [recorded {was["result"]}'
-                                   + ('' if was.get('commit') == commit else ', on an older commit')
+                                   + ('' if not moved else f', and {len(moved)} file(s) it covers have changed since')
                                    + ']')
         print(f'  {n}. {c["title"]}{mark}')
         for step in c['do']:
             print(f'       - {step}')
         print(f'     pass: {c["pass"]}')
+        print()
+    if machine:
+        # Named, not silently absent. «What is being checked for me» is the other half of «what am I
+        # being asked», and a list that shrinks without saying why reads as a list that forgot.
+        print(f'Already run for you, on this commit ({len(machine)} of {len(all_applying)}):')
+        for c in machine:
+            print(f'  - {c["title"]}')
+            print(f'      {c["by"]}')
         print()
     print('Answer with the numbers above:')
     print(f'  python3 tools/handcheck.py {app} --pass 1,2,3')
@@ -282,9 +323,8 @@ def plan(app: str) -> int:
 
 def record(app: str, ids: list, result: str, note: str) -> int:
     files = changed(app)
-    todo = [c for c in CHECKS if applies(c, app, files)]
+    todo = [c for c in CHECKS if applies(c, app, files) and not c.get('by')]
     rec = read_record(app)
-    rec.setdefault('version', version(app))
     rec.setdefault('checks', {})
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
     for i in ids:
@@ -293,7 +333,8 @@ def record(app: str, ids: list, result: str, note: str) -> int:
             return 1
         c = todo[i - 1]
         rec['checks'][c['id']] = {'result': result, 'at': now, 'commit': head(),
-                                  'title': c['title'], **({'note': note} if note else {})}
+                                  'version': version(app), 'title': c['title'],
+                                  **({'note': note} if note else {})}
         print(f'  {c["id"]}: {result}')
     p = record_path(app)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -306,9 +347,13 @@ def record(app: str, ids: list, result: str, note: str) -> int:
 
 
 def check(app: str) -> int:
-    """What release.sh asks. Anything but a full set of passes on this exact commit is a refusal."""
+    """What release.sh asks. Anything but a full set of passes on this exact commit is a refusal.
+
+    Only the entries a person is asked for: one a machine runs is checked by that machine on every run
+    of the battery, and asking for it twice would teach him to type `--pass` at a list he has not
+    read - which is how a gate becomes a formality."""
     files = changed(app)
-    todo = [c for c in CHECKS if applies(c, app, files)]
+    todo = [c for c in CHECKS if applies(c, app, files) and not c.get('by')]
     rec = read_record(app)
     commit = head()
     problems = []
@@ -319,8 +364,12 @@ def check(app: str) -> int:
         elif was['result'] != 'pass':
             problems.append(f'{c["id"]}: recorded as {was["result"]}'
                             + (f' - {was["note"]}' if was.get('note') else ''))
-        elif was.get('commit') != commit:
-            problems.append(f'{c["id"]}: was run on {was["commit"][:10]}, and the code has moved since')
+        else:
+            moved = stale_for(c, app, was.get('commit', ''))
+            if moved:
+                problems.append(f'{c["id"]}: run on {was["commit"][:10]}, and what it exercises has '
+                                f'changed since - {", ".join(moved[:3])}'
+                                + (f' and {len(moved) - 3} more' if len(moved) > 3 else ''))
     left = uncovered(app, files)
     for f in left:
         problems.append(f'{f} changed and no manual check covers it - add one to tools/handcheck.py')

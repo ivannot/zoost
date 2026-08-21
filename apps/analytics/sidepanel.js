@@ -696,7 +696,13 @@ async function addWorkspace() {
     // and then put you back where you were, with the mismatch bar still up and the new folder empty
     // behind it. The CRM twin has always done this; this is the half that was missing here.
     await window.idbHandle.set('activeWsAnalytics', info.workspace);
-    setBusy(false, `Workspace «${info.name || info.workspace}» created. Press Pull all.`);
+    // Zoho Analytics does not always give a workspace a name this endpoint can read, and the panel
+    // then had nothing to show but the id - «I import a new org and the dropdown tells me nothing».
+    // A missing name is said once, beside the control that fixes it, instead of being rendered as a
+    // number and left for the reader to work out.
+    setBusy(false, info.name
+      ? `Workspace «${info.name}» created. Press Pull all.`
+      : `Workspace ${info.workspace} created - Zoho Analytics gave it no name. Press ✎ to name it, then Pull all.`);
     $('status').className = 'ok';
     await refreshWorkspaces();
   } catch (e) {
@@ -886,12 +892,12 @@ async function refreshContext() {
   // the two buttons are how.
     $('mmtext').textContent = sampleMm
       ? `Sample workspace - invented data. Pulling is off: nothing here comes from workspace ${ctx.workspace}, and nothing here can reach it.`
-      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${bound.name || bound.workspace}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
+      : `The tab is workspace ${ctx.workspace}; this folder mirrors \u00ab${wsShown(bound)}\u00bb (${bound.workspace}). Pulling is off until they match; what is already mirrored stays readable.`;
     // Two ways out, as the CRM offers: take the tab to the bound workspace, or move this panel to
     // the workspace the tab is already in - switching to it if it exists locally, creating it if not.
     // The first is meaningless for a sample: there is no Zoho Analytics workspace to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
-    $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.name || bound.workspace}\u00bb \u2197`;
+    $('mmgo').textContent = `Switch tab \u2192 \u00ab${wsShown(bound)}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
     const sw = $('mmsw'); sw.className = 'znav'; sw.style.display = sampleMm ? 'none' : '';
@@ -3055,6 +3061,17 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
  * that showed only the user's name for something would be a list you cannot check against the
  * platform.
  */
+/** What to call a workspace on screen: the name its owner gave it, then the platform's, then its id.
+ *
+ *  The order is the point, and it was wrong wherever the *binding* was shown rather than the list. The
+ *  mismatch bar said «this folder mirrors "Default Workspace" (99000001)» over a workspace the reader
+ *  had named «Acme production» a minute earlier - the one word they would have recognised, dropped in
+ *  the one sentence that exists to be recognised. Reported. The id stays beside it in the bar, because
+ *  that is the fact nothing can be wrong about; here it is the last resort, not the subject. */
+function wsShown(b) {
+  if (!b) return '';
+  return String((b.label || '').trim() || (b.name || '').trim() || b.workspace || '');
+}
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || `${w.name || w.folder} \u00b7 ${w.id}`; }
 /** The workspace list is ordered by what the reader actually sees. Sorting by the derived name
  *  while displaying the user's own label produces a list that looks unsorted - «Acme» in a folder

@@ -495,7 +495,12 @@ window.chrome = {{
     // what lets tools/probe.py run a whole pull through the shipped code instead of photographing a
     // mirror somebody else wrote. A shot that installs nothing behaves exactly as it did.
     sendMessage: async (id, msg) => {{
-      if (msg && msg.cmd === 'context') return {ctx};
+      // `context` too, when the driving script asks for it: a probe that wants to see the panel
+      // refuse a mismatched tab has to be able to *move the tab*, and that is the only way to.
+      if (msg && msg.cmd === 'context') {{
+        const own = window.__bridge && window.__bridge.context;
+        return own ? own(msg) : {ctx};
+      }}
       const answer = window.__bridge && msg && window.__bridge[msg.cmd];
       return answer ? answer(msg) : {{ ok: true }};
     }},

@@ -134,6 +134,40 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- a workspace is called what its owner called it ----------
+//
+// The mismatch bar named the platform's workspace («Default Workspace») or the instance over a folder
+// the reader had labelled «Acme production» a minute earlier - the one word they would recognise,
+// missing from the one sentence written to be recognised. Reported. The id stays beside it, because
+// that is the fact nothing can be wrong about.
+
+for (const [app, sample] of [['crm', { label: 'Acme production', instance: 'acme', org: '123' }],
+                             ['analytics', { label: 'Acme production', name: 'Default Workspace', workspace: '99' }]]) {
+  const { wsShown } = load([sliceFn(`apps/${app}/sidepanel.js`, 'wsShown')]);
+
+  test(`${app}: the name its owner gave it wins`, () => {
+    assert.equal(wsShown(sample), 'Acme production');
+  });
+
+  test(`${app}: without one, the platform's name - and the id only when there is nothing else`, () => {
+    const noLabel = { ...sample, label: '' };
+    assert.equal(wsShown(noLabel), app === 'crm' ? 'acme' : 'Default Workspace');
+    const bare = app === 'crm' ? { org: '123' } : { workspace: '99' };
+    assert.equal(wsShown(bare), app === 'crm' ? '123' : '99');
+    // Whitespace is not a name. A label of «   » used to win over a real one and render as nothing.
+    assert.equal(wsShown({ ...sample, label: '   ' }), app === 'crm' ? 'acme' : 'Default Workspace');
+  });
+
+  test(`${app}: the mismatch bar and its buttons all use it`, () => {
+    const src = read(`apps/${app}/sidepanel.js`);
+    const bar = src.slice(src.indexOf("$('mmtext')"), src.indexOf("$('mmsw')"));
+    assert.ok(!/bound\.(instance|name)\s*\|\|\s*bound\.(org|workspace)/.test(bar),
+      'the bar still names the platform over the reader\'s own label');
+    assert.equal((bar.match(/wsShown\(bound\)/g) || []).length, 2,
+      'the sentence and the switch button must both use it');
+  });
+}
+
 // ---------- the way out of a mismatch is not refused by the guard on the mismatch ----------
 //
 // Delete the workspace you are in; the panel selects another; the tab now disagrees with it and the

@@ -3808,7 +3808,7 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
             left = mod.uncovered(app, files)
             self.assertEqual(left, [], f'{app}: no manual check covers these')
 
-    def test_an_answer_about_another_commit_does_not_count(self):
+    def test_an_answer_expires_when_the_code_it_exercises_moves(self):
         mod = self._mod()
         app = 'crm'
         with tempfile.TemporaryDirectory() as tmp:
@@ -3818,10 +3818,37 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 mod.record(app, [1], 'pass', '')
-                mod.head = lambda: 'b' * 40          # one line changed after he answered
+                # The panel moved after he answered: the pull check is about the panel, so it expires.
+                mod.changed_between = lambda a, since: [f'apps/{app}/sidepanel.js']
                 rc = mod.check(app)
             self.assertEqual(rc, 1, out.getvalue())
-            self.assertIn('the code has moved since', out.getvalue())
+            self.assertIn('what it exercises has changed since', out.getvalue())
+
+    def test_an_answer_survives_a_change_it_has_nothing_to_do_with(self):
+        # The first version expired every answer whenever any line moved, which is honest and
+        # expensive: a fix in the diagram window sent him back to re-run a pull on a real org. An
+        # answer is about the code its check exercises - and that is derivable, so it is derived.
+        mod = self._mod()
+        with tempfile.TemporaryDirectory() as tmp:
+            mod.record_path = lambda a: pathlib.Path(tmp) / 'rec.json'
+            mod.changed = lambda a: ['apps/crm/sidepanel.js']
+            mod.head = lambda: 'a' * 40
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                asked = [c for c in mod.CHECKS
+                         if mod.applies(c, 'crm', mod.changed('crm')) and not c.get('by')]
+                mod.record('crm', list(range(1, len(asked) + 1)), 'pass', '')
+                mod.changed_between = lambda a, since: ['apps/crm/graphview.js']   # nothing they touch
+                rc = mod.check('crm')
+            self.assertEqual(rc, 0, out.getvalue())
+
+    def test_an_answer_outlives_the_version_it_was_given_for(self):
+        # Per version was the first shape, and it threw every answer away at each bump: a release that
+        # changed a label sent him back through a pull on a real org for nothing. The ledger is per
+        # product, and what expires an answer is its own perimeter moving - not the version number.
+        mod = self._mod()
+        self.assertTrue(str(mod.record_path('crm')).endswith('store/crm/handchecks.json'),
+                        'the record is named after a version, so a bump discards it')
 
     def test_a_failure_is_recordable_and_refuses_the_tag(self):
         mod = self._mod()

@@ -1125,10 +1125,10 @@ async function refreshContext() {
   // the two buttons are how.
     $('mmtext').textContent = sampleMm
       ? `Sample workspace - invented data. Pulling is off: nothing here comes from \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}), and nothing here can reach it.`
-      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${bound.instance || '?'}\u00bb (org ${bound.org}). Pulling is off until they match; what is already mirrored stays readable.`;
+      : `Zoho tab \u00ab${lastCtx.instance || '?'}\u00bb (org ${lastCtx.org}) \u2260 local workspace \u00ab${wsShown(bound)}\u00bb (org ${bound.org}). Pulling is off until they match; what is already mirrored stays readable.`;
     // «Switch tab» is meaningless for a sample: there is no Zoho org to switch to.
     $('mmgo').style.display = sampleMm ? 'none' : '';
-    $('mmgo').textContent = `Switch tab \u2192 \u00ab${bound.instance || '?'}\u00bb \u2197`;
+    $('mmgo').textContent = `Switch tab \u2192 \u00ab${wsShown(bound)}\u00bb \u2197`;
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id !== activeWsId && w.binding && w.binding.org === lastCtx.org && (!w.binding.base || !lastCtx.origin || w.binding.base === lastCtx.origin));
     const sw = $('mmsw'); sw.style.display = sampleMm ? 'none' : '';
@@ -4289,6 +4289,15 @@ function setMode(mode) {
 // If the active tab is no longer among the visible ones - the user just hid it, or a pull discovered
 // it is refused - the panel moves to the first that is left, rather than showing an empty view whose
 // segment is gone. With every tab hidden it says so instead of rendering a bare strip.
+/** What to call a workspace on screen: the name its owner gave it, then the platform's, then the org.
+ *
+ *  The twin of the Analytics panel's, and the same defect on both sides: the mismatch bar named the
+ *  *instance* over a workspace the reader had labelled themselves, in the one sentence that exists to
+ *  be recognised. The org id stays beside it, because that is the fact nothing can be wrong about. */
+function wsShown(b) {
+  if (!b) return '';
+  return String((b.label || '').trim() || (b.instance || '').trim() || b.org || '');
+}
 function renderTabs() {
   const bar = $('modebar');
   const vis = visibleTabs();

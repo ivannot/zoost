@@ -793,6 +793,46 @@ PULL_AN = r"""
     // 4. The panel is showing what it just pulled, not its memory of what was there before.
     if (fxViews.views.length !== views.length)
       say('the panel holds ' + views.length + ' views against ' + fxViews.views.length + ' pulled');
+
+    // 5. Every stage of the pull said what it was doing. Read from the *events* - what the status
+    //    line actually became, in order - and not sampled at chosen instants, which is this
+    //    repository's own rule about intermittent behaviour. The stage that writes to disk is the one
+    //    that was silent, and «looks stuck» is a bug report we have already had.
+    const seen = [];
+    const statusEl = () => document.getElementById('statustext');
+    const obs = new MutationObserver(() => { const t = statusEl().textContent; if (seen[seen.length - 1] !== t) seen.push(t); });
+    obs.observe(statusEl(), { childList: true, characterData: true, subtree: true });
+
+    // 6. A second pull, over the workspace the first one wrote. This is where a half-written mirror
+    //    shows: the prune has something to do, every file is rewritten, and the marker has to come
+    //    back to complete. It was a thing only a person could try.
+    await pullAll();
+    await wait(600);
+    obs.disconnect();
+    const line2 = statusEl().textContent;
+    if (/interrupted|could not|failed/i.test(line2)) say('the second pull ended on: ' + line2);
+    if (JSON.parse(fs.read(base + '.pull-state.json') || '{}').state !== 'complete')
+      say('the second pull left the marker at ' + JSON.parse(fs.read(base + '.pull-state.json') || '{}').state);
+    const after2 = fs.dump().filter((p) => p.startsWith(base));
+    if (after2.length !== after.length)
+      say('a second pull changed the file count from ' + after.length + ' to ' + after2.length);
+    for (const stage of ['Reading the view list', 'Reading SQL', 'Reading lineage', 'Writing the mirror', 'Writing SQL files']) {
+      if (!seen.some((t) => t.indexOf(stage) === 0 || t.indexOf(stage) >= 0))
+        say('the pull never said «' + stage + '» - it is a stage that runs in silence: ' + JSON.stringify(seen));
+    }
+
+    // 7. The tab moves to another workspace, and the panel refuses to read Zoho for it. The guard is
+    //    what stops one org's data landing in another's folder, and it had never been exercised.
+    window.__bridge.context = () => ({ ok: true, origin: cfg.origin, workspace: '99000999', view: null });
+    await refreshContext();
+    await wait(300);
+    const bytes = fs.dump().length;
+    let refused = false;
+    try { await pullAll(); } catch (_) { refused = true; }
+    await wait(400);
+    if (!refused && !/refus|different workspace|until they match/i.test(statusEl().textContent))
+      say('a pull on a mismatched tab was not refused: ' + statusEl().textContent);
+    if (fs.dump().length !== bytes) say('a refused pull still wrote to the workspace');
     document.title = 'PULL OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message; });
 """
