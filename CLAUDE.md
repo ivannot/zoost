@@ -797,6 +797,15 @@ on the dead half is a change nobody can defend later.
 **Own mistakes plainly.** When a bug traces back to something you wrote, say that, name the cause,
 and fix it. No hedging, no diffusing it into the passive voice.
 
+**A finding is not handed over without the thing that fixes it.** «Always put me in a position to have
+all the material, otherwise I have to ask for it and we slow down for nothing.» Said about a dashboard
+field reported as drifted with a *command* to run for the text - and he does not run commands, so it
+was an instruction to nobody: a correct finding, and useless. The rule was already here as «hand me
+the finished text ready to paste»; what was missing is that it binds **every** report, not only the
+ones that look like a handover. Name the file, quote the text, print the number. `dashcheck` does it
+now instead of pointing at `storecopy`, and a case holds it - the failure is invisible in a green run,
+because the finding was right.
+
 **At handover time, give me the steps and nothing else.** When a release is ready, or anything is
 waiting on an action of mine, lead with a numbered list of what *I* do: which file to download and
 from where, which fields change and what to paste, what stays untouched. Leave out what you verified

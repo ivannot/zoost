@@ -3895,5 +3895,28 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
         self.assertIn('tools/handcheck.py', stamp)
 
 
+class AFindingCarriesWhatFixesIt(unittest.TestCase):
+    """«Always put me in a position to have all the material, otherwise I have to ask and we slow
+    down for nothing.»
+
+    `dashcheck` said which dashboard field had drifted and told him to run a command to see the text -
+    and he does not run commands, so it was an instruction to nobody: a finding, then a round trip,
+    then the words. CLAUDE.md has said «hand me the finished text ready to paste» since long before;
+    this is that rule with a machine behind it, in the one place that produces the fields.
+
+    Held here because the failure is invisible in a green run: the finding was *correct*, and useless."""
+
+    def test_a_field_that_differs_comes_with_the_text_that_replaces_it(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('dashcheck', ROOT / 'tools' / 'dashcheck.py')
+        src = (ROOT / 'tools' / 'dashcheck.py').read_text(encoding='utf-8')
+        i = src.index('elif theirs != ours:')
+        block = src[i:src.index('s = state(page)', i)]
+        self.assertIn('ready to paste', block, 'the finding names the field and not the words')
+        self.assertIn('ours.splitlines()', block, 'nothing prints the replacement text')
+        self.assertNotIn('storecopy.py', block,
+                         'it still sends him to a command instead of handing over the text')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

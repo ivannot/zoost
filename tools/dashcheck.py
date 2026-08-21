@@ -108,8 +108,15 @@ def main() -> int:
             findings.append(f"§{n}: more than one unlabelled textarea, so which is the single "
                             f"purpose is a guess - not made")
         elif theirs != ours:
-            findings.append(f"§{n} {key}: the dashboard differs from the repository. "
-                            f"python3 tools/storecopy.py {args.app} {n} --copy")
+            # The text comes with the finding. Naming the field and leaving the words to be fetched
+            # puts a round trip between «this is wrong» and «here is what it should say» - and the
+            # author does not run commands, so «run storecopy» was an instruction to nobody. Asked
+            # for as a rule: «always put me in a position to have all the material, otherwise I have
+            # to ask for it and we slow down for nothing.» CLAUDE.md already said to hand over
+            # finished text ready to paste; this is that rule with a machine behind it.
+            findings.append(f"§{n} {key}: the dashboard differs from store/{args.app}/store-listing.md "
+                            f"§{n} ({len(ours)} chars). What it should say, ready to paste:\n"
+                            + '\n'.join('    | ' + ln for ln in ours.splitlines()))
 
     s = state(page)
     # The privacy URL is in no store-listing.md section, so there is nothing there to compare it
