@@ -1965,13 +1965,32 @@ function wireFnChips(root, open) {
   root.querySelectorAll('.wf-fn, a[data-file]').forEach((el) => {
     const target = el.dataset.wf != null ? 'workflows' : 'functions';
     if (tabReachable(target, true)) { el.onclick = () => open(el); return; }
-    // Not a link any more: no handler, no pointer, and the reason where the reader is looking.
-    el.classList.add('gone');
-    el.removeAttribute('href');
-    el.onclick = null;
-    el.title = isForbidden(target)
+    // Not a link any more, and that has to be true of the *element* and not only of its handler.
+    // Removing the click left an `<a>` behind, and the containers style anchors by id - `#pvcallers a`
+    // and `#healthbody a` both set a pointer and a hover, and an id selector beats any class this
+    // could add. So it looked exactly like a working link that had stopped working, which is the
+    // worst of the three states. Reported. The same trap is already recorded ten lines above the
+    // `#pvcallers a.wf-fn` rule, one turn earlier: the container wins over the chip.
+    //
+    // So the anchor becomes a span. Nothing that styles `a` can reach it, in this container or in any
+    // container added later, and the chip keeps its own class-based look minus the colour, which
+    // `.wf-fn.gone` mutes. The text stays: what uses a module is a fact about the module.
+    const why = isForbidden(target)
       ? `${tabLabel(target)}: your Zoho role does not grant access to that area.`
       : `${tabLabel(target)} is hidden in Settings, so this does not open.`;
+    if (el.tagName === 'A') {
+      const span = document.createElement('span');
+      span.className = el.className;
+      span.textContent = el.textContent;
+      Object.entries(el.dataset).forEach(([k, v]) => { span.dataset[k] = v; });
+      el.replaceWith(span);
+      span.classList.add('gone');
+      span.title = why;
+      return;
+    }
+    el.classList.add('gone');
+    el.onclick = null;
+    el.title = why;
   });
 }
 async function showModuleUsage(api, path, mine, op) {

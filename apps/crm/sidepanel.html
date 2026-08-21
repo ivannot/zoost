@@ -427,6 +427,10 @@
      the module, and hiding the Functions tab does not make it untrue - it simply stops being a way in. */
   .wf-fn.gone{background:none;border-color:#33415a;color:var(--muted);cursor:default}
   .wf-fn.gone:hover{background:none;color:var(--muted)}
+  /* `cursor:default` is not enough on its own where the container styles the element by id, so the
+     inert chip is not an `<a>` at all - see wireFnChips(). This says what it should look like; the
+     element swap is what makes sure nothing else can say otherwise. */
+  span.wf-fn.gone{text-decoration:none}
   .connfns{padding:6px 10px 2px}
   .rlbl{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;margin-right:5px;vertical-align:middle}
   .rlbl.remote{background:#1e3a5f;color:#8ec5ff}

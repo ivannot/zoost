@@ -158,7 +158,27 @@ test('crm: the helper decides from the tab the chip declares, and says which rea
     'the target is guessed rather than read from the chip');
   assert.match(fn, /tabReachable\(target, true\)/, 'it does not ask whether the tab can be opened');
   assert.match(fn, /el\.onclick = null/, 'an inert chip keeps its handler');
+  // The element, not only the handler. Removing the click left an <a> behind, and the containers
+  // style anchors by id - `#pvcallers a` and `#healthbody a` set a pointer and a hover, and an id
+  // selector beats any class the chip can add. It looked like a link that had stopped working, which
+  // is worse than either a link or plain text. Reported, one fix later.
+  assert.match(fn, /el\.tagName === 'A'/, 'an inert chip is still an anchor, so the container styles it');
+  assert.match(fn, /replaceWith\(span\)/, 'nothing swaps the element, so `#pvcallers a` still wins');
   assert.match(fn, /isForbidden\(target\)/, 'both reasons read as one, and they are two different actions');
+});
+
+test('crm: no container may style away the inertness by id', () => {
+  // The rule that generalises: an inert chip must not be reachable by an `a` selector. This reads the
+  // panel's own stylesheet for id-scoped anchor rules that set a pointer or a hover, and requires the
+  // swap to exist rather than requiring each container to be polite - there were two such rules and a
+  // third would have re-broken it silently.
+  const css = read('apps/crm/sidepanel.html');
+  const bossy = (css.match(/#\w+ a(?:\.[\w-]+)*(?::hover)?\s*\{[^}]*\}/g) || [])
+    .filter((r) => /cursor:\s*pointer|:hover/.test(r));
+  assert.ok(bossy.length > 0, 'the premise moved: no id-scoped anchor rules left, re-read this case');
+  const fn = sliceFn('apps/crm/sidepanel.js', 'wireFnChips');
+  assert.match(fn, /createElement\('span'\)/,
+    `${bossy.length} id-scoped anchor rule(s) can out-specify the chip, so it must stop being an anchor`);
 });
 
 test('crm: hidden is a reason a tab cannot be opened, alongside refused', () => {
