@@ -1132,7 +1132,7 @@ async function refreshContext() {
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id !== activeWsId && w.binding && w.binding.org === lastCtx.org && (!w.binding.base || !lastCtx.origin || w.binding.base === lastCtx.origin));
     const sw = $('mmsw'); sw.style.display = sampleMm ? 'none' : '';
-    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name}\u00bb`; sw.onclick = () => { $('ws').value = match.id; activate(match, true); }; }
+    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${wsShown(match)}\u00bb`; sw.onclick = () => { $('ws').value = match.id; activate(match, true); }; }
     else { sw.textContent = `Create workspace for \u00ab${lastCtx.instance || '?'}\u00bb`; sw.onclick = () => addWorkspaceForTab(); }
   }
   // inhibit all Zoho-bound operations unless the active tab matches the workspace (tab-navigation stays allowed)
@@ -4296,7 +4296,14 @@ function setMode(mode) {
  *  be recognised. The org id stays beside it, because that is the fact nothing can be wrong about. */
 function wsShown(b) {
   if (!b) return '';
-  return String((b.label || '').trim() || (b.instance || '').trim() || b.org || '');
+  // Two shapes reach here and both are «a workspace»: the binding this panel holds, which carries the
+  // reader's own name as `label`, and a row of the workspace list, which carries it as `cfg.label`
+  // and the folder as `name`. Reading only the first left «Switch workspace -> ...» naming the
+  // platform under a sentence that had just stopped doing exactly that. Reported, after the first
+  // fix - and the test that held the sentence stopped at the button, so it agreed with the bug.
+  const own = ((b.label || (b.cfg && b.cfg.label) || '') + '').trim();
+  return String(own || (b.instance || (b.cfg && b.cfg.instance) || '').trim() || b.org
+                || (b.cfg && b.cfg.org) || b.name || '');
 }
 function renderTabs() {
   const bar = $('modebar');

@@ -901,7 +901,7 @@ async function refreshContext() {
     $('mmgo').onclick = () => switchTab();
     const match = (wsList || []).find((w) => w.id === String(ctx.workspace) && w.id !== bound.workspace);
     const sw = $('mmsw'); sw.className = 'znav'; sw.style.display = sampleMm ? 'none' : '';
-    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${match.name || match.folder}\u00bb`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
+    if (match) { sw.textContent = `Switch workspace \u2192 \u00ab${wsShown(match) || match.folder}\u00bb`; sw.onclick = () => { $('ws').value = match.id; selectWorkspace(match); }; }
     else { sw.textContent = `Create workspace for \u00ab${ctx.workspace}\u00bb`; sw.onclick = () => addWorkspace(); }
   }
   updateButtons();
@@ -3070,7 +3070,13 @@ $('wsroot').onclick = () => ((root && !rootGranted) ? grantRoot() : pickRoot());
  *  that is the fact nothing can be wrong about; here it is the last resort, not the subject. */
 function wsShown(b) {
   if (!b) return '';
-  return String((b.label || '').trim() || (b.name || '').trim() || b.workspace || '');
+  // Two shapes reach here and both are «a workspace»: the binding this panel holds, which carries the
+  // reader's own name as `label`, and a row of the workspace list, which carries it as `cfg.label`.
+  // Reading only the first left «Switch workspace -> ...» naming the platform under a sentence that
+  // had just stopped doing exactly that. Reported, after the first fix - and the test that held the
+  // sentence stopped at the button, so it agreed with the bug.
+  const own = ((b.label || (b.cfg && b.cfg.label) || '') + '').trim();
+  return String(own || (b.name || '').trim() || b.workspace || b.id || '');
 }
 function wsOptionText(w) { return ((w.cfg && w.cfg.label) || '').trim() || `${w.name || w.folder} \u00b7 ${w.id}`; }
 /** The workspace list is ordered by what the reader actually sees. Sorting by the derived name

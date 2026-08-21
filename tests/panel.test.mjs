@@ -158,13 +158,31 @@ for (const [app, sample] of [['crm', { label: 'Acme production', instance: 'acme
     assert.equal(wsShown({ ...sample, label: '   ' }), app === 'crm' ? 'acme' : 'Default Workspace');
   });
 
-  test(`${app}: the mismatch bar and its buttons all use it`, () => {
+  test(`${app}: every name the mismatch bar shows goes through it`, () => {
+    // The first version of this read the bar *up to* `$('mmsw')` and stopped - so it passed while the
+    // «Switch workspace ->» button on the next line went on naming the platform. A test whose window
+    // ends where the bug starts agrees with the bug. Reported, one fix later.
     const src = read(`apps/${app}/sidepanel.js`);
-    const bar = src.slice(src.indexOf("$('mmtext')"), src.indexOf("$('mmsw')"));
-    assert.ok(!/bound\.(instance|name)\s*\|\|\s*bound\.(org|workspace)/.test(bar),
-      'the bar still names the platform over the reader\'s own label');
-    assert.equal((bar.match(/wsShown\(bound\)/g) || []).length, 2,
-      'the sentence and the switch button must both use it');
+    const from = src.indexOf("$('mmtext')");
+    // The bar ends on the line that offers to create a workspace for the tab - the last thing in it,
+    // and the only end marker both panels share. Asserted, because the first end anchor existed in one
+    // twin and not the other: `indexOf` returned -1, `slice` read to the end of the file, and the test
+    // reported a line four thousand down as a defect in the bar. An anchor that is absent must fail,
+    // never widen.
+    const end = src.indexOf('addWorkspace', from);
+    assert.ok(from > 0 && end > from, `${app}: the mismatch bar no longer looks like this - fix the test`);
+    const bar = src.slice(from, src.indexOf('\n', end));
+    // A *name* must go through the helper; the id beside it is the fact nothing can be wrong about
+    // and stays raw on purpose - `${bound.org}`, `${bound.workspace}`, `${ctx.workspace}`.
+    // ...and the *tab* keeps the platform's word too: nobody has named a tab, they have named the
+    // workspace, so `${lastCtx.instance}` is what the reader is looking at in Zoho. What must carry
+    // the reader's own name is a workspace this panel holds - the binding, or a row it could switch to.
+    for (const raw of bar.match(/\$\{[^}]*\b(bound|match)\.(name|instance|folder)\b[^}]*\}/g) || []) {
+      assert.match(raw, /wsShown\(/,
+        `${app}: the bar shows ${raw} raw - a workspace is called what its owner called it`);
+    }
+    assert.ok((bar.match(/wsShown\(/g) || []).length >= 3,
+      'the sentence and both buttons name a workspace, so all three go through it');
   });
 }
 
