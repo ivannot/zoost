@@ -684,13 +684,18 @@ async function addWorkspace() {
   if (!ctx || !ctx.workspace) return status('Open a Zoho Analytics workspace in the active tab first.', 'warn');
   setBusy(true, 'Creating the workspace folder…');
   try {
-    const info = await toBridge({ cmd: 'workspaceInfo' });
+    const info = await toBridge({ cmd: 'workspaceInfo', aboutTab: true });
     const base = await appRoot(true);
     if (!base) throw new Error(`could not create the ${APP_DIR}/ folder`);
     const folder = stemOf(info.name || 'workspace', info.workspace);
     const h = await base.getDirectoryHandle(folder, { create: true });
     dir = h; forgetDirs();
     await patchCfg({ workspace: info.workspace, name: info.name, origin: info.origin, sv: PULL_SV, lastPull: null });
+    // Remembered before the list is rebuilt, because rebuilding it selects the remembered one - and
+    // the remembered one was still the workspace you were in. So «Create workspace for X» created X
+    // and then put you back where you were, with the mismatch bar still up and the new folder empty
+    // behind it. The CRM twin has always done this; this is the half that was missing here.
+    await window.idbHandle.set('activeWsAnalytics', info.workspace);
     setBusy(false, `Workspace «${info.name || info.workspace}» created. Press Pull all.`);
     $('status').className = 'ok';
     await refreshWorkspaces();
@@ -742,14 +747,29 @@ async function toBridge(msg) {
   // whoever called the function directly. `context` is how the mismatch is detected in the first
   // place, so it is the one thing that always goes; and a panel with nothing bound yet is creating
   // its first workspace, which is not a mismatch.
-  if (msg && msg.cmd !== 'context' && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
+  // `aboutTab` is the exception, and it is one command wide. «Create workspace for <id>» is the
+  // control this panel *offers* to resolve a mismatch, and it needs the tab's workspace name to name
+  // the folder - which is a bridge call, which this line refused. So the way out of the state was
+  // refused by the guard on that state: press it and you got «nothing here reads Zoho Analytics until
+  // they match», about the very act of making them match. Found by the author on the first manual
+  // check of a release, in the first minute of it.
+  //
+  // What makes it safe to let through is not that it is a create: it is that `workspaceInfo` in the
+  // bridge resolves its id from the **page's own URL** and takes nothing from the message, so it can
+  // only ever describe the workspace the tab is on. There is no parameter through which another
+  // workspace could be named, and a test holds both halves of that.
+  const aboutTab = !!(msg && msg.aboutTab);
+  if (msg && msg.cmd !== 'context' && !aboutTab && bound && !guardOk()) throw new Error(MSG.mismatchRefused);
   const id = await analyticsTabId();
   if (id == null) throw new Error('The active tab is not Zoho Analytics.');
   await ensureBridge(id);
   // The identity travels with the command and is checked *in the page that will run it* - see the
   // note in the CRM twin. Everything above is a check against a memory of which workspace the tab
   // was showing, with three awaits between reading it and arriving.
-  const expected = (msg && msg.cmd !== 'context' && bound)
+  // The same exception, one layer down: the page refuses a command whose `__zoostExpected` does not
+  // match it, and the whole point here is that it does not - we are asking a tab about itself while
+  // bound elsewhere. Sending the binding would have the page refuse what the panel just allowed.
+  const expected = (msg && msg.cmd !== 'context' && !aboutTab && bound)
     ? { workspace: bound.workspace, origin: bound.origin } : null;
   const r = await chrome.tabs.sendMessage(id, expected ? { ...msg, __zoostExpected: expected } : msg);
   if (!r) throw new Error('No answer from the Zoho Analytics page.');

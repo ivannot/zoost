@@ -219,7 +219,7 @@ switchTab	147323632e4d	47a3038657d0	divergent
 syncChips	b0ad33a6b1d0	b0ad33a6b1d0	identical
 syncLockRow	1c6f4d354382	1c6f4d354382	identical
 textWidth	81d2d194f73e	81d2d194f73e	identical
-toBridge	7a1cb1ea6311	4b76106e745d	divergent
+toBridge	7a1cb1ea6311	93b7beed0330	divergent
 toast	01d6754c6d35	1eca6a5ac1a0	divergent
 toggleAI	8780db5203e0	e7a00b84968a	divergent
 toggleNavMenu	4e2a9d69c9b1	4e2a9d69c9b1	identical

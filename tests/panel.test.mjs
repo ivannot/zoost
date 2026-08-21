@@ -134,6 +134,50 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- the way out of a mismatch is not refused by the guard on the mismatch ----------
+//
+// Delete the workspace you are in; the panel selects another; the tab now disagrees with it and the
+// bar offers «Create workspace for <the tab's>». Pressing it answered «nothing here reads Zoho
+// Analytics until they match» - the guard refusing the one action whose purpose is to make them
+// match. Found by the author on the first manual check of a release.
+//
+// The exception is one command wide and it is safe for a reason that has to stay true, so both
+// halves are held here: the panel marks only this call, and the bridge's `workspaceInfo` takes its
+// id from the page's own URL rather than from the message - so it cannot be pointed at another
+// workspace, whatever is in the message.
+
+test('analytics: only the tab-scoped workspaceInfo is exempt from the mismatch guard', () => {
+  const src = read('apps/analytics/sidepanel.js');
+  const marked = [...src.matchAll(/toBridge\(\{([^}]*aboutTab[^}]*)\}/g)].map((m) => m[1]);
+  assert.equal(marked.length, 1, `aboutTab is used ${marked.length} times - it is meant to be one`);
+  assert.match(marked[0], /cmd:\s*'workspaceInfo'/, 'aboutTab marks something other than workspaceInfo');
+  // The guard is still the guard for everything else, including the pull's own workspaceInfo.
+  const guard = src.slice(src.indexOf('async function toBridge'));
+  assert.match(guard, /msg\.cmd !== 'context' && !aboutTab && bound && !guardOk\(\)/);
+  assert.match(guard, /const expected = \(msg && msg\.cmd !== 'context' && !aboutTab && bound\)/,
+    'the binding would travel with it and the page would refuse what the panel allowed');
+});
+
+test('analytics: the bridge reads the workspace from the page, never from the message', () => {
+  // This is what makes the exemption safe rather than convenient. If `workspaceInfo` ever takes an
+  // id from the caller, the exemption becomes a way to read another workspace while bound here.
+  const fn = sliceFn('apps/analytics/content-bridge.js', 'workspaceInfo');
+  assert.match(fn, /const id = ws\(\)/, 'workspaceInfo must resolve its own id');
+  assert.ok(!/\bmsg\b/.test(fn), 'workspaceInfo reads the message, so it can be pointed elsewhere');
+});
+
+test('analytics: a workspace it has just created is the one it selects', () => {
+  // refreshWorkspaces() picks the remembered workspace, and the remembered one was still the one you
+  // were in - so «Create workspace for X» created X and put you back, mismatch bar and all. The CRM
+  // twin has always remembered it first.
+  const src = read('apps/analytics/sidepanel.js');
+  const body = src.slice(src.indexOf('async function addWorkspace()'));
+  const remember = body.indexOf("idbHandle.set('activeWsAnalytics'");
+  const refresh = body.indexOf('await refreshWorkspaces()');
+  assert.ok(remember > 0, 'nothing remembers the workspace that was just created');
+  assert.ok(remember < refresh, 'it is remembered after the list is rebuilt, which is too late');
+});
+
 // ---------- a pull says which stage it is in, including the ones that are not network ----------
 //
 // The reading stages announced themselves and counted; the stages that write did not. On the CRM side
@@ -3722,14 +3766,32 @@ for (const [app, fns] of [
 for (const app of ['crm', 'analytics']) {
   test(`${app}: nothing reaches the platform through a mismatch, whatever the buttons say`, () => {
     const send = sliceFn(`apps/${app}/sidepanel.js`, 'toBridge');
-    assert.ok(/msg\.cmd !== 'context' && bound && !guardOk\(\)/.test(send),
-      'the transport lets anything through, so removing a disabled attribute is enough');
     assert.ok(/throw new Error\(MSG\.mismatchRefused\)/.test(send),
       'the refusal is silent or unnamed at the door');
-    // The two exemptions, stated rather than discovered: the probe that detects the mismatch, and a
-    // panel that has nothing bound yet and is creating its first workspace.
-    assert.ok(/cmd !== 'context'/.test(send), 'the probe that detects the mismatch is refused by it');
-    assert.ok(/&& bound &&/.test(send), 'a panel with no workspace bound cannot create its first');
+    const line = send.split('\n').find((l) => /throw new Error\(MSG\.mismatchRefused\)/.test(l));
+    assert.ok(/&& bound && !guardOk\(\)/.test(line),
+      'the transport lets anything through, so removing a disabled attribute is enough');
+    // The exemptions are **derived from the line and checked against a declared set**, not pinned as
+    // an expression: this used to assert the condition character for character, so adding a third
+    // exemption failed the test for having changed rather than for being wrong, which teaches whoever
+    // is adding one to edit the test. Each is a way past a guard on reaching Zoho, so each has to be
+    // named here with its reason, and a fourth invented tomorrow fails until it is.
+    //   context   the probe that detects the mismatch in the first place - refusing it is circular
+    //   bound     a panel with nothing bound is creating its first workspace, which is no mismatch
+    //   aboutTab  «Create workspace for <the tab's>», the control offered to *resolve* the mismatch.
+    //             Safe because the bridge's workspaceInfo takes its id from the page's own URL.
+    const declared = { crm: ["cmd !== 'context'", 'bound', '!guardOk()'],
+                       analytics: ["cmd !== 'context'", '!aboutTab', 'bound', '!guardOk()'] }[app];
+    const clauses = line.slice(line.indexOf('if (') + 4, line.lastIndexOf(') throw')).split('&&')
+      .map((c) => c.trim().replace(/^msg\.?/, ''))
+      .filter((c) => c && c !== 'msg');
+    for (const c of clauses) {
+      assert.ok(declared.some((d) => c.includes(d)),
+        `${app}: «${c}» is a way past the mismatch guard that nothing here declares`);
+    }
+    for (const d of declared) {
+      assert.ok(clauses.some((c) => c.includes(d)), `${app}: the guard no longer tests ${d}`);
+    }
   });
 }
 
