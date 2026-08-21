@@ -165,6 +165,20 @@ test('crm: a tab the kind does not declare is absent, not disabled', () => {
     'asking for a tab this kind does not have must land on the first, not on nothing');
 });
 
+test('crm: an element that outlives a render is not inside what the render replaces', () => {
+  // `#pvcallers` is moved into the Details pane, and that pane is inside `#pvtable`, whose contents
+  // the next module open replaces. Without taking it home first the second module destroyed it, and
+  // every detail after the first said nothing about what reads or writes the module - silently. The
+  // probe caught it; this holds the order it was fixed in.
+  const src = read('apps/crm/modules.js');
+  const home = src.indexOf("$('pvcallershome').after($('pvcallers'))");
+  const write = src.indexOf("$('pvtable').innerHTML");
+  const move = src.indexOf("$('pvdetails').appendChild($('pvcallers'))");
+  assert.ok(home > 0 && write > 0 && move > 0, 'the module detail no longer moves the callers box');
+  assert.ok(home < write, 'the shared element is still inside #pvtable when it is replaced');
+  assert.ok(write < move, 'it is moved into a pane that does not exist yet');
+});
+
 test('crm: the related lists are rendered into their own pane, not into Details', () => {
   const src = read('apps/crm/modules.js');
   assert.match(src, /<div id="pvrels">\$\{rlBlock\}<\/div>/);

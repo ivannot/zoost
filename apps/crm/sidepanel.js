@@ -1906,6 +1906,13 @@ function setPvTab(which) {
  *  choice to make. `openModule` not calling it at all is what let a module show `Code | Details`. */
 function pvTabsFor(kind) {
   pvKind = PV_KINDS[kind] ? kind : null;
+  // `#pvcallers` belongs to a function - its own box above the code - and to a module, where it is
+  // «read by / written by» and belongs *under* the names, inside the Details pane, so that the pane
+  // scrolls as one region instead of two stacked boxes each with a scrollbar. Reported with a
+  // picture. Moved here rather than by whoever opens a module: this runs on every open and knows the
+  // kind, so nothing has to remember to put it back.
+  const callers = $('pvcallers'), home = $('pvcallershome');
+  if (kind !== 'module' && callers && home && callers.previousElementSibling !== home) home.after(callers);
   $('pvtabs').hidden = !pvKind;
   if (!pvKind) $('codecopy').style.display = 'none';   // a workflow, a schedule, a connection: no code
   $('pvtabsr').innerHTML = '';        // the diagram control belongs to the item being left

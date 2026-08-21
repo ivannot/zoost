@@ -361,10 +361,25 @@ async function openModule(path, layoutId) {
   // which is a column a side panel still cannot show - «you struggle to see the whole detail, there
   // is no room». The fields are what a module is opened for, so they stay first; the related-list
   // API names are the one string Deluge actually needs, so they get a tab instead of a footer.
+  // `#pvcallers` is a long-lived element that this function *moves* into the Details pane below - and
+  // the pane lives inside `#pvtable`, whose contents are replaced on the next line. Opening a second
+  // module therefore destroyed it, and every later `$('pvcallers')` was null: the detail of every
+  // module after the first said nothing about what reads or writes it, silently. Caught by the probe
+  // on the first run, in the case that opens a second module.
+  //
+  // So it goes home before the write and comes back after it. The rule is general and worth the line:
+  // an element that outlives a render must not be inside what the render replaces.
+  $('pvcallershome').after($('pvcallers'));
   $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m)}</div></div>`
     + `<div id="pvrels">${rlBlock}</div>`
     + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
+  // The names first, then what reads and writes it. It was the other way round - «read by» and
+  // «written by» at the top and the module's own display name, api_name and generated name below the
+  // fold - which is backwards: what the thing *is* comes before what uses it. Reported with a
+  // picture. Moving the element rather than re-rendering it keeps `showModuleUsage()` writing into
+  // the one box it has always written into, and it arrives asynchronously into whatever is on screen.
+  $('pvdetails').appendChild($('pvcallers'));
   $('pvtabsr').innerHTML = relBar;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {
     navigator.clipboard.writeText(c.dataset.c).then(() => setStatus(`Copied \u00ab${c.dataset.c}\u00bb`, 'ok')).catch(() => {});

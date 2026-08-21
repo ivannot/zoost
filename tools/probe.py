@@ -585,6 +585,40 @@ CRM = """
     healthOpenSchedule('1', 'x'); await wait(500);
     if (viewMode !== before) say('it switched into an area the role forbids');
 
+    // A module's detail: three tabs, the names before what uses them, and one scrolling region.
+    tabAccess.schedules = {};
+    // Through the segment, the way a reader gets there: setMode() alone does not rebuild the list.
+    const modSeg = [...document.querySelectorAll('.seg')].find((x) => /Modules/.test(x.textContent));
+    if (!modSeg) say('there is no Modules segment to click');
+    modSeg.click(); await wait(1200);
+    const modRow = [...document.querySelectorAll('#tree .f')].find((e) => /Orders/.test(e.textContent))
+      || [...document.querySelectorAll('#tree .f')][0];
+    if (!modRow) say('the modules tree is empty in the fixture');
+    modRow.click(); await wait(1500);
+    if (!$('pvdetails')) say('clicking a module row did not open a module detail');
+    for (const id of ['pvtab_code', 'pvtab_rel', 'pvtab_info']) {
+      if (getComputedStyle($(id)).display === 'none') say(`a module's detail is missing ${id}`);
+    }
+    $('pvtab_info').click(); await wait(500);
+    const det = $('pvdetails'), cal = $('pvcallers');
+    // What the thing *is* comes before what uses it: the names block was below «read by / written by»,
+    // under the fold. Read from the DOM order rather than from the markup, because the element is
+    // moved at open time and only the result is the answer.
+    if (!det.contains(cal)) say('read by / written by is not inside the Details pane');
+    if (det.firstElementChild === cal) say('what uses the module comes before what the module is');
+    // One region scrolls. Two stacked boxes with a scrollbar each is what this replaced.
+    const scrolls = [...det.querySelectorAll('*'), det].filter((e) => {
+      const o = getComputedStyle(e).overflowY; return o === 'auto' || o === 'scroll';
+    });
+    if (scrolls.length) say(scrolls.length + ' box(es) inside Details scroll on their own: ' + scrolls.map((e) => e.id || e.className).join(', '));
+    // And a function has no Related lists tab at all - absent, not disabled.
+    setMode('functions'); await wait(600);
+    const fn = [...document.querySelectorAll('#tree .f')][0];
+    if (fn) {
+      fn.click(); await wait(900);
+      if (getComputedStyle($('pvtab_rel')).display !== 'none') say('a function offers Related lists');
+    }
+
     document.title = 'HISTORY OK';
   })().catch((e) => { document.title = 'SHOT ERROR: ' + e.message + ' @@ ' + (e.stack || '').split('\\n').slice(0, 3).join(' / '); });
 """

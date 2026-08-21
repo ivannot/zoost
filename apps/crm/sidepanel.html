@@ -562,6 +562,11 @@
      appeared moved the extension instead of this box. Reported with a picture. */
   #pvcallers{padding:5px 10px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--muted);display:none;line-height:1.5;background:#161d2b;overflow:auto;min-height:0;max-height:45vh}
   #pvcallers.show{display:block} #pvcallers b{color:var(--ink)} #pvcallers a{color:var(--sel);cursor:pointer}
+  /* Inside a module's Details pane it is not a box of its own: one region scrolls, not two stacked
+     ones with a scrollbar each - «the scrollbar should appear on the whole box, not only on the
+     module names». Scoped by the parent rather than by a class, because `showModuleUsage()` assigns
+     `className` wholesale and a class would be dropped on the next render. */
+  #pvdetails #pvcallers{max-height:none;overflow:visible;border-bottom:0;background:none;padding:0 10px 8px}
   /* `#pvcallers a` is an id selector and `.wf-fn:hover` is not, so the chip's hover colour lost to
      it and the label stayed blue on a blue fill - unreadable, reported with a picture. The chip is
      shared with three other views, so it is *this* container that is made to agree with it rather
@@ -743,6 +748,9 @@
         <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
         <span id="pvtabsr"></span>
       </div>
+      <!-- Where it lives for a *function*: its own box above the code. On a module it is moved into
+           the Details pane, under the names - see pvTabsFor(). The anchor is what takes it back. -->
+      <span id="pvcallershome" hidden></span>
       <div id="pvcallers"></div>
       <div id="pvbody"><pre id="pvgutter"></pre><pre id="pvcode"></pre></div>
       <div id="pvtable"></div>
