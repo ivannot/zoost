@@ -8,11 +8,20 @@ the getRelatedRecords snippet in half, and it is what an outside review found ag
 `title="${esc(...)}"` carrying names that come from Zoho, plus two carrying an API error message with
 no escaping at all.
 
-The consequence is narrow and real. MV3's default policy blocks inline scripts and inline handlers,
-so this is not code execution. What is left is markup injection into a panel that holds an API key:
-a broken or spoofed interface, and an `<img src="https://…">` that makes a request the moment it is
-rendered. It takes someone able to name an object inside the Zoho org — not a stranger, but not
-nobody either.
+The consequence is narrow and real **in the panel**. MV3's default policy blocks inline scripts and
+inline handlers there, so this is not code execution. What is left is markup injection into a panel
+that holds an API key: a broken or spoofed interface, and an `<img src="https://…">` that makes a
+request the moment it is rendered. It takes someone able to name an object inside the Zoho org — not a
+stranger, but not nobody either.
+
+**That reasoning does not cover the exported report**, and saying it did was the defect the last two
+days keep producing: a limit whose *reason* describes less ground than the limit claims.
+`apps/crm/export.js` writes a standalone document opened from `file://`, with no content-security
+policy and an inline `<script>` of its own - so in that file, markup injection would be code execution.
+An outside review read all 158 content interpolations in that file and found them clean: helpers that
+escape in turn, numbers, markup this code had just built, and the Deluge source through `hl()`, which
+tokenises and escapes every piece. So there is nothing to fix, and the sentence above is now true of
+the thing it is about rather than of everything.
 
 What is checked: every `attr="${…}"` inside a template literal. The interpolation must go through
 `escA` (or be plainly safe — a number, a literal, a comparison). Element *content* is not checked
@@ -32,6 +41,50 @@ FILES = sorted(p for p in (ROOT / 'apps').rglob('*.js'))
 # `escQ` is the second of the two, for a value that has already been through `escHtml`: it encodes
 # the delimiters and nothing else, because encoding `&` twice is its own defect.
 ATTR_SAFE = re.compile(r'\b(escA|escQ)\s*\(')
+
+# ...and the name is not the property. This file's own docstring throws away a list of identifiers
+# «known to be ours» on the grounds that **an allow-list of names is a checklist wearing a script's
+# clothes; the criterion has to be a property of the value** - and `ATTR_SAFE` was that same list one
+# level up: not the names of values, but the names of escapers. The counter-example was already in the
+# tree. Seven `escA` are defined across the shipped scripts; six encode `& < > " '` and the seventh,
+# in `apps/crm/highlight.js`, encoded `&`, `"` and `<` and left `'` and `>` alone. It was harmless
+# where it stood - four attributes, all double-quoted - which is a property of those call sites and
+# not of the function, and the checker approved every one of them by name without ever reading the
+# body. Raised by an outside review.
+#
+# So the name is now a pointer to a definition, and the definition has to hold. What an attribute
+# escaper must encode is **both delimiters**: a value that meets `'` and passes through is unsafe the
+# day a single-quoted attribute is written, and nothing here would have said so.
+ESCAPER_DEF = re.compile(r'\b(?:const|let|var|function)\s+(escA|escQ)\s*=?\s*(?:\([^)]*\)|[\w$]+)\s*(?:=>)?'
+                         r'(?P<body>[^\n]*)')
+# What it *emits*, not what characters appear in it. The first version of this looked for `"` and `'`
+# in the body and every escaper passed - including the weak one - because both characters are there as
+# the delimiters of its own string literals. A property has to be read off the output, and an
+# attribute escaper's output is the entity: `&quot;` for one delimiter, `&#39;` (or `&apos;`, or the
+# hex form) for the other.
+DELIMITERS = {'a double quote': (r'&quot;', r'&#34'), 'an apostrophe': (r'&#39', r'&apos;', r'&#x27')}
+
+
+def weak_escapers() -> list:
+    """Every escaper the safety criterion trusts whose body cannot emit both delimiter entities.
+
+    One line each, because that is how all seven in this tree are written. A multi-line one is
+    reported as weak rather than skipped: that direction fails safe - it asks to be looked at."""
+    out = []
+    for path in FILES:
+        src = path.read_text(encoding='utf-8')
+        for m in ESCAPER_DEF.finditer(src):
+            body = m.group('body')
+            missing = [name for name, forms in DELIMITERS.items() if not any(f in body for f in forms)]
+            if missing:
+                line = src[:m.start()].count('\n') + 1
+                # `relative_to` throws for a path outside the tree, which is only ever a test - and
+                # a tool that dies while reporting is a poor way to learn that.
+                where = path.relative_to(ROOT) if str(path).startswith(str(ROOT)) else path.name
+                out.append(f'{where}:{line}: {m.group(1)} never emits '
+                           f'{" or ".join(missing)} - the checker trusts this name in every attribute '
+                           f'in the tree, and here it is a weaker escaper than the name promises')
+    return out
 
 # A value is safe only if it demonstrably cannot contain a quote: a number, a quoted literal, a
 # boolean, or an expression that renders one. Everything else is reported.
@@ -313,6 +366,8 @@ def main() -> int:
     accept = '--accept' in sys.argv
     ledger = {} if accept else read_ledger()
     findings = []
+    # Before the attributes themselves: whether the thing that makes an attribute safe is safe.
+    findings += weak_escapers()
     seen = missed = 0
     for path in FILES:
         src = re.sub(r'^\s*//.*$', '', path.read_text(encoding='utf-8'), flags=re.M)

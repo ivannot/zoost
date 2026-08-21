@@ -90,6 +90,53 @@ Counts alone would prove nothing here: a crude count is either short or long, an
 the careful pass covered the same ground. Positions are checkable, which is what makes this a
 mechanism rather than a number to look at.
 
+## 5. The safety criterion trusted a name, and that name had two meanings - high
+
+**What broke.** `ATTR_SAFE` approves an expression when it contains a call to `escA` or `escQ`. Seven
+`escA` are defined across the shipped scripts. Six encode `& < > " '`. The seventh,
+`apps/crm/highlight.js`, encoded `&`, `"` and `<` and left the apostrophe and `>` alone - and it is
+used on `data-mod="${escA(target)}"` and two `title=`, all double-quoted, so it was harmless. But it
+was harmless **because of where it was called**, which is a property of four call sites and not of the
+function; the checker approved every one of them without ever reading the body. A single-quoted
+attribute written tomorrow, or that definition copied into a new file, and the tool would still say
+zero.
+
+The reviewer's point was sharper than the defect: **this file's own docstring throws away a list of
+identifiers «known to be ours»** on the grounds that a list of names is a checklist wearing a script's
+clothes and the criterion has to be a property of the value. `ATTR_SAFE` was that same list one level
+up - not the names of values, but the names of escapers - and the counter-example was already in the
+tree.
+
+**The fix.** The seventh escaper is the same as the other six. And the name is now a pointer to a
+definition that has to hold: `weak_escapers()` reads every `escA`/`escQ` body in the files it scans
+and reports any that cannot emit **both** delimiter entities. It runs before the attributes
+themselves, because a criterion that does not hold makes every finding below it worthless.
+
+Its own first version was wrong in the way that matters here: it looked for `"` and `'` *in the body*,
+and every escaper passed - including the weak one - because both characters are there as the
+delimiters of its own string literals. A property has to be read off the **output**: `&quot;` and
+`&#39;`. Proven by putting the weak body back and watching it named.
+
+**The rule.** **A name is not a property, and the second definition of a name is where that stops
+being pedantry.** Where a check trusts an identifier, it has to reach the definition - and if it
+cannot, the trust is a list, whatever it is called.
+
+## 6. A limit whose reason described more ground than the limit
+
+**What broke.** Nothing, and it is here because the reasoning was wrong rather than the code. The
+docstring justifies not checking element *content* by saying MV3 blocks inline scripts, so injection
+there is not code execution. True of the panel. **Not true of `apps/crm/export.js`**, which writes a
+standalone document opened from `file://`, with no content-security policy and an inline `<script>` of
+its own.
+
+The reviewer read all 158 content interpolations in that file: clean - helpers that escape in turn,
+numbers, markup this code had just built, and the Deluge source through `hl()`, which tokenises and
+escapes every piece. So there is nothing to fix. The sentence now says which surface its reason covers.
+
+**The rule.** The same one as №1, from the other side: **a limit is only as declared as its reason is
+accurate.** «We do not check X, because Y» is a blind spot the moment Y stops being true somewhere X
+still happens - and it reads as more considered than an undeclared gap, which makes it worse.
+
 ## Said rather than fixed
 
 - **The origin check sits inside `if (origin)`**, so a client that omits the header skips it. Left as

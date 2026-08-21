@@ -11,7 +11,14 @@
  */
 (function () {
   const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  // The same escaper as everywhere else in this repository, and it was not: this one did `&`, `"` and
+  // `<` and left `'` and `>` alone. Harmless where it is used - four attributes, all double-quoted -
+  // and that is a property of *those call sites*, not of the function, which is the wrong place for a
+  // safety property to live. `htmlcheck` approves an expression when it sees a call to `escA`; it
+  // never read this body, so the one weak escaper in the tree was the one the checker trusted by
+  // name. Found by an outside review, which pointed out that the tool's own docstring already argues
+  // against exactly this: a list of names is a checklist wearing a script's clothes.
+  const escA = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const KW = 'if|else|for|each|in|return|while|do|try|catch|finally|throw|throws|and|or|not|null|true|false|info';
   const TY = 'void|string|int|bigint|long|double|decimal|float|boolean|bool|map|list|key|date|datetime|time|collection|file';
   const NS = 'standalone|automation|button|schedule|validation_rule';

@@ -3946,6 +3946,38 @@ class ACheckerCountsWhatItInspected(unittest.TestCase):
                          'the headline counts files opened, which is true and says nothing')
         self.assertIn('none left unread', first)
 
+    def test_the_escapers_the_criterion_trusts_are_read_and_not_taken_on_their_name(self):
+        # `ATTR_SAFE` approves an expression that calls `escA`. Seven escA are defined in the shipped
+        # scripts; six encode `& < > " '` and the seventh encoded three of the five - harmless where
+        # it stood, which is a property of its call sites and not of the function. The tool's own
+        # docstring throws away a list of names on exactly this ground, and ATTR_SAFE was that list
+        # one level up. Held on a fixture, because the tree changes and the shape does not.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('htmlcheck', ROOT / 'tools' / 'htmlcheck.py')
+        mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        weak = "const escA = (s) => String(s).replace(/&/g, '&amp;').replace(/\"/g, '&quot;');"
+        full = ("const escA = (s) => String(s).replace(/[&<>\"']/g, (c) => "
+                "({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));")
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp)
+            (d / 'weak.js').write_text(weak, encoding='utf-8')
+            (d / 'full.js').write_text(full, encoding='utf-8')
+            mod.FILES = [d / 'weak.js']
+            found = mod.weak_escapers()
+            self.assertTrue(found, 'an escaper that never emits an apostrophe was approved by name')
+            self.assertIn('an apostrophe', found[0])
+            mod.FILES = [d / 'full.js']
+            self.assertEqual(mod.weak_escapers(), [],
+                             'a complete escaper is reported, so the check cries wolf')
+
+    def test_the_reason_a_limit_gives_covers_the_ground_the_limit_claims(self):
+        # The export writes a standalone document opened from file://, with no CSP and an inline
+        # script - so «MV3 blocks inline scripts, therefore this is not code execution» is true of the
+        # panel and not of that file. The limit stands; its reason had to stop describing everything.
+        doc = (ROOT / 'tools' / 'htmlcheck.py').read_text(encoding='utf-8')
+        self.assertIn('does not cover the exported report', doc,
+                      'the stated reason still reads as covering every surface this tool skips')
+
     def test_a_narrower_pass_reports_itself_before_it_reports_the_code(self):
         # The historical defect, put back: the pattern that only matched a whole-value `${...}`.
         src = (ROOT / 'tools' / 'htmlcheck.py').read_text(encoding='utf-8')
