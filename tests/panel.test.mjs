@@ -134,6 +134,44 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- the detail strip is what the kind declares ----------
+//
+// It was two buttons and a boolean, so a module's related lists lived at the bottom of «Details» -
+// under the refusal banner, the names and the layout counts, in a column a side panel cannot show.
+// «You struggle to see the whole detail, there is no room.» They have a tab now, and the strip is
+// derived from the kind's panes rather than from a pair of ids, so the fourth costs nothing.
+
+test('crm: a module has three detail tabs and a function has two', () => {
+  const kinds = load([sliceConst('apps/crm/sidepanel.js', 'PV_KINDS')]).PV_KINDS;
+  assert.deepEqual(Object.keys(kinds.module.panes), ['code', 'rel', 'info']);
+  assert.deepEqual(Object.keys(kinds.function.panes), ['code', 'info']);
+  // Each pane names elements that exist in the markup, or a tab leads nowhere.
+  const html = read('apps/crm/sidepanel.html');
+  const rendered = read('apps/crm/modules.js');
+  for (const panes of Object.values(kinds.module.panes)) {
+    for (const [id] of panes) {
+      assert.ok(html.includes(`id="${id}"`) || rendered.includes(`id="${id}"`),
+        `the module's ${id} pane is in no markup`);
+    }
+  }
+});
+
+test('crm: a tab the kind does not declare is absent, not disabled', () => {
+  // The panel's rule everywhere else, and «Related lists» on a function would open an empty pane.
+  const fn = sliceFn('apps/crm/sidepanel.js', 'setPvTab');
+  assert.match(fn, /b\.style\.display = \(kinds && kinds\.panes\[tab\]\) \? '' : 'none'/,
+    'a kind without the tab still shows its button');
+  assert.match(fn, /pvTab = \(kinds && kinds\.panes\[which\]\) \? which : 'code'/,
+    'asking for a tab this kind does not have must land on the first, not on nothing');
+});
+
+test('crm: the related lists are rendered into their own pane, not into Details', () => {
+  const src = read('apps/crm/modules.js');
+  assert.match(src, /<div id="pvrels">\$\{rlBlock\}<\/div>/);
+  const details = src.slice(src.indexOf('<div id="pvdetails">'), src.indexOf('</div>`;', src.indexOf('<div id="pvdetails">')));
+  assert.ok(!details.includes('rlBlock'), 'the related lists are still inside Details');
+});
+
 // ---------- a hidden tab has no live references into it ----------
 //
 // Hide Functions, open a module, look at what uses it, click one - and the tab came back. «When a tab

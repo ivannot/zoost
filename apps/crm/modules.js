@@ -355,13 +355,15 @@ async function openModule(path, layoutId) {
   const refBanner = refusal
     ? `<div class="box warn" style="margin:8px 10px;padding:8px 10px;font:11px var(--sans);line-height:1.5;color:#f7c66b;background:rgba(217,119,6,.12);border:1px solid #8a6321;border-radius:6px">${escHtml(refusal.text)}</div>`
     : '';
-  // Fields on one tab, everything else on the other - the same split as a function's, for the same
-  // reason: this pane held the names, the banner, the relations bar, the layout picker, the fields
-  // table and the related lists, stacked in 400px. The fields are what a module is opened for, so
-  // they are the first tab; the related-list API names are the most valuable thing here and sit at
-  // the top of the second, not at the bottom of a column nobody reaches.
+  // Three tabs: Fields, Related lists, Details. The pane once held the names, the banner, the
+  // relations bar, the layout picker, the fields table *and* the related lists, stacked in 400px;
+  // splitting it in two left the related lists at the bottom of «Details», under everything else,
+  // which is a column a side panel still cannot show - «you struggle to see the whole detail, there
+  // is no room». The fields are what a module is opened for, so they stay first; the related-list
+  // API names are the one string Deluge actually needs, so they get a tab instead of a footer.
   $('pvtable').innerHTML = `<div id="pvfields">${selector}<div id="laybody">${renderFieldsTable(m)}</div></div>`
-    + `<div id="pvdetails">${refBanner}${namesBlock}${rlBlock}</div>`;
+    + `<div id="pvrels">${rlBlock}</div>`
+    + `<div id="pvdetails">${refBanner}${namesBlock}</div>`;
   pvTabsFor('module');                 // clears the slot, so the bar goes in after it, never before
   $('pvtabsr').innerHTML = relBar;
   $('pvtable').querySelectorAll('.rlcopy').forEach((c) => (c.onclick = () => {

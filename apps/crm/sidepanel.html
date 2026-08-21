@@ -732,6 +732,13 @@
            switch to, and a strip with nothing on the other side is a control with nothing to do. -->
       <div class="dtabs" id="pvtabs" hidden>
         <button class="dtab active" id="pvtab_code" data-pv="code">Code</button>
+        <!-- A module's related lists were at the bottom of «Details», under the banner, the names and
+             the layout counts - and that column does not fit in a side panel: «you struggle to see the
+             whole detail, there is no room». They are the most valuable thing on a module (the API name
+             `zoho.crm.getRelatedRecords()` needs) so they get a tab of their own, which is also what
+             the Analytics panel already does with Columns | SQL | Relations. Hidden for a function, which has
+             none: a strip that shows a tab leading nowhere is worse than three of them. -->
+        <button class="dtab" id="pvtab_rel" data-pv="rel">Related lists</button>
         <button class="dtab" id="pvtab_info" data-pv="info">Details</button>
         <button id="codecopy" class="lbtn icon" style="display:none" title="Copy this code to the clipboard" aria-label="Copy code"><svg class="mk" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4a1.5 1.5 0 0 0-1.5 1.5V10a1.5 1.5 0 0 0 1.5 1.5h1.5"/></svg></button>
         <span id="pvtabsr"></span>

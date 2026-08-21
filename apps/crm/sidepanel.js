@@ -1869,12 +1869,27 @@ const PV_KINDS = {
   function: { first: 'Code', panes: { code: [['pvbody', 'flex']], info: [['pvcallers', '']] } },
   // `pvcallers` is on both kinds now: on a function it is what calls it, on a module it is what
   // reads and writes it. Same pane, same question - what relates to the thing on screen.
-  module: { first: 'Fields', panes: { code: [['pvfields', '']], info: [['pvdetails', ''], ['pvcallers', '']] } },
+  //
+  // A module has three. Its related lists used to sit at the bottom of «Details», under the refusal
+  // banner, the names block and the layout counts, in a column that does not fit a side panel -
+  // «you struggle to see the whole detail, there is no room». They carry the one string Deluge
+  // actually needs, so they get their own tab rather than the bottom of somebody else's.
+  module: { first: 'Fields', panes: { code: [['pvfields', '']], rel: [['pvrels', '']],
+                                      info: [['pvdetails', ''], ['pvcallers', '']] } },
 };
+const PV_TABS = { code: 'pvtab_code', rel: 'pvtab_rel', info: 'pvtab_info' };
 function setPvTab(which) {
-  pvTab = which === 'info' ? 'info' : 'code';
-  $('pvtab_code').classList.toggle('active', pvTab === 'code');
-  $('pvtab_info').classList.toggle('active', pvTab === 'info');
+  // Derived from the kind's own panes rather than from a pair of ids: the strip was two buttons and a
+  // boolean, so a third tab meant a third `if` in four places. What a kind has is what it declares.
+  const kinds = PV_KINDS[pvKind];
+  pvTab = (kinds && kinds.panes[which]) ? which : 'code';
+  Object.entries(PV_TABS).forEach(([tab, id]) => {
+    const b = $(id); if (!b) return;
+    // A tab a kind does not have is absent, not disabled: the panel's rule everywhere else, and a
+    // «Related lists» on a function would lead to an empty pane.
+    b.style.display = (kinds && kinds.panes[tab]) ? '' : 'none';
+    b.classList.toggle('active', tab === pvTab);
+  });
   // The copy control belongs to the pane that holds code, so it follows the strip like every other
   // pane rather than being switched on by the opener: set there, it stayed lit on «Details» and on a
   // module, where there is no code at all - visible in a picture published on the site. It is the
