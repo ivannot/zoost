@@ -387,7 +387,12 @@ def check(app: str) -> int:
         print(f'{len(problems)} finding(s). The release needs what only you can run, on this commit.')
         print(f'  python3 tools/handcheck.py {app}')
         return 1
-    print(f'{len(todo)} manual check(s) recorded as passing on {commit[:10]}.')
+    # What it means and not what is convenient to print: the answers were given on the commits below,
+    # and they still stand because nothing they exercise has moved since. Printing HEAD here read as
+    # «he ran them on this commit», which is a claim about a person and would have been false.
+    when = sorted({(rec['checks'][c['id']].get('commit') or '?')[:10] for c in todo})
+    print(f'{len(todo)} manual check(s) still standing at {commit[:10]}, answered on '
+          + ', '.join(when) + ' - nothing they exercise has changed since.')
     return 0
 
 

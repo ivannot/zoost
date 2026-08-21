@@ -64,6 +64,11 @@ def skipped(rel: str) -> bool:
             # report its own record back at itself - and `--accept` never converges, because each run
             # writes lines that the next run finds. Derived files are read, not judged.
             or rel == LEDGER_REL
+            # The manual-check records. They carry the author's own sentence about what he saw, in the
+            # language he said it in - and a quotation translated is a quotation falsified, which this
+            # repository states as a rule. Accepting each one into the ledger instead would grow it by
+            # a line every release, and the ledger may only shrink.
+            or rel.endswith('/handchecks.json')
             or rel.startswith('dist/'))
 
 
