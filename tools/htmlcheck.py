@@ -21,6 +21,7 @@ content would cry wolf until nobody read it. That limit is stated rather than hi
 
     python3 tools/htmlcheck.py
 """
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -216,16 +217,80 @@ def notes_belong_to_a_control(findings: list) -> None:
                                 f'.ctl it should belong to - a control and its explanation are one block')
 
 
+
+# An attribute value with *anything* interpolated into it, and each `${...}` inside it.
+#
+# The pattern here used to be `attr="${...}"` - the whole value, and nothing else. So `href="#${id}"`,
+# `class="row ${cls}"` and `style="background:${c}"` were never examined at all: measured on this tree,
+# **148 of 210** attribute interpolations were inspected and 62 were invisible, while the tool printed
+# zero. Found by an outside review, and it is the same shape as the defect this repository already
+# recorded once - a checker that reports success over the third of the surface it does not look at.
+#
+# The limit that *is* deliberate (element content, below) is written down. This one was not, so it
+# read as complete coverage. That is the difference between a limit and a blind spot.
+ATTR_WITH_EXPR = re.compile(r'(\w[\w-]*)="([^"\n]*\$\{[^"\n]*)"')
+
+
+def interpolations(value: str) -> list:
+    """Every `${...}` in an attribute value, brace-counted so a nested object literal stays whole."""
+    out, i = [], 0
+    while True:
+        j = value.find('${', i)
+        if j < 0:
+            return out
+        depth, k = 1, j + 2
+        while k < len(value) and depth:
+            if value[k] == '{':
+                depth += 1
+            elif value[k] == '}':
+                depth -= 1
+            k += 1
+        out.append(value[j + 2:k - 1])
+        i = k
+
+
+# What widening it uncovered is 41 expressions that are inert and cannot be shown to be inert *by
+# syntax*: an anchor built by `sanitize()`, a colour from the panel's own palette, a class from a
+# ternary of literals, a number. Teaching `suspect()` their names would be an allow-list of functions
+# - the checklist wearing a script's clothes this repository refuses - so they are a **ledger**, like
+# `cssdupes.txt` and `asyncglobals.txt`: recorded with their place, anything new is a finding, and the
+# ledger may only shrink. Two real ones were fixed before it was written rather than recorded in it.
+LEDGER = ROOT / 'tools' / 'attrraw.txt'
+
+
+def key(rel, attr: str, expr: str) -> str:
+    return hashlib.sha256(f'{rel}\x00{attr}\x00{expr}'.encode('utf-8')).hexdigest()[:16]
+
+
+def read_ledger() -> dict:
+    if not LEDGER.exists():
+        return {}
+    out = {}
+    for row in LEDGER.read_text(encoding='utf-8').splitlines():
+        if row.startswith('#') or not row.strip():
+            continue
+        k, _, rest = row.partition('  ')
+        out[k] = rest
+    return out
+
+
 def main() -> int:
+    accept = '--accept' in sys.argv
+    ledger = {} if accept else read_ledger()
     findings = []
     for path in FILES:
         src = re.sub(r'^\s*//.*$', '', path.read_text(encoding='utf-8'), flags=re.M)
-        for m in re.finditer(r'(\w[\w-]*)="\$\{([^}]*(?:\{[^}]*\}[^}]*)*)\}"', src):
-            attr, expr = m.group(1), m.group(2)
-            if suspect(expr):
-                line = src[:m.start()].count('\n') + 1
-                rel = path.relative_to(ROOT)
-                findings.append(f'{rel}:{line}: {attr}="${{{" ".join(expr.split())[:60]}}}" is not attribute-escaped')
+        for m in ATTR_WITH_EXPR.finditer(src):
+            attr, value = m.group(1), m.group(2)
+            line = src[:m.start()].count('\n') + 1
+            rel = path.relative_to(ROOT)
+            for expr in interpolations(value):
+                if not suspect(expr):
+                    continue
+                short = ' '.join(expr.split())[:60]
+                if key(rel, attr, short) in ledger:
+                    continue
+                findings.append(f'{rel}:{line}: {attr}="${{{short}}}" is not attribute-escaped')
 
     pages = sorted(p for p in (ROOT / 'apps').rglob('*.html'))
     pages += sorted((ROOT / 'site').rglob('*.html'))
@@ -235,6 +300,19 @@ def main() -> int:
         findings += [f'{path.relative_to(ROOT).parent}/{f}' for f in divs_are_closed(path)]
     notes_belong_to_a_control(findings)
 
+    if accept:
+        rows = ['# Derived by tools/htmlcheck.py - do not edit by hand; run it with --accept.',
+                '# Attribute interpolations that are not attribute-escaped and are inert for a reason',
+                '# syntax cannot see: an anchor through sanitize(), a colour from our own palette, a',
+                '# ternary of literals, a number. The ledger may only shrink.']
+        for f in findings:
+            place, _, rest = f.partition(': ')
+            rel, _, _line = place.rpartition(':')
+            attr, _, expr = rest.partition('="${')
+            rows.append(f'{key(rel, attr, expr.rsplit("}\" is not", 1)[0])}  {f}')
+        LEDGER.write_text('\n'.join(rows) + '\n', encoding='utf-8')
+        print(f'{len(findings)} attribute interpolation(s) recorded in {LEDGER.relative_to(ROOT)}')
+        return 0
     print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')
     for f in findings:
         print('  ' + f)

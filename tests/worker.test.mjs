@@ -605,6 +605,60 @@ test('the trace appears when the panel writes, and not before', () => {
   }
 });
 
+// ---------- the rate limit is a limit, or it is decoration ----------
+//
+// The read failed closed and the *write* was swallowed: a KV fault that stopped `put` while `get`
+// kept answering would return 0 for ever, and five-a-day would stop existing in silence - on the one
+// endpoint that opens public issues under the maintainer's token. Found by an outside review, and it
+// is the shape this repository already named in `updateMetaIndex`: a refused write caught and
+// dropped, so the caller carries on as if it had happened.
+
+function reportEndpoint({ get = async () => '0', put = async () => {} } = {}) {
+  const calls = { github: 0 };
+  const ctx = {
+    console, crypto, URL, URLSearchParams, Response, TextEncoder, JSON,
+    REPORT_REPO: 'x/y', REPORT_MAX: 8000, REPORT_SAYS_MAX: 2000, REPORT_PER_IP_PER_DAY: 5,
+    reportRedact: (t) => String(t), reportFence: (t) => t,
+    reportRateKey: async () => 'rl:test',
+    fetch: async (url) => {
+      if (String(url).includes('turnstile')) return { json: async () => ({ success: true }) };
+      calls.github++;
+      return { json: async () => ({ html_url: 'https://github.com/x/y/issues/1' }) };
+    },
+  };
+  vm.createContext(ctx);
+  vm.runInContext(sliceFn('site/_worker.js', 'report'), ctx);
+  const request = {
+    method: 'POST',
+    url: 'https://zoost.it/api/report',
+    headers: { get: (h) => (h === 'origin' ? 'https://zoost.it' : '') },
+    json: async () => ({ report: 'Zoost 1.0 · x\nwhat happened\n  boom', says: '', token: 't' }),
+  };
+  return { run: () => vm.runInContext('report', ctx)(request, { STATUS: { get, put }, TURNSTILE_SECRET: 's', GH_TOKEN: 'g' }), calls };
+}
+
+test('a counter that cannot be written refuses the report rather than losing the limit', async () => {
+  const e = reportEndpoint({ put: async () => { throw new Error('KV down'); } });
+  const res = await e.run();
+  assert.equal(res.status, 503, 'the write was swallowed, so the ceiling silently stopped existing');
+  assert.equal(e.calls.github, 0, 'it opened the issue anyway, having failed to count it');
+});
+
+test('and when the counter can be written, the report goes', async () => {
+  // The other half: a gate that always refuses is broken, and looks strict until somebody needs it.
+  const e = reportEndpoint();
+  const res = await e.run();
+  assert.equal(res.status, 200);
+  assert.equal(e.calls.github, 1);
+});
+
+test('over the ceiling, nothing is sent', async () => {
+  const e = reportEndpoint({ get: async () => '5' });
+  const res = await e.run();
+  assert.equal(res.status, 429);
+  assert.equal(e.calls.github, 0);
+});
+
 test('a report written by hand is sent as one, and says so', () => {
   const p = reportPage();
   p.say('The panel will not open on Firefox.');

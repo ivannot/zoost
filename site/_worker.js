@@ -486,6 +486,11 @@ async function report(request, env) {
   if (request.method !== 'POST') return bad(405, 'Use POST.');
   // `new URL('null')` throws, and a sandboxed iframe or a hand-made request sends exactly that -
   // which turned a 403 into an unhandled exception and a platform error page.
+  // A browser sends `origin` on a cross-site POST, so this stops a form on someone else's page. A
+  // client that simply omits the header is *not* refused here, and the honest reason is that this
+  // endpoint has no cookie and no session: there is nothing for a forged cross-site request to spend,
+  // and the gate that matters is Turnstile below. Said plainly because the shape of the check reads
+  // as more than it does - raised by an outside review, and right about the reading.
   const origin = request.headers.get('origin') || '';
   if (origin) {
     let host = null;
@@ -530,7 +535,17 @@ async function report(request, env) {
   // Counted **before** the issue is created, not after. Counting afterwards let concurrent requests
   // all read the same number and all go through; KV is eventually consistent, so this is still a
   // ceiling rather than a lock - but it is the ceiling it claims to be, not one race wide.
-  try { await env.STATUS.put(key, String(seen + 1), { expirationTtl: 86400 }); } catch (_) {}
+  // Fails closed, like the read above and for the same reason. This was `catch (_) {}`: a KV fault
+  // that stopped `put` while `get` kept answering would return 0 for ever, and the five-a-day ceiling
+  // would stop existing **in silence** - on the one endpoint here that opens public issues under the
+  // maintainer's token. Turnstile still stands in front of it, so it was never open to anyone; what
+  // it lost was the only limit that applies to somebody who *can* pass Turnstile.
+  //
+  // It is also a defect this repository has already named once, in `updateMetaIndex`: a refused write
+  // swallowed by `.catch(() => {})`, so the caller went on to clear its dirty mark over a write that
+  // never happened. Same shape, one system over. Found by an outside review.
+  try { await env.STATUS.put(key, String(seen + 1), { expirationTtl: 86400 }); }
+  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
 
   const ok = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
