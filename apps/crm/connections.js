@@ -107,7 +107,7 @@ function openConnection(c) {
   if (c.scopes && c.scopes.length) h += `<details class="wfraw"><summary>Scopes (${c.scopes.length})</summary><pre>${escHtml(c.scopes.join('\n'))}</pre></details>`;
   h += '</div>';
   $('pvtable').innerHTML = h;
-  $('pvtable').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => { setMode('functions'); openFile(a.dataset.file); }));
+  wireFnChips($('pvtable'), (a) => { setMode('functions'); openFile(a.dataset.file); });
   showPreview();
 }
 /** A timestamp the reader can act on. The failures endpoint answers with two forms of the same

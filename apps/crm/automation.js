@@ -87,7 +87,7 @@ async function openSchedule(e) {
     + (e.last ? `<div class="wfrow"><span class="wk">Last run</span> ${escHtml(e.last)}</div>` : '')
     + `</div>`;
   showPreview();
-  $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });
+  wireFnChips($('pvtable'), (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
 }
 
 // ---------- workflows ----------

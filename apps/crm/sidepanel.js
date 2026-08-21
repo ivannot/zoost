@@ -1169,6 +1169,7 @@ async function filterByConnection(name) {
   // expected error is expected.
   let g; try { g = await ensureGraph(); }
   catch (e) { if ((e && e.message) === WS_MOVED) return; setStatus('Could not build the graph: ' + ((e && e.message) || e), 'bad'); return; }
+  if (!tabReachable('functions')) return;   // filtering a list you have put away is a jump like any other
   connFilterSet = new Set(Object.values(g.nodes).filter((n) => (n.connections || []).some((c) => c.name === name)).map((n) => n.file));
   connectionFilter = name;
   if (viewMode !== 'functions') setMode('functions'); else renderTree();
@@ -1945,6 +1946,34 @@ async function modulesOf(node) {
  *  to any module, so «nothing writes here» is «nothing that could be read», and the line under the
  *  lists carries that instead of leaving the reader to assume otherwise.
  */
+/** A cross-tab chip stops being a way in when its tab is not there.
+ *
+ *  «When a tab is disabled we must not still have live references that take you there - the links
+ *  stop existing for that tab, otherwise hiding it means nothing.» Reported after watching a hidden
+ *  Functions tab come back by clicking a function in a module's detail. Refusing the click was the
+ *  first half and it is not enough: a link that looks like a link and then says no is a worse
+ *  interface than no link, because the reader learns nothing until they have pressed it.
+ *
+ *  So it is decided here, once, from the target the chip already declares - `data-file` and `data-fnid`
+ *  mean the functions tab, `data-wf` means workflows - rather than at six render sites that would
+ *  drift. What a chip becomes is plain text carrying the reason, which is the same shape the empty
+ *  states in this panel use: say what is in the way and what to do about it.
+ *
+ *  `root` is where the chips were just drawn; `open` is what a live one does with the element. */
+function wireFnChips(root, open) {
+  if (!root) return;
+  root.querySelectorAll('.wf-fn, a[data-file]').forEach((el) => {
+    const target = el.dataset.wf != null ? 'workflows' : 'functions';
+    if (tabReachable(target, true)) { el.onclick = () => open(el); return; }
+    // Not a link any more: no handler, no pointer, and the reason where the reader is looking.
+    el.classList.add('gone');
+    el.removeAttribute('href');
+    el.onclick = null;
+    el.title = isForbidden(target)
+      ? `${tabLabel(target)}: your Zoho role does not grant access to that area.`
+      : `${tabLabel(target)} is hidden in Settings, so this does not open.`;
+  });
+}
 async function showModuleUsage(api, path, mine, op) {
   const box = $('pvcallers'); box.textContent = 'reading what the code does with it\u2026'; box.className = 'show';
   try {
@@ -1979,10 +2008,7 @@ async function showModuleUsage(api, path, mine, op) {
     // `openFile()` alone left the list showing modules while the detail showed a function, which is
     // the panel reading as if it had lost its place. Reported. Same two calls every other cross-tab
     // jump here makes, rather than a second way of doing it.
-    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => {
-      if (!tabReachable('functions')) return;
-      setMode('functions'); openFromTree(a.dataset.file);
-    }));
+    wireFnChips(box, (a) => { setMode('functions'); openFromTree(a.dataset.file); });
   } catch (_) { box.className = ''; }
 }
 async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
@@ -2079,7 +2105,7 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
     if (node.updatedTime) modBits.push(escHtml(String(node.updatedTime).slice(0, 16)));
     if (modBits.length) html += `<div class="modline">Last modified ${modBits.join(' \u00b7 ')}</div>`;
     box.innerHTML = html;
-    box.querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => openFile(a.dataset.file)));
+    wireFnChips(box, (a) => openFile(a.dataset.file));
     box.querySelectorAll('.conn[data-conn]').forEach((c) => (c.onclick = () => filterByConnection(c.dataset.conn)));
     // A module chip opens the module, the way a function chip opens the function. It is the whole
     // point of the reading: the two halves of the mirror are one click apart instead of two lists.
@@ -4750,7 +4776,7 @@ async function openWorkflow(e) {
   $('pvbody').style.display = 'none'; $('pvtable').style.display = 'block';
   $('pvtable').innerHTML = renderWorkflowDetail(rule);
   showPreview();
-  $('pvtable').querySelectorAll('.wf-fn').forEach((sp) => { sp.onclick = () => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname); });
+  wireFnChips($('pvtable'), (sp) => openFunctionFromWorkflow(sp.dataset.fnid, sp.dataset.fnname));
   const _ub = $('pvtable').querySelector('.wfusage'); if (_ub) _ub.onclick = () => loadWorkflowUsage(_ub.dataset.wfid, $('pvtable').querySelector('.wfusage-out'), _ub);
 }
 function renderWorkflowDetail(rule) {
@@ -4855,6 +4881,7 @@ function openFunctionFromWorkflow(id, name) {
   const nid = String(id || ''); const nm = (name || '').toLowerCase();
   let ent = treeData.find((x) => x.id === nid) || treeData.find((x) => (x.display_name || '').toLowerCase() === nm || (x.api_name || '').toLowerCase() === nm);
   if (!ent) { setStatus(`Function "${name}" not in workspace - pull functions first.`, 'warn'); return; }
+  if (!tabReachable('functions')) return;
   setMode('functions'); openFromTree(ent.path);
 }
 

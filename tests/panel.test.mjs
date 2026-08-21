@@ -134,6 +134,41 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- a hidden tab has no live references into it ----------
+//
+// Hide Functions, open a module, look at what uses it, click one - and the tab came back. «When a tab
+// is disabled we must not still have live references that take you there: the links stop existing for
+// that tab, otherwise hiding it means nothing.» Refusing the click is not enough either - a link that
+// looks like one and then says no teaches the reader nothing until they have pressed it.
+
+test('crm: every chip that leads to another tab is wired through the one helper', () => {
+  // Six render sites, one decision. The point of the helper is that the seventh inherits it; the
+  // point of this case is that nobody wires a chip by hand again.
+  for (const file of ['apps/crm/sidepanel.js', 'apps/crm/automation.js', 'apps/crm/connections.js',
+                      'apps/crm/health.js']) {
+    const src = read(file);
+    const raw = src.match(/querySelectorAll\('(?:\.wf-fn|a\[data-file\])'\)/g) || [];
+    assert.deepEqual(raw, [], `${file}: a chip is wired outside wireFnChips, so it stays a link`);
+  }
+});
+
+test('crm: the helper decides from the tab the chip declares, and says which reason', () => {
+  const fn = sliceFn('apps/crm/sidepanel.js', 'wireFnChips');
+  assert.match(fn, /dataset\.wf != null \? 'workflows' : 'functions'/,
+    'the target is guessed rather than read from the chip');
+  assert.match(fn, /tabReachable\(target, true\)/, 'it does not ask whether the tab can be opened');
+  assert.match(fn, /el\.onclick = null/, 'an inert chip keeps its handler');
+  assert.match(fn, /isForbidden\(target\)/, 'both reasons read as one, and they are two different actions');
+});
+
+test('crm: hidden is a reason a tab cannot be opened, alongside refused', () => {
+  const fn = sliceFn('apps/crm/health.js', 'tabReachable');
+  assert.match(fn, /isForbidden\(tab\)/);
+  assert.match(fn, /isHiddenByUser\(tab\)/,
+    'a tab hidden in Settings still answers «reachable», so every link into it goes on working');
+  assert.ok(fn.indexOf('Settings') > 0, 'the refusal does not say where to turn it back on');
+});
+
 // ---------- hiding the tab you are on takes you off it ----------
 //
 // `renderTabs()` gives the tab you are *on* a segment even when it is hidden, so you are never on a

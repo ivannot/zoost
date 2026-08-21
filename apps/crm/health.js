@@ -150,7 +150,7 @@ function renderHealthView() {
   });
   $('healthbody').innerHTML = html;
   $('healthbody').querySelectorAll('.htab').forEach((b) => (b.onclick = () => { healthTab = b.dataset.tab; renderHealthView(); }));
-  $('healthbody').querySelectorAll('a[data-file]').forEach((a) => (a.onclick = () => healthOpenFn(a.dataset.file, a.dataset.line ? parseInt(a.dataset.line, 10) : null)));
+  wireFnChips($('healthbody'), (a) => healthOpenFn(a.dataset.file, a.dataset.line ? parseInt(a.dataset.line, 10) : null));
   // A map, not a ternary. Two kinds fitted in a conditional and the third and fourth did not: the
   // «Automation actions nothing fires» list rendered as plain text for exactly as long as it has
   // existed, because adding a row to a health group and adding a way to open it were two separate
@@ -226,10 +226,28 @@ const AP_TAB = { workflow: 'workflows', schedule: 'schedules', action: 'actions'
  *  instead of saying what happened. Hiding a tab in Settings is *not* this: `renderTabs()` puts that
  *  segment back for as long as the reader is on it, which is the case this used to be confused with.
  */
+/** Can this tab be opened at all, and if not, why - the two reasons being different facts.
+ *
+ *  It knew about one of them: an area your Zoho role refuses. A tab you hid in **Settings** answered
+ *  yes, so every cross-tab link went on working and landing on it - and the panel then had to give the
+ *  hidden tab a segment again to avoid looking lost. Reported: «when a tab is disabled we must not
+ *  still have live references that take you there - the links stop existing for that tab, otherwise
+ *  hiding it means nothing.» Which is the right rule: a hidden tab is a part of the product the reader
+ *  has put away, and a link is a way in.
+ *
+ *  The two messages stay apart because the actions are different: one is your administrator's, the
+ *  other is one switch in Settings. */
 function tabReachable(tab, quiet) {
-  if (!tab || !isForbidden(tab)) return true;
-  if (!quiet) setStatus(`${tabLabel(tab)}: your Zoho role does not grant access to that area, so it cannot be opened.`, 'warn');
-  return false;
+  if (!tab) return true;
+  if (isForbidden(tab)) {
+    if (!quiet) setStatus(`${tabLabel(tab)}: your Zoho role does not grant access to that area, so it cannot be opened.`, 'warn');
+    return false;
+  }
+  if (isHiddenByUser(tab)) {
+    if (!quiet) setStatus(`${tabLabel(tab)} is hidden in Settings, so nothing here opens it. Turn it back on to follow this.`, 'warn');
+    return false;
+  }
+  return true;
 }
 const AP_OPEN = { workflow_rules: 'workflow', workflow: 'workflow', schedules: 'schedule',
                   schedule: 'schedule', actions: 'action', module: 'module', modules: 'module' };
