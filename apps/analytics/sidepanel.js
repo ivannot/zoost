@@ -1266,6 +1266,14 @@ async function writeToDisk(info, op, next) {
   // instead of presenting files from two different moments as one. An interrupted pull is repaired
   // by running Pull all again, and the message says exactly that.
   const { views, folders, schema, relations, sqls, deps, pullFailed } = next;
+  // Everything below this line is disk, and disk was the one stage of a pull that said nothing. The
+  // reading stages each announce themselves and count; then the last one closed with «Reading
+  // lineage... 50 / 50» and that line sat there through three JSON files, one .sql per query table
+  // and a prune - which on a real workspace is hundreds of writes and takes long enough to read as a
+  // hang. Reported as: the process looks stuck, so show what else is going on. A stage that is silent
+  // is indistinguishable from a stage that is stuck - which is a rule this repository already holds
+  // for its own tools, and had not applied to the one place the panel spends the longest.
+  op.say('Writing the mirror\u2026', 'busy');
   await op.write(PULL_STATE, JSON.stringify({ state: 'writing', startedAt: new Date().toISOString() }));
   try {
     await writeJson('views.json', { workspace: info.workspace, pulledAt: new Date().toISOString(), folders, views }, op);
@@ -1274,14 +1282,22 @@ async function writeToDisk(info, op, next) {
     // One .sql per query table, so the workspace is diffable in git - that is the whole point of the
     // mirror. The index keeps the id-to-file mapping and the column-level lineage beside it.
     const index = {};
+    // Counted like every reading stage, and for the same reason: one file per query table is the
+    // longest thing this function does, and «0 / 240» moving is the difference between working and
+    // hung. Said every ten so the line does not flicker on a small workspace.
+    const total = Object.keys(sqls).length;
+    let written = 0;
     for (const [id, q] of Object.entries(sqls)) {
       const v = views.find((x) => x.id === id);
       const stem = stemOf(v ? v.name : id, id);
       await op.write(`sql/${stem}.sql`, typeof q.sql === 'string' ? q.sql : '');
       index[id] = { stem, name: v ? v.name : '', parents: q.parents, sources: q.sources };
+      if (++written % 10 === 0 || written === total) op.say(`Writing SQL files\u2026 ${written} / ${total}`, 'busy');
     }
     await writeJson('sql/index.json', index, op);
+    op.say('Removing what the workspace no longer has\u2026', 'busy');
     next.cleanupFailed = await pruneSql(index, op);
+    op.say('Finishing the mirror\u2026', 'busy');
     await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   } catch (e) {
     // The marker was written successfully, so any failure from here to `complete` means the disk is

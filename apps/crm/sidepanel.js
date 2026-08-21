@@ -4419,6 +4419,11 @@ async function pullEverything() {
   try {
   const runners = { functions: pullAll, modules: pullModules, workflows: pullWorkflows, schedules: pullSchedules, actions: pullActions, connections: pullConnections, failures: pullFailures };
   const skipped = [];
+  // What this pull will actually do, counted before it starts: the areas your Zoho role allows and
+  // your settings ask for. A «3 of 6» that silently meant «3 of whatever is left» would be worse
+  // than no number at all.
+  const todo = TABS.filter((t) => !isForbidden(t.id) && isPulled(t.id));
+  let done = 0;
   for (const t of TABS) {
     // Each area starts its own op, and an op begun *after* a switch belongs to the new workspace -
     // so without this the remaining areas would carry on pulling the tab's org into the folder the
@@ -4426,9 +4431,20 @@ async function pullEverything() {
     if (!op.current()) return;
     if (isForbidden(t.id)) continue;
     if (!isPulled(t.id)) { skipped.push(t.id); continue; }
+    // Said here, before the runner is called, and not left to the runner to say. Every one of them
+    // asks for the folder permission, then the tab's context, then reads the config - three or four
+    // awaits, seconds on a cold bridge - before its own first message replaces this line. Until then
+    // the panel showed the *previous* area's closing line, «All 900 functions downloaded.», with
+    // nothing turning: the pull was working and looked finished, then stuck. Reported exactly that
+    // way. The position is in it because «what else is left» is the other half of the question.
+    op.say(`${tabLabel(t.id)}: ${done + 1} of ${todo.length}…`, 'busy');
     try { await runners[t.id](); } catch (_) { /* each records its own verdict and states its own message */ }
+    done++;
   }
   if (!op.current()) return;
+  // The last area closes with its own line and then this runs - rebuilding a tree of thousands of
+  // rows, which is the second place the panel looked stuck at the end of a pull.
+  op.say('Rebuilding the list\u2026', 'busy');
   try { await rebuildActive(); } catch (_) {}
   renderTabs();                                   // a refusal discovered just now changes the set
   // Both notes, because they are different facts and neither may be swallowed: one is what Zoho

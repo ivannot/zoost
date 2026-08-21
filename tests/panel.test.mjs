@@ -134,6 +134,48 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- a pull says which stage it is in, including the ones that are not network ----------
+//
+// The reading stages announced themselves and counted; the stages that write did not. On the CRM side
+// each area asks for the folder, the tab context and the config - three or four awaits - before its
+// own first message lands, so between areas the panel showed the *previous* area's closing line with
+// nothing turning: working, and indistinguishable from stuck. On the Analytics side the whole disk
+// write was silent, which on a real workspace is hundreds of files after «Reading lineage... 50 / 50».
+// Read out of the source rather than driven, for the reason slice.mjs exists: these are two lines
+// inside 4000 of DOM-bound code, and what has to hold is that they are there and that they are said
+// *before* the work, not after it.
+
+test('the CRM names each area before it pulls it, and the position in the run', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const body = src.slice(src.indexOf('async function pullEverything'));
+  const say = body.indexOf('op.say(`${tabLabel(t.id)}');
+  const call = body.indexOf('await runners[t.id]()');
+  assert.ok(say > 0, 'no line names the area about to be pulled');
+  assert.ok(say < call, 'the area is named after it has been pulled, which is when it is too late');
+  assert.match(body, /of \$\{todo\.length\}/, 'the position must count the areas this run will do');
+  // The denominator is what the run will actually do - not TABS, which includes what the role
+  // refused and what settings excluded. «3 of 7» over a run of four is a wrong number, not a rough one.
+  assert.match(body, /const todo = TABS\.filter\(\(t\) => !isForbidden\(t\.id\) && isPulled\(t\.id\)\)/);
+});
+
+test('the CRM says it is rebuilding the list after the last area', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const body = src.slice(src.indexOf('async function pullEverything'));
+  const say = body.indexOf('Rebuilding the list');
+  const call = body.indexOf('await rebuildActive()');
+  assert.ok(say > 0 && say < call, 'the rebuild is the second place a finished-looking pull is still working');
+});
+
+test('Analytics counts the SQL files it writes, and says so before the first one', () => {
+  const src = read('apps/analytics/sidepanel.js');
+  const body = src.slice(src.indexOf('async function writeToDisk'));
+  assert.ok(body.indexOf('Writing the mirror') < body.indexOf("op.write(PULL_STATE"),
+    'the disk stage must be announced before it starts, not once it is over');
+  assert.match(body, /Writing SQL files\\u2026 \$\{written\} \/ \$\{total\}/,
+    'one file per query table is the longest thing this does and it has to count');
+  assert.ok(body.indexOf('Removing what the workspace no longer has') < body.indexOf('pruneSql(index, op)'));
+});
+
 // ---------- both bridges: reading one cookie out of the jar ----------
 //
 // `csrfToken()` above is tested with the jar injected, so the *reading* was covered by nothing. It
@@ -6916,7 +6958,9 @@ test('analytics: a write failure after the marker blocks the live snapshot too',
     patchCfg: async () => {}, pruneSql: async () => 0, readJson: async () => ({}),
     stemOf: (n, id) => `${n}-${id}`, bound: null, Object, JSON, Date, Boolean, Error,
   };
-  ctx.op = { current: () => true, write: async (p) => writes.push(p) };
+  // `say` is part of an operation, not decoration: a stub without it stands in for something that
+  // does not exist, and the failure lands on the assertion three lines down rather than on the gap.
+  ctx.op = { current: () => true, write: async (p) => writes.push(p), say: () => {} };
   vm.createContext(ctx);
   vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
   let error;
@@ -7119,7 +7163,7 @@ test('analytics: a partial SQL update never replaces an unreadable index with an
       PULL_SV: 1, CFG: '.zoost.json', PULL_STATE: '.pull-state.json',
       pruneSql: async () => {}, Object, JSON, Date, Boolean,
     };
-    ctx.op = { current: () => live, write: async () => {} };
+    ctx.op = { current: () => live, write: async () => {}, say: () => {} };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'writeToDisk'), ctx);
     ctx.readJson = async () => { live = false; return { label: 'B', sample: true }; };
