@@ -4866,7 +4866,20 @@ try {
   chrome.storage.onChanged.addListener(async (ch, area) => {
     if (area !== 'local') return;
     if (ch.aicfg) aiEngineChrome();            // engine/model changed: refresh the badge and the notice
-    if (ch.tabPrefs) { await loadTabPrefs(); renderTabs(); }
+    if (ch.tabPrefs) {
+      await loadTabPrefs();
+      // Hiding the tab you are standing on has to take you off it. `renderTabs()` gives the tab you
+      // are *on* a segment even when it is hidden - which is right for a jump, where a health row
+      // lands you on a hidden list and a row with no segment reads as the panel having lost its
+      // place - and wrong for this, where you have just said «remove that one» about the thing in
+      // front of you. So two tabs turned off in Settings left one gone and one still there, and the
+      // difference was which one you happened to be looking at. Reported exactly that way.
+      if (viewMode && isHiddenByUser(viewMode)) {
+        const next = visibleTabs()[0];
+        if (next) setMode(next);            // setMode renders the row itself
+        else renderTabs();                  // every tab hidden: the row says so
+      } else renderTabs();
+    }
     if (ch.zohoDc) zohoDc = ch.zohoDc.newValue || zohoDc;
     if (!ch.settingsStamp) return;
     await loadScope();

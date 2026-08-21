@@ -1017,6 +1017,12 @@ What that request means, in order. Do all of it without being asked:
    record is committed with the release. **This is not a formality: `release.sh` refuses to tag
    without it**, and an answer stops counting the moment the code moves, because it names a commit.
 
+   **He does not run it, and that is the agreed shape**: «I talk to you in natural language and I use
+   the app as a user, that's it». So you produce the plan, he exercises the product, he says in words
+   what happened, and **you record it for him** - his sentence in `--note`, because that is the
+   evidence. Never record what he has not said, and never infer a pass from a green suite: the whole
+   value of the step is that it is his answer and not yours.
+
    It exists because a defect that made every Pull all fail reached a submitted package. Nothing here
    could execute a pull; both pulls now run headless in `tools/probe.py` against the sample, and what
    is left needs an org, a role, a data centre and a person. He asked to be in the chain rather than

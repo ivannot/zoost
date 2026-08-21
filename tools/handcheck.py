@@ -29,6 +29,13 @@ since changed is worth nothing. Change one line after certifying and this says s
 
 **And it records only what happened.** No `--pass all` for a run nobody did: the ids are typed one by
 one, and a failure is recordable - a tool that can only hear «yes» is a tool that is asking nothing.
+
+**Who types it is not the point; whose answer it is, is.** The author does not run commands: «I talk
+to you in natural language and I use the app as a user, that's it». So he reads the plan, exercises
+the product, says in words what happened, and the assistant records it - with his words in `--note`,
+because the sentence he used is the evidence and «pass» is only the filing. Nothing here is inferred
+from a green suite or from an assistant's confidence: if he has not said it, it is not recorded, and
+`release.sh` stops.
 """
 import argparse
 import contextlib

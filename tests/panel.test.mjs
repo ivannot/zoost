@@ -134,6 +134,31 @@ test('an unknown prefix falls back to the CRM family rather than throwing', () =
   withJar({ CT_CSRF_TOKEN: 'C' }, () => assert.equal(csrf.csrfToken('nonsense'), 'C'));
 });
 
+// ---------- hiding the tab you are on takes you off it ----------
+//
+// `renderTabs()` gives the tab you are *on* a segment even when it is hidden, so you are never on a
+// list with no segment in the row - right for a jump, where a health link lands you on a hidden tab.
+// Applied to Settings it is wrong: turn two tabs off and one goes while the other stays, and which is
+// which depends on where you happened to be standing. Reported that way.
+
+test('crm: turning off the tab in front of you moves the panel off it', () => {
+  const src = read('apps/crm/sidepanel.js');
+  const handler = src.slice(src.indexOf('if (ch.tabPrefs)'), src.indexOf('if (ch.zohoDc)'));
+  assert.match(handler, /isHiddenByUser\(viewMode\)/,
+    'the preferences change and nothing asks whether you are standing on what was just hidden');
+  assert.ok(handler.indexOf('loadTabPrefs') < handler.indexOf('isHiddenByUser'),
+    'it asks before the new preferences are loaded, so it reads the old answer');
+  assert.match(handler, /setMode\(next\)/, 'it notices and stays where it is');
+});
+
+test('crm: the jump onto a hidden tab still keeps its segment', () => {
+  // The other half, and the reason this is two behaviours rather than one: a row with no segment in
+  // the strip reads as the panel having lost its place, and a jump is not a preference.
+  const fn = sliceFn('apps/crm/sidepanel.js', 'renderTabs');
+  assert.match(fn, /!vis\.includes\(viewMode\) && !isForbidden\(viewMode\)/,
+    'a jump onto a hidden tab now lands with no segment lit');
+});
+
 // ---------- a workspace is called what its owner called it ----------
 //
 // The mismatch bar named the platform's workspace («Default Workspace») or the instance over a folder
