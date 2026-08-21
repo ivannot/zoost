@@ -144,6 +144,28 @@ What it cannot do is written in its own docstring rather than left to be discove
 line-based, a global written after an await is not automatically wrong, and it says nothing about
 *what* a guard checks. That is why it is a ledger and not a gate.
 
+**A checker's own coverage is the thing nobody measures, and it is where three findings in a row have
+now come from.** Asked for after an outside review found two defects
+*inside the checkers*: catch this class here, rather than by another reader. The shape is always the same: a headline that counts what was opened -
+«32 shipped scripts, 30 pages» - and says nothing about what was examined inside. `htmlcheck` inspected
+**148 of 210** attribute interpolations and printed zero, truthfully, for months; `asynccheck` had the
+same hole; and each time the number on screen was the evidence that stopped anyone looking.
+
+The mechanism that catches it is not more care, it is **a second, cruder scan of the same subject,
+compared by position**: the careful pass reads attribute values properly, the crude one marks every
+`${` with an unclosed `="` behind it, and a position the crude one sees which the careful one never
+read is a finding *about the tool*, printed above any finding about the code. Counts prove nothing here
+- a crude count is either short or long - and positions are checkable. It found the remaining hole in
+its own widened pattern on the first run, an attribute value wrapped across two lines.
+
+So, for anything that inspects a tree: **print the count of things inspected, and derive the
+denominator by a cruder method than the check itself.** Where a cruder enumeration is not available,
+say so in the docstring. `csscheck`, `samplecheck` and now `htmlcheck` state a work-unit; `namecheck`,
+`callcheck` and `deadcode` state files, which is honest only because their subject *is* the file. The
+rule this leaves is the one from the same review: **a limit that is not written down is a blind spot** -
+`htmlcheck` not reading element content is a conclusion and says so, and not reading two thirds of its
+own subject was invisible to everyone, including whoever wrote it.
+
 **And every so often, sweep rather than check.** The battery answers questions somebody thought to
 ask; a sweep asks what nobody has. Two commands, neither of them a gate: `python3 tools/deadcode.py`
 lists what is declared, styled or marked up and used by nothing - candidates, never verdicts, because

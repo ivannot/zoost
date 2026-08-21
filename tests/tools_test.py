@@ -3918,5 +3918,53 @@ class AFindingCarriesWhatFixesIt(unittest.TestCase):
                          'it still sends him to a command instead of handing over the text')
 
 
+class ACheckerCountsWhatItInspected(unittest.TestCase):
+    """«A tool that says 0 while not looking at a third of the surface.»
+
+    Three findings in one outside review, two of them inside checkers, and the same shape underneath:
+    a headline that counts the files opened - «32 shipped scripts, 30 pages» - and says nothing about
+    what was examined inside them. `htmlcheck` inspected 148 of 210 attribute interpolations and
+    printed zero, for months, truthfully.
+
+    The mechanism that catches it is a **second, cruder scan of the same subject, compared by
+    position**: the careful pass reads attribute values properly, the crude one marks every `${` that
+    has an unclosed `="` behind it, and a position the crude one sees which the careful one never read
+    is a finding *about the tool*, printed before any finding about the code. A crude count would prove
+    nothing - it is either short or long; positions are checkable.
+
+    These cases hold the mechanism rather than the number, because the number moves with the code."""
+
+    def _run(self, *args):
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'htmlcheck.py'), *args],
+                             capture_output=True, text=True, cwd=str(ROOT))
+        return out.returncode, out.stdout
+
+    def test_the_headline_counts_what_was_inspected_and_not_only_the_files(self):
+        _, out = self._run()
+        first = out.splitlines()[0]
+        self.assertRegex(first, r'\d+ attribute interpolation\(s\) inspected',
+                         'the headline counts files opened, which is true and says nothing')
+        self.assertIn('none left unread', first)
+
+    def test_a_narrower_pass_reports_itself_before_it_reports_the_code(self):
+        # The historical defect, put back: the pattern that only matched a whole-value `${...}`.
+        src = (ROOT / 'tools' / 'htmlcheck.py').read_text(encoding='utf-8')
+        wide = 'r\'(\\w[\\w-]*)="([^"]{0,600}?\\$\\{[^"]{0,600}?)"\''
+        self.assertIn(wide, src, 'the pattern moved - fix this case rather than deleting it')
+        narrow = 'r\'(\\w[\\w-]*)="(\\$\\{[^}]*\\})"\''
+        with tempfile.TemporaryDirectory() as tmp:
+            spare = pathlib.Path(tmp) / 'htmlcheck.py'
+            shutil.copy2(ROOT / 'tools' / 'htmlcheck.py', spare)
+            (ROOT / 'tools' / 'htmlcheck.py').write_text(src.replace(wide, narrow), encoding='utf-8')
+            try:
+                rc, out = self._run()
+            finally:
+                shutil.copy2(spare, ROOT / 'tools' / 'htmlcheck.py')
+        self.assertEqual(rc, 1, out)
+        self.assertIn('NOT LOOKED AT', out.splitlines()[0])
+        self.assertIn('this checker does not look here', out,
+                      'it went quiet about its own blind spot, which is what this exists to stop')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -228,7 +228,12 @@ def notes_belong_to_a_control(findings: list) -> None:
 #
 # The limit that *is* deliberate (element content, below) is written down. This one was not, so it
 # read as complete coverage. That is the difference between a limit and a blind spot.
-ATTR_WITH_EXPR = re.compile(r'(\w[\w-]*)="([^"\n]*\$\{[^"\n]*)"')
+# `[^"]` and not `[^"\n]`: an attribute value may be written across two lines - a long `title=` with
+# its text wrapped - and the line-bound version could not match one, so it read the value as absent.
+# The crude scan below saw the interpolation and the careful one did not, which is how this hole was
+# found: by the tool auditing itself on its first run after being widened. Bounded, so an unbalanced
+# quote somewhere cannot make one match swallow the rest of the file.
+ATTR_WITH_EXPR = re.compile(r'(\w[\w-]*)="([^"]{0,600}?\$\{[^"]{0,600}?)"')
 
 
 def interpolations(value: str) -> list:
@@ -274,12 +279,57 @@ def read_ledger() -> dict:
     return out
 
 
+
+# The denominator, found by a **cruder** method than the check uses - and compared by *position*
+# rather than by count, because a crude count is either short or long and neither proves anything.
+#
+# This is the mechanism that would have caught the defect above on the day it was written, and it is
+# the one thing this file learnt that generalises. The careful pass reads attribute values properly.
+# This one walks the raw text and marks every `${` that has an unclosed `="` behind it on the same
+# line - which is over-broad on purpose. Every position it marks must fall inside something the
+# careful pass actually read; one that does not is a **finding about the tool**, printed before any
+# finding about the code.
+#
+# A checker that prints «32 shipped scripts, 30 pages» is telling the truth about what it opened and
+# nothing about what it examined - which is exactly how two thirds of this one's subject stayed
+# invisible while the number on screen looked healthy.
+
+
+def crude_slots(src: str) -> set:
+    """Offsets of every `${` that looks like it is inside a quoted attribute value."""
+    out = set()
+    for m in re.finditer(r'\$\{', src):
+        line_start = src.rfind('\n', 0, m.start()) + 1
+        before = src[line_start:m.start()]
+        q = before.rfind('="')
+        if q < 0:
+            continue
+        if '"' not in before[q + 2:]:          # the attribute's closing quote has not gone by yet
+            out.add(m.start())
+    return out
+
+
 def main() -> int:
     accept = '--accept' in sys.argv
     ledger = {} if accept else read_ledger()
     findings = []
+    seen = missed = 0
     for path in FILES:
         src = re.sub(r'^\s*//.*$', '', path.read_text(encoding='utf-8'), flags=re.M)
+        crude, read = crude_slots(src), []
+        for m in ATTR_WITH_EXPR.finditer(src):
+            # Where each `${` this pass consumed actually starts, so the two can be compared by place.
+            at = src.index(m.group(2), m.start())
+            for expr in interpolations(m.group(2)):
+                read.append(src.index('${' + expr, at))
+                at = read[-1] + 2
+        seen += len(read)
+        blind = crude - set(read)
+        missed += len(blind)
+        for off in sorted(blind)[:3]:
+            findings.append(f'{path.relative_to(ROOT)}:{src[:off].count(chr(10)) + 1}: this checker '
+                            f'does not look here - a cruder scan sees an attribute interpolation the '
+                            f'careful one never read')
         for m in ATTR_WITH_EXPR.finditer(src):
             attr, value = m.group(1), m.group(2)
             line = src[:m.start()].count('\n') + 1
@@ -313,7 +363,12 @@ def main() -> int:
         LEDGER.write_text('\n'.join(rows) + '\n', encoding='utf-8')
         print(f'{len(findings)} attribute interpolation(s) recorded in {LEDGER.relative_to(ROOT)}')
         return 0
-    print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages')
+    # Before anything about the code: what this tool did not look at. A gap here is a defect in the
+    # checker, and it goes first because a finding count printed under an unstated blind spot is the
+    # number that gets quoted as evidence.
+    print(f'htmlcheck: {len(FILES)} shipped scripts, {len(pages)} pages, '
+          f'{seen} attribute interpolation(s) inspected'
+          + (f', {missed} NOT LOOKED AT' if missed else ', none left unread'))
     for f in findings:
         print('  ' + f)
     print()

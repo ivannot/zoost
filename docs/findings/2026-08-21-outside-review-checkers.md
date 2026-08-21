@@ -66,6 +66,30 @@ its dirty mark over something that never happened - reappearing one system over,
 runtime the earlier fix never touched. A rule learnt in the panel does not travel to the Worker by
 itself.
 
+## 4. What was built so the next one is caught here - the mechanism, not the care
+
+Asked for straight after: catch this class directly, rather than by another reader. The three findings
+above have one shape - **a tool that reports zero over a surface it does not look at** - and the thing
+that catches it is not more attention, it is a **second, cruder scan of the same subject, compared by
+position**.
+
+`htmlcheck` now runs both. The careful pass reads attribute values properly; the crude one walks the
+raw text and marks every `${` that has an unclosed `="` behind it on the same line, which is
+over-broad on purpose. Every position the crude one marks must fall inside something the careful one
+actually read. One that does not is a finding *about the tool*, and it is printed **above** any finding
+about the code, because a finding count under an unstated blind spot is the number that gets quoted as
+evidence. The headline says «223 attribute interpolation(s) inspected, none left unread» instead of
+«32 shipped scripts, 30 pages», which was true and told nobody anything.
+
+Two proofs, and the second is the one worth keeping. Restoring the old pattern makes it announce
+itself: «148 inspected, **75 NOT LOOKED AT**», with the places. And on its very first run after being
+widened it found a hole nobody had reported - an attribute value written across two lines, which the
+line-bound pattern could not match at all. The tool audited itself and was right.
+
+Counts alone would prove nothing here: a crude count is either short or long, and neither says whether
+the careful pass covered the same ground. Positions are checkable, which is what makes this a
+mechanism rather than a number to look at.
+
 ## Said rather than fixed
 
 - **The origin check sits inside `if (origin)`**, so a client that omits the header skips it. Left as
