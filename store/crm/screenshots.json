@@ -1,7 +1,7 @@
 {
   "_": "What is on the Store listing right now. Written by hand at submission, like the RELEASES.md row - the upload is a manual step and nothing here can observe it. `python3 tools/shots.py` prints the digest of the current set and says whether it still matches this one.",
-  "version": "1.45.0",
-  "digest": "426760aaf16e9590",
+  "version": "1.46.0",
+  "digest": "37cf695436b95c29",
   "files": [
     "1.png",
     "2.png",
