@@ -3998,5 +3998,45 @@ class ACheckerCountsWhatItInspected(unittest.TestCase):
                       'it went quiet about its own blind spot, which is what this exists to stop')
 
 
+class TheBranchThatGetsTaggedIsChecked(unittest.TestCase):
+    """`main` was red for the length of somebody else's review, and nothing said so.
+
+    The battery was a *release* gate: `release.yml` runs it before it builds, with a comment saying two
+    minutes there makes those checks unskippable. True of the tag. But CI ran on tags and on nothing
+    else, so the branch that gets tagged could sit red indefinitely, and the moment anyone found out
+    was the first `git push --follow-tags` - a release half-cut over a branch nobody had verified.
+
+    It happened for the most ordinary reason there is: a file edited after the last local run and
+    committed without another. The local rule is right and had already been broken, which is this
+    repository's own definition of a rule that needs a check behind it."""
+
+    WF = ROOT / '.github/workflows/battery.yml'
+
+    def test_the_battery_runs_on_a_push_to_the_default_branch(self):
+        self.assertTrue(self.WF.exists(), 'nothing runs the suite between a commit and a tag')
+        wf = self.WF.read_text(encoding='utf-8')
+        self.assertRegex(wf, r'push:\s*\n\s*branches: \[main\]', 'it does not fire on a push to main')
+        self.assertIn('bash tests/run.sh', wf, 'it fires and runs something else')
+
+    def test_it_pins_its_actions_like_every_other_workflow(self):
+        # A tag is a ref its owner can repoint; the rest of this repository pins to a commit and says
+        # which release it was. A new workflow is exactly where that slips.
+        for f in sorted((ROOT / '.github/workflows').glob('*.yml')):
+            for line in f.read_text(encoding='utf-8').splitlines():
+                if 'uses:' not in line or line.strip().startswith('#'):
+                    continue
+                self.assertRegex(line, r'uses: [^@]+@[0-9a-f]{40}',
+                                 f'{f.name}: an action is pinned to a moving ref')
+
+    def test_the_live_audit_is_deliberately_not_in_it(self):
+        # auditcheck's live half says nothing until a push has landed, and its claims ledger is read
+        # and accepted as part of finishing a piece of work - so on push it would be red for ordinary
+        # reasons, and a red mark that is usually noise teaches everyone to ignore the mark.
+        wf = self.WF.read_text(encoding='utf-8')
+        self.assertNotIn('auditcheck.py', wf.split('jobs:')[1],
+                         'the push workflow runs auditcheck, which will be red for ordinary reasons')
+        self.assertIn('auditcheck', wf.split('jobs:')[0], 'the omission is not explained')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

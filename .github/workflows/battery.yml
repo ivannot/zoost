@@ -1,0 +1,45 @@
+# The battery, on every push to the default branch.
+#
+# It existed only as a release gate. `release.yml` runs `bash tests/run.sh` before it builds anything,
+# with a comment saying that two minutes there makes those checks unskippable - and that is true of the
+# tag, which is the moment it was written for. But **CI ran on tags and on nothing else**, so `main`
+# could sit red indefinitely with nothing saying so, and the moment anyone found out was the first
+# `git push --follow-tags`: a release half-cut, over a branch nobody had verified.
+#
+# It happened. A findings note was edited *after* the last local run of the battery and committed
+# without another, and `main` was red for the length of a review by somebody else. The local discipline
+# is real - run it after the last edit, not before - and a discipline that has already been broken once
+# is exactly what this repository says to replace with a check.
+#
+# So: the same battery, on push, on the branch that gets tagged. Two minutes a commit, and the window
+# between a commit and a tag stops being the one place nothing looks.
+#
+# What is deliberately *not* here: `auditcheck`. Its live half says nothing until a push has landed,
+# and its claims ledger is read and accepted as part of finishing a piece of work - so on push it
+# would be red for ordinary reasons and would teach everyone to ignore a red mark. It stays where it
+# is, in the release gate and in the routine.
+name: battery
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to a commit, like every other action in this repository: a tag is a ref its owner can
+      # repoint. The trailing comment records which release it was.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          # The suite derives two things from git - the sitemap's lastmod per file, and what whatsnew
+          # reports since a tag - and a shallow checkout has neither. The release workflow learnt this
+          # the hard way on the first release that ran the gate.
+          fetch-depth: 0
+
+      - name: bash tests/run.sh
+        run: bash tests/run.sh

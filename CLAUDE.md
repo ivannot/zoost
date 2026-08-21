@@ -549,6 +549,15 @@ the first page outside the guides to use it rendered it as ordinary bold text. E
 `.card` / `.note` history repeating, and this time `classes_defined` caught it on the same day rather
 than after months. It is `.doc`-scoped, so no landing page changes.
 
+**The battery runs after the *last* edit, and now something checks that too.** `main` was red for the
+length of somebody else's review: a findings note edited after the last local run and committed
+without another, and the failure was in the note, not the code. Nothing said so, because CI ran **on
+tags and on nothing else** - so the branch that gets tagged could sit red indefinitely and the moment
+of discovery would be the first `git push --follow-tags`, with a release half-cut. `.github/workflows/battery.yml`
+runs `tests/run.sh` on every push to `main`; the local rule stands and is no longer the only thing
+standing. Reported from outside, twice in two days, which is the argument for the workflow rather than
+for more care.
+
 **A change worth keeping → a commit.** Do not batch unrelated work into one commit. Commit it yourself
 rather than proposing a message and waiting — the rule that only Ivan decides what goes in a commit
 message is about *attribution*, which stays absent, not about a review gate on the wording.

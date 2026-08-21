@@ -131,7 +131,12 @@ its own.
 
 The reviewer read all 158 content interpolations in that file: clean - helpers that escape in turn,
 numbers, markup this code had just built, and the Deluge source through `hl()`, which tokenises and
-escapes every piece. So there is nothing to fix. The sentence now says which surface its reason covers.
+escapes every piece.
+
+**The fix.** None in the code, and that is the finding: the sentence in `tools/htmlcheck.py` now names
+the surface its reason covers - the panel - and says outright that the exported report is not under
+it. An entry that needed no fix says so; leaving the section out is how this one turned the suite red,
+because the shape test reads «what broke» and then looks for the other two.
 
 **The rule.** The same one as №1, from the other side: **a limit is only as declared as its reason is
 accurate.** «We do not check X, because Y» is a blind spot the moment Y stops being true somewhere X
