@@ -31,13 +31,28 @@ since changed is worth nothing. Change one line after certifying and this says s
 one, and a failure is recordable - a tool that can only hear «yes» is a tool that is asking nothing.
 """
 import argparse
+import contextlib
 import datetime
+import io
 import json
 import pathlib
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def in_its_repository() -> bool:
+    """This tool is only correct where the repository is. It reads the manifest for the version, asks
+    git what changed since the tag, and writes a record that has to be committed - so a copy of it
+    somewhere else does not do less, it answers *wrongly*: no tag, so nothing changed, so nothing to
+    run, so the release looks certified. That is the one failure a tool like this must not have, and
+    the author raised it before it happened: «I am not sure I have an up-to-date tools directory».
+
+    So the copy that travels is the **plan**, which is text and cannot be run, and the tool refuses to
+    work anywhere but here. See `--plan-file`, which is what tools/totest.sh writes into the folder
+    the browser machine sees."""
+    return (ROOT / '.git').exists() and (ROOT / 'apps').is_dir()
 
 # What only a person with a real org can establish. Each entry: what to do, what a pass looks like,
 # and which shipped files make it apply. `covers` is matched against the paths changed since the tag.
@@ -321,13 +336,29 @@ def check(app: str) -> int:
 
 
 def main() -> int:
+    # First, before argparse: the parser reads apps/ to know the product names, so a copy elsewhere
+    # died on a traceback rather than on the sentence written for exactly this. A guard that only
+    # fires after the thing it guards has already thrown is the shape of guard this repository keeps
+    # finding - «a check that skips when the thing is absent is not a check».
+    if not in_its_repository():
+        print('This is a copy: it is only correct inside the Zoost repository, where the manifest, the')
+        print('tags and the record it writes all are. Run it there - and if you are reading a plan on')
+        print('another machine, that file is the thing that travels.')
+        return 2
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('app', choices=[p.name for p in sorted((ROOT / 'apps').iterdir()) if p.is_dir()])
     ap.add_argument('--pass', dest='passed', help='ids that were run and worked, e.g. 1,2')
     ap.add_argument('--fail', dest='failed', help='ids that were run and did not')
     ap.add_argument('--note', default='', help='what you saw - kept with the answer')
     ap.add_argument('--check', action='store_true', help='what tools/release.sh asks before tagging')
+    ap.add_argument('--plan-file', help='write the plan there as plain text, for the machine you test on')
     a = ap.parse_args()
+    if a.plan_file:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            plan(a.app)
+        pathlib.Path(a.plan_file).write_text(out.getvalue(), encoding='utf-8')
+        return 0
     if a.check:
         return check(a.app)
     if a.passed or a.failed:

@@ -25,11 +25,20 @@ STAMP=.git/zoost-lastsync
 # because it was not: shots.py rendered a new screenshot set for a release and this exited at the
 # stamp without copying it, so the dashboard was about to be fed the previous version's images -
 # found by the author, on the release where it mattered.
+# The commit is part of what is over there now: `tools/totest.sh` writes the manual test plan into
+# that folder, and the plan names the commit it is about - so a commit with no file change under
+# apps/ (a fix in tools/, a rewritten note) would leave a plan claiming a commit that has moved on.
+# The stamp carries it, and a mismatch syncs. The plan's own generator is watched for the same
+# reason: editing the catalogue of checks changes what he has to run, and nothing under apps/ moves.
+HEAD_NOW=$(git rev-parse HEAD 2>/dev/null || echo none)
+
 if [ -f "$STAMP" ] \
+   && [ "$(cat "$STAMP" 2>/dev/null)" = "$HEAD_NOW" ] \
    && [ -z "$(find apps -type f -newer "$STAMP" -print -quit 2>/dev/null)" ] \
-   && [ -z "$(find dist/store -type f -newer "$STAMP" -print -quit 2>/dev/null)" ]; then
+   && [ -z "$(find dist/store -type f -newer "$STAMP" -print -quit 2>/dev/null)" ] \
+   && [ -z "$(find tools/handcheck.py -newer "$STAMP" -print -quit 2>/dev/null)" ]; then
   exit 0
 fi
 
 bash tools/totest.sh >/dev/null 2>&1 || true
-touch "$STAMP"
+printf '%s' "$HEAD_NOW" > "$STAMP"

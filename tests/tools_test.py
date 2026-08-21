@@ -2366,7 +2366,12 @@ class TheExtensionsReachTheMachineThatLoadsThem(unittest.TestCase):
             self.assertEqual(green.returncode, 0, f'a writable destination was refused: {green.stderr}')
             left = sorted(p.name for p in dest.iterdir())
             self.assertNotIn('.zoost-writable', left, 'the probe left its file in the mirror')
-            self.assertLessEqual(set(left), {'crm', 'analytics', 'store'},
+            # The two extensions, the Store images, and one plain-text plan per product - what a
+            # person has to exercise there for this release, derived on every sync. Nothing else, and
+            # deliberately **not** tools/: a copy of handcheck.py over there would have no tags and no
+            # apps/, so it would answer «nothing to run» and make an uncertified release look signed.
+            self.assertLessEqual(set(left), {'crm', 'analytics', 'store',
+                                             'what-to-test-crm.txt', 'what-to-test-analytics.txt'},
                                  f'the mirror holds something nobody asked for: {left}')
             self.assertIn('crm', left, 'the mirror is missing an extension')
 
@@ -3835,6 +3840,32 @@ class TheManualHalfOfATestIsRecordedAndGates(unittest.TestCase):
         src = (ROOT / 'tools' / 'release.sh').read_text(encoding='utf-8')
         self.assertIn('handcheck.py "$APP" --check', src,
                       'release.sh can tag over a release nobody exercised')
+
+    def test_a_copy_of_the_tool_refuses_to_answer(self):
+        # A copy on another machine has no tags and no apps/, so it would say «nothing changed,
+        # nothing to run» - and an uncertified release would look certified. It has to refuse, not
+        # do less. Raised by the author before it happened: «I am not sure I have an up-to-date
+        # tools directory».
+        with tempfile.TemporaryDirectory() as tmp:
+            elsewhere = pathlib.Path(tmp) / 'tools'
+            elsewhere.mkdir()
+            shutil.copy2(ROOT / 'tools' / 'handcheck.py', elsewhere / 'handcheck.py')
+            out = subprocess.run([sys.executable, str(elsewhere / 'handcheck.py'), 'crm'],
+                                 capture_output=True, text=True)
+            self.assertEqual(out.returncode, 2, out.stdout + out.stderr)
+            self.assertIn('only correct inside', out.stdout)
+
+    def test_the_plan_travels_and_the_tool_does_not(self):
+        # What reaches the machine with the browser is text: derived on every sync, naming its commit,
+        # and impossible to run. The tool stays where the manifest, the tags and the record are.
+        sync = (ROOT / 'tools' / 'totest.sh').read_text(encoding='utf-8')
+        self.assertIn('--plan-file', sync, 'the test folder gets no plan, so he tests from memory')
+        self.assertNotIn('rsync $RSYNC_FLAGS tools', sync, 'the tools folder must not be mirrored')
+        stamp = (ROOT / 'tools' / 'synctest.sh').read_text(encoding='utf-8')
+        # A commit with no change under apps/ still moves what the plan says. Without this the file
+        # over there names a commit that has moved on, which is the one thing it must never do.
+        self.assertIn('git rev-parse HEAD', stamp)
+        self.assertIn('tools/handcheck.py', stamp)
 
 
 if __name__ == '__main__':

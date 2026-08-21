@@ -168,6 +168,19 @@ if [ -d dist/store ]; then
   IMGS=$(find "$DEST/store" -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
 fi
 
+# And the third thing that has to reach the machine with the browser: **what a person has to run
+# there, for this release**. `tools/handcheck.py` cannot go - it reads the manifest, asks git what
+# changed since the tag and writes a record that gets committed, so a copy of it on another machine
+# would answer «nothing changed, nothing to run» and make an uncertified release look certified.
+# Raised by the author before it bit: «I am not sure I have an up-to-date tools directory».
+#
+# So the plan travels and the tool does not. It is derived on every sync, which is what makes it
+# impossible to read a stale one: the file says which commit it is about, and the answer is recorded
+# back where the repository is.
+for app in crm analytics; do
+  python3 tools/handcheck.py "$app" --plan-file "$DEST/what-to-test-$app.txt" 2>/dev/null || true
+done
+
 printf '%s\n' "$DEST/crm" "$DEST/analytics"
 if [ -n "$IMGS" ]; then
   echo "$DEST/store  ($IMGS image(s), the set to upload)"
