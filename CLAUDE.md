@@ -1086,9 +1086,15 @@ What that request means, in order. Do all of it without being asked:
    no judgement left in it. **The decision is Submit for review**, it is in the dashboard, and it stays
    yours - the listing fields and the screenshots cannot be set through the API anyway, so you open
    the dashboard regardless, with the package already there.
-6d. **Ask him for the dashboard page, and run `python3 tools/dashcheck.py <app> page.html`.** Not
-   the fields one by one - the whole page source, which is easier for him to paste and carries every
-   field at once. It reads the six texts by their `data-payload` anchor, the privacy URL, the
+6d. **`python3 tools/dashcheck.py <app> page.html` is available to him, and is not a gate you hold
+   him to.** «You have to trust that I pasted the texts, the way you trust that I ran the tests.»
+   Right, and the asymmetry was mine: the manual checks are recorded on his word, so a paste is too.
+   What the tool is for is catching a *slip* - a box filled with the wrong section, a paste cut short -
+   so offer it when he wants it, and reach for it after a refusal. Never make the submission wait on
+   it. What it must always do is hand over the finished texts *before* he opens the dashboard, so
+   there is nothing to come back for: that is the rule three lines up, and it is what makes this step
+   optional rather than skipped. Not the fields one by one - the whole page source, which is easier
+   for him to paste and carries every field at once. It reads the six texts by their `data-payload` anchor, the privacy URL, the
    data-collection boxes, the three attestations and the remote-code answer, and diffs them against
    `store/<app>/store-listing.md`. This is the only check that exists on the listing, and it has to
    be asked for: Google exposes no API for those fields, which is why the step is by hand at all.
