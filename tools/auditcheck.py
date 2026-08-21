@@ -574,7 +574,15 @@ def deploy_state(findings: list, notes: list, offline: bool, before_tag: bool = 
 # The wrong direction is the expensive one. Saying "in review" about something published costs
 # nothing but confusion; saying "on the Chrome Web Store" about something still in review sends a
 # reader to a listing that serves an error, which is how this got its first finding.
-UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat', re.I)
+# «Not there right now» in every shape the site actually uses, including the transitional one: a
+# listing withdrawn and going back up. A sentence that carries both readings is describing the
+# transition, and the unpublished half is the one that governs - otherwise the honest sentence «back
+# on the Chrome Web Store shortly» is reported as a claim that it is on the Store, which is the
+# checker refusing the truth for containing the words of the falsehood.
+UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat'
+                         r'|being republished|back on the [^.]*shortly|has nothing to give you'
+                         r'|sta tornando online|stanno tornando online|di nuovo sul [^.]*a breve'
+                         r'|non ha niente da darti', re.I)
 PUBLISHED = re.compile(r'on the (Chrome )?Web Store|sul Chrome Web Store', re.I)
 PRODUCT = {'crm': re.compile(r'Zoho CRM|Zoost CRM', re.I), 'analytics': re.compile(r'Zoho Analytics|Zoost Analytics', re.I)}
 
@@ -606,7 +614,7 @@ def published_state_is_stated(findings: list, notes: list) -> None:
                 if state[app] and UNPUBLISHED.search(line):
                     findings.append(f'site/{rel}: says Zoost {app} is in review; the listing serves '
                                     f'{live[app]["store"]} — "{line[:96]}"')
-                if not state[app] and PUBLISHED.search(line):
+                if not state[app] and PUBLISHED.search(line) and not UNPUBLISHED.search(line):
                     findings.append(f'site/{rel}: says Zoost {app} is on the Store; the listing '
                                     f'serves nothing — "{line[:96]}"')
     notes.append('  ' + ', '.join(f'Zoost {a} {"published" if v else "not published"}' for a, v in state.items())

@@ -30,7 +30,8 @@ a7203f53e96e94b8  tests/tools_test.py: 'Reported as «i colori sono utili ma non
 c67ff172ee11cff1  tests/tools_test.py: 'questa pagina non esiste',
 afb8397dc20b1735  tests/tools_test.py: 'devono essere allineate a sinistra',
 b8afae2985f4d224  tools/auditcheck.py: r'|mai|sempre|nessun[ao]?|niente|soltanto|unic[ao]|ogni|tutt[eio])\b'
-5f32609377eae3a9  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat', re.I)
+dd128dd07336eaf7  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in revisione|not yet published|non è ancora pubblicat'
+7c777cfccf826fc6  tools/auditcheck.py: r'|non ha niente da darti', re.I)
 5b807b2eb99100a9  tools/langcheck.py: 'della', 'delle', 'dello', 'degli', 'questo', 'questa', 'queste', 'questi', 'quello', 'quella',
 8c60a9097a6fa9ac  tools/langcheck.py: 'perché', 'perche', 'viene', 'vengono', 'quando', 'quindi', 'invece', 'senza', 'sempre',
 e2148af1f3f54292  tools/langcheck.py: 'ogni', 'tutti', 'tutte', 'tutto', 'nella', 'nelle', 'dalla', 'dalle', 'sulla', 'sulle',
