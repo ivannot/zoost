@@ -254,9 +254,10 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m "initial mirror"</code><
       sliders. There is no single right value across graphs, so the trade-off is yours to make. The
       starting values live in <b class="ui">⚙ Settings</b>, and the two are the same setting seen from two
       places.</li>
-    <li><b class="ui">Fields: key</b> draws each table with the columns that carry the relations - the
-      keys - and nothing else; <b class="ui">Fields: all</b> draws every column. Key is the readable
-      choice on anything larger than a handful of tables, and it is the one to set before printing.</li>
+    <li><b class="ui">Fields: key</b> draws each table with the columns worth seeing at that size - the
+      ones that carry a relation, the mandatory ones, and <code>Name</code>, <code>Owner</code> and
+      <code>id</code>; <b class="ui">Fields: all</b> draws every column. Key is the readable choice on
+      anything larger than a handful of tables, and it is the one to set before printing.</li>
     <li><b class="ui">Emphasis: relations</b> pushes the table boxes into the background and brings the
       relation names forward; <b class="ui">Emphasis: tables</b> puts it back. Which of the two you
       want depends on the question - what is joined to what, or what each table holds.</li>
