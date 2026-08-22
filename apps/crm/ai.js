@@ -286,7 +286,7 @@ async function aiFocus(op = beginWorkspaceOp()) {
     if (p.endsWith('.dg')) {
       const g = await ensureGraph(op);
       const n = Object.values(g.nodes).find((x) => x.file === p);
-      if (n) return block(`the Deluge function ${n.namespace}.${n.name}`, aiTrunc(n.source_code || '', 5000), 'deluge');
+      if (n) return block(`the Deluge function ${n.namespace}.${n.name}`, aiTrunc(await fnSource(n, op), 5000), 'deluge');
       return '';
     }
     if (p.startsWith('workflows/')) {
@@ -396,6 +396,30 @@ function aiCap(lines, total, how, limit = 120) {
     + `\n… and ${total - limit} more (${total} in all). ${how}`;
 }
 
+/** The Deluge source of one function, read from the file it is in.
+ *
+ *  It used to be `n.source_code`, a field loadGraph() put on every node. That worked while the graph
+ *  was built by opening every .dg and stopped the day the summary cache landed: a node served from
+ *  `functions/meta-index.json` carries the references and the counts and an empty source, and after
+ *  the first pull every node is served from it. So `search_code` answered «(no matches)» over an org
+ *  it had never read, `get_function` returned a function with no body, and the focus block handed the
+ *  model an empty fence - three tools quietly answering about nothing, which is the defect this
+ *  repository already met in the Analytics `search_sql`.
+ *
+ *  Read once per node and kept on it, so a `search_code` over 900 functions opens each file once and
+ *  a second question costs nothing. The cache dies with the graph, which is rebuilt whenever anything
+ *  is written - so a re-pulled function is re-read rather than answered from memory.
+ */
+async function fnSource(n, op) {
+  if (!n || !n.file) return '';
+  if (typeof n._src === 'string') return n._src;
+  let src = '';
+  try { src = await op.read(n.file); } catch (_) { src = ''; }
+  // The read is the await, and the node it belongs to may be from a workspace we have left by now.
+  if (!op.current()) throw new Error(WS_MOVED);
+  n._src = src;
+  return src;
+}
 async function aiExecTool(name, input, op = beginWorkspaceOp()) {
   const g = await ensureGraph(op); const nodes = g.nodes; input = input || {};
   const findFn = (q) => { if (!q) return null; if (nodes[q]) return nodes[q]; const low = String(q).toLowerCase(); return Object.values(nodes).find((n) => (n.namespace + '.' + n.name).toLowerCase() === low || (n.name || '').toLowerCase() === low || (n.api_name || '').toLowerCase() === low); };
@@ -411,10 +435,25 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
     return `${rows.length} function(s) match (${crit}); ${Object.keys(nodes).length} in the workspace.\n`
       + rows.map((r) => `${r.id} - ${r.s.lines} lines, ${r.s.apiCalls} calls`).join('\n');
   }
-  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${n.source_code || ''}`; }
+  if (name === 'get_function') { const n = findFn(input.name); if (!n) return MSG.noFn + input.name; return `namespace.name: ${n.namespace}.${n.name}\napi_name: ${n.api_name || ''}\nreturns: ${n.return_type || ''}  REST: ${!!n.rest}\ncalls: ${(n.calls || []).join(', ') || '(none)'}\ncalled_by: ${(n.called_by || []).join(', ') || '(none)'}\nused_in: ${(n.associated_place || []).map((p) => p._type).join(', ') || '(none)'}\nconnections: ${(n.connections || []).map((c) => c.name).join(', ') || '(none)'}\nreads_modules: ${(n.modules || []).filter((m) => m.mode === 'read').map((m) => m.name).join(', ') || '(none)'}\nwrites_modules: ${(n.modules || []).filter((m) => m.mode === 'write').map((m) => m.name).join(', ') || '(none)'}${n.modulesUnknown ? `\nmodule_not_determinable_in: ${n.modulesUnknown} call(s)` : ''}\n${n.stats ? `size: ${n.stats.lines} lines (${n.stats.codeLines} code), ${n.stats.chars} chars\noutbound_calls: ${n.stats.apiCalls} (invokeurl ${n.stats.invokeurl}, zoho.crm ${n.stats.crm}, other Zoho ${n.stats.zoho}, sendmail ${n.stats.sendmail})\n` : ''}last_modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' ' + String(n.updatedTime).slice(0, 16) : ''}\n\n${await fnSource(n, op)}`; }
   if (name === 'who_calls') { const n = findFn(input.name); return n ? ((n.called_by || []).join('\n') || '(no callers)') : MSG.noFn + input.name; }
   if (name === 'get_callees') { const n = findFn(input.name); return n ? ((n.calls || []).join('\n') || '(no callees)') : MSG.noFn + input.name; }
-  if (name === 'search_code') { const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)'; const hits = []; Object.values(nodes).forEach((n) => { const src = n.source_code || ''; const i = src.toLowerCase().indexOf(q); if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`); }); return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.', 60) : '(no matches)'; }
+  if (name === 'search_code') {
+    const q = (input.query || '').toLowerCase(); if (!q) return '(empty query)';
+    const hits = []; let unread = 0;
+    for (const n of Object.values(nodes)) {
+      const src = await fnSource(n, op);
+      // A function whose file could not be read is not a function without the term in it. Counted and
+      // said, because «no matches» over sources nobody opened is the answer this tool used to give
+      // for the whole org.
+      if (!src) { unread++; continue; }
+      const i = src.toLowerCase().indexOf(q);
+      if (i >= 0) hits.push(`${n.namespace}.${n.name}:${src.slice(0, i).split('\n').length}`);
+    }
+    const caveat = unread ? ` ${unread} function(s) could not be read; absence is not exhaustive.` : '';
+    return hits.length ? aiCap(hits, hits.length, 'Use a longer or more specific substring.' + caveat, 60)
+                       : `(no matches in ${Object.keys(nodes).length - unread} function(s))${caveat}`;
+  }
   if (name === 'get_module') { const mods = (await loadModuleFiles(op)) || {}; const m = mods[input.api_name] || Object.values(mods).find((x) => (x.api_name || '').toLowerCase() === String(input.api_name).toLowerCase()); return m ? aiModuleText(m) : 'Module not found: ' + input.api_name; }
   if (name === 'list_failures') {
     let d = null; try { d = JSON.parse(await op.read('failures/index.json')); } catch (_) {}

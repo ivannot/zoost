@@ -439,7 +439,7 @@ function select(id, nopush) {
   const badges = schema
     ? `<span class="badge">${esc(n.namespace)}</span>${n.dead_suspect ? '<span class="badge">unreferenced</span>' : ''}`
     : `<span class="badge">${esc(n.namespace)} \u00b7 ${esc(n.category || '')}</span>${n.rest ? '<span class="badge b-rest">REST</span>' : ''}${n.dead_suspect ? '<span class="badge">no caller</span>' : ''}`;
-  const extra = schema ? fieldsTableHtml(n) : srcBlock(n);
+  const extra = schema ? fieldsTableHtml(n) : '';   // no source in this window - see graphlogic.js
   const layInfo = (schema && (n.layouts || []).length) ? `<div class="assoc" style="margin-top:2px">Layouts (${n.layouts.length}): ${n.layouts.map((l) => esc(l.name || String(l.id)) + (l.visible === false ? ' (hidden)' : '')).join(' \u00b7 ')}</div>` : '';
   $('main').innerHTML = `
     <div class="crumbs">${crumb}</div>

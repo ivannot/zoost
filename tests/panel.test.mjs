@@ -606,7 +606,10 @@ const focusCtx = {
   get connectionData() { return globalThis.__cn || []; },
   get moduleData() { return globalThis.__md || []; },
   aiTrunc: (t, n) => String(t).slice(0, n),
-  ensureGraph: async () => ({ nodes: { a: { file: 'ns/Fn.dg', namespace: 'ns', name: 'Fn', source_code: 'info 1;' } } }),
+  // No `source_code` on the node: the graph does not carry one, and a fixture that invented it here
+  // is a fixture that could not have shown the defect. The source is on disk, where the code reads it.
+  ensureGraph: async () => ({ nodes: { a: { file: 'ns/Fn.dg', namespace: 'ns', name: 'Fn' } } }),
+  WS_MOVED: 'moved',
   readFile: async (p) => {
     if (globalThis.__files && globalThis.__files[p]) return globalThis.__files[p];
     throw new Error('not on disk');
@@ -621,6 +624,7 @@ const focusCtx = {
   JSON, Object,
 };
 const { aiFocus } = load([sliceFn('apps/crm/modules.js', 'moduleRefusal'),
+                          sliceFn('apps/crm/ai.js', 'fnSource'),
                           sliceFn('apps/crm/ai.js', 'aiFocus')], focusCtx);
 
 function looking(at, extra = {}) {
@@ -629,7 +633,7 @@ function looking(at, extra = {}) {
 }
 
 test('a Deluge function still gets its source as focus', async () => {
-  const out = await looking('ns/Fn.dg');
+  const out = await looking('ns/Fn.dg', { __files: { 'ns/Fn.dg': 'info 1;' } });
   assert.match(out, /CURRENT FOCUS/);
   assert.match(out, /Deluge function ns\.Fn/);
   assert.match(out, /info 1;/);
@@ -8431,5 +8435,130 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
               'the English page still says the drawing is replaced by the next one');
     assert.ok(/la finestra consuma la\s+propria copia nel momento in cui si apre/.test(it),
               'the Italian page still describes the old retention');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The source of a function is in its file, and a fast path may not decide whether a reader gets it.
+//
+// `loadGraph()` used to put `source_code` on every node, and the summary cache turned that into a
+// lie: a node served from `functions/meta-index.json` carries the references and the counts and an
+// empty string, and after the first pull every node is served from it. Three assistant tools and
+// the Markdown export read that field. Written from the run, not from the source - the first proof
+// of this was a script that built the graph over a warm summary and printed `source_code: ""`.
+{
+  test('a graph node served from the summary carries no source, and fnSource reads the file', async () => {
+    const files = {
+      'functions/meta-index.json': JSON.stringify({ v: 5, files: {
+        'functions/ns/a.dg': { namespace: 'ns', name: 'a', api_name: 'a', display_name: 'A',
+                               refs: [], stats: { lines: 3, codeLines: 3, chars: 30, apiCalls: 0 }, modules: [] },
+      } }),
+      'functions/ns/a.dg': 'info "hello";\ninfo "world";\nreturn 1;',
+    };
+    let reads = 0;
+    const op = { root: {}, current: () => true,
+                 read: async (p) => { reads++; if (!(p in files)) throw new Error('ENOENT ' + p); return files[p]; } };
+
+    // The real graph builder, so the node is the shipped shape rather than a copy of it.
+    const gctx = { window: {}, console };
+    vm.createContext(gctx);
+    vm.runInContext(read('apps/crm/graph-core.js'), gctx);
+
+    const { loadGraph } = load([sliceFn('apps/crm/sidepanel.js', 'loadGraph')], {
+      WS_MOVED: 'moved', META_INDEX: 'functions/meta-index.json', SUMMARY_V: 5,
+      distrustSummary: false, _dirtySource: new Set(), bound: null, lastCtx: null,
+      fnStats: (t) => ({ lines: String(t).split('\n').length }),
+      saveGraphFacts: async () => {},
+      walk: async function* () { yield 'functions/ns/a.dg'; },
+      window: gctx.window,
+    });
+    const g = await loadGraph(op);
+    const n = g.nodes['ns.a'];
+    assert.ok(n, 'the summary path built no node at all');
+    // `in`, not truthiness: the defect *was* an empty string, so `!n.source_code` passes on it and
+    // on the fix alike. Proven by planting the old line back and watching this go red.
+    assert.ok(!('source_code' in n), 'a node carries a source the graph never read - the field is back');
+
+    const { fnSource } = load([sliceFn('apps/crm/ai.js', 'fnSource')], { WS_MOVED: 'moved' });
+    assert.equal(await fnSource(n, op), files['functions/ns/a.dg'], 'fnSource did not read the file');
+    const after = reads;
+    assert.equal(await fnSource(n, op), files['functions/ns/a.dg'], 'the second read differs from the first');
+    assert.equal(reads, after, 'fnSource re-opens the file on every question');
+  });
+
+  test('fnSource refuses to answer about a workspace that has been left', async () => {
+    const { fnSource } = load([sliceFn('apps/crm/ai.js', 'fnSource')], { WS_MOVED: 'moved' });
+    const op = { current: () => false, read: async () => 'info "x";' };
+    await assert.rejects(() => fnSource({ file: 'functions/ns/a.dg' }, op), /moved/);
+  });
+
+  // And the tools that read it. `search_code` answering «(no matches)» over an org whose sources it
+  // never opened is the same defect as the Analytics `search_sql`, which had never run once.
+  test('the assistant reads the source from disk, not from the graph node', () => {
+    const ai = read('apps/crm/ai.js');
+    assert.ok(!/n\.source_code|\.source_code \|\| ''/.test(ai.replace(/^ \*.*$/gm, '')),
+              'a tool still reads source_code off a graph node');
+    for (const tool of ['search_code', 'get_function']) {
+      const i = ai.indexOf(`name === '${tool}'`);
+      assert.ok(i > 0, `id=${tool} is gone from the tool switch`);
+      assert.ok(/fnSource\(/.test(ai.slice(i, i + 1400)), `id=${tool} does not reach the file`);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Two reports of one workspace may not disagree about how many functions the org has. The HTML has
+// always enumerated the index and marked what a pull could not download; the Markdown enumerated the
+// call graph, which is built by walking the .dg files - so it listed the downloaded ones and printed
+// their number as the org's function count. The report written to be handed to an assistant was the
+// one that undercounted, and it would have answered that a function the org has does not exist.
+{
+  const mdGlobals = {
+    SCOPE_DEFAULT: { functions: true, modules: true, workflows: true, schedules: true, connections: true,
+                     actions: true, failures: true, health: true, code: true },
+    SCOPE_KEYS: ['functions', 'modules', 'code'],
+    bound: { instance: 'yourinstance', org: '1234567890', label: 'Acme', base: 'https://crm.zoho.eu' },
+    envOf: () => 'eu', freshnessLine: () => 'just now',
+    byField: (f) => (a, b) => String(a[f]).localeCompare(String(b[f])),
+    wfScheduled: () => ({ count: 0, delays: [] }), isFnAction: () => false,
+    moduleRefusal: () => '', actionKindLabel: (k) => k,
+    actStale: () => false, actKept: () => false, actThin: () => false,
+    _mdCell: (x) => String(x == null ? '' : x),
+    PRODUCT_NAME: 'Zoost', PRODUCT_URL: 'https://zoost.it', PRODUCT_AUTHOR: 'Ivan', LEGAL_DISCLAIMER: 'x',
+  };
+  const data = () => ({
+    fns: [
+      { api_name: 'alpha', display_name: 'Alpha', namespace: 'ns', rest: false, code: 'info "a";',
+        downloaded: true, associated_place: null, connections: [],
+        stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 },
+        node: { id: 'ns.alpha', namespace: 'ns', name: 'alpha', api_name: 'alpha', calls: [], called_by: [],
+                stats: { lines: 1, codeLines: 1, chars: 9, apiCalls: 0 } } },
+      { api_name: 'beta', display_name: 'Beta', namespace: 'ns', rest: false, code: '',
+        downloaded: false, associated_place: null, connections: [], stats: null },
+    ],
+    mods: [], g: { nodes: {} }, modRefs: {}, wfs: [], scheds: [], conns: [],
+    fails: { at: null, usage: null, failures: [] }, acts: [], actUsers: new Map(),
+  });
+
+  test('the Markdown lists a function the pull could not download', () => {
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const md = buildExportMarkdown(data(), { functions: true, code: true });
+    assert.ok(md.includes('`ns.beta`'), 'a function in the index is missing from the report');
+    assert.ok(/- Functions: 2 \(1 not downloaded/.test(md), `the count is not the org's: ${md.split('\n')[5]}`);
+    assert.ok(/### ns.beta[\s\S]{0,400}?source: not downloaded/.test(md), 'beta has no section, or does not say why it has no source');
+  });
+
+  test('a function with no source gets no empty code fence', () => {
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const md = buildExportMarkdown(data(), { functions: true, code: true });
+    assert.ok(md.includes('```deluge\ninfo "a";'), 'the downloaded function lost its source');
+    assert.ok(!/```deluge\n\n?```/.test(md), 'an empty fence reads as a function with no body');
+  });
+
+  test('turning off the source keeps every function listed', () => {
+    const { buildExportMarkdown } = load([sliceFn('apps/crm/export.js', 'buildExportMarkdown')], mdGlobals);
+    const md = buildExportMarkdown(data(), { functions: true, code: false });
+    assert.ok(!md.includes('```deluge'), 'source excluded and a fence was written anyway');
+    assert.ok(md.includes('### ns.alpha') && md.includes('### ns.beta'), 'a function vanished with the source');
   });
 }

@@ -464,6 +464,10 @@ async function loadExportData(op = beginWorkspaceOp()) {
       if (!n) return;
       f.modulesR = n.modulesR; f.modulesW = n.modulesW; f.modulesT = n.modulesT;
       f.modulesUnknown = n.modulesUnknown || 0;
+      // What the graph knows about this function, kept beside the index row it belongs to: calls,
+      // callers, signature, description. The Markdown used to enumerate the graph instead of the
+      // index, which is the same divergence one level up - see buildExportMarkdown().
+      f.node = n;
     });
   }
   const modRefs = {};
@@ -509,8 +513,24 @@ function buildExportMarkdown(d, scope) {
   conns = scope.connections ? (conns || []) : [];
   acts = scope.actions ? (acts || []) : [];
   fails = scope.failures ? (fails || { failures: [] }) : { at: null, usage: null, failures: [] };
-  const nodes = scope.functions ? ((g && g.nodes) || {}) : {};
-  const fnList = Object.values(nodes).sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
+  // The enumeration is the index - every function the org has - and not the call graph, which is
+  // built by walking the .dg files and therefore holds only the ones a pull managed to download.
+  // The HTML has always listed all of them, marking what is missing «not downloaded»; this one
+  // listed the downloaded ones and printed their number as the org's function count, so two reports
+  // of one workspace disagreed and the one that disagreed downwards is the one written to be given
+  // to an assistant. It would have answered that a function the org has does not exist - «not read»
+  // masquerading as «does not exist», which is the defect this repository fixed in the Analytics
+  // query tables and left standing here.
+  //
+  // The source comes from `code`, read from disk by loadExportData: a graph node carries none.
+  const fnList = (scope.functions ? (d.fns || []) : [])
+    .map((f) => Object.assign({ namespace: f.namespace, name: f.api_name, api_name: f.api_name,
+                                rest: f.rest, stats: f.stats, source_code: f.code || '' }, f.node || {},
+                              { downloaded: f.downloaded, source_code: f.code || '',
+                                display_name: f.display_name, associated_place: f.associated_place,
+                                connections: f.connections, modified_by: f.modified_by, updatedTime: f.updatedTime }))
+    .sort((a, b) => (a.namespace + '.' + a.name).localeCompare(b.namespace + '.' + b.name));
+  const notDown = fnList.filter((n) => !n.downloaded).length;
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
   const inst = (bound && bound.instance) || 'workspace', org = (bound && bound.org) || '?', env = bound ? envOf(bound.base) : '?';
   const first = (t) => (t || '').split('\n')[0].slice(0, 120);
@@ -518,12 +538,12 @@ function buildExportMarkdown(d, scope) {
   const wfFns = (w) => { const out = []; const det = w.detail; if (det) (det.conditions || []).forEach((c) => { const acts = []; if (c.instant_actions && c.instant_actions.actions) acts.push(...c.instant_actions.actions); (Array.isArray(c.scheduled_actions) ? c.scheduled_actions : []).forEach((sa) => acts.push(...(sa.actions || []))); acts.filter(isFnAction).forEach((a) => out.push(a.name)); }); return [...new Set(out)]; };
   let md = '# Zoho CRM Deluge - Workspace export (AI context)\n\n';
   if (bound && bound.label) md += `- Workspace: ${bound.label}\n`;
-  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
+  md += `- Instance: ${inst}\n- Org: ${org}\n- Environment: ${env}\n- Generated: ${now}\n- Functions: ${fnList.length}${notDown ? ` (${notDown} not downloaded - listed, without source)` : ''} \u00b7 Modules: ${mods.length} \u00b7 Workflows: ${wfs.length} \u00b7 Schedules: ${scheds.length}\n`;
   md += `- Data read from Zoho: ${freshnessLine()}\n\n`;
   md += `- Contents: ${SCOPE_KEYS.filter((k) => scope[k]).join(', ') || 'nothing'}\n\n`;
   md += '> Self-contained, read-only snapshot of this Zoho CRM org\'s Deluge functions, module schema, and automations. Intended as context for an AI assistant used outside the extension.\n\n';
   md += '## Index\n\n### Functions\n';
-  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.description ? ' - ' + first(n.description) : ''}\n`; });
+  fnList.forEach((n) => { const used = [...new Set((n.associated_place || []).map((p) => p._type).filter(Boolean))]; md += `- \`${n.namespace}.${n.name}\`${params(n)}${n.return_type ? ' \u2192 ' + n.return_type : ''}${n.rest ? ' \u00b7 REST' : ''}${used.length ? ' \u00b7 used in ' + used.join('/') : ''}${n.stats ? ` \u00b7 ${n.stats.lines} lines \u00b7 ${n.stats.apiCalls} API call(s)` : ''}${n.downloaded ? '' : ' \u00b7 not downloaded'}${n.description ? ' - ' + first(n.description) : ''}\n`; });
   md += '\n### Modules\n';
   mods.slice().sort(byField('api_name')).forEach((m) => { md += `- \`${m.api_name}\` - ${m.unreadable ? 'not described by Zoho' : `${(m.fields || []).length} fields`}\n`; });
   if (wfs.length) {
@@ -555,7 +575,10 @@ function buildExportMarkdown(d, scope) {
     if (n.modulesT && n.modulesT.length) md += `- reaches by URL: ${n.modulesT.join(', ')}\n`;
     if (n.modulesUnknown) md += `- module not determinable in ${n.modulesUnknown} call(s)\n`;
     if (n.modified_by || n.updatedTime) md += `- modified: ${n.modified_by ? 'by ' + n.modified_by : ''}${n.updatedTime ? ' · ' + String(n.updatedTime).slice(0, 16) : ''}\n`;
-    md += scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
+    // An empty fence would read as a function with no body. Not downloaded is a different fact from
+    // empty, and this report has one job: never to let the two look alike.
+    md += !n.downloaded ? '\n- source: not downloaded - run Pull all, or ↻ Refresh, to fetch it\n\n'
+        : scope.code ? ('\n```deluge\n' + String(n.source_code || '').replace(/```/g, '`\u200b``') + '\n```\n\n') : '\n';
   });
   // Relation-first catalogue: this is the section an LLM should hit when asked
   // \"how do I read the related data of a contact?\"

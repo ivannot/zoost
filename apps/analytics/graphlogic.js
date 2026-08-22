@@ -74,16 +74,21 @@ function applyFilter() {
   if (curView === 'er') erShowMaybeHeavy();
 }
 
-function srcBlock(n) {
-  const code = n.source_code || '';
-  if (!code) return '';
-  const lines = code.split('\n').length;
-  const gut = Array.from({ length: lines }, (_, k) => k + 1).join('\n');
-  const hl = window.highlightDeluge ? window.highlightDeluge(code) : esc(code);
-  const st = n.stats;   // computed by the panel from the same source; counts only, no verdict
-  const callBits = st && st.apiCalls ? ` · ${st.apiCalls} outbound call${st.apiCalls === 1 ? '' : 's'} (${st.invokeurl} invokeurl, ${st.crm} zoho.crm, ${st.zoho} other${st.sendmail ? `, ${st.sendmail} sendmail` : ''})` : st ? ' · no outbound calls' : '';
-  return `<div class="srcwrap"><div class="srchead">Source · ${lines} lines${st ? ` (${st.codeLines} code)` : ''}${callBits} · ${esc(n.namespace)}.${esc(n.name)}</div><div class="srcbody"><pre class="gut">${gut}</pre><pre class="src">${hl}</pre></div></div>`;
-}
+// The node card in this window carries no source, and cannot.
+//
+// It used to: `srcBlock(n)` rendered the Deluge (or the SQL) with line numbers under the calls and
+// callers. On 14 August the payload handed to this window stopped carrying `source_code` - the whole
+// org's source was crossing into storage for a card that shows a few dozen lines - and the commit
+// that did it recorded «`source_code` appears nowhere in either graphview.js, so it was pure
+// carriage». That grep was right about graphview.js and a day out of date: the renderer had moved
+// into graphlogic.js the commit before. So the panel went quiet instead of the payload, and the card
+// has shown no source since.
+//
+// It is removed rather than restored, because the strip was the right decision and both privacy
+// pages now describe the smaller payload. Source is read in the side panel, which holds the folder.
+//
+// The rule: a grep scoped to a file name is invalidated by any refactor that moved code, and the
+// only claim it can support is about that file. Verify the *behaviour*, or grep the tree.
 
 // The clamp, named and out of the drag so it can be tested without a DOM: never below MIN, and
 // never so wide that the detail beside it has less than KEEP. A container reporting no width is not

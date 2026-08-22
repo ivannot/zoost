@@ -6,8 +6,6 @@
 # selector	where
 analytics:#ertools button.on	apps/analytics/graphview.html
 analytics:*	apps/analytics/graphview.html,apps/analytics/options.html,apps/analytics/sidepanel.html
-analytics:.c-com	apps/analytics/graphview.html,apps/analytics/sidepanel.html
-analytics:.c-kw	apps/analytics/graphview.html,apps/analytics/sidepanel.html
 analytics:.ck	apps/analytics/options.html,apps/analytics/sidepanel.html
 analytics:.ck input	apps/analytics/options.html,apps/analytics/sidepanel.html
 analytics:.empty	apps/analytics/graphview.html,apps/analytics/sidepanel.html
@@ -20,8 +18,6 @@ analytics:header	apps/analytics/graphview.html,apps/analytics/options.html
 analytics:header h1	apps/analytics/graphview.html,apps/analytics/options.html
 crm:#ertools button.on	apps/crm/graphview.html
 crm:*	apps/crm/graphview.html,apps/crm/options.html,apps/crm/sidepanel.html
-crm:.c-com	apps/crm/graphview.html,apps/crm/sidepanel.html
-crm:.c-kw	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.chips	apps/crm/graphview.html,apps/crm/sidepanel.html
 crm:.ck	apps/crm/options.html,apps/crm/sidepanel.html
 crm:.ck em	apps/crm/options.html,apps/crm/sidepanel.html

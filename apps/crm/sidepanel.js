@@ -1570,11 +1570,19 @@ function fnStats(src) {
 }
 
 // ---------- graph cache ----------
-// What the diagram window is given, which is less than what the panel holds. `source_code` is put
-// back onto the graph nodes by loadGraph() for the assistant and the Markdown export - both of which
-// read it from memory - and the window has never touched it: it draws names, kinds and arrows. So it
-// is stripped here rather than shipped and forgotten, because the payload crosses into storage and
-// what crosses a boundary is what has to be justified.
+// What the diagram window is given, which is less than what the panel holds. It draws names, kinds
+// and arrows, so the payload carries those; what crosses into storage is what has to be justified.
+//
+// `source_code` is no longer on a graph node at all. It used to be put back by loadGraph() «for the
+// assistant and the Markdown export», and that sentence was true only of a graph built by reading
+// every .dg: a node served from the summary cache carries an empty string, and after the first pull
+// every node is. So the three assistant tools that read it answered about an org whose source they
+// had never seen - `search_code` said «(no matches)» over 900 functions - and the Markdown export
+// wrote empty fences. Whoever wants the text reads the file: the graph is structure, the .dg is the
+// source, and a fast path may not decide which of the two a reader gets.
+//
+// The delete below stays. Nothing puts the field on a node today, and a defensive strip on the one
+// object that leaves the panel costs a line.
 //
 // And it goes to `chrome.storage.session`: this is a hand-off to a window opening in a moment, not a
 // setting. Session storage is memory - it goes when the browser does, instead of a copy of the org's
@@ -1669,7 +1677,7 @@ async function loadGraph(op = beginWorkspaceOp()) {
   // open would touch a folder the reader may have under version control.
   if (read) await saveGraphFacts(nodes, g, op);
   if (!op.current()) throw new Error(WS_MOVED);
-  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].source_code = nd.dg; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; // The counts come from the source when it was read, and from the summary when it was not -
+  nodes.forEach((nd) => { const id = nd.namespace + '.' + nd.name; if (g.nodes[id]) { g.nodes[id].return_type = nd.return_type; g.nodes[id].params = nd.params; g.nodes[id].connections = nd.connections; g.nodes[id].modified_by = nd.modified_by; g.nodes[id].updatedTime = nd.updatedTime; // The counts come from the source when it was read, and from the summary when it was not -
   // the same numbers either way, since `fnStats()` is a pure reading of that text and what the
   // summary holds is the result of having run it.
   g.nodes[id].stats = nd.stats || fnStats(nd.dg); } });
