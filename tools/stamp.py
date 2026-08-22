@@ -32,6 +32,7 @@ Two rules that are not arbitrary:
 import argparse
 import datetime
 import hashlib
+import os
 import pathlib
 import re
 import subprocess
@@ -52,15 +53,26 @@ TRANSLATED = re.compile(r'<!--\s*translated-from:\s*(\S+)')
 
 def git_date(rel: str) -> str:
     """The last commit that touched a path, as YYYY-MM-DD. Uncommitted changes read as today,
-    because the file *has* changed - the same rule sitemap.py applies to <lastmod>."""
+    because the file *has* changed - the same rule sitemap.py applies to <lastmod>.
+
+    **Both branches are UTC**, and that is the whole of the second paragraph. They were not: `today`
+    was UTC while `%cs` prints the committer's own recorded offset, so within one evening the check
+    said «says 22, it is 23» before a commit and «says 23, it is 22» after one, and the battery could
+    not converge at all in the hours around midnight - which is exactly when CI last went red for a
+    date nobody had changed. Two clocks compared as one, the class this repository has met at every
+    boundary it has: pick one and read both sides through it. UTC rather than local, because a page
+    stamped by the machine that happened to run the tool is a value that moves when nothing has.
+    """
     p = ROOT / rel
     dirty = subprocess.run(['git', '-C', str(ROOT), 'status', '--porcelain', '--', str(p)],
                            capture_output=True, text=True).stdout.strip()
     today = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
     if dirty:
         return today
-    return subprocess.run(['git', '-C', str(ROOT), 'log', '-1', '--format=%cs', '--', str(p)],
-                          capture_output=True, text=True).stdout.strip() or today
+    return subprocess.run(['git', '-C', str(ROOT), 'log', '-1', '--format=%cd',
+                           '--date=format-local:%Y-%m-%d', '--', str(p)],
+                          capture_output=True, text=True,
+                          env={**os.environ, 'TZ': 'UTC'}).stdout.strip() or today
 
 
 def manifest_version(app: str) -> str:

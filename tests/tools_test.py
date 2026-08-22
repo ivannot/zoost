@@ -4492,5 +4492,50 @@ class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
                          f'hook does not mention them: {missing}')
 
 
+class DatesAreOneClock(unittest.TestCase):
+    """A page's «updated» date comes from one clock, whichever branch produced it.
+
+    `stamp.py` had two branches and a clock each: an uncommitted file read UTC, a committed one read
+    `%cs`, which git prints in the offset recorded **on the commit**. Between UTC midnight and the
+    committer's own midnight the two disagree by a day, so the checker said «says 22, it is 23»
+    before a commit and «says 23, it is 22» after one - a battery that cannot converge, at the one
+    hour of the day nobody is looking, and the reason CI last went red over a date nobody had typed.
+
+    The first version of this case compared two runs under two timezones and passed on the defect:
+    `%cs` does not move with `TZ`, so it measured something the bug does not do. It is measured on a
+    commit **built for it** instead - a fixed instant recorded at +14:00, whose local day and UTC day
+    are different by construction - so the disagreement is deterministic rather than a property of
+    what time it happens to be here.
+    """
+
+    def test_a_committed_date_is_read_in_utc_like_todays(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('stamp_under_test', ROOT / 'tools' / 'stamp.py')
+        stamp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(stamp)
+        with tempfile.TemporaryDirectory() as d:
+            repo = pathlib.Path(d)
+            env = {**os.environ, 'GIT_AUTHOR_DATE': '2026-01-02T10:00:00+14:00',
+                   'GIT_COMMITTER_DATE': '2026-01-02T10:00:00+14:00',
+                   'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': 't@e',
+                   'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': 't@e'}
+            (repo / 'f.txt').write_text('x', encoding='utf-8')
+            for cmd in (['init', '-q'], ['add', 'f.txt'], ['commit', '-qm', 'x']):
+                subprocess.run(['git', '-C', str(repo)] + cmd, env=env, capture_output=True, text=True)
+            stamp.ROOT = repo
+            # 2026-01-02 10:00 at +14:00 is 2026-01-01 20:00 UTC. `today` is UTC, so this must be too.
+            self.assertEqual(stamp.git_date('f.txt'), '2026-01-01',
+                             'a committed date is read in the committer\'s offset while an uncommitted '
+                             'one is read in UTC - the two branches disagree by a day around midnight '
+                             'and the stamps oscillate')
+
+    def test_it_reports_a_date_at_all(self):
+        # A gate that always agrees is not strict, it is broken: the case above would also pass if
+        # the tool returned '' for everything. This is the half that proves it can speak.
+        out = subprocess.run([sys.executable, str(ROOT / 'tools' / 'stamp.py'), '--check'],
+                             cwd=ROOT, capture_output=True, text=True,
+                             env={**os.environ, 'TZ': 'UTC'})
+        self.assertRegex(out.stdout, r'\d{4}|stamp', 'stamp.py --check says nothing at all')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
