@@ -90,6 +90,7 @@ CLOSED = {
     ("siblings", "an-panel"):  ("tests/panel.test.mjs: every control greyed by a verdict says why", "planted 2026-08-22"),
     ("silent", "an-panel"):    ("tests/panel.test.mjs: a refused folder permission is never a silent return", "planted 2026-08-22"),
     ("silent", "crm-panel"):   ("ditto - the same check reads both products", "planted 2026-08-22"),
+    ("workspace", "an-panel"): ("tests/panel.test.mjs: the selection and the nav chain are forgotten where the workspace changes", "planted 2026-08-22"),
 }
 
 

@@ -687,6 +687,17 @@ async function selectWorkspace(w) {
   if (!sameWs) {
     const n = dropWorkspaceState();
     if (n) status(`Workspace changed - the assistant's ${n}-message conversation was cleared: it was about the other workspace.`, 'warn');
+    // The selection and the back/forward chain belong to the workspace being left: every step in the
+    // chain is a view id of that one. `loadFromDisk` drops them, and only on its *successful* path -
+    // three returns come first, one of them the mirror it refuses for being interrupted mid-write.
+    // Take that route and the panel stands in the new workspace with the old one's view still in the
+    // detail pane and ◂ ready to open ids that mean nothing here.
+    //
+    // Here rather than there, because `loadFromDisk` also runs for ↻ Refresh on the workspace you
+    // are already in, and forgetting where you were would be a defect of its own. This is the one
+    // place that knows the workspace actually changed.
+    selectedId = null; navClear();
+    $('detail').classList.remove('show'); $('resizer').classList.remove('show');
   }
   if (!(await loadFromDisk(op))) return;
   if (!sameWs) resetView();   // after the load: Health is rendered from what is now in memory

@@ -9197,3 +9197,34 @@ for (const app of ['crm', 'analytics']) {
       `from the feature working:\n  ` + bad.join('\n  '));
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The selection and the back/forward chain belong to the workspace being left.
+//
+// Every step in that chain is an id of the workspace it was built in. Analytics dropped them inside
+// `loadFromDisk`, on its successful path only - and three returns come first, one of them the mirror
+// it refuses for having been interrupted mid-write. Take that route and the panel stands in the new
+// workspace with the previous one's view in the detail pane and ◂ ready to open ids that mean nothing
+// there. The CRM has the same shape and clears them where the workspace changes.
+//
+// Derived: whichever function decides that the workspace has actually changed must forget both,
+// before anything can return.
+{
+  for (const [app, fn] of [['analytics', 'selectWorkspace'], ['crm', 'activate']]) {
+    test(`${app}: leaving a workspace forgets the selection and the chain it belongs to`, () => {
+      const src = read(`apps/${app}/sidepanel.js`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const at = src.indexOf(`async function ${fn}(`);
+      assert.ok(at > 0, `id=${fn} is gone - renamed, or no longer a declaration`);
+      const body = src.slice(at, src.indexOf('\n}', at));
+      const clear = body.indexOf('navClear()');
+      assert.ok(clear > 0, `id=${app} ${fn}() never forgets the navigation chain of the workspace being left`);
+      const sel = body.search(/selectedId = null|currentPath = null/);
+      assert.ok(sel > 0, `id=${app} ${fn}() keeps the previous workspace's selection`);
+      // Inside the branch that knows the workspace differs, not after a load that can return first.
+      const guard = body.search(/if \(!sameWs\)|if \(sameWs\)/);
+      if (guard > 0) {
+        assert.ok(clear > guard, `id=${app} the chain is forgotten outside the «this is a different workspace» branch`);
+      }
+    });
+  }
+}
