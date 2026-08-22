@@ -3946,7 +3946,10 @@ test('analytics: a workspace that cannot be read is not reported as never pulled
             'the load has no local place to collect its own failure');
   assert.ok(/diskUnreadable = views\.length \? null : failed;/.test(load),
     'a stray failure from an unrelated read can speak about this workspace');
-  const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason');
+  // Comments stripped: this asserts the order of two *branches*, and a comment above one of them
+  // naming the other's sentence made it fail on a correct change. A test about code reads code.
+  const why = sliceFn('apps/analytics/sidepanel.js', 'emptyReason')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   assert.ok(why.indexOf('diskUnreadable') < why.indexOf('Nothing pulled yet'),
     'the panel blames the pull before it says the files could not be read');
   assert.ok(/Refresh/.test(why.slice(why.indexOf('diskUnreadable'))),

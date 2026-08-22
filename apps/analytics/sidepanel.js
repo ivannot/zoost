@@ -477,6 +477,10 @@ async function readJson(rel, fallback, op, onFailure) {
 // What the last load off disk ran into, and the only thing the empty state is allowed to speak about:
 // a stray failure from some unrelated read must not turn into a sentence about this workspace.
 let diskUnreadable = null;
+// Set by the one branch of `loadFromDisk` that refuses a mirror outright, and cleared by every other
+// path through it, so the empty state can name that refusal instead of falling through to «nothing
+// pulled yet» - which is what a reader was told about a folder full of files.
+let pullInterrupted = false;
 const writeJson = (rel, o, op) => (op ? op.write(rel, JSON.stringify(o, null, 2)) : writeFile(rel, JSON.stringify(o, null, 2)));
 // Merge rather than replace. `.zoost.json` holds more than the binding - the workspace's own name
 // lives there too - and a whole-object write from any one writer silently drops what the others put
@@ -593,6 +597,13 @@ async function refreshWorkspaces() {
   if (!list.length) {
     sel.innerHTML = `<option value="">${esc(root.name)}/${APP_DIR} - no workspaces yet</option>`;
     if (stray) status(`${stray} workspace folder(s) sit directly in «${root.name}». Each Zoost product keeps its own - move the Zoho Analytics ones into «${root.name}/${APP_DIR}/» and reopen the panel.`, 'warn');
+    // The remembered sample id is refreshed from the list below - «including to null, which is how
+    // deleting the sample stops the button offering to open one that is gone». This return is the one
+    // path that never reaches it: delete the sample when it is the *only* workspace and the id stays
+    // in storage, so `updateSampleButtons()` hides «+ Sample» for good - while the empty state two
+    // lines down is telling the reader to press it. It survives a reload, because the stale id is
+    // restored from storage on start.
+    noteSampleWs(null);
     dir = null; bound = null; forgetDirs(); render(); return updateButtons();
   }
   sel.innerHTML = list.map((w) => `<option value="${escA(w.id)}" title="${escA(wsOptionTitle(w))}">${esc(wsOptionText(w))}</option>`).join('');
@@ -1018,7 +1029,13 @@ function updateButtons() {
     ? 'The active tab is a different workspace from the one selected here.'
     : PULL_TITLE;
 }
-function setBusy(on, text) { busy = on; status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : ''); updateButtons(); }
+function setBusy(on, text) {
+  busy = on;
+  // `null` means «leave the status line alone»: the caller has already put the right sentence there
+  // and «Ready.» would be a lie over it. One path did exactly that - see refreshLocal().
+  if (text !== null) status(text || (on ? 'Working…' : 'Ready.'), on ? 'busy' : '');
+  updateButtons();
+}
 function setPullBusy(on) {
   pullDepth = Math.max(0, pullDepth + (on ? 1 : -1));
   pullBusy = pullDepth > 0;
@@ -1379,6 +1396,7 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   if (ps && ps.state === 'writing') {
     if (!op.current()) return false;
     views = []; folders = []; schema = {}; relations = []; sqls = {}; deps = null; pullFailed = [];
+    pullInterrupted = true;
     render();
     status('The last pull was interrupted mid-write, so the files on disk describe two different moments - run Pull all to repair the mirror.', 'warn');
     return false;
@@ -1408,6 +1426,7 @@ async function loadFromDisk(op = beginWorkspaceOp()) {
   if (index) for (const [id, e] of Object.entries(index)) sqls[id] = { id, sql: null, stem: e.stem, parents: e.parents || [], sources: e.sources || {} };
   mergeSchemaIntoViews();
   diskUnreadable = views.length ? null : failed;
+  pullInterrupted = false;
   // Another workspace on disk: the chain is dropped, because every step in it is a view id that
   // belongs to the one being left. This and the removal below are the only places that forget.
   selectedId = null; navClear(); $('detail').classList.remove('show'); $('resizer').classList.remove('show');
@@ -1559,6 +1578,13 @@ function renderTypeFilter() {
   });
   if (deps) opts.push(`<option value="${escA(ORPHANS)}">Nothing depends on (${views.filter(isOrphanCandidate).length})</option>`);
   sel.innerHTML = opts.join('');
+  // A filter this workspace has no option for is dropped rather than kept invisibly. `typeFilter` is
+  // module state and survives a change of workspace, which is right while the choice still applies -
+  // «Table» means the same thing in both. It stops applying when the new workspace has none of that
+  // type, or when its lineage was never pulled and «Nothing depends on» is not offered: the select
+  // then falls to selectedIndex -1 and shows nothing, while `visibleViews()` goes on filtering. The
+  // reader sees a full workspace collapsed to «No view matches» under a control showing no filter.
+  if (typeFilter && ![...sel.options].some((o) => o.value === typeFilter)) typeFilter = null;
   sel.value = typeFilter || '';
 }
 
@@ -1797,6 +1823,14 @@ function emptyReason() {
       + 'should not be empty, the sample was written before this part existed: delete the workspace '
       + 'and press <b>+ Sample</b> again.';
   }
+  // The mirror is there and is refused: `loadFromDisk` found `.pull-state.json` still saying
+  // `writing`. Without this the list fell through to «Nothing pulled yet», which sends the reader to
+  // press Pull all - right by accident - while telling them something false about their own folder.
+  if (pullInterrupted) {
+    return '<b>The last pull was interrupted while it was writing.</b> The files on disk describe two '
+      + 'different moments, so nothing here is shown rather than a mixture of them. Press '
+      + '<b>Pull all</b> to repair the mirror.';
+  }
   if (diskUnreadable) {
     // The one state where the files are there and the panel cannot see them. Naming the file and what
     // the browser called it, because the cause is outside this extension - a folder that moved, a
@@ -1834,8 +1868,23 @@ function render() {
   }
   const rows = visibleViews();
   if (!rows.length) {
-    list.innerHTML = `<div class="empty"><b>No view matches.</b>
-      ${typeFilter ? 'The type filter and the' : 'The'} search box are narrowing ${views.length} views down to none.
+    // Written for `in: names`, and it was the only one. In SQL mode all three of its statements were
+    // wrong: column names are not searched (that is the other branch), only query tables can match so
+    // `views.length` is not the denominator, and - the one that matters - it says nothing about the
+    // .sql files that would not open. `sqlUnread` is computed carefully by `ensureSqlCache` and was
+    // used in exactly one place, a status line the next message overwrites. So a reader whose
+    // workspace has three unreadable queries was told the search covered everything, on the one
+    // surface where «no matches» is the whole answer. The assistant one screen over carries its
+    // coverage with the answer; this is the same fact, said in the same voice.
+    const qts = views.filter((v) => v.type === 'QueryTable').length;
+    const narrowing = typeFilter ? 'The type filter and the' : 'The';
+    list.innerHTML = searchMode === 'sql'
+      ? `<div class="empty"><b>No query matches.</b>
+      ${narrowing} search box are narrowing ${qts} quer${qts === 1 ? 'y' : 'ies'} down to none;
+      the other ${views.length - qts} view(s) have no SQL to search.
+      ${sqlUnread ? `<b>${sqlUnread} of them could not be opened</b>, so absence here is not exhaustive. ` : ''}Clear the box to see them all again.</div>`
+      : `<div class="empty"><b>No view matches.</b>
+      ${narrowing} search box are narrowing ${views.length} views down to none.
       The search also looks inside column names. Clear it to see them all again.</div>`;
     return;
   }
@@ -1923,9 +1972,13 @@ function resetDetailScroll() {
 async function openDetail(id) {
   const mine = ++detailLoad;
   const op = beginWorkspaceOp();
-  selectedId = id;
+  // After the guard, not before it. Selecting an id this workspace does not have left the panel
+  // marked on a view that does not exist - no row lit, the previous item still in the pane, nothing
+  // said - and `selectedId` then fed the assistant's CURRENT FOCUS. Every caller guards the id today,
+  // so this is a trap rather than a live defect; it costs one line not to leave it armed.
   const v = viewById().get(id);
   if (!v) return;
+  selectedId = id;
   // Every way in passes through here - a row click, an arrow key, a foreign key, a lineage entry -
   // so the history is complete without any of them knowing it exists. The kind is carried too, so
   // the chain reads «query table Funnel» rather than a bare name.
@@ -2117,8 +2170,14 @@ async function refreshLocal() {
   if (root && !rootGranted) { await grantRoot(); return; }
   if (!dir) return;
   setBusy(true, 'Reloading from disk…');
-  await loadFromDisk();
-  setBusy(false);
+  // `loadFromDisk` returns false when it has *already* said why, and the one case that matters is a
+  // mirror whose last pull was interrupted mid-write: it is refused, with the repair named. This was
+  // the only caller that ignored the answer, so `setBusy(false)` wrote «Ready.» over the warning -
+  // and the empty list underneath then blamed «Nothing pulled yet. Press Pull all», because the
+  // writing branch returns before `diskUnreadable` is assigned. A blocked mirror, reported as an
+  // empty one, under the word Ready.
+  const ok = await loadFromDisk();
+  setBusy(false, ok ? undefined : null);
 }
 
 // ---------- schema graph ----------

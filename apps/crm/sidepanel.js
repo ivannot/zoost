@@ -4246,6 +4246,11 @@ async function loadWorkspaces() {
     setStatus(stray
       ? `${stray} workspace folder(s) sit directly in \u00ab${root.name}\u00bb. Each Zoost product now keeps its own - move them into \u00ab${root.name}/${APP_DIR}/\u00bb and click Refresh.`
       : 'Open your Zoho CRM tab, then click + to create its workspace.', 'warn');
+    // Same hole as the Analytics twin, found there: this return never reaches the line below that
+    // refreshes the remembered sample id «including to null». Delete the sample when it is the only
+    // workspace and the id stays in storage, so the button that offers to write one is hidden for
+    // good - while the empty state is telling the reader to press it.
+    noteSampleWs(null);
     renderBlocked(); await refreshContext(); return;
   }
   // The list is real now, so the remembered answer is refreshed from it - including to null,

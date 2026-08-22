@@ -56,7 +56,7 @@ currentAi	c79a5fcc1b4d	c79a5fcc1b4d	identical
 dirFor	c67faa925fb1	c67faa925fb1	identical
 dropWorkspaceState	cec7b82817f4	167539fa76e8	divergent
 egoStat	7389bc350b28	7389bc350b28	identical
-emptyReason	f7a750117acd	edc245701f46	divergent
+emptyReason	f7a750117acd	c6461ab20713	divergent
 engineIncomplete	54560440576d	54560440576d	identical
 ensureBridge	712bc0fdc4d2	e7f9159cd83c	divergent
 ensurePerm	e58bab35e382	e58bab35e382	identical
@@ -182,7 +182,7 @@ relRender	65b6796a1174	479e5c41dd33	divergent
 rememberActive	b905c9b77414	b905c9b77414	identical
 removeFileAt	d6514d26b3e4	1b045eb72889	divergent
 renameWorkspace	99bfdcd2240f	bf0d938e89ff	divergent
-render	1f1f526caa02	5d6f78c492ac	divergent
+render	1f1f526caa02	b47086e0e791	divergent
 renderGoDc	8ea801e3495f	c9e96f15e295	divergent
 renderNav	de56c9b9ed2d	5037a60baf16	divergent
 renderRx	da8caf217c7f	da8caf217c7f	identical
