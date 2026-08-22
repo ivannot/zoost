@@ -81,6 +81,7 @@ CLOSED = {
     ("claim", "site"):        ("tools/auditcheck.py absolutes ledger", "planted 2026-08-20"),
     ("siblings", "diagrams"): ("tools/twincheck.py", "planted 2026-08-19"),
     ("workspace", "crm-panel"): ("tests/panel.test.mjs derives every *Data/*Index", "planted 2026-08-22"),
+    ("owner", "crm-panel"):   ("tests/panel.test.mjs derives every pull that reaches Zoho", "planted 2026-08-22"),
 }
 
 

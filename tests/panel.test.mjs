@@ -6999,6 +6999,10 @@ test('every cache in a shipped panel is named by something that tests it', () =>
       loadActionsIndex: async () => prevIdx,
       rebuildActions: async () => {}, noteAccess: async () => {},
       notePullFailure: async (_a, e) => { throw e; },
+      // The pull marks itself running and releases through the one helper. Stubbed here because this
+      // case runs the function, which is exactly how the free reference was caught the moment the
+      // three pulls that had never owned the flag were given it.
+      pullActive: false, endPull: () => {},
     };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/crm/automation.js', 'pullActions') + '\npullActions();', ctx);
@@ -8804,5 +8808,68 @@ for (const app of ['crm', 'analytics']) {
     const fetches = [...src.matchAll(/fetch\(BASE \+ ([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
     assert.ok(fetches.length > 0, `id=${app} nothing fetches BASE + a path any more - check the shape`);
     for (const v of fetches) assert.equal(v, 'safePath', `id=${app} a request bypasses the path guard`);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A flag is owned by everything that can be in the state it describes.
+//
+// `pullActive` says «a pull is running», and `reconcileFunctions` reads it to defer a save/create/
+// delete notice until the pull has finished - because reconciling during a pull means a second
+// `listFunctions`, a second index rewrite and a second `downloadMissing`, concurrently with the most
+// expensive thing this panel does. Four pulls set it. Three did not: Schedules, Connections and
+// Actions, which reach Zoho exactly like the other four.
+//
+// `endPull()` exists because ending a pull is one act and not five - its own comment says «a pull
+// added tomorrow cannot forget the half nobody sees». It could, and three had.
+//
+// Derived, not listed: whichever panel-side `pull*` reaches Zoho is in scope, so the eighth added
+// tomorrow is covered by nobody remembering. The orchestrators fall out of it by themselves -
+// `pullEverything`, `pullCurrent` and `pullHealthRuntime` call no bridge, they call the others.
+{
+  const FILES = ['apps/crm/sidepanel.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
+                 'apps/crm/connections.js', 'apps/crm/health.js'];
+
+  const pulls = () => {
+    const out = [];
+    for (const rel of FILES) {
+      const src = read(rel);
+      for (const m of src.matchAll(/^async function (pull\w*)\s*\(/gm)) {
+        const body = src.slice(m.index, src.indexOf('\n}', m.index));
+        out.push({ rel, name: m[1], body, reaches: /toBridge\(/.test(body) });
+      }
+    }
+    return out;
+  };
+
+  test('every pull that reaches Zoho owns the flag that defers a reconcile', () => {
+    const all = pulls();
+    assert.ok(all.length >= 8, `only ${all.length} pull functions found - the derivation broke`);
+    const reaching = all.filter((p) => p.reaches);
+    assert.ok(reaching.length >= 6, `only ${reaching.length} of them reach Zoho - the derivation broke`);
+    for (const p of reaching) {
+      assert.ok(/pullActive = true/.test(p.body),
+                `id=${p.name} (${p.rel}) reaches Zoho and does not set pullActive - a save notice ` +
+                `arriving during it starts a full reconcile on top of the pull`);
+      assert.ok(/endPull\(\)/.test(p.body),
+                `id=${p.name} (${p.rel}) sets pullActive and does not call endPull() - the notice it ` +
+                `deferred is never consumed, so the change is remembered and never answered`);
+    }
+  });
+
+  test('nothing clears the flag except the one helper', () => {
+    // The other half of «ending a pull is one act»: a pull that writes `pullActive = false` itself
+    // skips the pending-notice half, which is the part nobody sees missing.
+    for (const rel of FILES) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      // Not the declaration: `let pullActive = false, pullBusy = false;` is where the flag comes
+      // from, not a place that clears it. My own first version of this check reported it.
+      for (const m of src.matchAll(/(?<!let )(?<!, )pullActive\s*=\s*false/g)) {
+        const line = src.slice(0, m.index).split('\n').length;
+        const fn = src.slice(0, m.index).lastIndexOf('function endPull');
+        const nextFn = src.slice(0, m.index).lastIndexOf('function ');
+        assert.equal(fn, nextFn, `${rel}:${line} clears pullActive outside endPull()`);
+      }
+    }
   });
 }

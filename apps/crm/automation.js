@@ -260,6 +260,12 @@ async function pullSchedules() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
+    // A pull is running: `reconcileFunctions` reads this to defer a save, create or delete notice
+    // until it ends, because reconciling during a pull is a second list, a second index rewrite and
+    // a second downloadMissing on top of the most expensive thing this panel does. Set by four pulls
+    // and by none of the three here, which reach Zoho exactly like the other four. `finally`, so the
+    // early returns inside this try release it too.
+    pullActive = true;
     if (!(await ensurePerm(op.root))) { setStatus(MSG.folder, 'warn'); return; }
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
@@ -272,13 +278,14 @@ async function pullSchedules() {
     if (!(await loadScheduleIndex(op))) return; if (viewMode === 'schedules') renderSchedules();
     setStatus(`Schedules pull complete: ${(r.entries || []).length} schedules.${r.capped ? ' · stopped early - some may be missing' : ''}`, r.capped ? 'warn' : 'ok');
     await noteAccess('schedules', null, op);
-  } catch (e) { await notePullFailure('schedules', e, op); }
+  } catch (e) { await notePullFailure('schedules', e, op); } finally { endPull(); }
 }
 // Org-wide connections catalogue → connections/index.json. Written once per "Pull all".
 async function pullConnections() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
+    pullActive = true;   // see pullSchedules above for why, and why it is released in a finally
     if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
@@ -291,7 +298,7 @@ async function pullConnections() {
     if (viewMode === 'connections') await rebuildConnections();   // reflect it immediately, like the other pulls do
     else setStatus(`Connections pulled: ${(r.connections || []).length}.`, 'ok');
     await noteAccess('connections', null, op);
-  } catch (e) { await notePullFailure('connections', e, op); }
+  } catch (e) { await notePullFailure('connections', e, op); } finally { endPull(); }
 }
 // ---------- automation actions (what a workflow fires) ----------
 //
@@ -382,6 +389,7 @@ async function pullActions() {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   if (mismatchRefuse()) return;
   try {
+    pullActive = true;   // see pullSchedules above for why, and why it is released in a finally
     if (!(await ensurePerm(op.root))) return;
     const ctx = await getContext(); if (!ctx) { setStatus(MSG.noTab, 'warn'); return; }
     const cfg = await opReadCfg(op);
@@ -461,7 +469,7 @@ async function pullActions() {
     if (viewMode === 'actions') { await rebuildActions(); if (note) setStatus(`${actions.length} action(s).` + note, 'warn'); }
     else setStatus(`${actions.length} action(s) pulled.` + note, (missed.length || capped.length || detailMissed.length) ? 'warn' : 'ok');
     await noteAccess('actions', null, op);
-  } catch (e) { await notePullFailure('actions', e, op); }
+  } catch (e) { await notePullFailure('actions', e, op); } finally { endPull(); }
 }
 async function rebuildActions() {
   // These read the mirror and then publish a whole list into the panel's memory. A rebuild is
