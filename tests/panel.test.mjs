@@ -8928,3 +8928,74 @@ for (const app of ['crm', 'analytics']) {
       bad.map((c) => `  ${c.rel}:${c.line}  «${c.text}…»`).join('\n'));
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A read that stopped early may not authorise a deletion.
+//
+// A list Zoho cut short is a statement about how far the reading got, not about what exists. Written
+// as the index, and pruned against, it deletes things that are still there - the worst thing this
+// product can do, and reachable on any org past the paging limit by an ordinary create. Every
+// existing pull refuses it; each was fixed after being found, and each was then pinned by a case
+// naming that pull.
+//
+// **A list of names is a list somebody has to remember.** Planted here: a new pull, correct in every
+// other respect - workspace captured, mismatch refused, failures through the helper, `op.current()`
+// before every write - and wrong in exactly one way, pruning against a list that may have stopped
+// early. Nothing in the battery said a word about the deletion. So this derives the set instead:
+// whichever panel function removes files is in scope, and it must refuse a truncated list before the
+// first removal, or name the command it used as one the bridge can never cut short.
+{
+  const PANEL = ['apps/crm/sidepanel.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
+                 'apps/crm/connections.js', 'apps/crm/health.js'];
+
+  // Derived from the bridge: which commands are *provably* whole. A command whose handler mentions
+  // `capped` can answer short; a command the bridge does not implement at all says nothing about
+  // itself, and unknown is not safe. My first version had it the other way round and the planted pull
+  // walked straight past it, using a command name the bridge has never heard of - the same «I cannot
+  // read it, so I will assume the harmless one» that let four spellings past the write gate this
+  // morning. Only a command that is here and cannot cap is exempt.
+  const whole = () => {
+    const src = read('apps/crm/content-bridge.js');
+    const out = new Set();
+    for (const m of src.matchAll(/msg\?\.cmd === '(\w+)'\) \{ (\w+)\(/g)) {
+      const at = src.indexOf(`async function ${m[2]}(`);
+      if (at < 0) continue;
+      if (!/capped/.test(src.slice(at, src.indexOf('\n  }', at)))) out.add(m[1]);
+    }
+    return out;
+  };
+
+  test('nothing deletes on the word of a list that may have stopped early', () => {
+    const safe = whole();
+    assert.ok(safe.size >= 3, `only ${safe.size} whole-by-construction commands derived - the derivation broke`);
+    const bad = [];
+    let deleters = 0;
+    for (const rel of PANEL) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/^async function (\w+)\s*\(/gm)) {
+        const body = src.slice(m.index, src.indexOf('\n}', m.index));
+        const rm = body.search(/op\.remove\(/);
+        if (rm < 0) continue;
+        // Only the function that *decides* what is gone. `removeFunctionPaths(paths, op)` and
+        // `pruneFunction(id, entry)` are handed what to delete: completeness is their caller's
+        // question, and asking it of them would be asking the wrong function. Deciding shows as
+        // walking the folder and testing each path against a set - that is derivable, where a list
+        // of exempt names would be one more thing to remember.
+        if (!/walk\(op\.root\)/.test(body)) continue;
+        deleters++;
+        const cmds = [...body.matchAll(/cmd: '(\w+)'/g)].map((c) => c[1]);
+        if (cmds.length && cmds.every((c) => safe.has(c))) continue;   // provably whole answers
+        const guard = body.search(/\bcapped\b/);
+        if (guard < 0 || guard > rm) {
+          bad.push(`${rel} ${m[1]}() deletes on ${cmds.length ? cmds.join(', ') : 'a list read elsewhere'}`);
+        }
+      }
+    }
+    // Two today - `pullWorkflows` and `pullModules` - measured, not guessed. My first version asserted
+    // three, which is the shape of mistake this whole grid is about: a denominator nobody counted.
+    assert.ok(deleters >= 2, `only ${deleters} folder-walking deletions found - the derivation broke`);
+    assert.deepEqual(bad, [],
+      `a truncated list is a statement about the reading, not about the org - these delete before ` +
+      `asking whether the list was complete:\n  ` + bad.join('\n  '));
+  });
+}
