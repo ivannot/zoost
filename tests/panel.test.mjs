@@ -9445,3 +9445,57 @@ for (const app of ['crm', 'analytics']) {
       `recovers - returns at the first line and leaves it there:\n  ` + bad.join('\n  '));
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A schema version that does not move is a fast path serving yesterday's shape as today's.
+//
+// Every function on disk carries `sv`, and the panel re-fetches only what is below `META_SV`:
+// `row.stale = (s.sv || 0) < META_SV`. So the version *is* the promise that a copy on disk holds
+// every field this build captures. Add a field to the meta and leave `sv` alone, and every function
+// pulled before that day is served as current with the field missing - by the summary cache, by the
+// graph, by both exports and by the assistant. Nothing re-reads it, because nothing knows.
+//
+// The comment beside it says «bump when new fields are captured», which is a rule living as prose,
+// and this repository's record on those is not ambiguous. Planted a field, left `sv` at 2: green.
+//
+// Held by the field list itself, recorded here against the version it belongs to. When the meta
+// changes, this fails; bump `sv` and `META_SV`, and update the list in the same change - which is
+// the moment the reader is looking at the right thing.
+{
+  const FIELDS = {
+    2: ['id', 'name', 'display_name', 'api_name', 'nameSpace', 'category', 'source', 'return_type',
+        'params', 'description', 'updatedTime', 'modified_by', 'associated_place', 'workflow',
+        'rest_api', 'connections', 'sv'],
+  };
+
+  test('the meta schema version moves when the captured fields do', () => {
+    const src = read('apps/crm/content-bridge.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const at = src.indexOf('const meta = {');
+    assert.ok(at > 0, 'the function meta is no longer built as one object literal');
+    const body = src.slice(at, src.indexOf('\n    };', at));
+    const sv = body.match(/\bsv:\s*(\d+)/);
+    assert.ok(sv, 'the meta carries no schema version, so nothing on disk can be told apart by age');
+    // Top level only. `rest_api` and `connections` map into object literals of their own, and their
+    // keys - type, active, name, label, service, scopes - are not fields of the meta.
+    const keys = [];
+    let depth = 0;
+    for (let i = body.indexOf('{') + 1; i < body.length; i++) {
+      const c = body[i];
+      if ('{(['.includes(c)) depth++;
+      else if ('})]'.includes(c)) depth--;
+      else if (depth === 0) {
+        const m = /^(\w+):/.exec(body.slice(i));
+        if (m && /[\s{,]/.test(body[i - 1] || ',')) { keys.push(m[1]); i += m[0].length - 1; }
+      }
+    }
+    const known = FIELDS[sv[1]];
+    assert.ok(known, `sv is ${sv[1]} and this check knows nothing about that version - record its ` +
+                     `field list here in the change that bumped it`);
+    assert.deepEqual([...new Set(keys)].sort(), [...known].sort(),
+      `the fields captured for a function have changed and sv is still ${sv[1]}: every function ` +
+      `pulled before today is served as current without them, because nothing marks it stale`);
+    // The panel's ceiling must agree with what the bridge stamps, or «stale» means nothing.
+    const panel = read('apps/crm/sidepanel.js').match(/const META_SV = (\d+)/);
+    assert.equal(panel[1], sv[1], 'the bridge stamps one version and the panel compares another');
+  });
+}
