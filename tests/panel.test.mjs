@@ -8528,7 +8528,10 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
       Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
-    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op);
+    // The census is required now: these two cases called it with two arguments, which is the shape
+    // the data loss had. An empty census here is the honest fixture - this case is about what the
+    // *index* keeps - and it is passed explicitly rather than defaulted.
+    const failed = await vm.runInContext('pruneSql', ctx)({ q1: { stem: 'kept' } }, ctx.op, []);
     assert.equal(failed, 0, 'a successful cleanup does not report its result to the pull');
     assert.deepEqual(removed.sort(), ['sql/deleted.sql', 'sql/renamed-old.sql'],
                      'a deleted or renamed query leaves its file behind with no map naming it');
@@ -8542,7 +8545,7 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
       walk: async function* () { yield 'sql/old.sql'; }, Set, Object, RegExp };
     vm.createContext(ctx);
     vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'pruneSql'), ctx);
-    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op);
+    const failed = await vm.runInContext('pruneSql', ctx)({}, ctx.op, []);
     assert.equal(failed, 1, 'the caller cannot know cleanup was incomplete');
     assert.equal(said.length, 1);
     assert.equal(said[0][1], 'warn');
@@ -8997,5 +9000,66 @@ for (const app of ['crm', 'analytics']) {
     assert.deepEqual(bad, [],
       `a truncated list is a statement about the reading, not about the org - these delete before ` +
       `asking whether the list was complete:\n  ` + bad.join('\n  '));
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// What a deletion keeps may not depend on an argument somebody can forget.
+//
+// `pruneSql(index, op, census = [])` removes every .sql file the keep-set does not contain, and the
+// keep-set is the union of the new index and the **census** of query tables the workspace still has.
+// That third argument is the whole fix for a real data loss: the keep-set used to be the index
+// alone, and a query table is only in the index if its SQL came back *this time*, so a workspace
+// where 60 of 200 queries answered 429 lost 60 good .sql files in one pull - in a folder the reader
+// keeps under git.
+//
+// `= []` is an empty default. Drop the argument at the one call site and the loss is back, exactly as
+// it was, with every test and every checker green. Planted, and nothing said a word.
+//
+// So: a folder-walking deletion may not take an optional parameter that feeds its keep-set. Derived
+// from the source, not from a list of function names - the seventh prune written tomorrow with a
+// convenient default is caught by nobody remembering.
+{
+  const PANELS = ['apps/analytics/sidepanel.js', 'apps/crm/sidepanel.js', 'apps/crm/modules.js'];
+
+  test('nothing a prune keeps can be left out by a caller', () => {
+    const bad = [];
+    let seen = 0;
+    for (const rel of PANELS) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/^async function (\w+)\s*\(([^)]*)\)/gm)) {
+        const body = src.slice(m.index, src.indexOf('\n}', m.index));
+        if (!/op\.remove\(/.test(body) || !/walk\(op\.root\)/.test(body)) continue;
+        seen++;
+        // Which parameters carry a default, and which of them the keep-set is built from.
+        const optional = m[2].split(',').map((p) => p.trim()).filter((p) => p.includes('='))
+                             .map((p) => p.split('=')[0].trim());
+        const keep = body.slice(body.search(/\bconst keep\b|\bkeep\s*=|\bliveFiles\b|\bliveIds\b/));
+        for (const o of optional) {
+          if (new RegExp(`\\b${o}\\b`).test(keep.slice(0, keep.search(/op\.remove\(/) + 1 || undefined))) {
+            bad.push(`${rel} ${m[1]}(${o} = …) - a caller that omits it deletes what it was meant to keep`);
+          }
+        }
+      }
+    }
+    assert.ok(seen >= 2, `only ${seen} folder-walking deletions found - the derivation broke`);
+    assert.deepEqual(bad, [], `a deletion's keep-set must not be optional:\n  ` + bad.join('\n  '));
+  });
+
+  test('every call to a prune hands it everything the keep-set needs', () => {
+    // The other half, and the one that would have caught the plant directly: a call site that passes
+    // fewer arguments than the declaration names.
+    const src = read('apps/analytics/sidepanel.js').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const decl = src.match(/^async function pruneSql\s*\(([^)]*)\)/m);
+    assert.ok(decl, 'pruneSql() is gone - renamed, or no longer a declaration');
+    const params = decl[1].split(',').length;
+    const calls = [...src.matchAll(/pruneSql\(([^)]*)\)/g)].filter((c) => !c[0].startsWith('pruneSql(index, op, census'));
+    assert.ok(calls.length >= 1, 'pruneSql() is never called - drop it, or the check is looking in the wrong file');
+    for (const c of calls) {
+      const given = c[1].split(',').length;
+      assert.equal(given, params,
+        `pruneSql is declared with ${params} parameters and called with ${given}: the census is what ` +
+        `keeps a query table's .sql file when its SQL could not be read this time`);
+    }
   });
 }

@@ -1299,7 +1299,7 @@ async function writePartialSnapshot(op, next) {
  *  was no map left to even say which were residue. Runs only after the new files and the new index
  *  are written; a removal that fails stays for the next pull, which derives the same keep-set and
  *  retries for free. */
-async function pruneSql(index, op, census = []) {
+async function pruneSql(index, op, census) {
   // **What the workspace has, not what this pull could read.** The keep-set was the new index alone,
   // and a query table is only in that index if its SQL came back *this time* - so a workspace where
   // 60 of 200 queries answered 429 lost 60 previously-good .sql files in one pull, in the folder the
@@ -1312,6 +1312,16 @@ async function pruneSql(index, op, census = []) {
   // that is still a query table in the workspace keeps its file, whatever happened to it today. Its
   // *index row* is still absent, so nothing serves yesterday's SQL as if it were current: the panel
   // says «not read», which is true, and the file survives for the next pull and for the diff.
+  // Required, and it used to carry `= []`. An empty default turns the whole argument above into a
+  // suggestion: drop it at the one call site and the keep-set is the index alone again, which is the
+  // data loss this parameter exists to prevent - proven by doing exactly that and watching every
+  // test and every checker stay green. Refusing is the only safe direction: a prune that cannot say
+  // what the workspace still has must not decide what it no longer has.
+  if (!Array.isArray(census)) {
+    throw new Error('pruneSql needs the census of query tables the workspace still has - without it '
+                    + 'the keep-set is only what was read this time, and a query whose SQL failed '
+                    + 'would lose its file.');
+  }
   const keep = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
   for (const v of census) keep.add(`sql/${stemOf(v.name, v.id)}.sql`);
   let failed = 0;
