@@ -8873,3 +8873,58 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// «Nothing pulled yet - press Pull all» must never be said without asking what is actually in the way.
+//
+// `emptyReason()` walks the states in the order they block each other - no folder, no access, no
+// workspace, a sample (which refuses Pull by design), an old layout - and returns the one thing the
+// reader has to do. Every empty state is supposed to ask it and fall back to «press Pull» only when
+// nothing else is in the way. Saying the wrong missing thing is worse than silence, because the
+// reader goes and does it and nothing changes: that is written in CLAUDE.md and it is why the
+// function exists.
+//
+// Four places named Pull without asking, and the clearest was fourteen lines from one that did -
+// `modules.js:523` against `:537`, the same file, the same shape. One of a set, changed; the others
+// left behind.
+//
+// Derived: any user-facing literal that both reports an empty state and names Pull as the remedy is
+// in scope, wherever it is written. A seventh tab, or a seventh diagram entry, is covered without
+// anyone remembering.
+{
+  const FILES = ['apps/crm/sidepanel.js', 'apps/crm/modules.js', 'apps/crm/automation.js',
+                 'apps/crm/connections.js', 'apps/crm/health.js', 'apps/crm/export.js'];
+  const EMPTY = /(pulled yet|no \w+ (?:yet|recorded))/i;
+  const REMEDY = /(pull all|click pull|press <b>pull|press pull|use pull|pull in )/i;
+
+  const claims = () => {
+    const out = [];
+    for (const rel of FILES) {
+      const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/(['"`])((?:(?!\1)[\s\S]){0,300}?)\1/g)) {
+        const text = m[2];
+        if (!EMPTY.test(text) || !REMEDY.test(text)) continue;
+        // The statement this literal belongs to: back to the previous `;` or `{`, forward to the
+        // next `;`. Enough to see whether the fallback was reached through `emptyReason()`.
+        const from = Math.max(src.lastIndexOf(';', m.index), src.lastIndexOf('{', m.index)) + 1;
+        const to = src.indexOf(';', m.index + m[0].length);
+        out.push({ rel, line: src.slice(0, m.index).split('\n').length,
+                   text: text.slice(0, 60), stmt: src.slice(from, to < 0 ? src.length : to) });
+      }
+    }
+    return out;
+  };
+
+  test('nothing tells the reader to press Pull without asking what is in the way', () => {
+    const all = claims();
+    assert.ok(all.length >= 8, `only ${all.length} empty states found - the derivation broke`);
+    // All of them, not the first. A check about «one of a set was changed and the others were left»
+    // that stops at the first failure makes the reader fix one of four and believe they are done -
+    // which is the defect, one level up, in the tool written to catch it.
+    const bad = all.filter((c) => !/emptyReason\(\)/.test(c.stmt));
+    assert.deepEqual(bad.map((c) => `${c.rel}:${c.line}`), [],
+      `these tell the reader to press Pull without asking what is in the way - on a sample workspace ` +
+      `Pull is refused by design, and with no folder access it is not the blocker:\n` +
+      bad.map((c) => `  ${c.rel}:${c.line}  «${c.text}…»`).join('\n'));
+  });
+}

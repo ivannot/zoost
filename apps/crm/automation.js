@@ -29,7 +29,12 @@ async function rebuildSchedules() {
     const _cfg = await opReadCfg(op); if (!op.current()) return; if (_cfg) bound = _cfg; await cacheBinding(bound);
     if (!(await loadScheduleIndex(op))) return;
     renderSchedules();
-    setStatus(scheduleData.length ? `${scheduleData.length} schedules.` : 'No schedules pulled yet - use Pull all.', 'ok');
+    // `emptyReason()` first, like the tree three lines down and like the other four tabs: on a
+    // sample workspace Pull is refused by design, so «use Pull all» sends the reader to press a grey
+    // button. The status line also stopped being 'ok' over an empty list.
+    setStatus(scheduleData.length ? `${scheduleData.length} schedules.`
+                                  : (emptyReason() || 'No schedules pulled yet - use Pull all.'),
+              scheduleData.length ? 'ok' : 'warn');
   } catch (e) { if (op.current()) setStatus(MSG.refreshErr + e.message, 'bad'); }
   if (op.current()) await refreshContext();
 }

@@ -506,7 +506,7 @@ async function openCallFocus(id, depth) {
     await requirePerm(op.root);
     op.say(`Building the graph for ${id}\u2026`, 'busy');
     const g = await callGraphWithContext(op);
-    if (!g.counts.nodes) throw new Error('No functions pulled yet - press Pull all.');
+    if (!g.counts.nodes) throw new Error(emptyReason() || 'No functions pulled yet - press Pull all.');
     if (!g.nodes[id]) throw new Error(`${id} is not in the graph.`);
     const gg = Object.assign({}, g, { focus: id, depth: Math.max(1, depth || 2) });
     if (!(await publishGraph(gg, op, ws))) return;
@@ -520,7 +520,7 @@ async function openSchemaFocus(apiName, depth) {
     await requirePerm(op.root);
     op.say(`Building relations graph for ${apiName}\u2026`, 'busy');
     const g = await buildSchemaGraph(undefined, undefined, op);   // full graph; the ER window filters by focus + depth client-side (adjustable there)
-    if (!g.counts.nodes) throw new Error('No modules pulled yet - pull in Modules mode.');
+    if (!g.counts.nodes) throw new Error(emptyReason() || 'No modules pulled yet - pull in Modules mode.');
     if (!g.nodes[apiName]) throw new Error(`Module ${apiName} not found in the schema.`);
     if (g.nodes[apiName].unreadable) throw new Error(`Zoho would not describe ${apiName}, so it has no fields and no relations to draw.`);
     g.focus = apiName; g.depth = Math.max(1, depth || 2);
