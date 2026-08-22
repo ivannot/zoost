@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Refuse a push whose commit does not pass the battery.
+#
+# **Why a hook and not a habit.** Three checks in this repository derive their answer from *git*: the
+# sitemap's `lastmod`, the «updated» date on each guide, and the translation markers. All three read
+# the last-commit date of a file - so their answer changes at the moment of the commit, and a battery
+# run *before* committing cannot see what the commit will do. On 23 August the date rolled over
+# between the run and the push: the run was green, the commit moved four pages to the new day, and
+# `main` went red on a tree that had passed thirty seconds earlier.
+#
+# That is not carelessness and no amount of care fixes it: the input did not exist yet. What fixes it
+# is running the battery on the commit, which is what this does.
+#
+# Install:  git config core.hooksPath tools/hooks
+# Skip once (a genuine emergency, and say so in the push): git push --no-verify
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+# Nothing to check if nothing is going out.
+if git diff --quiet HEAD@{upstream} HEAD 2>/dev/null; then exit 0; fi
+
+echo "pre-push: running the battery on this commit…"
+if ! bash tests/run.sh > /tmp/zoost-prepush.log 2>&1; then
+  echo
+  echo "pre-push: REFUSED - the battery is red on the commit you are pushing."
+  tail -20 /tmp/zoost-prepush.log
+  echo
+  echo "The whole log is in /tmp/zoost-prepush.log."
+  echo "If the derived files moved (sitemap, stamps, markers), regenerate them, amend, and push again."
+  exit 1
+fi
+
+# The derived files are read from git, so they can only be checked once the commit exists - and if
+# they moved, the commit that is about to be pushed is already wrong. Say so rather than pushing it.
+if ! git diff --quiet; then
+  echo
+  echo "pre-push: REFUSED - the battery left changes behind:"
+  git status --porcelain
+  echo
+  echo "These are derived from the commit itself. Amend them into it and push again."
+  exit 1
+fi
+echo "pre-push: green."

@@ -562,6 +562,16 @@ for more care.
 rather than proposing a message and waiting — the rule that only Ivan decides what goes in a commit
 message is about *attribution*, which stays absent, not about a review gate on the wording.
 
+**The battery runs on the commit, not before it - `tools/hooks/pre-push` enforces that.** Three checks
+here derive their answer from *git*: the sitemap's `lastmod`, the «updated» date `stamp.py` writes on
+each guide, and the translation markers. All three read a file's last-commit date, so their answer
+changes **at the moment of the commit** - and a run before committing cannot see what the commit will
+do. On 23 August the date rolled over in between: the battery was green, the commit moved four pages
+into the new day, and `main` went red on a tree that had passed thirty seconds earlier. No amount of
+care fixes that, because the input did not exist yet. The hook runs the battery on the commit and
+refuses the push if it is red **or if it leaves derived files changed** - those belong in the commit
+going out. Install it once per machine: `git config core.hooksPath tools/hooks`.
+
 **And the commit is pushed in the same breath. Ivan never touches the code — the git is yours, all of
 it.** He decides *when the publication process starts*; every mechanical step of it is yours, push
 included. This is the boundary this file already states — decisions his, derivations and executions

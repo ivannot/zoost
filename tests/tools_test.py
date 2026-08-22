@@ -4446,5 +4446,51 @@ class AsyncCheckReadsWhatItOpens(unittest.TestCase):
                              f'another are meant to, and there are two of those')
 
 
+class NothingIsPushedThatTheBatteryHasNotSeen(unittest.TestCase):
+    """Three checks here derive their answer from git, so a run before the commit cannot see it.
+
+    `sitemap.py` reads each page's last-commit date for `lastmod`; `stamp.py` writes the «updated»
+    date on the guides from the same source; `sitecheck --retranslated` moves the translation markers
+    against a digest of the English page. All three change their answer **at the moment of the
+    commit** - and on 23 August the date rolled over between a green battery and the push. The commit
+    moved four pages into the new day, and `main` went red on a tree that had passed thirty seconds
+    earlier.
+
+    No amount of care fixes that: the input did not exist when the check ran. What fixes it is running
+    the battery on the commit, which is what `tools/hooks/pre-push` does - and it refuses if the
+    battery leaves derived files changed behind, because those belong in the commit being pushed.
+    """
+
+    HOOK = ROOT / 'tools' / 'hooks' / 'pre-push'
+
+    def test_the_hook_is_in_the_repository_and_executable(self):
+        self.assertTrue(self.HOOK.exists(), 'tools/hooks/pre-push is gone')
+        self.assertTrue(os.access(self.HOOK, os.X_OK), 'the hook is not executable, so git ignores it')
+
+    def test_it_runs_the_battery_and_refuses_leftovers(self):
+        src = self.HOOK.read_text(encoding='utf-8')
+        self.assertIn('bash tests/run.sh', src, 'the hook does not run the battery')
+        self.assertIn('git diff --quiet', src,
+                      'the hook does not refuse a commit the battery left derived changes against')
+        self.assertIn('exit 1', src, 'the hook cannot refuse anything')
+
+    def test_every_git_derived_check_is_named_in_the_hook(self):
+        # Derived: whichever tool reads a commit date is one whose answer the commit itself changes,
+        # and the hook's own comment must name it - so a fourth added tomorrow is not a silent
+        # member of the class that caused this.
+        derived = set()
+        for f in sorted((ROOT / 'tools').glob('*.py')):
+            src = f.read_text(encoding='utf-8')
+            if re.search(r"git['\"].{0,80}log|%ad|committer|last-commit", src, re.S):
+                derived.add(f.stem)
+        self.assertGreaterEqual(len(derived), 2, f'only {len(derived)} git-derived tools found - the sweep broke')
+        hook = self.HOOK.read_text(encoding='utf-8')
+        missing = sorted(d for d in derived if d not in hook and d not in ('whatsnew', 'release', 'auditcheck',
+                                                                          'handcheck', 'submitted', 'matrix'))
+        self.assertEqual(missing, [],
+                         f'these read git and so change their answer when the commit is made, and the '
+                         f'hook does not mention them: {missing}')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
