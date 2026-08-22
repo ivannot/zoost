@@ -37,6 +37,8 @@ dd128dd07336eaf7  tools/auditcheck.py: UNPUBLISHED = re.compile(r'in review|in r
 e2148af1f3f54292  tools/langcheck.py: 'ogni', 'tutti', 'tutte', 'tutto', 'nella', 'nelle', 'dalla', 'dalle', 'sulla', 'sulle',
 5af11691fedd4223  tools/langcheck.py: 'essere', 'devono', 'deve', 'sono', 'anche', 'ancora', 'perchè', 'cosa', 'niente',
 70e8e2ca830a9596  tools/langcheck.py: 'nessun', 'nessuna', 'soltanto', 'oppure', 'adesso', 'allora', 'clicchi', 'aggiorni',
+d324d93adb1e4c2f  tools/samplecheck.py: (r'depends on what|da cosa dipende', "lineage.files"),
+fe3c2eef462e1d35  tools/samplecheck.py: ROW = re.compile(r'<td data-label="(?:What it holds|Cosa contiene)">(.*?)</td>\s*'
 cda47b8dc268550f  tools/sitecheck.py: Cross-language links that are deliberate — «la versione inglese di questa pagina», the switch in
 46d274eb652a77c6  tools/sitecheck.py: twice. The Italian pages said eleven of those twenty differently: «leggi ciò che viene spedito»
 86b84dc40e6fb8d0  tools/sitecheck.py: against «leggi quello che viene distribuito», «un passo manuale» against «un passaggio manuale».

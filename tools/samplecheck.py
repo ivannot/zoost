@@ -74,6 +74,10 @@ def measure() -> dict:
             "connections": len(_load(CRM / "connections/index.json")), "connections.files": files(CRM / "connections"),
             "actions": len(_load(CRM / "actions/index.json")), "actions.files": files(CRM / "actions"),
             "failures.files": files(CRM / "failures"),
+            # The page gives these a row of their own, so they are measured rather than assumed. A
+            # row whose number nothing computes is a claim on a public page with no check behind it,
+            # which is the whole reason this tool exists.
+            "config.files": 1 if (CRM / ".zoost.json").exists() else 0,
         },
         "analytics": {
             "total": files(AN),
@@ -82,6 +86,10 @@ def measure() -> dict:
             "dashboards": kinds.get("Dashboard", 0),
             "relations": len(rel),
             "sql.files": files(AN / "sql"),
+            "views.files": 1 if (AN / "views.json").exists() else 0,
+            "schema.files": 1 if (AN / "schema.json").exists() else 0,
+            "lineage.files": 1 if (AN / "lineage.json").exists() else 0,
+            "config.files": 1 if (AN / ".zoost.json").exists() else 0,
         },
     }
 
@@ -109,6 +117,53 @@ CLAIMS = [
 
 PAGES = ["site/try.html", "site/it/try.html"]
 
+# The **Files** column, which nothing compared until today.
+#
+# Every one of these numbers was already being measured - `functions.files`, `modules.files`, and the
+# rest are in `--json` and always were - and no claim referred to any of them. Eight numbers on a
+# public page, in the tool built to check that page's numbers, and its silence read as coverage. The
+# same shape as `htmlcheck` inspecting two thirds of its subject: what a tool computes and does not
+# compare is worth exactly nothing.
+#
+# Matched on the first cell, per table, because «the workspace config» is a row in both of them and
+# the two mean different files. A row that matches nothing here is a finding: an exemption list is a
+# checklist wearing a script's clothes, and this check has no way to know what a new row claims.
+ROW_KEYS = [
+    (r'deluge|funzioni deluge', "functions.files"),
+    (r'\bmodul', "modules.files"),
+    (r'workflow', "workflows.files"),
+    (r'schedul', "schedules.files"),
+    (r'connection|connession', "connections.files"),
+    (r'automation action|azioni di automazione', "actions.files"),
+    (r'runtime', "failures.files"),
+    (r'query table', "sql.files"),
+    (r'\bviews\b|\bviste\b', "views.files"),
+    (r'relations|relazioni', "schema.files"),
+    (r'depends on what|da cosa dipende', "lineage.files"),
+    (r'workspace config|configurazione del workspace', "config.files"),
+]
+ROW = re.compile(r'<td data-label="(?:What it holds|Cosa contiene)">(.*?)</td>\s*'
+                 r'<td data-label="(?:Files|File)">(\d+)</td>', re.S)
+
+
+def row_claims(markup):
+    """(app, key, stated) for every row of the two tables, in the order they are written.
+
+    The app comes from the heading above the table rather than from the row, because the same row
+    text appears under both.
+    """
+    out = []
+    for chunk in re.split(r'<h3[^>]*>', markup)[1:]:
+        head = chunk[:120].lower()
+        app = "crm" if "crm" in head else "analytics" if "analytics" in head else None
+        if not app:
+            continue
+        for what, n in ROW.findall(chunk):
+            plain = " ".join(re.sub(r'<[^>]+>', ' ', what).split()).lower()
+            key = next((k for pat, k in ROW_KEYS if re.search(pat, plain)), None)
+            out.append((app, key, int(n), plain))
+    return out
+
 
 def main() -> int:
     m = measure()
@@ -116,6 +171,7 @@ def main() -> int:
         print(json.dumps(m, indent=2))
         return 0
     findings = []
+    rowcount = 0
     for rel in PAGES:
         page = ROOT / rel
         text = re.sub(r'<[^>]+>', ' ', page.read_text(encoding="utf-8"))
@@ -127,8 +183,21 @@ def main() -> int:
                 findings.append(f"{rel}: nothing on the page states «{key}» - the sample has {want}")
             elif want not in hits:
                 findings.append(f"{rel}: says {sorted(hits)} where the sample has {want} ({key})")
+        rows = row_claims(page.read_text(encoding="utf-8"))
+        for app, key, stated, plain in rows:
+            if key is None:
+                findings.append(f"{rel}: the row «{plain}» states {stated} file(s) and this check "
+                                f"measures nothing for it - add the measurement, or the row")
+                continue
+            want = m[app].get(key)
+            if want is None:
+                findings.append(f"{rel}: «{plain}» maps to {app}.{key}, which is not measured")
+            elif want != stated:
+                findings.append(f"{rel}: the row «{plain}» says {stated} file(s), the sample has "
+                                f"{want} ({app}.{key})")
+        rowcount += len(rows)
     print(f"samplecheck: {sum(len(v) for v in m.values())} measurements from the delivered sample, "
-          f"{len(CLAIMS)} claims per page, {len(PAGES)} pages")
+          f"{len(CLAIMS)} claims and {rowcount // len(PAGES)} file counts per page, {len(PAGES)} pages")
     for f in findings:
         print("  " + f)
     print()
