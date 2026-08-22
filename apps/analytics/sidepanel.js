@@ -2742,6 +2742,16 @@ async function aiSend() {
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
   aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); status('AI thinking…', 'busy');
+  // `finally`, not the last line. Everything from here on can exit through `if (!current())` - the
+  // workspace was left, or the conversation was cleared - and each of those exits used to leave
+  // `aiBusy` true and the Send button disabled *for the life of the panel*, with the «thinking…»
+  // dots still on screen. Every later question then returned at the first line.
+  //
+  // It was reachable without changing workspace at all: `wsGen` is bumped by every selection,
+  // including re-selecting the one already open (the ✎ rename, ↻ Refresh after a lapsed permission,
+  // the capture-phase re-grant click), while `dropWorkspaceState` - the only other place that clears
+  // this flag - runs only when the workspace actually differs. The flag is owned by the function
+  // that sets it, so it is released here whatever happens. Same fix in the CRM twin.
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
@@ -2761,8 +2771,13 @@ async function aiSend() {
     if (!current()) return;
     status('', '');
   } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); status('AI error', 'warn'); }
+  finally {
+    // The button and the flag belong to this send, whichever way it ended. What must *not* happen
+    // here is a redraw of a conversation that is no longer on screen, so the render stays guarded.
+    aiBusy = false;
+    const send = $('aisend'); if (send) send.disabled = false;
+  }
   if (!current()) return;
-  aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
 

@@ -2030,16 +2030,48 @@ test('re-activating the same workspace keeps the conversation', () => {
   }
 });
 
+
+// What a panel function actually clears, following calls one level deep.
+//
+// Three cases below used to grep the body of `dropWorkspaceState()` for `graphCache = null`, and
+// went red the day that list moved into a `dropFileCaches()` the workspace change and ↻ Refresh now
+// share - a change that made the code more correct, asserted against as a regression. The subject
+// was never "this identifier appears in this function": it was "leaving a workspace drops this
+// cache", and that survives one hop.
+function clearedBy(src, name, depth = 2) {
+  const start = src.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`${name}() not found - renamed, moved or deleted`);
+  const body = src.slice(start, src.indexOf('\n}', start));
+  let out = new Set([...body.matchAll(/(\w+)\s*=\s*(?:null|\[\]|new Map\(\))/g)].map((m) => m[1]));
+  if (depth > 0) {
+    for (const m of body.matchAll(/\b(\w+)\(\s*\)/g)) {
+      if (m[1] === name || !src.includes(`function ${m[1]}(`)) continue;
+      for (const c of clearedBy(src, m[1], depth - 1)) out.add(c);
+    }
+  }
+  return out;
+}
+
 test("the CRM's per-org caches are dropped there too, not only in the Functions tab", () => {
   // graphCache, moduleFilesCache and aiConnCache were cleared in rebuildTree(), which only runs if you
   // happen to be on Functions. Switch workspace from the Workflows tab and the assistant answered
   // from the previous org's functions and schema, with no sign of it anywhere.
-  const src = crmPanel();
-  const fn = src.slice(src.indexOf('function dropWorkspaceState()'));
-  const body = fn.slice(0, fn.indexOf('\n}'));
-  for (const c of ['graphCache = null', 'moduleFilesCache = null', 'aiConnCache = null']) {
-    assert.ok(body.includes(c), `dropWorkspaceState does not clear ${c}`);
+  const cleared = clearedBy(crmPanel(), 'dropWorkspaceState');
+  for (const c of ['graphCache', 'moduleFilesCache', 'aiConnCache', 'treeData', 'index']) {
+    assert.ok(cleared.has(c), `id=${c} survives a change of workspace`);
   }
+});
+
+test('↻ Refresh drops everything a change of workspace drops, minus the conversation', () => {
+  // Its tooltip promises «read every file again». It cleared three of nine, so the assistant and the
+  // health view kept answering from the file that had just been replaced under them.
+  const src = crmPanel();
+  const workspace = clearedBy(src, 'dropWorkspaceState');
+  const files = clearedBy(src, 'dropFileCaches');
+  for (const c of ['failIndex', 'healthData', 'actionUsers', 'aiActCache', 'moduleFilesCache']) {
+    assert.ok(files.has(c), `id=${c} is not dropped by Refresh, which says it reads every file again`);
+  }
+  for (const c of files) assert.ok(workspace.has(c), `id=${c} is dropped by Refresh but survives a workspace change`);
 });
 
 test('Clear and switching workspace empty the chat through the same function', () => {
@@ -6026,6 +6058,9 @@ test('the directory handles are cached, and dropped when the folder changes', ()
     // cannot see. Anything outside those is a call site remembering again.
     const allowed = [region('const noteWrite', '\n};'),
                      region('function dropWorkspaceState', '\n}'),
+                     // The one list of what came out of a file, shared by the workspace change and by
+                     // ↻ Refresh. Both are «start over», neither is a call site remembering again.
+                     region('function dropFileCaches', '\n}'),
                      region('async function rebuildTree', '\n}')];
     for (const c of CACHES) {
       for (const line of code.split('\n')) {
@@ -6825,9 +6860,13 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   });
 
   test('every cache made of a workspace\'s files is dropped with it', () => {
-    const drop = src.slice(src.indexOf('function dropWorkspaceState'), src.indexOf('\n}', src.indexOf('function dropWorkspaceState')));
-    for (const c of ['graphCache', 'codeCache', 'modNamesCache', 'moduleFilesCache', 'aiConnCache', 'aiActCache']) {
-      assert.ok(new RegExp(c + '\\s*=\\s*null').test(drop), `${c} survives a change of workspace`);
+    // Following the call, not grepping the body: the list moved into `dropFileCaches()` the day
+    // ↻ Refresh needed the same one, and an assertion about where a line sits would have called that
+    // a regression.
+    const cleared = clearedBy(src, 'dropWorkspaceState');
+    for (const c of ['graphCache', 'codeCache', 'modNamesCache', 'moduleFilesCache', 'aiConnCache',
+                     'aiActCache', 'failIndex', 'healthData', 'actionUsers']) {
+      assert.ok(cleared.has(c), `id=${c} survives a change of workspace`);
     }
   });
 }
@@ -8627,5 +8666,100 @@ test('an operation-bound call chain never starts a fresh workspace halfway throu
     const md = buildExportMarkdown(data(), { functions: true, code: false });
     assert.ok(!md.includes('```deluge'), 'source excluded and a fence was written anyway');
     assert.ok(md.includes('### ns.alpha') && md.includes('### ns.beta'), 'a function vanished with the source');
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// A destructive act reads the folder it is about to act on, never a memory of some folder.
+//
+// `reconcileFunctions` computed what to delete as `treeData.filter(downloaded && !live.has(id))`.
+// `treeData` is written only by `rebuildTree()`, which runs only while the Functions tab is on
+// screen - so from any other tab, switching workspace left it describing the workspace before. The
+// ids of two orgs never intersect, so «what Zoho no longer has» became «every downloaded function of
+// the previous workspace», and each was removed by relative path from the *current* folder and
+// announced as «Deleted in Zoho». A production and a sandbox mirror of one org collide on nearly
+// every functions/<namespace>/<api_name>.dg there is.
+{
+  const src = crmPanel();
+
+  test('what to prune is read from this workspace’s index, not from the list on screen', () => {
+    const at = src.indexOf('function reconcileFunctions()');
+    assert.ok(at > 0, 'reconcileFunctions() is gone - renamed, or no longer a declaration');
+    // Not the first column-zero brace: this function wraps its work in an IIFE, so that lands inside
+    // it. The next top-level `function` keyword is the honest end.
+    const fn = src.slice(at, src.indexOf('\nfunction ', at + 10));
+    assert.ok(/const gone = prev\.filter/.test(fn), 'the prune is derived from memory again');
+    assert.ok(fn.indexOf("op.read('functions/index.json')") < fn.indexOf('const gone'),
+              'the previous index is not read before it is overwritten');
+    assert.ok(!/treeData\.filter\([^)]*live/.test(fn), 'treeData decides what gets deleted');
+  });
+
+  test('pruneFunction builds its path from the entry it was handed', async () => {
+    const removed = [];
+    const ctx = {
+      // Deliberately wrong: this is the *previous* workspace's memory, which is what the defect used.
+      index: new Map([['7', { path: 'functions/other/StaleName.dg' }]]),
+      treeData: [{ id: '7', path: 'functions/other/StaleName.dg' }],
+      failedRemovals: new Set(),
+      sanitize: (x) => String(x).replace(/[^\w.-]+/g, '_'),
+      beginWorkspaceOp: () => ({
+        current: () => true,
+        remove: async (p) => { removed.push(p); },
+        read: async () => '[]',
+        write: async () => {},
+      }),
+      setStatus: () => {}, renderTree: () => {}, updateMissingButton: () => {},
+      currentPath: null, $: () => ({ classList: { remove() {} } }),
+      String, Map, Set, Array, JSON, RegExp, Error, Object,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'pruneFunction'), ctx);
+    await vm.runInContext("pruneFunction('7', { id: '7', namespace: 'ns', api_name: 'Alpha' })", ctx);
+    assert.deepEqual(removed, ['functions/ns/Alpha.dg', 'functions/ns/Alpha.meta.json'],
+                     'the path came from memory rather than from the entry read off this disk');
+  });
+
+  test('with no entry it still falls back to memory, for the single-id path', async () => {
+    const removed = [];
+    const ctx = {
+      index: new Map([['7', { path: 'functions/ns/Alpha.dg' }]]), treeData: [],
+      failedRemovals: new Set(), sanitize: (x) => x,
+      beginWorkspaceOp: () => ({ current: () => true, remove: async (p) => { removed.push(p); },
+                                 read: async () => '[]', write: async () => {} }),
+      setStatus: () => {}, renderTree: () => {}, updateMissingButton: () => {},
+      currentPath: null, $: () => ({ classList: { remove() {} } }),
+      String, Map, Set, Array, JSON, RegExp, Error, Object,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/sidepanel.js', 'pruneFunction'), ctx);
+    await vm.runInContext("pruneFunction('7')", ctx);
+    assert.deepEqual(removed, ['functions/ns/Alpha.dg', 'functions/ns/Alpha.meta.json']);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The flag is owned by the function that sets it.
+//
+// `aiSend` set `aiBusy` and disabled Send, then ran through a dozen `if (!current()) return` exits -
+// each of which left both set for the life of the panel, with the «thinking…» dots on screen and
+// every later question returning at the first line. `current()` is false whenever `wsGen` moved, and
+// `wsGen` moves on *every* activation, including re-activating the workspace already open: the ✎
+// rename, ↻ Refresh after a lapsed permission, the capture-phase re-grant click. The state that
+// cleared the flag ran only when the workspace actually differed. Same shape as `pullActive`, which
+// this repository has already had to fix once: set by many, released by one.
+for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+  test(`${app}: the assistant releases Send however the send ends`, () => {
+    const fn = sliceFn(file, 'aiSend');
+    const i = fn.indexOf('aiBusy = true');
+    assert.ok(i > 0, `id=${app} aiSend no longer marks itself busy`);
+    const after = fn.slice(i);
+    assert.ok(/\}\s*finally\s*\{/.test(after), `id=${app} the release is not in a finally`);
+    const fin = after.slice(after.search(/\}\s*finally\s*\{/));
+    assert.ok(/aiBusy = false/.test(fin), `id=${app} aiBusy is cleared outside the finally`);
+    assert.ok(/disabled = false/.test(fin), `id=${app} Send is re-enabled outside the finally`);
+    // And the release must not sit behind a guard, which is exactly what it used to do.
+    const between = after.slice(0, after.search(/\}\s*finally\s*\{/));
+    assert.ok(!/if \(!current\(\)\) return;\s*\n\s*aiBusy = false/.test(between),
+              `id=${app} an overtaken send still leaves the panel wedged`);
   });
 }

@@ -790,6 +790,12 @@ const noteWrite = (rel) => {
   // Which rule uses which action is read out of the rules themselves, so a workflows pull changes
   // the answer - and the actions pull was the only one that rebuilt it.
   if (rel.startsWith('workflows/')) { actionUsers = null; aiActCache = null; return; }
+  // The runtime reading. `failIndex` was dropped at one call site - inside `pullFailures`, and only
+  // when the reader happened to be standing on the Functions tab - so pulling from any other tab left
+  // the panel holding the pre-pull numbers while the export, which reads the file, printed the new
+  // ones. The rule this file already states: invalidation derives from the write, never from the
+  // memory of whoever caused it, or the next write path added inherits nothing.
+  if (rel.startsWith('failures/')) { failIndex = null; healthData = null; return; }
   if (!rel.startsWith('functions/')) return;
   if (rel.endsWith('.meta.json')) _dirtyMeta.add(rel.replace(/\.meta\.json$/, '.dg'));
   else if (rel.endsWith('.dg')) { _dirtySource.add(rel); _dirtyMeta.add(rel); codeCache = null; graphCache = null; }
@@ -3504,6 +3510,21 @@ function reconcileFunctions() {
         return;
       }
       const live = new Set((r.entries || []).map((e) => String(e.id)));
+      // What the mirror said *before* this answer replaces it, read from disk. It used to be
+      // `treeData`, which is module state written only by `rebuildTree()` - and `rebuildTree()` runs
+      // only while the Functions tab is the one on screen. So on any other tab, switching workspace
+      // left `treeData` describing the workspace before: `gone` became «every downloaded function of
+      // A» (ids of two orgs never intersect), and each was removed by relative path from **B's**
+      // folder, announced as «Deleted in Zoho». A production/sandbox pair collides on nearly every
+      // `functions/<namespace>/<api_name>.dg` there is.
+      //
+      // The sixth question this repository asks of every function - what survives a change of
+      // workspace - answered for the two globals nobody had added to `dropWorkspaceState`. They are
+      // dropped there now as well, but the real fix is this one: a destructive act reads the folder
+      // it is about to act on, never a memory of some folder.
+      let prev = [];
+      try { const t = JSON.parse(await op.read('functions/index.json')); if (Array.isArray(t)) prev = t; } catch (_) {}
+      if (!op.current()) return;
       await op.write('functions/index.json', JSON.stringify(r.entries, null, 2));
       // Pruned from what Zoho says, never from what the page said.
       // Whatever a previous round could not finish removing, before anything else.
@@ -3515,9 +3536,9 @@ function reconcileFunctions() {
         try { await op.remove(p); failedRemovals.delete(p); }
         catch (e) { if (/NotFound/i.test(String(e && e.name))) failedRemovals.delete(p); }
       }
-      const gone = treeData.filter((e) => e.downloaded && !live.has(String(e.id)));
+      const gone = prev.filter((e) => !live.has(String(e.id)));
       let failed = 0;
-      for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id) ? 0 : 1; }
+      for (const e of gone) { if (!op.current()) return; failed += await pruneFunction(e.id, e) ? 0 : 1; }
       await rebuildTree();
       await downloadMissing();
       if (failed) setStatus(`${failed} deleted function(s) could not be fully removed - click \u21bb Refresh.`, 'warn');
@@ -3557,12 +3578,19 @@ async function removeFunctionPaths(paths, op) {
 
 /** Take a function out of the mirror. Returns whether it went completely - a half-removed function
  *  reported as removed comes back at the next open, and the reader was told it had gone. */
-async function pruneFunction(id) {
+/** Remove one function from the mirror. `entry` is its row in *this workspace's* `functions/index.json`
+ *  - the caller has just read it off disk - and it is preferred over the in-memory maps for the same
+ *  reason the caller now reads that file: `index` and `treeData` describe whichever workspace last
+ *  drew the Functions tab, which is not necessarily this one. They stay as a fallback for the
+ *  single-id path (`syncOneNow`), where the id came from a save notice about the workspace on screen. */
+async function pruneFunction(id, entry = null) {
   const op = beginWorkspaceOp();   // the workspace this belongs to, carried rather than re-read
   const key = String(id);
   const info = index.get(key);
   const row = treeData.find((e) => String(e.id) === key);
-  const path = (info && info.path) || (row && row.path);
+  const fromEntry = entry && entry.namespace && entry.api_name
+    ? `functions/${sanitize(entry.namespace)}/${sanitize(entry.api_name)}.dg` : null;
+  const path = fromEntry || (info && info.path) || (row && row.path);
   if (!path) return true;
   let whole = true;
   // The folder this removal belongs to. Two files, two removals, awaits inside each: without this
@@ -4004,8 +4032,7 @@ function clearConversationState() {
 }
 function dropWorkspaceState() {
   const had = clearConversationState();
-  graphCache = null; moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null; failIndex = null;
-  healthData = null;   // an audit is about one workspace, and it was the one thing left off this list
+  dropFileCaches();   // everything read out of a file - listed once, in the function below
   // Relative paths mean nothing outside the folder they came from: a removal that failed in one
   // workspace was retried against the same path in the next, which is a file belonging to another
   // org. The queue goes with the workspace it belongs to.
@@ -4014,8 +4041,26 @@ function dropWorkspaceState() {
   // workspace missed every one of its functions, and the module names resolved against the previous
   // org's index - so a module the new workspace has and the old one did not vanished from the chips
   // and from both reports, silently, as an absence.
-  codeCache = null; modNamesCache = null;
+  // The functions list itself. Written only by `rebuildTree()`, which runs only while the Functions
+  // tab is on screen - so on any other tab these two described the *previous* workspace for as long
+  // as the reader stayed there, and everything that consults them by id (`syncOneNow`,
+  // `distrustEverything`, the prune) was answering about that one.
+  treeData = []; index = new Map();
   return had;
+}
+/** Everything held in memory that was read out of a file in the working folder.
+ *
+ *  Two callers, and the second is why it exists as a function. `↻ Refresh` is the control for the
+ *  write this panel cannot see - somebody restoring a file, a `git checkout` - and its tooltip says
+ *  «read every file again». It cleared three of nine: `moduleFilesCache`, `aiConnCache`,
+ *  `aiActCache`, `actionUsers`, `failIndex` and `healthData` all answered from before the press, so
+ *  the assistant and the health view kept describing the file that had just been replaced.
+ *
+ *  Listed once, so a cache added tomorrow is dropped by both without anybody remembering. */
+function dropFileCaches() {
+  graphCache = null; codeCache = null; modNamesCache = null;
+  moduleFilesCache = null; aiConnCache = null; aiActCache = null; actionUsers = null;
+  failIndex = null; healthData = null;
 }
 /** What is on *screen* when a different workspace is opened - the other half of the above.
  *
@@ -5078,7 +5123,7 @@ async function pullHealthRuntime() {
   });
 }
 $('healthpull').onclick = pullHealthRuntime;
-$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); graphCache = null; codeCache = null; modNamesCache = null; await rebuildActive();
+$('health').onclick = toggleHealth; $('healthx').onclick = closeHealth; $('missing').onclick = () => (viewMode === 'workflows' ? downloadMissingWf() : downloadMissing()); $('export').onclick = exportHtml; $('exportmd').onclick = exportMarkdown; $('graph').onclick = () => (viewMode === 'modules' ? openSchemaGraph() : openGraph()); $('refresh').onclick = async () => { if (root && !rootGranted) { await grantRoot(); return; } distrustEverything(); dropFileCaches(); await rebuildActive();
   // The message that reports a removal it could not finish says «click Refresh», so Refresh has
   // to be the thing that tries again - a remedy naming a control that does something else is
   // worse than no remedy, because the reader does it and believes it worked.

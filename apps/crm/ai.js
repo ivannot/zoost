@@ -333,6 +333,16 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // export emits neither. The door nobody thought to close, in the block whose comment says
         // exactly that. Found by a review of this file.
         const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
+        // And the webhook's query string, for the same reason and by the same helper `list_actions`
+        // uses one screen over. `webhookForModel`'s own docstring names this threat - «a Zoho CRM
+        // webhook URL routinely carries a token or an API key in its query string, and this text is
+        // sent to Anthropic or OpenAI» - and the fix went into the tool that lists them and not into
+        // the block that focuses one. `{ ...e }` sends the row whole, so every field carrying a
+        // secret has to be named here: the sender was named, the URL beside it was not.
+        //
+        // Unlike the sender there is no setting: the query is withheld always. What the model
+        // answers about is which rule calls out and where, and the host and the path say that.
+        if (shown.url) shown.url = webhookForModel(shown.url);
         const WITHHELD = '(withheld - Settings can let the assistant see the sender)';
         if (!addresses) {
           if (shown.from_address) shown.from_address = WITHHELD;
@@ -701,6 +711,16 @@ async function aiSend() {
   const inp = $('aiinput'); const text = inp.value.trim(); if (!text) return;
   inp.value = ''; aiMessages.push({ role: 'user', content: text });
   aiBusy = true; $('aisend').disabled = true; aiRenderMessages(); setStatus('AI thinking\u2026', 'busy');
+  // `finally`, not the last line. Everything from here on can exit through `if (!current())` - the
+  // workspace was left, or the conversation was cleared - and each of those exits used to leave
+  // `aiBusy` true and the Send button disabled *for the life of the panel*, with the «thinking…»
+  // dots still on screen. Every later question then returned at the first line.
+  //
+  // It was reachable without changing workspace at all: `wsGen` is bumped by every activation,
+  // including re-activating the one already open (↻ Refresh after a lapsed permission, the ✎ rename,
+  // the capture-phase re-grant click), while the state that clears `aiBusy` is dropped only when the
+  // workspace actually differs. The flag is owned by the function that sets it - the rule this
+  // repository already learnt about `pullActive` - so it is released here whatever happens.
   try {
     const apiMessages = aiMessages.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }));
     const withTools = cfg.active === 'anthropic';
@@ -720,8 +740,13 @@ async function aiSend() {
     if (!current()) return;
     setStatus('', '');
   } catch (e) { if (!current()) return; aiMessages.push({ role: 'assistant', content: friendlyError(e) }); setStatus('AI error', 'warn'); }
+  finally {
+    // The button and the flag belong to this send, whichever way it ended. What must *not* happen
+    // here is a redraw of a conversation that is no longer on screen, so the render stays guarded.
+    aiBusy = false;
+    const send = $('aisend'); if (send) send.disabled = false;
+  }
   if (!current()) return;
-  aiBusy = false; $('aisend').disabled = false;
   aiRenderMessages();
 }
 async function aiEngineChrome() {
