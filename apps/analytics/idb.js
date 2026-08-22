@@ -1,4 +1,4 @@
-// Persistenza minimale di un handle (FileSystemDirectoryHandle) in IndexedDB.
+// The smallest possible persistence of a FileSystemDirectoryHandle, in IndexedDB.
 const IDB_NAME = 'zoost';
 
 window.idbHandle = {
