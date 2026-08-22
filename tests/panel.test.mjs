@@ -8766,3 +8766,35 @@ for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analyt
               `id=${app} an overtaken send still leaves the panel wedged`);
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// The mirror is untrusted content: it is text a workspace author wrote, and a folder can be
+// received, shared or synced. `functions/index.json` is read off disk and its `id` goes straight
+// into `/crm/v2/settings/functions/${id}` - so `"id": "../../../v2/users?type=AllUsers&x="`
+// normalises to an endpoint nobody chose, fetched with the reader's own session and cookies. The
+// two parameters beside it were `encodeURIComponent`'d; the id was not.
+for (const app of ['crm', 'analytics']) {
+  const rel = `apps/${app}/content-bridge.js`;
+  const { safePath } = load([sliceFn(rel, 'safePath')], { String, Error });
+
+  test(`${app}: a request path that climbs out of its endpoint is refused`, () => {
+    assert.equal(safePath('/crm/v2/settings/functions/12345?language=deluge'),
+                 '/crm/v2/settings/functions/12345?language=deluge', 'an ordinary path was refused');
+    for (const bad of ['/crm/v2/settings/functions/../../../v2/users?type=AllUsers',
+                       '/crm/v2/../../evil', '/a/..', '/a\\b', '/a#b', 'crm/v2/x']) {
+      assert.throws(() => safePath(bad), /malformed/, `id=${bad} was allowed through`);
+    }
+    // A `..` inside the *query* is not a path segment and must not be refused - the guard is about
+    // where the request goes, not about what it carries.
+    assert.doesNotThrow(() => safePath('/x/y?q=../z'));
+  });
+
+  test(`${app}: every request goes through it`, () => {
+    // Comments stripped: one of them quotes `fetch(BASE + path)` while explaining a different bug,
+    // and a test about code that reads prose is the trap this suite has now hit three times today.
+    const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const fetches = [...src.matchAll(/fetch\(BASE \+ ([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
+    assert.ok(fetches.length > 0, `id=${app} nothing fetches BASE + a path any more - check the shape`);
+    for (const v of fetches) assert.equal(v, 'safePath', `id=${app} a request bypasses the path guard`);
+  });
+}

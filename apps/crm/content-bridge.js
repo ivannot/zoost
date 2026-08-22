@@ -151,7 +151,7 @@
   // before. If the second attempt fails the original error is what the user sees.
   async function warmDeluge() {
     try {
-      await fetch(BASE + '/crm/v9/settings/automation/schedules?page=1&per_page=1',
+      await fetch(BASE + safePath('/crm/v9/settings/automation/schedules?page=1&per_page=1'),
         { headers: headers(), credentials: 'include' });
     } catch (_) {}
   }
@@ -178,8 +178,27 @@
     throw e;
   }
 
+  /** Refuse a path that is not the one it looks like.
+   *
+   *  Every path here is built by interpolation, and some of the values come out of the working
+   *  folder: `functions/index.json` is read off disk and its `id` goes into
+   *  `/crm/v2/settings/functions/${id}`. A workspace folder is text somebody else may have written -
+   *  received, shared, synced - and `"id": "../../../v2/users?type=AllUsers&x="` is normalised by the
+   *  URL parser into an endpoint nobody chose, fetched with the reader's own session and cookies.
+   *
+   *  Held here rather than at each call site, so a path built tomorrow inherits it: the same reason
+   *  `noteWrite` maps writes to caches in one place. The call sites encode their ids as well, which
+   *  is the belt to this pair of braces.
+   */
+  function safePath(path) {
+    const p = String(path).split('?')[0];
+    if (!p.startsWith('/') || p.includes('\\') || p.includes('#') || p.split('/').includes('..')) {
+      throw new Error('Refused a malformed request path - the workspace index may be damaged.');
+    }
+    return path;
+  }
   async function api(path, csrfPrefix, retried) {
-    const res = await fetch(BASE + path, { headers: headers(csrfPrefix), credentials: 'include' });
+    const res = await fetch(BASE + safePath(path), { headers: headers(csrfPrefix), credentials: 'include' });
     // 204 is an answer: «this org has none of those». It has no body, so res.json() would throw and
     // an empty area would arrive as a failure - measured on an org with no webhooks at all.
     if (res.status === 204) return NO_CONTENT;
@@ -247,12 +266,12 @@
     return { total: raw.length, entries, capped };
   }
   async function fetchWorkflow(id) {
-    const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}`);
+    const resp = await api(`/crm/v8/settings/automation/workflow_rules/${encodeURIComponent(id)}`);
     const rule = list(resp, 'workflow_rules', 'workflow_rules/' + id)[0]; if (!rule) throw new Error('not found');
     return { rule };
   }
   async function workflowUsage(id, fromD, tillD) {
-    const resp = await api(`/crm/v8/settings/automation/workflow_rules/${id}/actions/usage?executed_from=${fromD}&executed_till=${tillD}&include_inner_details=related_details.sent_percentage`);
+    const resp = await api(`/crm/v8/settings/automation/workflow_rules/${encodeURIComponent(id)}/actions/usage?executed_from=${fromD}&executed_till=${tillD}&include_inner_details=related_details.sent_percentage`);
     return { usage: list(resp, 'workflow_rules', 'workflow_rules/' + id + '/actions/usage')[0] || null };
   }
   // Scheduled functions - the list already carries the called function {id, name}.
@@ -276,7 +295,7 @@
   }
   async function fetchOne(id, category, source) {
     const q = []; if (category) q.push('category=' + encodeURIComponent(category)); q.push('language=deluge'); if (source) q.push('source=' + encodeURIComponent(source));
-    const d = await api(`/crm/v2/settings/functions/${id}?${q.join('&')}`); const fn = list(d, 'functions', 'functions/' + id)[0];
+    const d = await api(`/crm/v2/settings/functions/${encodeURIComponent(id)}?${q.join('&')}`); const fn = list(d, 'functions', 'functions/' + id)[0];
     return fn ? toFile(fn) : null;
   }
 

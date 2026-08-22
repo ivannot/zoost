@@ -2957,8 +2957,91 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
         },
     }
 
+    @staticmethod
+    def _code(src: str) -> str:
+        """The source with comments blanked, offsets preserved.
+
+        `\\bfetch\\s*\\(` matches «re-fetch (backfill)» in a sentence, and once «I could not read the
+        method» stopped meaning GET, that comment became a finding about a write path. A check about
+        code reads code - the third time in one day this suite was fooled by its own prose.
+
+        It is a state machine and not a set of rules, because three cheaper versions were each wrong
+        in a different direction, all within the hour:
+
+          - strings before comments blanked from the `//` inside 'https://api.anthropic.com/…' to the
+            end of the line, cutting two POSTs in half and reporting them as writes towards Zoho;
+          - comments before strings ran away over the quote inside /(?:crmZgid|["']?zgid["']?)…/,
+            swallowing 10KB of `content-bridge.js` - a regex literal I had just written down as a
+            limit that does not bite, in the first file it read;
+          - consuming a backtick to the next backtick lost track inside `${ `nested` }`, which both
+            panels use constantly, and left comments unblanked again.
+
+        A limit asserted rather than measured is a blind spot with a note attached. So: one pass, one
+        stack, and a check over every shipped script that each `//` line is blank in the output.
+        """
+        out, i, n = [], 0, len(src)
+        stack = []            # '`' inside a template, '{' inside a ${…} of one
+        prev = None           # last non-space code character, for regex-vs-division
+        KEYWORD = re.compile(r'\b(return|typeof|case|in|of|new|delete|void|do|else)\s*$')
+
+        def emit(text, blank=False):
+            nonlocal prev
+            out.append(''.join(' ' if c != '\n' else '\n' for c in text) if blank else text)
+            if not blank:
+                t = text.rstrip()
+                if t:
+                    prev = t[-1]
+
+        while i < n:
+            c = src[i]
+            intpl = stack and stack[-1] == '`'      # inside template text: only ${ and ` matter
+            if intpl:
+                if c == '\\':
+                    emit(src[i:i + 2]); i += 2; continue
+                if c == '`':
+                    stack.pop(); emit(c); i += 1; continue
+                if src.startswith('${', i):
+                    stack.append('{'); emit('${'); i += 2; continue
+                emit(c); i += 1; continue
+            if c == '}' and stack and stack[-1] == '{':
+                stack.pop(); emit(c); i += 1; continue
+            if src.startswith('/*', i):
+                j = src.find('*/', i + 2); j = n if j < 0 else j + 2
+                emit(src[i:j], blank=True); i = j; continue
+            if src.startswith('//', i):
+                j = src.find('\n', i); j = n if j < 0 else j
+                emit(src[i:j], blank=True); i = j; continue
+            if c == '`':
+                stack.append('`'); emit(c); i += 1; continue
+            if c in '\'"':
+                j = i + 1
+                while j < n and src[j] != c:
+                    j += 2 if src[j] == '\\' else 1
+                j = min(j + 1, n)
+                emit(src[i:j]); i = j; continue
+            if c == '/' and (prev is None or prev in '(,=:[!&|?{};+-*%~^<>'
+                             or KEYWORD.search(''.join(out[-3:]))):
+                j, cls = i + 1, False
+                while j < n:
+                    ch = src[j]
+                    if ch == '\\':
+                        j += 2; continue
+                    if ch == '[':
+                        cls = True
+                    elif ch == ']':
+                        cls = False
+                    elif ch == '/' and not cls:
+                        break
+                    elif ch == '\n':
+                        break               # not a regex after all; stop rather than run away
+                    j += 1
+                emit(src[i:min(j + 1, n)]); i = min(j + 1, n); continue
+            emit(c); i += 1
+        return ''.join(out)
+
     def calls(self, src: str):
         """Every fetch(...) with its argument text, taken by walking the brackets."""
+        src = self._code(src)
         out = []
         for m in re.finditer(r'\bfetch\s*\(', src):
             depth, i = 0, m.end() - 1
@@ -2973,6 +3056,27 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
             out.append(src[m.end():i])
         return out
 
+    @staticmethod
+    def _opts_not_literal(call: str) -> bool:
+        """True when the init argument is not an object literal written at the call.
+
+        `fetch(url, OPT)` and `fetch(req)` say nothing about the method here, and the fourth of the
+        four spellings that walked past this gate was exactly that. «I cannot read it» is not GET.
+        """
+        depth, cut = 0, None
+        for k, ch in enumerate(call):
+            if ch in '([{':
+                depth += 1
+            elif ch in ')]}':
+                depth -= 1
+            elif ch == ',' and depth == 0:
+                cut = k
+                break
+        if cut is None:
+            # One argument: a bare identifier is a Request object; anything else is a URL, so GET.
+            return bool(re.fullmatch(r'\s*[A-Za-z_$][\w$]*\s*', call))
+        return not call[cut + 1:].lstrip().startswith('{')
+
     def test_every_shipped_fetch_to_zoho_is_a_read(self):
         seen = 0
         for f in sorted((ROOT / 'apps').rglob('*.js')):
@@ -2980,8 +3084,25 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
             src = f.read_text(encoding='utf-8')
             for call in self.calls(src):
                 seen += 1
-                m = re.search(r"method:\s*'([A-Z]+)'", call)
-                method = m.group(1) if m else 'GET'
+                # Any quoting, and «I could not tell» is not GET.
+                #
+                # This read `method:\s*'([A-Z]+)'` and defaulted to GET, so four ordinary spellings
+                # walked past the one gate that enforces «no write path to Zoho»: a double-quoted
+                # "DELETE", a backticked `PUT`, `method: verb` with the verb in a variable, and an
+                # options object built above the call. Measured by planting each. The URL half of
+                # this check resolves constants for exactly that reason - «a URL moved into a
+                # variable cannot hide» - and the method is the half that decides whether it is a
+                # write. The adversary named in CLAUDE.md is a session here adding a write path by
+                # accident, which is the adversary that would have got through.
+                m = re.search(r'''method\s*:\s*['"`]([A-Za-z]+)['"`]''', call)
+                if m:
+                    method = m.group(1).upper()
+                elif re.search(r'\bmethod\s*:', call):
+                    method = 'UNKNOWN'      # named but not a literal: cannot be read as a read
+                elif self._opts_not_literal(call):
+                    method = 'UNKNOWN'      # a Request object, or an options object built elsewhere
+                else:
+                    method = 'GET'
                 # The host is not always written at the call: the OpenAI one is `OPENAI_BASE +
                 # '/chat/completions'`, and reading the call text alone said «a POST to Zoho» about
                 # the AI provider. So single-quoted constants of the file are resolved first - the
@@ -2990,7 +3111,7 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                 # It is two hops, not one - `const base = OPENAI_BASE` and `const OPENAI_BASE =
                 # 'https://api.openai.com/v1'` - so the widening runs until it stops growing rather
                 # than once. A fixed number of rounds is the same guess one level up.
-                defs = dict(re.findall(r"const (\w+)\s*=\s*'([^']+)'", src))
+                defs = dict(re.findall(r'''const (\w+)\s*=\s*['"`]([^'"`]+)['"`]''', src))
                 defs.update(dict(re.findall(r"const (\w+)\s*=\s*(\w+);", src)))
                 widened, before = call, None
                 while widened != before:
@@ -3005,6 +3126,68 @@ class NothingShippedCanWriteToZoho(unittest.TestCase):
                               f'non-negotiable. If it writes nothing, name its endpoints in '
                               f'ALLOWED_POST with the reason. Call: {call.strip()[:100]}')
         self.assertGreater(seen, 4, 'no fetch call was found at all, so this asserted nothing')
+
+
+
+    def test_the_four_spellings_that_used_to_walk_past(self):
+        """Each of these was planted against the previous version and reported GET.
+
+        The URL half of this check resolves constants because «a URL moved into a variable cannot
+        hide»; the same reasoning was never applied to the method, and the method is the half that
+        decides whether it is a write. The adversary CLAUDE.md names - a session here adding a write
+        path by accident - is the one that would have got through.
+        """
+        def method_of(call):
+            m = re.search(r"""method\s*:\s*['"`]([A-Za-z]+)['"`]""", call)
+            if m:
+                return m.group(1).upper()
+            if re.search(r'\bmethod\s*:', call):
+                return 'UNKNOWN'
+            return 'UNKNOWN' if NothingShippedCanWriteToZoho._opts_not_literal(call) else 'GET'
+
+        t = NothingShippedCanWriteToZoho()
+        cases = {
+            "fetch(BASE + '/x' + id, { method: verb })": 'UNKNOWN',
+            'fetch(BASE + "/x", { method: "DELETE" })': 'DELETE',
+            'fetch(BASE + \'/x\', { method: `PUT` })': 'PUT',
+            "fetch(BASE + '/x', OPT)": 'UNKNOWN',
+            "fetch(req)": 'UNKNOWN',
+            "fetch(BASE + '/x')": 'GET',
+            "fetch(BASE + '/x', { headers: h })": 'GET',
+        }
+        for src, want in cases.items():
+            got = [method_of(c) for c in t.calls(src)]
+            self.assertEqual(got, [want], f'{src} read as {got}, expected {want}')
+
+    def test_the_comment_blanker_reads_every_shipped_script(self):
+        """The crude half of this check: every `//` line must be blank in the output, in every file.
+
+        Three earlier versions each passed the suite and were wrong - a `//` in a URL, a quote in a
+        regex literal, a nested `${ `template` }`. None of them was caught by a case; all three were
+        caught by running the blanker over the whole tree and comparing, which is the mechanism this
+        repository already uses for `htmlcheck` and `csscheck`: a second, cruder pass over the same
+        subject, compared by position.
+        """
+        checked = 0
+        for f in sorted((ROOT / 'apps').rglob('*.js')) + sorted((ROOT / 'site').glob('*.js')):
+            src = f.read_text(encoding='utf-8')
+            blank = NothingShippedCanWriteToZoho._code(src)
+            self.assertEqual(len(blank), len(src), f'{f}: the blanker changed the offsets')
+            for m in re.finditer(r'(?m)^[ \t]*//', src):
+                self.assertNotIn('//', blank[m.start():m.end()],
+                                 f'{f}:{src.count(chr(10), 0, m.start()) + 1} a comment is read as code')
+                checked += 1
+        self.assertGreater(checked, 500, f'only {checked} comment lines examined - the sweep is not sweeping')
+
+    def test_the_blanker_keeps_what_is_not_a_comment(self):
+        code = NothingShippedCanWriteToZoho._code
+        self.assertIn('https://api.anthropic.com', code("const U = 'https://api.anthropic.com/v1';"))
+        self.assertIn('["\']?zgid', code('const m = /(?:crmZgid|["\']?zgid["\']?)/;'))
+        self.assertIn('nested', code('const t = `a ${ `nested` } b`;  // gone'))
+        self.assertNotIn('gone', code('const t = `a ${ `nested` } b`;  // gone'))
+        self.assertNotIn('hidden', code('/* hidden */ const x = 1;'))
+        # A quote inside a comment must not open a string that swallows what follows.
+        self.assertIn('fetch(BASE', code("// don't\nfetch(BASE + p);"))
 
     def test_the_one_non_read_helper_reaches_only_the_endpoints_named_here(self):
         # The helper is generic - `post(path, params)` - so what keeps the guarantee is not its

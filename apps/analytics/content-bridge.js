@@ -73,8 +73,26 @@
       return m ? m[1] : null;
     } catch (_) { return null; }
   }
+  /** Refuse a path that is not the one it looks like.
+   *
+   *  Every path here is built by interpolation, and some of the values come out of the working
+   *  folder: a view id read from `views.json` goes into `/clientapi/.../views/${id}/editsql`. A
+   *  workspace folder is text somebody else may have written - received, shared, synced - and an id
+   *  of `../../../something` is normalised by the URL parser into an endpoint nobody chose, fetched
+   *  with the reader's own session and cookies.
+   *
+   *  Held here rather than at each call site, so a path built tomorrow inherits it. Same guard, same
+   *  words, in the CRM twin.
+   */
+  function safePath(path) {
+    const p = String(path).split('?')[0];
+    if (!p.startsWith('/') || p.includes('\\') || p.includes('#') || p.split('/').includes('..')) {
+      throw new Error('Refused a malformed request path - the workspace index may be damaged.');
+    }
+    return path;
+  }
   async function api(path) {
-    const res = await fetch(BASE + path, {
+    const res = await fetch(BASE + safePath(path), {
       headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
       credentials: 'include',
     });
@@ -117,7 +135,7 @@
   async function post(path, params) {
     const token = zdbCsrf();
     if (!token) throw new Error('CSRF token not found (no CSRF_TOKEN or CT_CSRF_TOKEN cookie on this page - are you signed in?)');
-    const res = await fetch(BASE + path, {
+    const res = await fetch(BASE + safePath(path), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
@@ -171,7 +189,7 @@
   // ---- the census ---------------------------------------------------------------------------
   async function listViews() {
     const id = ws();
-    const j = await api(`/reportsapi/db/${id}/VIEWLIST?ZOHO_FOLDERLIST=true&NOCACHE=${Date.now()}`);
+    const j = await api(`/reportsapi/db/${encodeURIComponent(id)}/VIEWLIST?ZOHO_FOLDERLIST=true&NOCACHE=${Date.now()}`);
     const d = (j && j.data) || {};
     const path = `db/${id}/VIEWLIST`;
     const views = zip(need(d.viewListKey, 'viewListKey', path), need(d.viewListValues, 'viewListValues', path));
@@ -286,7 +304,7 @@
   // PAROBJID names the source tables; PAROBJIDINVCOLS says *which columns of each* the query
   // actually involves, which is what makes "if I drop this column, what breaks" answerable.
   async function querySql(id) {
-    const j = await api(`/clientapi/sqltable/workspaces/${ws()}/views/${id}/editsql`);
+    const j = await api(`/clientapi/sqltable/workspaces/${ws()}/views/${encodeURIComponent(id)}/editsql`);
     const d = (j && j.data) || {};
     // A response without SQLQUERY is a shape this does not understand, not a query with no text.
     // Coercing it to '' made the pull report success, write an empty file, and leave the panel saying
@@ -318,7 +336,7 @@
   // Analytics' own dependency answer for one view, both directions. `level` is the distance in the
   // graph, so this is already transitive - not just the immediate neighbours.
   async function viewDependencies(id) {
-    const j = await api(`/clientapi/dependencyview/workspace/${ws()}/view/${id}`);
+    const j = await api(`/clientapi/dependencyview/workspace/${ws()}/view/${encodeURIComponent(id)}`);
     const d = (j && j.data) || {};
     // Validate at the boundary. `{objId, level}` is the shape every captured response used, but an
     // element that does not carry one must be dropped, not turned into the string "undefined" - which
