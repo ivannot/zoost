@@ -7210,9 +7210,14 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     // `orgId()` is called by the header builder, so a pull of a few thousand functions serialised the
     // whole CRM document a few thousand times. A *successful* read is remembered; a failed one is not,
     // because a page that has not rendered the field yet must be asked again.
-    const ctx = { _org: null, reads: 0, document: { documentElement: { get innerHTML() { ctx.reads++; return ctx.html; } } },
+    // `memoValid()` and `location` come with it: the memo now belongs to the URL it was read at, and
+    // running the function alone is what caught the free reference the moment that landed.
+    const ctx = { _org: null, _zuid: null, _memoAt: null, reads: 0,
+                  location: { href: 'https://crm.zoho.eu/crm/org123/tab/Home' },
+                  document: { documentElement: { get innerHTML() { ctx.reads++; return ctx.html; } } },
                   html: 'var crmZgid = "123456789012";' };
     vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'memoValid'), ctx);
     vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'orgId'), ctx);
     assert.equal(vm.runInContext('orgId()', ctx), '123456789012');
     assert.equal(vm.runInContext('orgId()', ctx), '123456789012');
@@ -7221,6 +7226,24 @@ test('every cache in a shipped panel is named by something that tests it', () =>
     assert.equal(vm.runInContext('orgId()', ctx), null);
     assert.equal(vm.runInContext('orgId()', ctx), null);
     assert.equal(ctx.reads, 2, 'a page that had not rendered the id yet is never asked again');
+  });
+
+  test('and it is forgotten when the page becomes another page', () => {
+    // A `pushState` to another org changes the URL and replaces nothing. The memo used to survive
+    // that, and the guard meant to catch it compares the panel's expectation against `context()`,
+    // which reads the memo - a stale value agreeing with itself.
+    const ctx = { _org: null, _zuid: null, _memoAt: null, reads: 0,
+                  location: { href: 'https://crm.zoho.eu/crm/org111/tab/Home' },
+                  document: { documentElement: { get innerHTML() { ctx.reads++; return ctx.html; } } },
+                  html: 'var crmZgid = "111111111111";' };
+    vm.createContext(ctx);
+    vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'memoValid'), ctx);
+    vm.runInContext(sliceFn('apps/crm/content-bridge.js', 'orgId'), ctx);
+    assert.equal(vm.runInContext('orgId()', ctx), '111111111111');
+    ctx.location.href = 'https://crm.zoho.eu/crm/org999/tab/Home';
+    ctx.html = 'var crmZgid = "999999999999";';
+    assert.equal(vm.runInContext('orgId()', ctx), '999999999999',
+                 'the bridge answers with the org the tab used to be on');
   });
 }
 
@@ -9342,6 +9365,45 @@ for (const app of ['crm', 'analytics']) {
       // worse: it turns every phrase the prose quotes for another reason into a finding. Four
       // tightenings, four different sets of false positives, which is a subject telling you it is
       // the wrong one. Where a check cannot be made exact, this repository says so in the check.
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// A value memoised from the page belongs to the URL it was read at.
+//
+// `orgId()` and `zuid()` scrape the CRM org and user id out of the document, and both are memoised:
+// without it a pull of a few thousand functions serialises the whole CRM DOM a few thousand times.
+// The memo's safety rested on a sentence about somebody else's single-page application - «a value
+// that was found cannot change without a navigation, which replaces the document this script is
+// attached to» - which nothing here can establish, and `history.pushState` falsifies.
+//
+// The guard that is supposed to notice makes it circular: `expectedMatches` compares what the panel
+// expects against `context()`, and `context()` reads the memo. A stale value is compared with itself
+// and agrees - so a pull could be answered by the org the tab used to be on.
+//
+// One line instead of an assumption: the memo belongs to `location.href`, and a different one
+// re-reads. Derived, so a third memo added tomorrow is held to it.
+{
+  for (const app of ['crm', 'analytics']) {
+    test(`${app}: nothing scraped from the page outlives the page it was scraped from`, () => {
+      const src = read(`apps/${app}/content-bridge.js`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const memos = [...src.matchAll(/if \((_\w+)\) return \1;/g)].map((m) => m[1]);
+      for (const name of memos) {
+        const at = src.lastIndexOf('function ', src.indexOf(`if (${name}) return ${name};`));
+        const body = src.slice(at, src.indexOf('\n  }', at));
+        assert.ok(/memoValid\(\)|location\.(href|pathname)/.test(body),
+                  `id=${name} is returned from memory with nothing tying it to the page it was read ` +
+                  `from - a pushState changes the org and this keeps answering with the old one`);
+      }
+      // And the invalidator must actually forget: a `memoValid` that only records the URL is worse
+      // than none, because it reads as a guard.
+      if (/function memoValid/.test(src)) {
+        const mv = src.slice(src.indexOf('function memoValid'), src.indexOf('\n  }', src.indexOf('function memoValid')));
+        for (const name of memos) {
+          assert.ok(new RegExp(`${name} = null`).test(mv), `id=${name} is never cleared when the URL changes`);
+        }
+      }
     });
   }
 }

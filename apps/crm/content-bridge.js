@@ -49,8 +49,24 @@
   // field yet must be asked again, and a value that was found cannot change without a navigation,
   // which replaces the document this script is attached to. Switching org in Zoho is such a
   // navigation; the panel compares the org against the binding on every pull regardless.
-  let _org = null, _zuid = null;
+  let _org = null, _zuid = null, _memoAt = null;
+  // The URL the memo belongs to. The paragraph above rests on «a value that was found cannot change
+  // without a navigation, which replaces the document this script is attached to» - and that is a
+  // claim about somebody else's single-page application, which nothing here can establish.
+  // `history.pushState` changes the path without replacing anything, and the guard that is supposed
+  // to notice - `expectedMatches` - compares the panel's expectation against `context()`, which
+  // reads *this memo*: a stale value is compared with itself and agrees.
+  //
+  // One line instead of an assumption: the memo belongs to the URL it was read at, and a different
+  // one re-reads. The saving it exists for is intact - a pull of a few thousand functions serialised
+  // the whole CRM DOM a few thousand times - because the URL does not change during a pull.
+  function memoValid() {
+    if (_memoAt === location.href) return true;
+    _memoAt = location.href; _org = null; _zuid = null;
+    return false;
+  }
   function orgId() {
+    memoValid();
     if (_org) return _org;
     // The CRM org id is the zgid / crmZgid. Do NOT fall back to a generic "orgId":
     // on some pages that is an embedded ASAP/help-portal id (e.g. ASAP_ORGID), not the CRM org.
@@ -64,6 +80,7 @@
   // The Zoho user id (zuid) is on every CRM page - a #dreZuId field (deluge runtime) and a `zuid`
   // JS global. The connections catalogue endpoint needs it. Scraped like orgId (same fragility).
   function zuid() {
+    memoValid();
     if (_zuid) return _zuid;
     try { const el = document.getElementById('dreZuId'); const v = el && String(el.value || el.textContent || '').trim(); if (v && /^\d{6,}$/.test(v)) return (_zuid = v); } catch (_) {}
     try { const m = document.documentElement.innerHTML.match(/\bzuid\s*["'\s]*[:=]\s*["']?(\d{9,})/i); if (m) return (_zuid = m[1]); } catch (_) {}
