@@ -2308,6 +2308,10 @@ async function aiUnlock() {
     $('ailockpass').select(); return;
   }
   await window.ZOOST_KEYVAULT.remember(prov, key);
+  // Cleared here, on success, as the docstring has always said. It was not: `aiShowLock` empties the
+  // input only on the branch that *shows* the row, so the passphrase sat in the DOM for the life of
+  // the panel. Found by a review of the boundary; the CRM twin had it too.
+  $('ailockpass').value = '';
   aiLockMsg(''); aiShowLock(false); status('API key unlocked for this browser session.', 'ok');
 }
 function aiTrunc(x, n) { const t = x || ''; return t.length > n ? t.slice(0, n) + '\n… (truncated)' : t; }

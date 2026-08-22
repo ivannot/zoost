@@ -630,7 +630,13 @@
       lastFailedAt: f.last_failed_time_ISO || null,
       firstFailedAt: Number(f.failed_time) ? new Date(Number(f.failed_time)).toISOString() : null,
       reRunAt: f.re_run_time && f.re_run_time !== 'null' ? f.re_run_time : null,
-      recordId: (f.entity_info && f.entity_info.id) ? String(f.entity_info.id) : null,
+      // `entity_info.id` is **not** here, and the comment above says why in the paragraph about
+      // `params`: for a Workflow or a Button failure that id is 36 bytes identifying a customer
+      // record. It used to be captured, written into `failures/index.json`, and read by nothing -
+      // not the panel, not either export, not the assistant. The same fact the boundary drops one
+      // field earlier, kept one field later, for no purpose. Two rules, one line: «it never reads
+      // customer records», and «never add data fetching without the UI that shows it». Found by a
+      // review of this file.
     };
   }
   // One page, and it is *said*. The endpoint takes `start` and `limit`, and whether it walks past the

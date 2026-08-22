@@ -155,14 +155,14 @@
       <h3>Anthropic<button class="danger" id="ai_a_forget" type="button">Forget</button></h3>
       <div class="grid2">
         <label><span class="lt">Model</span><input type="text" id="ai_a_model" placeholder="e.g. claude-sonnet-4-5"></label>
-        <label><span class="lt">API key</span><input type="password" id="ai_a_key" placeholder="sk-ant-…"></label>
+        <label><span class="lt">API key</span><input type="password" autocomplete="off" id="ai_a_key" placeholder="sk-ant-…"></label>
       </div>
     </div>
     <div class="prov" id="provOpenai">
       <h3>OpenAI (ChatGPT)<button class="danger" id="ai_o_forget" type="button">Forget</button></h3>
       <div class="grid2">
         <label><span class="lt">Model</span><input type="text" id="ai_o_model" placeholder="e.g. gpt-4o-mini"></label>
-        <label><span class="lt">API key</span><input type="password" id="ai_o_key" placeholder="sk-…"></label>
+        <label><span class="lt">API key</span><input type="password" autocomplete="off" id="ai_o_key" placeholder="sk-…"></label>
       </div>
     </div>
     <div class="ctl">
@@ -199,9 +199,9 @@
       <label class="ck"><input type="checkbox" id="ai_lock"><span><b>Protect the key with a passphrase</b> -
         it is stored encrypted, and you type the passphrase once per browser session</span></label>
       <div id="ai_lockrow" class="lockrow" hidden>
-        <label id="ai_currow"><span class="lt">Current passphrase</span><input type="password" id="ai_passcur" placeholder="the one in use now"></label>
-        <label id="ai_passrow"><span class="lt">New passphrase</span><input type="password" id="ai_pass" placeholder="chosen by you, never stored"></label>
-        <label id="ai_pass2row"><span class="lt">Repeat</span><input type="password" id="ai_pass2" placeholder="must match"></label>
+        <label id="ai_currow"><span class="lt">Current passphrase</span><input type="password" autocomplete="off" id="ai_passcur" placeholder="the one in use now"></label>
+        <label id="ai_passrow"><span class="lt">New passphrase</span><input type="password" autocomplete="new-password" id="ai_pass" placeholder="chosen by you, never stored"></label>
+        <label id="ai_pass2row"><span class="lt">Repeat</span><input type="password" autocomplete="new-password" id="ai_pass2" placeholder="must match"></label>
         <p class="sub lockhint" id="ai_lockhint"></p>
         <p class="sub lockhint" id="ai_lockset" hidden>The key is encrypted. The passphrase is not stored, so there is nothing to show here. <button type="button" id="ai_passchange">Change passphrase</button></p>
         <p class="sub lockhint" id="ai_lostrow" hidden>Lost the passphrase? <button type="button" id="ai_passlost" class="danger">Remove the protection</button></p>

@@ -105,6 +105,12 @@ async function aiUnlock() {
     $('ailockpass').select(); return;
   }
   await window.ZOOST_KEYVAULT.remember(prov, key);
+  // The field is cleared here, on success, and the docstring above has always said it was. It was
+  // not: `aiShowLock` empties the input only on the branch that *shows* the row, so after an unlock
+  // the passphrase sat in the DOM for the life of the panel. It does not leave the machine and
+  // nothing reads that node - but it is a sentence about a secret, and it was not true of the code.
+  // Found by a review of the boundary.
+  $('ailockpass').value = '';
   aiLockMsg(''); aiShowLock(false); setStatus('API key unlocked for this browser session.', 'ok');
 }
 function aiTrunc(x, n) { const s = x || ''; return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
@@ -128,6 +134,22 @@ let aiActCache = null;
  *  rather than a scope tick, because a chat has no dialog to tick: the export asks per file, this
  *  asks once. Off unless the user turned it on - the mirror keeps the address either way, and what
  *  is at stake here is whether it leaves the machine. */
+/** A webhook's address, with the part that is usually a secret taken off.
+ *
+ *  A Zoho CRM webhook URL routinely carries a token or an API key in its query string, and this text
+ *  is sent to Anthropic or OpenAI. It was the *ungated* field: the sender's email address beside it
+ *  is behind a switch that is off by default, and the webhook went whole. The model has no use for
+ *  the query - what it answers about is «which rule calls out, and where» - so the host and the path
+ *  travel and the query is replaced by a mark that says something was there. The panel and the
+ *  exports still show it in full: those are the reader's own screen and a file they choose to hand
+ *  over. Found by a review of the boundary.
+ */
+function webhookForModel(url) {
+  const u = String(url || '');
+  if (!u) return '';
+  const cut = u.search(/[?#]/);
+  return cut < 0 ? u : `${u.slice(0, cut)}?(query withheld)`;
+}
 async function shareAddresses() {
   try { const c = await chrome.storage.local.get('aicfg'); return !!(c.aicfg && c.aicfg.shareAddresses); }
   catch (_) { return false; }   // unreadable is «do not share», the direction that cannot leak
@@ -498,7 +520,7 @@ async function aiExecTool(name, input, op = beginWorkspaceOp()) {
         ? ` writes ${a.field || '?'} <- ${actStale(a) ? 'not read by this pull' : (a.value === null || a.value === undefined) ? 'cleared' : a.value}`
         : a.kind === 'email_notifications'
           ? ` template ${(a.template && a.template.name) || '?'}${acts.addresses && a.from_address ? ', from ' + a.from_address : a.from_type ? ', from ' + (a.from_type === 'user' ? 'a user address' : 'an organisation address') : ''}`
-          : a.kind === 'webhooks' ? ` ${a.method || ''} ${a.url || ''}`
+          : a.kind === 'webhooks' ? ` ${a.method || ''} ${webhookForModel(a.url)}`
           : a.kind === 'tasks' && actKept(a) ? ` - ${KEPT_DETAIL}`
           : a.kind === 'tasks' && actThin(a) ? ` - ${MISS_DETAIL}` : '';
       return `${a.name} [${a.kind}]${a.module ? ' on ' + a.module : ''} - fired by ${users.length} rule(s)${users.length ? ': ' + users.map((w) => w.name).join(', ') : ''}${extra}`;

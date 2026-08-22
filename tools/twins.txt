@@ -12,7 +12,7 @@ aiContextLabel	6b65dd4c3db5	9e759687172d	divergent
 aiEngineChrome	1b258b12d73a	ae6ca83689d5	divergent
 aiEngineWord	eda86661e8e6	eda86661e8e6	identical
 aiEnsureFiles	46ca4cb53f51	46ca4cb53f51	identical
-aiExecTool	e9856c12421d	ee81072522f9	divergent
+aiExecTool	738856b8504c	ee81072522f9	divergent
 aiGetCfg	b01820a97b0f	b01820a97b0f	identical
 aiLockMsg	27ab8454c641	27ab8454c641	identical
 aiLocked	2f50d3d07bfc	2f50d3d07bfc	identical
@@ -26,7 +26,7 @@ aiStreamAnthropic	b0b989fb4051	b0b989fb4051	identical
 aiToolArg	8fc8ff0203b7	0b09a0bc91bf	divergent
 aiToolEvent	7529360de91f	60bfbfc26800	divergent
 aiTrunc	764f499b06b9	d0f094951075	divergent
-aiUnlock	94ac98f5b8c9	703c51f70169	divergent
+aiUnlock	6e29500b5ee0	6a9f73479d87	divergent
 appRoot	7ce174166cab	7ce174166cab	identical
 applyFilter	4adeaeee0813	4adeaeee0813	identical
 asideWidth	e38e10836248	e38e10836248	identical

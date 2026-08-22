@@ -318,6 +318,67 @@ for (const [app, sample] of [['crm', { label: 'Acme production', instance: 'acme
   });
 }
 
+// ---------- what leaves the machine for the assistant ----------
+//
+// Three fields, one rule: the panel and the exports are the reader's own screen and a file they hand
+// over deliberately; the AI path is the one that leaves without a per-item decision. So what travels
+// there is decided field by field, and each of these was found travelling when it should not.
+
+test('crm: a webhook URL reaches the model without its query string', () => {
+  // A Zoho webhook URL routinely carries a token in its query, and this was the *ungated* field -
+  // beside a sender address that is behind a switch which is off by default.
+  const { webhookForModel } = load([sliceFn('apps/crm/ai.js', 'webhookForModel')]);
+  assert.equal(webhookForModel('https://hooks.example.com/x?token=SECRET'),
+               'https://hooks.example.com/x?(query withheld)');
+  assert.equal(webhookForModel('https://hooks.example.com/x#frag=SECRET'),
+               'https://hooks.example.com/x?(query withheld)');
+  assert.equal(webhookForModel('https://hooks.example.com/x'), 'https://hooks.example.com/x');
+  assert.equal(webhookForModel(null), '');
+  const src = read('apps/crm/ai.js');
+  assert.ok(!/a\.kind === 'webhooks' \? ` \$\{a\.method \|\| ''\} \$\{a\.url/.test(src),
+    'the tool still sends the whole URL');
+});
+
+test('crm: the sender-sharing switch is read when it is used, not cached with the workspace', () => {
+  // `aiActCache` is dropped by a write to actions/, a write to workflows/ and a change of workspace.
+  // A *setting* in there could be stale for a browser session - and this one decides whether a
+  // person's address leaves the machine.
+  const src = read('apps/crm/ai.js');
+  const fn = sliceFn('apps/crm/ai.js', 'aiLoadActions');
+  assert.ok(!/aiActCache = \{ list, users, addresses \}/.test(fn), 'the setting is cached again');
+  assert.match(fn, /addresses: await shareAddresses\(\)/, 'it is not read where it is used');
+  assert.equal((src.match(/addresses: await shareAddresses\(\)/g) || []).length, 2,
+    'both the cached and the fresh path must read it');
+});
+
+test('crm: the sender name is withheld with the sender address, not without it', () => {
+  // The focus block spreads the whole row, so withholding has to name every field that carries the
+  // sender - `from_name` is the person's own name when the type is `user`, and it was travelling.
+  const src = read('apps/crm/ai.js');
+  const block = src.slice(src.indexOf('const shown = { ...e'), src.indexOf('return block(', src.indexOf('const shown = { ...e')));
+  assert.match(block, /shown\.from_address = WITHHELD/);
+  assert.match(block, /shown\.from_name = WITHHELD/, 'the name goes while the address is held back');
+});
+
+test('crm: a customer record id is not captured at the boundary', () => {
+  // The bridge drops `params` because for a Workflow failure it is a record id. `entity_info.id` is
+  // the same fact one field later, and it was kept, written to disk, and read by nothing.
+  const src = read('apps/crm/content-bridge.js');
+  assert.ok(!/recordId:/.test(src), 'a customer record id is captured again');
+  assert.ok(!/entity_info/.test(src.replace(/\/\/[^\n]*/g, '')), 'entity_info is read outside a comment');
+});
+
+test('both panels: the unlock passphrase does not stay in the DOM', () => {
+  for (const rel of ['apps/crm/ai.js', 'apps/analytics/sidepanel.js']) {
+    const src = read(rel);
+    const at = src.indexOf('KEYVAULT.remember(prov, key)');
+    assert.ok(at > 0, `${rel}: the unlock path moved`);
+    const after = src.slice(at, at + 700);
+    assert.match(after, /\$\('ailockpass'\)\.value = ''/,
+      `${rel}: the field is cleared only when the row is shown, so it survives a successful unlock`);
+  }
+});
+
 // ---------- the way out of a mismatch is not refused by the guard on the mismatch ----------
 //
 // Delete the workspace you are in; the panel selects another; the tab now disagrees with it and the
