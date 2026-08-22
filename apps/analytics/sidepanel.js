@@ -1268,8 +1268,21 @@ async function writePartialSnapshot(op, next) {
  *  was no map left to even say which were residue. Runs only after the new files and the new index
  *  are written; a removal that fails stays for the next pull, which derives the same keep-set and
  *  retries for free. */
-async function pruneSql(index, op) {
+async function pruneSql(index, op, census = []) {
+  // **What the workspace has, not what this pull could read.** The keep-set was the new index alone,
+  // and a query table is only in that index if its SQL came back *this time* - so a workspace where
+  // 60 of 200 queries answered 429 lost 60 previously-good .sql files in one pull, in the folder the
+  // reader keeps under git. «Could not be read» is not «no longer exists», and this is the one place
+  // in the product where confusing them destroys something. Found by a review of this file, under
+  // the fifth of the six questions: does partial data authorise a destructive act?
+  //
+  // The CRM twin has always drawn the line here - it prunes from the census `listFunctions` returns,
+  // and refuses to prune at all when that list came back capped - and this is the same rule: a view
+  // that is still a query table in the workspace keeps its file, whatever happened to it today. Its
+  // *index row* is still absent, so nothing serves yesterday's SQL as if it were current: the panel
+  // says «not read», which is true, and the file survives for the next pull and for the diff.
   const keep = new Set(Object.values(index).map((e) => `sql/${e.stem}.sql`));
+  for (const v of census) keep.add(`sql/${stemOf(v.name, v.id)}.sql`);
   let failed = 0;
   for await (const p of walk(op.root)) {
     if (!/^sql\/[^/]+\.sql$/.test(p) || keep.has(p)) continue;
@@ -1322,7 +1335,7 @@ async function writeToDisk(info, op, next) {
     }
     await writeJson('sql/index.json', index, op);
     op.say('Removing what the workspace no longer has\u2026', 'busy');
-    next.cleanupFailed = await pruneSql(index, op);
+    next.cleanupFailed = await pruneSql(index, op, views.filter((v) => v.type === 'QueryTable'));
     op.say('Finishing the mirror\u2026', 'busy');
     await op.write(PULL_STATE, JSON.stringify({ state: 'complete', completedAt: new Date().toISOString() }));
   } catch (e) {

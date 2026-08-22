@@ -31,6 +31,7 @@ Its limits, said rather than left to be found:
 So it is a gate rather than a ledger: it reports zero on this tree, and anything it reports is either
 a real defect or one line to add to the list.
 """
+import json
 import pathlib
 import re
 import sys
@@ -180,15 +181,44 @@ def called(code: str) -> dict:
     return out
 
 
+
+def scopes(app_dir) -> list:
+    """Every independent scope in an app, with the scripts that share it.
+
+    Three kinds, and all three are derived: a page and its `<script src>`; the service worker, which
+    is alone; and each content-script entry, whose `js` array shares one world per `world`+`matches`
+    group. Named by where they come from, so a finding says which scope it is about."""
+    out = []
+    for page in sorted(app_dir.glob('*.html')):
+        html = page.read_text(encoding='utf-8')
+        out.append((page.name, [s for s in re.findall(r'<script[^>]+src="([^"]+)"', html) if s.endswith('.js')]))
+    mf = app_dir / 'manifest.json'
+    if mf.exists():
+        data = json.loads(mf.read_text(encoding='utf-8'))
+        sw = (data.get('background') or {}).get('service_worker')
+        if sw:
+            out.append(('manifest: background.service_worker', [sw]))
+        for n, cs in enumerate(data.get('content_scripts') or [], 1):
+            js = [j for j in (cs.get('js') or []) if j.endswith('.js')]
+            if js:
+                out.append((f"manifest: content_scripts[{n}] ({cs.get('world', 'ISOLATED')})", js))
+    return out
+
+
 def scan() -> list:
     findings = []
     pages = 0
     for app_dir in sorted((ROOT / 'apps').iterdir()):
         if not app_dir.is_dir():
             continue
-        for page in sorted(app_dir.glob('*.html')):
-            html = page.read_text(encoding='utf-8')
-            scripts = [s for s in re.findall(r'<script[^>]+src="([^"]+)"', html) if s.endswith('.js')]
+        # A page is one scope; so is a service worker, and so is each content-script world. The first
+        # version read only `<script src>` and therefore skipped the five scripts that run where
+        # nobody is watching a console - both backgrounds and the three content scripts - which is
+        # exactly where this tool's founding defect would be *worse*: a ReferenceError in a content
+        # script lands in Zoho's own page console and nothing here would ever say so. Measured by a
+        # review: 27 of 32 shipped scripts read. The manifest declares the other five, so the list is
+        # still derived and a script added there tomorrow is covered without anyone remembering.
+        for page, scripts in scopes(app_dir):
             if not scripts:
                 continue
             pages += 1
@@ -196,7 +226,7 @@ def scan() -> list:
             for rel in scripts:
                 path = app_dir / rel
                 if not path.exists():
-                    findings.append(f'{app_dir.name}/{page.name}: loads {rel}, which is not there')
+                    findings.append(f'{app_dir.name}/{page}: loads {rel}, which is not there')
                     continue
                 code = blank_literals(path.read_text(encoding='utf-8'))
                 have |= declared(code)
@@ -207,7 +237,7 @@ def scan() -> list:
                     continue
                 rel, line = want[name]
                 findings.append(f'{app_dir.name}/{rel}:{line}: {name}() is called and is in no script '
-                                f'{page.name} loads')
+                                f'{page} loads')
     return findings, pages
 
 

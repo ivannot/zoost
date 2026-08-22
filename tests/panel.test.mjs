@@ -401,7 +401,10 @@ test('Analytics counts the SQL files it writes, and says so before the first one
     'the disk stage must be announced before it starts, not once it is over');
   assert.match(body, /Writing SQL files\\u2026 \$\{written\} \/ \$\{total\}/,
     'one file per query table is the longest thing this does and it has to count');
-  assert.ok(body.indexOf('Removing what the workspace no longer has') < body.indexOf('pruneSql(index, op)'));
+  // `pruneSql(index, op, ...)` now takes the census as a third argument, so the call is matched by
+  // its name rather than by an exact argument list - a test pinned to a signature reports a refactor
+  // as a defect, which is how a suite teaches people to edit it.
+  assert.ok(body.indexOf('Removing what the workspace no longer has') < body.indexOf('pruneSql('));
 });
 
 // ---------- both bridges: reading one cookie out of the jar ----------
@@ -6559,12 +6562,33 @@ test('every cache in a shipped panel is named by something that tests it', () =>
   const fn = (n) => panel.slice(panel.indexOf(n), panel.indexOf('\n}', panel.indexOf(n)));
 
   test('every write and every removal is checked, not just the first', () => {
-    for (const [name, effect] of [['async function syncOneNow', 'writeFile'],
-                                  ['async function pruneFunction', 'removeFile']]) {
+    // **This asserted `0 >= 0` for months.** It grepped for `dir !== myDir`, `writeFile(` and
+    // `removeFile(`; both functions were refactored onto `beginWorkspaceOp()` / `op.current()` /
+    // `op.write()` / `op.remove()`, so both counts became zero and the comparison passed on nothing.
+    // `|| []` is what turned «matched nothing» into «zero» - the shape this repository already names:
+    // a guard that skips when the thing is absent is not a guard. Proven by an outside review, which
+    // planted two unguarded writes after the last check and watched the suite stay green.
+    //
+    // So: the names are asserted to exist before they are counted, and the *order* is checked rather
+    // than the totals - three checks and two writes passed the old comparison whatever their
+    // positions. Every effect must have a guard between it and the effect before it.
+    for (const [name, effects] of [['async function syncOneNow', ['op.write(']],
+                                   ['async function pruneFunction', ['op.remove(']]]) {
       const body = fn(name);
-      const checks = (body.match(/dir !== myDir/g) || []).length;
-      const effects = (body.match(new RegExp(effect + '\\(', 'g')) || []).length;
-      assert.ok(checks >= effects, `${name}: ${effects} ${effect} calls behind ${checks} check(s)`);
+      assert.ok(body.length > 200, `${name}: the slice is empty - renamed or moved, so this tests nothing`);
+      const guard = /op\.current\(\)|!current\(\)/;
+      assert.match(body, guard, `${name}: no workspace check at all`);
+      for (const effect of effects) {
+        const at = [...body.matchAll(new RegExp(effect.replace(/[(.]/g, '\\$&'), 'g'))].map((m) => m.index);
+        assert.ok(at.length, `${name}: no ${effect} call - the effect was renamed and this stopped testing it`);
+        let from = 0;
+        for (const i of at) {
+          const between = body.slice(from, i);
+          assert.match(between, guard,
+            `${name}: a ${effect} with no workspace check between it and the effect before it`);
+          from = i;
+        }
+      }
     }
   });
 

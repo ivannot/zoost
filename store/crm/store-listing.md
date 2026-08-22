@@ -145,11 +145,11 @@ No browsing data, no Zoho CRM data and no personal information go into storage. 
 ```
 scripting is used to inject two small scripts into Zoho CRM tabs only, and nowhere else.
 
-1. A bridge script that calls the Zoho CRM API from the page's own origin, using the session the user is already signed in with. Running in the page context is what allows the extension to read the user's own functions, module metadata, layouts, related lists, workflows, schedules and the names of the org's connections without asking for separate credentials, and strictly within that user's existing Zoho permissions.
+1. A bridge script that calls the Zoho CRM API from the page's own origin, with the session the user is already signed in with. That is what lets it read their own functions, module metadata, layouts, related lists, workflows, schedules and connection names without separate credentials, strictly within their existing Zoho permissions.
 
-2. A hook that detects when the user saves a Deluge function in the native Zoho editor, so the corresponding local file can be updated automatically and the local mirror stays faithful.
+2. A hook that notices when the user saves a Deluge function in the native Zoho editor, so the local file follows. It wraps the page's own fetch and XMLHttpRequest to see the method and URL of that request: no bodies are read, nothing is altered, and it passes on "a function was saved" with its id.
 
-Both scripts are packaged with the extension; no remote code is fetched or executed. They read only; they never modify the Zoho page, its content, or any data in the Zoho CRM.
+Neither writes anything to Zoho CRM: no record, no function, no setting, and no remote code is fetched or executed. One thing is written into the page, said here rather than left to be found: Find types the function name into Zoho's search box, when the user asks for it.
 ```
 
 ## 8. tabs justification (max 1000)

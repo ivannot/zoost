@@ -128,16 +128,27 @@ let aiActCache = null;
  *  rather than a scope tick, because a chat has no dialog to tick: the export asks per file, this
  *  asks once. Off unless the user turned it on - the mirror keeps the address either way, and what
  *  is at stake here is whether it leaves the machine. */
+async function shareAddresses() {
+  try { const c = await chrome.storage.local.get('aicfg'); return !!(c.aicfg && c.aicfg.shareAddresses); }
+  catch (_) { return false; }   // unreadable is «do not share», the direction that cannot leak
+}
 async function aiLoadActions(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
-  if (aiActCache) return aiActCache;
+  // The list and the users are workspace data and are worth caching. **The setting is not**, and
+  // caching it was a defect: `aiActCache` is dropped by a write to actions/, a write to workflows/
+  // and a change of workspace - and by nothing else, so turning «share sender addresses» *off* in
+  // Settings left the cached `true` answering for the rest of the browser session, and the address
+  // went on travelling to the provider. A switch whose whole meaning is «does this leave the
+  // machine» must not be able to be stale. Found by a review of this file.
+  //
+  // So it is read at the moment it is used. One `chrome.storage.local.get` per answer is nothing
+  // beside the request that follows it, and there is now no third invalidation site to forget.
+  if (aiActCache) return { ...aiActCache, addresses: await shareAddresses() };
   let list = []; try { const a = JSON.parse(await op.read('actions/index.json')); if (Array.isArray(a)) list = a; } catch (_) {}
   const users = actionUsers || await buildActionUsers(op);
-  let addresses = false;
-  try { const c = await chrome.storage.local.get('aicfg'); addresses = !!(c.aicfg && c.aicfg.shareAddresses); } catch (_) {}
   if (!op.current()) return null;
-  aiActCache = { list, users, addresses };
-  return aiActCache;
+  aiActCache = { list, users };
+  return { ...aiActCache, addresses: await shareAddresses() };
 }
 async function aiLoadConnections(op = beginWorkspaceOp()) {
   if (!op.current()) return null;
@@ -293,8 +304,18 @@ async function aiFocus(op = beginWorkspaceOp()) {
         // focus block that carried it regardless would let the address out through the one door
         // nobody thought to close - and the whole point of that switch is that it has one meaning.
         const { addresses } = (await aiLoadActions(op)) || { addresses: false };
+        // `{ ...e }` sends the whole row, which is why the withholding has to name every field that
+        // carries the sender rather than the one the setting is named after. `from_name` is the
+        // person's own name when `from_type` is `user`, and it was going to the provider while the
+        // address beside it was held back - the panel shows the two as one fact, «From», and the
+        // export emits neither. The door nobody thought to close, in the block whose comment says
+        // exactly that. Found by a review of this file.
         const shown = { ...e, fired_by: fired.map((r) => r.name || r.id) };
-        if (!addresses && shown.from_address) shown.from_address = '(withheld - Settings can let the assistant see sender addresses)';
+        const WITHHELD = '(withheld - Settings can let the assistant see the sender)';
+        if (!addresses) {
+          if (shown.from_address) shown.from_address = WITHHELD;
+          if (shown.from_name) shown.from_name = WITHHELD;
+        }
         return block(`the ${actionKindLabel(e.kind).toLowerCase().replace(/s$/, '')} \u00ab${e.name || e.id}\u00bb`,
           aiTrunc(JSON.stringify(shown, null, 2), 4000))
           + (fired.length ? '' : (e.associated

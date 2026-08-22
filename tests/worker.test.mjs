@@ -613,7 +613,7 @@ test('the trace appears when the panel writes, and not before', () => {
 // is the shape this repository already named in `updateMetaIndex`: a refused write caught and
 // dropped, so the caller carries on as if it had happened.
 
-function reportEndpoint({ get = async () => '0', put = async () => {} } = {}) {
+function reportEndpoint({ get = async () => '0', put = async () => {}, turnstile = true } = {}) {
   const calls = { github: 0 };
   const ctx = {
     console, crypto, URL, URLSearchParams, Response, TextEncoder, JSON,
@@ -621,7 +621,7 @@ function reportEndpoint({ get = async () => '0', put = async () => {} } = {}) {
     reportRedact: (t) => String(t), reportFence: (t) => t,
     reportRateKey: async () => 'rl:test',
     fetch: async (url) => {
-      if (String(url).includes('turnstile')) return { json: async () => ({ success: true }) };
+      if (String(url).includes('turnstile')) return { json: async () => ({ success: turnstile }) };
       calls.github++;
       return { json: async () => ({ html_url: 'https://github.com/x/y/issues/1' }) };
     },
@@ -650,6 +650,19 @@ test('and when the counter can be written, the report goes', async () => {
   const res = await e.run();
   assert.equal(res.status, 200);
   assert.equal(e.calls.github, 1);
+});
+
+test('a failed challenge costs no slot of the daily limit', async () => {
+  // The order used to be counter-then-Turnstile, so a reader whose token had gone stale - this page
+  // asks them to *read* the report first - burnt one of their five a day per attempt, and five
+  // presses of Send locked them out for 24 hours having published nothing. The repository already
+  // held this rule one case over: the empty-report check runs before the limiter for the same reason.
+  const puts = [];
+  const e = reportEndpoint({ put: async (...a) => { puts.push(a); }, turnstile: false });
+  const res = await e.run();
+  assert.equal(res.status, 403);
+  assert.deepEqual(puts, [], 'a caller who cannot pass the challenge still spent a slot, and a KV write');
+  assert.equal(e.calls.github, 0);
 });
 
 test('over the ceiling, nothing is sent', async () => {

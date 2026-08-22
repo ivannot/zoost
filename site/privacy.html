@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://zoost.it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
 <meta property="og:description" content="Privacy policy for the Zoost Chrome extensions. No server, no account, no telemetry: nothing ever reaches the developer.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=384d514b55">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=51bcf1eb48">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/privacy">
 <link rel="alternate" hreflang="en" href="https://zoost.it/privacy">
@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
 <meta name="theme-color" content="#0d121c">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/site.css?v=d2772f19a3">
+<link rel="stylesheet" href="/site.css?v=0dbf2dc307">
 
 </head>
 <body>
@@ -48,7 +48,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">21 August 2026</span></p>
+  <p class="upd">Zoost - Chrome extensions · Last updated: <span data-stamp="updated">22 August 2026</span></p>
 
   <div class="box">
     <h2 class="h3">The short version</h2>
@@ -294,17 +294,31 @@
     and is not intended for use by anyone under 16.</p>
 
   <h2>8. This website</h2>
-  <p>zoost.it sets no cookies, embeds no trackers, loads no third-party fonts, scripts or analytics, and
-    does not profile visitors. The pages are static files; the only script is one small file served from
-    this same domain, which fills in the copyright year and the version badge in the footer.</p>
-  <p>That badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's
-    edge and asks two public sources: the extension's Chrome Web Store listing page, and GitHub for
+  <p>zoost.it sets no cookies, embeds no trackers, loads no third-party fonts or analytics, and does not
+    profile visitors. The pages are static files, and every page but one runs a single script served
+    from this same domain, which fills in the copyright year and the version badge in the footer.</p>
+  <p><b>The one exception is <a href="/report">the problem-report page</a></b>, which also loads
+    Cloudflare's Turnstile from <code>challenges.cloudflare.com</code>. It is the anti-abuse check
+    standing between that form and a public issue tracker, and it is the only third-party script on
+    this site. It runs on that page and nowhere else. Cloudflare is given your address for the check,
+    which is described below - it is already the host of this site, so it has it either way.</p>
+  <p>The badge calls one endpoint on this site, <code>/api/versions</code>. It runs on Cloudflare's
+    edge and answers from two things: a reading of the Chrome Web Store, taken by a scheduled job in
+    the public repository and stored at the edge rather than fetched while you wait, and GitHub for
     the repository's newest tag, the version in its manifest and the date the site content last
     changed. That is how the footer can show what is published, what was released, what is in
     development, and when these pages last changed.</p>
   <p>Those requests are made <b>by the server, not by your browser</b>. Nothing about you is sent to
     Google or GitHub, no identifier of yours is involved, and the answer is cached for everyone
     alike. If a source is unreachable the badge simply reads "unknown".</p>
+  <p><b>What sending a problem report leaves behind.</b> The report itself is published as a public
+    issue and is described in section 2. Two things about the request are worth stating here, because
+    they concern you rather than the report: Cloudflare's Turnstile is given your IP address to run its
+    check, and the endpoint keeps a <b>counter</b> so that no single address can open more than five
+    issues a day. That counter is stored against a <b>salted hash</b> of the address and expires after
+    24 hours: your address is not written down, and what is written cannot be turned back into it -
+    not even by whoever reads the store. Nothing else about the request is kept, and none of it is
+    joined to the report.</p>
   <p><b>The one place where the developer <em>is</em> the controller.</b> This site is served by
     Cloudflare, which is both its network and its host. Like any web server, its edge keeps ordinary
     request logs - IP address, time, URL, user agent - and counts requests without setting a cookie or

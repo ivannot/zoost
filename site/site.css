@@ -282,7 +282,7 @@ figure.shot figcaption{margin-top:8px;font-size:13px;color:var(--muted);line-hei
 .doc .upd{font:12px var(--mono);color:#7688a1;margin:0 0 30px}
 .doc p,.doc li{color:#c3cddc}
 .doc ul,.doc ol{padding-left:22px} .doc li{margin:7px 0}
-.doc code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.doc code{font:13px var(--mono);color:var(--teal);background:#0f1826;border:1px solid var(--line);border-radius:5px;padding:1px 5px;overflow-wrap:anywhere}
 .doc .box{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 19px;margin:18px 0}
 .doc .box.warn{border-color:#6b4a1c;background:#1e1a12}
 .doc .box.warn b{color:#f0a44a}
@@ -348,7 +348,6 @@ footer .flinks a{display:inline-flex;align-items:center;min-height:24px}
    were tried first and are worse - 414px each puts the longer paragraph on seven lines by itself.
    Nothing changes below 1096px, where the column is already narrower than 78ch. */
 footer .legal{line-height:1.65;margin:10px 0 0}
-}
 /* Version alignment badge — hidden until site.js has something true to put in it. */
 #vers{display:none}
 /* One block per product: its name on a line of its own, then its three facts beneath it.
@@ -404,7 +403,9 @@ footer .legal{line-height:1.65;margin:10px 0 0}
    guides overflowed by ~95px and the privacy table by ~32px, from long code tokens in table cells
    (`crm/instance[-sandbox]-orgid` and its kind) and from tables wider than the screen. A page you
    have to drag left and right to read is broken, whatever the desktop looks like. */
-.doc code{overflow-wrap:anywhere}
+/* `overflow-wrap` lives on the one `.doc code` rule above, where the rest of the chip is written.
+   It was a second rule for the same selector here, which is a class meaning two things - and it hid
+   for months behind a stray `}` that made csscheck stop reading this file at line 351. */
 .doc pre{overflow-x:auto}
 @media (max-width:760px){
   main table{display:block;overflow-x:auto}

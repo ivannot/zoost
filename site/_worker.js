@@ -524,29 +524,19 @@ async function report(request, env) {
   if (!/^Zoost /.test(text.trim())) return bad(400, 'That does not look like a Zoost report.');
 
   const ip = request.headers.get('cf-connecting-ip') || '';
-  const key = await reportRateKey(env, ip);
-  // Fails closed. The first version swallowed a KV error into `seen = 0`, so an outage of the store
-  // switched the limit off entirely - a rate limit that disappears exactly when things are going
-  // wrong is not one. Refusing costs a reader a message that names the other two ways in.
-  let seen = 0;
-  try { seen = Number(await env.STATUS.get(key)) || 0; }
-  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
-  if (seen >= REPORT_PER_IP_PER_DAY) return bad(429, 'That is several reports from here today. Please open an issue by hand, or email ivan@zoost.it.');
-  // Counted **before** the issue is created, not after. Counting afterwards let concurrent requests
-  // all read the same number and all go through; KV is eventually consistent, so this is still a
-  // ceiling rather than a lock - but it is the ceiling it claims to be, not one race wide.
-  // Fails closed, like the read above and for the same reason. This was `catch (_) {}`: a KV fault
-  // that stopped `put` while `get` kept answering would return 0 for ever, and the five-a-day ceiling
-  // would stop existing **in silence** - on the one endpoint here that opens public issues under the
-  // maintainer's token. Turnstile still stands in front of it, so it was never open to anyone; what
-  // it lost was the only limit that applies to somebody who *can* pass Turnstile.
-  //
-  // It is also a defect this repository has already named once, in `updateMetaIndex`: a refused write
-  // swallowed by `.catch(() => {})`, so the caller went on to clear its dirty mark over a write that
-  // never happened. Same shape, one system over. Found by an outside review.
-  try { await env.STATUS.put(key, String(seen + 1), { expirationTtl: 86400 }); }
-  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
 
+  // **Turnstile first, and the counter after it.** The order used to be the other way round, and it
+  // cost the reader the thing this endpoint is for: a token is single-use and expires, and this page
+  // asks you to *read* the report before sending it - so a token that has gone stale answers «the
+  // check did not pass, please try again», the widget resets, and five presses of Send later a person
+  // who has published nothing is refused for 24 hours. Reported by an outside review, which also
+  // pointed out that this repository already holds the rule one case over: a test requires the
+  // empty-report check to run before the limiter, because otherwise it spends a slot of the daily
+  // limit. The check that refuses most hostile traffic was the one it was never applied to.
+  //
+  // The other half is cheaper and just as real: before this, an unauthenticated caller who cannot
+  // pass the challenge still caused five KV writes per address, in a namespace shared with the
+  // workflow that keeps /api/versions truthful.
   const ok = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -557,6 +547,35 @@ async function report(request, env) {
   // be accepted here. Checking it costs one comparison and keeps the widening honest.
   if (!ok || !ok.success) return bad(403, 'The check did not pass. Please try again.');
   if (ok.hostname && ok.hostname !== new URL(request.url).hostname) return bad(403, 'The check did not pass. Please try again.');
+
+  const key = await reportRateKey(env, ip);
+  // Fails closed. The first version swallowed a KV error into `seen = 0`, so an outage of the store
+  // switched the limit off entirely - a rate limit that disappears exactly when things are going
+  // wrong is not one. Refusing costs a reader a message that names the other two ways in.
+  let seen = 0;
+  try { seen = Number(await env.STATUS.get(key, { cacheTtl: 60 })) || 0; }
+  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
+  if (seen >= REPORT_PER_IP_PER_DAY) return bad(429, 'That is several reports from here today. Please open an issue by hand, or email ivan@zoost.it.');
+  // Counted **before** the issue is created, not after. Counting afterwards let concurrent requests
+  // all read the same number and all go through.
+  //
+  // What this is *not*: a lock. KV is eventually consistent and the read is cached at the edge, so
+  // requests arriving together can read the same number and all pass - the width of that window is
+  // the cache, not one request. The comment here used to claim «not one race wide», which overstated
+  // it; what bounds a burst is the cost of minting Turnstile tokens, and that is now the check
+  // *above* this one rather than below it. Said precisely because an overstated guarantee is the kind
+  // of sentence this project has had to walk back before.
+  //
+  // Fails closed, like the read above and for the same reason. This was `catch (_) {}`: a KV fault
+  // that stopped `put` while `get` kept answering would return 0 for ever, and the five-a-day ceiling
+  // would stop existing **in silence** - on the one endpoint here that opens public issues under the
+  // maintainer's token.
+  //
+  // It is also a defect this repository has already named once, in `updateMetaIndex`: a refused write
+  // swallowed by `.catch(() => {})`, so the caller went on to clear its dirty mark over a write that
+  // never happened. Same shape, one system over. Found by an outside review.
+  try { await env.STATUS.put(key, String(seen + 1), { expirationTtl: 86400 }); }
+  catch (_) { return bad(503, 'The limiter is unavailable, so nothing is being accepted right now. Please open an issue by hand, or email ivan@zoost.it.'); }
 
   // Rebuilt, never passed through: two fenced blocks and a sentence saying where they came from.
   const clean = reportRedact(text);

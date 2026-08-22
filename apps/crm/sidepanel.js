@@ -451,8 +451,12 @@ const SCOPE_KEYS = ['functions', 'code', 'modules', 'layouts', 'relations', 'wor
 // convenience: an export is a file you hand to somebody, and an address is the one thing in this
 // mirror that belongs to a person rather than to a configuration. It is one tick away, and the
 // report says how many it withheld so nobody reads a blank as an absence.
-const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, health: true };
-const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, health: false };
+// `failures` was in SCOPE_KEYS and in neither preset, so the dialog drew its box and the default
+// export left the chapter out - and pressing «Everything» *unticked* a box the reader had ticked,
+// because the preset is assigned whole. A key in the list and not in the presets is a control that
+// disagrees with itself. Found by a review; `tests/panel.test.mjs` now holds the three in step.
+const SCOPE_FULL = { functions: true, code: true, modules: true, layouts: true, relations: true, workflows: true, schedules: true, actions: true, addresses: false, connections: true, failures: true, health: true };
+const SCOPE_SAFE = { functions: true, code: false, modules: true, layouts: true, relations: true, workflows: false, schedules: false, actions: true, addresses: false, connections: true, failures: true, health: false };
 // **The sensitive section starts unticked, and that is a promise being kept rather than a taste.**
 // The site, the README and §4.3 of the privacy policy all say the same thing - «the sensitive part is
 // opt-in and flagged when selected» - and this line said the opposite: the first export a person ever
@@ -2091,18 +2095,23 @@ async function showCallers(path, mine = previewLoad, op = beginWorkspaceOp()) {
       if (!fx || !previewCurrent(mine, op) || currentPath !== path) return;
       // Zoho reports the display name; the mirror knows three names for the same function and which
       // one matches is not ours to assume. Try them all rather than picking one and finding nothing.
-      const mine = [node.display_name, node.name, node.api_name]
+      // Named `hits`, and it has to be: this was `const mine`, which shadows the *parameter* `mine`
+      // for the whole block - so the `previewCurrent(mine, op)` three lines above read it in the
+      // temporal dead zone and threw, every single time. The catch below swallowed it, so «what Zoho
+      // says about this function at runtime» has never rendered once, silently, while the exports
+      // printed it. Found by a review of this file.
+      const hits = [node.display_name, node.name, node.api_name]
         .map((k) => fx.byName.get(String(k || '').toLowerCase())).find((v) => v && v.length) || [];
-      if (mine.length) {
-        const total = mine.reduce((n, f) => n + (f.count || 0), 0);
-        const last = mine.map((f) => f.lastFailedAt).filter(Boolean).sort().pop();
+      if (hits.length) {
+        const total = hits.reduce((n, f) => n + (f.count || 0), 0);
+        const last = hits.map((f) => f.lastFailedAt).filter(Boolean).sort().pop();
         html += `<div class="failwrap"><b>Failing in Zoho:</b> ${escHtml(String(total))}\u00d7`
           + (last ? ` \u00b7 last ${escHtml(fmtDate(last))}` : '')
           + ` \u00b7 as read on ${escHtml(fmtDate(fx.at))}`
           // One line per distinct reason. Zoho returns a row per failing invocation, so a function
           // that broke the same way twice came back with the same sentence printed twice - which
           // reads as two problems and is one. The count above already says how many times.
-          + [...new Map(mine.map((f) => [`${f.componentType}|${f.reason}`, f])).values()]
+          + [...new Map(hits.map((f) => [`${f.componentType}|${f.reason}`, f])).values()]
               .map((f) => `<div class="failrow">${escHtml(f.componentType || '?')} \u00b7 ${escHtml(f.reason || '')}</div>`).join('')
           + '</div>';
       }
@@ -5010,11 +5019,17 @@ async function pullHealthRuntime() {
     if (!guardOk()) { setStatus(MSG.wrongTab, 'warn'); healthSay(MSG.wrongTab, 'warn'); return; }
     const b = $('healthpull'); b.disabled = true;
     healthSay('Reading from Zoho\u2026');
+    // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
+    // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
+    // an outside scan: results of the workspace that was left, published into the one that arrived.
+    //
+    // Declared **before** the try, because the catch reads it. Inside, `catch` has a scope of its own
+    // and there is no other `op` in this file - so every error from this sequence was replaced by
+    // «op is not defined», thrown out of the handler that existed to report it: the health view stayed
+    // on «Reading from Zoho...» for good, the real reason was lost, and «Report this problem» carried
+    // the ReferenceError instead of the fault. Found by a review of this file.
+    const op = beginWorkspaceOp();
     try {
-      // One operation for the whole sequence: the selector is blocked during the *pull*, and came back
-      // the moment it ended - while the audit that follows was still reading the mirror. Reproduced by
-      // an outside scan: results of the workspace that was left, published into the one that arrived.
-      const op = beginWorkspaceOp();
       await pullFailures();
       if (!op.current()) return;
       failIndex = null;                       // the file changed under it
@@ -5069,7 +5084,10 @@ function reportFacts(err, ai) {
     },
     // The access record is «which areas your Zoho role answered for», already held for the settings
     // page. Only the refused keys travel: the names of what was refused, never anything inside it.
-    refused: Object.keys(tabAccess || {}).filter((k) => tabAccess[k] === false),
+    // `tabAccess[k]` is an object - `{state, status, at, pulledAt}` - and never `false`, so this read
+    // `=== false` and reported an empty list every time. The one fact in the report that explains a
+    // whole class of «why is this tab empty» was the one it never carried. Found by a review.
+    refused: Object.keys(tabAccess || {}).filter((k) => tabAccess[k] && tabAccess[k].state === 'forbidden'),
     ai,
     steps: reportSteps.slice(),
   };

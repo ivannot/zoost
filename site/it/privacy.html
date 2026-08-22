@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="it">
 <head>
-<!-- translated-from: site/privacy.html sha256:3fa7449381f12526 -->
+<!-- translated-from: site/privacy.html sha256:64114d7c40ad9671 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy policy - Zoost</title>
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://zoost.it/it/privacy">
 <meta property="og:title" content="Privacy policy - Zoost">
 <meta property="og:description" content="Privacy policy delle estensioni Chrome Zoost. Nessun server, nessun account, nessuna telemetria: lo sviluppatore non riceve niente.">
-<meta property="og:image" content="https://zoost.it/img/og.png?v=384d514b55">
+<meta property="og:image" content="https://zoost.it/img/og.png?v=51bcf1eb48">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://zoost.it/it/privacy">
 <link rel="alternate" hreflang="en" href="https://zoost.it/privacy">
@@ -22,7 +22,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4a69cd9ac6">
 <meta name="theme-color" content="#0d121c">
 <meta name="robots" content="index,follow">
-<link rel="stylesheet" href="/site.css?v=d2772f19a3">
+<link rel="stylesheet" href="/site.css?v=0dbf2dc307">
 
 </head>
 <body>
@@ -49,7 +49,7 @@
 <div class="wrap">
 
   <h1>Privacy policy</h1>
-  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">21 agosto 2026</span></p>
+  <p class="upd">Zoost - estensioni per Chrome · Ultimo aggiornamento: <span data-stamp="updated">22 agosto 2026</span></p>
 
   <p class="note" data-it-only><b>La versione inglese è quella che fa fede.</b> Questa è una
     traduzione fedele, offerta perché il documento sia leggibile da chi deve approvarne l'uso in
@@ -312,17 +312,32 @@
     e non è destinato all'uso da parte di chi ha meno di 16 anni.</p>
 
   <h2>8. Questo sito</h2>
-  <p>zoost.it non imposta cookie, non incorpora tracker, non carica font, script o analytics di terze parti, non profila i visitatori. Le pagine sono file statici; l'unico script è un piccolo file
+  <p>zoost.it non imposta cookie, non incorpora tracker, non carica font o analytics di terze parti,
+    non profila i visitatori. Le pagine sono file statici, e ognuna tranne una esegue un solo script
     servito da questo stesso dominio, che compila l'anno del copyright e il badge delle versioni nel
     footer.</p>
-  <p>Quel badge chiama un solo endpoint su questo sito, <code>/api/versions</code>. Gira sull'edge di
-    Cloudflare e interroga due fonti pubbliche: la pagina dell'estensione sul Chrome Web Store, e
+  <p><b>L'unica eccezione è <a href="/report">la pagina delle segnalazioni</a></b>, che carica anche
+    Turnstile di Cloudflare da <code>challenges.cloudflare.com</code>. È il controllo anti-abuso che
+    sta fra quel modulo e un tracker di issue pubblico, ed è l'unico script di terze parti su questo
+    sito: gira su quella pagina e su nessun'altra. A Cloudflare viene passato il tuo indirizzo per fare
+    il controllo - lo trovi descritto più sotto, ed è comunque già l'hosting di questo sito.</p>
+  <p>Il badge chiama un solo endpoint su questo sito, <code>/api/versions</code>. Gira sull'edge di
+    Cloudflare e risponde a partire da due cose: una lettura del Chrome Web Store, presa da un job
+    schedulato nel repository pubblico e conservata sull'edge invece che richiesta mentre aspetti, e
     GitHub per il tag più recente del repository, la versione nel suo manifest e la data dell'ultima
     modifica ai contenuti del sito. È così che il footer può mostrare cosa è pubblicato, cosa è stato
     rilasciato, cosa è in sviluppo e quando queste pagine sono cambiate l'ultima volta.</p>
   <p>Quelle richieste le fa <b>il server, non il tuo browser</b>. A Google e a GitHub non viene
     mandato niente di tuo, non è coinvolto nessun tuo identificatore, e la risposta è messa in cache
     uguale per tutti. Se una fonte non risponde, il badge dice semplicemente «sconosciuta».</p>
+  <p><b>Cosa lascia dietro di sé una segnalazione.</b> La segnalazione in sé viene pubblicata come
+    issue pubblica ed è descritta nella sezione 2. Due cose sulla richiesta vanno dette qui, perché
+    riguardano te e non la segnalazione: a Turnstile di Cloudflare viene passato il tuo indirizzo IP
+    per fare il controllo, e l'endpoint tiene un <b>contatore</b>, perché da uno stesso indirizzo non
+    si possano aprire più di cinque issue al giorno. Quel contatore è conservato su un <b>hash con
+    sale</b> dell'indirizzo e scade dopo 24 ore: il tuo indirizzo non viene scritto da nessuna parte, e
+    quello che viene scritto non può essere ricondotto a lui - nemmeno da chi legge l'archivio. Della
+    richiesta non viene tenuto altro, e niente di tutto questo viene unito alla segnalazione.</p>
   <p><b>L'unico punto in cui lo sviluppatore <em>è</em> titolare del trattamento.</b> Questo sito è
     servito da Cloudflare, che ne è insieme la rete e l'hosting. Come qualunque server web, il suo edge
     tiene normali log delle richieste - indirizzo IP, ora, URL, user agent - e ne conta il numero senza

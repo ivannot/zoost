@@ -43,4 +43,3 @@ crm:header	apps/crm/graphview.html,apps/crm/options.html
 crm:header h1	apps/crm/graphview.html,apps/crm/options.html
 site:header .brand	site/site.css
 site:header nav a.nprod	site/site.css
-site:main table	site/site.css
