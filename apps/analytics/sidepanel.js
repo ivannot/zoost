@@ -1971,12 +1971,29 @@ async function openDetail(id) {
   $('dzoho').style.display = zurl ? '' : 'none';
   $('dzoho').onclick = () => { if (zurl) chrome.tabs.create({ url: zurl }); };
   $('dtitle').title = `${v.type} · ${v.folderName || 'no folder'} · id ${v.id}`;
-  // A tab that cannot say anything about this view is disabled, not shown and silently empty.
-  $('tab_sql').disabled = !sqls[id];
-  $('tab_rel').disabled = !relationsOf(id).length;
+  // A tab that cannot say anything about this view is disabled, not shown and silently empty - and
+  // it says which silence it is, in a title, the way the ER button beside it has always done.
+  //
+  // `!sqls[id]` was two different facts under one grey tab. A view that is not a query table has no
+  // SQL and never will; a query table whose SQL the pull could not read *has* one, and this product
+  // states that everywhere else - in the search coverage line, in both exports, in the assistant's
+  // answers. Here it turned the tab off and said nothing, which is the reading of «not read» as
+  // «does not exist» that the rest of the release removed. The tab stays on and the pane gives the
+  // reason Zoho or the disk gave.
+  const sqlSt = sqlState(id);
+  $('tab_sql').disabled = sqlSt.kind === 'not-query';
+  $('tab_sql').title = sqlSt.kind === 'not-query' ? 'SQL - only a query table has any'
+    : sqlSt.kind === 'unread' ? `SQL - not read: ${sqlSt.error}`
+      : 'SQL - the query this view is built from';
+  const rels = relationsOf(id).length;
+  $('tab_rel').disabled = !rels;
+  $('tab_rel').title = rels ? `Relations - ${rels} foreign key(s)`
+    : 'Relations - nothing in the ER model links to or from this view';
   $('tab_lin').disabled = !deps;
-  if (detailTab === 'sql' && !sqls[id]) detailTab = 'cols';
-  if (detailTab === 'rel' && !relationsOf(id).length) detailTab = 'cols';
+  $('tab_lin').title = deps ? 'Lineage - what this reads, and what reads it'
+    : 'Lineage - not pulled for this workspace; use Pull above';
+  if (detailTab === 'sql' && sqlSt.kind === 'not-query') detailTab = 'cols';
+  if (detailTab === 'rel' && !rels) detailTab = 'cols';
   if (detailTab === 'lin' && !deps) detailTab = 'cols';
   document.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('active', b.dataset.tab === detailTab));
   await renderDetail(v, mine, op);
@@ -2049,7 +2066,10 @@ async function renderDetail(v, mine = detailLoad, op = beginWorkspaceOp()) {
       // Highlighted, and still escaped: `highlightSql` tokenises the raw text and escapes every
       // piece itself, which is the only reason it may be handed to innerHTML at all.
       ? `<pre class="sql">${window.highlightSql ? window.highlightSql(sql) : esc(sql)}</pre>`
-      : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL file could not be read.' : 'No SQL text.'}</b> ${esc(sqlText(sql))}</div>`) + '</div>';
+      // The reason, not a reason: `sqlState` knows whether the pull failed (and what Zoho said),
+      // whether the file refused to open, or whether the mirror never had it. A single «could not be
+      // read» over all three sends the reader to fix the wrong thing.
+      : `<div class="empty" style="padding:0"><b>${sql == null ? 'The SQL was not read.' : 'No SQL text.'}</b> ${esc(sql == null ? sqlState(v.id).error || SQL_UNREADABLE : sqlText(sql))}</div>`) + '</div>';
     paintFindMarks(body.querySelector('pre.sql'), findMarkRe());
     return;
   }

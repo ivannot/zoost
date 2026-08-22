@@ -8275,12 +8275,35 @@ test('analytics: health includes SQL files found unreadable after loading the in
       'the detail pane': /<h5>SQL<\/h5><div class="none">not read/,
       'the HTML export': /Its SQL could not be read \(\$\{esc2\(st\.error\)\}\)/,
       'the Markdown export': /> Its SQL could not be read \(\$\{st\.error\}\)/,
+      // The seventh surface, and the one the list did not have: the tab itself. Six places said
+      // «not read» carefully while the SQL tab went grey on `!sqls[id]` and offered no way in - so
+      // the reader never reached any of the six. A list of surfaces is only as good as its length.
+      'the detail tab': /\$\('tab_sql'\)\.disabled = sqlSt\.kind === 'not-query'/,
+      'the tab title': /SQL - not read: \$\{sqlSt\.error\}/,
     })) assert.ok(re.test(an), `${what} still treats an unread query as an absent one`);
     // Every failure records its stage, or sqlState cannot tell sql from lineage.
     assert.ok(!/still\.push\(\.\.\.\(r2?\.failed \|\| \[\]\)\);/.test(an),
               'a partial pull records failures with no stage');
     assert.ok(/\(sq\.failed \|\| \[\]\)\.map\(\(f\) => \(\{ \.\.\.f, stage: 'sql' \}\)\)/.test(sliceFn('apps/analytics/sidepanel.js', 'pullAll')),
               'the full pull records sql failures with no stage');
+  });
+
+  test('analytics: a query table whose pull failed keeps a way into its SQL', () => {
+    // The decision the tab strip makes, run on the state a failed pull actually produces.
+    const ctx = {
+      views: [{ id: 'q1', name: 'Q1', type: 'QueryTable' }, { id: 't1', name: 'T1', type: 'Table' }],
+      sqls: {}, pullFailed: [{ id: 'q1', stage: 'sql', error: 'HTTP 429' }], sqlDiskUnread: new Set(),
+      String, Object, Map, Array,
+    };
+    vm.createContext(ctx);
+    vm.runInContext(sliceConst('apps/analytics/sidepanel.js', 'viewById'), ctx);
+    vm.runInContext(sliceFn('apps/analytics/sidepanel.js', 'sqlState'), ctx);
+    const st = vm.runInContext("sqlState('q1')", ctx);
+    assert.equal(st.kind, 'unread');
+    assert.equal(st.error, 'HTTP 429', 'the reason Zoho gave is lost before it reaches the tab');
+    assert.equal(st.kind === 'not-query', false, 'the SQL tab is off for a query table that has one');
+    assert.equal(vm.runInContext("sqlState('t1')", ctx).kind, 'not-query',
+                 'a plain table would be offered a SQL tab');
   });
 
   test('analytics: the unread counter includes queries whose pull failed', () => {
