@@ -73,7 +73,7 @@ erClearPick	1651a49013e5	1651a49013e5	identical
 erComputeSlots	8387e9d7fbbf	8387e9d7fbbf	identical
 erConcentric	15c61f8831d3	15c61f8831d3	identical
 erCountRefresh	4840d8d1eede	4840d8d1eede	identical
-erCovers	c8d7f68ba585	c8d7f68ba585	identical
+erCovers	8a84a91170e1	8a84a91170e1	identical
 erDrawn	f0c143992e52	f0c143992e52	identical
 erEdgePoints	38225449fcf9	38225449fcf9	identical
 erFieldsFor	39b26c15f9ce	7f029df0a700	divergent
@@ -110,7 +110,7 @@ erTipText	b770d433afce	b770d433afce	identical
 erToggleCut	0b670af6490c	0b670af6490c	identical
 erUnhide	aeec288aee06	aeec288aee06	identical
 erUpdateControlVis	b78229b43139	57b8f58ae404	divergent
-erVisibleIds	c7dab4f9b7b9	fd30dec0e9c6	divergent
+erVisibleIds	372e3743dccc	dffd20c3e9ec	divergent
 erWouldGo	9cd722f5fad5	9cd722f5fad5	identical
 erWouldShow	ca79d2150047	ca79d2150047	identical
 erWouldShowSet	caeb385bd9c3	caeb385bd9c3	identical
@@ -210,7 +210,7 @@ showAbout	82e6680fac24	aa578e8faf85	divergent
 showEmergency	cfdb73138aab	cfdb73138aab	identical
 showForget	63d678d4c003	63d678d4c003	identical
 showView	49f92b01afbe	49f92b01afbe	identical
-statCounts	87b246d2040f	87b246d2040f	identical
+statCounts	df6998dd5891	df6998dd5891	identical
 statOf	2ef352c8af46	37de86ac019c	divergent
 statRefresh	20950ce4619e	20950ce4619e	identical
 stepSelection	01087cab90ac	060e86ed5417	divergent

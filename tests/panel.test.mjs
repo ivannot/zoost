@@ -2256,10 +2256,19 @@ test('a status line counts what is on screen, on both sides of the window', () =
     c: { id: 'c', name: 'c', category: 'connections', calls: [], called_by: [], rest: false, dead_suspect: false, unresolved: [] },
   };
   const hiddenKinds = new Set(), onlyConds = new Set();
-  const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds, Set, Object };
+  // Nothing folded here: `erCut` is the map of folded arcs and `erIds` the ids on the drawing, and
+  // `statCounts` asks what the reader folded away now. The counts below are unchanged and still
+  // about the chips - which is the point of an empty fixture for a state this case is not about.
+  const ctx = { N, DATA: { kind: 'calls' }, hiddenKinds, onlyConds,
+                erCut: new Map(), erIds: [], Set, Object, Map };
   const { statCounts } = load([gcon('crm', 'KINDOF'),
                                gcon('crm', 'CONDITION_KEYS'),
                                gfn('crm', 'passKind'),
+                               // It asks what the reader folded away now, and running the function
+                               // alone is what caught the free reference the moment that landed -
+                               // the fourth time today. Nothing is folded in this fixture, so the
+                               // counts below are unchanged and still about the chips.
+                               gfn('crm', 'erHiddenSet'),
                                gfn('crm', 'statCounts')], ctx);
   assert.deepEqual([statCounts(null).n, statCounts(null).e], [3, 1], 'the unfiltered counts are wrong');
   hiddenKinds.add('connections');
@@ -9712,4 +9721,72 @@ for (const app of ['crm', 'analytics']) {
       'the window requires a recorded kind again, and the settings page writes none - so everything ' +
       'saved there is read and discarded, silently, on every open');
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// What the reader folded away is not on the drawing, and every count says so.
+//
+// A `-` mark on an arc folds a branch off the diagram. `erFit` and the print handler skip what
+// `erHiddenSet()` hides - `docs/diagrams.md` records that as done - and it was done for **two readers
+// of five**. The others went on counting folded boxes: the status line's node and link totals, the
+// tab badge, and the «it now covers N other boxes» hint, which could report a box as covered by one
+// that is not on screen. So the window said in one line that three boxes had gone and in another
+// that they were still there.
+//
+// Derived: whichever function counts what is on the drawing must consult the folded set. The subject
+// is «reads erIds or the node table to produce a number», which is what a counter is.
+{
+  for (const app of ['crm', 'analytics']) {
+    test(`${app}: nothing counts a box the reader folded away`, () => {
+      const bad = [];
+      let seen = 0;
+      for (const f of ['graphview.js', 'graphlogic.js']) {
+        const src = read(`apps/${app}/${f}`).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        for (const m of src.matchAll(/^function (\w+)\s*\(/gm)) {
+          const body = src.slice(m.index, src.indexOf('\n}', m.index));
+          const counts = /(erIds\.forEach|erIds\.filter|Object\.keys\(N\)|nodesA\.filter)/.test(body);
+          if (!counts || m[1] === 'erHiddenSet') continue;
+          // Derived from the *consumer*, not from the shape. A function that walks the node set is
+          // not automatically a statement about the drawing: `visibleKindCount` feeds `drawable()`,
+          // which asks whether the layout can afford this graph - and folding does not re-lay it out,
+          // so the budget is the whole set. `erLayout` positions everything for the same reason, and
+          // `orphanedByFilter` answers a question about the *filter*. Three counters that walk the
+          // same data and answer different questions; telling them apart by shape is not possible,
+          // and by name would be a list.
+          //
+          // What is in scope is what reaches the reader as a description of what is drawn: the status
+          // line, the tab badge, and the overlap hint.
+          // Two hops, because the chain is `graphStat -> statOf -> statCounts`: a one-hop search put
+          // `statCounts` out of scope and the plant that put folded boxes back into the status line
+          // walked past. Named consumers are the entry points a reader sees - the status line, the
+          // tab badge, the overlap hint - and what they reach is derived.
+          const consumers = ['graphStat', 'erCountRefresh', 'erCovers', 'statOf'];
+          // Across both files of the window, not within one. `statCounts` lives in graphlogic.js and
+          // its consumer `graphStat` in graphview.js, so a same-file search reported it as reaching
+          // nobody - and the plant that put the folded boxes back into the status line passed. The
+          // two files are one window; the check has to read them as one.
+          const both = ['graphview.js', 'graphlogic.js']
+            .map((x) => read(`apps/${app}/${x}`)).join('\n');
+          const reaches = consumers.some((c) => {
+            if (m[1] === c) return true;
+            const at = both.indexOf(`function ${c}(`);
+            if (at < 0) return false;
+            return new RegExp(`\\b${m[1]}\\(`).test(both.slice(at, both.indexOf('\n}', at)));
+          });
+          if (!reaches) continue;
+          seen++;
+          // **The limit, stated.** This asks whether the folded set is *consulted*, not whether the
+          // answer is right: a body that reads `erHiddenSet()` and then ignores it would pass. That
+          // is not derivable from the text, and the alternative - running each counter against a
+          // fixture with something folded - is a case per counter rather than a rule, which is what
+          // this grid is trying to get away from. Proven by planting the removal of both lines.
+          if (!/erHiddenSet\(\)|\bgone\b|erCut/.test(body)) bad.push(`apps/${app}/${f}: ${m[1]}()`);
+        }
+      }
+      assert.ok(seen >= 2, `only ${seen} counters of the drawing found in ${app} - the derivation broke`);
+      assert.deepEqual(bad, [],
+        `these count what is on the diagram without asking what was folded off it, so the window ` +
+        `reports boxes it is not drawing:\n  ` + bad.join('\n  '));
+    });
+  }
 }

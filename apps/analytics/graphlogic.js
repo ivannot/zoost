@@ -230,7 +230,9 @@ function computeMaxDepth() {
 }
 
 function statCounts(set) {
-  const inSet = (id) => !set || set.has(id);
+  // Folded boxes are out of the count for the same reason they are out of `erCovers` - see there.
+  const gone = erHiddenSet();
+  const inSet = (id) => (!set || set.has(id)) && !gone.has(id);
   const nodes = Object.keys(N).filter((id) => inSet(id) && passKind(N[id]));
   const keep = new Set(nodes);
   let e = 0;
@@ -622,9 +624,17 @@ function erCovers(id) {
   // not hiding anything, and it is not what the reader is being told about.
   const A = erPos[id];
   if (!A) return 0;
+  // What the reader has folded away is not on the drawing, so it is not counted, not covered and not
+  // in the badge. `erFit` and the print handler already skip it - «Both skip what erHiddenSet hides
+  // now», says docs/diagrams.md - and that was done for two readers of five. Fold a branch with a
+  // `-` mark and the hint says «3 boxes off the diagram» while the status line above it and the tab
+  // badge beside it go on counting them: the window stating in one line that three boxes went and in
+  // another that they are still there.
+  const gone = erHiddenSet();
+  if (gone.has(id)) return 0;
   let k = 0;
   erIds.forEach((other) => {
-    if (other === id) return;
+    if (other === id || gone.has(other)) return;
     const B = erPos[other];
     if (!B) return;
     const ox = (A.w + B.w) / 2 - Math.abs((B.x + B.w / 2) - (A.x + A.w / 2));

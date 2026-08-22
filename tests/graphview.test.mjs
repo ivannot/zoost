@@ -458,7 +458,12 @@ for (const app of ['crm', 'analytics']) {
         d: { x: 30, y: 40, w: 190, h: 80 },      // overlaps a as well
       },
       erIds: ['a', 'b', 'c', 'd'],
+      // Nothing folded. `erCovers` asks now, because a box the reader folded away is not on the
+      // drawing and cannot be covering anything - and running it alone is what named the free
+      // reference the moment that landed.
+      erCut: new Map(), Set, Map, Object,
     });
+    vm.runInContext(gfn(app, 'erHiddenSet'), ctx);
     vm.runInContext(gfn(app, 'erCovers'), ctx);
     assert.equal(vm.runInContext("erCovers('a')", ctx), 2, 'a covers b and d');
     assert.equal(vm.runInContext("erCovers('c')", ctx), 0, 'c covers nothing');

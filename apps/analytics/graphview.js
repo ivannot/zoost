@@ -1086,11 +1086,13 @@ function erVisibleIds() {
   // on a real workspace of 377 views: 86 of the 135 entities with columns were outside the diagram
   // for that reason. The `relations` branch below has always kept the focus for exactly this reason;
   // this one had not, which is the same guard present on one path and missing on its twin.
+  // And what the reader folded away is not visible - see the note in the CRM twin and in `erCovers`.
+  const gone = erHiddenSet();
   if (erEmph !== 'relations') {
-    return nodesA.filter((id) => erCandidate(id) && (erFieldsFor(N[id]).length > 0 || id === curFocus));
+    return nodesA.filter((id) => erCandidate(id) && !gone.has(id) && (erFieldsFor(N[id]).length > 0 || id === curFocus));
   }
   const linked = linkedUnderFilter();
-  return nodesA.filter((id) => erCandidate(id) && (linked.has(id) || id === curFocus));
+  return nodesA.filter((id) => erCandidate(id) && !gone.has(id) && (linked.has(id) || id === curFocus));
 }
 // What the chips leave standing but the diagram will not draw, because nothing links it any more.
 // The Explorer beside it still lists those items, so the number has to be given rather than left

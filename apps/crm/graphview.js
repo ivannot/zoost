@@ -1396,11 +1396,15 @@ function erVisibleIds() {
   // on a real workspace of 377 views: 86 of the 135 entities with columns were outside the diagram
   // for that reason. The `relations` branch below has always kept the focus for exactly this reason;
   // this one had not, which is the same guard present on one path and missing on its twin.
+  // And what the reader folded away is not visible: the tab badge counts what is on the drawing, and
+  // it counted folded boxes. `erFit` and the print handler already skip them; this is the third and
+  // fourth reader of the same state. See the note in `erCovers`.
+  const gone = erHiddenSet();
   if (DATA.kind === 'schema' && erEmph !== 'relations') {
-    return nodesA.filter((id) => erCandidate(id) && (erFieldsFor(N[id]).length > 0 || id === curFocus));
+    return nodesA.filter((id) => erCandidate(id) && !gone.has(id) && (erFieldsFor(N[id]).length > 0 || id === curFocus));
   }
   const linked = linkedUnderFilter();
-  return nodesA.filter((id) => erCandidate(id) && (linked.has(id) || id === curFocus));
+  return nodesA.filter((id) => erCandidate(id) && !gone.has(id) && (linked.has(id) || id === curFocus));
 }
 // What the chips leave standing but the diagram will not draw, because nothing links it any more.
 // A number the reader has to be given: the Explorer beside it lists those items, and two panes
