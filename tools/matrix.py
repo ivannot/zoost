@@ -104,6 +104,7 @@ CLOSED = {
     ("owner", "bridges"):      ("tests/panel.test.mjs: an injection guard is a version, not a boolean", "planted 2026-08-22"),
     ("fastpath", "bridges"):   ("tests/panel.test.mjs: the meta schema version moves when the captured fields do", "planted 2026-08-22"),
     ("siblings", "options"):   ("tests/panel.test.mjs: a preset keeps what the page cannot show", "planted 2026-08-22"),
+    ("claim", "crm-ai"):       ("tests/panel.test.mjs: the passphrase field is emptied on both branches", "planted 2026-08-22"),
 }
 
 

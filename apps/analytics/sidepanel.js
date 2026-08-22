@@ -2407,7 +2407,16 @@ function aiShowLock(on) {
   // a row that is already showing would clear a half-typed passphrase and steal the caret back.
   if (row.hidden !== !on) {
     row.hidden = !on;
-    if (on) { $('ailockpass').value = ''; aiLockMsg(''); $('ailockpass').focus(); }
+    // Cleared on **both** branches. The docstring above says the passphrase «is cleared», and that
+    // was true of one path: the success of `aiUnlock`. Two others left it in the DOM for the life of
+    // the panel - the protection removed in Settings between showing this row and pressing Unlock,
+    // which returns through `aiShowLock(false)`; and `aiEngineChrome()`, which runs on every window
+    // focus and every settings change and hides the row whenever the key is no longer locked.
+    //
+    // It does not leave the machine and nothing reads that node. It is a sentence about a secret,
+    // and it was not true of the code.
+    $('ailockpass').value = '';
+    if (on) { aiLockMsg(''); $('ailockpass').focus(); }
   }
 }
 /** A DOMException's message names the symptom and never the remedy.

@@ -9541,3 +9541,37 @@ for (const app of ['crm', 'analytics']) {
     }
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// A field that holds a secret is empty whenever its row is not on screen.
+//
+// The docstring over `aiShowLock` says the passphrase «decrypts once, the plaintext goes to
+// chrome.storage.session, and the field is cleared». That was true of exactly one path - the success
+// of `aiUnlock`. `aiShowLock` emptied the input only on the branch that *shows* the row, so two
+// others left it in the DOM for the life of the panel: the protection removed in Settings between
+// showing the row and pressing Unlock, which returns through `aiShowLock(false)`; and
+// `aiEngineChrome()`, which runs on every window focus and every settings change.
+//
+// It does not leave the machine and nothing reads that node. It is a sentence about a secret, and it
+// was not true of the code - which is the class this cell is about.
+//
+// Derived from the markup: whichever input the lock row holds is the one that must be emptied, so
+// renaming it does not quietly drop the cover.
+{
+  for (const [app, file] of [['crm', 'apps/crm/ai.js'], ['analytics', 'apps/analytics/sidepanel.js']]) {
+    test(`${app}: the passphrase field is emptied whether the row opens or closes`, () => {
+      const html = read(`apps/${app}/sidepanel.html`);
+      const row = html.slice(html.indexOf('id="ailockrow"'), html.indexOf('</div>', html.indexOf('id="ailockrow"')));
+      const input = (row.match(/<input[^>]*id="(\w+)"/) || [])[1];
+      assert.ok(input, `id=${app} the lock row holds no input - the derivation broke`);
+      const fn = sliceFn(file, 'aiShowLock');
+      const clear = new RegExp(`\\$\\('${input}'\\)\\.value = ''`);
+      assert.ok(clear.test(fn), `id=${input} is never emptied by aiShowLock`);
+      // On the hide branch too: an `if (on)` around the clear is exactly the defect.
+      const guarded = new RegExp(`if \\(on\\)[^\\n]*\\$\\('${input}'\\)\\.value = ''`);
+      assert.ok(!guarded.test(fn),
+                `id=${input} is emptied only when the row opens, so closing it leaves the passphrase ` +
+                `in the DOM for the life of the panel`);
+    });
+  }
+}
