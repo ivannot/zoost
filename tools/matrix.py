@@ -84,6 +84,7 @@ CLOSED = {
     ("owner", "crm-panel"):   ("tests/panel.test.mjs derives every pull that reaches Zoho", "planted 2026-08-22"),
     ("siblings", "crm-panel"): ("tests/panel.test.mjs derives every «press Pull» empty state", "planted 2026-08-22"),
     ("partial", "crm-panel"):  ("tests/panel.test.mjs derives every folder-walking deletion", "planted 2026-08-22"),
+    ("claim", "store"):        ("tests/tools_test.py derives every numbered section from the headings", "planted 2026-08-22"),
 }
 
 

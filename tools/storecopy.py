@@ -25,7 +25,14 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The fenced body is named because a second reader depends on it: `auditcheck` reads absolute claims
 # out of `(?P<body>...)` and nothing else in these files, so the fence is the boundary between what is
 # published and what we write to ourselves. A name is additive - it is still group 4 to the code below.
+# The fenced body of a section - the text somebody retypes into a dashboard box. Kept fenced-only,
+# because `auditcheck` imports it to ask «is there a fence here», and a pattern that also matched a
+# blockquote would answer yes to a different question. The other body shape is handled in sections().
 SECTION = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?\n\n```\n(?P<body>.*?)\n```', re.S | re.M)
+# Every numbered heading, whatever follows it. The denominator, so a section in a shape sections()
+# cannot read is a finding about the tool rather than a silence - `tests/tools_test.py` derives the
+# same set from the file by a cruder route and compares.
+HEADING = re.compile(r'^## (\d+)\. ([^\n]+?)(?: \(max (\d+)\))?$', re.M)
 
 
 def clipboard() -> list:
@@ -42,8 +49,28 @@ def sections(app: str):
     f = ROOT / 'store' / app / 'store-listing.md'
     if not f.exists():
         sys.exit(f'no store copy for {app}')
-    return [(int(m.group(1)), m.group(2), int(m.group(3)) if m.group(3) else None, m.group(4))
-            for m in SECTION.finditer(f.read_text(encoding='utf-8'))]
+    text = f.read_text(encoding='utf-8')
+    heads = list(HEADING.finditer(text))
+    out = []
+    for k, h in enumerate(heads):
+        chunk = text[h.end():heads[k + 1].start() if k + 1 < len(heads) else len(text)]
+        fence = re.search(r'```\n(.*?)\n```', chunk, re.S)
+        if fence:
+            body = fence.group(1)
+        else:
+            # Section 10 is the data disclosure: a table of checkboxes and one blockquote, the
+            # sentence Google is told about what leaves the machine. No fence, so the old parser
+            # walked past the heading and `--changed`, `digests` and `dashcheck` never saw it. It
+            # drifted for two days in the CRM listing, still saying «Nothing is sent to the
+            # developer» after the problem report shipped, and the sweep that corrected its twin
+            # missed it for the same reason: nothing was comparing it.
+            quote = re.search(r'((?:^>[^\n]*\n)+)', chunk, re.M)
+            if not quote:
+                continue        # a heading with neither shape: the test derives it and reports it
+            body = '\n'.join(l[2:] if l.startswith('> ') else l[1:]
+                              for l in quote.group(1).strip().split('\n'))
+        out.append((int(h.group(1)), h.group(2), int(h.group(3)) if h.group(3) else None, body))
+    return out
 
 
 def digests(app: str) -> dict:

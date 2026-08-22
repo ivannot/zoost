@@ -4304,5 +4304,39 @@ class CssScannerReadsEveryRule(unittest.TestCase):
             self.assertEqual(self.c.unread(css), [], f'{where}: a rule this check never reads')
 
 
+class StoreCopySeesEverySection(unittest.TestCase):
+    """Every numbered section of a listing must be read by the tool that hands it over.
+
+    `storecopy` prints one dashboard box on the clipboard and `--changed` says which boxes moved since
+    the last submission; `dashcheck` diffs the dashboard against these texts. All three read the same
+    parser, and that parser required a fenced body:
+
+        ^## (\\d+)\\. ...\\n\\n```\\n(?P<body>.*?)\\n```
+
+    **Section 10 has no fence.** It is the data-disclosure section - the checkboxes and the one
+    sentence Google is told about what leaves the machine, which is a compliance statement rather than
+    marketing copy - and it was therefore compared by nothing. It drifted for two days in the CRM
+    listing, still saying «Nothing is sent to the developer» after the problem report shipped, and the
+    sweep that corrected its twin did not see it either.
+
+    So: the denominator comes from the headings, by a cruder method than the parser, and a section the
+    parser skips is a finding about the tool. The same shape as `htmlcheck` and `csscheck`.
+    """
+
+    def setUp(self):
+        import importlib
+        self.sc = importlib.import_module('storecopy')
+
+    def test_no_numbered_section_is_skipped(self):
+        for app in ('crm', 'analytics'):
+            f = ROOT / 'store' / app / 'store-listing.md'
+            written = {int(m.group(1)) for m in re.finditer(r'(?m)^## (\d+)\.', f.read_text(encoding='utf-8'))}
+            read = {n for n, _, _, _ in self.sc.sections(app)}
+            self.assertGreaterEqual(len(written), 9, f'{app}: only {len(written)} sections found - the sweep broke')
+            self.assertEqual(sorted(written - read), [],
+                             f'{app}: storecopy never reads section(s) {sorted(written - read)}, so nothing '
+                             f'compares them against the dashboard and nothing says when they drift')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

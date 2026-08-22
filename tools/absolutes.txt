@@ -117,6 +117,7 @@ ae5ac05569b3b2c5  site/crm.html: Grep your whole org Full-text search across eve
 3ba747e115a8923d  site/crm.html: Or press + Sample and skip all of it.
 e047d6d3704c253d  site/crm.html: Put them under Git and they get a history too, so one diff answers what changed in this org last month across every kind at once.
 b5dd5ce4a1587ec5  site/crm.html: The health check Orphan candidates, unresolved calls, broken automations, lookups pointing at nothing.
+2d41d51fe78b5294  site/crm.html: The only other thing that ever leaves is a problem report you write, read in full and send yourself.
 1b6fca1a98412c4d  site/crm.html: The panel sits beside Zoho CRM and lists every function in the org at once, with its namespace, its size, and whether the local copy is current.
 f9b098c6a5e4c44a  site/crm.html: What's inside Every function, as a file Deluge source in namespaced folders, ready for Git.
 df5e00baaede3ff1  site/crm.html: Workflows, schedules and connections are nodes too, so you see what starts the code and what it reaches - and a connection nothing uses stands out.
@@ -430,7 +431,7 @@ c1756489add65007  site/it/crm.html: Anche workflow, schedulazioni e connessioni 
 012afdaec7ce6b1e  site/it/crm.html: Export e un assistente opzionale Tutta l'org come un unico file HTML che sta in piedi da solo, o in Markdown per darlo in pasto a un'AI.
 de3ab25c1dd77c91  site/it/crm.html: Il pannello sta accanto a Zoho CRM ed elenca tutte le funzioni dell'org in una volta, con il namespace, la dimensione e se la copia locale è aggiornata.
 23276c198b4dc5c1  site/it/crm.html: Installa dal Chrome Web Store La scheda sta tornando online in questi giorni - un invio è stato ritirato per errore, quindi per qualche giorno quel pulsante non ha niente da darti.
-8eac5e35d88af80f  site/it/crm.html: L'assistente AI è l'unica parte che manda dati fuori dalla tua macchina: il contenuto del workspace che gli serve, sorgente Deluge compreso, va al provider che configuri.
+65cd3a97b9199030  site/it/crm.html: L'unica altra cosa che esce è una segnalazione di problema che scrivi, leggi per intero e mandi tu.
 7385aaa61714a66d  site/it/crm.html: Mettici Git sopra e uno storico ce l'ha anche tutto il resto: un solo diff ti dice cos'è cambiato in quest'org il mese scorso , su ogni tipo insieme, invece che una funzione alla volta.
 3dcd37c1f902ff80  site/it/crm.html: Nessun tab Zoho, nessun account: è generato e non scaricato, tutto ciò che parlerebbe con la piattaforma è disabilitato e lo cancelli come qualsiasi altro workspace.
 5f5bcce742d9f829  site/it/crm.html: Nessuna soglia, nessun allarme rosso, nessun punteggio.
@@ -1050,7 +1051,6 @@ f7452b4afb8df770  store/analytics/store-listing.md: Tabs on other sites are neve
 a2820e715c0c9baf  store/analytics/store-listing.md: The API key may be protected by a passphrase, and then only the encrypted form is kept (AES-GCM, PBKDF2-SHA256).
 14bae74ebfb9082e  store/analytics/store-listing.md: The Zoho Analytics hosts declared in the manifest: the analytics.* domain of every Zoho data centre.
 5099d4de2ed81ea6  store/analytics/store-listing.md: The extension reads the workspace through Zoho Analytics' own endpoints, which are only reachable from a page on the Zoho Analytics origin with the user's session cookies.
-ce7c9a016a9674af  store/analytics/store-listing.md: The only other thing that leaves is a problem report the user writes, reads in full and sends by pressing Send; it becomes a public issue.
 94d3c26f67a7d8d1  store/analytics/store-listing.md: The panel has to stay visible while the user navigates Zoho Analytics, because the workspace it acts on is whichever one the active tab is in - the panel reads the workspace id from the tab's URL and disables every Zoho-bound action when the tab moves to a different workspace.
 97ba193d4983d0fb  store/analytics/store-listing.md: The rows inside tables are never sent, because the extension does not read them.
 3fa339dd1eb94af9  store/analytics/store-listing.md: The two AI providers, Anthropic and OpenAI, are needed only by the optional AI assistant and only after the user enters their own API key for one of them.
@@ -1062,7 +1062,6 @@ c2a0e232d21020b1  store/analytics/store-listing.md: WHO IT'S FOR Zoho Analytics 
 1f7f1669335d355b  store/analytics/store-listing.md: What can be said from a browser is what Zoost sends; it is named here because anyone checking the read-only claim literally will find it.
 52394b196be084c4  store/analytics/store-listing.md: Whatever the assistant writes is a draft; Zoho Analytics is the only thing that can tell you it compiles.
 5bf685e8b83c820b  store/analytics/store-listing.md: With Anthropic it runs as an agent with read-only tools over your local mirror - it can read a structure, follow a foreign key, open a query's SQL, search columns, and say what depends on what.
-7c979389495f0d12  store/analytics/store-listing.md: With no AI provider configured and no report sent, nothing leaves the machine.
 8602cada0110e89d  store/analytics/store-listing.md: Without it the panel would work only on tabs opened after the extension started.
 55ae705c6c20f951  store/analytics/store-listing.md: Zoost gives a Zoho Analytics user a local view of the workspace they have built, one it only ever reads from and never writes to: it mirrors the workspace's structure - views, tables, columns, relations, the SQL of query tables and the dependencies between them - into plain files on the user's own disk, and presents that mirror as a navigable catalogue, an ER diagram, an audit and a shareable report.
 09fc78125f088070  store/analytics/store-listing.md: Zoost mirrors a Zoho Analytics workspace into plain local files, then draws you the map that Zoho Analytics never shows you.
@@ -1096,7 +1095,7 @@ b720fdc8ad684077  store/crm/store-listing.md: Everything else the pull captures 
 3b44cf54041ec498  store/crm/store-listing.md: Nothing in the report matches a category either - versions, an error inside Zoost's own files, redacted status lines and counters are none of the nine.
 4060a0067706681b  store/crm/store-listing.md: Nothing is ever sent automatically.
 6c13e86618ab3b36  store/crm/store-listing.md: Nothing is read back, and it is never contacted on its own.
-4815603412406b07  store/crm/store-listing.md: Nothing is sent to the developer.
+8941f2678d71534d  store/crm/store-listing.md: Nothing is sent unless you press Send.
 d7ca61381803a403  store/crm/store-listing.md: Nothing is stored remotely or synced.
 592d95429926a431  store/crm/store-listing.md: One consequence to remember at release time: a change in data practice after installation must be disclosed prominently, so the release notes say it, not only this file.
 894fd4c165ae667d  store/crm/store-listing.md: Pull every Deluge function to plain .dg files with .meta.json sidecars, in namespaced folders, and Git works on all of it at once - optional, because without it the mirror is still ordinary files you can search and hand over.
@@ -1107,11 +1106,12 @@ b163a8569f8a9390  store/crm/store-listing.md: The Zoho CRM hosts: the crm.* and 
 0a07f254713043d5  store/crm/store-listing.md: The answer is narrower: **the extension transmits nothing.** It builds a text out of its own diagnostics and writes it into a page it opens in front of the user; the reading and the sending both happen there, on that page, and the page is covered by §8 of the privacy policy, which is about the website.
 4984bdcd73e87c04  store/crm/store-listing.md: The extension is inert on every other site.
 bd83d69a5139db74  store/crm/store-listing.md: The one.* hosts it does not read - they only tell the panel which org a Zoho One tab belongs to.
+ce7c9a016a9674af  store/crm/store-listing.md: The only other thing that leaves is a problem report the user writes, reads in full and sends by pressing Send; it becomes a public issue.
 9d25858ce82dca10  store/crm/store-listing.md: The sidePanel permission is used only to open and manage that panel.
 c9887f9a71824adc  store/crm/store-listing.md: This is the core of the environment guard: each local workspace is bound to one org, and if the active tab belongs to a different org - production versus sandbox in particular - every Zoho-bound action is disabled until they match.
 796557bc685f6655  store/crm/store-listing.md: Two things leave your machine, and only when you make them.
 f9c6fd904203ccc4  store/crm/store-listing.md: With Anthropic it runs as an agent with read-only tools and explores your org itself, showing every tool call; with OpenAI it answers in one pass from the org index and the function you have open.
-1cca3283c5631789  store/crm/store-listing.md: With no AI provider configured, nothing leaves the machine.
+7c979389495f0d12  store/crm/store-listing.md: With no AI provider configured and no report sent, nothing leaves the machine.
 2003dcb0b590ca82  store/crm/store-listing.md: Zoost calls no endpoint that creates, edits or deletes anything in Zoho, never touches Zoho CRM records, and does nothing on any other website.
 cae0029df9149604  store/crm/store-listing.md: Zoost catalogues every relation with its target module, the lookup or linking module behind it, and the Deluge call ready to copy.
 4d70e60b3c09cde1  store/crm/store-listing.md: chrome.storage.session holds the decrypted API key, only while passphrase protection is on and unlocked: memory-only, cleared when the browser closes.
